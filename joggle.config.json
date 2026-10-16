@@ -1,5 +1,4 @@
 {
-  "presets": ["@autotelic/joggle/presets/structure"],
   "unavailable": "count",
   "rules": {
     "joggle/layer-direction": "error",
@@ -18,6 +17,6 @@
     ]
   },
   "evidence": {
-    "repository": "The dependency law from README.md and pnpm-workspace.yaml, written a second time where the import rule can read it: protocol depends on nothing, each engine depends on protocol and never on a sibling, and the harness depends on protocol and drives the engines as processes — it never links them. `packages/plumb` and `packages/joggle` are named before they are moved in, so the law is declared once and the migration only has to satisfy it. The layer order is the part to re-derive when joggle lands: a linear order says 'may not import upward', and the harness's rule is the stronger 'may not import a sibling engine at all'."
+    "repository": "The dependency law from README.md and pnpm-workspace.yaml, written a second time where the import rule can read it: protocol depends on nothing, each engine depends on protocol and never on a sibling, and the harness depends on protocol and drives the engines as processes — it never links them. `packages/plumb` and `packages/joggle` are named here and both now exist, so the law was declared once and the move had only to satisfy it. The layer order is the part to re-derive: a linear order says 'may not import upward', and the harness's rule is the stronger 'may not import a sibling engine at all'. A `presets` entry stood here naming `@autotelic/joggle/presets/structure`; that preset exists only on joggle's unimported line, so it went with it and the explicit rule list below is the whole intent. The other shipped preset, `presets/composition`, is deliberately not used: its own header calls it somebody's architecture — opted into, not defaulted on."
   }
 }
