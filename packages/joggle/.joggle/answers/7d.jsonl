@@ -1,0 +1,5 @@
+7d2921b93dee00d8	1790631747	{"confidence":0.58,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.6799999999999999,"component_or_feature":0.01,"not_applicable":0.3,"route_or_handler":0.01}}
+7d34c243db71e7a3	1790624340	{"confidence":0.95,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.04,"framework_glue":0,"implementation_detail":0.96,"wire_contract":0}}
+7d78c35ee4c1b173	1790624340	{"confidence":0.38,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.46,"no_difference":0.06,"removes_a_hazard":0.3,"slightly_clearer":0.18},"rating":1.99}
+7d944421f9b68442	1790631748	{"confidence":0.98,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.98,"not_a_derivation":0.01,"reimplements":0.01}}
+7de5c6fdc99e5fa2	1790624340	{"confidence":0.98,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}

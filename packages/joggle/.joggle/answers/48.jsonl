@@ -1,0 +1,13 @@
+4803b661ecab30f2	1790624340	{"confidence":0.94,"kind":"Classify","label":"same_module","probabilities":{"different_deployables":0,"same_module":0.96,"same_package":0.04,"sibling_packages":0}}
+48328547f4e91d71	1790631748	{"confidence":0.79,"kind":"Classify","label":"same_module","probabilities":{"different_deployables":0,"same_module":0.84,"same_package":0.16,"sibling_packages":0}}
+4837e66057e9d9e4	1790634043	{"confidence":0.27,"kind":"Classify","label":"general","probabilities":{"general":0.52,"names_a_caller":0,"shared_vocabulary":0.48}}
+48475c251e01a423	1790632045	{"confidence":0.92,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.9400000000000001,"infrastructure":0,"input_adaptation":0,"mechanical":0,"not_applicable":0.06,"orchestration":0,"rendering":0,"request_validation":0,"transport_concern":0}}
+484803185365f76b	1790631748	{"confidence":0.61,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.71,"component_or_feature":0.09,"not_applicable":0.2,"route_or_handler":0}}
+485de0b87a9ed73c	1790633007	{"confidence":0.1,"kind":"Classify","label":"meaning_switched","probabilities":{"appropriate":0.29,"independent":0.31,"meaning_switched":0.4}}
+486348b9c312f10d	1790631748	{"confidence":0.26,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.32,"keep_variants":0.5,"no_issue":0.18}}
+4871c0640914eca3	1790631748	{"confidence":0.66,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.74,"component_or_feature":0.01,"not_applicable":0.24,"route_or_handler":0.01}}
+4883ea64b2aa4a05	1790624340	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
+48a7cafd65ba5ced	1790631748	{"confidence":0.67,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.76,"component_or_feature":0,"not_applicable":0.23,"route_or_handler":0.01}}
+48d051a8c069de72	1790631748	{"confidence":0.37,"kind":"Classify","label":"not_applicable","probabilities":{"already_there":0.36,"component_or_feature":0.1,"not_applicable":0.52,"route_or_handler":0.02}}
+48e65333fd5a9153	1790631747	{"confidence":0.44,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.02,"internal_only":0.63,"unaccounted":0.35}}
+48fe70f53ebb3024	1790631747	{"confidence":0.95,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.96,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0.01}}

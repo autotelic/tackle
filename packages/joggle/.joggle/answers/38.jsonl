@@ -1,0 +1,13 @@
+380646591dd5d708	1790624340	{"confidence":0.92,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.9299999999999999,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0.04}}
+380b0f0750575e8b	1790624340	{"confidence":0.33,"kind":"Classify","label":"wrong_behavior","probabilities":{"no_issue":0.46,"stale_reference":0,"wrong_behavior":0.5,"wrong_contract":0.04}}
+38162edede118865	1790631747	{"confidence":0.98,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
+3817cbef98e7022d	1790631748	{"confidence":0.71,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.75,"infrastructure":0,"input_adaptation":0,"mechanical":0.01,"not_applicable":0.01,"orchestration":0.23,"rendering":0,"request_validation":0,"transport_concern":0}}
+382d20f8352e44e8	1790631747	{"confidence":0.69,"kind":"Classify","label":"rendering","probabilities":{"domain_logic":0.12,"infrastructure":0,"input_adaptation":0.08,"mechanical":0.01,"not_applicable":0.03,"orchestration":0,"rendering":0.73,"request_validation":0,"transport_concern":0.03}}
+38327d525988ed1f	1790624340	{"kind":"Probability","probability":0.69}
+3860334883adc3af	1790635273	{"confidence":0.35,"kind":"Rate","label":"no_difference","probabilities":{"meaningfully_better":0.04,"no_difference":0.73,"removes_a_hazard":0.17,"slightly_clearer":0.06},"rating":0.65}
+3887890dd5ce74ee	1790631747	{"confidence":0.84,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.07,"internal_only":0.89,"unaccounted":0.04}}
+38a59768098095b3	1790635956	{"confidence":0.48,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.55,"infrastructure":0.01,"input_adaptation":0,"mechanical":0,"not_applicable":0.01,"orchestration":0.43,"rendering":0,"request_validation":0,"transport_concern":0}}
+38bb4251ca833250	1790635213	{"confidence":0.43,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.61,"not_a_derivation":0.36,"reimplements":0.03}}
+38c150810acdeb3d	1790631748	{"confidence":0.22,"kind":"Classify","label":"no_issue","probabilities":{"collapse":0.06,"keep_variants":0.46,"no_issue":0.48}}
+38e165cf78ce3881	1790631748	{"confidence":0.56,"kind":"Classify","label":"same_module","probabilities":{"different_deployables":0,"same_module":0.67,"same_package":0.33,"sibling_packages":0}}
+38fb91bb322c3433	1790631747	{"confidence":0.38,"kind":"Classify","label":"drift","probabilities":{"compatible":0.15,"drift":0.59,"two_concepts":0.26}}

@@ -1,0 +1,22 @@
+---
+// A card — with an em dash, so a byte-counted position would be wrong.
+import { formatTitle } from "../utils/use-card.ts"
+
+interface Props {
+  title: string
+  date: Date
+}
+
+const { title } = Astro.props
+export const heading = (): string => formatTitle(title)
+---
+<article>
+  <h2>{heading()} — “quoted”</h2>
+</article>
+<script>
+  function toggleCard(card: HTMLElement) {
+    card.classList.toggle("open")
+  }
+  document.querySelectorAll<HTMLElement>("article").forEach(toggleCard)
+</script>
+<script type="application/ld+json">{"@type": "Article"}</script>

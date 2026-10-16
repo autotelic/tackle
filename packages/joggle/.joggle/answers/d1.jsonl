@@ -1,0 +1,10 @@
+d11bfbf661b42fa4	1790624340	{"confidence":0.92,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.94,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0.03}}
+d16f091287af6e55	1790631747	{"confidence":0.44,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.59,"component_or_feature":0.11,"not_applicable":0.25,"route_or_handler":0.05}}
+d18bdcfc327589f1	1790631747	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0.01}}
+d18d7d6230e86041	1790631747	{"confidence":0.78,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.8,"infrastructure":0,"input_adaptation":0,"mechanical":0.1,"not_applicable":0.03,"orchestration":0.07,"rendering":0,"request_validation":0,"transport_concern":0}}
+d195a1324953f93a	1790631747	{"confidence":0.84,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.09,"inferred":0.02,"not_applicable":0.89}}
+d1b3f95be4355f63	1790635213	{"confidence":0.46,"kind":"Classify","label":"not_a_derivation","probabilities":{"legitimate_local":0.33,"not_a_derivation":0.64,"reimplements":0.03}}
+d1d482344c3e077b	1790631747	{"confidence":0.71,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.8,"not_a_derivation":0.19,"reimplements":0.01}}
+d1e2676ddd4f104c	1790631747	{"confidence":0.61,"kind":"Classify","label":"domain_concept","probabilities":{"domain_concept":0.71,"framework_glue":0,"implementation_detail":0.29,"wire_contract":0}}
+d1ead743a934f35c	1790631747	{"confidence":0.95,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.96,"not_a_derivation":0.02,"reimplements":0.02}}
+d1f815036717f891	1790631747	{"confidence":0.95,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.96,"infrastructure":0,"input_adaptation":0,"mechanical":0,"not_applicable":0.03,"orchestration":0,"rendering":0,"request_validation":0.01,"transport_concern":0}}

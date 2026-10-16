@@ -1,0 +1,5 @@
+0113a65b6c1322f1	1790624340	{"confidence":0.65,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.76,"member_1":0.11,"member_2":0.13}}
+0133809607ef86d1	1790635273	{"confidence":0.85,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.9,"unclear":0,"value":0.1}}
+01403f0fc4568ea0	1790631747	{"confidence":0.33,"kind":"Classify","label":"value","probabilities":{"meaning":0.45,"unclear":0,"value":0.55}}
+015fd750930efec1	1790636506	{"confidence":0.65,"kind":"Classify","label":"violation","probabilities":{"acceptable":0.22,"different_pattern":0.02,"violation":0.76}}
+01cbf65503338ee5	1790636522	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0}}

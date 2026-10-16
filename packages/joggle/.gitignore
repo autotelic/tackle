@@ -1,0 +1,31 @@
+repos/
+node_modules/
+dist/
+*.tsbuildinfo
+coverage/
+
+# Judgement replay cache and the baseline. Kept in git on purpose: CI replays
+# reviewed verdicts with no API key, and the baseline is the acceptance a person
+# wrote. The cache is a directory of shards, one per key prefix, so a branch
+# merge is a directory merge; the baseline is a directory of fragments, one per
+# accepted finding. Nothing else in .joggle/ is tracked. See docs/artifacts.md.
+.joggle/*
+!.joggle/.gitattributes
+!.joggle/answers/
+!.joggle/answers/**
+!.joggle/baseline/
+!.joggle/baseline/**
+# The pre-shard single files, so a repository that has not migrated still works.
+!.joggle/answers.json
+!.joggle/baseline.json
+
+# Local only. Never published.
+entropy-machine/
+.pi/
+
+# Local secrets — never commit these.
+.env
+.env.*
+!.env.example
+*.pem
+.secrets*

@@ -1,0 +1,13 @@
+fd3027d90ce9f20e	1790635483	{"confidence":0.79,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.11,"inferred":0.02,"not_applicable":0.87}}
+fd392c783e05693c	1790635216	{"confidence":0.46,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.64,"not_a_derivation":0.36,"reimplements":0}}
+fd699fe1da7e2ad1	1790636522	{"confidence":0.34,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.06,"independent":0.55,"meaning_switched":0.39}}
+fd6c3bbd2ef12650	1790634043	{"confidence":0.8,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.87,"not_a_derivation":0.12,"reimplements":0.01}}
+fd6e92727efdd36b	1790631748	{"confidence":0.45,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.5,"infrastructure":0,"input_adaptation":0.01,"mechanical":0.39,"not_applicable":0.09,"orchestration":0,"rendering":0.01,"request_validation":0,"transport_concern":0}}
+fd7c9e04232fe78d	1790631747	{"confidence":0.92,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.94,"stale_reference":0,"wrong_behavior":0.05,"wrong_contract":0.01}}
+fd931175472bc2c6	1790635161	{"confidence":0.71,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.19,"independent":0.81,"meaning_switched":0}}
+fdab7c06e467dc06	1790631747	{"consistency":1,"kind":"Probability","probability":0.6122222222222223}
+fdc5d84bbc4d8002	1790632045	{"confidence":0.66,"kind":"Classify","label":"no_issue","probabilities":{"collapse":0.04,"keep_variants":0.19,"no_issue":0.77}}
+fddac45bae72641f	1790631747	{"confidence":0.88,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.08,"independent":0.92,"meaning_switched":0}}
+fde8ed72f9552bb8	1790631747	{"confidence":0.85,"kind":"Classify","label":"orchestration","probabilities":{"domain_logic":0.02,"infrastructure":0.04,"input_adaptation":0,"mechanical":0.06999999999999999,"not_applicable":0,"orchestration":0.87,"rendering":0,"request_validation":0,"transport_concern":0}}
+fdeff60864fc9a69	1790624340	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
+fdfadaa2dbd2f10e	1790635110	{"confidence":0.92,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.94,"stale_reference":0,"wrong_behavior":0.05,"wrong_contract":0.01}}

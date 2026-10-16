@@ -1,0 +1,11 @@
+---
+export async function getCrew(res, id) {
+  const crew = await crewStore.fetchOne(id)
+  if (crew === null) {
+    res.statusCode = 503
+    return
+  }
+  res.send(crew)
+}
+---
+<p>crew</p>

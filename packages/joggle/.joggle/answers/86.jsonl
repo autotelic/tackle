@@ -1,0 +1,10 @@
+8613d850ea51c7a3	1790624340	{"confidence":0.98,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
+86224dc368a06c60	1790624340	{"confidence":0.86,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.89,"stale_reference":0.01,"wrong_behavior":0.09,"wrong_contract":0.01}}
+86532c8aaa14ccff	1790631748	{"confidence":0.05,"kind":"Rate","label":"slightly_clearer","probabilities":{"meaningfully_better":0.22,"no_difference":0.27,"removes_a_hazard":0.23,"slightly_clearer":0.28},"rating":1.4}
+8667fb537b6def41	1790635870	{"confidence":0.83,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.85,"infrastructure":0,"input_adaptation":0,"mechanical":0.04,"not_applicable":0.11,"orchestration":0,"rendering":0,"request_validation":0,"transport_concern":0}}
+866d9dfb6e31b560	1790636522	{"confidence":0.35,"kind":"Classify","label":"no_issue","probabilities":{"facade":0.05,"no_issue":0.5,"related_helpers":0.39,"type_surface":0.06}}
+866e91407679ca1a	1790631747	{"confidence":0.92,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.94,"stale_reference":0.02,"wrong_behavior":0.03,"wrong_contract":0.01}}
+86d36cb840cc2e7d	1790631747	{"confidence":0.5,"kind":"Classify","label":"orchestration","probabilities":{"domain_logic":0.42,"infrastructure":0.01,"input_adaptation":0,"mechanical":0,"not_applicable":0.01,"orchestration":0.56,"rendering":0,"request_validation":0,"transport_concern":0}}
+86dc5b5f87f1cc28	1790631747	{"confidence":0.87,"kind":"Classify","label":"mechanical","probabilities":{"domain_logic":0.01,"infrastructure":0.02,"input_adaptation":0.01,"mechanical":0.88,"not_applicable":0.07,"orchestration":0.01,"rendering":0,"request_validation":0,"transport_concern":0}}
+86e552086c899c1f	1790636522	{"consistency":1,"kind":"Probability","probability":0.28111111111111114}
+86e598ff7a8640f1	1790635161	{"confidence":0.85,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.89,"stale_reference":0.08,"wrong_behavior":0.02,"wrong_contract":0.01}}

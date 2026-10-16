@@ -1,0 +1,11 @@
+5229d02bb1678fd8	1790624340	{"confidence":0.96,"kind":"Classify","label":"library_core","probabilities":{"domain_core":0,"infrastructure":0,"library_core":0.97,"not_applicable":0,"rendering_edge":0,"transport_edge":0,"utilities":0.03}}
+523415b50c7018c4	1790632045	{"confidence":0.44,"kind":"Classify","label":"same_module","probabilities":{"different_deployables":0,"same_module":0.58,"same_package":0.42,"sibling_packages":0}}
+523a5172b4c43dfc	1790631748	{"confidence":0.55,"kind":"Classify","label":"not_applicable","probabilities":{"already_there":0.26,"component_or_feature":0.03,"not_applicable":0.66,"route_or_handler":0.05}}
+524638cc65f717d9	1790635213	{"confidence":0.86,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.91,"not_a_derivation":0.04,"reimplements":0.05}}
+5276f8b3fbad040a	1790636522	{"confidence":0.93,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0,"wrong_behavior":0.04,"wrong_contract":0.01}}
+527f10acfb063348	1790631747	{"confidence":0.76,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.8099999999999999,"component_or_feature":0.01,"not_applicable":0.16,"route_or_handler":0.02}}
+52b07bc428464d6f	1790631747	{"confidence":0.69,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.77,"stale_reference":0.01,"wrong_behavior":0.19,"wrong_contract":0.03}}
+52c366f3d10f4332	1790631748	{"confidence":0.64,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.77,"unclear":0,"value":0.23}}
+52c45483d054598a	1790631747	{"confidence":0.98,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
+52f7b8ebc0d14850	1790631747	{"confidence":0.63,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.76,"not_a_derivation":0.23,"reimplements":0.01}}
+52fe4cb3ef83cd81	1790631747	{"confidence":0.75,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.81,"component_or_feature":0.01,"not_applicable":0.15,"route_or_handler":0.03}}

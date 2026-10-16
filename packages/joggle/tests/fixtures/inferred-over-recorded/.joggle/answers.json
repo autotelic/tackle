@@ -1,0 +1,25 @@
+{
+  "version": "0.1.0",
+  "entries": {
+    "77bd99f308a7971e": {
+      "kind": "Classify",
+      "label": "independent",
+      "probabilities": {
+        "inferred": 0.13,
+        "independent": 0.71,
+        "not_applicable": 0.16
+      },
+      "confidence": 0.56
+    },
+    "bc8b318f26bab654": {
+      "kind": "Classify",
+      "label": "independent",
+      "probabilities": {
+        "inferred": 0.13,
+        "independent": 0.71,
+        "not_applicable": 0.16
+      },
+      "confidence": 0.56
+    }
+  }
+}

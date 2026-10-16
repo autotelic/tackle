@@ -1,0 +1,4 @@
+ad571c1a46e18141	1790631747	{"confidence":0.99,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.01,"inferred":0,"not_applicable":0.99}}
+ad8e17c4dd2eb35a	1790624340	{"confidence":0.83,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.05,"framework_glue":0,"implementation_detail":0.87,"wire_contract":0.08}}
+adcaa9733f2fb70b	1790635213	{"confidence":0.88,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.92,"not_a_derivation":0.05,"reimplements":0.03}}
+adeda4b08e71068a	1790635161	{"confidence":0.61,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.71,"component_or_feature":0.04,"not_applicable":0.21,"route_or_handler":0.04}}

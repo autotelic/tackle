@@ -1,0 +1,5 @@
+f7035bd3be041e4e	1790636522	{"consistency":1,"kind":"Probability","probability":0.35666666666666663}
+f74e30adf19f3a0f	1790635483	{"confidence":0.92,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.03,"inferred":0.02,"not_applicable":0.95}}
+f75bf3671c132fd3	1790631747	{"confidence":0.77,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.08,"internal_only":0.84,"unaccounted":0.08}}
+f76702eac8f38b1e	1790631747	{"confidence":0.32,"kind":"Classify","label":"drift","probabilities":{"compatible":0.25,"drift":0.54,"two_concepts":0.21}}
+f7db798171f9dc04	1790624340	{"kind":"Probability","probability":0.46}

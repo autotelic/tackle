@@ -1,0 +1,5 @@
+# Lets `doppler run -- pnpm joggle ...` pick the right project without flags.
+# The key itself lives in Doppler, never here.
+setup:
+  - project: joggle
+    config: dev

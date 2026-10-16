@@ -1,0 +1,12 @@
+881aa1731a2506e9	1790631748	{"confidence":0.86,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.88,"infrastructure":0,"input_adaptation":0,"mechanical":0.01,"not_applicable":0.11,"orchestration":0,"rendering":0,"request_validation":0,"transport_concern":0}}
+8831276b475c2872	1790631748	{"confidence":0.98,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.99,"infrastructure":0,"input_adaptation":0,"mechanical":0,"not_applicable":0.01,"orchestration":0,"rendering":0,"request_validation":0,"transport_concern":0}}
+88548a5fe59265bf	1790636506	{"confidence":0.65,"kind":"Classify","label":"violation","probabilities":{"acceptable":0.22,"different_pattern":0.02,"violation":0.76}}
+88568ccd3842017b	1790624340	{"confidence":0.71,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.01,"name_meaning":0,"no_issue":0.2,"semantic_verdict":0.79}}
+888429c6819b1c07	1790632140	{"confidence":0.3,"kind":"Classify","label":"drift","probabilities":{"compatible":0.13,"drift":0.54,"two_concepts":0.33}}
+889fe5cd8d5bc4e4	1790631748	{"confidence":0.6,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.71,"component_or_feature":0.01,"not_applicable":0.27,"route_or_handler":0.01}}
+88b3b56525ed3049	1790624340	{"confidence":0.64,"kind":"Rate","label":"no_difference","probabilities":{"meaningfully_better":0.04,"no_difference":0.71,"removes_a_hazard":0.01,"slightly_clearer":0.24},"rating":0.36}
+88d48dd6f5f55549	1790631747	{"confidence":0.62,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.24,"independent":0.74,"meaning_switched":0.02}}
+88d7cc9dcac54a22	1790632140	{"confidence":0.51,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.63,"component_or_feature":0.01,"not_applicable":0.34,"route_or_handler":0.02}}
+88dbf52e4b87a850	1790634343	{"confidence":0.46,"kind":"Classify","label":"drift","probabilities":{"compatible":0.05,"drift":0.64,"two_concepts":0.31}}
+88ee7188ca7998be	1790631747	{"confidence":1,"kind":"Classify","label":"mechanical","probabilities":{"domain_logic":0,"infrastructure":0,"input_adaptation":0,"mechanical":1,"not_applicable":0,"orchestration":0,"rendering":0,"request_validation":0,"transport_concern":0}}
+88ff622354c91edd	1790631748	{"confidence":0.97,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.98,"not_a_derivation":0.02,"reimplements":0}}

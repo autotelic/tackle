@@ -1,0 +1,7 @@
+c90baa3ed59948f0	1790624340	{"confidence":0.59,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.69,"stale_reference":0,"wrong_behavior":0.26,"wrong_contract":0.05}}
+c93aaf5af86958fc	1790635213	{"confidence":0.59,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.73,"not_a_derivation":0.27,"reimplements":0}}
+c95d429281236e1a	1790633007	{"confidence":0.71,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.75,"infrastructure":0.01,"input_adaptation":0,"mechanical":0.01,"not_applicable":0.01,"orchestration":0.22,"rendering":0,"request_validation":0,"transport_concern":0}}
+c9a9bfc075400aba	1790635956	{"confidence":0.96,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.97,"component_or_feature":0,"not_applicable":0.03,"route_or_handler":0}}
+c9b542623aca8c47	1790636522	{"confidence":0.82,"kind":"Classify","label":"drift","probabilities":{"drift":0.88,"handled":0.06,"mismapped":0.06}}
+c9c447697decea7d	1790632045	{"confidence":0.4,"kind":"Classify","label":"same_module","probabilities":{"different_deployables":0,"same_module":0.56,"same_package":0.44,"sibling_packages":0}}
+c9ce6639597cdd87	1790635161	{"confidence":0.7,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.2,"independent":0.8,"meaning_switched":0}}

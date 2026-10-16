@@ -1,0 +1,11 @@
+a02ad25574cb9946	1790631747	{"confidence":0.11,"kind":"Classify","label":"orchestration","probabilities":{"domain_logic":0.16,"infrastructure":0.08,"input_adaptation":0.03,"mechanical":0.16,"not_applicable":0.13,"orchestration":0.21,"rendering":0.02,"request_validation":0.02,"transport_concern":0.19}}
+a03792bac8e6fed8	1790636522	{"confidence":0.25,"kind":"Classify","label":"belongs","probabilities":{"belongs":0.5,"framework_expected":0.16,"violates":0.34}}
+a04f525c1e98c87b	1790636522	{"confidence":0.84,"kind":"Classify","label":"independent","probabilities":{"independent":0.9,"inferred":0.03,"not_applicable":0.07}}
+a06b13f064b40339	1790631747	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
+a06ff4e1f59cef74	1790624340	{"confidence":0.93,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0,"wrong_behavior":0.04,"wrong_contract":0.01}}
+a07a3f4a9e5d7f60	1790631747	{"confidence":0.95,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0.02}}
+a0a3bdd307727df2	1790624340	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
+a0c91a5d244451d2	1790631748	{"confidence":0.72,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.76,"infrastructure":0,"input_adaptation":0.01,"mechanical":0.1,"not_applicable":0.09,"orchestration":0.04,"rendering":0,"request_validation":0,"transport_concern":0}}
+a0cf1ce373cd46cb	1790635161	{"confidence":0.9,"kind":"Classify","label":"orchestration","probabilities":{"domain_logic":0.08,"infrastructure":0,"input_adaptation":0,"mechanical":0,"not_applicable":0.01,"orchestration":0.91,"rendering":0,"request_validation":0,"transport_concern":0}}
+a0db7a2ddc85aed0	1790635216	{"confidence":0.19,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.46,"not_a_derivation":0.45,"reimplements":0.09}}
+a0f1808c84ee8227	1790631747	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}

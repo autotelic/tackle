@@ -1,0 +1,12 @@
+d000dc10702ccdaf	1790635956	{"confidence":0.4,"kind":"Classify","label":"two_concepts","probabilities":{"compatible":0.09,"drift":0.31,"two_concepts":0.6}}
+d00533741adc0331	1790631747	{"confidence":0.81,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.87,"stale_reference":0.07,"wrong_behavior":0.03,"wrong_contract":0.03}}
+d00ea8f045f5d7fa	1790631747	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
+d01436c50281ccc3	1790635110	{"confidence":0.37,"kind":"Classify","label":"two_concepts","probabilities":{"compatible":0.02,"drift":0.4,"two_concepts":0.58}}
+d017ba2e8f04dda8	1790631747	{"confidence":0.98,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0.01}}
+d022723f8cc60498	1790635213	{"confidence":0.88,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.92,"not_a_derivation":0.05,"reimplements":0.03}}
+d093ccecee3a5d69	1790634168	{"confidence":0.89,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.06,"member_1":0.94}}
+d0970338429204b8	1790631748	{"confidence":0.74,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.81,"component_or_feature":0,"not_applicable":0.18,"route_or_handler":0.01}}
+d09f66ba9de14718	1790635161	{"confidence":0.37,"kind":"Classify","label":"not_applicable","probabilities":{"domain_logic":0.12,"infrastructure":0.02,"input_adaptation":0,"mechanical":0.02,"not_applicable":0.44,"orchestration":0.35,"rendering":0.03,"request_validation":0,"transport_concern":0.02}}
+d0e3f0150de648f7	1790633007	{"confidence":0.92,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.94,"stale_reference":0,"wrong_behavior":0.05,"wrong_contract":0.01}}
+d0e65fdfb4c9a7ce	1790635870	{"confidence":0.6,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.65,"infrastructure":0,"input_adaptation":0,"mechanical":0,"not_applicable":0.06,"orchestration":0,"rendering":0.29000000000000004,"request_validation":0,"transport_concern":0}}
+d0ef57a9a822cd55	1790624340	{"kind":"Probability","probability":0.13}

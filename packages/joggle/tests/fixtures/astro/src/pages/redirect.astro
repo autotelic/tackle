@@ -1,0 +1,6 @@
+---
+const target = Astro.url.searchParams.get("to")
+if (target === null) return Astro.redirect("/")
+export function destination() { return target }
+---
+<p>{target}</p>

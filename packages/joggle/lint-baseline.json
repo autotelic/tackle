@@ -1,0 +1,5 @@
+{
+  "note": "Known plumb findings, by identity and count. `pnpm lint:update` accepts the current state; `pnpm lint` fails when a count rises or a new identity appears.",
+  "total": 0,
+  "census": {}
+}

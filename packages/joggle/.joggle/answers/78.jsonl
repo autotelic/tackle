@@ -1,0 +1,11 @@
+7811891d65948ce0	1790624340	{"confidence":0.98,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0.01}}
+7811d18071007333	1790635161	{"confidence":0.91,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.93,"stale_reference":0,"wrong_behavior":0.06,"wrong_contract":0.01}}
+7818a4ed9ace058c	1790624340	{"confidence":0.98,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0.01}}
+7832c6b13f2d937b	1790634253	{"confidence":0.46,"kind":"Classify","label":"drift","probabilities":{"compatible":0.24,"drift":0.63,"two_concepts":0.13}}
+784adcc530741675	1790631747	{"confidence":0.86,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.9,"stale_reference":0.01,"wrong_behavior":0.06,"wrong_contract":0.03}}
+7859ee037c1b5818	1790635035	{"confidence":0.6,"kind":"Classify","label":"drift","probabilities":{"compatible":0.12,"drift":0.73,"two_concepts":0.15}}
+789b2878468cc6d9	1790634168	{"confidence":0.96,"kind":"Classify","label":"domain_concept","probabilities":{"domain_concept":0.97,"framework_glue":0,"implementation_detail":0,"wire_contract":0.03}}
+78a23363417a7d6e	1790631747	{"confidence":0.69,"kind":"Classify","label":"rendering","probabilities":{"domain_logic":0.12,"infrastructure":0,"input_adaptation":0.08,"mechanical":0.01,"not_applicable":0.03,"orchestration":0,"rendering":0.73,"request_validation":0,"transport_concern":0.03}}
+78a8eeca7495b056	1790635035	{"confidence":0.95,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0.01}}
+78b8d1595ef6aa45	1790631747	{"confidence":0.98,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.98,"infrastructure":0,"input_adaptation":0.01,"mechanical":0,"not_applicable":0.01,"orchestration":0,"rendering":0,"request_validation":0,"transport_concern":0}}
+78e594e2293954ce	1790631747	{"confidence":0.8,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.84,"infrastructure":0.01,"input_adaptation":0,"mechanical":0.04,"not_applicable":0.03,"orchestration":0.08,"rendering":0,"request_validation":0,"transport_concern":0}}

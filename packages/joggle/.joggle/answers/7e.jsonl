@@ -1,0 +1,10 @@
+7e0a5128b64b0b2b	1790631747	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0.01,"wrong_behavior":0.01,"wrong_contract":0}}
+7e2527f461383512	1790631747	{"confidence":1,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":1,"infrastructure":0,"input_adaptation":0,"mechanical":0,"not_applicable":0,"orchestration":0,"rendering":0,"request_validation":0,"transport_concern":0}}
+7e3c392acac81bb4	1790631747	{"confidence":0.69,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.77,"stale_reference":0.01,"wrong_behavior":0.19,"wrong_contract":0.03}}
+7e42ee13d658e7e5	1790633176	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0.01,"wrong_behavior":0.01,"wrong_contract":0}}
+7e51cb68158bde73	1790624340	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0.01}}
+7e555cdb69f4ac4f	1790635870	{"confidence":0.83,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.85,"infrastructure":0,"input_adaptation":0,"mechanical":0.04,"not_applicable":0.11,"orchestration":0,"rendering":0,"request_validation":0,"transport_concern":0}}
+7e6c9cae0b69e894	1790631747	{"confidence":0.63,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.73,"component_or_feature":0.06,"not_applicable":0.18,"route_or_handler":0.03}}
+7eab33233ab4f939	1790632045	{"confidence":0.36,"kind":"Rate","label":"no_difference","probabilities":{"meaningfully_better":0.06,"no_difference":0.72,"removes_a_hazard":0.16,"slightly_clearer":0.06},"rating":0.64}
+7ed0b83263a453ba	1790631747	{"confidence":0.71,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.79,"stale_reference":0,"wrong_behavior":0.15,"wrong_contract":0.06}}
+7ee5f357497d0398	1790631747	{"confidence":0.71,"kind":"Classify","label":"general","probabilities":{"general":0.81,"names_a_caller":0.01,"shared_vocabulary":0.18}}

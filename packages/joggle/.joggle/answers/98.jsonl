@@ -1,0 +1,8 @@
+98143df76b5de784	1790631747	{"confidence":0.8,"kind":"Classify","label":"orchestration","probabilities":{"domain_logic":0.11,"infrastructure":0,"input_adaptation":0.02,"mechanical":0.01,"not_applicable":0.03,"orchestration":0.83,"rendering":0,"request_validation":0,"transport_concern":0}}
+981f9d3d644aa7ec	1790631748	{"confidence":0.55,"kind":"Classify","label":"infrastructure","probabilities":{"domain_logic":0.03,"infrastructure":0.6,"input_adaptation":0,"mechanical":0,"not_applicable":0,"orchestration":0.37,"rendering":0,"request_validation":0,"transport_concern":0}}
+9887a7bd1840616a	1790631748	{"confidence":0.42,"kind":"Classify","label":"no_issue","probabilities":{"collapse":0.11,"keep_variants":0.27,"no_issue":0.62}}
+988a02e3597d8dcf	1790624340	{"kind":"Probability","probability":0.2}
+98b13567239fc85b	1790624340	{"kind":"Probability","probability":0.69}
+98bcc3db8986c960	1790631747	{"confidence":0.74,"kind":"Classify","label":"general","probabilities":{"general":0.83,"names_a_caller":0.01,"shared_vocabulary":0.16}}
+98de69e3a7efce26	1790624340	{"confidence":0.9,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.93,"stale_reference":0,"wrong_behavior":0.06,"wrong_contract":0.01}}
+98fbf32e4e8734f3	1790624340	{"confidence":0.75,"kind":"Classify","label":"same_package","probabilities":{"different_deployables":0,"same_module":0.19,"same_package":0.81,"sibling_packages":0}}

@@ -1,0 +1,90 @@
+{
+  "$schema": "./schema/config.json",
+  "presets": [
+    "@autotelic/joggle/presets/composition"
+  ],
+  "unavailable": "count",
+  "rules": {
+    "joggle/bundle-dot-notation": "warn",
+    "joggle/bundle-tripartite-value": "warn",
+    "joggle/bundle-one-file-per-block": "warn",
+    "joggle/bundle-context-hook": "warn",
+    "joggle/page-needs-composition": "warn",
+    "joggle/naming-drift": "warn",
+    "joggle/duplicate-meaning": "warn",
+    "joggle/layer-direction": "warn",
+    "joggle/import-cycle": "warn"
+  },
+  "ignore": [
+    {
+      "rule": "joggle/bundle-*",
+      "path": "tests/fixtures/**",
+      "reason": "the composition fixtures are deliberately broken in both directions: `bad/` violates the pattern so a test can assert it is caught, and `good/` follows it so a test can assert it is silent. Reporting them is the tool reporting its own test data"
+    },
+    {
+      "rule": "joggle/dependency-fit",
+      "path": "tests/fixtures/**",
+      "reason": "a fixture imports react to give a bundle something to be a bundle of, and declares no manifest; the question this rule asks is about a package's own dependencies, and a fixture has no package"
+    }
+  ],
+  "architecture": {
+    "layers": [
+      {
+        "name": "contract",
+        "include": [
+          "src/schema.ts",
+          "src/state.ts",
+          "src/policy.ts",
+          "src/config.ts",
+          "src/vocabulary.ts"
+        ]
+      },
+      {
+        "name": "kernel",
+        "include": [
+          "src/rule.ts",
+          "src/imports.ts",
+          "src/similarity.ts",
+          "src/cluster.ts",
+          "src/bundles.ts",
+          "src/architecture.ts",
+          "src/workspace.ts",
+          "src/tsgo.ts",
+          "src/source.ts",
+          "src/astro.ts",
+          "src/tsconfig-scope.ts",
+          "src/judge.ts",
+          "src/gitignore.ts",
+          "src/fingerprint.ts",
+          "src/parsecache.ts",
+          "src/plugins.ts",
+          "src/testing.ts"
+        ]
+      },
+      {
+        "name": "rules",
+        "include": [
+          "src/rules/**",
+          "src/presets/**"
+        ]
+      },
+      {
+        "name": "engine",
+        "include": [
+          "src/check.ts",
+          "src/report.ts"
+        ]
+      },
+      {
+        "name": "entry",
+        "include": [
+          "src/main.ts",
+          "src/plugin.ts"
+        ]
+      }
+    ]
+  },
+  "evidence": {
+    "repository": "joggle analyses other repositories and reports diagnostics; it does not render. There is no React here, so the composition-pattern rules are only meaningful when run against a codebase that does render."
+  }
+}

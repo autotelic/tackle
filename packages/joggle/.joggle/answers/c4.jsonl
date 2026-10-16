@@ -1,0 +1,2 @@
+c43fa1bc469bd8db	1790636522	{"confidence":0.82,"kind":"Classify","label":"one_thing","probabilities":{"already_named":0.04,"one_thing":0.88,"unrelated":0.08}}
+c467472413bafc5d	1790631748	{"confidence":0.47,"kind":"Classify","label":"mechanical","probabilities":{"domain_logic":0.11,"infrastructure":0.01,"input_adaptation":0.31,"mechanical":0.53,"not_applicable":0.02,"orchestration":0.02,"rendering":0,"request_validation":0,"transport_concern":0}}

@@ -1,0 +1,88 @@
+name: joggle
+description: Cross-file patterns and idioms for TypeScript, enforced like a linter.
+author: "@autotelic"
+
+branding:
+  icon: search
+  color: purple
+
+inputs:
+  api-key:
+    description: TypeSafe API key. Omit to run the deterministic rules only; judged rules then report as skipped.
+    required: false
+  scope:
+    description: 'What to check: "changed" (default), "pr", "since", or "all".'
+    required: false
+    default: changed
+  since:
+    description: Git revision to scope against when scope is "since".
+    required: false
+    default: origin/main
+  paths:
+    description: Files or directories to analyse. Default is whatever tsgo lists.
+    required: false
+  max-warnings:
+    description: Fail when warnings exceed this number (-1 disables).
+    required: false
+    default: "-1"
+  offline:
+    description: Answer only from the committed verdict cache; never call the model.
+    required: false
+    default: "false"
+  version:
+    description: The @autotelic/joggle version to run.
+    required: false
+    default: latest
+  working-directory:
+    description: Directory to run in.
+    required: false
+    default: "."
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 24
+
+    - name: joggle check
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        TYPESAFE_API_KEY: ${{ inputs.api-key }}
+        GH_TOKEN: ${{ github.token }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        IN_SCOPE: ${{ inputs.scope }}
+        IN_SINCE: ${{ inputs.since }}
+        IN_PATHS: ${{ inputs.paths }}
+        IN_MAX: ${{ inputs.max-warnings }}
+        IN_OFFLINE: ${{ inputs.offline }}
+        IN_VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        args=(check --format github)
+        case "$IN_SCOPE" in
+          changed) args+=(--changed) ;;
+          pr)
+            if [ -n "${PR_NUMBER:-}" ]; then
+              args+=(--pr-number "$PR_NUMBER")
+            else
+              args+=(--pr)
+            fi
+            ;;
+          since) args+=(--since "$IN_SINCE") ;;
+          all) ;;
+          *)
+            echo "joggle: unknown scope '$IN_SCOPE' (expected changed, pr, since, or all)"
+            exit 1
+            ;;
+        esac
+        if [ "$IN_OFFLINE" = "true" ]; then
+          args+=(--offline)
+        fi
+        if [ -n "${IN_PATHS:-}" ]; then
+          read -r -a listed <<< "$IN_PATHS"
+          args+=("${listed[@]}")
+        fi
+        args+=(--max-warnings "$IN_MAX")
+        npx --yes "@autotelic/joggle@${IN_VERSION}" "${args[@]}"

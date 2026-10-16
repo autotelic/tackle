@@ -1,0 +1,11 @@
+4e0d4b0aeef09d82	1790624340	{"confidence":0.95,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.96,"stale_reference":0.02,"wrong_behavior":0.01,"wrong_contract":0.01}}
+4e18a628d3b0c800	1790631747	{"confidence":0.98,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
+4e28ea9606412072	1790624340	{"confidence":0.94,"kind":"Classify","label":"same_module","probabilities":{"different_deployables":0,"same_module":0.96,"same_package":0.04,"sibling_packages":0}}
+4e66552553d74e97	1790631748	{"confidence":0.96,"kind":"Classify","label":"mechanical","probabilities":{"domain_logic":0.02,"infrastructure":0.02,"input_adaptation":0,"mechanical":0.96,"not_applicable":0,"orchestration":0,"rendering":0,"request_validation":0,"transport_concern":0}}
+4e728bb075b41d05	1790631747	{"confidence":0.77,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.08,"internal_only":0.84,"unaccounted":0.08}}
+4e9ead023be165b4	1790624340	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
+4ea4e72dd86021d1	1790635956	{"confidence":0.83,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.87,"stale_reference":0,"wrong_behavior":0.11,"wrong_contract":0.02}}
+4eab6bd8d57f08f5	1790631747	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
+4eae5346a51e3d6f	1790624340	{"confidence":0.82,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.87,"stale_reference":0,"wrong_behavior":0.1,"wrong_contract":0.03}}
+4ec9308d18d10d62	1790636522	{"confidence":0.45,"kind":"Classify","label":"belongs","probabilities":{"belongs":0.63,"framework_expected":0.07,"violates":0.3}}
+4ed41dac86bfc598	1790624340	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0}}

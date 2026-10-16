@@ -1,0 +1,12 @@
+7f0ba1f7372a5ac6	1790631747	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0}}
+7f0c59d25ab3b4c8	1790624340	{"confidence":0.98,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
+7f266c3ecdf72418	1790624340	{"confidence":0.95,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.04,"framework_glue":0,"implementation_detail":0.96,"wire_contract":0}}
+7f31f35a8ed3b5ec	1790631747	{"confidence":0.58,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.68,"component_or_feature":0.01,"not_applicable":0.3,"route_or_handler":0.01}}
+7f38c7e0362d539d	1790631747	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0}}
+7f622771d5dd47f9	1790624340	{"confidence":0.82,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.87,"stale_reference":0,"wrong_behavior":0.08,"wrong_contract":0.05}}
+7f8dc3d4b98878e0	1790624340	{"confidence":0.86,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.9,"stale_reference":0.03,"wrong_behavior":0.02,"wrong_contract":0.05}}
+7fb5620989ad928f	1790631747	{"confidence":0.8,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.86,"component_or_feature":0,"not_applicable":0.14,"route_or_handler":0}}
+7fb5c73d8c74f966	1790634043	{"confidence":0.44,"kind":"Classify","label":"not_applicable","probabilities":{"agrees":0.34,"excludes":0.03,"not_applicable":0.63}}
+7fd176fef710c2d1	1790631747	{"confidence":0.66,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.78,"not_a_derivation":0.22,"reimplements":0}}
+7fe98b205adce9d5	1790631747	{"confidence":0.96,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.02,"inferred":0,"not_applicable":0.98}}
+7ff39d9f0dcefae5	1790624340	{"confidence":0.45,"kind":"Classify","label":"same_package","probabilities":{"different_deployables":0,"same_module":0.41,"same_package":0.59,"sibling_packages":0}}

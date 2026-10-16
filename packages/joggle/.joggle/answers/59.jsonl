@@ -1,0 +1,6 @@
+591ee041c03d6a79	1790631747	{"confidence":0.62,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.22,"internal_only":0.75,"unaccounted":0.03}}
+594685101281b3c5	1790631747	{"confidence":0.73,"kind":"Classify","label":"one_concept","probabilities":{"already_named":0.09,"coincidental":0.08,"one_concept":0.83}}
+595a3e1149b4242f	1790634043	{"confidence":0.35,"kind":"Classify","label":"drift","probabilities":{"compatible":0.04,"drift":0.57,"two_concepts":0.39}}
+5994633e66bb1d0b	1790631747	{"confidence":0.76,"kind":"Classify","label":"infrastructure","probabilities":{"domain_logic":0.09,"infrastructure":0.79,"input_adaptation":0.02,"mechanical":0.01,"not_applicable":0,"orchestration":0.07,"rendering":0,"request_validation":0,"transport_concern":0.02}}
+599a81b0f65d5b74	1790631747	{"confidence":0.86,"kind":"Classify","label":"infrastructure","probabilities":{"domain_logic":0.06,"infrastructure":0.89,"input_adaptation":0,"mechanical":0.04,"not_applicable":0,"orchestration":0.01,"rendering":0,"request_validation":0,"transport_concern":0}}
+59b11cbc6bece263	1790624340	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}

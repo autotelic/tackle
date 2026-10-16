@@ -1,0 +1,91 @@
+{
+  "name": "@autotelic/joggle",
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "pnpm@12.3.4",
+  "description": "Cross-file patterns and idioms for TypeScript — the layer above the linter and the typechecker.",
+  "license": "MIT",
+  "homepage": "https://github.com/autotelic/joggle#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/autotelic/joggle.git"
+  },
+  "bugs": {
+    "url": "https://github.com/autotelic/joggle/issues"
+  },
+  "keywords": [
+    "typescript",
+    "linter",
+    "static-analysis",
+    "cross-file",
+    "oxc",
+    "effect",
+    "code-quality",
+    "pi-package"
+  ],
+  "engines": {
+    "node": ">=24.18.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "pi": {
+    "extensions": [
+      "./extensions"
+    ]
+  },
+  "exports": {
+    "./plugin": {
+      "development": "./src/plugin.ts",
+      "default": "./dist/plugin.js"
+    },
+    "./testing": {
+      "development": "./src/testing.ts",
+      "default": "./dist/testing.js"
+    },
+    "./presets/composition": {
+      "development": "./src/presets/composition.ts",
+      "default": "./dist/presets/composition.js"
+    }
+  },
+  "files": [
+    "dist",
+    "bin",
+    "extensions",
+    "JOGGLE.md"
+  ],
+  "bin": {
+    "joggle": "./bin/joggle.js"
+  },
+  "scripts": {
+    "joggle": "node --conditions=development src/main.ts",
+    "joggle:elsewhere": "sh scripts/joggle-elsewhere.sh",
+    "build": "tsgo -p tsconfig.build.json",
+    "prepack": "pnpm build",
+    "prepublishOnly": "pnpm check",
+    "typecheck": "tsgo --noEmit",
+    "prepare": "effect-tsgo patch --no-typescript --oxlint",
+    "test": "vitest run",
+    "lint": "node scripts/lint-baseline.mjs",
+    "lint:update": "node scripts/lint-baseline.mjs --update",
+    "diagram:rules": "node scripts/diagram-rules.mjs",
+    "check": "pnpm typecheck && pnpm test && pnpm lint"
+  },
+  "dependencies": {
+    "@effect/ai-typesafe": "4.0.0-rc.116",
+    "@effect/platform-node": "4.0.0-rc.116",
+    "effect": "4.0.0-rc.116",
+    "oxc-parser": "0.150.0"
+  },
+  "devDependencies": {
+    "@autotelic/plumb": "0.6.0",
+    "@effect/tsgo": "0.46.1",
+    "@effect/vitest": "4.0.0-rc.116",
+    "@types/node": "24.13.5",
+    "@typescript/native-preview": "7.0.0-dev.20260707.2",
+    "oxlint": "1.83.0",
+    "oxlint-tsgolint": "7.0.2003",
+    "typebox": "1.3.34",
+    "vitest": "5.0.1"
+  }
+}

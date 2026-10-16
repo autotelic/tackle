@@ -1,0 +1,4 @@
+4456654b124066de	1790631747	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
+44a82395f76f89e4	1790631747	{"confidence":0.86,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.08,"inferred":0.01,"not_applicable":0.91}}
+44f4dbca773c4bf5	1790631747	{"confidence":0.38,"kind":"Classify","label":"drift","probabilities":{"compatible":0.18,"drift":0.59,"two_concepts":0.23}}
+44ff3cce08291988	1790631747	{"confidence":0.39,"kind":"Classify","label":"same_package","probabilities":{"different_deployables":0,"same_module":0.45,"same_package":0.55,"sibling_packages":0}}

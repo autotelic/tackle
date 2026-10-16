@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 1108" width="1500" height="1108" role="img" aria-label="How joggle's rules work">
+<defs>
+<marker id="a-6f6c62" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#6f6c62"/></marker>
+<marker id="a-0f6f5c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#0f6f5c"/></marker>
+<marker id="a-a8480c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#a8480c"/></marker>
+<marker id="a-3a4a8c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#3a4a8c"/></marker>
+<style>
+.flow{stroke-dasharray:7 6;animation:flow 1.1s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-13}}
+.pulse{animation:pulse 2.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+@media (prefers-reduced-motion: reduce){.flow,.pulse{animation:none}}
+</style>
+</defs>
+<rect x="0" y="0" width="1500" height="1108" rx="0" fill="#fbfaf6" stroke="#fbfaf6" stroke-width="1.2"/>
+<text x="64" y="80" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="36" font-weight="700" fill="#1a1914" text-anchor="start" letter-spacing="0" opacity="1">How joggle decides</text>
+<text x="64" y="112" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="16" font-weight="400" fill="#6f6c62" text-anchor="start" letter-spacing="0" opacity="1">One kind of rule: a candidate generator, and a question.  Be deterministic where you can prove, and judge only where you must.</text>
+<line x1="64" y1="136" x2="1436" y2="136" stroke="#d8d4c8" stroke-width="1.2"/>
+<rect x="64" y="154" width="440" height="56" rx="12" fill="none" stroke="#d8d4c8" stroke-width="1.2"/>
+<text x="82" y="179" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="16" font-weight="700" fill="#6f6c62" text-anchor="start" letter-spacing="0" opacity="1">tsc / tsgo</text>
+<text x="82" y="198" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="12.5" font-weight="400" fill="#6f6c62" text-anchor="start" letter-spacing="0" opacity="1">the program  ·  is this well-typed?</text>
+<rect x="524" y="154" width="440" height="56" rx="12" fill="none" stroke="#d8d4c8" stroke-width="1.2"/>
+<text x="542" y="179" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="16" font-weight="700" fill="#6f6c62" text-anchor="start" letter-spacing="0" opacity="1">oxlint</text>
+<text x="542" y="198" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="12.5" font-weight="400" fill="#6f6c62" text-anchor="start" letter-spacing="0" opacity="1">the file and its AST  ·  is this well-formed?</text>
+<rect x="984" y="154" width="440" height="56" rx="12" fill="#f1eee6" stroke="#1a1914" stroke-width="1.6"/>
+<text x="1002" y="179" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="16" font-weight="700" fill="#1a1914" text-anchor="start" letter-spacing="0" opacity="1">joggle</text>
+<text x="1002" y="198" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="12.5" font-weight="400" fill="#6f6c62" text-anchor="start" letter-spacing="0" opacity="1">the codebase and its facts  ·  is this the same thing as that?</text>
+<rect x="64" y="236" width="1372" height="116" rx="12" fill="#ffffff" stroke="#d8d4c8" stroke-width="1.2"/>
+<text x="86" y="266" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="15" font-weight="700" fill="#1a1914" text-anchor="start" letter-spacing="0.6" opacity="1">1 · THE INDEX</text>
+<text x="1414" y="266" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="12" font-weight="400" fill="#6f6c62" text-anchor="end" letter-spacing="0" opacity="1">deterministic · content-addressed · cached</text>
+<text x="86" y="296" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="13.5" font-weight="400" fill="#2b2a24" text-anchor="start" letter-spacing="0" opacity="1">oxc parse  →  units · imports · call sites · jsx · object literals · columns</text>
+<text x="86" y="318" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="13.5" font-weight="400" fill="#2b2a24" text-anchor="start" letter-spacing="0" opacity="1">tsgo  →  types</text>
+<text x="86" y="340" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="12" font-weight="400" fill="#6f6c62" text-anchor="start" letter-spacing="0" opacity="1">an unchanged run costs nothing: the index is reused</text>
+<rect x="64" y="392" width="1372" height="396" rx="12" fill="#ffffff" stroke="#a8480c" stroke-width="1.4"/>
+<rect x="64" y="392" width="1372" height="6" rx="3" fill="#a8480c"/>
+<text x="86" y="432" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="15.5" font-weight="700" fill="#a8480c" text-anchor="start" letter-spacing="0.4" opacity="1">2 · A RULE</text>
+<text x="1414" y="432" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12" font-weight="400" fill="#a8480c" text-anchor="end" letter-spacing="0" opacity="1">generation is deterministic · the verdict is a question</text>
+<text x="86" y="458" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="12.5" font-weight="900" fill="#6f6c62" text-anchor="start" letter-spacing="0" opacity="1">Every rule is judged. The deterministic half is its find: a predicate over the facts, free and high recall.</text>
+<text x="94" y="510" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="14" font-weight="700" fill="#a8480c" text-anchor="start" letter-spacing="0" opacity="1">1  find</text>
+<text x="94" y="534" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="12.5" font-weight="242.39999999999998" fill="#1a1914" text-anchor="start" letter-spacing="0" opacity="1">a predicate over the facts · high recall · noise tolerated</text>
+<text x="356.4" y="510" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="14" font-weight="700" fill="#a8480c" text-anchor="start" letter-spacing="0" opacity="1">2  evidence</text>
+<text x="356.4" y="534" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="12.5" font-weight="242.39999999999998" fill="#1a1914" text-anchor="start" letter-spacing="0" opacity="1">the panel a reviewer would need · bounded atoms</text>
+<text x="618.8" y="510" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="14" font-weight="700" fill="#a8480c" text-anchor="start" letter-spacing="0" opacity="1">3  questions</text>
+<text x="618.8" y="534" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="12.5" font-weight="242.39999999999998" fill="#1a1914" text-anchor="start" letter-spacing="0" opacity="1">atomic and typed:  Noul · Choice · Score</text>
+<text x="881.1999999999999" y="510" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="14" font-weight="700" fill="#a8480c" text-anchor="start" letter-spacing="0" opacity="1">4  policy</text>
+<text x="881.1999999999999" y="534" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="12.5" font-weight="242.39999999999998" fill="#1a1914" text-anchor="start" letter-spacing="0" opacity="1">the gates you control, in one file</text>
+<text x="1143.6" y="510" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="14" font-weight="700" fill="#a8480c" text-anchor="start" letter-spacing="0" opacity="1">5  diagnose</text>
+<text x="1143.6" y="534" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="12.5" font-weight="242.39999999999998" fill="#1a1914" text-anchor="start" letter-spacing="0" opacity="1">span · message · help · confidence</text>
+<text x="94" y="600" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="12.5" font-weight="900" fill="#6f6c62" text-anchor="start" letter-spacing="0" opacity="1">Noul: is it true? (0–1)      Choice: one of a set      Score: a level on a rubric</text>
+<rect x="94" y="620" width="1312" height="34" rx="12" fill="#f1eee6" stroke="#a8480c" stroke-width="1.2"/>
+<text x="750" y="642" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="13" font-weight="600" fill="#a8480c" text-anchor="middle" letter-spacing="0" opacity="1">every rule's questions for a run travel in ONE request</text>
+<rect x="94" y="664" width="1312" height="58" rx="12" fill="none" stroke="#d8d4c8" stroke-width="1.2"/>
+<text x="110" y="687" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="12" font-weight="700" fill="#6f6c62" text-anchor="start" letter-spacing="0.6" opacity="1">gates</text>
+<text x="168" y="687" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="13" font-weight="400" fill="#2b2a24" text-anchor="start" letter-spacing="0" opacity="1">probabilityFloor 0.5  ·  minMargin 0.25  ·  reviewFloor 0.6</text>
+<text x="110" y="708" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="12.5" font-weight="400" fill="#6f6c62" text-anchor="start" letter-spacing="0" opacity="1">below the floor: drop      ·      uncertain: a notice      ·      decisive: a finding</text>
+<text x="94" y="770" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="12" font-weight="400" fill="#a8480c" text-anchor="start" letter-spacing="0" opacity="1">a rule with no model key is skipped, unless --offline replays its cached answers</text>
+<path class="flow" d="M 750 352 C 750 352, 750 392, 750 392" fill="none" stroke="#a8480c" stroke-width="1.6" marker-end="url(#a-a8480c)"/>
+<rect x="64" y="824" width="1372" height="140" rx="12" fill="#ffffff" stroke="#3a4a8c" stroke-width="1.4"/>
+<rect x="64" y="824" width="1372" height="6" rx="3" fill="#3a4a8c"/>
+<text x="86" y="866" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="15.5" font-weight="700" fill="#3a4a8c" text-anchor="start" letter-spacing="0.4" opacity="1">3 · THE OUTCOME</text>
+<text x="1414" y="866" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12.5" font-weight="400" fill="#6f6c62" text-anchor="end" letter-spacing="0" opacity="1">text · stylish · unix · json · github</text>
+<text x="86" y="900" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="12.5" font-weight="700" fill="#6f6c62" text-anchor="start" letter-spacing="0.8" opacity="1">DIAGNOSTICS</text>
+<text x="86" y="924" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="12.5" font-weight="400" fill="#1a1914" text-anchor="start" letter-spacing="0" opacity="1">one diagnostic shape — span · severity · message · help · confidence</text>
+<text x="546" y="900" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="12.5" font-weight="700" fill="#6f6c62" text-anchor="start" letter-spacing="0.8" opacity="1">NOTES</text>
+<text x="546" y="924" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="12.5" font-weight="400" fill="#1a1914" text-anchor="start" letter-spacing="0" opacity="1">the census, and every bound the run hit</text>
+<text x="1006" y="900" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="12.5" font-weight="700" fill="#6f6c62" text-anchor="start" letter-spacing="0.8" opacity="1">DROPS</text>
+<text x="1006" y="924" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="12.5" font-weight="400" fill="#1a1914" text-anchor="start" letter-spacing="0" opacity="1">the funnel: no_evidence · budget · declined · gated · unreadable</text>
+<path class="flow" d="M 750 788 C 750 788, 750 824, 750 824" fill="none" stroke="#a8480c" stroke-width="1.6" marker-end="url(#a-a8480c)"/>
+<rect x="64" y="992" width="1372" height="84" rx="12" fill="#f1eee6" stroke="#d8d4c8" stroke-width="1.2"/>
+<text x="86" y="1024" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="11.5" font-weight="700" fill="#6f6c62" text-anchor="start" letter-spacing="1" opacity="1">REPLAY</text>
+<text x="86" y="1050" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="13" font-weight="400" fill="#2b2a24" text-anchor="start" letter-spacing="0" opacity="1">key = question version + model + evidence + questions</text>
+<text x="700" y="1050" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="13" font-weight="400" fill="#1a1914" text-anchor="start" letter-spacing="0" opacity="1">commit .joggle/answers.json  →  CI replays --offline with no key</text>
+<text x="1414" y="1024" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="11.5" font-weight="700" fill="#6f6c62" text-anchor="end" letter-spacing="1" opacity="1">SCOPE</text>
+<text x="1414" y="1050" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="13" font-weight="400" fill="#2b2a24" text-anchor="end" letter-spacing="0" opacity="1">changed · since &lt;rev&gt; · pr · all</text>
+<text x="64" y="1090" font-family="ui-sans-serif,-apple-system,'Segoe UI',Inter,sans-serif" font-size="11.5" font-weight="400" fill="#6f6c62" text-anchor="start" letter-spacing="0" opacity="1">joggle — docs/rule-anatomy.svg</text>
+</svg>

@@ -1,0 +1,13 @@
+0f0850b97de8ef6b	1790631747	{"confidence":0.83,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.88,"stale_reference":0,"wrong_behavior":0.11,"wrong_contract":0.01}}
+0f0da4949262ad0b	1790631747	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0.01}}
+0f1ab300d6bda1b4	1790631748	{"confidence":0.73,"kind":"Classify","label":"infrastructure","probabilities":{"domain_logic":0,"infrastructure":0.77,"input_adaptation":0,"mechanical":0.01,"not_applicable":0,"orchestration":0.22,"rendering":0,"request_validation":0,"transport_concern":0}}
+0f248c991b31aa5a	1790624340	{"confidence":0.93,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0.01,"wrong_behavior":0.04,"wrong_contract":0}}
+0f272e4e52145066	1790631747	{"confidence":0.84,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.88,"stale_reference":0.01,"wrong_behavior":0.1,"wrong_contract":0.01}}
+0f58c4e5280e4ff2	1790631747	{"confidence":0.22,"kind":"Classify","label":"drift","probabilities":{"compatible":0.07,"drift":0.47,"two_concepts":0.46}}
+0f5e1cc7b6edbcb1	1790631747	{"confidence":0.92,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.94,"stale_reference":0,"wrong_behavior":0.05,"wrong_contract":0.01}}
+0f77bbc301267e02	1790624340	{"confidence":0.94,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0,"wrong_behavior":0.04,"wrong_contract":0.01}}
+0f9c0660b1088cec	1790624340	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
+0fb80b2d434e958c	1790631747	{"confidence":0.86,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.9,"stale_reference":0.01,"wrong_behavior":0.06,"wrong_contract":0.03}}
+0fc119bf36110e8c	1790631747	{"confidence":0.78,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.83,"component_or_feature":0.01,"not_applicable":0.16,"route_or_handler":0}}
+0fd204d4b893768d	1790624340	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0}}
+0fd6ebe0096fb6e0	1790635161	{"confidence":0.85,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.89,"stale_reference":0.08,"wrong_behavior":0.02,"wrong_contract":0.01}}

@@ -1,0 +1,4 @@
+311c18a0bcbe78eb	1790633007	{"confidence":0.75,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.03,"no_issue":0.15,"semantic_verdict":0.8200000000000001}}
+31a25c6374b847bd	1790624340	{"confidence":0.62,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.14,"keep_variants":0.75,"no_issue":0.11}}
+31a93ec8b50a8f10	1790631747	{"confidence":0.46,"kind":"Classify","label":"infrastructure","probabilities":{"domain_logic":0.04,"infrastructure":0.52,"input_adaptation":0,"mechanical":0.04,"not_applicable":0,"orchestration":0.4,"rendering":0,"request_validation":0,"transport_concern":0}}
+31f19b02527d00ce	1790635551	{"confidence":0.64,"kind":"Classify","label":"meaning_switched","probabilities":{"appropriate":0.15,"independent":0.08,"meaning_switched":0.77}}

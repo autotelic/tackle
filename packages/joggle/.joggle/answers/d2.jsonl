@@ -1,0 +1,12 @@
+d2032be91f1aab23	1790634343	{"confidence":0.86,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.89,"stale_reference":0.01,"wrong_behavior":0.08,"wrong_contract":0.02}}
+d20e9b0ce3efff0a	1790633283	{"confidence":0.94,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0.02,"wrong_behavior":0.02,"wrong_contract":0.01}}
+d2403d0b02a6885d	1790635213	{"confidence":0.41,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.6,"not_a_derivation":0.38,"reimplements":0.02}}
+d24f980d60058a47	1790631747	{"confidence":0.8,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.84,"infrastructure":0.01,"input_adaptation":0,"mechanical":0.04,"not_applicable":0.03,"orchestration":0.08,"rendering":0,"request_validation":0,"transport_concern":0}}
+d251e1f19097763b	1790631748	{"confidence":0.84,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.86,"infrastructure":0,"input_adaptation":0.01,"mechanical":0.02,"not_applicable":0.04,"orchestration":0.02,"rendering":0.04,"request_validation":0,"transport_concern":0.01}}
+d2567a34f9af4828	1790632045	{"confidence":0.18,"kind":"Classify","label":"drift","probabilities":{"compatible":0.28,"drift":0.45,"two_concepts":0.27}}
+d267e880c18c9490	1790634043	{"confidence":0.62,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.72,"stale_reference":0.02,"wrong_behavior":0.24,"wrong_contract":0.02}}
+d292fc8339c914b9	1790624340	{"kind":"Probability","probability":0.35}
+d2933fe593c34f69	1790631747	{"confidence":0.31,"kind":"Classify","label":"move","probabilities":{"merge":0.17,"move":0.54,"no_issue":0.29}}
+d2a4558be2ee44f7	1790631747	{"confidence":0.89,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.93,"not_a_derivation":0.04,"reimplements":0.03}}
+d2ac3c5a741b6ebf	1790635483	{"confidence":0.83,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.09,"inferred":0.02,"not_applicable":0.89}}
+d2bbad38c72b5d9d	1790631747	{"confidence":0.55,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.3,"names_a_caller":0,"shared_vocabulary":0.7}}

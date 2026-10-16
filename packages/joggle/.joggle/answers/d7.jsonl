@@ -1,0 +1,11 @@
+d74589f607e28ce3	1790631747	{"confidence":0.46,"kind":"Classify","label":"infrastructure","probabilities":{"domain_logic":0.04,"infrastructure":0.52,"input_adaptation":0,"mechanical":0.04,"not_applicable":0,"orchestration":0.4,"rendering":0,"request_validation":0,"transport_concern":0}}
+d753430423e45cd6	1790635869	{"confidence":0.85,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.89,"stale_reference":0,"wrong_behavior":0.1,"wrong_contract":0.01}}
+d765da18822386ee	1790624340	{"confidence":0.29,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.03,"keep_variants":0.52,"no_issue":0.45}}
+d77f5c15bff6053a	1790631747	{"confidence":0.85,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.89,"stale_reference":0.01,"wrong_behavior":0.09,"wrong_contract":0.01}}
+d7897967af02336b	1790624340	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0.01}}
+d79c2ea3848ff2d1	1790635213	{"confidence":0.63,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.75,"not_a_derivation":0.23,"reimplements":0.02}}
+d7b0a8f838a06d2a	1790624340	{"kind":"Probability","probability":0.29}
+d7c37510b2eea9b7	1790634993	{"confidence":0.85,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.9,"not_a_derivation":0.07,"reimplements":0.03}}
+d7e139ed3c23f627	1790631748	{"confidence":0.76,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.82,"component_or_feature":0,"not_applicable":0.17,"route_or_handler":0.01}}
+d7e5a46ff6dcf012	1790633007	{"confidence":0.76,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.79,"infrastructure":0,"input_adaptation":0,"mechanical":0.14,"not_applicable":0.04,"orchestration":0.03,"rendering":0,"request_validation":0,"transport_concern":0}}
+d7eaf541f670977f	1790631747	{"confidence":0.95,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0.01}}

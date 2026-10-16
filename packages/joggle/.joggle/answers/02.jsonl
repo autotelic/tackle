@@ -1,0 +1,13 @@
+023294eb45e60f48	1790624340	{"confidence":0.58,"kind":"Classify","label":"no_issue","probabilities":{"collapse":0,"keep_variants":0.28,"no_issue":0.72}}
+024eae166a860fe1	1790631747	{"confidence":0.61,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.71,"component_or_feature":0,"not_applicable":0.29,"route_or_handler":0}}
+027a8e547a244c5d	1790631747	{"confidence":0.39,"kind":"Classify","label":"same_package","probabilities":{"different_deployables":0,"same_module":0.45,"same_package":0.55,"sibling_packages":0}}
+028212f948b3c04d	1790635955	{"confidence":0.95,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0}}
+029e1ad7f9d0137e	1790634043	{"confidence":0.23,"kind":"Classify","label":"drift","probabilities":{"compatible":0.45,"drift":0.48,"two_concepts":0.07}}
+02aa393e182dacbd	1790624340	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
+02ab67ffd5a94a85	1790624340	{"kind":"Probability","probability":0.62}
+02b8c01e80d70a45	1790635483	{"confidence":0.93,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0.04,"wrong_behavior":0.01,"wrong_contract":0}}
+02c6fbb63b2c673f	1790631747	{"confidence":0.89,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.06,"inferred":0.02,"not_applicable":0.92}}
+02d07b8b3db1d357	1790631747	{"confidence":0.96,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.97,"infrastructure":0,"input_adaptation":0,"mechanical":0.02,"not_applicable":0.01,"orchestration":0,"rendering":0,"request_validation":0,"transport_concern":0}}
+02d07d5008a37c71	1790631747	{"confidence":0.32,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.06,"merge":0.46,"move":0.44,"share_a_contract":0.03,"split":0.01}}
+02e0c31dce6a13d5	1790631747	{"confidence":0.93,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0.03}}
+02ed4d4ed7d6213e	1790631747	{"confidence":0.84,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.9,"not_a_derivation":0.01,"reimplements":0.09}}

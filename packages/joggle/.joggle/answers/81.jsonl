@@ -1,0 +1,12 @@
+81121074c3934f75	1790624340	{"confidence":0.53,"kind":"Classify","label":"name_meaning","probabilities":{"magic_threshold":0,"name_meaning":0.65,"no_issue":0.09,"semantic_verdict":0.26}}
+812768838336ec28	1790635213	{"confidence":0.32,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.55,"not_a_derivation":0.43,"reimplements":0.02}}
+813e9f511dba53ae	1790631747	{"confidence":0.6,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.12,"internal_only":0.74,"unaccounted":0.14}}
+8148df510da109a2	1790635213	{"confidence":0.88,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.92,"not_a_derivation":0.05,"reimplements":0.03}}
+816127e7cba9cdc4	1790631748	{"confidence":0.17,"kind":"Classify","label":"move","probabilities":{"leave_it":0.1,"merge":0.27,"move":0.34,"share_a_contract":0.26,"split":0.03}}
+816b90f57e4c4c23	1790631747	{"confidence":0.22,"kind":"Classify","label":"input_adaptation","probabilities":{"domain_logic":0.08,"infrastructure":0,"input_adaptation":0.31,"mechanical":0.12,"not_applicable":0.25,"orchestration":0.16,"rendering":0.02,"request_validation":0,"transport_concern":0.06}}
+8176c15480f61f32	1790631747	{"confidence":0.95,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.96,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0.01}}
+817a5b81fd219bfc	1790631747	{"confidence":0.43,"kind":"Classify","label":"drift","probabilities":{"compatible":0.18,"drift":0.62,"two_concepts":0.2}}
+817f759bc2998b41	1790631747	{"confidence":0.94,"kind":"Classify","label":"orchestration","probabilities":{"domain_logic":0.04,"infrastructure":0,"input_adaptation":0,"mechanical":0,"not_applicable":0.01,"orchestration":0.95,"rendering":0,"request_validation":0,"transport_concern":0}}
+818023ec2522385f	1790634168	{"confidence":0.89,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.06,"member_1":0.94}}
+8194fdfc7117dd46	1790631747	{"confidence":0.85,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.89,"component_or_feature":0,"not_applicable":0.1,"route_or_handler":0.01}}
+81e722a2e7c2facb	1790624340	{"confidence":0.38,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.69,"member_1":0.31}}
