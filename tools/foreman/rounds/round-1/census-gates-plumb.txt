@@ -1,0 +1,96 @@
+$ cd packages/plumb && pnpm check
+
+$ pnpm lint && pnpm typecheck && pnpm test && pnpm check:rule-tests && pnpm check:config
+$ oxlint src
+$ tsc --noEmit
+$ vitest run --passWithNoTests
+
+ RUN  v4.1.12 /Users/togmund/autotelic/tackle/packages/plumb
+
+
+ Test Files  12 passed (12)
+      Tests  85 passed (85)
+   Start at  16:46:02
+   Duration  1.73s (transform 1.14s, setup 0ms, import 4.29s, tests 490ms, environment 1ms)
+
+$ node scripts/check-rule-tests.mjs
+missing suite: rules/no-anonymous-wide-tuples.test.ts
+missing suite: rules/no-barrel-export-star.test.ts
+missing suite: rules/no-boolean-field-signals.test.ts
+missing suite: rules/no-builtin-throws.test.ts
+missing suite: rules/no-chained-type-assertions.test.ts
+missing suite: rules/no-conditional-empty-object-spread.test.ts
+missing suite: rules/no-exported-mutable-state.test.ts
+missing suite: rules/no-generic-export-names.test.ts
+missing suite: rules/no-impossible-branch-throw.test.ts
+missing suite: rules/no-known-value-widening.test.ts
+missing suite: rules/no-module-mocking.test.ts
+missing suite: rules/no-multiple-function-params.test.ts
+missing suite: rules/no-nondeterministic-core.test.ts
+missing suite: rules/no-object-parameters.test.ts
+missing suite: rules/no-optional-function-parameters.test.ts
+missing suite: rules/no-product-of-state-booleans.test.ts
+missing suite: rules/no-redundant-derived-field.test.ts
+missing suite: rules/no-reflect-apply.test.ts
+missing suite: rules/no-reflect-get.test.ts
+missing suite: rules/no-reinterpret-cast.test.ts
+missing suite: rules/no-runtime-typeof.test.ts
+missing suite: rules/no-sentinel-comparison-union.test.ts
+missing suite: rules/no-shape-in-symbol-names.test.ts
+missing suite: rules/no-stacked-jsdoc-blocks.test.ts
+missing suite: rules/no-stray-inline-comments.test.ts
+missing suite: rules/no-swappable-primitive-params.test.ts
+missing suite: rules/no-tag-ladder-assertions.test.ts
+missing suite: rules/no-transposed-field-reads.test.ts
+missing suite: rules/no-unit-return-validators.test.ts
+missing suite: rules/no-unknown-parameters.test.ts
+missing suite: rules/no-unknown-returns.test.ts
+missing suite: rules/no-unknown-type-aliases.test.ts
+missing suite: rules/no-unsafe-dictionary-type.test.ts
+missing suite: rules/no-vague-test-filenames.test.ts
+missing suite: rules/no-widen-then-assert.test.ts
+missing suite: rules/prefer-payload-brand.test.ts
+missing suite: rules/prefer-property-tests.test.ts
+missing suite: rules/require-canonical-stringify-for-identity.test.ts
+missing suite: rules/require-deprecated-tag-for-legacy-comments.test.ts
+missing suite: rules/require-exhaustive-tag-switch.test.ts
+missing suite: rules/require-fc-block-predicate.test.ts
+missing suite: rules/require-jsdoc-on-exported.test.ts
+missing suite: rules/require-published-order.test.ts
+missing suite: rules/require-safety-comment-for-type-assertion.test.ts
+missing suite: rules/require-sort-comparator.test.ts
+missing suite: rules/test-utils.test.ts
+missing suite: effect/rules/guarded-op-must-return-effect.test.ts
+missing suite: effect/rules/guarded-op-must-return-option.test.ts
+missing suite: effect/rules/no-cascading-layer-provide.test.ts
+missing suite: effect/rules/no-decode-unknown-option.test.ts
+missing suite: effect/rules/no-direct-browser-storage.test.ts
+missing suite: effect/rules/no-direct-fetch.test.ts
+missing suite: effect/rules/no-manual-field-guards.test.ts
+missing suite: effect/rules/no-nested-layer-provide.test.ts
+missing suite: effect/rules/no-schema-class-modeling.test.ts
+missing suite: effect/rules/no-service-constructor-imports.test.ts
+missing suite: effect/rules/no-silent-error-swallow.test.ts
+missing suite: effect/rules/no-static-effect-service-forwarders.test.ts
+missing suite: effect/rules/no-try-catch.test.ts
+missing suite: effect/rules/no-unguarded-json-parse.test.ts
+missing suite: effect/rules/option-core-needs-effect-public.test.ts
+missing suite: effect/rules/prefer-die-for-precondition-defects.test.ts
+missing suite: effect/rules/prefer-effect-gen-for-guard-ladders.test.ts
+missing suite: effect/rules/prefer-effect-match.test.ts
+missing suite: effect/rules/prefer-effect-predicate-over-boolean-function.test.ts
+missing suite: effect/rules/prefer-named-guard-predicate.test.ts
+missing suite: effect/rules/prefer-option-pipeline.test.ts
+missing suite: effect/rules/prefer-ordering-match.test.ts
+missing suite: effect/rules/prefer-tagged-enum.test.ts
+missing suite: effect/rules/require-schema-type-derivation.test.ts
+missing suite: meta/rules/no-disable-directives.test.ts
+missing suite: meta/rules/no-manual-ancestor-walks.test.ts
+missing suite: meta/rules/prefer-before-file-scope.test.ts
+missing suite: meta/rules/require-create-once.test.ts
+missing suite: meta/rules/require-rule-tester.test.ts
+75 rule(s) missing test suites.
+$ node scripts/check-config.mjs
+oxlint config consistent with shipped plugins.
+
+exit=0

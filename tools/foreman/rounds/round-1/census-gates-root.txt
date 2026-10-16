@@ -1,0 +1,29 @@
+$ pnpm check
+
+$ pnpm format:check && pnpm typecheck && pnpm test && pnpm lexicon:compat && pnpm build
+$ oxfmt --check .
+Checking formatting...
+
+
+  x Expected `,` or `)` but found `Identifier`
+   ,-[tools/foreman/rounds/round-1/census-meter.json:1:3]
+ 1 | $ opencode2 stats --json --full --project .
+   : ^ ^^^^|^^^^
+   : |     `-- `,` or `)` expected
+   : `-- Opened here
+ 2 | 
+   `----
+
+  x Expected `,` or `)` but found `Identifier`
+   ,-[tools/foreman/rounds/round-1/census-ledger-root.json:1:3]
+ 1 | $ pnpm jig check --format json
+   : ^ ^^|^
+   : |   `-- `,` or `)` expected
+   : `-- Opened here
+ 2 | 
+   `----
+Error occurred when checking code style in the above files.
+[ELIFECYCLE] Command failed with exit code 2.
+[ELIFECYCLE] Command failed with exit code 2.
+
+exit=0

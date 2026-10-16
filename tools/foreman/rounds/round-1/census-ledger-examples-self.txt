@@ -1,0 +1,16 @@
+$ pnpm jig check --cwd examples/self
+
+$ node --conditions=development packages/jig-cli/src/cli.ts check --cwd examples/self
+0 error(s), 0 warning(s), 2 notice(s) in 2 file(s)
+
+engines
+  plumb: 1 finding(s)
+  joggle: 1 finding(s)
+  cutlist: 0 finding(s) — cutlist could not run: NotFound: ChildProcess.spawn (cutlist build --check)
+
+ratchet
+  joggle/joggle/unparsed-output: 1 new finding not in the baseline
+  plumb/plumb/unparsed-output: 1 new finding not in the baseline
+[ELIFECYCLE] Command failed with exit code 1.
+
+exit=0

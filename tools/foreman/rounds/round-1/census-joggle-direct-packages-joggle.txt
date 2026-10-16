@@ -1,0 +1,43 @@
+$ cd packages/joggle && node --conditions=development src/main.ts check --format json
+
+{
+  "diagnostics": [],
+  "summary": {
+    "files": 151,
+    "rules": 38,
+    "structure": {
+      "concepts": 554,
+      "declarations": 639,
+      "duplicated": 114,
+      "overloaded": 0
+    },
+    "problems": 0,
+    "errors": 0,
+    "warnings": 0,
+    "infos": 0,
+    "judged": 0,
+    "byMove": {
+      "contract": 0,
+      "combine": 0,
+      "expand": 0,
+      "correctness": 0
+    },
+    "skipped": [
+      {
+        "ruleId": "joggle/hoist-to-domain",
+        "reason": "joggle/Decision.systemOne: MissingKey: No API key provided. Set the appropriate environment variable. TYPESAFE_API_KEY is not set"
+      }
+    ],
+    "notes": [
+      {
+        "ruleId": "joggle/layer-direction",
+        "reason": "0 upward import(s) among 61 ranked file(s) in 5 declared layer(s); 90 file(s) in no layer"
+      },
+      {
+        "ruleId": "joggle/layer-purity",
+        "reason": "no layer declares a forbidden import, so there was nothing to check -- not the same as finding none"
+      },
+      {
+        "ruleId": "joggle/import-cycle",
+        "reason": "0 runtime cycle(s), 1 type-only, 3 partly erased, in 1051 import edge(s)"
+exit=

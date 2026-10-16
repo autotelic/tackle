@@ -1,0 +1,16 @@
+$ pnpm typecheck
+
+$ pnpm -r run typecheck
+Scope: 6 of 7 workspace projects
+packages/protocol typecheck$ tsgo --noEmit
+packages/plumb typecheck$ tsc --noEmit
+packages/protocol typecheck: Done
+packages/cutlist typecheck$ tsgo --noEmit
+packages/jig-cli typecheck$ tsgo --noEmit
+packages/cutlist typecheck: Done
+packages/jig-cli typecheck: Done
+packages/plumb typecheck: Done
+packages/joggle typecheck$ tsgo --noEmit
+packages/joggle typecheck: Done
+
+exit=0

@@ -1,0 +1,6 @@
+$ pnpm cutlist build --check --cwd examples/self
+
+$ node --conditions=development packages/cutlist/src/cli.ts build --check --cwd examples/self
+tools/ui-catalog/catalog.json is up to date (5aad97ef1237)
+
+exit=0

@@ -1,0 +1,16 @@
+$ doppler run -p joggle -c dev -- pnpm jig check
+
+$ node --conditions=development packages/jig-cli/src/cli.ts check
+0 error(s), 0 warning(s), 2 notice(s) in 2 file(s)
+
+engines
+  cutlist: 0 finding(s) — cutlist could not run: NotFound: ChildProcess.spawn (cutlist build --check)
+  plumb: 1 finding(s)
+  joggle: 1 finding(s)
+
+ratchet
+  joggle/joggle/unparsed-output: 1 new finding not in the baseline
+  plumb/plumb/unparsed-output: 1 new finding not in the baseline
+[ELIFECYCLE] Command failed with exit code 1.
+
+exit=0

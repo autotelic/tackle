@@ -1,0 +1,22 @@
+$ cd packages/joggle && pnpm check
+
+$ pnpm typecheck && pnpm test && pnpm lint
+$ tsgo --noEmit
+$ vitest run
+
+ RUN  v5.0.1 /Users/togmund/autotelic/tackle/packages/joggle
+
+
+ Test Files  68 passed (68)
+      Tests  282 passed (282)
+   Start at  16:45:58
+   Duration  7.12s (import 77%, tests 16%, transform 7%)
+
+    Isolate  68 workers spawned · ~106ms startup each (spawn + environment, per file)
+             at least ~694ms faster with isolate: false — reuses workers across files instead of one per file
+
+$ node scripts/lint-baseline.mjs
+
+0 findings, 0 new, 0 fixed since the baseline.
+
+exit=0

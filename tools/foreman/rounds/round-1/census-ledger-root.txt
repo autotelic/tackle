@@ -1,0 +1,72 @@
+$ pnpm jig check --format json
+
+$ node --conditions=development packages/jig-cli/src/cli.ts check --format json
+{
+  "lexicon": {
+    "name": "report",
+    "version": 1
+  },
+  "counts": {
+    "error": 0,
+    "warn": 0,
+    "info": 2
+  },
+  "files": 2,
+  "diagnostics": [
+    {
+      "engine": "joggle",
+      "ruleId": "joggle/unparsed-output",
+      "severity": "info",
+      "message": "jig could not parse joggle output (exit 1)",
+      "help": "readFileString: NotFound: FileSystem.readFile (/Users/togmund/autotelic/tackle/tsc app.ts util.ts)",
+      "location": {
+        "file": "joggle.config",
+        "line": 1,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb/unparsed-output",
+      "severity": "info",
+      "message": "jig could not parse plumb output (exit 1)",
+      "help": "Failed to build configuration from /Users/togmund/autotelic/tackle/examples/self/.oxlintrc.json.\n\n  x Failed to load JS plugin: @autotelic/plumb/ui\n  |   \"./ui\" is not exported under the conditions [\"module-sync\", \"node\", \"import\"] from package /Users/togmund/autotelic/tackle/node_modules/.pnpm/node_modules/@autotelic/plumb (see exports field in /Users/togmund/autotelic/tackle/node_modules/.pnpm/n",
+      "location": {
+        "file": "plumb.config",
+        "line": 1,
+        "column": 1
+      }
+    }
+  ],
+  "generators": [
+    {
+      "id": "cutlist",
+      "diagnostics": 0,
+      "error": 0,
+      "warn": 0,
+      "info": 0,
+      "durationMs": 3,
+      "note": "cutlist could not run: NotFound: ChildProcess.spawn (cutlist build --check)"
+    },
+    {
+      "id": "plumb",
+      "diagnostics": 1,
+      "error": 0,
+      "warn": 0,
+      "info": 1,
+      "durationMs": 168
+    },
+    {
+      "id": "joggle",
+      "diagnostics": 1,
+      "error": 0,
+      "warn": 0,
+      "info": 1,
+      "durationMs": 1202
+    }
+  ],
+  "elapsedMs": 1202
+}
+[ELIFECYCLE] Command failed with exit code 1.
+
+exit=0
