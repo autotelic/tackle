@@ -1,0 +1,9 @@
+$ pnpm jig engines --cwd examples/self
+
+$ node --conditions=development packages/jig-cli/src/cli.ts engines --cwd examples/self
+engine              kind            command        source
+plumb               oxlint-plugin   oxlint         PATH
+joggle              process         joggle         PATH
+cutlist             process         cutlist        project
+
+exit=0

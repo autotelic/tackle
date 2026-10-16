@@ -1,0 +1,5 @@
+$ pnpm jig baseline
+
+$ node --conditions=development packages/jig-cli/src/cli.ts baseline
+jig: accepted 149 finding(s) into .jig-baseline.json
+exit=0

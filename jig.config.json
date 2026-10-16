@@ -1,0 +1,29 @@
+{
+  "$schema": "https://autotelic.dev/tackle/protocol/jig.config.json",
+  "engines": [
+    {
+      "id": "cutlist",
+      "kind": "process",
+      "command": "cutlist",
+      "args": ["--cwd", "examples/self"]
+    },
+    {
+      "id": "plumb",
+      "kind": "oxlint-plugin",
+      "command": "oxlint",
+      "config": "oxlint.config.ts",
+      "args": [
+        "--ignore-pattern",
+        "examples/**",
+        "--ignore-pattern",
+        "packages/plumb/**",
+        "--ignore-pattern",
+        "packages/joggle/**"
+      ]
+    },
+    { "id": "joggle", "kind": "process", "command": "joggle", "config": "joggle.config.json" }
+  ],
+  "gate": { "mode": "all", "baseline": ".jig-baseline.json", "failOn": "any-new" },
+  "report": { "format": "text", "maxWarnings": -1 },
+  "agent": { "cookbook": "JIG.md" }
+}

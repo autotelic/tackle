@@ -1,0 +1,5118 @@
+$ pnpm jig check --format json
+
+$ node --conditions=development packages/jig-cli/src/cli.ts check --format json
+{
+  "lexicon": {
+    "name": "report",
+    "version": 1
+  },
+  "counts": {
+    "error": 0,
+    "warn": 461,
+    "info": 0
+  },
+  "files": 44,
+  "diagnostics": [
+    {
+      "engine": "plumb",
+      "ruleId": "no-unsafe-dictionary-type",
+      "severity": "warn",
+      "message": "This dictionary's unknown value type gives callers no concrete value contract. Use an owner/schema-derived value type; parse external payloads before insertion.",
+      "location": {
+        "file": "oxlint.config.ts",
+        "line": 31,
+        "column": 24
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unsafe-dictionary-type",
+      "severity": "warn",
+      "message": "This dictionary's unknown value type gives callers no concrete value contract. Use an owner/schema-derived value type; parse external payloads before insertion.",
+      "location": {
+        "file": "oxlint.config.ts",
+        "line": 31,
+        "column": 33
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "prefer-property-tests",
+      "severity": "warn",
+      "message": "No `fast-check` import: this suite only exercises hand-picked examples. Add property-based coverage (generate inputs, assert invariants), or disable this rule inline with a reason if the behavior is truly non-property-testable.",
+      "location": {
+        "file": "packages/cutlist/src/catalog.test.ts",
+        "line": 1,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-swappable-primitive-params",
+      "severity": "warn",
+      "message": "`resolveSpecifier` takes 2 adjacent `string` parameters, so a swapped call compiles. Brand each one (e.g. `type UserId = string & Brand.Brand<\"UserId\">`) so the compiler rejects transposed arguments.",
+      "location": {
+        "file": "packages/cutlist/src/catalog.ts",
+        "line": 63,
+        "column": 7
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `string | undefined`, conflating absence with a value. Return Option<string> and express absence as Option.none().",
+      "location": {
+        "file": "packages/cutlist/src/catalog.ts",
+        "line": 67,
+        "column": 4
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-stray-inline-comments",
+      "severity": "warn",
+      "message": "Stray inline comment inside a function body. Move the note into the enclosing declaration's JSDoc (as description prose or an annotated note) or delete it.",
+      "location": {
+        "file": "packages/cutlist/src/catalog.ts",
+        "line": 79,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-stray-inline-comments",
+      "severity": "warn",
+      "message": "Stray inline comment inside a function body. Move the note into the enclosing declaration's JSDoc (as description prose or an annotated note) or delete it.",
+      "location": {
+        "file": "packages/cutlist/src/catalog.ts",
+        "line": 80,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-stray-inline-comments",
+      "severity": "warn",
+      "message": "Stray inline comment inside a function body. Move the note into the enclosing declaration's JSDoc (as description prose or an annotated note) or delete it.",
+      "location": {
+        "file": "packages/cutlist/src/catalog.ts",
+        "line": 81,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-stray-inline-comments",
+      "severity": "warn",
+      "message": "Stray inline comment inside a function body. Move the note into the enclosing declaration's JSDoc (as description prose or an annotated note) or delete it.",
+      "location": {
+        "file": "packages/cutlist/src/catalog.ts",
+        "line": 82,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-sort-comparator",
+      "severity": "warn",
+      "message": "This sort has no comparator, so ordering defaults to string comparison and the canonical order is accidental. Pass an explicit comparator so the intended order is stated here.",
+      "location": {
+        "file": "packages/cutlist/src/catalog.ts",
+        "line": 111,
+        "column": 61
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-swappable-primitive-params",
+      "severity": "warn",
+      "message": "`isRouteModule` takes 2 adjacent `string` parameters, so a swapped call compiles. Brand each one (e.g. `type UserId = string & Brand.Brand<\"UserId\">`) so the compiler rejects transposed arguments.",
+      "location": {
+        "file": "packages/cutlist/src/catalog.ts",
+        "line": 115,
+        "column": 7
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-stray-inline-comments",
+      "severity": "warn",
+      "message": "Stray inline comment inside a function body. Move the note into the enclosing declaration's JSDoc (as description prose or an annotated note) or delete it.",
+      "location": {
+        "file": "packages/cutlist/src/catalog.ts",
+        "line": 131,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-stray-inline-comments",
+      "severity": "warn",
+      "message": "Stray inline comment inside a function body. Move the note into the enclosing declaration's JSDoc (as description prose or an annotated note) or delete it.",
+      "location": {
+        "file": "packages/cutlist/src/catalog.ts",
+        "line": 132,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-stray-inline-comments",
+      "severity": "warn",
+      "message": "Stray inline comment inside a function body. Move the note into the enclosing declaration's JSDoc (as description prose or an annotated note) or delete it.",
+      "location": {
+        "file": "packages/cutlist/src/catalog.ts",
+        "line": 190,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-stray-inline-comments",
+      "severity": "warn",
+      "message": "Stray inline comment inside a function body. Move the note into the enclosing declaration's JSDoc (as description prose or an annotated note) or delete it.",
+      "location": {
+        "file": "packages/cutlist/src/catalog.ts",
+        "line": 191,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-stray-inline-comments",
+      "severity": "warn",
+      "message": "Stray inline comment inside a function body. Move the note into the enclosing declaration's JSDoc (as description prose or an annotated note) or delete it.",
+      "location": {
+        "file": "packages/cutlist/src/catalog.ts",
+        "line": 192,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/no-try-catch",
+      "severity": "warn",
+      "message": "Raw `try`/`catch` detours this failure around the typed error channel. Use `Effect.try` (or `Effect.tryPromise`) failing a tagged reason, or let the error propagate. An integration boundary that must consume throwing APIs justifies itself with a `SAFETY:` comment.",
+      "location": {
+        "file": "packages/cutlist/src/check.ts",
+        "line": 31,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-reinterpret-cast",
+      "severity": "warn",
+      "message": "Type assertion discards type evidence. Narrow with discriminants/`in` checks or a type predicate instead.",
+      "location": {
+        "file": "packages/cutlist/src/check.ts",
+        "line": 32,
+        "column": 23
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-safety-comment-for-type-assertion",
+      "severity": "warn",
+      "message": "This type assertion has no `SAFETY:` justification. State the checked invariant immediately before the assertion or its containing statement.",
+      "location": {
+        "file": "packages/cutlist/src/check.ts",
+        "line": 32,
+        "column": 23
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-runtime-typeof",
+      "severity": "warn",
+      "message": "A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.",
+      "location": {
+        "file": "packages/cutlist/src/check.ts",
+        "line": 33,
+        "column": 19
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unsafe-dictionary-type",
+      "severity": "warn",
+      "message": "This dictionary's unknown value type gives callers no concrete value contract. Use an owner/schema-derived value type; parse external payloads before insertion.",
+      "location": {
+        "file": "packages/cutlist/src/crawl.ts",
+        "line": 29,
+        "column": 12
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/cutlist/src/crawl.ts",
+        "line": 31,
+        "column": 26
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `Ast | undefined`, conflating absence with a value. Return Option<Ast> and express absence as Option.none().",
+      "location": {
+        "file": "packages/cutlist/src/crawl.ts",
+        "line": 31,
+        "column": 36
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-runtime-typeof",
+      "severity": "warn",
+      "message": "A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.",
+      "location": {
+        "file": "packages/cutlist/src/crawl.ts",
+        "line": 32,
+        "column": 3
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-reinterpret-cast",
+      "severity": "warn",
+      "message": "Type assertion discards type evidence. Narrow with discriminants/`in` checks or a type predicate instead.",
+      "location": {
+        "file": "packages/cutlist/src/crawl.ts",
+        "line": 32,
+        "column": 75
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-safety-comment-for-type-assertion",
+      "severity": "warn",
+      "message": "This type assertion has no `SAFETY:` justification. State the checked invariant immediately before the assertion or its containing statement.",
+      "location": {
+        "file": "packages/cutlist/src/crawl.ts",
+        "line": 32,
+        "column": 75
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/cutlist/src/crawl.ts",
+        "line": 34,
+        "column": 25
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/cutlist/src/crawl.ts",
+        "line": 36,
+        "column": 29
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `string | undefined`, conflating absence with a value. Return Option<string> and express absence as Option.none().",
+      "location": {
+        "file": "packages/cutlist/src/crawl.ts",
+        "line": 36,
+        "column": 52
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-runtime-typeof",
+      "severity": "warn",
+      "message": "A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.",
+      "location": {
+        "file": "packages/cutlist/src/crawl.ts",
+        "line": 38,
+        "column": 10
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/cutlist/src/crawl.ts",
+        "line": 41,
+        "column": 24
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `string | undefined`, conflating absence with a value. Return Option<string> and express absence as Option.none().",
+      "location": {
+        "file": "packages/cutlist/src/crawl.ts",
+        "line": 41,
+        "column": 34
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `root` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/cutlist/src/crawl.ts",
+        "line": 44,
+        "column": 21
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/cutlist/src/crawl.ts",
+        "line": 46,
+        "column": 24
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-runtime-typeof",
+      "severity": "warn",
+      "message": "A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.",
+      "location": {
+        "file": "packages/cutlist/src/crawl.ts",
+        "line": 54,
+        "column": 9
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/cutlist/src/crawl.ts",
+        "line": 64,
+        "column": 27
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `string | undefined`, conflating absence with a value. Return Option<string> and express absence as Option.none().",
+      "location": {
+        "file": "packages/cutlist/src/crawl.ts",
+        "line": 64,
+        "column": 37
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/cutlist/src/crawl.ts",
+        "line": 76,
+        "column": 30
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `string | undefined`, conflating absence with a value. Return Option<string> and express absence as Option.none().",
+      "location": {
+        "file": "packages/cutlist/src/crawl.ts",
+        "line": 76,
+        "column": 40
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/cutlist/src/crawl.ts",
+        "line": 83,
+        "column": 37
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-sort-comparator",
+      "severity": "warn",
+      "message": "This sort has no comparator, so ordering defaults to string comparison and the canonical order is accidental. Pass an explicit comparator so the intended order is stated here.",
+      "location": {
+        "file": "packages/cutlist/src/crawl.ts",
+        "line": 129,
+        "column": 10
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-sort-comparator",
+      "severity": "warn",
+      "message": "This sort has no comparator, so ordering defaults to string comparison and the canonical order is accidental. Pass an explicit comparator so the intended order is stated here.",
+      "location": {
+        "file": "packages/cutlist/src/crawl.ts",
+        "line": 152,
+        "column": 10
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-swappable-primitive-params",
+      "severity": "warn",
+      "message": "`parseModule` takes 2 adjacent `string` parameters, so a swapped call compiles. Brand each one (e.g. `type UserId = string & Brand.Brand<\"UserId\">`) so the compiler rejects transposed arguments.",
+      "location": {
+        "file": "packages/cutlist/src/crawl.ts",
+        "line": 160,
+        "column": 14
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-sort-comparator",
+      "severity": "warn",
+      "message": "This sort has no comparator, so ordering defaults to string comparison and the canonical order is accidental. Pass an explicit comparator so the intended order is stated here.",
+      "location": {
+        "file": "packages/cutlist/src/crawl.ts",
+        "line": 177,
+        "column": 14
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-stray-inline-comments",
+      "severity": "warn",
+      "message": "Stray inline comment inside a function body. Move the note into the enclosing declaration's JSDoc (as description prose or an annotated note) or delete it.",
+      "location": {
+        "file": "packages/cutlist/src/crawl.ts",
+        "line": 180,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-stray-inline-comments",
+      "severity": "warn",
+      "message": "Stray inline comment inside a function body. Move the note into the enclosing declaration's JSDoc (as description prose or an annotated note) or delete it.",
+      "location": {
+        "file": "packages/cutlist/src/crawl.ts",
+        "line": 181,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-stray-inline-comments",
+      "severity": "warn",
+      "message": "Stray inline comment inside a function body. Move the note into the enclosing declaration's JSDoc (as description prose or an annotated note) or delete it.",
+      "location": {
+        "file": "packages/cutlist/src/crawl.ts",
+        "line": 182,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-sort-comparator",
+      "severity": "warn",
+      "message": "This sort has no comparator, so ordering defaults to string comparison and the canonical order is accidental. Pass an explicit comparator so the intended order is stated here.",
+      "location": {
+        "file": "packages/cutlist/src/crawl.ts",
+        "line": 190,
+        "column": 11
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-sort-comparator",
+      "severity": "warn",
+      "message": "This sort has no comparator, so ordering defaults to string comparison and the canonical order is accidental. Pass an explicit comparator so the intended order is stated here.",
+      "location": {
+        "file": "packages/cutlist/src/crawl.ts",
+        "line": 191,
+        "column": 12
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-reinterpret-cast",
+      "severity": "warn",
+      "message": "`<arrow>` exists only to perform a type assertion: a laundering wrapper that hides the cast from review and tooling.",
+      "location": {
+        "file": "packages/cutlist/src/crawl.ts",
+        "line": 215,
+        "column": 9
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-reinterpret-cast",
+      "severity": "warn",
+      "message": "Type assertion discards type evidence. Narrow with discriminants/`in` checks or a type predicate instead.",
+      "location": {
+        "file": "packages/cutlist/src/crawl.ts",
+        "line": 215,
+        "column": 15
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-safety-comment-for-type-assertion",
+      "severity": "warn",
+      "message": "This type assertion has no `SAFETY:` justification. State the checked invariant immediately before the assertion or its containing statement.",
+      "location": {
+        "file": "packages/cutlist/src/crawl.ts",
+        "line": 215,
+        "column": 15
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-sort-comparator",
+      "severity": "warn",
+      "message": "This sort has no comparator, so ordering defaults to string comparison and the canonical order is accidental. Pass an explicit comparator so the intended order is stated here.",
+      "location": {
+        "file": "packages/cutlist/src/crawl.ts",
+        "line": 223,
+        "column": 12
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-barrel-export-star",
+      "severity": "warn",
+      "message": "`export * from './config.ts'` erases the names it forwards; readers resolving a symbol through this barrel must grep inside the package instead. Re-export the explicit names.",
+      "location": {
+        "file": "packages/cutlist/src/index.ts",
+        "line": 7,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-barrel-export-star",
+      "severity": "warn",
+      "message": "`export * from './crawl.ts'` erases the names it forwards; readers resolving a symbol through this barrel must grep inside the package instead. Re-export the explicit names.",
+      "location": {
+        "file": "packages/cutlist/src/index.ts",
+        "line": 8,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-barrel-export-star",
+      "severity": "warn",
+      "message": "`export * from './paths.ts'` erases the names it forwards; readers resolving a symbol through this barrel must grep inside the package instead. Re-export the explicit names.",
+      "location": {
+        "file": "packages/cutlist/src/index.ts",
+        "line": 9,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-barrel-export-star",
+      "severity": "warn",
+      "message": "`export * from './owners.ts'` erases the names it forwards; readers resolving a symbol through this barrel must grep inside the package instead. Re-export the explicit names.",
+      "location": {
+        "file": "packages/cutlist/src/index.ts",
+        "line": 10,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-barrel-export-star",
+      "severity": "warn",
+      "message": "`export * from './tier.ts'` erases the names it forwards; readers resolving a symbol through this barrel must grep inside the package instead. Re-export the explicit names.",
+      "location": {
+        "file": "packages/cutlist/src/index.ts",
+        "line": 11,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-barrel-export-star",
+      "severity": "warn",
+      "message": "`export * from './signature.ts'` erases the names it forwards; readers resolving a symbol through this barrel must grep inside the package instead. Re-export the explicit names.",
+      "location": {
+        "file": "packages/cutlist/src/index.ts",
+        "line": 12,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-barrel-export-star",
+      "severity": "warn",
+      "message": "`export * from './tokens.ts'` erases the names it forwards; readers resolving a symbol through this barrel must grep inside the package instead. Re-export the explicit names.",
+      "location": {
+        "file": "packages/cutlist/src/index.ts",
+        "line": 13,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-barrel-export-star",
+      "severity": "warn",
+      "message": "`export * from './catalog.ts'` erases the names it forwards; readers resolving a symbol through this barrel must grep inside the package instead. Re-export the explicit names.",
+      "location": {
+        "file": "packages/cutlist/src/index.ts",
+        "line": 14,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-barrel-export-star",
+      "severity": "warn",
+      "message": "`export * from './check.ts'` erases the names it forwards; readers resolving a symbol through this barrel must grep inside the package instead. Re-export the explicit names.",
+      "location": {
+        "file": "packages/cutlist/src/index.ts",
+        "line": 15,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `string | undefined`, conflating absence with a value. Return Option<string> and express absence as Option.none().",
+      "location": {
+        "file": "packages/cutlist/src/owners.ts",
+        "line": 25,
+        "column": 69
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-stray-inline-comments",
+      "severity": "warn",
+      "message": "Stray inline comment inside a function body. Move the note into the enclosing declaration's JSDoc (as description prose or an annotated note) or delete it.",
+      "location": {
+        "file": "packages/cutlist/src/owners.ts",
+        "line": 33,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-sort-comparator",
+      "severity": "warn",
+      "message": "This sort has no comparator, so ordering defaults to string comparison and the canonical order is accidental. Pass an explicit comparator so the intended order is stated here.",
+      "location": {
+        "file": "packages/cutlist/src/owners.ts",
+        "line": 49,
+        "column": 10
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-swappable-primitive-params",
+      "severity": "warn",
+      "message": "`relativeToRoot` takes 2 adjacent `string` parameters, so a swapped call compiles. Brand each one (e.g. `type UserId = string & Brand.Brand<\"UserId\">`) so the compiler rejects transposed arguments.",
+      "location": {
+        "file": "packages/cutlist/src/paths.ts",
+        "line": 28,
+        "column": 14
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-sort-comparator",
+      "severity": "warn",
+      "message": "This sort has no comparator, so ordering defaults to string comparison and the canonical order is accidental. Pass an explicit comparator so the intended order is stated here.",
+      "location": {
+        "file": "packages/cutlist/src/render/hooks.ts",
+        "line": 17,
+        "column": 22
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-jsdoc-on-exported",
+      "severity": "warn",
+      "message": "Exported function `renderManifest` has no JSDoc block. Document the contract with @param/@returns so the jsdoc rules can enforce it.",
+      "location": {
+        "file": "packages/cutlist/src/render/manifest.ts",
+        "line": 8,
+        "column": 14
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-deprecated-tag-for-legacy-comments",
+      "severity": "warn",
+      "message": "Comment says this code is deprecated/legacy but carries no @deprecated tag; prose warnings are invisible to tooling. Add `@deprecated` (with a pointer to the replacement) so agents and editors see it.",
+      "location": {
+        "file": "packages/cutlist/src/render/menu.ts",
+        "line": 1,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-shape-in-symbol-names",
+      "severity": "warn",
+      "message": "Rename symbol \"shape\" for its domain role; \"shape\" describes structure rather than ownership.",
+      "location": {
+        "file": "packages/cutlist/src/render/tokens.ts",
+        "line": 9,
+        "column": 30
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-sort-comparator",
+      "severity": "warn",
+      "message": "This sort has no comparator, so ordering defaults to string comparison and the canonical order is accidental. Pass an explicit comparator so the intended order is stated here.",
+      "location": {
+        "file": "packages/cutlist/src/signature.ts",
+        "line": 38,
+        "column": 10
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/prefer-effect-predicate-over-boolean-function",
+      "severity": "warn",
+      "message": "Export this predicate as P.Predicate<ReadonlyArray<string>> so it composes with P.and/or/mapInput, Array.filter, and Option refinement.",
+      "location": {
+        "file": "packages/cutlist/src/tier.ts",
+        "line": 38,
+        "column": 58
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-swappable-primitive-params",
+      "severity": "warn",
+      "message": "`keysInBlock` takes 2 adjacent `string` parameters, so a swapped call compiles. Brand each one (e.g. `type UserId = string & Brand.Brand<\"UserId\">`) so the compiler rejects transposed arguments.",
+      "location": {
+        "file": "packages/cutlist/src/tokens.ts",
+        "line": 23,
+        "column": 7
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-shape-in-symbol-names",
+      "severity": "warn",
+      "message": "Rename symbol \"shape\" for its domain role; \"shape\" describes structure rather than ownership.",
+      "location": {
+        "file": "packages/cutlist/src/tokens.ts",
+        "line": 68,
+        "column": 11
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-exported-mutable-state",
+      "severity": "warn",
+      "message": "`CSS_VARIABLE` lives at module scope, so this mutation is invisible shared state across every caller: the blessed-surface-area problem. Make it local, or hold it in explicit state/service passed by parameter.",
+      "location": {
+        "file": "packages/cutlist/src/tokens.ts",
+        "line": 77,
+        "column": 7
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-sort-comparator",
+      "severity": "warn",
+      "message": "This sort has no comparator, so ordering defaults to string comparison and the canonical order is accidental. Pass an explicit comparator so the intended order is stated here.",
+      "location": {
+        "file": "packages/cutlist/src/tokens.ts",
+        "line": 84,
+        "column": 22
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-shape-in-symbol-names",
+      "severity": "warn",
+      "message": "Rename symbol \"shape\" for its domain role; \"shape\" describes structure rather than ownership.",
+      "location": {
+        "file": "packages/cutlist/src/tokens.ts",
+        "line": 84,
+        "column": 48
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-shape-in-symbol-names",
+      "severity": "warn",
+      "message": "Rename symbol \"shape\" for its domain role; \"shape\" describes structure rather than ownership.",
+      "location": {
+        "file": "packages/cutlist/src/tokens.ts",
+        "line": 84,
+        "column": 48
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `string | undefined`, conflating absence with a value. Return Option<string> and express absence as Option.none().",
+      "location": {
+        "file": "packages/jig-cli/extensions/jig.ts",
+        "line": 26,
+        "column": 32
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-known-value-widening",
+      "severity": "warn",
+      "message": "The explicit anonymous object type on return value of `cli` discards known type evidence. Keep inference, validate with `satisfies`, or use a named owner contract.",
+      "location": {
+        "file": "packages/jig-cli/extensions/jig.ts",
+        "line": 42,
+        "column": 57
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-known-value-widening",
+      "severity": "warn",
+      "message": "The explicit anonymous object type on return value of `cli` discards known type evidence. Keep inference, validate with `satisfies`, or use a named owner contract.",
+      "location": {
+        "file": "packages/jig-cli/extensions/jig.ts",
+        "line": 44,
+        "column": 36
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-known-value-widening",
+      "severity": "warn",
+      "message": "The explicit anonymous object type on return value of `cli` discards known type evidence. Keep inference, validate with `satisfies`, or use a named owner contract.",
+      "location": {
+        "file": "packages/jig-cli/extensions/jig.ts",
+        "line": 46,
+        "column": 33
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-known-value-widening",
+      "severity": "warn",
+      "message": "The explicit anonymous object type on return value of `cli` discards known type evidence. Keep inference, validate with `satisfies`, or use a named owner contract.",
+      "location": {
+        "file": "packages/jig-cli/extensions/jig.ts",
+        "line": 47,
+        "column": 10
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/jig-cli/extensions/jig.ts",
+        "line": 68,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `JsonReport | undefined`, conflating absence with a value. Return Option<JsonReport> and express absence as Option.none().",
+      "location": {
+        "file": "packages/jig-cli/extensions/jig.ts",
+        "line": 92,
+        "column": 33
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/no-try-catch",
+      "severity": "warn",
+      "message": "Raw `try`/`catch` detours this failure around the typed error channel. Use `Effect.try` (or `Effect.tryPromise`) failing a tagged reason, or let the error propagate. An integration boundary that must consume throwing APIs justifies itself with a `SAFETY:` comment.",
+      "location": {
+        "file": "packages/jig-cli/extensions/jig.ts",
+        "line": 93,
+        "column": 3
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-reinterpret-cast",
+      "severity": "warn",
+      "message": "Type assertion discards type evidence. Narrow with discriminants/`in` checks or a type predicate instead.",
+      "location": {
+        "file": "packages/jig-cli/extensions/jig.ts",
+        "line": 94,
+        "column": 19
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-safety-comment-for-type-assertion",
+      "severity": "warn",
+      "message": "This type assertion has no `SAFETY:` justification. State the checked invariant immediately before the assertion or its containing statement.",
+      "location": {
+        "file": "packages/jig-cli/extensions/jig.ts",
+        "line": 94,
+        "column": 19
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-runtime-typeof",
+      "severity": "warn",
+      "message": "A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.",
+      "location": {
+        "file": "packages/jig-cli/extensions/jig.ts",
+        "line": 95,
+        "column": 9
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-reinterpret-cast",
+      "severity": "warn",
+      "message": "Type assertion discards type evidence. Narrow with discriminants/`in` checks or a type predicate instead.",
+      "location": {
+        "file": "packages/jig-cli/extensions/jig.ts",
+        "line": 96,
+        "column": 14
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-safety-comment-for-type-assertion",
+      "severity": "warn",
+      "message": "This type assertion has no `SAFETY:` justification. State the checked invariant immediately before the assertion or its containing statement.",
+      "location": {
+        "file": "packages/jig-cli/extensions/jig.ts",
+        "line": 96,
+        "column": 14
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-stray-inline-comments",
+      "severity": "warn",
+      "message": "Stray inline comment inside a function body. Move the note into the enclosing declaration's JSDoc (as description prose or an annotated note) or delete it.",
+      "location": {
+        "file": "packages/jig-cli/extensions/jig.ts",
+        "line": 126,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unsafe-dictionary-type",
+      "severity": "warn",
+      "message": "This dictionary's unknown value type gives callers no concrete value contract. Use an owner/schema-derived value type; parse external payloads before insertion.",
+      "location": {
+        "file": "packages/jig-cli/extensions/jig.ts",
+        "line": 137,
+        "column": 21
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unsafe-dictionary-type",
+      "severity": "warn",
+      "message": "This dictionary's unknown value type gives callers no concrete value contract. Use an owner/schema-derived value type; parse external payloads before insertion.",
+      "location": {
+        "file": "packages/jig-cli/extensions/jig.ts",
+        "line": 141,
+        "column": 36
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unsafe-dictionary-type",
+      "severity": "warn",
+      "message": "This dictionary's unknown value type gives callers no concrete value contract. Use an owner/schema-derived value type; parse external payloads before insertion.",
+      "location": {
+        "file": "packages/jig-cli/extensions/jig.ts",
+        "line": 146,
+        "column": 40
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `error` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/jig-cli/extensions/jig.ts",
+        "line": 152,
+        "column": 24
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `_onUpdate` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/jig-cli/extensions/jig.ts",
+        "line": 190,
+        "column": 18
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/no-try-catch",
+      "severity": "warn",
+      "message": "Raw `try`/`catch` detours this failure around the typed error channel. Use `Effect.try` (or `Effect.tryPromise`) failing a tagged reason, or let the error propagate. An integration boundary that must consume throwing APIs justifies itself with a `SAFETY:` comment.",
+      "location": {
+        "file": "packages/jig-cli/extensions/jig.ts",
+        "line": 193,
+        "column": 7
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/no-nullish-default-on-partial-input",
+      "severity": "warn",
+      "message": "`?? 50` on `params.limit` conflates 'absent' with '50' in partial updates and re-invent's Effect's Schema. Use `Schema.optional` / `Schema.nullable` to distinguish absent from falsy with full type safety.",
+      "location": {
+        "file": "packages/jig-cli/extensions/jig.ts",
+        "line": 203,
+        "column": 34
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `_onUpdate` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/jig-cli/extensions/jig.ts",
+        "line": 230,
+        "column": 18
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/no-try-catch",
+      "severity": "warn",
+      "message": "Raw `try`/`catch` detours this failure around the typed error channel. Use `Effect.try` (or `Effect.tryPromise`) failing a tagged reason, or let the error propagate. An integration boundary that must consume throwing APIs justifies itself with a `SAFETY:` comment.",
+      "location": {
+        "file": "packages/jig-cli/extensions/jig.ts",
+        "line": 233,
+        "column": 7
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/no-try-catch",
+      "severity": "warn",
+      "message": "Raw `try`/`catch` detours this failure around the typed error channel. Use `Effect.try` (or `Effect.tryPromise`) failing a tagged reason, or let the error propagate. An integration boundary that must consume throwing APIs justifies itself with a `SAFETY:` comment.",
+      "location": {
+        "file": "packages/jig-cli/extensions/jig.ts",
+        "line": 255,
+        "column": 7
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-returns",
+      "severity": "warn",
+      "message": "This function exposes `unknown` to its caller. Parse the value at its boundary and return a named domain type.",
+      "location": {
+        "file": "packages/jig-cli/src/baseline.ts",
+        "line": 18,
+        "column": 34
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/no-try-catch",
+      "severity": "warn",
+      "message": "Raw `try`/`catch` detours this failure around the typed error channel. Use `Effect.try` (or `Effect.tryPromise`) failing a tagged reason, or let the error propagate. An integration boundary that must consume throwing APIs justifies itself with a `SAFETY:` comment.",
+      "location": {
+        "file": "packages/jig-cli/src/baseline.ts",
+        "line": 19,
+        "column": 3
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-reinterpret-cast",
+      "severity": "warn",
+      "message": "Type assertion discards type evidence. Narrow with discriminants/`in` checks or a type predicate instead.",
+      "location": {
+        "file": "packages/jig-cli/src/baseline.ts",
+        "line": 20,
+        "column": 12
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-safety-comment-for-type-assertion",
+      "severity": "warn",
+      "message": "This type assertion has no `SAFETY:` justification. State the checked invariant immediately before the assertion or its containing statement.",
+      "location": {
+        "file": "packages/jig-cli/src/baseline.ts",
+        "line": 20,
+        "column": 12
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-stray-inline-comments",
+      "severity": "warn",
+      "message": "Stray inline comment inside a function body. Move the note into the enclosing declaration's JSDoc (as description prose or an annotated note) or delete it.",
+      "location": {
+        "file": "packages/jig-cli/src/cli.ts",
+        "line": 102,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-stray-inline-comments",
+      "severity": "warn",
+      "message": "Stray inline comment inside a function body. Move the note into the enclosing declaration's JSDoc (as description prose or an annotated note) or delete it.",
+      "location": {
+        "file": "packages/jig-cli/src/cli.ts",
+        "line": 103,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "prefer-property-tests",
+      "severity": "warn",
+      "message": "No `fast-check` import: this suite only exercises hand-picked examples. Add property-based coverage (generate inputs, assert invariants), or disable this rule inline with a reason if the behavior is truly non-property-testable.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.test.ts",
+        "line": 1,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-known-value-widening",
+      "severity": "warn",
+      "message": "The explicit open dictionary type on binding `DEFAULT_ARGS` discards known type evidence. Keep inference, validate with `satisfies`, or use a named owner contract.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 34,
+        "column": 71
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-swappable-primitive-params",
+      "severity": "warn",
+      "message": "`resolveEngineCommand` takes 2 adjacent `string` parameters, so a swapped call compiles. Brand each one (e.g. `type UserId = string & Brand.Brand<\"UserId\">`) so the compiler rejects transposed arguments.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 55,
+        "column": 14
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 60,
+        "column": 24
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unsafe-dictionary-type",
+      "severity": "warn",
+      "message": "This dictionary's unknown value type gives callers no concrete value contract. Use an owner/schema-derived value type; parse external payloads before insertion.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 60,
+        "column": 34
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `Record<string, unknown> | undefined`, conflating absence with a value. Return Option<Record<string, unknown>> and express absence as Option.none().",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 60,
+        "column": 34
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-runtime-typeof",
+      "severity": "warn",
+      "message": "A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 61,
+        "column": 3
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-reinterpret-cast",
+      "severity": "warn",
+      "message": "Type assertion discards type evidence. Narrow with discriminants/`in` checks or a type predicate instead.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 62,
+        "column": 8
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-safety-comment-for-type-assertion",
+      "severity": "warn",
+      "message": "This type assertion has no `SAFETY:` justification. State the checked invariant immediately before the assertion or its containing statement.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 62,
+        "column": 8
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unsafe-dictionary-type",
+      "severity": "warn",
+      "message": "This dictionary's unknown value type gives callers no concrete value contract. Use an owner/schema-derived value type; parse external payloads before insertion.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 62,
+        "column": 17
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 65,
+        "column": 26
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `string | undefined`, conflating absence with a value. Return Option<string> and express absence as Option.none().",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 65,
+        "column": 36
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-runtime-typeof",
+      "severity": "warn",
+      "message": "A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 66,
+        "column": 3
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 68,
+        "column": 26
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-runtime-typeof",
+      "severity": "warn",
+      "message": "A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 69,
+        "column": 3
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 72,
+        "column": 28
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-swappable-primitive-params",
+      "severity": "warn",
+      "message": "`ruleIdOf` takes 2 adjacent `string` parameters, so a swapped call compiles. Brand each one (e.g. `type UserId = string & Brand.Brand<\"UserId\">`) so the compiler rejects transposed arguments.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 88,
+        "column": 7
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 106,
+        "column": 31
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 117,
+        "column": 37
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-swappable-primitive-params",
+      "severity": "warn",
+      "message": "`relativeTo` takes 2 adjacent `string` parameters, so a swapped call compiles. Brand each one (e.g. `type UserId = string & Brand.Brand<\"UserId\">`) so the compiler rejects transposed arguments.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 124,
+        "column": 7
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unsafe-dictionary-type",
+      "severity": "warn",
+      "message": "This dictionary's unknown value type gives callers no concrete value contract. Use an owner/schema-derived value type; parse external payloads before insertion.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 128,
+        "column": 28
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-swappable-primitive-params",
+      "severity": "warn",
+      "message": "`normalize` takes 2 adjacent `string` parameters, so a swapped call compiles. Brand each one (e.g. `type UserId = string & Brand.Brand<\"UserId\">`) so the compiler rejects transposed arguments.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 147,
+        "column": 14
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `raw` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 147,
+        "column": 32
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `Diagnostic | undefined`, conflating absence with a value. Return Option<Diagnostic> and express absence as Option.none().",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 147,
+        "column": 72
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 163,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 164,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 165,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 166,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-runtime-typeof",
+      "severity": "warn",
+      "message": "A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 166,
+        "column": 9
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 167,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-runtime-typeof",
+      "severity": "warn",
+      "message": "A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 167,
+        "column": 9
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 173,
+        "column": 32
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `ReadonlyArray<Record<string, unknown>> | undefined`, conflating absence with a value. Return Option<ReadonlyArray<Record<string, unknown>>> and express absence as Option.none().",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 173,
+        "column": 42
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unsafe-dictionary-type",
+      "severity": "warn",
+      "message": "This dictionary's unknown value type gives callers no concrete value contract. Use an owner/schema-derived value type; parse external payloads before insertion.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 173,
+        "column": 56
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unsafe-dictionary-type",
+      "severity": "warn",
+      "message": "This dictionary's unknown value type gives callers no concrete value contract. Use an owner/schema-derived value type; parse external payloads before insertion.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 175,
+        "column": 20
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unsafe-dictionary-type",
+      "severity": "warn",
+      "message": "This dictionary's unknown value type gives callers no concrete value contract. Use an owner/schema-derived value type; parse external payloads before insertion.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 187,
+        "column": 11
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `SourceLocation | undefined`, conflating absence with a value. Return Option<SourceLocation> and express absence as Option.none().",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 189,
+        "column": 4
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-runtime-typeof",
+      "severity": "warn",
+      "message": "A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 199,
+        "column": 19
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-runtime-typeof",
+      "severity": "warn",
+      "message": "A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 200,
+        "column": 21
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 205,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 206,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-swappable-primitive-params",
+      "severity": "warn",
+      "message": "`parseSarif` takes 2 adjacent `string` parameters, so a swapped call compiles. Brand each one (e.g. `type UserId = string & Brand.Brand<\"UserId\">`) so the compiler rejects transposed arguments.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 210,
+        "column": 7
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unsafe-dictionary-type",
+      "severity": "warn",
+      "message": "This dictionary's unknown value type gives callers no concrete value contract. Use an owner/schema-derived value type; parse external payloads before insertion.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 211,
+        "column": 8
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `ReadonlyArray<Diagnostic> | undefined`, conflating absence with a value. Return Option<ReadonlyArray<Diagnostic>> and express absence as Option.none().",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 214,
+        "column": 4
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-swappable-primitive-params",
+      "severity": "warn",
+      "message": "`parseCodeClimate` takes 2 adjacent `string` parameters, so a swapped call compiles. Brand each one (e.g. `type UserId = string & Brand.Brand<\"UserId\">`) so the compiler rejects transposed arguments.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 240,
+        "column": 7
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `doc` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 241,
+        "column": 8
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `ReadonlyArray<Diagnostic> | undefined`, conflating absence with a value. Return Option<ReadonlyArray<Diagnostic>> and express absence as Option.none().",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 244,
+        "column": 4
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-runtime-typeof",
+      "severity": "warn",
+      "message": "A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 256,
+        "column": 17
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 263,
+        "column": 7
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 268,
+        "column": 9
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-swappable-primitive-params",
+      "severity": "warn",
+      "message": "`stripGithubPrefix` takes 2 adjacent `string` parameters, so a swapped call compiles. Brand each one (e.g. `type UserId = string & Brand.Brand<\"UserId\">`) so the compiler rejects transposed arguments.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 280,
+        "column": 7
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-swappable-primitive-params",
+      "severity": "warn",
+      "message": "`parseGithub` takes 3 adjacent `string` parameters, so a swapped call compiles. Brand each one (e.g. `type UserId = string & Brand.Brand<\"UserId\">`) so the compiler rejects transposed arguments.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 285,
+        "column": 7
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `ReadonlyArray<Diagnostic> | undefined`, conflating absence with a value. Return Option<ReadonlyArray<Diagnostic>> and express absence as Option.none().",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 289,
+        "column": 4
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 323,
+        "column": 9
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 324,
+        "column": 9
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-swappable-primitive-params",
+      "severity": "warn",
+      "message": "`parseEngineOutput` takes 3 adjacent `string` parameters, so a swapped call compiles. Brand each one (e.g. `type UserId = string & Brand.Brand<\"UserId\">`) so the compiler rejects transposed arguments.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 348,
+        "column": 14
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `ReadonlyArray<Diagnostic> | undefined`, conflating absence with a value. Return Option<ReadonlyArray<Diagnostic>> and express absence as Option.none().",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 352,
+        "column": 4
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/no-try-catch",
+      "severity": "warn",
+      "message": "Raw `try`/`catch` detours this failure around the typed error channel. Use `Effect.try` (or `Effect.tryPromise`) failing a tagged reason, or let the error propagate. An integration boundary that must consume throwing APIs justifies itself with a `SAFETY:` comment.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 359,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-stray-inline-comments",
+      "severity": "warn",
+      "message": "Stray inline comment inside a function body. Move the note into the enclosing declaration's JSDoc (as description prose or an annotated note) or delete it.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 363,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/no-try-catch",
+      "severity": "warn",
+      "message": "Raw `try`/`catch` detours this failure around the typed error channel. Use `Effect.try` (or `Effect.tryPromise`) failing a tagged reason, or let the error propagate. An integration boundary that must consume throwing APIs justifies itself with a `SAFETY:` comment.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 368,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-stray-inline-comments",
+      "severity": "warn",
+      "message": "Stray inline comment inside a function body. Move the note into the enclosing declaration's JSDoc (as description prose or an annotated note) or delete it.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 378,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/no-try-catch",
+      "severity": "warn",
+      "message": "Raw `try`/`catch` detours this failure around the typed error channel. Use `Effect.try` (or `Effect.tryPromise`) failing a tagged reason, or let the error propagate. An integration boundary that must consume throwing APIs justifies itself with a `SAFETY:` comment.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 389,
+        "column": 7
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-swappable-primitive-params",
+      "severity": "warn",
+      "message": "`cutlistDiagnostics` takes 2 adjacent `string` parameters, so a swapped call compiles. Brand each one (e.g. `type UserId = string & Brand.Brand<\"UserId\">`) so the compiler rejects transposed arguments.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 402,
+        "column": 7
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-swappable-primitive-params",
+      "severity": "warn",
+      "message": "`unparsed` takes 2 adjacent `string` parameters, so a swapped call compiles. Brand each one (e.g. `type UserId = string & Brand.Brand<\"UserId\">`) so the compiler rejects transposed arguments.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 422,
+        "column": 7
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-stray-inline-comments",
+      "severity": "warn",
+      "message": "Stray inline comment inside a function body. Move the note into the enclosing declaration's JSDoc (as description prose or an annotated note) or delete it.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 429,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-stray-inline-comments",
+      "severity": "warn",
+      "message": "Stray inline comment inside a function body. Move the note into the enclosing declaration's JSDoc (as description prose or an annotated note) or delete it.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 430,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 441,
+        "column": 7
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-swappable-primitive-params",
+      "severity": "warn",
+      "message": "`engineDiagnostics` takes 3 adjacent `string` parameters, so a swapped call compiles. Brand each one (e.g. `type UserId = string & Brand.Brand<\"UserId\">`) so the compiler rejects transposed arguments.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 458,
+        "column": 14
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-optional-function-parameters",
+      "severity": "warn",
+      "message": "Optional parameters hide `undefined` from callers. Annotate the parameter as `T | undefined` so the possibility is spelled out in the type.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 475,
+        "column": 3
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 485,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-nondeterministic-core",
+      "severity": "warn",
+      "message": "`Date.now` makes this code's output depend on when/where it runs, breaking canonical form (identical inputs, identical outputs). Capture it at the boundary and pass it in as a parameter.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 495,
+        "column": 21
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-nondeterministic-core",
+      "severity": "warn",
+      "message": "`Date.now` makes this code's output depend on when/where it runs, breaking canonical form (identical inputs, identical outputs). Capture it at the boundary and pass it in as a parameter.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 504,
+        "column": 11
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-nondeterministic-core",
+      "severity": "warn",
+      "message": "`Date.now` makes this code's output depend on when/where it runs, breaking canonical form (identical inputs, identical outputs). Capture it at the boundary and pass it in as a parameter.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 523,
+        "column": 11
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-nondeterministic-core",
+      "severity": "warn",
+      "message": "`Date.now` makes this code's output depend on when/where it runs, breaking canonical form (identical inputs, identical outputs). Capture it at the boundary and pass it in as a parameter.",
+      "location": {
+        "file": "packages/jig-cli/src/engines.ts",
+        "line": 532,
+        "column": 54
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-barrel-export-star",
+      "severity": "warn",
+      "message": "`export * from './config.ts'` erases the names it forwards; readers resolving a symbol through this barrel must grep inside the package instead. Re-export the explicit names.",
+      "location": {
+        "file": "packages/jig-cli/src/index.ts",
+        "line": 5,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-barrel-export-star",
+      "severity": "warn",
+      "message": "`export * from './baseline.ts'` erases the names it forwards; readers resolving a symbol through this barrel must grep inside the package instead. Re-export the explicit names.",
+      "location": {
+        "file": "packages/jig-cli/src/index.ts",
+        "line": 6,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-barrel-export-star",
+      "severity": "warn",
+      "message": "`export * from './exec.ts'` erases the names it forwards; readers resolving a symbol through this barrel must grep inside the package instead. Re-export the explicit names.",
+      "location": {
+        "file": "packages/jig-cli/src/index.ts",
+        "line": 7,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-barrel-export-star",
+      "severity": "warn",
+      "message": "`export * from './engines.ts'` erases the names it forwards; readers resolving a symbol through this barrel must grep inside the package instead. Re-export the explicit names.",
+      "location": {
+        "file": "packages/jig-cli/src/index.ts",
+        "line": 8,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-barrel-export-star",
+      "severity": "warn",
+      "message": "`export * from './run.ts'` erases the names it forwards; readers resolving a symbol through this barrel must grep inside the package instead. Re-export the explicit names.",
+      "location": {
+        "file": "packages/jig-cli/src/index.ts",
+        "line": 9,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-barrel-export-star",
+      "severity": "warn",
+      "message": "`export * from './render.ts'` erases the names it forwards; readers resolving a symbol through this barrel must grep inside the package instead. Re-export the explicit names.",
+      "location": {
+        "file": "packages/jig-cli/src/index.ts",
+        "line": 10,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-known-value-widening",
+      "severity": "warn",
+      "message": "The explicit anonymous object type on return value of `invoke` discards known type evidence. Keep inference, validate with `satisfies`, or use a named owner contract.",
+      "location": {
+        "file": "packages/jig-cli/src/opencode.ts",
+        "line": 37,
+        "column": 57
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-known-value-widening",
+      "severity": "warn",
+      "message": "The explicit anonymous object type on return value of `invoke` discards known type evidence. Keep inference, validate with `satisfies`, or use a named owner contract.",
+      "location": {
+        "file": "packages/jig-cli/src/opencode.ts",
+        "line": 38,
+        "column": 29
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-known-value-widening",
+      "severity": "warn",
+      "message": "The explicit anonymous object type on return value of `invoke` discards known type evidence. Keep inference, validate with `satisfies`, or use a named owner contract.",
+      "location": {
+        "file": "packages/jig-cli/src/opencode.ts",
+        "line": 39,
+        "column": 10
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/no-try-catch",
+      "severity": "warn",
+      "message": "Raw `try`/`catch` detours this failure around the typed error channel. Use `Effect.try` (or `Effect.tryPromise`) failing a tagged reason, or let the error propagate. An integration boundary that must consume throwing APIs justifies itself with a `SAFETY:` comment.",
+      "location": {
+        "file": "packages/jig-cli/src/opencode.ts",
+        "line": 54,
+        "column": 3
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/jig-cli/src/opencode.ts",
+        "line": 58,
+        "column": 7
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-stray-inline-comments",
+      "severity": "warn",
+      "message": "Stray inline comment inside a function body. Move the note into the enclosing declaration's JSDoc (as description prose or an annotated note) or delete it.",
+      "location": {
+        "file": "packages/jig-cli/src/opencode.ts",
+        "line": 62,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-stray-inline-comments",
+      "severity": "warn",
+      "message": "Stray inline comment inside a function body. Move the note into the enclosing declaration's JSDoc (as description prose or an annotated note) or delete it.",
+      "location": {
+        "file": "packages/jig-cli/src/opencode.ts",
+        "line": 63,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-reinterpret-cast",
+      "severity": "warn",
+      "message": "Type assertion discards type evidence. Narrow with discriminants/`in` checks or a type predicate instead.",
+      "location": {
+        "file": "packages/jig-cli/src/opencode.ts",
+        "line": 64,
+        "column": 20
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-safety-comment-for-type-assertion",
+      "severity": "warn",
+      "message": "This type assertion has no `SAFETY:` justification. State the checked invariant immediately before the assertion or its containing statement.",
+      "location": {
+        "file": "packages/jig-cli/src/opencode.ts",
+        "line": 64,
+        "column": 20
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-runtime-typeof",
+      "severity": "warn",
+      "message": "A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.",
+      "location": {
+        "file": "packages/jig-cli/src/opencode.ts",
+        "line": 71,
+        "column": 13
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/jig-cli/src/opencode.ts",
+        "line": 76,
+        "column": 30
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-runtime-typeof",
+      "severity": "warn",
+      "message": "A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.",
+      "location": {
+        "file": "packages/jig-cli/src/opencode.ts",
+        "line": 77,
+        "column": 3
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-reinterpret-cast",
+      "severity": "warn",
+      "message": "Type assertion discards type evidence. Narrow with discriminants/`in` checks or a type predicate instead.",
+      "location": {
+        "file": "packages/jig-cli/src/opencode.ts",
+        "line": 115,
+        "column": 27
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-safety-comment-for-type-assertion",
+      "severity": "warn",
+      "message": "This type assertion has no `SAFETY:` justification. State the checked invariant immediately before the assertion or its containing statement.",
+      "location": {
+        "file": "packages/jig-cli/src/opencode.ts",
+        "line": 115,
+        "column": 27
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-runtime-typeof",
+      "severity": "warn",
+      "message": "A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.",
+      "location": {
+        "file": "packages/jig-cli/src/opencode.ts",
+        "line": 117,
+        "column": 26
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-reinterpret-cast",
+      "severity": "warn",
+      "message": "Type assertion discards type evidence. Narrow with discriminants/`in` checks or a type predicate instead.",
+      "location": {
+        "file": "packages/jig-cli/src/opencode.ts",
+        "line": 146,
+        "column": 27
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-safety-comment-for-type-assertion",
+      "severity": "warn",
+      "message": "This type assertion has no `SAFETY:` justification. State the checked invariant immediately before the assertion or its containing statement.",
+      "location": {
+        "file": "packages/jig-cli/src/opencode.ts",
+        "line": 146,
+        "column": 27
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-stray-inline-comments",
+      "severity": "warn",
+      "message": "Stray inline comment inside a function body. Move the note into the enclosing declaration's JSDoc (as description prose or an annotated note) or delete it.",
+      "location": {
+        "file": "packages/jig-cli/src/opencode.ts",
+        "line": 163,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-stray-inline-comments",
+      "severity": "warn",
+      "message": "Stray inline comment inside a function body. Move the note into the enclosing declaration's JSDoc (as description prose or an annotated note) or delete it.",
+      "location": {
+        "file": "packages/jig-cli/src/opencode.ts",
+        "line": 164,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-stray-inline-comments",
+      "severity": "warn",
+      "message": "Stray inline comment inside a function body. Move the note into the enclosing declaration's JSDoc (as description prose or an annotated note) or delete it.",
+      "location": {
+        "file": "packages/jig-cli/src/opencode.ts",
+        "line": 165,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-stray-inline-comments",
+      "severity": "warn",
+      "message": "Stray inline comment inside a function body. Move the note into the enclosing declaration's JSDoc (as description prose or an annotated note) or delete it.",
+      "location": {
+        "file": "packages/jig-cli/src/opencode.ts",
+        "line": 166,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-stray-inline-comments",
+      "severity": "warn",
+      "message": "Stray inline comment inside a function body. Move the note into the enclosing declaration's JSDoc (as description prose or an annotated note) or delete it.",
+      "location": {
+        "file": "packages/jig-cli/src/opencode.ts",
+        "line": 167,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-stray-inline-comments",
+      "severity": "warn",
+      "message": "Stray inline comment inside a function body. Move the note into the enclosing declaration's JSDoc (as description prose or an annotated note) or delete it.",
+      "location": {
+        "file": "packages/jig-cli/src/opencode.ts",
+        "line": 168,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/jig-cli/src/opencode.ts",
+        "line": 173,
+        "column": 13
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/jig-cli/src/opencode.ts",
+        "line": 178,
+        "column": 21
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/jig-cli/src/opencode.ts",
+        "line": 179,
+        "column": 21
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/jig-cli/src/opencode.ts",
+        "line": 180,
+        "column": 21
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/jig-cli/src/opencode.ts",
+        "line": 183,
+        "column": 13
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/jig-cli/src/opencode.ts",
+        "line": 188,
+        "column": 21
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/jig-cli/src/opencode.ts",
+        "line": 191,
+        "column": 13
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/jig-cli/src/opencode.ts",
+        "line": 196,
+        "column": 21
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "prefer-property-tests",
+      "severity": "warn",
+      "message": "No `fast-check` import: this suite only exercises hand-picked examples. Add property-based coverage (generate inputs, assert invariants), or disable this rule inline with a reason if the behavior is truly non-property-testable.",
+      "location": {
+        "file": "packages/jig-cli/src/oxlint-conformance.test.ts",
+        "line": 1,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-sort-comparator",
+      "severity": "warn",
+      "message": "This sort has no comparator, so ordering defaults to string comparison and the canonical order is accidental. Pass an explicit comparator so the intended order is stated here.",
+      "location": {
+        "file": "packages/jig-cli/src/oxlint-conformance.test.ts",
+        "line": 43,
+        "column": 12
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/prefer-effect-match",
+      "severity": "warn",
+      "message": "This ternary chain re-implements pattern matching over literal comparisons. Use `Match.value` (or `Match.discriminate`) from `effect/Match` so exhaustiveness is checked by the compiler.",
+      "location": {
+        "file": "packages/jig-cli/src/render.ts",
+        "line": 32,
+        "column": 3
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-nondeterministic-core",
+      "severity": "warn",
+      "message": "`Date.now` makes this code's output depend on when/where it runs, breaking canonical form (identical inputs, identical outputs). Capture it at the boundary and pass it in as a parameter.",
+      "location": {
+        "file": "packages/jig-cli/src/run.ts",
+        "line": 35,
+        "column": 21
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-nondeterministic-core",
+      "severity": "warn",
+      "message": "`Date.now` makes this code's output depend on when/where it runs, breaking canonical form (identical inputs, identical outputs). Capture it at the boundary and pass it in as a parameter.",
+      "location": {
+        "file": "packages/jig-cli/src/run.ts",
+        "line": 42,
+        "column": 18
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-sort-comparator",
+      "severity": "warn",
+      "message": "This sort has no comparator, so ordering defaults to string comparison and the canonical order is accidental. Pass an explicit comparator so the intended order is stated here.",
+      "location": {
+        "file": "packages/protocol/scripts/lexicon-compat.mjs",
+        "line": 29,
+        "column": 20
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/no-try-catch",
+      "severity": "warn",
+      "message": "Raw `try`/`catch` detours this failure around the typed error channel. Use `Effect.try` (or `Effect.tryPromise`) failing a tagged reason, or let the error propagate. An integration boundary that must consume throwing APIs justifies itself with a `SAFETY:` comment.",
+      "location": {
+        "file": "packages/protocol/scripts/lexicon-compat.mjs",
+        "line": 34,
+        "column": 3
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-exported-mutable-state",
+      "severity": "warn",
+      "message": "`skipped` lives at module scope, so this mutation is invisible shared state across every caller: the blessed-surface-area problem. Make it local, or hold it in explicit state/service passed by parameter.",
+      "location": {
+        "file": "packages/protocol/scripts/lexicon-compat.mjs",
+        "line": 37,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-exported-mutable-state",
+      "severity": "warn",
+      "message": "`checked` lives at module scope, so this mutation is invisible shared state across every caller: the blessed-surface-area problem. Make it local, or hold it in explicit state/service passed by parameter.",
+      "location": {
+        "file": "packages/protocol/scripts/lexicon-compat.mjs",
+        "line": 42,
+        "column": 3
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-exported-mutable-state",
+      "severity": "warn",
+      "message": "`failures` lives at module scope, so this mutation is invisible shared state across every caller: the blessed-surface-area problem. Make it local, or hold it in explicit state/service passed by parameter.",
+      "location": {
+        "file": "packages/protocol/scripts/lexicon-compat.mjs",
+        "line": 44,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/no-try-catch",
+      "severity": "warn",
+      "message": "Raw `try`/`catch` detours this failure around the typed error channel. Use `Effect.try` (or `Effect.tryPromise`) failing a tagged reason, or let the error propagate. An integration boundary that must consume throwing APIs justifies itself with a `SAFETY:` comment.",
+      "location": {
+        "file": "packages/protocol/scripts/read-report.mjs",
+        "line": 21,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "prefer-property-tests",
+      "severity": "warn",
+      "message": "No `fast-check` import: this suite only exercises hand-picked examples. Add property-based coverage (generate inputs, assert invariants), or disable this rule inline with a reason if the behavior is truly non-property-testable.",
+      "location": {
+        "file": "packages/protocol/src/baseline.test.ts",
+        "line": 1,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-sort-comparator",
+      "severity": "warn",
+      "message": "This sort has no comparator, so ordering defaults to string comparison and the canonical order is accidental. Pass an explicit comparator so the intended order is stated here.",
+      "location": {
+        "file": "packages/protocol/src/baseline.ts",
+        "line": 33,
+        "column": 15
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/baseline.ts",
+        "line": 43,
+        "column": 39
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `Baseline | undefined`, conflating absence with a value. Return Option<Baseline> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/baseline.ts",
+        "line": 43,
+        "column": 49
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-sort-comparator",
+      "severity": "warn",
+      "message": "This sort has no comparator, so ordering defaults to string comparison and the canonical order is accidental. Pass an explicit comparator so the intended order is stated here.",
+      "location": {
+        "file": "packages/protocol/src/baseline.ts",
+        "line": 48,
+        "column": 33
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-shape-in-symbol-names",
+      "severity": "warn",
+      "message": "Rename symbol \"shape\" for its domain role; \"shape\" describes structure rather than ownership.",
+      "location": {
+        "file": "packages/protocol/src/catalog.ts",
+        "line": 52,
+        "column": 12
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `DuplicateCandidate | null`, conflating absence with a value. Return Option<DuplicateCandidate> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/catalog.ts",
+        "line": 140,
+        "column": 4
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-shape-in-symbol-names",
+      "severity": "warn",
+      "message": "Rename symbol \"shape\" for its domain role; \"shape\" describes structure rather than ownership.",
+      "location": {
+        "file": "packages/protocol/src/catalog.ts",
+        "line": 159,
+        "column": 35
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/catalog.ts",
+        "line": 180,
+        "column": 29
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `Tiers | undefined`, conflating absence with a value. Return Option<Tiers> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/catalog.ts",
+        "line": 180,
+        "column": 39
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/catalog.ts",
+        "line": 190,
+        "column": 47
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `CatalogComponent | undefined`, conflating absence with a value. Return Option<CatalogComponent> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/catalog.ts",
+        "line": 190,
+        "column": 57
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/catalog.ts",
+        "line": 216,
+        "column": 40
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `DuplicateCandidate | undefined`, conflating absence with a value. Return Option<DuplicateCandidate> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/catalog.ts",
+        "line": 216,
+        "column": 50
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/catalog.ts",
+        "line": 228,
+        "column": 30
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `CatalogTokens | undefined`, conflating absence with a value. Return Option<CatalogTokens> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/catalog.ts",
+        "line": 228,
+        "column": 40
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-shape-in-symbol-names",
+      "severity": "warn",
+      "message": "Rename symbol \"shape\" for its domain role; \"shape\" describes structure rather than ownership.",
+      "location": {
+        "file": "packages/protocol/src/catalog.ts",
+        "line": 232,
+        "column": 9
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-shape-in-symbol-names",
+      "severity": "warn",
+      "message": "Rename symbol \"shape\" for its domain role; \"shape\" describes structure rather than ownership.",
+      "location": {
+        "file": "packages/protocol/src/catalog.ts",
+        "line": 232,
+        "column": 31
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-shape-in-symbol-names",
+      "severity": "warn",
+      "message": "Rename symbol \"shape\" for its domain role; \"shape\" describes structure rather than ownership.",
+      "location": {
+        "file": "packages/protocol/src/catalog.ts",
+        "line": 234,
+        "column": 53
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-shape-in-symbol-names",
+      "severity": "warn",
+      "message": "Rename symbol \"shape\" for its domain role; \"shape\" describes structure rather than ownership.",
+      "location": {
+        "file": "packages/protocol/src/catalog.ts",
+        "line": 237,
+        "column": 26
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-shape-in-symbol-names",
+      "severity": "warn",
+      "message": "Rename symbol \"shape\" for its domain role; \"shape\" describes structure rather than ownership.",
+      "location": {
+        "file": "packages/protocol/src/catalog.ts",
+        "line": 237,
+        "column": 26
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/catalog.ts",
+        "line": 241,
+        "column": 38
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `Catalog | undefined`, conflating absence with a value. Return Option<Catalog> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/catalog.ts",
+        "line": 241,
+        "column": 48
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/catalog.ts",
+        "line": 282,
+        "column": 48
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `ManifestComponent | undefined`, conflating absence with a value. Return Option<ManifestComponent> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/catalog.ts",
+        "line": 282,
+        "column": 58
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/catalog.ts",
+        "line": 308,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/catalog.ts",
+        "line": 322,
+        "column": 39
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-stray-inline-comments",
+      "severity": "warn",
+      "message": "Stray inline comment inside a function body. Move the note into the enclosing declaration's JSDoc (as description prose or an annotated note) or delete it.",
+      "location": {
+        "file": "packages/protocol/src/catalog.ts",
+        "line": 324,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-stray-inline-comments",
+      "severity": "warn",
+      "message": "Stray inline comment inside a function body. Move the note into the enclosing declaration's JSDoc (as description prose or an annotated note) or delete it.",
+      "location": {
+        "file": "packages/protocol/src/catalog.ts",
+        "line": 325,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "prefer-property-tests",
+      "severity": "warn",
+      "message": "No `fast-check` import: this suite only exercises hand-picked examples. Add property-based coverage (generate inputs, assert invariants), or disable this rule inline with a reason if the behavior is truly non-property-testable.",
+      "location": {
+        "file": "packages/protocol/src/compat.test.ts",
+        "line": 1,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-reinterpret-cast",
+      "severity": "warn",
+      "message": "Type assertion discards type evidence. Narrow with discriminants/`in` checks or a type predicate instead.",
+      "location": {
+        "file": "packages/protocol/src/compat.test.ts",
+        "line": 86,
+        "column": 21
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-safety-comment-for-type-assertion",
+      "severity": "warn",
+      "message": "This type assertion has no `SAFETY:` justification. State the checked invariant immediately before the assertion or its containing statement.",
+      "location": {
+        "file": "packages/protocol/src/compat.test.ts",
+        "line": 86,
+        "column": 21
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unsafe-dictionary-type",
+      "severity": "warn",
+      "message": "This dictionary's unknown value type gives callers no concrete value contract. Use an owner/schema-derived value type; parse external payloads before insertion.",
+      "location": {
+        "file": "packages/protocol/src/compat.ts",
+        "line": 20,
+        "column": 29
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-returns",
+      "severity": "warn",
+      "message": "This function exposes `unknown` to its caller. Parse the value at its boundary and return a named domain type.",
+      "location": {
+        "file": "packages/protocol/src/compat.ts",
+        "line": 20,
+        "column": 68
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unsafe-dictionary-type",
+      "severity": "warn",
+      "message": "This dictionary's unknown value type gives callers no concrete value contract. Use an owner/schema-derived value type; parse external payloads before insertion.",
+      "location": {
+        "file": "packages/protocol/src/compat.ts",
+        "line": 22,
+        "column": 31
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unsafe-dictionary-type",
+      "severity": "warn",
+      "message": "This dictionary's unknown value type gives callers no concrete value contract. Use an owner/schema-derived value type; parse external payloads before insertion.",
+      "location": {
+        "file": "packages/protocol/src/compat.ts",
+        "line": 22,
+        "column": 57
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unsafe-dictionary-type",
+      "severity": "warn",
+      "message": "This dictionary's unknown value type gives callers no concrete value contract. Use an owner/schema-derived value type; parse external payloads before insertion.",
+      "location": {
+        "file": "packages/protocol/src/compat.ts",
+        "line": 27,
+        "column": 29
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-runtime-typeof",
+      "severity": "warn",
+      "message": "A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.",
+      "location": {
+        "file": "packages/protocol/src/compat.ts",
+        "line": 30,
+        "column": 62
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unsafe-dictionary-type",
+      "severity": "warn",
+      "message": "This dictionary's unknown value type gives callers no concrete value contract. Use an owner/schema-derived value type; parse external payloads before insertion.",
+      "location": {
+        "file": "packages/protocol/src/compat.ts",
+        "line": 33,
+        "column": 25
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `ReadonlyArray<unknown> | undefined`, conflating absence with a value. Return Option<ReadonlyArray<unknown>> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/compat.ts",
+        "line": 33,
+        "column": 51
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unsafe-dictionary-type",
+      "severity": "warn",
+      "message": "This dictionary's unknown value type gives callers no concrete value contract. Use an owner/schema-derived value type; parse external payloads before insertion.",
+      "location": {
+        "file": "packages/protocol/src/compat.ts",
+        "line": 38,
+        "column": 25
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `string | undefined`, conflating absence with a value. Return Option<string> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/compat.ts",
+        "line": 38,
+        "column": 51
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-runtime-typeof",
+      "severity": "warn",
+      "message": "A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.",
+      "location": {
+        "file": "packages/protocol/src/compat.ts",
+        "line": 39,
+        "column": 3
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unsafe-dictionary-type",
+      "severity": "warn",
+      "message": "This dictionary's unknown value type gives callers no concrete value contract. Use an owner/schema-derived value type; parse external payloads before insertion.",
+      "location": {
+        "file": "packages/protocol/src/compat.ts",
+        "line": 48,
+        "column": 27
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `number | undefined`, conflating absence with a value. Return Option<number> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/compat.ts",
+        "line": 48,
+        "column": 66
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-runtime-typeof",
+      "severity": "warn",
+      "message": "A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.",
+      "location": {
+        "file": "packages/protocol/src/compat.ts",
+        "line": 49,
+        "column": 3
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-reinterpret-cast",
+      "severity": "warn",
+      "message": "Type assertion discards type evidence. Narrow with discriminants/`in` checks or a type predicate instead.",
+      "location": {
+        "file": "packages/protocol/src/compat.ts",
+        "line": 49,
+        "column": 38
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-safety-comment-for-type-assertion",
+      "severity": "warn",
+      "message": "This type assertion has no `SAFETY:` justification. State the checked invariant immediately before the assertion or its containing statement.",
+      "location": {
+        "file": "packages/protocol/src/compat.ts",
+        "line": 49,
+        "column": 38
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `previous` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/compat.ts",
+        "line": 58,
+        "column": 13
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `next` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/compat.ts",
+        "line": 59,
+        "column": 9
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-stray-inline-comments",
+      "severity": "warn",
+      "message": "Stray inline comment inside a function body. Move the note into the enclosing declaration's JSDoc (as description prose or an annotated note) or delete it.",
+      "location": {
+        "file": "packages/protocol/src/compat.ts",
+        "line": 73,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-stray-inline-comments",
+      "severity": "warn",
+      "message": "Stray inline comment inside a function body. Move the note into the enclosing declaration's JSDoc (as description prose or an annotated note) or delete it.",
+      "location": {
+        "file": "packages/protocol/src/compat.ts",
+        "line": 74,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-stray-inline-comments",
+      "severity": "warn",
+      "message": "Stray inline comment inside a function body. Move the note into the enclosing declaration's JSDoc (as description prose or an annotated note) or delete it.",
+      "location": {
+        "file": "packages/protocol/src/compat.ts",
+        "line": 87,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 143,
+        "column": 29
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `Tiers | undefined`, conflating absence with a value. Return Option<Tiers> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 143,
+        "column": 39
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 152,
+        "column": 35
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `TokenSource | undefined`, conflating absence with a value. Return Option<TokenSource> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 152,
+        "column": 45
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 160,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 161,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 165,
+        "column": 33
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `Ownership | undefined`, conflating absence with a value. Return Option<Ownership> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 165,
+        "column": 43
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 173,
+        "column": 32
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `Patterns | undefined`, conflating absence with a value. Return Option<Patterns> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 173,
+        "column": 42
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 197,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 198,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 204,
+        "column": 10
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `Readonly<Record<string, ReadonlyArray<string>>> | undefined`, conflating absence with a value. Return Option<Readonly<Record<string, ReadonlyArray<string>>>> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 205,
+        "column": 4
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 217,
+        "column": 44
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `CutlistConfig | undefined`, conflating absence with a value. Return Option<CutlistConfig> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 217,
+        "column": 54
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 247,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 252,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 253,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 254,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 255,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 259,
+        "column": 30
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `CutlistOutput | undefined`, conflating absence with a value. Return Option<CutlistOutput> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 259,
+        "column": 40
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 271,
+        "column": 33
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `EngineRef | undefined`, conflating absence with a value. Return Option<EngineRef> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 271,
+        "column": 43
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-stray-inline-comments",
+      "severity": "warn",
+      "message": "Stray inline comment inside a function body. Move the note into the enclosing declaration's JSDoc (as description prose or an annotated note) or delete it.",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 278,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-stray-inline-comments",
+      "severity": "warn",
+      "message": "Stray inline comment inside a function body. Move the note into the enclosing declaration's JSDoc (as description prose or an annotated note) or delete it.",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 279,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 286,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 287,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 288,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 289,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 293,
+        "column": 28
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `Gate | undefined`, conflating absence with a value. Return Option<Gate> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 293,
+        "column": 38
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 299,
+        "column": 28
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 303,
+        "column": 44
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `HarnessConfig | undefined`, conflating absence with a value. Return Option<HarnessConfig> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 303,
+        "column": 54
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 314,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 317,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 318,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 323,
+        "column": 10
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `| { readonly format?: \"text\" | \"json\" | \"jsonl\" | \"github\"; readonly maxWarnings?: number }\n  | undefined`, conflating absence with a value. Return Option<{ readonly format?: \"text\" | \"json\" | \"jsonl\" | \"github\"; readonly maxWarnings?: number }> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 325,
+        "column": 3
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 333,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 334,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 339,
+        "column": 10
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `{ readonly cookbook?: string; readonly onboarding?: string } | undefined`, conflating absence with a value. Return Option<{ readonly cookbook?: string; readonly onboarding?: string }> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 340,
+        "column": 4
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 347,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/config.ts",
+        "line": 348,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "prefer-property-tests",
+      "severity": "warn",
+      "message": "No `fast-check` import: this suite only exercises hand-picked examples. Add property-based coverage (generate inputs, assert invariants), or disable this rule inline with a reason if the behavior is truly non-property-testable.",
+      "location": {
+        "file": "packages/protocol/src/conformance.test.ts",
+        "line": 1,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-reinterpret-cast",
+      "severity": "warn",
+      "message": "Type assertion discards type evidence. Narrow with discriminants/`in` checks or a type predicate instead.",
+      "location": {
+        "file": "packages/protocol/src/conformance.test.ts",
+        "line": 32,
+        "column": 22
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-safety-comment-for-type-assertion",
+      "severity": "warn",
+      "message": "This type assertion has no `SAFETY:` justification. State the checked invariant immediately before the assertion or its containing statement.",
+      "location": {
+        "file": "packages/protocol/src/conformance.test.ts",
+        "line": 32,
+        "column": 22
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unsafe-dictionary-type",
+      "severity": "warn",
+      "message": "This dictionary's unknown value type gives callers no concrete value contract. Use an owner/schema-derived value type; parse external payloads before insertion.",
+      "location": {
+        "file": "packages/protocol/src/conformance.test.ts",
+        "line": 32,
+        "column": 57
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-reinterpret-cast",
+      "severity": "warn",
+      "message": "Type assertion discards type evidence. Narrow with discriminants/`in` checks or a type predicate instead.",
+      "location": {
+        "file": "packages/protocol/src/conformance.test.ts",
+        "line": 39,
+        "column": 22
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-safety-comment-for-type-assertion",
+      "severity": "warn",
+      "message": "This type assertion has no `SAFETY:` justification. State the checked invariant immediately before the assertion or its containing statement.",
+      "location": {
+        "file": "packages/protocol/src/conformance.test.ts",
+        "line": 39,
+        "column": 22
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unsafe-dictionary-type",
+      "severity": "warn",
+      "message": "This dictionary's unknown value type gives callers no concrete value contract. Use an owner/schema-derived value type; parse external payloads before insertion.",
+      "location": {
+        "file": "packages/protocol/src/conformance.test.ts",
+        "line": 39,
+        "column": 52
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-reinterpret-cast",
+      "severity": "warn",
+      "message": "Type assertion discards type evidence. Narrow with discriminants/`in` checks or a type predicate instead.",
+      "location": {
+        "file": "packages/protocol/src/conformance.test.ts",
+        "line": 40,
+        "column": 19
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-safety-comment-for-type-assertion",
+      "severity": "warn",
+      "message": "This type assertion has no `SAFETY:` justification. State the checked invariant immediately before the assertion or its containing statement.",
+      "location": {
+        "file": "packages/protocol/src/conformance.test.ts",
+        "line": 40,
+        "column": 19
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-runtime-typeof",
+      "severity": "warn",
+      "message": "A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.",
+      "location": {
+        "file": "packages/protocol/src/conformance.test.ts",
+        "line": 47,
+        "column": 11
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-reinterpret-cast",
+      "severity": "warn",
+      "message": "Type assertion discards type evidence. Narrow with discriminants/`in` checks or a type predicate instead.",
+      "location": {
+        "file": "packages/protocol/src/conformance.test.ts",
+        "line": 92,
+        "column": 20
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-safety-comment-for-type-assertion",
+      "severity": "warn",
+      "message": "This type assertion has no `SAFETY:` justification. State the checked invariant immediately before the assertion or its containing statement.",
+      "location": {
+        "file": "packages/protocol/src/conformance.test.ts",
+        "line": 92,
+        "column": 20
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unsafe-dictionary-type",
+      "severity": "warn",
+      "message": "This dictionary's unknown value type gives callers no concrete value contract. Use an owner/schema-derived value type; parse external payloads before insertion.",
+      "location": {
+        "file": "packages/protocol/src/conformance.test.ts",
+        "line": 92,
+        "column": 50
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 17,
+        "column": 33
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unsafe-dictionary-type",
+      "severity": "warn",
+      "message": "This dictionary's unknown value type gives callers no concrete value contract. Use an owner/schema-derived value type; parse external payloads before insertion.",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 17,
+        "column": 52
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-runtime-typeof",
+      "severity": "warn",
+      "message": "A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 18,
+        "column": 3
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 21,
+        "column": 28
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `string | undefined`, conflating absence with a value. Return Option<string> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 21,
+        "column": 38
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-runtime-typeof",
+      "severity": "warn",
+      "message": "A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 22,
+        "column": 3
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 25,
+        "column": 28
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `number | undefined`, conflating absence with a value. Return Option<number> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 25,
+        "column": 38
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-runtime-typeof",
+      "severity": "warn",
+      "message": "A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 26,
+        "column": 3
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 29,
+        "column": 28
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `number | undefined`, conflating absence with a value. Return Option<number> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 29,
+        "column": 38
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-runtime-typeof",
+      "severity": "warn",
+      "message": "A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 30,
+        "column": 3
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 33,
+        "column": 29
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `boolean | undefined`, conflating absence with a value. Return Option<boolean> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 33,
+        "column": 39
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-runtime-typeof",
+      "severity": "warn",
+      "message": "A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 34,
+        "column": 3
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 38,
+        "column": 10
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `T | undefined`, conflating absence with a value. Return Option<T> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 40,
+        "column": 4
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-runtime-typeof",
+      "severity": "warn",
+      "message": "A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 41,
+        "column": 3
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-reinterpret-cast",
+      "severity": "warn",
+      "message": "Type assertion discards type evidence. Narrow with discriminants/`in` checks or a type predicate instead.",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 41,
+        "column": 33
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-safety-comment-for-type-assertion",
+      "severity": "warn",
+      "message": "This type assertion has no `SAFETY:` justification. State the checked invariant immediately before the assertion or its containing statement.",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 41,
+        "column": 33
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-reinterpret-cast",
+      "severity": "warn",
+      "message": "Type assertion discards type evidence. Narrow with discriminants/`in` checks or a type predicate instead.",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 42,
+        "column": 8
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-safety-comment-for-type-assertion",
+      "severity": "warn",
+      "message": "This type assertion has no `SAFETY:` justification. State the checked invariant immediately before the assertion or its containing statement.",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 42,
+        "column": 8
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 51,
+        "column": 10
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `element` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 52,
+        "column": 19
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `ReadonlyArray<T> | undefined`, conflating absence with a value. Return Option<ReadonlyArray<T>> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 53,
+        "column": 4
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 65,
+        "column": 32
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `ReadonlyArray<string> | undefined`, conflating absence with a value. Return Option<ReadonlyArray<string>> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 65,
+        "column": 42
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unsafe-dictionary-type",
+      "severity": "warn",
+      "message": "This dictionary's unknown value type gives callers no concrete value contract. Use an owner/schema-derived value type; parse external payloads before insertion.",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 77,
+        "column": 11
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `LexiconRef | undefined`, conflating absence with a value. Return Option<LexiconRef> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 79,
+        "column": 4
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-runtime-typeof",
+      "severity": "warn",
+      "message": "A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 82,
+        "column": 9
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-shape-in-symbol-names",
+      "severity": "warn",
+      "message": "Rename symbol \"shape\" for its domain role; \"shape\" describes structure rather than ownership.",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 83,
+        "column": 11
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-reinterpret-cast",
+      "severity": "warn",
+      "message": "Type assertion discards type evidence. Narrow with discriminants/`in` checks or a type predicate instead.",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 83,
+        "column": 19
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-safety-comment-for-type-assertion",
+      "severity": "warn",
+      "message": "This type assertion has no `SAFETY:` justification. State the checked invariant immediately before the assertion or its containing statement.",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 83,
+        "column": 19
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unsafe-dictionary-type",
+      "severity": "warn",
+      "message": "This dictionary's unknown value type gives callers no concrete value contract. Use an owner/schema-derived value type; parse external payloads before insertion.",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 83,
+        "column": 26
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-shape-in-symbol-names",
+      "severity": "warn",
+      "message": "Rename symbol \"shape\" for its domain role; \"shape\" describes structure rather than ownership.",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 84,
+        "column": 24
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-shape-in-symbol-names",
+      "severity": "warn",
+      "message": "Rename symbol \"shape\" for its domain role; \"shape\" describes structure rather than ownership.",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 84,
+        "column": 39
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-shape-in-symbol-names",
+      "severity": "warn",
+      "message": "Rename symbol \"shape\" for its domain role; \"shape\" describes structure rather than ownership.",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 85,
+        "column": 25
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-runtime-typeof",
+      "severity": "warn",
+      "message": "A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.",
+      "location": {
+        "file": "packages/protocol/src/decode.ts",
+        "line": 88,
+        "column": 7
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/doc.ts",
+        "line": 95,
+        "column": 40
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `MenuEntry | undefined`, conflating absence with a value. Return Option<MenuEntry> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/doc.ts",
+        "line": 95,
+        "column": 50
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/doc.ts",
+        "line": 111,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/doc.ts",
+        "line": 112,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/doc.ts",
+        "line": 117,
+        "column": 35
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `Menu | undefined`, conflating absence with a value. Return Option<Menu> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/doc.ts",
+        "line": 117,
+        "column": 45
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/doc.ts",
+        "line": 139,
+        "column": 41
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `Onboarding | undefined`, conflating absence with a value. Return Option<Onboarding> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/doc.ts",
+        "line": 139,
+        "column": 51
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-deprecated-tag-for-legacy-comments",
+      "severity": "warn",
+      "message": "Comment says this code is deprecated/legacy but carries no @deprecated tag; prose warnings are invisible to tooling. Add `@deprecated` (with a pointer to the replacement) so agents and editors see it.",
+      "location": {
+        "file": "packages/protocol/src/fixture-support.ts",
+        "line": 10,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-reinterpret-cast",
+      "severity": "warn",
+      "message": "`<arrow>` exists only to perform a type assertion: a laundering wrapper that hides the cast from review and tooling.",
+      "location": {
+        "file": "packages/protocol/src/fixture-support.ts",
+        "line": 26,
+        "column": 25
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-returns",
+      "severity": "warn",
+      "message": "This function exposes `unknown` to its caller. Parse the value at its boundary and return a named domain type.",
+      "location": {
+        "file": "packages/protocol/src/fixture-support.ts",
+        "line": 26,
+        "column": 45
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-reinterpret-cast",
+      "severity": "warn",
+      "message": "Type assertion discards type evidence. Narrow with discriminants/`in` checks or a type predicate instead.",
+      "location": {
+        "file": "packages/protocol/src/fixture-support.ts",
+        "line": 27,
+        "column": 3
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-safety-comment-for-type-assertion",
+      "severity": "warn",
+      "message": "This type assertion has no `SAFETY:` justification. State the checked invariant immediately before the assertion or its containing statement.",
+      "location": {
+        "file": "packages/protocol/src/fixture-support.ts",
+        "line": 27,
+        "column": 3
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/prefer-effect-predicate-over-boolean-function",
+      "severity": "warn",
+      "message": "Export this predicate as P.Predicate<string> so it composes with P.and/or/mapInput, Array.filter, and Option refinement.",
+      "location": {
+        "file": "packages/protocol/src/fixture-support.ts",
+        "line": 30,
+        "column": 50
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-reinterpret-cast",
+      "severity": "warn",
+      "message": "Type assertion discards type evidence. Narrow with discriminants/`in` checks or a type predicate instead.",
+      "location": {
+        "file": "packages/protocol/src/fixture-support.ts",
+        "line": 38,
+        "column": 15
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-safety-comment-for-type-assertion",
+      "severity": "warn",
+      "message": "This type assertion has no `SAFETY:` justification. State the checked invariant immediately before the assertion or its containing statement.",
+      "location": {
+        "file": "packages/protocol/src/fixture-support.ts",
+        "line": 38,
+        "column": 15
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/fixture-support.ts",
+        "line": 46,
+        "column": 61
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-returns",
+      "severity": "warn",
+      "message": "This function exposes `unknown` to its caller. Parse the value at its boundary and return a named domain type.",
+      "location": {
+        "file": "packages/protocol/src/fixture-support.ts",
+        "line": 46,
+        "column": 73
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-known-value-widening",
+      "severity": "warn",
+      "message": "The explicit open dictionary type on binding `DECODERS` discards known type evidence. Keep inference, validate with `satisfies`, or use a named owner contract.",
+      "location": {
+        "file": "packages/protocol/src/fixture-support.ts",
+        "line": 46,
+        "column": 85
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-barrel-export-star",
+      "severity": "warn",
+      "message": "`export * from './lexicon.ts'` erases the names it forwards; readers resolving a symbol through this barrel must grep inside the package instead. Re-export the explicit names.",
+      "location": {
+        "file": "packages/protocol/src/index.ts",
+        "line": 9,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-barrel-export-star",
+      "severity": "warn",
+      "message": "`export * from './decode.ts'` erases the names it forwards; readers resolving a symbol through this barrel must grep inside the package instead. Re-export the explicit names.",
+      "location": {
+        "file": "packages/protocol/src/index.ts",
+        "line": 10,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-barrel-export-star",
+      "severity": "warn",
+      "message": "`export * from './report.ts'` erases the names it forwards; readers resolving a symbol through this barrel must grep inside the package instead. Re-export the explicit names.",
+      "location": {
+        "file": "packages/protocol/src/index.ts",
+        "line": 11,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-barrel-export-star",
+      "severity": "warn",
+      "message": "`export * from './baseline.ts'` erases the names it forwards; readers resolving a symbol through this barrel must grep inside the package instead. Re-export the explicit names.",
+      "location": {
+        "file": "packages/protocol/src/index.ts",
+        "line": 12,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-barrel-export-star",
+      "severity": "warn",
+      "message": "`export * from './config.ts'` erases the names it forwards; readers resolving a symbol through this barrel must grep inside the package instead. Re-export the explicit names.",
+      "location": {
+        "file": "packages/protocol/src/index.ts",
+        "line": 13,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-barrel-export-star",
+      "severity": "warn",
+      "message": "`export * from './catalog.ts'` erases the names it forwards; readers resolving a symbol through this barrel must grep inside the package instead. Re-export the explicit names.",
+      "location": {
+        "file": "packages/protocol/src/index.ts",
+        "line": 14,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-barrel-export-star",
+      "severity": "warn",
+      "message": "`export * from './doc.ts'` erases the names it forwards; readers resolving a symbol through this barrel must grep inside the package instead. Re-export the explicit names.",
+      "location": {
+        "file": "packages/protocol/src/index.ts",
+        "line": 15,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-barrel-export-star",
+      "severity": "warn",
+      "message": "`export * from './compat.ts'` erases the names it forwards; readers resolving a symbol through this barrel must grep inside the package instead. Re-export the explicit names.",
+      "location": {
+        "file": "packages/protocol/src/index.ts",
+        "line": 16,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "prefer-property-tests",
+      "severity": "warn",
+      "message": "No `fast-check` import: this suite only exercises hand-picked examples. Add property-based coverage (generate inputs, assert invariants), or disable this rule inline with a reason if the behavior is truly non-property-testable.",
+      "location": {
+        "file": "packages/protocol/src/lexicon.test.ts",
+        "line": 1,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-known-value-widening",
+      "severity": "warn",
+      "message": "The explicit open dictionary type on binding `lexicons` discards known type evidence. Keep inference, validate with `satisfies`, or use a named owner contract.",
+      "location": {
+        "file": "packages/protocol/src/lexicon.ts",
+        "line": 75,
+        "column": 58
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-known-value-widening",
+      "severity": "warn",
+      "message": "The explicit open dictionary type on binding `LEXICONS` discards known type evidence. Keep inference, validate with `satisfies`, or use a named owner contract.",
+      "location": {
+        "file": "packages/protocol/src/lexicon.ts",
+        "line": 151,
+        "column": 65
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/lexicon.ts",
+        "line": 162,
+        "column": 38
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-runtime-typeof",
+      "severity": "warn",
+      "message": "A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.",
+      "location": {
+        "file": "packages/protocol/src/lexicon.ts",
+        "line": 163,
+        "column": 3
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/lexicon.ts",
+        "line": 170,
+        "column": 37
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-runtime-typeof",
+      "severity": "warn",
+      "message": "A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.",
+      "location": {
+        "file": "packages/protocol/src/lexicon.ts",
+        "line": 171,
+        "column": 7
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-reinterpret-cast",
+      "severity": "warn",
+      "message": "Type assertion discards type evidence. Narrow with discriminants/`in` checks or a type predicate instead.",
+      "location": {
+        "file": "packages/protocol/src/lexicon.ts",
+        "line": 172,
+        "column": 18
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-safety-comment-for-type-assertion",
+      "severity": "warn",
+      "message": "This type assertion has no `SAFETY:` justification. State the checked invariant immediately before the assertion or its containing statement.",
+      "location": {
+        "file": "packages/protocol/src/lexicon.ts",
+        "line": 172,
+        "column": 18
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unsafe-dictionary-type",
+      "severity": "warn",
+      "message": "This dictionary's unknown value type gives callers no concrete value contract. Use an owner/schema-derived value type; parse external payloads before insertion.",
+      "location": {
+        "file": "packages/protocol/src/lexicon.ts",
+        "line": 172,
+        "column": 27
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-runtime-typeof",
+      "severity": "warn",
+      "message": "A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.",
+      "location": {
+        "file": "packages/protocol/src/lexicon.ts",
+        "line": 176,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "prefer-property-tests",
+      "severity": "warn",
+      "message": "No `fast-check` import: this suite only exercises hand-picked examples. Add property-based coverage (generate inputs, assert invariants), or disable this rule inline with a reason if the behavior is truly non-property-testable.",
+      "location": {
+        "file": "packages/protocol/src/projections.test.ts",
+        "line": 1,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-returns",
+      "severity": "warn",
+      "message": "This function exposes `unknown` to its caller. Parse the value at its boundary and return a named domain type.",
+      "location": {
+        "file": "packages/protocol/src/projections.test.ts",
+        "line": 31,
+        "column": 64
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/projections.test.ts",
+        "line": 39,
+        "column": 7
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/projections.test.ts",
+        "line": 40,
+        "column": 7
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-known-value-widening",
+      "severity": "warn",
+      "message": "The explicit unknown type on return value of `toSarif` discards known type evidence. Keep inference, validate with `satisfies`, or use a named owner contract.",
+      "location": {
+        "file": "packages/protocol/src/projections.test.ts",
+        "line": 43,
+        "column": 10
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unsafe-dictionary-type",
+      "severity": "warn",
+      "message": "This dictionary's unknown value type gives callers no concrete value contract. Use an owner/schema-derived value type; parse external payloads before insertion.",
+      "location": {
+        "file": "packages/protocol/src/projections.test.ts",
+        "line": 58,
+        "column": 29
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/projections.test.ts",
+        "line": 65,
+        "column": 13
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/projections.test.ts",
+        "line": 66,
+        "column": 13
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/projections.test.ts",
+        "line": 84,
+        "column": 21
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/projections.test.ts",
+        "line": 87,
+        "column": 21
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-returns",
+      "severity": "warn",
+      "message": "This function exposes `unknown` to its caller. Parse the value at its boundary and return a named domain type.",
+      "location": {
+        "file": "packages/protocol/src/projections.test.ts",
+        "line": 101,
+        "column": 33
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/projections.test.ts",
+        "line": 113,
+        "column": 7
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-returns",
+      "severity": "warn",
+      "message": "This function exposes `unknown` to its caller. Parse the value at its boundary and return a named domain type.",
+      "location": {
+        "file": "packages/protocol/src/projections.test.ts",
+        "line": 119,
+        "column": 41
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/projections.test.ts",
+        "line": 129,
+        "column": 9
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "prefer-property-tests",
+      "severity": "warn",
+      "message": "No `fast-check` import: this suite only exercises hand-picked examples. Add property-based coverage (generate inputs, assert invariants), or disable this rule inline with a reason if the behavior is truly non-property-testable.",
+      "location": {
+        "file": "packages/protocol/src/readers.test.ts",
+        "line": 1,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "prefer-property-tests",
+      "severity": "warn",
+      "message": "No `fast-check` import: this suite only exercises hand-picked examples. Add property-based coverage (generate inputs, assert invariants), or disable this rule inline with a reason if the behavior is truly non-property-testable.",
+      "location": {
+        "file": "packages/protocol/src/report.test.ts",
+        "line": 1,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-known-value-widening",
+      "severity": "warn",
+      "message": "The explicit open dictionary type on binding `severityRank` discards known type evidence. Keep inference, validate with `satisfies`, or use a named owner contract.",
+      "location": {
+        "file": "packages/protocol/src/report.ts",
+        "line": 55,
+        "column": 65
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/report.ts",
+        "line": 130,
+        "column": 3
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-reinterpret-cast",
+      "severity": "warn",
+      "message": "`<arrow>` exists only to perform a type assertion: a laundering wrapper that hides the cast from review and tooling.",
+      "location": {
+        "file": "packages/protocol/src/report.ts",
+        "line": 161,
+        "column": 10
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-reinterpret-cast",
+      "severity": "warn",
+      "message": "Type assertion discards type evidence. Narrow with discriminants/`in` checks or a type predicate instead.",
+      "location": {
+        "file": "packages/protocol/src/report.ts",
+        "line": 161,
+        "column": 20
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "require-safety-comment-for-type-assertion",
+      "severity": "warn",
+      "message": "This type assertion has no `SAFETY:` justification. State the checked invariant immediately before the assertion or its containing statement.",
+      "location": {
+        "file": "packages/protocol/src/report.ts",
+        "line": 161,
+        "column": 20
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/report.ts",
+        "line": 176,
+        "column": 39
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `SourceLocation | undefined`, conflating absence with a value. Return Option<SourceLocation> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/report.ts",
+        "line": 176,
+        "column": 49
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/report.ts",
+        "line": 188,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/report.ts",
+        "line": 189,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/report.ts",
+        "line": 194,
+        "column": 41
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `Diagnostic | undefined`, conflating absence with a value. Return Option<Diagnostic> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/report.ts",
+        "line": 194,
+        "column": 51
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/report.ts",
+        "line": 222,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/report.ts",
+        "line": 223,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/report.ts",
+        "line": 224,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/report.ts",
+        "line": 225,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/report.ts",
+        "line": 226,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/report.ts",
+        "line": 227,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/report.ts",
+        "line": 232,
+        "column": 44
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `EngineSummary | undefined`, conflating absence with a value. Return Option<EngineSummary> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/report.ts",
+        "line": 232,
+        "column": 54
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/report.ts",
+        "line": 257,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/report.ts",
+        "line": 258,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/report.ts",
+        "line": 259,
+        "column": 5
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-unknown-parameters",
+      "severity": "warn",
+      "message": "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
+      "location": {
+        "file": "packages/protocol/src/report.ts",
+        "line": 274,
+        "column": 37
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "plumb-effect/guarded-op-must-return-option",
+      "severity": "warn",
+      "message": "This function returns `Report | undefined`, conflating absence with a value. Return Option<Report> and express absence as Option.none().",
+      "location": {
+        "file": "packages/protocol/src/report.ts",
+        "line": 274,
+        "column": 47
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-stray-inline-comments",
+      "severity": "warn",
+      "message": "Stray inline comment inside a function body. Move the note into the enclosing declaration's JSDoc (as description prose or an annotated note) or delete it.",
+      "location": {
+        "file": "packages/protocol/src/report.ts",
+        "line": 281,
+        "column": 1
+      }
+    },
+    {
+      "engine": "plumb",
+      "ruleId": "no-conditional-empty-object-spread",
+      "severity": "warn",
+      "message": "This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "location": {
+        "file": "packages/protocol/src/report.ts",
+        "line": 290,
+        "column": 5
+      }
+    }
+  ],
+  "generators": [
+    {
+      "id": "cutlist",
+      "diagnostics": 0,
+      "error": 0,
+      "warn": 0,
+      "info": 0,
+      "durationMs": 389
+    },
+    {
+      "id": "plumb",
+      "diagnostics": 461,
+      "error": 0,
+      "warn": 461,
+      "info": 0,
+      "durationMs": 316
+    },
+    {
+      "id": "joggle",
+      "diagnostics": 0,
+      "error": 0,
+      "warn": 0,
+      "info": 0,
+      "durationMs": 1335
+    }
+  ],
+  "elapsedMs": 1336
+}
+[ELIFECYCLE] Command failed with exit code 1.
+
+exit=0

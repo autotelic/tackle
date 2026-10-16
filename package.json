@@ -22,8 +22,12 @@
     "release": "pnpm build && changeset publish"
   },
   "devDependencies": {
+    "@autotelic/cutlist": "workspace:*",
+    "@autotelic/joggle": "workspace:*",
+    "@autotelic/plumb": "workspace:*",
     "@changesets/cli": "^2.29.0",
     "@effect/tsgo": "catalog:",
+    "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",

@@ -1,19 +1,45 @@
-import { defineConfig } from "oxlint"
+import { plumbEffectRecommendedRules, plumbRecommendedRules } from "@autotelic/plumb/configs"
 
 /*
- * The workspace's own lint config — empty of rules on purpose.
+ * The workspace's own lint config — where plumb runs on the code that ships plumb.
  *
- * plumb lands here (see MIGRATION.md item 6): `jsPlugins` gains `@autotelic/plumb` and
- * `rules` spreads `plumbRecommendedRules`. Until then this file exists so the wiring point
- * is in one place, and so the `config` field in `jig.config.json` resolves.
+ * plumb lands here (MIGRATION.md item 6, FOREMAN.md §11 Phase A): `jsPlugins` gains the
+ * `plumb` and `plumb-effect` plugins and `rules` spreads their recommended sets, so `jig`'s
+ * `plumb` engine runs real rules instead of bare oxlint wearing plumb's name.
  *
- * For whoever adds the first rule: `plumb` is in this workspace, but its rules are not wired
- * in here yet, and `pnpm lint` cannot reach three directories at once — `examples/self`, whose
- * `.oxlintrc.json` names `@autotelic/plumb/ui` (on the branch the move did not take) and the
- * external `@shadcn/lint`; and `packages/plumb` and `packages/joggle`, which each carry their
- * own config and may not nest under this one (`options.typeAware` is root-only). A root
- * config's `ignorePatterns` does NOT stop oxlint building a directory's config — the run fails
- * before a single file is read — and neither does `.oxlintignore`. Only the command line
- * works, so the exclusions live in `pnpm lint` and not here. All other forms were tried.
+ * The rules sit at `warn`, not the recommended `error`, for one round. A single error-enable
+ * puts ~450 findings across `protocol`, `cutlist`, and `jig-cli` behind a plain `pnpm lint`
+ * that has no baseline to ratchet against — the "error over a growing baseline" FOREMAN §5
+ * warns against. Phase B moves each rule to `error` under the ≤50-findings entry bar; until
+ * then `pnpm jig check` freezes the same findings in `.jig-baseline.json` by identity, so
+ * they are visible and cannot be re-reported.
+ *
+ * `plumb-react` is absent on purpose: nothing here renders.
+ *
+ * `plumb-effect/require-schema-type-derivation` is off, matching
+ * `packages/joggle/oxlint.config.ts`: it collects schema names and interfaces at Program:exit
+ * without reading the `extends` clause, so it reports every Schema-derived interface as
+ * hand-rolled, and its createOnce cross-file state makes the same tree report 33/39/40
+ * findings run to run. A rule that cannot hold a reproducible baseline cannot join a ratchet.
+ *
+ * The `ignorePatterns` mirror the flags `pnpm lint` and `jig`'s plumb engine pass on the
+ * command line. They are documentation here; the command line is what actually works —
+ * oxlint builds a directory's nested config before it applies any ignore.
  */
-export default defineConfig({})
+
+/** Every rule a recommended set ships, held at `warn` until Phase B ratchets it. */
+const atWarn = (rules: Readonly<Record<string, unknown>>): Record<string, "warn"> =>
+  Object.fromEntries(Object.keys(rules).map((rule) => [rule, "warn"]))
+
+export default {
+  ignorePatterns: ["node_modules", "examples/**", "packages/plumb/**", "packages/joggle/**"],
+  jsPlugins: [
+    { name: "plumb", specifier: "@autotelic/plumb" },
+    { name: "plumb-effect", specifier: "@autotelic/plumb/effect" },
+  ],
+  rules: {
+    ...atWarn(plumbRecommendedRules),
+    ...atWarn(plumbEffectRecommendedRules),
+    "plumb-effect/require-schema-type-derivation": "off",
+  },
+}

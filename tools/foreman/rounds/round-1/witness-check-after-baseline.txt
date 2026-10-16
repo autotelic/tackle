@@ -1,0 +1,10 @@
+$ pnpm jig check
+
+$ node --conditions=development packages/jig-cli/src/cli.ts check
+0 error(s), 461 warning(s), 0 notice(s) in 44 file(s)
+
+engines
+  cutlist: 0 finding(s)
+  plumb: 461 finding(s)
+  joggle: 0 finding(s)
+exit=0
