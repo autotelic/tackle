@@ -11,33 +11,43 @@ concurrency:
 permissions:
   contents: write
   pull-requests: write
-  id-token: write
 
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - run: corepack enable
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: pnpm
-          registry-url: https://registry.npmjs.org
 
       - run: pnpm install --frozen-lockfile
 
-      # Opens (or updates) a "version packages" PR from the pending changesets.
-      # Merging that PR publishes only the packages whose version changed.
+      # Opens (or updates) the "version packages" PR from the pending changesets.
+      #
+      # No `publish` input, and that is deliberate rather than unfinished. With no
+      # pending changesets this action's next move is "publish any version npm does not
+      # have" — and every publishable package here is still at 0.0.0, so wiring it would
+      # publish 0.0.0 the moment anything lands on main. (Observed: the first push to
+      # main tried exactly that, and only failed because no token was configured.)
+      #
+      # Turning publishing on is one input plus the version it should first publish:
+      #
+      #   publish: pnpm release        # root script: pnpm build && changeset publish
+      #   registry-url: https://registry.npmjs.org   (in setup-node above)
+      #   env: NPM_TOKEN / NODE_AUTH_TOKEN
+      #
+      # Do it in the same commit as the first real version, and give the setup-node step
+      # `package-manager-cache: false` then: these docs call out that a poisoned cache can
+      # expose publish credentials. Versioning needs none of that, so it stays off.
       - uses: changesets/action@v1
         with:
           version: pnpm version
-          publish: pnpm release
           commit: "chore: version packages"
           title: "chore: version packages"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
