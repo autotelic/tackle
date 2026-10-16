@@ -1,0 +1,10 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.turbo/
+.DS_Store
+coverage/
+
+# joggle local caches (committed answers live in .joggle/answers, which IS tracked)
+.joggle/run-cache/
+.joggle/parsecache/

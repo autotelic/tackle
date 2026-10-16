@@ -1,0 +1,6 @@
+# LF everywhere: oxfmt, tsgo, and Node all assume it, and it keeps the moved repos
+# (plumb, joggle) from arriving with CRLF churn.
+* text=auto eol=lf
+
+# Long and generated; collapse it in diffs rather than letting it dominate the page.
+pnpm-lock.yaml linguist-generated=true

@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autotelic.dev/tackle/protocol/report.json",
+  "title": "Report",
+  "description": "One run, across every engine, in one oxlint-shaped stream.",
+  "type": "object",
+  "required": ["protocolVersion", "counts", "files", "diagnostics", "generators"],
+  "additionalProperties": false,
+  "properties": {
+    "protocolVersion": { "type": "string" },
+    "counts": { "$ref": "#/$defs/counts" },
+    "files": { "type": "integer", "minimum": 0 },
+    "diagnostics": { "type": "array", "items": { "$ref": "#/$defs/diagnostic" } },
+    "generators": { "type": "array", "items": { "$ref": "#/$defs/generator" } },
+    "elapsedMs": { "type": "number" }
+  },
+  "$defs": {
+    "severity": { "enum": ["error", "warn", "info"] },
+    "counts": {
+      "type": "object",
+      "required": ["error", "warn", "info"],
+      "additionalProperties": false,
+      "properties": {
+        "error": { "type": "integer", "minimum": 0 },
+        "warn": { "type": "integer", "minimum": 0 },
+        "info": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "location": {
+      "type": "object",
+      "required": ["file", "line", "column"],
+      "additionalProperties": false,
+      "properties": {
+        "file": { "type": "string" },
+        "line": { "type": "integer", "minimum": 1 },
+        "column": { "type": "integer", "minimum": 1 },
+        "endLine": { "type": "integer", "minimum": 1 },
+        "endColumn": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "diagnostic": {
+      "type": "object",
+      "required": ["engine", "ruleId", "severity", "message", "location"],
+      "additionalProperties": false,
+      "properties": {
+        "engine": { "type": "string" },
+        "ruleId": { "type": "string" },
+        "severity": { "$ref": "#/$defs/severity" },
+        "message": { "type": "string" },
+        "help": { "type": "string" },
+        "location": { "$ref": "#/$defs/location" },
+        "identity": { "type": "string" },
+        "judged": { "type": "boolean" },
+        "fixable": { "type": "boolean" },
+        "docsUrl": { "type": "string" },
+        "engineVersion": { "type": "string" }
+      }
+    },
+    "generator": {
+      "type": "object",
+      "required": ["id", "diagnostics", "error", "warn", "info"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "version": { "type": "string" },
+        "diagnostics": { "type": "integer", "minimum": 0 },
+        "error": { "type": "integer", "minimum": 0 },
+        "warn": { "type": "integer", "minimum": 0 },
+        "info": { "type": "integer", "minimum": 0 },
+        "durationMs": { "type": "number" },
+        "note": { "type": "string" }
+      }
+    }
+  }
+}

@@ -1,0 +1,47 @@
+# tackle — one pnpm workspace over four independent tools + one leaf protocol.
+#
+# Dependency law (enforce with joggle/import-architecture on this repo):
+#   protocol  ← depends on nothing
+#   plumb     ← protocol          (never joggle, cutlist, jig)
+#   joggle    ← protocol          (never plumb, cutlist, jig)
+#   cutlist   ← protocol          (never plumb, joggle, jig)
+#   jig       ← protocol + drives the other three as processes
+
+packages:
+  - "packages/*"
+  - "examples/*"
+
+# Pin shared runtime versions ONCE. Effect is a shared runtime, so pin exactly —
+# never a caret — and bump deliberately across every package at the same time.
+catalog:
+  effect: "4.0.5" # stable v4
+  # The OpenCode plugin API, used only by jig's optional `./opencode` surface.
+  "@opencode/plugin": "2.0.31"
+  "@effect/platform-node": "4.0.5"
+  "@effect/vitest": "4.0.5"
+  # Typechecking and building run on `tsgo`, the native compiler, wearing Effect's
+  # language service (@effect/tsgo) via the `prepare` patch. `tsc` is not installed.
+  "@effect/tsgo": "0.53.3"
+  "@typescript/native-preview": "7.0.0-dev.20260707.2"
+  oxc-parser: "0.150.0"
+  oxlint: "1.88.0" # 1.88.0 is the newest @effect/tsgo 0.53.3 supports
+  "oxlint-tsgolint": "7.0.2004" # type-aware oxlint glue, paired with oxlint 1.88.0
+  oxfmt: "0.73.0" # the Oxc formatter, alongside the Oxc linter
+  vitest: "5.0.1"
+  "@types/node": "24.13.5"
+
+minimumReleaseAgeExclude:
+  - "@effect/tsgo-darwin-arm64@0.53.3"
+  - "@effect/tsgo-darwin-x64@0.53.3"
+  - "@effect/tsgo-linux-arm64@0.53.3"
+  - "@effect/tsgo-linux-arm@0.53.3"
+  - "@effect/tsgo-linux-x64@0.53.3"
+  - "@effect/tsgo-win32-arm64@0.53.3"
+  - "@effect/tsgo-win32-x64@0.53.3"
+  - "@effect/tsgo@0.53.3"
+  - "@opencode/ai@2.0.31"
+  - "@opencode/client@2.0.31"
+  - "@opencode/plugin@2.0.31"
+  - "@opencode/protocol@2.0.31"
+  - "@opencode/schema@2.0.31"
+  - "@opencode/util@2.0.31"

@@ -1,0 +1,9 @@
+{
+  "rules": {
+    "plumb-ui/no-off-token-color": "error",
+    "plumb-ui/no-raw-interactive": "error",
+    "plumb-ui/no-local-copy-of-shared": "error",
+    "plumb-react/require-tripartite-context": "error",
+    "plumb-react/require-guarded-context-hook": "error"
+  }
+}

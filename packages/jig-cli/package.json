@@ -1,0 +1,62 @@
+{
+  "name": "@autotelic/jig-cli",
+  "version": "0.0.0",
+  "description": "The harness (CLI: `jig`): run every conformance engine in one pass, merge them into one report, and hold the ratchet. Shells out; never links. The package is `jig-cli` only because `jig` is taken; the command the world types is `jig`.",
+  "license": "MIT",
+  "bin": {
+    "jig": "./bin/jig.js"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "extensions"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "development": "./src/index.ts",
+      "default": "./dist/index.js"
+    },
+    "./opencode": {
+      "development": "./src/opencode.ts",
+      "default": "./dist/opencode.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "jig": "node --conditions=development src/cli.ts",
+    "build": "tsgo -p tsconfig.build.json",
+    "typecheck": "tsgo --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@autotelic/protocol": "workspace:*",
+    "@effect/platform-node": "catalog:",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/tsgo": "catalog:",
+    "@opencode/plugin": "catalog:",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "@opencode/plugin": "*"
+  },
+  "peerDependenciesMeta": {
+    "@opencode/plugin": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">=24.18.0"
+  },
+  "pi": {
+    "extensions": [
+      "./extensions"
+    ]
+  }
+}

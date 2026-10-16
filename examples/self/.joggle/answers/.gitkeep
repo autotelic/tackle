@@ -1,0 +1,5 @@
+# Committed verdicts live here, one file per judged component.
+#
+# The directory is tracked and empty on purpose: `joggle` replays an answer when one is
+# present and only reaches for a model when it is not, so an empty store is the honest
+# starting state, and this file is what keeps the directory in the tree.

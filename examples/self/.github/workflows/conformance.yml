@@ -1,0 +1,24 @@
+name: conformance
+
+# The gates run deterministic-first: oxlint (with plumb riding it as a jsPlugin) and
+# `cutlist --check` cannot disagree with a local run. joggle replays committed verdicts
+# and reaches for a model only where none exists, so the reviewer-facing gate needs no key.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  conformance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: pnpm }
+
+      - run: pnpm install
+
+      - uses: oxc-project/oxlint-action@v2 # plumb rides here (jsPlugins)
+      - uses: autotelic/joggle-action@v1 # replay · no key · changed-only
+      - run: npx @autotelic/cutlist build --check

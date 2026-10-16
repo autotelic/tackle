@@ -1,0 +1,25 @@
+{
+  "presets": ["@autotelic/joggle/presets/composition"],
+  "unavailable": "count",
+  "rules": {
+    "joggle/bundle-dot-notation": "warn",
+    "joggle/bundle-tripartite-value": "warn",
+    "joggle/bundle-one-file-per-block": "warn",
+    "joggle/bundle-context-hook": "warn",
+    "joggle/page-needs-composition": "warn",
+    "joggle/naming-drift": "warn",
+    "joggle/duplicate-meaning": "warn",
+    "joggle/layer-direction": "error",
+    "joggle/import-cycle": "error"
+  },
+  "architecture": {
+    "layers": [
+      { "name": "primitive", "include": ["src/components/ui/**"] },
+      { "name": "shared", "include": ["src/components/**"] },
+      { "name": "local", "include": ["src/routes/**"] }
+    ]
+  },
+  "evidence": {
+    "repository": "This is the exemplar client. The layers are the same vocabulary `cutlist.config.json` declares, written a second time where the import rule can read them: a primitive may not import a shared component, and neither may reach back into a route."
+  }
+}

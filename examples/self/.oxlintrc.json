@@ -1,0 +1,33 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["react", "typescript", "import"],
+  "jsPlugins": [
+    { "name": "plumb", "specifier": "@autotelic/plumb" },
+    { "name": "plumb-react", "specifier": "@autotelic/plumb/react" },
+    { "name": "plumb-ui", "specifier": "@autotelic/plumb/ui" },
+    { "name": "shadcn", "specifier": "@shadcn/lint" }
+  ],
+  "rules": {
+    "plumb/no-unknown-parameters": "error",
+    "plumb/require-jsdoc-on-exported": "error",
+    "plumb/require-safety-comment-for-type-assertion": "error",
+    "plumb-react/require-tripartite-context": "error",
+    "plumb-react/require-guarded-context-hook": "error",
+    "plumb-ui/no-off-token-color": [
+      "error",
+      { "manifest": "./tools/ui-catalog/plumb-ui.config.json" }
+    ],
+    "plumb-ui/no-arbitrary-value": "warn",
+    "plumb-ui/no-raw-html-layout": ["warn", { "allowPaths": ["src/components/ui"] }],
+    "plumb-ui/no-raw-interactive": ["error", { "allowPaths": ["src/components/ui"] }],
+    "plumb-ui/no-local-copy-of-shared": [
+      "error",
+      { "manifest": "./tools/ui-catalog/plumb-ui.config.json" }
+    ],
+    "plumb-ui/require-catalog-entry": [
+      "warn",
+      { "manifest": "./tools/ui-catalog/plumb-ui.config.json" }
+    ]
+  },
+  "ignorePatterns": ["tools/ui-catalog/**"]
+}

@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autotelic.dev/tackle/protocol/cutlist.config.json",
+  "title": "CutlistConfig",
+  "description": "A repo's vocabulary: where app code lives, how imports alias, which roots are which tier, where tokens come from, and which convention packs apply.",
+  "type": "object",
+  "required": ["roots", "tiers", "tokens", "ownership"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "roots": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "alias": {
+      "type": "object",
+      "additionalProperties": { "type": "array", "items": { "type": "string" } }
+    },
+    "tiers": {
+      "type": "object",
+      "required": ["primitive", "shared", "local"],
+      "additionalProperties": false,
+      "properties": {
+        "primitive": { "type": "array", "items": { "type": "string" } },
+        "shared": { "type": "array", "items": { "type": "string" } },
+        "local": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "tokens": {
+      "type": "object",
+      "required": ["from"],
+      "additionalProperties": false,
+      "properties": {
+        "from": { "type": "string" },
+        "theme": { "type": "string" },
+        "vars": { "type": "string" }
+      }
+    },
+    "hooks": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": { "barrel": { "type": "string" } }
+    },
+    "ownership": {
+      "type": "object",
+      "required": ["routeOwner", "transitive"],
+      "additionalProperties": false,
+      "properties": {
+        "routeOwner": { "enum": ["first-segment", "full"] },
+        "transitive": { "type": "boolean" }
+      }
+    },
+    "patterns": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "composition": {
+          "type": "object",
+          "required": ["providerSuffix", "hookPrefix"],
+          "additionalProperties": false,
+          "properties": {
+            "providerSuffix": { "type": "string" },
+            "hookPrefix": { "type": "string" }
+          }
+        },
+        "urlState": {
+          "type": "object",
+          "required": ["router", "reader"],
+          "additionalProperties": false,
+          "properties": {
+            "router": { "enum": ["remix", "tanstack", "next", "react-router"] },
+            "reader": { "type": "string" }
+          }
+        }
+      }
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "catalog": { "type": "string" },
+        "manifest": { "type": "string" },
+        "menu": { "type": "string" },
+        "hooks": { "type": "string" },
+        "tokens": { "type": "string" }
+      }
+    }
+  }
+}

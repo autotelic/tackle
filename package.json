@@ -1,0 +1,35 @@
+{
+  "name": "@autotelic/tackle",
+  "version": "0.0.0",
+  "private": true,
+  "description": "One workspace for the conformance tools: plumb, joggle, cutlist, jig — and the protocol they agree on.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "pnpm -r run build",
+    "typecheck": "pnpm -r run typecheck",
+    "test": "pnpm -r run test",
+    "lint": "oxlint --ignore-pattern 'examples/**' .",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
+    "check": "pnpm format:check && pnpm typecheck && pnpm test && pnpm build",
+    "prepare": "effect-tsgo patch --no-typescript --oxlint",
+    "cutlist": "node --conditions=development packages/cutlist/src/cli.ts",
+    "jig": "node --conditions=development packages/jig-cli/src/cli.ts",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "pnpm build && changeset publish"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.29.0",
+    "@effect/tsgo": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "oxlint-tsgolint": "catalog:"
+  },
+  "engines": {
+    "node": ">=24.18.0"
+  },
+  "packageManager": "pnpm@12.3.4"
+}

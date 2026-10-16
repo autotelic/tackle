@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autotelic.dev/tackle/protocol/catalog.json",
+  "title": "Catalog",
+  "description": "The model cutlist computes once and renders many ways.",
+  "type": "object",
+  "required": [
+    "protocolVersion",
+    "hash",
+    "root",
+    "tokens",
+    "tiers",
+    "sharedRoots",
+    "localRoots",
+    "components",
+    "orphans",
+    "duplicates"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "protocolVersion": { "type": "string" },
+    "hash": { "type": "string" },
+    "root": { "type": "string" },
+    "tokens": {
+      "type": "object",
+      "required": ["colors", "type", "shape", "spacing"],
+      "additionalProperties": false,
+      "properties": {
+        "colors": { "type": "array", "items": { "type": "string" } },
+        "type": { "type": "array", "items": { "type": "string" } },
+        "shape": { "type": "array", "items": { "type": "string" } },
+        "spacing": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "tiers": { "$ref": "#/$defs/tiers" },
+    "sharedRoots": { "type": "array", "items": { "type": "string" } },
+    "localRoots": { "type": "array", "items": { "type": "string" } },
+    "components": { "type": "array", "items": { "$ref": "#/$defs/component" } },
+    "orphans": { "type": "array", "items": { "type": "string" } },
+    "duplicates": { "type": "array", "items": { "$ref": "#/$defs/duplicate" } }
+  },
+  "$defs": {
+    "tier": { "enum": ["primitive", "shared", "local"] },
+    "tiers": {
+      "type": "object",
+      "required": ["primitive", "shared", "local"],
+      "additionalProperties": false,
+      "properties": {
+        "primitive": { "type": "array", "items": { "type": "string" } },
+        "shared": { "type": "array", "items": { "type": "string" } },
+        "local": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "component": {
+      "type": "object",
+      "required": ["path", "name", "tier", "owners", "props", "tags", "signature", "documented"],
+      "additionalProperties": false,
+      "properties": {
+        "path": { "type": "string" },
+        "name": { "type": "string" },
+        "tier": { "$ref": "#/$defs/tier" },
+        "owners": { "type": "array", "items": { "type": "string" } },
+        "props": { "type": "array", "items": { "type": "string" } },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "signature": { "type": "array", "items": { "type": "string" } },
+        "documented": { "type": "boolean" }
+      }
+    },
+    "duplicate": {
+      "type": "object",
+      "required": ["left", "right", "score", "basis"],
+      "additionalProperties": false,
+      "properties": {
+        "left": { "type": "string" },
+        "right": { "type": "string" },
+        "score": { "type": "number", "minimum": 0, "maximum": 1 },
+        "basis": { "enum": ["skeleton"] }
+      }
+    }
+  }
+}

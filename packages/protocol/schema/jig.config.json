@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autotelic.dev/tackle/protocol/jig.config.json",
+  "title": "HarnessConfig",
+  "description": "`jig.config.json`: which engines are active, and how a run is gated. Each engine keeps its own config file; this one only says who runs and what counts as failure. `jig init` writes it.",
+  "type": "object",
+  "required": ["engines", "gate"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "engines": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "kind": { "enum": ["process", "oxlint-plugin", "internal"] },
+          "command": { "type": "string" },
+          "config": { "type": "string" },
+          "enabled": { "type": "boolean" }
+        }
+      }
+    },
+    "gate": {
+      "type": "object",
+      "required": ["mode", "baseline"],
+      "additionalProperties": false,
+      "properties": {
+        "mode": { "enum": ["touched-files", "all"] },
+        "baseline": { "type": "string" },
+        "failOn": { "enum": ["error", "warn", "any-new"] }
+      }
+    },
+    "report": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "format": { "enum": ["text", "json", "jsonl", "github"] },
+        "maxWarnings": { "type": "number" }
+      }
+    },
+    "agent": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cookbook": { "type": "string" },
+        "onboarding": { "type": "string" }
+      }
+    }
+  }
+}

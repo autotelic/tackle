@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autotelic.dev/tackle/protocol/baseline.json",
+  "title": "Baseline",
+  "description": "The findings a repository has already accepted. Committed, so the ratchet is a property of the code.",
+  "type": "object",
+  "required": ["protocolVersion", "identities"],
+  "additionalProperties": false,
+  "properties": {
+    "protocolVersion": { "type": "string" },
+    "identities": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+  }
+}

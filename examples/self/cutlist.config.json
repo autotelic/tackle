@@ -1,0 +1,27 @@
+{
+  "$schema": "https://autotelic.dev/tackle/protocol/cutlist.config.json",
+  "roots": ["src"],
+  "alias": { "@/*": ["src/*"] },
+  "tiers": {
+    "primitive": ["components/ui"],
+    "shared": ["components"],
+    "local": ["routes"]
+  },
+  "tokens": {
+    "from": "src/styles/app.css",
+    "vars": "src/styles/app.css"
+  },
+  "hooks": { "barrel": "src/components" },
+  "ownership": { "routeOwner": "first-segment", "transitive": false },
+  "patterns": {
+    "composition": { "providerSuffix": "Provider", "hookPrefix": "use" },
+    "urlState": { "router": "tanstack", "reader": "useSearch" }
+  },
+  "output": {
+    "catalog": "tools/ui-catalog/catalog.json",
+    "manifest": "tools/ui-catalog/plumb-ui.config.json",
+    "menu": "tools/ui-catalog/MENU.md",
+    "hooks": "tools/ui-catalog/hooks.md",
+    "tokens": "tools/ui-catalog/tokens.md"
+  }
+}

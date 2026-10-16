@@ -1,0 +1,11 @@
+{
+  "name": "examples-self",
+  "version": "0.0.0",
+  "private": true,
+  "description": "An exemplar client repo: the config set every adopter writes, kept runnable so the tools are exercised against a real tree instead of a fixture. Not published; ignored by changesets via `examples-*`, and declares no scripts so no `pnpm -r run …` can reach it.",
+  "type": "module",
+  "devDependencies": {
+    "@autotelic/cutlist": "workspace:*",
+    "@autotelic/jig-cli": "workspace:*"
+  }
+}

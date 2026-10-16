@@ -1,0 +1,23 @@
+/*
+ * The two token layers `cutlist` reads, in one place.
+ *
+ * A Tailwind v4 theme lives in `@theme`, and the custom properties it resolves to live in
+ * `:root`. They are allowed to disagree — and where they do, `tokens.md` says so, because
+ * "the brand purple is actually three different purples" is a finding, not a detail.
+ */
+
+@theme {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-primary: hsl(var(--primary));
+  --color-muted: hsl(var(--muted));
+  --color-border: hsl(var(--border));
+}
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 240 10% 4%;
+  --primary: 262 83% 58%;
+  --muted: 240 5% 96%;
+  --border: 240 6% 90%;
+}

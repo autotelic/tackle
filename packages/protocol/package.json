@@ -1,0 +1,35 @@
+{
+  "name": "@autotelic/protocol",
+  "version": "0.0.0",
+  "description": "The four seams — config, report, baseline, catalog/doc — as pure types, JSON Schema, and pure helpers. Not a tool.",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "schema"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "development": "./src/index.ts",
+      "default": "./dist/index.js"
+    },
+    "./schema/*": "./schema/*"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsgo -p tsconfig.build.json",
+    "typecheck": "tsgo --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "devDependencies": {
+    "@effect/tsgo": "catalog:",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "vitest": "catalog:"
+  },
+  "engines": {
+    "node": ">=24.18.0"
+  }
+}

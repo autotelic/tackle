@@ -1,0 +1,145 @@
+import { describe, expect, it } from "vitest"
+import { accept, diffBaseline, ratchetViolations } from "@autotelic/protocol"
+import { engineDiagnostics, normalize, parseEngineOutput } from "./engines.ts"
+
+/* The exact shape `oxlint --format json` emits, with the position inside labels[0].span. */
+const OXLINT = JSON.stringify({
+  diagnostics: [
+    {
+      message: "Variable 'unused' is declared but never used.",
+      code: "eslint(no-unused-vars)",
+      severity: "warning",
+      url: "https://oxc.rs/docs/guide/usage/linter/rules/eslint/no-unused-vars.html",
+      help: "Consider removing this declaration.",
+      filename: "/repo/app/a.ts",
+      labels: [
+        { label: "'unused' is declared here", span: { offset: 41, length: 6, line: 3, column: 9 } },
+      ],
+    },
+  ],
+  number_of_files: 1,
+})
+
+describe("parseEngineOutput", () => {
+  it("reads an oxlint report and relativizes the path", () => {
+    const diagnostics = parseEngineOutput(OXLINT, "plumb", "/repo")
+    expect(diagnostics).toEqual([
+      {
+        engine: "plumb",
+        ruleId: "eslint(no-unused-vars)",
+        severity: "warn",
+        message: "Variable 'unused' is declared but never used.",
+        location: { file: "app/a.ts", line: 3, column: 9 },
+        help: "Consider removing this declaration.",
+        docsUrl: "https://oxc.rs/docs/guide/usage/linter/rules/eslint/no-unused-vars.html",
+      },
+    ])
+  })
+
+  it("reads a report document whose findings carry an inline location", () => {
+    const stdout = JSON.stringify({
+      diagnostics: [
+        {
+          ruleId: "structure/no-index-barrel",
+          severity: "error",
+          message: "a barrel file",
+          location: { file: "app/components/index.ts", line: 1, column: 1 },
+          judged: false,
+        },
+      ],
+    })
+    const diagnostics = parseEngineOutput(stdout, "joggle", "/repo")
+    expect(diagnostics?.[0]?.location.file).toBe("app/components/index.ts")
+    expect(diagnostics?.[0]?.severity).toBe("error")
+  })
+
+  it("reads JSONL, one finding per line", () => {
+    const line = JSON.stringify({
+      ruleId: "r",
+      severity: "info",
+      message: "m",
+      location: { file: "a.ts", line: 2, column: 2 },
+    })
+    expect(parseEngineOutput(`${line}\n\n`, "engine", "/repo")).toHaveLength(1)
+  })
+
+  it("returns undefined for output it does not recognize, so the caller can say so", () => {
+    expect(parseEngineOutput("just some prose\nand more", "engine", "/repo")).toBeUndefined()
+  })
+
+  it("returns nothing for a silent engine", () => {
+    expect(parseEngineOutput("", "engine", "/repo")).toEqual([])
+  })
+})
+
+describe("normalize", () => {
+  it("drops an entry with no message rather than inventing one", () => {
+    expect(normalize({ code: "x" }, "e", "/repo")).toBeUndefined()
+  })
+})
+
+describe("engineDiagnostics", () => {
+  it("does not read a silent, failed engine as clean", () => {
+    const diagnostics = engineDiagnostics("joggle", 1, "", "boom: no tsconfig in sight", "/repo")
+    expect(diagnostics).toHaveLength(1)
+    expect(diagnostics[0]?.ruleId).toBe("joggle/unparsed-output")
+    expect(diagnostics[0]?.severity).toBe("info")
+    expect(diagnostics[0]?.help).toBe("boom: no tsconfig in sight")
+  })
+
+  it("names the exit code when a failed engine printed nothing at all", () => {
+    const diagnostics = engineDiagnostics("joggle", 2, "", "", "/repo")
+    expect(diagnostics[0]?.message).toBe("joggle exited 2 without output")
+    expect(diagnostics[0]?.help).toBeUndefined()
+  })
+
+  it("reads a silent, successful engine as clean", () => {
+    expect(engineDiagnostics("joggle", 0, "", "", "/repo")).toEqual([])
+  })
+
+  it("keeps the findings an engine printed, whatever it exited with", () => {
+    const stdout = JSON.stringify({
+      diagnostics: [
+        {
+          ruleId: "r",
+          severity: "warn",
+          message: "m",
+          location: { file: "a.ts", line: 1, column: 1 },
+        },
+      ],
+    })
+    expect(engineDiagnostics("joggle", 1, stdout, "", "/repo")).toHaveLength(1)
+  })
+
+  it("reads an empty but understood report on a clean exit as clean", () => {
+    expect(
+      engineDiagnostics("oxlint-engine", 0, JSON.stringify({ diagnostics: [] }), "", "/repo"),
+    ).toEqual([])
+  })
+
+  it("turns a failed cutlist into one stale-catalog error, not a parse attempt", () => {
+    const diagnostics = engineDiagnostics("cutlist", 1, "the catalog is stale\n", "", "/repo")
+    expect(diagnostics).toHaveLength(1)
+    expect(diagnostics[0]?.ruleId).toBe("cutlist/stale-catalog")
+    expect(diagnostics[0]?.severity).toBe("error")
+  })
+})
+
+describe("the ratchet wiring", () => {
+  it("fails on a novel identity and holds on a known one", () => {
+    const finding = {
+      engine: "joggle",
+      ruleId: "no-dupes",
+      severity: "error" as const,
+      message: "two of these",
+      location: { file: "a.ts", line: 1, column: 1 },
+      identity: "dupe-cluster-1",
+    }
+    const baseline = accept([finding])
+    expect(ratchetViolations(diffBaseline(baseline, [finding]))).toEqual([])
+    const novel = { ...finding, identity: "dupe-cluster-2" }
+    expect(ratchetViolations(diffBaseline(baseline, [finding, novel]))).toEqual([
+      "joggle/no-dupes: 1 new finding not in the baseline",
+    ])
+  })
+})
