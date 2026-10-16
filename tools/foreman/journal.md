@@ -579,8 +579,11 @@ oxlint not found
 
 **`joggle check` against its own package runs clean; against the root it never starts.** Same
 binary, different `cwd`: at `packages/joggle` it reads that package's `tsconfig.json`; at the
-root it synthesises TypeScript's default file list and dies. This isolates the cause to the
-missing root project, not to joggle.
+root it dies. The mechanism, corrected by the red team from primary source (§10): `joggle`
+runs `tsgo --listFilesOnly` and parses its stdout (`packages/joggle/src/tsgo.ts`); with no
+project, `tsgo` prints its **help text**, which contains the literal example line
+`  tsc app.ts util.ts`, and `joggle` reads that line as a source file. This isolates the cause
+to the missing root project, not to joggle.
 
 ```
 $ cd packages/joggle && node --conditions=development src/main.ts check --format json
@@ -630,6 +633,28 @@ exit=
 
 ---
 
+### 1.14 Correction (red team, §10): the `exit=` lines in §1.1–1.13 are the wrapper's
+
+The capture pattern was `{ echo …; "$cmd"; echo; echo "exit=$?"; } > file`, so each recorded
+`exit=$?` reports the **trailing `echo`**, not the command. Four captures therefore show a
+false `exit=0` directly beneath the command's own `[ELIFECYCLE] Command failed with exit code
+N`:
+
+| capture                           | recorded | true (from the body) |
+| --------------------------------- | -------- | -------------------- |
+| `census-ledger-root.txt`          | exit=0   | **exit 1**           |
+| `census-ledger-examples-self.txt` | exit=0   | **exit 1**           |
+| `census-judged-root.txt`          | exit=0   | **exit 1**           |
+| `census-gates-root.txt`           | exit=0   | **exit 2**           |
+
+Every other capture has no `[ELIFECYCLE]` line, so its `exit=0` is correct. This is FOREMAN
+§13's own rule turned on the census: "Never report a thing as done because the exit code was
+zero." Round 2 captures `$?` immediately after the command, and prefers a body that already
+proves the result. The raw captures are left byte-for-byte; the truth is the `[ELIFECYCLE]`
+line in each body.
+
+---
+
 ## 2. Triage
 
 Each finding gets one of joggle's three moves, assigned **after** the deeper-version question
@@ -668,8 +693,12 @@ preamble.
 
 **Evidence:** 1.3. Two causes in one finding: (a) the root `oxlint.config.ts` has no `plumb`
 plugin, so the plumb engine is oxlint wearing plumb's name (MIGRATION item 6); (b) oxlint scans
-`examples/self/.oxlintrc.json`, which names `@autotelic/plumb/ui` (on the branch the move did
-not take) and the external `@shadcn/lint`, and fails to _build a config_ before reading a file.
+`examples/self/.oxlintrc.json` and fails to _build a config_ before reading a file. The config
+names two unresolvable plugins — `@autotelic/plumb/ui` (on the branch the move did not take)
+and the external `@shadcn/lint` — but the red team's reproduction (§10) shows the error stops
+at the **first**, `@autotelic/plumb/ui`, so the captured help names only that one; and
+`@shadcn/lint` is not installed or declared anywhere in the workspace at all. Two latent
+breakages; the census caught one.
 
 > **Deeper version.** (1) A maintainer wires `plumb` into the root `oxlint.config.ts` so the
 > engine runs real rules, and scopes the run with `--ignore-pattern` (the CLI flag, because a
@@ -917,3 +946,47 @@ above with reasons.
    `--ignore-pattern 'packages/joggle/**'` workaround (MIGRATION item 6, still open).
 4. The `[A]` typebox item: decide the `packages/jig-cli/extensions/jig.ts` `typebox` dependency
    shape (runtime dep vs devDependency vs optional peer) and pin it.
+
+---
+
+## 10. Red team (W5) — falsification pass
+
+An independent, read-only conversation whose job was to falsify the claims above against
+primary sources (§6). Verdicts:
+
+| #   | Claim                                                           | Verdict                                                                                                                                            |
+| --- | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | the exemplar's catalog is current                               | **survives** — two independent recomputations of the sha256 from `catalog.ts` match (`5aad97ef…`), and a fresh `build --format json` reproduces it |
+| 2   | plumb's `unparsed-output` was a config-build failure, not clean | **survives** — reproduced raw from `examples/self`; the committed `jig` now passes 461 real plumb diagnostics                                      |
+| 3   | joggle never started (no root project)                          | **survives**, mechanism corrected (§1.13); the "committed HEAD still fails" half is **false now** that W2 (`d312ebb`) committed `tsconfig.json`    |
+| 4   | a missing engine is a note, never clean                         | **survives** — `cutlist`'s zero carries the `note` and has no `diagnostics` entry; structural in `engines.ts`                                      |
+| 5   | `plumb`'s rule-test check is advisory                           | **survives** — `--strict` is the only failure mode and `check` omits it; _not_ silent (it prints all 75)                                           |
+| 6   | the census's own `exit=` lines                                  | **falsified** — §1.14, four false success codes                                                                                                    |
+
+**Corrections folded in:** the joggle mechanism (§1.13), F2's phrasing, F3's precision (the
+error names one of two uninstalled plugins), and §1.14.
+
+**Strengthened.** The "global `joggle`" is worse than §1.13 said: `readlink -f
+/Users/togmund/.local/bin/joggle` is `/Users/togmund/autotelic/mess/scripts/joggle.sh`, a shim
+into a **different repository**. At census time the root run was driving another tree's joggle.
+That is the strongest possible evidence for F1: PATH did not merely shadow the workspace's
+engine, it substituted one from elsewhere.
+
+**F6 addendum.** `check-rule-tests.mjs` also counts `src/rules/test-utils.ts` — not a rule — as
+a missing suite, so its 75 is slightly inflated: the check judges by filename, not by
+registration.
+
+**Process finding (the red team's own).** The trunk advanced four times while it read. A
+witness that signs "at HEAD" without a SHA signs something that no longer exists. Every claim
+here that names a commit names it by SHA; where a claim does not, it is about `d0be603` (the
+census) and should say so.
+
+**Negative results (could not break).** §5.4/§5.6 reproducibility holds hard — a fresh run at
+`14332e2` is byte-identical on `(engine, ruleId, file, line, column, severity)`, and its
+distinct identity set equals the baseline's 149 exactly. The red team could not verify that
+`pnpm build` leaves `plumb`'s committed `dist` clean (it is read-only); **the foreman verified
+that separately** — after `pnpm check`, `git status --short packages/plumb` is empty.
+
+**Could not determine.** Which joggle binary the _census-time_ root run spawned: the mechanism
+fits the `mess` shim, but the 16:45 `PATH` is not recoverable from the repo and the root
+`node_modules/.bin/joggle` mtime postdates the census. The claim is well-grounded, not proven.
