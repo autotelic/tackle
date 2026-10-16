@@ -1,12 +1,33 @@
 [
   {
     "range": {
+      "start": { "line": 11, "character": 4 },
+      "end": { "line": 11, "character": 9 }
+    },
+    "severity": 1,
+    "code": "plumb/plumb/no-raw-html-layout",
+    "source": "plumb",
+    "message": "raw <div> outside a primitive",
+    "codeDescription": { "href": "https://autotelic.dev/plumb/no-raw-html-layout" }
+  },
+  {
+    "range": {
+      "start": { "line": 2, "character": 0 },
+      "end": { "line": 2, "character": 0 }
+    },
+    "severity": 2,
+    "code": "joggle/joggle/layer-direction",
+    "source": "joggle",
+    "message": "a primitive imports a shared component"
+  },
+  {
+    "range": {
       "start": { "line": 0, "character": 0 },
       "end": { "line": 0, "character": 0 }
     },
     "severity": 3,
     "code": "joggle/joggle/unparsed-output",
     "source": "joggle",
-    "message": "jig could not parse joggle output (exit 1)"
+    "message": "an engine could not run"
   }
 ]

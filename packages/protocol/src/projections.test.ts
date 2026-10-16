@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { loadJson } from "./fixture-support.ts"
+import { decodeBaseline } from "./baseline.ts"
+import { compileLexicon, loadJson, makeAjv } from "./fixture-support.ts"
 import { decodeReport, type Diagnostic, type Report, type Severity } from "./report.ts"
 
 /*
@@ -10,10 +11,16 @@ import { decodeReport, type Diagnostic, type Report, type Severity } from "./rep
  * it shows.
  */
 
-const report = decodeReport(loadJson("fixtures/report/golden.json"))
-if (report === undefined) throw new Error("fixtures/report/golden.json did not decode")
+const source = decodeReport(loadJson("fixtures/projections/report.golden.json"))
+if (source === undefined) throw new Error("fixtures/projections/report.golden.json did not decode")
+
+const baseline = decodeBaseline(loadJson("fixtures/projections/baseline.golden.json"))
+if (baseline === undefined) throw new Error("the projection baseline did not decode")
+const accepted: ReadonlySet<string> = new Set(baseline.identities)
 
 const nameOf = (diagnostic: Diagnostic): string => `${diagnostic.engine}/${diagnostic.ruleId}`
+const identityOf = (diagnostic: Diagnostic): string =>
+  diagnostic.identity ?? `${diagnostic.engine}/${diagnostic.ruleId}:${diagnostic.location.file}`
 const severity01 = (severity: Severity): "error" | "warning" | "note" =>
   severity === "error" ? "error" : severity === "warn" ? "warning" : "note"
 const severityNumeric = (severity: Severity): 1 | 2 | 3 =>
@@ -21,9 +28,9 @@ const severityNumeric = (severity: Severity): 1 | 2 | 3 =>
 const severityCodeClimate = (severity: Severity): "major" | "minor" | "info" =>
   severity === "error" ? "major" : severity === "warn" ? "minor" : "info"
 
-const toSarif = (source: Report): unknown => {
+const toSarif = (report: Report, known?: ReadonlySet<string>): unknown => {
   const rules = new Map<string, unknown>()
-  for (const diagnostic of source.diagnostics) {
+  for (const diagnostic of report.diagnostics) {
     if (rules.has(nameOf(diagnostic))) continue
     rules.set(nameOf(diagnostic), {
       id: nameOf(diagnostic),
@@ -41,39 +48,58 @@ const toSarif = (source: Report): unknown => {
         tool: {
           driver: {
             name: "tackle",
+            version: String(report.lexicon.version),
             informationUri: "https://github.com/autotelic/tackle",
             rules: [...rules.values()],
           },
         },
-        results: source.diagnostics.map((diagnostic) => ({
-          ruleId: nameOf(diagnostic),
-          level: severity01(diagnostic.severity),
-          message: { text: diagnostic.message },
-          locations: [
-            {
-              physicalLocation: {
-                artifactLocation: { uri: diagnostic.location.file },
-                region: {
-                  startLine: diagnostic.location.line,
-                  startColumn: diagnostic.location.column,
-                  ...(diagnostic.location.endLine === undefined
-                    ? {}
-                    : { endLine: diagnostic.location.endLine }),
-                  ...(diagnostic.location.endColumn === undefined
-                    ? {}
-                    : { endColumn: diagnostic.location.endColumn }),
+        results: report.diagnostics.map((diagnostic) => {
+          const isKnown = known !== undefined && known.has(identityOf(diagnostic))
+          const properties: Record<string, unknown> = {}
+          if (diagnostic.fixable === true) properties.fixable = true
+          if (known !== undefined) properties.baseline = isKnown ? "known" : "novel"
+          return {
+            ruleId: nameOf(diagnostic),
+            level: severity01(diagnostic.severity),
+            message: { text: diagnostic.message },
+            ...(Object.keys(properties).length === 0 ? {} : { properties }),
+            ...(isKnown
+              ? {
+                  suppressions: [
+                    {
+                      kind: "external",
+                      status: "accepted",
+                      justification: "accepted in the baseline",
+                    },
+                  ],
+                }
+              : {}),
+            locations: [
+              {
+                physicalLocation: {
+                  artifactLocation: { uri: diagnostic.location.file },
+                  region: {
+                    startLine: diagnostic.location.line,
+                    startColumn: diagnostic.location.column,
+                    ...(diagnostic.location.endLine === undefined
+                      ? {}
+                      : { endLine: diagnostic.location.endLine }),
+                    ...(diagnostic.location.endColumn === undefined
+                      ? {}
+                      : { endColumn: diagnostic.location.endColumn }),
+                  },
                 },
               },
-            },
-          ],
-        })),
+            ],
+          }
+        }),
       },
     ],
   }
 }
 
-const toLsp = (source: Report): unknown =>
-  source.diagnostics.map((diagnostic) => {
+const toLsp = (report: Report): unknown =>
+  report.diagnostics.map((diagnostic) => {
     const { line, column, endLine, endColumn } = diagnostic.location
     return {
       range: {
@@ -84,11 +110,14 @@ const toLsp = (source: Report): unknown =>
       code: nameOf(diagnostic),
       source: diagnostic.engine,
       message: diagnostic.message,
+      ...(diagnostic.docsUrl === undefined
+        ? {}
+        : { codeDescription: { href: diagnostic.docsUrl } }),
     }
   })
 
-const toCodeClimate = (source: Report): unknown =>
-  source.diagnostics.map((diagnostic) => ({
+const toCodeClimate = (report: Report): unknown =>
+  report.diagnostics.map((diagnostic) => ({
     type: "issue",
     check_name: nameOf(diagnostic),
     description: diagnostic.message,
@@ -101,21 +130,32 @@ const toCodeClimate = (source: Report): unknown =>
       },
     },
     severity: severityCodeClimate(diagnostic.severity),
-    fingerprint:
-      diagnostic.identity ??
-      `${diagnostic.engine}/${diagnostic.ruleId}:${diagnostic.location.file}`,
+    fingerprint: identityOf(diagnostic),
   }))
 
 describe("report projections", () => {
+  it("takes a report that satisfies the report schema", () => {
+    const validate = compileLexicon(makeAjv(), "report")
+    const ok = validate(loadJson("fixtures/projections/report.golden.json"))
+    if (!ok) throw new Error(JSON.stringify(validate.errors))
+    expect(ok).toBe(true)
+  })
+
   it("maps to the documented SARIF 2.1.0 example", () => {
-    expect(toSarif(report)).toEqual(loadJson("fixtures/projections/sarif.golden.json"))
+    expect(toSarif(source)).toEqual(loadJson("fixtures/projections/sarif.golden.json"))
+  })
+
+  it("annotates novel and known findings against the accepted baseline", () => {
+    expect(toSarif(source, accepted)).toEqual(
+      loadJson("fixtures/projections/sarif-with-baseline.golden.json"),
+    )
   })
 
   it("maps to the documented LSP 3.17 example (1-based report to 0-based editor)", () => {
-    expect(toLsp(report)).toEqual(loadJson("fixtures/projections/lsp.golden.json"))
+    expect(toLsp(source)).toEqual(loadJson("fixtures/projections/lsp.golden.json"))
   })
 
   it("maps to the documented Code Climate example (identity, never line)", () => {
-    expect(toCodeClimate(report)).toEqual(loadJson("fixtures/projections/codeclimate.golden.json"))
+    expect(toCodeClimate(source)).toEqual(loadJson("fixtures/projections/codeclimate.golden.json"))
   })
 })

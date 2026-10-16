@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "tackle",
+          "version": "1",
+          "informationUri": "https://github.com/autotelic/tackle",
+          "rules": [
+            {
+              "id": "plumb/plumb/no-raw-html-layout",
+              "name": "plumb/plumb/no-raw-html-layout",
+              "shortDescription": { "text": "raw <div> outside a primitive" },
+              "help": { "text": "Render a Card primitive instead." },
+              "helpUri": "https://autotelic.dev/plumb/no-raw-html-layout"
+            },
+            {
+              "id": "joggle/joggle/layer-direction",
+              "name": "joggle/joggle/layer-direction",
+              "shortDescription": { "text": "a primitive imports a shared component" }
+            },
+            {
+              "id": "joggle/joggle/unparsed-output",
+              "name": "joggle/joggle/unparsed-output",
+              "shortDescription": { "text": "an engine could not run" }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "plumb/plumb/no-raw-html-layout",
+          "level": "error",
+          "message": { "text": "raw <div> outside a primitive" },
+          "properties": { "fixable": true, "baseline": "novel" },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "src/routes/settings_.tsx" },
+                "region": { "startLine": 12, "startColumn": 5, "endLine": 12, "endColumn": 10 }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "joggle/joggle/layer-direction",
+          "level": "warning",
+          "message": { "text": "a primitive imports a shared component" },
+          "properties": { "baseline": "known" },
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "accepted in the baseline"
+            }
+          ],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "src/components/ui/badge.tsx" },
+                "region": { "startLine": 3, "startColumn": 1 }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "joggle/joggle/unparsed-output",
+          "level": "note",
+          "message": { "text": "an engine could not run" },
+          "properties": { "baseline": "novel" },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "joggle.config" },
+                "region": { "startLine": 1, "startColumn": 1 }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -6,24 +6,61 @@
       "tool": {
         "driver": {
           "name": "tackle",
+          "version": "1",
           "informationUri": "https://github.com/autotelic/tackle",
           "rules": [
             {
+              "id": "plumb/plumb/no-raw-html-layout",
+              "name": "plumb/plumb/no-raw-html-layout",
+              "shortDescription": { "text": "raw <div> outside a primitive" },
+              "help": { "text": "Render a Card primitive instead." },
+              "helpUri": "https://autotelic.dev/plumb/no-raw-html-layout"
+            },
+            {
+              "id": "joggle/joggle/layer-direction",
+              "name": "joggle/joggle/layer-direction",
+              "shortDescription": { "text": "a primitive imports a shared component" }
+            },
+            {
               "id": "joggle/joggle/unparsed-output",
               "name": "joggle/joggle/unparsed-output",
-              "shortDescription": { "text": "jig could not parse joggle output (exit 1)" },
-              "help": {
-                "text": "readFileString: NotFound: FileSystem.readFile (<root>/tsc app.ts util.ts)"
-              }
+              "shortDescription": { "text": "an engine could not run" }
             }
           ]
         }
       },
       "results": [
         {
+          "ruleId": "plumb/plumb/no-raw-html-layout",
+          "level": "error",
+          "message": { "text": "raw <div> outside a primitive" },
+          "properties": { "fixable": true },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "src/routes/settings_.tsx" },
+                "region": { "startLine": 12, "startColumn": 5, "endLine": 12, "endColumn": 10 }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "joggle/joggle/layer-direction",
+          "level": "warning",
+          "message": { "text": "a primitive imports a shared component" },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "src/components/ui/badge.tsx" },
+                "region": { "startLine": 3, "startColumn": 1 }
+              }
+            }
+          ]
+        },
+        {
           "ruleId": "joggle/joggle/unparsed-output",
           "level": "note",
-          "message": { "text": "jig could not parse joggle output (exit 1)" },
+          "message": { "text": "an engine could not run" },
           "locations": [
             {
               "physicalLocation": {

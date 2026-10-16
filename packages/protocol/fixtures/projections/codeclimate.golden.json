@@ -1,8 +1,26 @@
 [
   {
     "type": "issue",
+    "check_name": "plumb/plumb/no-raw-html-layout",
+    "description": "raw <div> outside a primitive",
+    "categories": ["Style"],
+    "location": { "path": "src/routes/settings_.tsx", "lines": { "begin": 12, "end": 12 } },
+    "severity": "major",
+    "fingerprint": "plumb/plumb/no-raw-html-layout:src/routes/settings_.tsx:div"
+  },
+  {
+    "type": "issue",
+    "check_name": "joggle/joggle/layer-direction",
+    "description": "a primitive imports a shared component",
+    "categories": ["Style"],
+    "location": { "path": "src/components/ui/badge.tsx", "lines": { "begin": 3 } },
+    "severity": "minor",
+    "fingerprint": "joggle/joggle/layer-direction:src/components/ui/badge.tsx"
+  },
+  {
+    "type": "issue",
     "check_name": "joggle/joggle/unparsed-output",
-    "description": "jig could not parse joggle output (exit 1)",
+    "description": "an engine could not run",
     "categories": ["Style"],
     "location": { "path": "joggle.config", "lines": { "begin": 1 } },
     "severity": "info",
