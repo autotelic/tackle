@@ -1,0 +1,46 @@
+{
+  "name": "@autotelic/plumb",
+  "version": "0.6.0",
+  "description": "Opinionated Oxlint rules that keep TypeScript true: generic and Effect-specific patterns, maintained as one source of truth for the autotelic repos.",
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.js",
+    "./effect": "./dist/effect/index.js",
+    "./meta": "./dist/meta/index.js",
+    "./testing": "./dist/testing/index.js",
+    "./react": "./dist/react/index.js",
+    "./configs": "./dist/configs/recommended-rules.js"
+  },
+  "scripts": {
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm check:rule-tests && pnpm check:config",
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "oxlint src",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "check:rule-tests": "node scripts/check-rule-tests.mjs",
+    "check:config": "node scripts/check-config.mjs"
+  },
+  "dependencies": {
+    "@oxlint/plugins": "1.79.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3",
+    "@typescript-eslint/parser": "^8.71.0",
+    "eslint": "^10.11.0",
+    "fast-check": "^4.9.0",
+    "oxlint": "1.79.0",
+    "typescript": "5.9.3",
+    "vitest": "^4.1.11"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@10.33.0"
+}
