@@ -9,7 +9,7 @@
     "build": "pnpm -r run build",
     "typecheck": "pnpm -r run typecheck",
     "test": "pnpm -r run test",
-    "lint": "oxlint --ignore-pattern 'examples/**' .",
+    "lint": "oxlint --ignore-pattern 'examples/**' --ignore-pattern 'packages/plumb/**' --ignore-pattern 'packages/joggle/**' .",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
     "check": "pnpm format:check && pnpm typecheck && pnpm test && pnpm build",

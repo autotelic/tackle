@@ -7,10 +7,13 @@ import { defineConfig } from "oxlint"
  * `rules` spreads `plumbRecommendedRules`. Until then this file exists so the wiring point
  * is in one place, and so the `config` field in `jig.config.json` resolves.
  *
- * For whoever adds the first rule: a root config's `ignorePatterns` does NOT stop oxlint
- * resolving `examples/self/.oxlintrc.json`, which names a plugin this workspace has not
- * moved in yet — the build fails before a single file is read. Neither does `.oxlintignore`.
- * Only the command line works (`--ignore-pattern 'examples/**'`, as `pnpm lint` does), so the
- * exclusion lives there and not here. Both other forms were tried.
+ * For whoever adds the first rule: `plumb` is in this workspace, but its rules are not wired
+ * in here yet, and `pnpm lint` cannot reach three directories at once — `examples/self`, whose
+ * `.oxlintrc.json` names `@autotelic/plumb/ui` (on the branch the move did not take) and the
+ * external `@shadcn/lint`; and `packages/plumb` and `packages/joggle`, which each carry their
+ * own config and may not nest under this one (`options.typeAware` is root-only). A root
+ * config's `ignorePatterns` does NOT stop oxlint building a directory's config — the run fails
+ * before a single file is read — and neither does `.oxlintignore`. Only the command line
+ * works, so the exclusions live in `pnpm lint` and not here. All other forms were tried.
  */
 export default defineConfig({})

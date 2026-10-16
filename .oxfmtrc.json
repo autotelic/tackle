@@ -6,5 +6,5 @@
   "trailingComma": "all",
   "arrowParens": "always",
   "endOfLine": "lf",
-  "ignorePatterns": []
+  "ignorePatterns": ["packages/plumb/**", "packages/joggle/**", "packages/joggle/tests/fixtures/**"]
 }
