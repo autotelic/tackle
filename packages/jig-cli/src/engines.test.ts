@@ -1,6 +1,15 @@
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 import { accept, diffBaseline, ratchetViolations } from "@autotelic/protocol"
-import { engineDiagnostics, normalize, parseEngineOutput } from "./engines.ts"
+import {
+  argsFor,
+  engineDiagnostics,
+  normalize,
+  parseEngineOutput,
+  resolveEngineCommand,
+} from "./engines.ts"
 
 /* The exact shape `oxlint --format json` emits, with the position inside labels[0].span. */
 const OXLINT = JSON.stringify({
@@ -122,6 +131,43 @@ describe("engineDiagnostics", () => {
     expect(diagnostics).toHaveLength(1)
     expect(diagnostics[0]?.ruleId).toBe("cutlist/stale-catalog")
     expect(diagnostics[0]?.severity).toBe("error")
+  })
+})
+
+describe("argsFor", () => {
+  it("appends a plugin's configured args to its base args", () => {
+    expect(
+      argsFor({ id: "plumb", kind: "oxlint-plugin", args: ["--ignore-pattern", "examples/**"] }),
+    ).toEqual(["--format", "json", "--ignore-pattern", "examples/**"])
+  })
+
+  it("appends a process engine's configured args to its base args", () => {
+    expect(argsFor({ id: "joggle", kind: "process", args: ["--scope", "src"] })).toEqual([
+      "check",
+      "--format",
+      "json",
+      "--scope",
+      "src",
+    ])
+  })
+
+  it("leaves the base args alone when the engine declares none", () => {
+    expect(argsFor({ id: "joggle", kind: "process" })).toEqual(["check", "--format", "json"])
+  })
+})
+
+describe("resolveEngineCommand", () => {
+  it("prefers the project's own install and falls back to the bare command", () => {
+    const root = mkdtempSync(join(tmpdir(), "jig-engine-"))
+    try {
+      const bin = join(root, "node_modules", ".bin")
+      mkdirSync(bin, { recursive: true })
+      writeFileSync(join(bin, "oxlint"), "#!/bin/sh\n")
+      expect(resolveEngineCommand(root, "oxlint")).toBe(join(bin, "oxlint"))
+      expect(resolveEngineCommand(root, "not-installed-here")).toBe("not-installed-here")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
   })
 })
 

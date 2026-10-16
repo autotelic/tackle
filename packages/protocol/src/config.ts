@@ -97,6 +97,12 @@ export interface EngineRef {
   readonly kind: "process" | "oxlint-plugin" | "internal"
   readonly command?: string
   readonly config?: string
+  /**
+   * Extra args appended to the engine's invocation. The one thing a project's own layout
+   * needs that a shared default cannot know: e.g. scoping the `plumb` engine to
+   * `--ignore-pattern examples/**` at a root whose exemplar will not build.
+   */
+  readonly args?: ReadonlyArray<string>
   readonly enabled?: boolean
 }
 
@@ -269,12 +275,17 @@ const decodeEngineRef = (value: unknown): EngineRef | undefined => {
   if (id === undefined || kind === undefined) return undefined
   const command = str(value.command)
   const config = str(value.config)
+  // Strict: an `args` that is present but not a string array is a vocabulary jig cannot
+  // trust, so the whole engine ref is refused rather than run with guessed args.
+  const args = "args" in value ? strings(value.args) : undefined
+  if ("args" in value && args === undefined) return undefined
   const enabled = bool(value.enabled)
   return {
     id,
     kind,
     ...(command === undefined ? {} : { command }),
     ...(config === undefined ? {} : { config }),
+    ...(args === undefined ? {} : { args }),
     ...(enabled === undefined ? {} : { enabled }),
   }
 }

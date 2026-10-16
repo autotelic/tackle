@@ -15,6 +15,7 @@ const EngineRefSchema = Schema.Struct({
   kind: Schema.Literals(["process", "oxlint-plugin", "internal"]),
   command: Schema.optionalKey(Schema.String),
   config: Schema.optionalKey(Schema.String),
+  args: Schema.optionalKey(Schema.Array(Schema.String)),
   enabled: Schema.optionalKey(Schema.Boolean),
 })
 

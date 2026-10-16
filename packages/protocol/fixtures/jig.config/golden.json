@@ -1,7 +1,13 @@
 {
   "$schema": "https://autotelic.dev/tackle/protocol/jig.config.json",
   "engines": [
-    { "id": "plumb", "kind": "oxlint-plugin", "command": "oxlint", "config": ".oxlintrc.json" },
+    {
+      "id": "plumb",
+      "kind": "oxlint-plugin",
+      "command": "oxlint",
+      "config": ".oxlintrc.json",
+      "args": ["--ignore-pattern", "examples/**"]
+    },
     { "id": "joggle", "kind": "process", "command": "joggle", "config": "joggle.config.json" },
     { "id": "cutlist", "kind": "process", "command": "cutlist", "config": "cutlist.config.json" }
   ],

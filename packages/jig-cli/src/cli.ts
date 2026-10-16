@@ -6,6 +6,7 @@ import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { accept } from "@autotelic/protocol"
 import { emptyBaseline, readBaseline, writeBaseline } from "./baseline.ts"
 import { defaultConfig, loadConfig } from "./config.ts"
+import { resolveEngineCommand } from "./engines.ts"
 import { renderGithub, renderJson, renderText } from "./render.ts"
 import { harnessRun } from "./run.ts"
 
@@ -91,23 +92,25 @@ const baselineCommand = Command.make("baseline", { cwd: cwdFlag, config: configF
 
 const enginesCommand = Command.make("engines", { cwd: cwdFlag, config: configFlag }, (options) =>
   Effect.gen(function* () {
-    const { settings } = yield* context(options.cwd, options.config)
+    const { root, settings } = yield* context(options.cwd, options.config)
     const onPath = (name: string): boolean =>
       (process.env.PATH ?? "").split(":").some((dir) => dir !== "" && existsSync(join(dir, name)))
-    const lines = ["engine              kind            command        on PATH"]
+    const lines = ["engine              kind            command        source"]
     for (const engine of settings.engines) {
       const command = engine.command ?? engine.id
       const enabled = engine.enabled === false ? " (disabled)" : ""
+      // The column reports where the run WILL draw the command from, so it asks the
+      // resolver rather than scanning PATH on its own: project install, PATH, or neither.
+      const resolved = resolveEngineCommand(root, command)
+      const source = resolved !== command ? "project" : onPath(command) ? "PATH" : "no"
       lines.push(
-        `${engine.id.padEnd(19)} ${engine.kind.padEnd(15)} ${command.padEnd(14)} ${
-          onPath(command) ? "yes" : "no"
-        }${enabled}`,
+        `${engine.id.padEnd(19)} ${engine.kind.padEnd(15)} ${command.padEnd(14)} ${source}${enabled}`,
       )
     }
     yield* write(lines.join("\n"))
   }),
 ).pipe(
-  Command.withDescription("List configured engines and whether their command is on PATH."),
+  Command.withDescription("List configured engines and where their command resolves from."),
   Command.withShortDescription("List configured engines."),
 )
 

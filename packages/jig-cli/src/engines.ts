@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs"
+import { join } from "node:path"
 import { Effect } from "effect"
 import {
   countsOf,
@@ -33,12 +35,27 @@ const DEFAULT_ARGS: Readonly<Record<string, ReadonlyArray<string>>> = {
   joggle: ["check", "--format", "json"],
 }
 
-const argsFor = (engine: EngineRef): ReadonlyArray<string> =>
-  engine.id === "cutlist"
+/** The engine's default args, then whatever the project configured on top. */
+export const argsFor = (engine: EngineRef): ReadonlyArray<string> => [
+  ...(engine.id === "cutlist"
     ? ["build", "--check"]
     : engine.kind === "oxlint-plugin"
       ? ["--format", "json"]
-      : (DEFAULT_ARGS[engine.id] ?? [])
+      : (DEFAULT_ARGS[engine.id] ?? [])),
+  ...(engine.args ?? []),
+]
+
+/**
+ * The command `jig` spawns for an engine.
+ *
+ * `PATH` is ambient: it belongs to whoever invoked `jig`, so a global install can silently
+ * shadow the version this project pinned. When the project has its own `node_modules/.bin`
+ * copy, that one wins; otherwise the bare command is left for `PATH` to resolve.
+ */
+export const resolveEngineCommand = (root: string, command: string): string => {
+  const local = join(root, "node_modules", ".bin", command)
+  return existsSync(local) ? local : command
+}
 
 const record = (value: unknown): Record<string, unknown> | undefined =>
   typeof value === "object" && value !== null && !Array.isArray(value)
@@ -492,7 +509,8 @@ export const runEngine = (
     }
 
     const binary = engine.command ?? id
-    const outcome = yield* Effect.match(exec(binary, argsFor(engine), root), {
+    const command = resolveEngineCommand(root, binary)
+    const outcome = yield* Effect.match(exec(command, argsFor(engine), root), {
       onFailure: (message: string) => ({ ok: false as const, message }),
       onSuccess: (value) => ({ ok: true as const, value }),
     })

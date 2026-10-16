@@ -19,6 +19,7 @@
           "kind": { "enum": ["process", "oxlint-plugin", "internal"] },
           "command": { "type": "string" },
           "config": { "type": "string" },
+          "args": { "type": "array", "items": { "type": "string" } },
           "enabled": { "type": "boolean" }
         }
       }
