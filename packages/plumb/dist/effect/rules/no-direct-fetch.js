@@ -1,5 +1,5 @@
 import { defineRule } from "@oxlint/plugins";
-const TEST_FILE = /.(?:test|spec).[cm]?[jt]sx?$|\/test\//u;
+const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$|\/test\//u;
 /** Bare `fetch` reaches past the application boundary un-injected; require a client service. */
 export const noDirectFetchRule = defineRule({
     meta: {

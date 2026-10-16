@@ -1,7 +1,7 @@
 import { defineRule } from "@oxlint/plugins";
 import { ancestorsOf } from "../../shared/ancestors.js";
 import { readField } from "../../shared/structural.js";
-const TEST_FILE = /.(?:test|spec).[cm]?[jt]sx?$|\/test\//u;
+const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$|\/test\//u;
 const commentOwnerKinds = new Set([
     "ExpressionStatement",
     "ReturnStatement",

@@ -1,6 +1,6 @@
 import { defineRule } from "@oxlint/plugins";
 import { getAllComments } from "../shared/structural.js";
-const TEST_FILE = /.(?:test|spec).[cm]?[jt]sx?$/u;
+const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$/u;
 /** Every exported function carries a complete JSDoc contract. */
 export const requireJsdocOnExportedRule = defineRule({
     meta: {

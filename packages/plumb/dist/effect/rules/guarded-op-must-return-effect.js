@@ -1,6 +1,6 @@
 import { defineRule } from "@oxlint/plugins";
 import { ancestorsOf } from "../../shared/ancestors.js";
-const TEST_FILE = /.(?:test|spec).[cm]?[jt]sx?$|\/test\//u;
+const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$|\/test\//u;
 /** Whether the member chain ends in the Option namespace, e.g. `Option` or `O`.
  *
  * @param {ESTree.Expression | ESTree.Super} node - The callee object to inspect.

@@ -1,5 +1,5 @@
 import { defineRule } from "@oxlint/plugins";
-const TEST_FILE = /.(?:test|spec).[cm]?[jt]sx?$/u;
+const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$/u;
 /** Stems that name nothing; a test file must point back at the module it covers. */
 const VAGUE_STEMS = new Set([
     "index",

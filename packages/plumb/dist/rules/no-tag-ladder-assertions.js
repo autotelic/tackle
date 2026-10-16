@@ -1,6 +1,6 @@
 import { defineRule } from "@oxlint/plugins";
 import { isRecordObject, isString } from "../shared/structural.js";
-const TEST_FILE = /.(?:test|spec).[cm]?[jt]sx?$|\/test\//u;
+const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$|\/test\//u;
 /** Whether the if-consequent (or alternate) is a bare `throw new Error(...)` assertion.
  *
  * @param {ESTree.Statement | null | undefined} statement - The branch body to inspect.

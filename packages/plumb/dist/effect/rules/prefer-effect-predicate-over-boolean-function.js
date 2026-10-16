@@ -1,5 +1,5 @@
 import { defineRule } from "@oxlint/plugins";
-const TEST_FILE = /.(?:test|spec).[cm]?[jt]sx?$/u;
+const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$/u;
 function parameterAnnotation(parameter) {
     if (parameter.type === "TSParameterProperty") {
         return parameterAnnotation(parameter.parameter);

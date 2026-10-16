@@ -2,7 +2,7 @@ import { defineRule } from "@oxlint/plugins";
 import { childNodes } from "../../shared/child-nodes.js";
 import { readField } from "../../shared/structural.js";
 const PREDICATE_NAME = /^is[A-Z]/u;
-const TEST_FILE = /.(?:test|spec).[cm]?[jt]sx?$/u;
+const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$/u;
 /** True for a logical chain (>= 2 operands) whose every leaf is a domain-predicate call.
  *
  * @param {ESTree.Expression} expression - The guard test expression.

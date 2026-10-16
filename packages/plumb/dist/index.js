@@ -47,6 +47,7 @@ import { noMultipleFunctionParamsRule } from "./rules/no-multiple-function-param
 import { noOptionalFunctionParametersRule } from "./rules/no-optional-function-parameters.js";
 import { noSingleUsePrivateFunctionsRule } from "./rules/no-single-use-private-functions.js";
 import { noMutableEnvironmentCaptureRule } from "./rules/no-mutable-environment-capture.js";
+import { noSqlStringInterpolationRule } from "./rules/no-sql-string-interpolation.js";
 /** Generic Oxlint rules that reject low-evidence and low-signal implementation patterns. */
 const plumbPlugin = eslintCompatPlugin({
     meta: { name: "plumb" },
@@ -99,6 +100,7 @@ const plumbPlugin = eslintCompatPlugin({
         "no-optional-function-parameters": noOptionalFunctionParametersRule,
         "no-single-use-private-functions": noSingleUsePrivateFunctionsRule,
         "no-mutable-environment-capture": noMutableEnvironmentCaptureRule,
+        "no-sql-string-interpolation": noSqlStringInterpolationRule,
     },
 });
 export default plumbPlugin;

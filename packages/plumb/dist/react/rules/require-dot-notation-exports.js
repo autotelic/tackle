@@ -1,7 +1,7 @@
 import { defineRule } from "@oxlint/plugins";
 import { isString } from "../../shared/structural.js";
 import { hookFamily, isProviderName } from "../role.js";
-const TEST_FILE = /.(?:test|spec).[cm]?[jt]sx?$/u;
+const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$/u;
 /**
  * Whether a component family (a Provider plus a useXxx hook sharing one family
  * name) must carry a dot-notation aggregate export. The useXxx hook is the

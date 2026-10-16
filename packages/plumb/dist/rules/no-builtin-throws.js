@@ -1,7 +1,7 @@
 import { defineRule } from "@oxlint/plugins";
 import { firstOptionRecord } from "../shared/rule-options.js";
 import { isRecordObject, isString } from "../shared/structural.js";
-const TEST_FILE = /.(?:test|spec).[cm]?[jt]sx?$/u;
+const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$/u;
 /** Generic built-in errors: untyped, prose-only, and invisible to tag-based handling. */
 const BUILTIN_ERRORS = new Set([
     "Error",

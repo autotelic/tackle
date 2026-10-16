@@ -1,6 +1,6 @@
 import { defineRule } from "@oxlint/plugins";
 import { ancestorsOf } from "../../shared/ancestors.js";
-const TEST_FILE = /.(?:test|spec).[cm]?[jt]sx?$|\/test\//u;
+const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$|\/test\//u;
 const EQUALITY_OPERATORS = new Set(["==", "===", "!=", "!=="]);
 /**
  * Whether the expression is a literal operand (literal or brace-less template).

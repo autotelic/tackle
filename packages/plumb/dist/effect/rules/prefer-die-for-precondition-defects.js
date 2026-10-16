@@ -1,7 +1,7 @@
 import { defineRule } from "@oxlint/plugins";
 import { readField } from "../../shared/structural.js";
 import { ancestorsOf } from "../../shared/ancestors.js";
-const TEST_FILE = /.(?:test|spec).[cm]?[jt]sx?$|\/test\//u;
+const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$|\/test\//u;
 /** Unwrap a tuple element to the type node it contributes to the annotation walk.
  *
  * @param {ESTree.TSTupleElement} element - Tuple element node.

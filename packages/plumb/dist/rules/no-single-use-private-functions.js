@@ -1,7 +1,7 @@
 import { defineRule } from "@oxlint/plugins";
 import { ancestorsOf } from "../shared/ancestors.js";
 import { isString } from "../shared/structural.js";
-const TEST_FILE = /.(?:test|spec).[cm]?[jt]sx?$/u;
+const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$/u;
 const MESSAGE_BY_KIND = {
     "effect-function": "singleUseEffectFunction",
     "effect-program": "singleUseEffectProgram",

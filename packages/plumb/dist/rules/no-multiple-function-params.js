@@ -1,7 +1,7 @@
 import { defineRule } from "@oxlint/plugins";
 import { readField } from "../shared/structural.js";
 import { ancestorsOf } from "../shared/ancestors.js";
-const TEST_FILE = /.(?:test|spec).[cm]?[jt]sx?$/u;
+const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$/u;
 const DEFAULT_MAX_PARAMS = 1;
 /** Conventional HTTP method handler names, exempt inside framework route files. */
 const HTTP_METHOD_NAMES = new Set([

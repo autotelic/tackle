@@ -2,7 +2,7 @@ import { defineRule } from "@oxlint/plugins";
 import { ancestorsOf } from "../../shared/ancestors.js";
 import { readField } from "../../shared/structural.js";
 import { isProviderName } from "../role.js";
-const TEST_FILE = /.(?:test|spec).[cm]?[jt]sx?$/u;
+const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$/u;
 /** Pattern identifying custom hooks (names starting with `use`). */
 const HOOK_PATTERN = /^use/u;
 /** React's built-in hooks that must not be used directly inside components. */

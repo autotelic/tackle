@@ -1,7 +1,7 @@
 import { defineRule } from "@oxlint/plugins";
 import { isString } from "../../shared/structural.js";
 const PROVISION_METHODS = new Set(["provide", "provideMerge"]);
-const TEST_FILE = /.(?:test|spec).[cm]?[jt]sx?$|\/test\//u;
+const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$|\/test\//u;
 /** Multiple provision stages in one pipe entangle dependency tiers; combine independent layers or name each stage.
  *
  * Import tracking covers local names bound to the `Layer` export of

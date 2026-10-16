@@ -1,5 +1,5 @@
 import { defineRule } from "@oxlint/plugins";
-const TEST_FILE = /.(?:test|spec).[cm]?[jt]sx?$/u;
+const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$/u;
 /**
  * Optional parameters hide undefined from the signature; require the union spelled out.
  *

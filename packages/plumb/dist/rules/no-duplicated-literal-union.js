@@ -36,6 +36,10 @@ export const noDuplicatedLiteralUnionRule = defineRule({
         const seen = new Map();
         const duplicates = new Map();
         return {
+            before() {
+                seen.clear();
+                duplicates.clear();
+            },
             TSTypeAliasDeclaration(node) {
                 const key = literalUnionKey(node.typeAnnotation);
                 if (key === null)

@@ -1,5 +1,5 @@
 import { defineRule } from "@oxlint/plugins";
-const TEST_FILE = /.(?:test|spec).[cm]?[jt]sx?$/u;
+const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$/u;
 const ORDERING_OPERATORS = new Set(["<", ">", "<=", ">=", "===", "=="]);
 function isZeroLiteral(expression) {
     return (expression !== null &&

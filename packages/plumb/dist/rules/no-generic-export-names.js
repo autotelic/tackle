@@ -38,7 +38,7 @@ const GENERIC_TERMS = new Set([
     "temp",
     "tmp",
 ]);
-const TEST_FILE = /.(?:test|spec).[cm]?[jt]sx?$/u;
+const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$/u;
 /** Split an identifier into its words across camelCase and separators.
  *
  * @param {string} name - Identifier or filename stem to split.

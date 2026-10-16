@@ -1,6 +1,6 @@
 import { defineRule } from "@oxlint/plugins";
 import { getAllComments } from "../shared/structural.js";
-const TEST_FILE = /.(?:test|spec).[cm]?[jt]sx?$/u;
+const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$/u;
 /** Directive and safety comments are tooling contracts, not prose. */
 const EXEMPT = /^(?:SAFETY:|eslint|oxlint|@ts-|ts-check|jscpd)/iu;
 /** Stray inline notes inside a function body belong in its JSDoc, not the code. */

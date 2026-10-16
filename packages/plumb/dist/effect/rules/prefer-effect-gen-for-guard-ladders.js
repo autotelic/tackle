@@ -1,6 +1,6 @@
 import { defineRule } from "@oxlint/plugins";
 import { ancestorsOf } from "../../shared/ancestors.js";
-const TEST_FILE = /.(?:test|spec).[cm]?[jt]sx?$|\/test\//u;
+const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$|\/test\//u;
 const LADDER_THRESHOLD = 3;
 /** Whether this call is an Effect combinator chained in the flatMap/map ladder family.
  *

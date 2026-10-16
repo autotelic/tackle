@@ -1,7 +1,7 @@
 import { defineRule } from "@oxlint/plugins";
 import { ancestorsOf } from "../../shared/ancestors.js";
 import { isHookName } from "../role.js";
-const TEST_FILE = /.(?:test|spec).[cm]?[jt]sx?$/u;
+const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$/u;
 /**
  * Whether a custom context hook that reads context must be reported for
  * lacking a guard against a missing Provider.

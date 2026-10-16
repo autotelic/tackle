@@ -1,6 +1,6 @@
 import { defineRule } from "@oxlint/plugins";
 import { isRecordObject, isString } from "../../shared/structural.js";
-const TEST_FILE = /.(?:test|spec).[cm]?[jt]sx?$/u;
+const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$/u;
 /** Whether a type-literal member declares a literal-typed `_tag` property.
  *
  * @param {ESTree.Node} member - A member of a type literal.

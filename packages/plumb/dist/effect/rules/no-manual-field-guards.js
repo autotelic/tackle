@@ -1,6 +1,6 @@
 import { defineRule } from "@oxlint/plugins";
 import { ancestorsOf } from "../../shared/ancestors.js";
-const TEST_FILE = /.(?:test|spec).[cm]?[jt]sx?$|\/test\//u;
+const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$|\/test\//u;
 function calleeName(node) {
     const callee = node.callee;
     if (callee.type === "MemberExpression" && callee.property.type === "Identifier") {

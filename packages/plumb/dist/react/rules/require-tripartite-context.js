@@ -1,6 +1,6 @@
 import { defineRule } from "@oxlint/plugins";
 import { isString } from "../../shared/structural.js";
-const TEST_FILE = /.(?:test|spec).[cm]?[jt]sx?$/u;
+const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$/u;
 /** The three required keys of a context value type. */
 const REQUIRED_KEYS = ["state", "actions", "meta"];
 /**

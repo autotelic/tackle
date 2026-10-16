@@ -25,11 +25,12 @@ export declare function createTester(): RuleTester;
  * Adapt a `createOnce` rule for Oxlint's RuleTester.
  *
  * RuleTester drives rules through their ESLint-compatible `create` method and
- * does not understand `before`/`after` lifecycle hooks. The adapter invokes
- * `createOnce` once per linted file (fresh state per file, exactly like native
- * Oxlint), honours the skip contract (`before` returning `false` skips the
- * file), and chains the rule's own `Program:exit` visitor with the after hook
- * instead of clobbering it.
+ * does not understand `before`/`after` lifecycle hooks. Like native Oxlint, the
+ * adapter invokes `createOnce` once and reuses its visitors for every linted
+ * file, so state a rule forgets to reset in `before` leaks between test cases
+ * exactly as it would leak between files in a real run. It also honours the
+ * skip contract (`before` returning `false` skips the file), and chains the
+ * rule's own `Program:exit` visitor with the after hook instead of clobbering it.
  *
  * @param {CreateOnceRule | Rule} rule - The createOnce-style rule to adapt. A
  * rule already in ESLint-style passes through untouched.

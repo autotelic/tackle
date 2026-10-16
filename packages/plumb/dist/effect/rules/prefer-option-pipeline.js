@@ -1,7 +1,7 @@
 import { defineRule } from "@oxlint/plugins";
 import { childNodes } from "../../shared/child-nodes.js";
 import { readField } from "../../shared/structural.js";
-const TEST_FILE = /.(?:test|spec).[cm]?[jt]sx?$/u;
+const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$/u;
 /**
  * Count Option.none() returns in this function's own body. Nested scopes belong to
  * themselves, and loop bodies hold algorithmic exits rather than guard scatters.

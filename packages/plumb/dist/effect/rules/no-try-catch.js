@@ -1,5 +1,5 @@
 import { defineRule } from "@oxlint/plugins";
-const TEST_FILE = /.(?:test|spec).[cm]?[jt]sx?$|\/test\//u;
+const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$|\/test\//u;
 /** Raw `try`/`catch` detours failures around the typed error channel; route them through `Effect.try` instead. */
 export const noTryCatchRule = defineRule({
     meta: {

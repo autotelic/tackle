@@ -1,6 +1,6 @@
 import { defineRule } from "@oxlint/plugins";
 import { ancestorsOf } from "../shared/ancestors.js";
-const TEST_FILE = /.(?:test|spec).[cm]?[jt]sx?$/u;
+const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$/u;
 /**
  * Whether the identifier sits inside a type annotation rather than a value position.
  *

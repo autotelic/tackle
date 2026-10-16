@@ -23,6 +23,8 @@ import { preferEffectMatchRule } from "./rules/prefer-effect-match.js";
 import { noNestedLayerProvideRule } from "./rules/no-nested-layer-provide.js";
 import { noCascadingLayerProvideRule } from "./rules/no-cascading-layer-provide.js";
 import { noStaticEffectServiceForwardersRule } from "./rules/no-static-effect-service-forwarders.js";
+import { noRawErrorForwardingRule } from "./rules/no-raw-error-forwarding.js";
+import { noNullishDefaultOnPartialInputRule } from "./rules/no-nullish-default-on-partial-input.js";
 /** Opt-in Oxlint rules for Effect service and Layer architecture. */
 const plumbEffectPlugin = eslintCompatPlugin({
     meta: { name: "plumb-effect" },
@@ -51,6 +53,8 @@ const plumbEffectPlugin = eslintCompatPlugin({
         "no-nested-layer-provide": noNestedLayerProvideRule,
         "no-cascading-layer-provide": noCascadingLayerProvideRule,
         "no-static-effect-service-forwarders": noStaticEffectServiceForwardersRule,
+        "no-raw-error-forwarding": noRawErrorForwardingRule,
+        "no-nullish-default-on-partial-input": noNullishDefaultOnPartialInputRule,
     },
 });
 export default plumbEffectPlugin;

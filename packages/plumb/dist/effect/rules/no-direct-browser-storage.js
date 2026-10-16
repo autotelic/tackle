@@ -1,7 +1,7 @@
 import { defineRule } from "@oxlint/plugins";
 import { ancestorsOf } from "../../shared/ancestors.js";
 import { isString } from "../../shared/structural.js";
-const TEST_FILE = /.(?:test|spec).[cm]?[jt]sx?$|\/test\//u;
+const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$|\/test\//u;
 const BANNED_STORAGE = new Set(["indexedDB", "localStorage", "sessionStorage"]);
 /**
  * The banned-storage global named by an identifier, if any.
