@@ -84,9 +84,15 @@ reconciliation that follows the move. All five packages now build and test here,
 ```sh
 pnpm install
 pnpm check        # format:check + typecheck + test + build, every package
+pnpm jig check    # every engine against this repo; holds the ratchet
 pnpm cutlist --help
 pnpm jig --help
 ```
+
+`pnpm jig check` is the root dogfood gate: it runs `plumb`, `joggle`, and `cutlist` against
+this repository, one report, and fails on anything new. What it finds is frozen by identity
+in `.jig-baseline.json`; the ratchet only shrinks that file, and Phase B drives every `plumb`
+and `joggle` rule to `error` until it is empty.
 
 `examples/self` is the exemplar client repo: the full config set (`cutlist.config.json`,
 `jig.config.json`, `joggle.config.json`, `.oxlintrc.json`), a small `src/` tree, and the
@@ -103,10 +109,10 @@ pnpm jig engines --cwd examples/self            # the census: configured, instal
 ```
 
 Root-level dogfood configs are the _other_ half of "build the tools with the tools", and they
-land with `plumb`/`joggle`: `joggle.config.json` declares the dependency law as architecture
-layers, `oxlint.config.ts` is where `plumb` is wired in, and `jig.config.json` follows once
-`jig` can read both. [`MIGRATION.md`](./MIGRATION.md) step 6 lists exactly what is missing and
-why — including what `jig check` reports at the root today, which is honest but not green.
+now land: `joggle.config.json` declares the dependency law as architecture layers,
+`tsconfig.json` gives `joggle` one project to read at the root, `oxlint.config.ts` wires
+`plumb` in (at `warn` until Phase B ratchets each rule to `error`), and `jig.config.json` runs
+all three engines. [`MIGRATION.md`](./MIGRATION.md) step 6 records what is still open.
 
 ## Status
 

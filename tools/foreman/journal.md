@@ -750,3 +750,170 @@ two benches here are the root seam itself. The independence that matters for thi
 witness and the red team — is bought with **separate conversations and raw instruments**, and
 those members are dispatched as such. If a later round's benches touch overlapping files, they
 get real worktrees.
+
+---
+
+## 4. Act — what each bench produced
+
+### W1 — engine location + `EngineRef.args` (cartographer/combine)
+
+Branch `foreman/r1-w1-engine-location`, commit `a97b7f8`, fast-forwarded into `main` by the
+foreman. Files: `packages/protocol/{src/config.ts,schema/jig.config.json,fixtures/jig.config/golden.json}`,
+`packages/jig-cli/{src/config.ts,src/engines.ts,src/cli.ts,src/engines.test.ts}`.
+
+- `EngineRef` gains an optional `args: string[]`; the decoder is strict (a present-but-malformed
+  `args` refuses the whole engine ref, rather than run with guessed args); the JSON Schema and
+  the Ajv golden fixture carry it; the frozen compat fixture is untouched.
+- `argsFor` appends `engine.args` to the engine's base args.
+- `resolveEngineCommand(root, command)` prefers `<root>/node_modules/.bin/<command>`, else the
+  bare command for PATH. `runEngine` spawns the resolved path; `jig engines` reports
+  `project` / `PATH` / `no` from the resolver, not from a bare PATH scan.
+
+### W2 — root dogfood config (foreman, trunk)
+
+Commit `d312ebb`. Root `tsconfig.json` (`packages/*/src`), root `package.json` (`@types/node`
+and workspace links to `plumb`/`joggle`/`cutlist`), root `oxlint.config.ts` (plumb +
+plumb-effect at `warn`; `require-schema-type-derivation` off), root `jig.config.json` (three
+engines; plumb scoped with `--ignore-pattern`; cutlist scoped to `examples/self`), and root
+`.jig-baseline.json`.
+
+**Why `warn`, recorded as a deliberate deviation.** `plumbRecommendedRules` ships at `error`.
+At `error` this tree produces ~455 findings behind a plain `pnpm lint` with no baseline to
+ratchet against — the "error over a growing baseline" §5 warns against. Phase B moves each
+rule to `error` under the ≤50-findings entry bar; until then `jig check` freezes the same
+findings by identity. The alternative (build the §5 rung-2 changed-files gate now) is F7
+below, a missing primitive, and not a Phase A prerequisite.
+
+## 5. Witness
+
+The bench conversation is W1's subagent; the witness is the foreman conversation plus the red
+team (§6), run against the merged trunk. Raw, re-run on the trunk:
+
+### 5.1 `pnpm jig engines` — every engine resolves from the project
+
+```
+$ pnpm jig engines
+engine              kind            command        source
+cutlist             process         cutlist        project
+plumb               oxlint-plugin   oxlint         project
+joggle              process         joggle         project
+```
+
+### 5.2 `pnpm jig engines --cwd examples/self`
+
+```
+engine              kind            command        source
+plumb               oxlint-plugin   oxlint         PATH
+joggle              process         joggle         PATH
+cutlist             process         cutlist        project
+```
+
+The exemplar links `cutlist` and `jig-cli` and nothing else, so `cutlist` resolves from its own
+`node_modules/.bin` and `plumb`/`joggle` fall through to PATH. That is the honest answer, and
+the column now says which one.
+
+### 5.3 `pnpm jig check --format json` — all three engines ran
+
+```
+counts { "error": 0, "warn": 461, "info": 0 }   files 44
+generators:
+  cutlist  0 findings   (ran)
+  plumb    461 findings (ran)
+  joggle   0 findings   (ran)
+```
+
+No `*/unparsed-output`, no missing-binary note. Compare the census (§1.3): plumb was
+`unparsed-output` (config-build failure), joggle was `unparsed-output` (no project), cutlist
+could not spawn. All three are now real runs.
+
+### 5.4 Reproducibility
+
+Two independent root ledgers produced **461 identical** diagnostics (engine, ruleId, file,
+line, column, severity). A baseline over a non-reproducible set would re-report; this holds.
+
+### 5.5 Package judges (re-run on the trunk)
+
+```
+packages/protocol   Test Files 7 passed (7)   Tests 89 passed (89)
+packages/protocol   lexicon-compat: 8 frozen record(s) valid against the current schemas
+packages/jig-cli    tsgo --noEmit (exit 0)   Test Files 2 passed (2)   Tests 38 passed (38)
+packages/joggle     (own check) 68 files / 282 tests; lint baseline 0 findings
+```
+
+### 5.6 The gate
+
+```
+$ pnpm jig baseline
+jig: accepted 149 finding(s) into .jig-baseline.json
+$ pnpm jig check
+0 error(s), 461 warning(s), 0 notice(s) in 44 file(s)
+exit=0
+$ pnpm check
+exit=0
+```
+
+The 461 findings dedupe to **149 identities** (rule × file — the protocol's granularity).
+`pnpm check` (format:check → typecheck → test → lexicon:compat → build) is green, and the
+build did not dirty `plumb`'s committed `dist`.
+
+## 6. Ratchet
+
+Only witnessed changes entered the trunk:
+
+| Commit    | What                               | Witness                 |
+| --------- | ---------------------------------- | ----------------------- |
+| `d0be603` | census, budget, triage             | raw instruments (§1)    |
+| `a97b7f8` | W1: engine location + `args`       | §5.1–5.5, red team (§7) |
+| `d312ebb` | W2: root dogfood config + baseline | §5.6, `pnpm check`      |
+
+The root `.jig-baseline.json` is now a property of the code: 149 identities, accepted by
+`jig baseline`, guarded by `failOn: any-new`. It can only shrink.
+
+## 7. Learn — what this round taught the tools
+
+- **F7 — the changed-files gate does not exist.** §5's rung 2 ("Touched") and FOREMAN §4 name
+  `pnpm lint:errors:changed` reading `.oxlint-errors.json`; nothing in this repository
+  implements it (only the exemplar's data file exists). Without it, no rule can move to
+  `error` without putting the whole repo red at once — so it is a **prerequisite of Phase B**,
+  and the single most valuable new primitive this round surfaced. It is `expand`; it needs an
+  approval and a home (most likely a `jig` subcommand, since `jig` owns the baseline idea).
+- **The census can lie about itself.** The "on PATH" column was hydraulic: it answered a fact
+  about the caller's shell, not the project, and `joggle` resolved to a **global**
+  `/Users/togmund/.local/bin/joggle`, not the workspace source. W1 removes the class: the
+  project's own install wins, and the column says which. This is the kind of finding that is
+  worthless to fix once and valuable to fix by rule.
+- **`plumb`'s rule-test check is advisory by design.** `scripts/check-rule-tests.mjs` reports
+  75 missing suites and exits 0 unless handed `--strict`; `plumb`'s `check` does not pass it.
+  Whether a co-located suite is required is a judgement (§7 `expand`), not a Phase A item.
+- **Two declaration sites for one format.** `EngineRef` is spelled in `protocol` (interface +
+  decoder), `protocol/schema/jig.config.json` (JSON Schema), and `jig-cli/config.ts` (Effect
+  Schema). W1 changed all three; nothing failed when only the TypeScript changed, because the
+  Ajv conformance suite is what catches the schema. The conformance suite _is_ the seam's
+  judge, and the golden fixture now exercises `args`.
+
+## 8. Status (three separate facts, §13)
+
+- **Code-ready.** W1 and W2 are committed on `main` (`a97b7f8`, `d312ebb`); docs and the
+  changeset are staged for the scribe commit.
+- **Verified.** `pnpm jig check` exit 0; `pnpm check` exit 0; `protocol` 89 tests +
+  `lexicon:compat`; `jig-cli` 38 tests; `joggle` own check. Witnessed by a different
+  conversation (W1 bench vs foreman + red team).
+- **Merged.** Both branches fast-forwarded into `main` by the foreman; no worktree left
+  unmerged.
+
+**Deviation carried into the queue.** W2's `plumb` rules are at `warn`, and `packages/joggle`'s
+typeAware ruleset is _not_ carried into a root config. Both are Phase B; both are recorded
+above with reasons.
+
+## 9. Handoff — the queue for Round 2
+
+1. **F7 first:** build the changed-files gate (`pnpm lint:errors:changed` / a `jig` equivalent)
+   so Phase B can move a rule to `error` without reddening the repo. Until it exists, Phase B
+   has no rung 2.
+2. Then Phase B, highest-count `contract` first: `plumb/no-conditional-empty-object-spread`
+   (68), `plumb/no-unknown-parameters` (63), `plumb-effect/guarded-op-must-return-option` (56),
+   `plumb/no-stray-inline-comments` (36). Each until ≤50, then `error`, then empty.
+3. Carry `plumb`'s and `joggle`'s rules into a root `options.typeAware` config and retire the
+   `--ignore-pattern 'packages/joggle/**'` workaround (MIGRATION item 6, still open).
+4. The `[A]` typebox item: decide the `packages/jig-cli/extensions/jig.ts` `typebox` dependency
+   shape (runtime dep vs devDependency vs optional peer) and pin it.

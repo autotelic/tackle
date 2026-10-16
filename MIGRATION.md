@@ -171,6 +171,19 @@ Consumers see **zero change**: same npm names, same `bin`, same `exports`, same 
    workspace today (`pnpm jig engines`, `pnpm jig check`) says exactly what is missing. Each
    gap is small and already known:
 
+   **Landed in Round 1 (2026-10-16).** All three prerequisites are in. A root `tsconfig.json`
+   scoped to `packages/*/src`, plus `@types/node` in the root `package.json`; a root
+   `oxlint.config.ts` threaded with the `plumb`/`plumb-effect` plugins; and a root
+   `jig.config.json` running all three engines. `jig` also gained `EngineRef.args` and resolves
+   an engine from the project's own `node_modules/.bin` before PATH (so the census reports what
+   the project installed, not what a global shell shadows). The root `pnpm jig check` now runs
+   `plumb` (461 findings), `joggle`, and `cutlist`, and its 149 identities are frozen in
+   `.jig-baseline.json`. The `plumb` rules run at `warn`; Phase B ratchets them to `error`, rule
+   by rule, under the ≤50-findings entry bar. Still open in this item: `plumb`'s rules are not
+   carried into a root `options.typeAware` config, so `packages/joggle/oxlint.config.ts` stays
+   nested and `pnpm lint` keeps `--ignore-pattern 'packages/joggle/**'`; and the exemplar's own
+   `plumb` engine still cannot load `@autotelic/plumb/ui`, so `examples/self` has no baseline.
+
    - **`joggle` has no project to read.** It discovers files through `tsgo`, and the workspace
      has `tsconfig.base.json` and no root `tsconfig.json`. With no project it synthesizes
      TypeScript's default file list (`tsc app.ts util.ts`) and dies on the missing file, which
