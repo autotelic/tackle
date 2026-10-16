@@ -3,6 +3,11 @@
   "version": "0.6.0",
   "description": "Opinionated Oxlint rules that keep TypeScript true: generic and Effect-specific patterns, maintained as one source of truth for the autotelic repos.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/autotelic/tackle.git",
+    "directory": "packages/plumb"
+  },
   "files": [
     "dist"
   ],
@@ -41,6 +46,5 @@
   },
   "engines": {
     "node": ">=20"
-  },
-  "packageManager": "pnpm@10.33.0"
+  }
 }

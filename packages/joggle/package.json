@@ -2,16 +2,16 @@
   "name": "@autotelic/joggle",
   "version": "0.1.0",
   "type": "module",
-  "packageManager": "pnpm@12.3.4",
   "description": "Cross-file patterns and idioms for TypeScript — the layer above the linter and the typechecker.",
   "license": "MIT",
-  "homepage": "https://github.com/autotelic/joggle#readme",
+  "homepage": "https://github.com/autotelic/tackle/tree/main/packages/joggle#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/autotelic/joggle.git"
+    "url": "git+https://github.com/autotelic/tackle.git",
+    "directory": "packages/joggle"
   },
   "bugs": {
-    "url": "https://github.com/autotelic/joggle/issues"
+    "url": "https://github.com/autotelic/tackle/issues"
   },
   "keywords": [
     "typescript",
@@ -78,7 +78,7 @@
     "oxc-parser": "0.150.0"
   },
   "devDependencies": {
-    "@autotelic/plumb": "0.6.0",
+    "@autotelic/plumb": "workspace:*",
     "@effect/tsgo": "0.46.1",
     "@effect/vitest": "4.0.0-rc.116",
     "@types/node": "24.13.5",
