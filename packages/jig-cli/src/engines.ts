@@ -58,6 +58,51 @@ const severityOf = (value: unknown): Severity => {
   return "warn"
 }
 
+/**
+ * oxlint names a rule `plugin(rule)` in `code` — `eslint(no-unused-vars)`,
+ * `plumb-ui(no-raw-html-layout)`. The report keeps `engine` and `ruleId` apart, so a code
+ * whose plugin is the engine itself must not repeat it: on engine `plumb`,
+ * `plumb(no-raw-html-layout)` is ruleId `no-raw-html-layout`, while
+ * `plumb-ui(no-raw-html-layout)` keeps the sub-plugin as a namespace. A bare code passes
+ * through. Without this, `${engine}/${ruleId}` reads `plumb/plumb(no-raw-html-layout)`.
+ */
+const RULE_CODE = /^([A-Za-z][\w-]*)\((.+)\)$/u
+
+const ruleIdOf = (code: string, engine: string): string => {
+  const match = RULE_CODE.exec(code)
+  if (match === null) return code
+  const plugin = match[1] ?? ""
+  const rule = match[2] ?? code
+  return plugin === engine ? rule : `${plugin}/${rule}`
+}
+
+/* The severity vocabularies each inbound encoding speaks, mapped to the protocol's three. */
+
+/** GitHub workflow commands: error | warning | notice. */
+const githubSeverity = (value: string | undefined): Severity => {
+  if (value === "error") return "error"
+  if (value === "notice") return "info"
+  return "warn"
+}
+
+/** SARIF: error | warning | note | none. */
+const sarifSeverity = (value: unknown): Severity => {
+  if (value === "error") return "error"
+  if (value === "note" || value === "none") return "info"
+  return "warn"
+}
+
+/**
+ * Code Climate / GitLab: info | minor | major | critical | blocker. This is the inverse of
+ * the outward projection, so `error → major → error` and `warn → minor → warn` round-trip.
+ * (`oxlint` chooses `major` for its own warnings; that loss is oxlint's, not the mapping's.)
+ */
+const codeClimateSeverity = (value: unknown): Severity => {
+  if (value === "info") return "info"
+  if (value === "minor") return "warn"
+  return "error"
+}
+
 /** A path as the report wants it: repository-relative when it sits under the root. */
 const relativeTo = (file: string, root: string): string =>
   file.startsWith(`${root}/`) ? file.slice(root.length + 1) : file
@@ -91,7 +136,10 @@ export const normalize = (raw: unknown, engine: string, root: string): Diagnosti
   const docsUrl = stringOf(entry.url) ?? stringOf(entry.docsUrl)
   return {
     engine,
-    ruleId: stringOf(entry.ruleId) ?? stringOf(entry.code) ?? stringOf(entry.rule) ?? "unknown",
+    ruleId: ruleIdOf(
+      stringOf(entry.ruleId) ?? stringOf(entry.code) ?? stringOf(entry.rule) ?? "unknown",
+      engine,
+    ),
     severity: severityOf(entry.severity),
     message,
     location: locationOf(entry, root),
@@ -105,12 +153,180 @@ export const normalize = (raw: unknown, engine: string, root: string): Diagnosti
 
 const defined = (value: Diagnostic | undefined): value is Diagnostic => value !== undefined
 
+const arrayOfRecords = (value: unknown): ReadonlyArray<Record<string, unknown>> | undefined => {
+  if (!Array.isArray(value)) return undefined
+  const out: Array<Record<string, unknown>> = []
+  for (const element of value) {
+    const entry = record(element)
+    if (entry === undefined) return undefined
+    out.push(entry)
+  }
+  return out
+}
+
+/* SARIF 2.1.0: what `oxlint --format sarif`, and most static-analysis tools, emit. */
+
+const sarifLocation = (
+  result: Record<string, unknown>,
+  root: string,
+): SourceLocation | undefined => {
+  const locations = result.locations
+  const physical = record(
+    record(Array.isArray(locations) ? locations[0] : undefined)?.physicalLocation,
+  )
+  const uri = stringOf(record(physical?.artifactLocation)?.uri)
+  if (uri === undefined) return undefined
+  const region = record(physical?.region)
+  const line = numberOr(region?.startLine, 1)
+  const column = numberOr(region?.startColumn, 1)
+  const endLine = typeof region?.endLine === "number" ? region.endLine : undefined
+  const endColumn = typeof region?.endColumn === "number" ? region.endColumn : undefined
+  return {
+    file: relativeTo(uri.replace(/^file:\/\//u, ""), root),
+    line,
+    column,
+    ...(endLine === undefined ? {} : { endLine }),
+    ...(endColumn === undefined ? {} : { endColumn }),
+  }
+}
+
+const parseSarif = (
+  doc: Record<string, unknown>,
+  engine: string,
+  root: string,
+): ReadonlyArray<Diagnostic> | undefined => {
+  const runs = arrayOfRecords(doc.runs)
+  if (runs === undefined) return undefined
+  const out: Array<Diagnostic> = []
+  for (const run of runs) {
+    const results = arrayOfRecords(run.results)
+    if (results === undefined) return undefined
+    for (const result of results) {
+      const message = stringOf(record(result.message)?.text)
+      const ruleId = stringOf(result.ruleId)
+      const location = sarifLocation(result, root)
+      if (message === undefined || ruleId === undefined || location === undefined) return undefined
+      out.push({
+        engine,
+        ruleId: ruleIdOf(ruleId, engine),
+        severity: sarifSeverity(result.level),
+        message,
+        location,
+      })
+    }
+  }
+  return out
+}
+
+/* Code Climate / GitLab Code Quality: the JSON array `oxlint --format gitlab` emits. */
+
+const parseCodeClimate = (
+  doc: unknown,
+  engine: string,
+  root: string,
+): ReadonlyArray<Diagnostic> | undefined => {
+  const issues = arrayOfRecords(doc)
+  if (issues === undefined) return undefined
+  const out: Array<Diagnostic> = []
+  for (const issue of issues) {
+    const location = record(issue.location)
+    const lines = record(location?.lines)
+    const description = stringOf(issue.description)
+    const check = stringOf(issue.check_name)
+    const path = stringOf(location?.path)
+    if (description === undefined || check === undefined || path === undefined) return undefined
+    const begin = numberOr(lines?.begin, 1)
+    const end = typeof lines?.end === "number" ? lines.end : undefined
+    const identity = stringOf(issue.fingerprint)
+    out.push({
+      engine,
+      ruleId: ruleIdOf(check, engine),
+      severity: codeClimateSeverity(issue.severity),
+      message: description,
+      ...(identity === undefined ? {} : { identity }),
+      location: {
+        file: relativeTo(path, root),
+        line: begin,
+        column: 1,
+        ...(end === undefined ? {} : { endLine: end }),
+      },
+    })
+  }
+  return out
+}
+
+/* GitHub Actions workflow commands: what `oxlint --format github` emits. */
+
+const GITHUB_ANNOTATION = /^::(?<level>error|warning|notice)\s+(?<props>.+?)::(?<message>.*)$/u
+
+/** oxlint repeats the position at the head of the message; the location field already has it. */
+const stripGithubPrefix = (message: string, file: string, line: number, column: number): string => {
+  const prefix = `${file}:${line}:${column}: `
+  return message.startsWith(prefix) ? message.slice(prefix.length) : message
+}
+
+const parseGithub = (
+  text: string,
+  engine: string,
+  root: string,
+): ReadonlyArray<Diagnostic> | undefined => {
+  const lines = text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("::"))
+  if (lines.length === 0) return undefined
+  const out: Array<Diagnostic> = []
+  for (const line of lines) {
+    const match = GITHUB_ANNOTATION.exec(line)
+    if (match === null) return undefined
+    const properties = new Map<string, string>()
+    for (const pair of (match.groups?.props ?? "").split(",")) {
+      const equals = pair.indexOf("=")
+      if (equals > 0) properties.set(pair.slice(0, equals).trim(), pair.slice(equals + 1).trim())
+    }
+    const file = properties.get("file")
+    if (file === undefined) return undefined
+    const lineNumber = numberOr(Number(properties.get("line")), 1)
+    const column = numberOr(Number(properties.get("col")), 1)
+    const endLine = properties.has("endLine")
+      ? numberOr(Number(properties.get("endLine")), lineNumber)
+      : undefined
+    const endColumn = properties.has("endColumn")
+      ? numberOr(Number(properties.get("endColumn")), column)
+      : undefined
+    out.push({
+      engine,
+      ruleId: ruleIdOf(properties.get("title") ?? "unknown", engine),
+      severity: githubSeverity(match.groups?.level),
+      message: stripGithubPrefix(match.groups?.message ?? "", file, lineNumber, column),
+      location: {
+        file: relativeTo(file, root),
+        line: lineNumber,
+        column,
+        ...(endLine === undefined ? {} : { endLine }),
+        ...(endColumn === undefined ? {} : { endColumn }),
+      },
+    })
+  }
+  return out
+}
+
 /**
  * Read an engine's stdout as diagnostics.
  *
- * Two encodings: a whole-document JSON report (`{ diagnostics: [...] }`, what oxlint and
- * `joggle check --format json` emit) and JSONL (one finding per line, what a runner
- * streams). Returns `undefined` when neither fits, so the caller can say so out loud.
+ * jig asks oxlint for `--format json`, but it may be handed an engine it did not
+ * configure, so it accepts the structured encodings that carry the same information:
+ *
+ *   - a whole-document JSON report (`{ diagnostics: [...] }`, oxlint and
+ *     `joggle check --format json`);
+ *   - SARIF 2.1.0 (`runs[].results`), the OASIS interchange;
+ *   - a Code Climate / GitLab array, which is also what we project out;
+ *   - GitHub Actions annotations (`::warning file=…::…`);
+ *   - JSONL, one finding per line, what a runner streams.
+ *
+ * XML (checkstyle, junit) and human text are NOT read: inventing a parser for them would
+ * be guessing. `undefined` means "jig could not read this", so the caller says so out loud
+ * rather than reporting a clean run.
  */
 export const parseEngineOutput = (
   stdout: string,
@@ -120,11 +336,26 @@ export const parseEngineOutput = (
   const trimmed = stdout.trim()
   if (trimmed === "") return []
 
+  if (trimmed.startsWith("::")) return parseGithub(trimmed, engine, root)
+
+  if (trimmed.startsWith("[")) {
+    try {
+      const codeClimate = parseCodeClimate(JSON.parse(trimmed), engine, root)
+      if (codeClimate !== undefined) return codeClimate
+    } catch {
+      // Not a JSON array; a JSONL stream also contains `[` only inside lines, so fall through.
+    }
+  }
+
   if (trimmed.startsWith("{")) {
     try {
       const entry = record(JSON.parse(trimmed))
       if (Array.isArray(entry?.diagnostics)) {
         return entry.diagnostics.map((raw) => normalize(raw, engine, root)).filter(defined)
+      }
+      if (entry !== undefined && Array.isArray(entry.runs)) {
+        const sarif = parseSarif(entry, engine, root)
+        if (sarif !== undefined) return sarif
       }
     } catch {
       // Not a whole document; a JSONL stream also starts with `{`, so fall through.

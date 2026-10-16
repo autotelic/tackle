@@ -1,0 +1,21 @@
+
+  ! eslint(no-unused-vars): Variable 'unused' is declared but never used. Unused variables should start with a '_'.
+   ,-[sample.js:1:7]
+ 1 | const unused = 1
+   :       ^^^|^^
+   :          `-- 'unused' is declared here
+ 2 | function f() {
+   `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-debugger): `debugger` statement is not allowed
+   ,-[sample.js:3:3]
+ 2 | function f() {
+ 3 |   debugger
+   :   ^^^^^^^^
+ 4 | }
+   `----
+  help: Remove the debugger statement
+
+Found 2 warnings and 0 errors.
+Finished in 8ms on 1 file with 96 rules using 10 threads.

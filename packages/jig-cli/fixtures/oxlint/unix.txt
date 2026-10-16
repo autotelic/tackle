@@ -1,0 +1,4 @@
+sample.js:1:7: Variable 'unused' is declared but never used. Unused variables should start with a '_'. [Warning/eslint(no-unused-vars)]
+sample.js:3:3: `debugger` statement is not allowed [Warning/eslint(no-debugger)]
+
+2 problems

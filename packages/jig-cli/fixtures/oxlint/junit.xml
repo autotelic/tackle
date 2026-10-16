@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="Oxlint" tests="2" failures="2" errors="0">
+    <testsuite name="sample.js" tests="2" disabled="0" errors="0" failures="2">
+        <testcase name="eslint(no-unused-vars)">
+            <failure message="Variable &apos;unused&apos; is declared but never used. Unused variables should start with a &apos;_&apos;.">line 1, column 7, Variable &apos;unused&apos; is declared but never used. Unused variables should start with a &apos;_&apos;.</failure>
+        </testcase>
+        <testcase name="eslint(no-debugger)">
+            <failure message="`debugger` statement is not allowed">line 3, column 3, `debugger` statement is not allowed</failure>
+        </testcase>
+    </testsuite>
+</testsuites>

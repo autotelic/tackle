@@ -1,0 +1,6 @@
+
+[4msample.js[0m
+  [2m1:7[0m  [33mwarning[0m  Variable 'unused' is declared but never used. Unused variables should start with a '_'.  [2meslint(no-unused-vars)[0m
+  [2m3:3[0m  [33mwarning[0m  `debugger` statement is not allowed  [2meslint(no-debugger)[0m
+
+[33m✖ 2 problems (0 errors, 2 warnings)[0m

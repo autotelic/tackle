@@ -1,0 +1,28 @@
+[
+  {
+    "description": "Variable 'unused' is declared but never used. Unused variables should start with a '_'.",
+    "check_name": "eslint(no-unused-vars)",
+    "fingerprint": "36068ec60cb00ec5",
+    "severity": "major",
+    "location": {
+      "path": "sample.js",
+      "lines": {
+        "begin": 1,
+        "end": 1
+      }
+    }
+  },
+  {
+    "description": "`debugger` statement is not allowed",
+    "check_name": "eslint(no-debugger)",
+    "fingerprint": "124397774b1cac67",
+    "severity": "major",
+    "location": {
+      "path": "sample.js",
+      "lines": {
+        "begin": 3,
+        "end": 3
+      }
+    }
+  }
+]

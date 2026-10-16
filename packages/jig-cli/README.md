@@ -19,7 +19,8 @@ conductor must not be a fifth thing everything links against.
 ## One report
 
 Every engine already reduces to the same shape — a place, a sentence, a severity — and
-oxlint decided what that looks like. `jig` reads two encodings and normalizes both:
+oxlint decided what that looks like. `jig` reads the structured encodings and normalizes
+them all:
 
 | Engine kind     | Invocation                   | Encoded as                                          |
 | --------------- | ---------------------------- | --------------------------------------------------- |
@@ -27,9 +28,24 @@ oxlint decided what that looks like. `jig` reads two encodings and normalizes bo
 | `process`       | `joggle check --format json` | a report document, or JSONL                         |
 | `cutlist`       | `cutlist build --check`      | a non-zero exit becomes one `stale-catalog` finding |
 
-An engine that speaks neither is **not** silently treated as clean: it produces one
-`<id>/unparsed-output` info finding, because "no findings" and "not understood" must
-never look the same.
+`jig` asks oxlint for JSON, but it may be handed an engine it did not configure, so it also
+accepts the shapes a finding is published in: **SARIF 2.1.0**, the **Code Climate / GitLab**
+array (the same shape `jig` projects outward — the read/write loop closes), and **GitHub
+Actions annotations**. JSONL is read too. XML (`checkstyle`, `junit`) and human text are
+deliberately **not** parsed: guessing at them would be a lie dressed as coverage.
+
+`fixtures/oxlint/` holds all ten of oxlint 1.88's output varieties, and
+`src/oxlint-conformance.test.ts` proves which are read and that the rest become findings
+rather than silence.
+
+oxlint names a rule `plugin(rule)`, so the report must not repeat the engine: on engine
+`plumb`, `plumb(no-raw-html-layout)` is ruleId `no-raw-html-layout`
+(`plumb/no-raw-html-layout`, not `plumb/plumb(...)`), while a sub-plugin keeps its namespace
+(`plumb/plumb-ui/no-raw-interactive`).
+
+An engine that speaks none of these is **not** silently treated as clean: it produces one
+`<id>/unparsed-output` info finding, because "no findings" and "not understood" must never
+look the same.
 
 ## The ratchet
 

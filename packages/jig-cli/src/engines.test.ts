@@ -26,7 +26,7 @@ describe("parseEngineOutput", () => {
     expect(diagnostics).toEqual([
       {
         engine: "plumb",
-        ruleId: "eslint(no-unused-vars)",
+        ruleId: "eslint/no-unused-vars",
         severity: "warn",
         message: "Variable 'unused' is declared but never used.",
         location: { file: "app/a.ts", line: 3, column: 9 },

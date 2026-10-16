@@ -1,0 +1,5 @@
+::warning file=sample.js,line=1,endLine=1,col=7,endColumn=13,title=eslint(no-unused-vars)::sample.js:1:7: Variable 'unused' is declared but never used. Unused variables should start with a '_'.
+::warning file=sample.js,line=3,endLine=3,col=3,endColumn=11,title=eslint(no-debugger)::sample.js:3:3: `debugger` statement is not allowed
+
+Found 2 warnings and 0 errors.
+Finished in 8ms on 1 file with 96 rules using 10 threads.
