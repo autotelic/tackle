@@ -30,6 +30,17 @@ catalog:
   vitest: "5.0.1"
   "@types/node": "24.13.5"
 
+# The rc line is not resolvable from its ranges alone. The published
+# `@effect/platform-node@4.0.0-rc.116` carries a *caret* on
+# `@effect/platform-node-shared`, so a resolve without joggle's (now deleted)
+# nested lockfile floats that one package onto the stable line — where it then
+# imports `effect/dist/process/ChildProcess.js`, which rc.116's `effect` does not
+# have. `joggle` is still on `4.0.0-rc.116`; its port to 4.0.5 is its own step.
+# Pin that single edge so the rc tree stays coherent, and leave the 4.0.5
+# consumers (cutlist, jig-cli, the OpenCode plugin) untouched.
+overrides:
+  "@effect/platform-node@4.0.0-rc.116>@effect/platform-node-shared": "4.0.0-rc.116"
+
 minimumReleaseAgeExclude:
   - "@effect/tsgo-darwin-arm64@0.53.3"
   - "@effect/tsgo-darwin-x64@0.53.3"
