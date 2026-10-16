@@ -10,13 +10,13 @@ one surface, make onboarding a prompt.
 
 ## The pieces
 
-| Package               | What it is                                                                            | Runs alone as                          | Consumes                                | Emits                                                                      |
-| --------------------- | ------------------------------------------------------------------------------------- | -------------------------------------- | --------------------------------------- | -------------------------------------------------------------------------- |
-| `@autotelic/plumb`    | Single-file Oxlint rules (core / effect / react / ui / meta)                          | `oxlint` (a `jsPlugin`)                | `.oxlintrc.json`                        | lint diagnostics                                                           |
-| `@autotelic/joggle`   | Cross-file _judged_ rules                                                             | `joggle check` (CLI, pi extension)     | `joggle.config.json`                    | verdicts, report, cache                                                    |
-| `@autotelic/cutlist`  | The vocabulary: crawl → tokens + components + tiers + owners + duplicate _candidates_ | `cutlist build`                        | `cutlist.config.json`                   | `catalog.json`, `plumb-ui.config.json`, `MENU.md`, `hooks.md`, `tokens.md` |
-| `@autotelic/jig-cli`  | The surface over engines (command: `jig`)                                             | `jig init/check/explain/learn/promote` | `jig.config.json` (+ each engine's own) | one oxlint-shaped report                                                   |
-| `@autotelic/protocol` | **Not a tool.** The four seams as formats: config, report, baseline, catalog/doc      | —                                      | —                                       | JSON Schema                                                                |
+| Package               | What it is                                                                                                                                                                                          | Runs alone as                          | Consumes                                | Emits                                                                      |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- | --------------------------------------- | -------------------------------------------------------------------------- |
+| `@autotelic/plumb`    | Single-file Oxlint rules (core / effect / react / ui / meta)                                                                                                                                        | `oxlint` (a `jsPlugin`)                | `.oxlintrc.json`                        | lint diagnostics                                                           |
+| `@autotelic/joggle`   | Cross-file _judged_ rules                                                                                                                                                                           | `joggle check` (CLI, pi extension)     | `joggle.config.json`                    | verdicts, report, cache                                                    |
+| `@autotelic/cutlist`  | The vocabulary: crawl → tokens + components + tiers + owners + duplicate _candidates_                                                                                                               | `cutlist build`                        | `cutlist.config.json`                   | `catalog.json`, `plumb-ui.config.json`, `MENU.md`, `hooks.md`, `tokens.md` |
+| `@autotelic/jig-cli`  | The surface over engines (command: `jig`)                                                                                                                                                           | `jig init/check/explain/learn/promote` | `jig.config.json` (+ each engine's own) | one oxlint-shaped report                                                   |
+| `@autotelic/protocol` | **Not a tool.** The record formats — the named, versioned lexicons (`report`, `baseline`, `catalog`, `manifest`, `menu`, `onboarding`, the configs) — as pure types, JSON Schema, and pure decoders | —                                      | —                                       | JSON Schema, lexicons, fixtures                                            |
 
 `cutlist` _produces_ the vocabulary; `plumb` and `joggle` _consume_ it. `jig` drives
 any registered engine — first-party (`plumb`, `joggle`, `cutlist`) or third-party
@@ -110,7 +110,8 @@ why — including what `jig check` reports at the root today, which is honest bu
 
 ## Status
 
-- `protocol` — the four seams as types and JSON Schema. **Built.**
+- `protocol` — the record formats as named, versioned lexicons: types, JSON Schema, pure
+  decoders, fixtures, a compatibility linter. **Built.**
 - `cutlist` — crawl → owners → tiers → signature → tokens → render. **v0.**
 - `jig-cli` — config, engine runner, one report, baseline, agent door, pi + opencode surfaces. **v0.**
 - `examples/self` — the exemplar client repo, kept runnable so the tools are exercised against

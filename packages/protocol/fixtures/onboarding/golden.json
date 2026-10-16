@@ -1,0 +1,5 @@
+{
+  "lexicon": { "name": "onboarding", "version": 1 },
+  "title": "ONBOARD.md",
+  "prompt": "# ONBOARD.md\n\nThe agent door. `jig init` writes this file; this is what it says.\n\n## What this repo is\n\nA UI application whose design system is a _contract_, not a convention. The contract is generated: `cutlist` crawls `src/`, and its output — the catalog, the menu, the token report — is committed under `tools/ui-catalog/`. Read it; do not re-derive it.\n\n## In this order\n\n1. `tools/ui-catalog/MENU.md` — every component, its tier, and what it is composed of.\n2. `tools/ui-catalog/tokens.md` — the color vocabulary.\n3. `cutlist.config.json` — roots, tiers, and the ownership rule.\n4. `joggle.config.json` — the architecture layers.\n\n## Then\n\n```sh\npnpm exec jig check\n```\n\nAn engine that could not run appears as a **note**. Notes are not clean results.\n"
+}

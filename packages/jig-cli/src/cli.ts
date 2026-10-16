@@ -3,7 +3,7 @@ import { join } from "node:path"
 import { Console, Effect, FileSystem, Option, Path } from "effect"
 import { Command, Flag } from "effect/cli"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
-import { accept, PROTOCOL_VERSION } from "@autotelic/protocol"
+import { accept } from "@autotelic/protocol"
 import { emptyBaseline, readBaseline, writeBaseline } from "./baseline.ts"
 import { defaultConfig, loadConfig } from "./config.ts"
 import { renderGithub, renderJson, renderText } from "./render.ts"
@@ -138,7 +138,7 @@ const initCommand = Command.make("init", { cwd: cwdFlag }, (options) =>
     }
     const baseline = path.resolve(root, defaultConfig.gate.baseline)
     if (!(yield* Effect.orElseSucceed(fs.exists(baseline), () => false))) {
-      yield* writeBaseline(baseline, { protocolVersion: PROTOCOL_VERSION, identities: [] })
+      yield* writeBaseline(baseline, emptyBaseline)
     }
     const cookbook = path.resolve(root, defaultConfig.agent?.cookbook ?? "JIG.md")
     if (!(yield* Effect.orElseSucceed(fs.exists(cookbook), () => false))) {

@@ -1,0 +1,15 @@
+{
+  "lexicon": { "name": "report", "version": 1 },
+  "counts": { "error": 0, "warn": 0, "info": 1 },
+  "files": 1,
+  "diagnostics": [
+    {
+      "engine": "joggle",
+      "ruleId": "joggle/unparsed-output",
+      "severity": "info",
+      "message": "a finding with no location",
+      "help": "the location is what an annotation needs; without it the record is unusable"
+    }
+  ],
+  "generators": []
+}

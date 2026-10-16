@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autotelic.dev/tackle/protocol/menu.json",
+  "title": "Menu",
+  "description": "The parts list MENU.md renders from. A mixed record: composition, orphans, duplicates and the hash are derived and regenerated; summary and useInstead are authored intent, and are the only reason the menu is not merely a rendering.",
+  "type": "object",
+  "required": ["lexicon", "title", "hash", "entries", "orphans", "duplicates"],
+  "additionalProperties": false,
+  "properties": {
+    "lexicon": { "$ref": "#/$defs/lexicon" },
+    "title": { "type": "string" },
+    "hash": {
+      "type": "string",
+      "description": "The catalog hash the derived half was computed from, so a reader can verify it is current."
+    },
+    "entries": { "type": "array", "items": { "$ref": "#/$defs/entry" } },
+    "orphans": { "type": "array", "items": { "type": "string" } },
+    "duplicates": { "type": "array", "items": { "$ref": "#/$defs/duplicate" } }
+  },
+  "$defs": {
+    "lexicon": {
+      "type": "object",
+      "required": ["name", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "enum": ["menu"] },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "tier": { "enum": ["primitive", "shared", "local"] },
+    "entry": {
+      "type": "object",
+      "required": ["name", "path", "tier", "composedOf"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "path": { "type": "string" },
+        "tier": { "$ref": "#/$defs/tier" },
+        "summary": {
+          "type": "string",
+          "description": "Authored: one line on when to reach for this."
+        },
+        "composedOf": { "type": "array", "items": { "type": "string" } },
+        "useInstead": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Authored: what to reach for instead, when a near-duplicate exists."
+        }
+      }
+    },
+    "duplicate": {
+      "type": "object",
+      "required": ["left", "right", "score", "basis"],
+      "additionalProperties": false,
+      "properties": {
+        "left": { "type": "string" },
+        "right": { "type": "string" },
+        "score": { "type": "number", "minimum": 0, "maximum": 1 },
+        "basis": { "enum": ["skeleton"] }
+      }
+    }
+  }
+}

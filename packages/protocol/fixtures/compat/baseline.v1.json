@@ -1,0 +1,7 @@
+{
+  "lexicon": { "name": "baseline", "version": 1 },
+  "identities": [
+    "joggle/joggle/layer-direction:src/components/ui/button.tsx",
+    "plumb/plumb/require-jsdoc-on-exported:src/components/ui/card.tsx"
+  ]
+}

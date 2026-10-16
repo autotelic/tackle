@@ -1,0 +1,5 @@
+{
+  "roots": ["src"],
+  "tokens": { "from": "src/styles/app.css" },
+  "ownership": { "routeOwner": "first-segment", "transitive": false }
+}

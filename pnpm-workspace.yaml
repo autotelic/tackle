@@ -29,6 +29,10 @@ catalog:
   oxfmt: "0.73.0" # the Oxc formatter, alongside the Oxc linter
   vitest: "5.0.1"
   "@types/node": "24.13.5"
+  # The outside judge for the lexicon schemas: a JSON-Schema validator that is not the
+  # TypeScript. Draft 2020-12, which is what schema/*.json declares. Dev-only; protocol's
+  # runtime stays dependency-free.
+  ajv: "8.17.1"
 
 # The rc line is not resolvable from its ranges alone. The published
 # `@effect/platform-node@4.0.0-rc.116` carries a *caret* on

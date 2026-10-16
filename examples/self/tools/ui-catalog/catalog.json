@@ -1,6 +1,9 @@
 {
-  "hash": "d84c6bffe01d689039448f39b81bf78d2f4c33556127910f6da2bd3e6ac91133",
-  "protocolVersion": "0.1.0",
+  "hash": "5aad97ef12370ed5d9e351f3a8026ca28d0e3c500256233815f608230f6a6b6e",
+  "lexicon": {
+    "name": "catalog",
+    "version": 1
+  },
   "root": "/Users/togmund/autotelic/tackle/examples/self",
   "tokens": {
     "colors": [

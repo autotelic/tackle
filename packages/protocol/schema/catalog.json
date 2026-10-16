@@ -2,10 +2,9 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://autotelic.dev/tackle/protocol/catalog.json",
   "title": "Catalog",
-  "description": "The model cutlist computes once and renders many ways.",
+  "description": "The model cutlist computes once and renders many ways. Every rendering derives from this object, so none can drift from another.",
   "type": "object",
   "required": [
-    "protocolVersion",
     "hash",
     "root",
     "tokens",
@@ -16,10 +15,18 @@
     "orphans",
     "duplicates"
   ],
+  "anyOf": [{ "required": ["lexicon"] }, { "required": ["protocolVersion"] }],
   "additionalProperties": false,
   "properties": {
-    "protocolVersion": { "type": "string" },
-    "hash": { "type": "string" },
+    "lexicon": { "$ref": "#/$defs/lexicon" },
+    "protocolVersion": {
+      "type": "string",
+      "description": "Legacy: the single version the format carried before per-lexicon versioning. Accepted forever; superseded by `lexicon`."
+    },
+    "hash": {
+      "type": "string",
+      "description": "Content hash of everything below, so a reader can verify rather than trust."
+    },
     "root": { "type": "string" },
     "tokens": {
       "type": "object",
@@ -40,6 +47,15 @@
     "duplicates": { "type": "array", "items": { "$ref": "#/$defs/duplicate" } }
   },
   "$defs": {
+    "lexicon": {
+      "type": "object",
+      "required": ["name", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "enum": ["catalog"] },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    },
     "tier": { "enum": ["primitive", "shared", "local"] },
     "tiers": {
       "type": "object",
@@ -62,7 +78,11 @@
         "owners": { "type": "array", "items": { "type": "string" } },
         "props": { "type": "array", "items": { "type": "string" } },
         "tags": { "type": "array", "items": { "type": "string" } },
-        "signature": { "type": "array", "items": { "type": "string" } },
+        "signature": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "The behavioral skeleton — the similarity signature, not props ∪ tags."
+        },
         "documented": { "type": "boolean" }
       }
     },

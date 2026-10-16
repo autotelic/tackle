@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
   countsOf,
+  decodeReport,
   exitCodeFor,
   makeReport,
   parseJsonl,
@@ -64,5 +65,26 @@ describe("jsonl", () => {
   it("round-trips and skips blank lines", () => {
     const diagnostics = [at(), at({ severity: "error" })]
     expect(parseJsonl(toJsonl(diagnostics) + "\n\n")).toEqual(diagnostics)
+  })
+})
+
+describe("decodeReport", () => {
+  it("recomputes the aggregates instead of trusting the writer's tallies", () => {
+    const lying = {
+      lexicon: { name: "report", version: 1 },
+      counts: { error: 9, warn: 9, info: 9 },
+      files: 99,
+      diagnostics: [at({ severity: "error" })],
+      generators: [],
+    }
+    const decoded = decodeReport(lying)
+    expect(decoded?.counts).toEqual({ error: 1, warn: 0, info: 0 })
+    expect(decoded?.files).toBe(1)
+  })
+
+  it("degrades a malformed report to undefined, never a partial one", () => {
+    expect(
+      decodeReport({ lexicon: { name: "report", version: 1 }, diagnostics: "not an array" }),
+    ).toBeUndefined()
   })
 })

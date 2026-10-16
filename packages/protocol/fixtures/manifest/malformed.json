@@ -1,0 +1,15 @@
+{
+  "lexicon": { "name": "manifest", "version": 1 },
+  "colors": [],
+  "sharedRoots": [],
+  "localRoots": [],
+  "components": [
+    {
+      "path": "src/a.tsx",
+      "name": "a",
+      "owners": [],
+      "props": [],
+      "tags": []
+    }
+  ]
+}

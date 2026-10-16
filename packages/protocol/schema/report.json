@@ -2,12 +2,17 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://autotelic.dev/tackle/protocol/report.json",
   "title": "Report",
-  "description": "One run, across every engine, in one oxlint-shaped stream.",
+  "description": "One run, across every engine, in one oxlint-shaped stream. A derived snapshot: its counts are a rendering, not the state. A record carries either its `lexicon` reference or, from before per-lexicon versioning, the legacy `protocolVersion`.",
   "type": "object",
-  "required": ["protocolVersion", "counts", "files", "diagnostics", "generators"],
+  "required": ["counts", "files", "diagnostics", "generators"],
+  "anyOf": [{ "required": ["lexicon"] }, { "required": ["protocolVersion"] }],
   "additionalProperties": false,
   "properties": {
-    "protocolVersion": { "type": "string" },
+    "lexicon": { "$ref": "#/$defs/lexicon" },
+    "protocolVersion": {
+      "type": "string",
+      "description": "Legacy: the single version the format carried before per-lexicon versioning. Accepted forever; superseded by `lexicon`."
+    },
     "counts": { "$ref": "#/$defs/counts" },
     "files": { "type": "integer", "minimum": 0 },
     "diagnostics": { "type": "array", "items": { "$ref": "#/$defs/diagnostic" } },
@@ -15,6 +20,15 @@
     "elapsedMs": { "type": "number" }
   },
   "$defs": {
+    "lexicon": {
+      "type": "object",
+      "required": ["name", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "enum": ["report"] },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    },
     "severity": { "enum": ["error", "warn", "info"] },
     "counts": {
       "type": "object",

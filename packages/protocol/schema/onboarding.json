@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autotelic.dev/tackle/protocol/onboarding.json",
+  "title": "Onboarding",
+  "description": "The agent door: a repo-local prompt that is simultaneously the client engineer's documentation, the client agent's system-prompt fragment, and the thing a review surface diffs. One artifact, three readers.",
+  "type": "object",
+  "required": ["lexicon", "title", "prompt"],
+  "additionalProperties": false,
+  "properties": {
+    "lexicon": { "$ref": "#/$defs/lexicon" },
+    "title": { "type": "string" },
+    "prompt": { "type": "string" }
+  },
+  "$defs": {
+    "lexicon": {
+      "type": "object",
+      "required": ["name", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "enum": ["onboarding"] },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

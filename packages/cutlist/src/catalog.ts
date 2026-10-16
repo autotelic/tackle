@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto"
 import { Effect, FileSystem, Path } from "effect"
 import {
-  PROTOCOL_VERSION,
+  lexiconRef,
   signatureOf,
   similarityOf,
   type Catalog,
@@ -197,7 +197,7 @@ export const buildCatalog = (
       .map((component) => component.path)
 
     const withoutHash = {
-      protocolVersion: PROTOCOL_VERSION,
+      lexicon: lexiconRef("catalog"),
       root,
       tokens,
       tiers: config.tiers,

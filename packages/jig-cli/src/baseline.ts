@@ -1,5 +1,5 @@
-import { Effect, FileSystem, Path, Result, Schema, SchemaParser } from "effect"
-import { PROTOCOL_VERSION, type Baseline } from "@autotelic/protocol"
+import { Effect, FileSystem, Path } from "effect"
+import { decodeBaseline, lexiconRef, type Baseline } from "@autotelic/protocol"
 
 /*
  * The baseline file, in the protocol's shape.
@@ -7,14 +7,21 @@ import { PROTOCOL_VERSION, type Baseline } from "@autotelic/protocol"
  * It is committed to the repository, so the ratchet is a property of the code rather
  * than a cache somebody can clear. Read defensively — a corrupt baseline means "not
  * accepted yet", which fails safe — and write strictly, in one exact shape.
+ *
+ * The decode is protocol's, not a schema re-spelled here: the format owns its reader, and
+ * two decoders would be two chances to drift.
  */
 
-const BaselineSchema = Schema.Struct({
-  protocolVersion: Schema.String,
-  identities: Schema.Array(Schema.String),
-})
+export const emptyBaseline: Baseline = { lexicon: lexiconRef("baseline"), identities: [] }
 
-export const emptyBaseline: Baseline = { protocolVersion: PROTOCOL_VERSION, identities: [] }
+/** Parse JSON without throwing; a malformed document is a miss. */
+const safeJson = (text: string): unknown => {
+  try {
+    return JSON.parse(text) as unknown
+  } catch {
+    return undefined
+  }
+}
 
 /** Read the committed baseline; a missing or malformed file is an empty one. */
 export const readBaseline = (file: string): Effect.Effect<Baseline, never, FileSystem.FileSystem> =>
@@ -23,11 +30,7 @@ export const readBaseline = (file: string): Effect.Effect<Baseline, never, FileS
     const exists = yield* Effect.orElseSucceed(fs.exists(file), () => false)
     if (!exists) return emptyBaseline
     const text = yield* Effect.orElseSucceed(fs.readFileString(file), () => "")
-    return (
-      Result.getOrUndefined(
-        SchemaParser.decodeResult(Schema.fromJsonString(BaselineSchema))(text),
-      ) ?? emptyBaseline
-    )
+    return decodeBaseline(safeJson(text)) ?? emptyBaseline
   })
 
 /** Write the baseline, creating its directory if needed. */

@@ -1,4 +1,5 @@
-import { PROTOCOL_VERSION } from "./version.ts"
+import { arrayOf, isRecord, readLexiconRef, str } from "./decode.ts"
+import { lexiconRef, type LexiconRef } from "./lexicon.ts"
 import type { Diagnostic } from "./report.ts"
 
 /*
@@ -10,11 +11,15 @@ import type { Diagnostic } from "./report.ts"
  *   - a run fails on NEW identities, and the set only ever shrinks as findings are
  *     fixed — "warn repo-wide, error on touched files" is this file, not a second
  *     configuration.
+ *
+ * The baseline is ACCEPTED STATE: derived from a run, then committed as a ratchet. It
+ * stores the identities and nothing else — no lines, no counts. A count is derived data,
+ * and a count cached in the ledger would be the aggregate stored inside the record.
  */
 
 /** The accepted state of a repository. */
 export interface Baseline {
-  readonly protocolVersion: string
+  readonly lexicon: LexiconRef
   readonly identities: ReadonlyArray<string>
 }
 
@@ -24,9 +29,24 @@ export const identityOf = (diagnostic: Diagnostic): string =>
 
 /** The baseline for the findings in front of you. What `--update-baseline` writes. */
 export const accept = (diagnostics: ReadonlyArray<Diagnostic>): Baseline => ({
-  protocolVersion: PROTOCOL_VERSION,
+  lexicon: lexiconRef("baseline"),
   identities: [...new Set(diagnostics.map(identityOf))].sort(),
 })
+
+/**
+ * Read a baseline, or `undefined` when it is not one.
+ *
+ * A malformed ledger is a miss, not an empty ledger with a different meaning: the caller
+ * decides what "no baseline" means (for `jig` it is `accept([])`), and conflating corrupt
+ * with empty here would hide the difference.
+ */
+export const decodeBaseline = (value: unknown): Baseline | undefined => {
+  if (!isRecord(value)) return undefined
+  const lexicon = readLexiconRef(value, "baseline")
+  const identities = arrayOf(value.identities, str)
+  if (lexicon === undefined || identities === undefined) return undefined
+  return { lexicon, identities: [...identities].sort() }
+}
 
 /** How a run compares to what was already accepted. */
 export interface BaselineDiff {

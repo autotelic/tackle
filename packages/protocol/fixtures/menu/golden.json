@@ -1,0 +1,72 @@
+{
+  "lexicon": {
+    "name": "menu",
+    "version": 1
+  },
+  "title": "UI menu",
+  "hash": "5aad97ef12370ed5d9e351f3a8026ca28d0e3c500256233815f608230f6a6b6e",
+  "entries": [
+    {
+      "name": "project-toolbar",
+      "path": "src/components/project-toolbar.tsx",
+      "tier": "shared",
+      "composedOf": ["useTheme", "Button", "Card"]
+    },
+    {
+      "name": "theme-context",
+      "path": "src/components/theme-context.ts",
+      "tier": "shared",
+      "composedOf": []
+    },
+    {
+      "name": "theme-provider",
+      "path": "src/components/theme-provider.tsx",
+      "tier": "shared",
+      "composedOf": ["useMemo", "useState", "ThemeContext.Provider"]
+    },
+    {
+      "name": "badge",
+      "path": "src/components/ui/badge.tsx",
+      "tier": "primitive",
+      "composedOf": ["span"]
+    },
+    {
+      "name": "button",
+      "path": "src/components/ui/button.tsx",
+      "tier": "primitive",
+      "composedOf": ["button"]
+    },
+    {
+      "name": "card",
+      "path": "src/components/ui/card.tsx",
+      "tier": "primitive",
+      "composedOf": ["h2", "section"]
+    },
+    {
+      "name": "use-theme",
+      "path": "src/components/use-theme.ts",
+      "tier": "shared",
+      "composedOf": ["useContext"]
+    },
+    {
+      "name": "dashboard_.$id.sponsors",
+      "path": "src/routes/dashboard_.$id.sponsors.tsx",
+      "tier": "local",
+      "composedOf": ["Card", "ProjectToolbar"]
+    },
+    {
+      "name": "dashboard_.$id",
+      "path": "src/routes/dashboard_.$id.tsx",
+      "tier": "local",
+      "composedOf": ["useParams", "Card", "ProjectToolbar", "ThemeProvider"]
+    },
+    {
+      "name": "settings_",
+      "path": "src/routes/settings_.tsx",
+      "tier": "local",
+      "composedOf": ["Card", "ProjectToolbar", "ThemeProvider"]
+    }
+  ],
+  "orphans": ["src/components/ui/badge.tsx"],
+  "duplicates": []
+}

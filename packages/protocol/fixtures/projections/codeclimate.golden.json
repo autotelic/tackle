@@ -1,0 +1,11 @@
+[
+  {
+    "type": "issue",
+    "check_name": "joggle/joggle/unparsed-output",
+    "description": "jig could not parse joggle output (exit 1)",
+    "categories": ["Style"],
+    "location": { "path": "joggle.config", "lines": { "begin": 1 } },
+    "severity": "info",
+    "fingerprint": "joggle/joggle/unparsed-output:joggle.config"
+  }
+]

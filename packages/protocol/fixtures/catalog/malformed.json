@@ -1,0 +1,22 @@
+{
+  "lexicon": { "name": "catalog", "version": 1 },
+  "hash": "abc",
+  "root": "/x",
+  "tokens": { "colors": [], "type": [], "shape": [], "spacing": [] },
+  "tiers": { "primitive": [], "shared": [], "local": [] },
+  "sharedRoots": [],
+  "localRoots": [],
+  "components": [
+    {
+      "path": "src/a.tsx",
+      "name": "a",
+      "owners": [],
+      "props": [],
+      "tags": [],
+      "signature": [],
+      "documented": true
+    }
+  ],
+  "orphans": [],
+  "duplicates": []
+}

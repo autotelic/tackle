@@ -1,4 +1,5 @@
-import { PROTOCOL_VERSION } from "./version.ts"
+import { arrayOf, bool, isRecord, num, oneOf, readLexiconRef, str, strings } from "./decode.ts"
+import { lexiconRef, type LexiconRef } from "./lexicon.ts"
 import type { Tiers, TierName } from "./config.ts"
 
 /*
@@ -54,7 +55,7 @@ export interface CatalogTokens {
 
 /** The whole model. */
 export interface Catalog {
-  readonly protocolVersion: string
+  readonly lexicon: LexiconRef
   /** Content hash of everything below. `--check` compares it against the tree. */
   readonly hash: string
   readonly root: string
@@ -89,6 +90,7 @@ export interface ManifestComponent {
 
 /** The manifest `plumb-ui` parses. */
 export interface UiManifest {
+  readonly lexicon: LexiconRef
   readonly colors: ReadonlyArray<string>
   readonly sharedRoots: ReadonlyArray<string>
   readonly localRoots: ReadonlyArray<string>
@@ -97,6 +99,7 @@ export interface UiManifest {
 
 /** Project the catalog onto the lint manifest. One source, one lookup table. */
 export const projectManifest = (catalog: Catalog): UiManifest => ({
+  lexicon: lexiconRef("manifest"),
   colors: catalog.tokens.colors,
   sharedRoots: catalog.sharedRoots,
   localRoots: catalog.localRoots,
@@ -150,7 +153,7 @@ export const nearestDuplicate = (
 
 /** An empty catalog, for a project that generates none. Every consumer degrades to silence. */
 export const emptyCatalog = (root: string): Catalog => ({
-  protocolVersion: PROTOCOL_VERSION,
+  lexicon: lexiconRef("catalog"),
   hash: "",
   root,
   tokens: { colors: [], type: [], shape: [], spacing: [] },
@@ -161,3 +164,178 @@ export const emptyCatalog = (root: string): Catalog => ({
   orphans: [],
   duplicates: [],
 })
+
+/*
+ * Decoders — the catalog and the manifest, read as untrusted input.
+ *
+ * `plumb` reading the manifest without importing this package is the proof the format is
+ * not merely the TypeScript; these decoders are the TypeScript's own tolerant half, and
+ * they exist so a stale catalog written by an older cutlist degrades to an empty view
+ * rather than a false finding. Unknown fields are ignored, so a newer catalog still reads.
+ */
+
+const TIERS_NAMES: ReadonlyArray<TierName> = ["primitive", "shared", "local"]
+
+/** Read the tier name set, or `undefined` when malformed. */
+const decodeTiers = (value: unknown): Tiers | undefined => {
+  if (!isRecord(value)) return undefined
+  const primitive = strings(value.primitive)
+  const shared = strings(value.shared)
+  const local = strings(value.local)
+  if (primitive === undefined || shared === undefined || local === undefined) return undefined
+  return { primitive, shared, local }
+}
+
+/** Read one component, or `undefined` when malformed. */
+export const decodeCatalogComponent = (value: unknown): CatalogComponent | undefined => {
+  if (!isRecord(value)) return undefined
+  const path = str(value.path)
+  const name = str(value.name)
+  const tier = oneOf(value.tier, TIERS_NAMES)
+  const owners = strings(value.owners)
+  const props = strings(value.props)
+  const tags = strings(value.tags)
+  const signature = strings(value.signature)
+  const documented = bool(value.documented)
+  if (
+    path === undefined ||
+    name === undefined ||
+    tier === undefined ||
+    owners === undefined ||
+    props === undefined ||
+    tags === undefined ||
+    signature === undefined ||
+    documented === undefined
+  ) {
+    return undefined
+  }
+  return { path, name, tier, owners, props, tags, signature, documented }
+}
+
+/** Read one duplicate candidate, or `undefined` when malformed. */
+export const decodeDuplicate = (value: unknown): DuplicateCandidate | undefined => {
+  if (!isRecord(value)) return undefined
+  const left = str(value.left)
+  const right = str(value.right)
+  const score = num(value.score)
+  const basis = oneOf(value.basis, ["skeleton"] as const)
+  if (left === undefined || right === undefined || score === undefined || basis === undefined) {
+    return undefined
+  }
+  return { left, right, score, basis }
+}
+
+const decodeTokens = (value: unknown): CatalogTokens | undefined => {
+  if (!isRecord(value)) return undefined
+  const colors = strings(value.colors)
+  const type = strings(value.type)
+  const shape = strings(value.shape)
+  const spacing = strings(value.spacing)
+  if (colors === undefined || type === undefined || shape === undefined || spacing === undefined) {
+    return undefined
+  }
+  return { colors, type, shape, spacing }
+}
+
+/** Read a catalog, or `undefined` when the whole model is malformed. */
+export const decodeCatalog = (value: unknown): Catalog | undefined => {
+  if (!isRecord(value)) return undefined
+  const lexicon = readLexiconRef(value, "catalog")
+  const hash = str(value.hash)
+  const root = str(value.root)
+  const tokens = decodeTokens(value.tokens)
+  const tiers = decodeTiers(value.tiers)
+  const sharedRoots = strings(value.sharedRoots)
+  const localRoots = strings(value.localRoots)
+  const components = arrayOf(value.components, decodeCatalogComponent)
+  const orphans = strings(value.orphans)
+  const duplicates = arrayOf(value.duplicates, decodeDuplicate)
+  if (
+    lexicon === undefined ||
+    hash === undefined ||
+    root === undefined ||
+    tokens === undefined ||
+    tiers === undefined ||
+    sharedRoots === undefined ||
+    localRoots === undefined ||
+    components === undefined ||
+    orphans === undefined ||
+    duplicates === undefined
+  ) {
+    return undefined
+  }
+  return {
+    lexicon,
+    hash,
+    root,
+    tokens,
+    tiers,
+    sharedRoots,
+    localRoots,
+    components,
+    orphans,
+    duplicates,
+  }
+}
+
+/** Read one manifest component, or `undefined` when malformed. */
+export const decodeManifestComponent = (value: unknown): ManifestComponent | undefined => {
+  if (!isRecord(value)) return undefined
+  const path = str(value.path)
+  const name = str(value.name)
+  const tier = oneOf(value.tier, TIERS_NAMES)
+  const owners = strings(value.owners)
+  const props = strings(value.props)
+  const tags = strings(value.tags)
+  if (
+    path === undefined ||
+    name === undefined ||
+    tier === undefined ||
+    owners === undefined ||
+    props === undefined ||
+    tags === undefined
+  ) {
+    return undefined
+  }
+  const signature = strings(value.signature)
+  return {
+    path,
+    name,
+    tier,
+    owners,
+    props,
+    tags,
+    ...(signature === undefined ? {} : { signature }),
+  }
+}
+
+/** The empty manifest, for a project that generates none. `plumb-ui`'s fail-open value. */
+export const EMPTY_MANIFEST: UiManifest = {
+  lexicon: lexiconRef("manifest"),
+  colors: [],
+  sharedRoots: [],
+  localRoots: [],
+  components: [],
+}
+
+/** Read the manifest, degrading to the empty one — the shape `plumb` already reads. */
+export const decodeManifest = (value: unknown): UiManifest => {
+  if (!isRecord(value)) return EMPTY_MANIFEST
+  // Manifest refs are optional in practice: the reader predates versioning and its own
+  // empty value has no ref, so a missing ref means "the current manifest", not corrupt.
+  const lexicon = "lexicon" in value ? readLexiconRef(value, "manifest") : undefined
+  const colors = strings(value.colors)
+  const sharedRoots = strings(value.sharedRoots)
+  const localRoots = strings(value.localRoots)
+  const components = arrayOf(value.components, decodeManifestComponent)
+  if (
+    (lexicon === undefined && "lexicon" in value) ||
+    colors === undefined ||
+    sharedRoots === undefined ||
+    localRoots === undefined ||
+    components === undefined
+  ) {
+    return EMPTY_MANIFEST
+  }
+  return { lexicon: lexicon ?? lexiconRef("manifest"), colors, sharedRoots, localRoots, components }
+}

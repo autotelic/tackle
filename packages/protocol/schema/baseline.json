@@ -2,12 +2,28 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://autotelic.dev/tackle/protocol/baseline.json",
   "title": "Baseline",
-  "description": "The findings a repository has already accepted. Committed, so the ratchet is a property of the code.",
+  "description": "The findings a repository has already accepted, keyed by identity. Committed, so the ratchet is a property of the code. Stores identities only — never lines, never counts.",
   "type": "object",
-  "required": ["protocolVersion", "identities"],
+  "required": ["identities"],
+  "anyOf": [{ "required": ["lexicon"] }, { "required": ["protocolVersion"] }],
   "additionalProperties": false,
   "properties": {
-    "protocolVersion": { "type": "string" },
+    "lexicon": { "$ref": "#/$defs/lexicon" },
+    "protocolVersion": {
+      "type": "string",
+      "description": "Legacy: the single version the format carried before per-lexicon versioning. Accepted forever; superseded by `lexicon`."
+    },
     "identities": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+  },
+  "$defs": {
+    "lexicon": {
+      "type": "object",
+      "required": ["name", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "enum": ["baseline"] },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    }
   }
 }

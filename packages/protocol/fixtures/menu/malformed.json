@@ -1,0 +1,8 @@
+{
+  "lexicon": { "name": "menu", "version": 1 },
+  "title": "UI menu",
+  "hash": "h",
+  "entries": [{ "name": "card", "path": "src/components/ui/card.tsx", "tier": "primitive" }],
+  "orphans": [],
+  "duplicates": []
+}

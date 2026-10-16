@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autotelic.dev/tackle/protocol/manifest.json",
+  "title": "Manifest",
+  "description": "The lint-facing projection of the catalog that plumb-ui parses. Field names match plumb/src/ui/manifest.ts exactly. `lexicon` is optional because the first readers predate versioning and read a manifest without one; cutlist's projector always writes it.",
+  "type": "object",
+  "required": ["colors", "sharedRoots", "localRoots", "components"],
+  "additionalProperties": false,
+  "properties": {
+    "lexicon": { "$ref": "#/$defs/lexicon" },
+    "protocolVersion": {
+      "type": "string",
+      "description": "Legacy: the single version the format carried before per-lexicon versioning. Accepted forever; superseded by `lexicon`."
+    },
+    "colors": { "type": "array", "items": { "type": "string" } },
+    "sharedRoots": { "type": "array", "items": { "type": "string" } },
+    "localRoots": { "type": "array", "items": { "type": "string" } },
+    "components": { "type": "array", "items": { "$ref": "#/$defs/component" } }
+  },
+  "$defs": {
+    "lexicon": {
+      "type": "object",
+      "required": ["name", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "enum": ["manifest"] },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "tier": { "enum": ["primitive", "shared", "local"] },
+    "component": {
+      "type": "object",
+      "required": ["path", "name", "tier", "owners", "props", "tags"],
+      "additionalProperties": false,
+      "properties": {
+        "path": { "type": "string" },
+        "name": { "type": "string" },
+        "tier": { "$ref": "#/$defs/tier" },
+        "owners": { "type": "array", "items": { "type": "string" } },
+        "props": { "type": "array", "items": { "type": "string" } },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "signature": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

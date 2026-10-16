@@ -21,12 +21,15 @@
   "scripts": {
     "build": "tsgo -p tsconfig.build.json",
     "typecheck": "tsgo --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "lexicon:compat": "node scripts/lexicon-compat.mjs",
+    "lexicon:read": "node scripts/read-report.mjs"
   },
   "devDependencies": {
     "@effect/tsgo": "catalog:",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
+    "ajv": "catalog:",
     "vitest": "catalog:"
   },
   "engines": {

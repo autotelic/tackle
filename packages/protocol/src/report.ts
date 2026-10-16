@@ -1,4 +1,5 @@
-import { PROTOCOL_VERSION } from "./version.ts"
+import { arrayOf, bool, int, isRecord, num, oneOf, readLexiconRef, str } from "./decode.ts"
+import { lexiconRef, type LexiconRef } from "./lexicon.ts"
 
 /*
  * The report shape: what every engine writes and every host reads.
@@ -9,6 +10,11 @@ import { PROTOCOL_VERSION } from "./version.ts"
  * plugin), `joggle` (a judged binary), and `@shadcn/lint` land in one stream that a
  * reviewer, a `::error` annotation, and a baseline can all read without caring which
  * engine spoke.
+ *
+ * The report is a DERIVED snapshot, not a source of truth: it carries tally fields
+ * (`counts`, `generators[].diagnostics`) because a reader wants a summary of one run, but
+ * nothing downstream may read truth out of them — the identities are the state, the
+ * numbers are a rendering. Store the stable thing; recompute the aggregate.
  */
 
 /** Three severities. `info` is for observations a run should not fail on. */
@@ -70,7 +76,7 @@ export interface EngineSummary {
 
 /** One run, across every engine, in one shape. */
 export interface Report {
-  readonly protocolVersion: string
+  readonly lexicon: LexiconRef
   readonly counts: Counts
   readonly files: number
   readonly diagnostics: ReadonlyArray<Diagnostic>
@@ -116,7 +122,7 @@ export const makeReport = (input: {
   readonly generators: ReadonlyArray<EngineSummary>
   readonly elapsedMs?: number
 }): Report => ({
-  protocolVersion: PROTOCOL_VERSION,
+  lexicon: lexiconRef("report"),
   counts: countsOf(input.diagnostics),
   files: input.files,
   diagnostics: sortDiagnostics(input.diagnostics),
@@ -153,3 +159,134 @@ export const parseJsonl = (text: string): ReadonlyArray<Diagnostic> =>
     .map((line) => line.trim())
     .filter((line) => line.length > 0)
     .map((line) => JSON.parse(line) as Diagnostic)
+
+/*
+ * Decoders — untrusted input in, typed value or `undefined` out.
+ *
+ * These are the readers an app uses on a record it did not write: an engine's stdout, a
+ * report a host fetched, a file another language wrote. Unknown fields are ignored (a
+ * newer writer must not be rejected); a KNOWN field of the wrong type fails the record,
+ * because a diagnostic with a non-numeric line is a record this reader cannot trust.
+ * Nothing throws.
+ */
+
+const SEVERITIES: ReadonlyArray<Severity> = ["error", "warn", "info"]
+
+/** Read a source location, or `undefined` when it is not one. */
+export const decodeLocation = (value: unknown): SourceLocation | undefined => {
+  if (!isRecord(value)) return undefined
+  const file = str(value.file)
+  const line = int(value.line)
+  const column = int(value.column)
+  if (file === undefined || line === undefined || column === undefined) return undefined
+  const endLine = int(value.endLine)
+  const endColumn = int(value.endColumn)
+  return {
+    file,
+    line,
+    column,
+    ...(endLine === undefined ? {} : { endLine }),
+    ...(endColumn === undefined ? {} : { endColumn }),
+  }
+}
+
+/** Read one diagnostic, or `undefined` when it is malformed. */
+export const decodeDiagnostic = (value: unknown): Diagnostic | undefined => {
+  if (!isRecord(value)) return undefined
+  const engine = str(value.engine)
+  const ruleId = str(value.ruleId)
+  const severity = oneOf(value.severity, SEVERITIES)
+  const message = str(value.message)
+  const location = decodeLocation(value.location)
+  if (
+    engine === undefined ||
+    ruleId === undefined ||
+    severity === undefined ||
+    message === undefined ||
+    location === undefined
+  ) {
+    return undefined
+  }
+  const help = str(value.help)
+  const identity = str(value.identity)
+  const judged = bool(value.judged)
+  const fixable = bool(value.fixable)
+  const docsUrl = str(value.docsUrl)
+  const engineVersion = str(value.engineVersion)
+  return {
+    engine,
+    ruleId,
+    severity,
+    message,
+    location,
+    ...(help === undefined ? {} : { help }),
+    ...(identity === undefined ? {} : { identity }),
+    ...(judged === undefined ? {} : { judged }),
+    ...(fixable === undefined ? {} : { fixable }),
+    ...(docsUrl === undefined ? {} : { docsUrl }),
+    ...(engineVersion === undefined ? {} : { engineVersion }),
+  }
+}
+
+/** Read one engine summary, or `undefined` when it is malformed. */
+export const decodeEngineSummary = (value: unknown): EngineSummary | undefined => {
+  if (!isRecord(value)) return undefined
+  const id = str(value.id)
+  const diagnostics = int(value.diagnostics)
+  const error = int(value.error)
+  const warn = int(value.warn)
+  const info = int(value.info)
+  if (
+    id === undefined ||
+    diagnostics === undefined ||
+    error === undefined ||
+    warn === undefined ||
+    info === undefined
+  ) {
+    return undefined
+  }
+  const version = str(value.version)
+  const durationMs = num(value.durationMs)
+  const note = str(value.note)
+  return {
+    id,
+    diagnostics,
+    error,
+    warn,
+    info,
+    ...(version === undefined ? {} : { version }),
+    ...(durationMs === undefined ? {} : { durationMs }),
+    ...(note === undefined ? {} : { note }),
+  }
+}
+
+/**
+ * Read a report, or `undefined` when the whole document is malformed.
+ *
+ * A report with one bad diagnostic is `undefined`, not a report missing a finding:
+ * dropping the bad entry would let a gate pass on a run it could not read.
+ *
+ * The `counts` and `files` a writer stored are DERIVED and are deliberately not read: this
+ * reader recomputes them from `diagnostics`, so nothing downstream can read truth out of a
+ * tally. A wrong `counts` in the bytes is not a corrupt report — it is a number this reader
+ * ignores.
+ */
+export const decodeReport = (value: unknown): Report | undefined => {
+  if (!isRecord(value)) return undefined
+  const lexicon = readLexiconRef(value, "report")
+  if (lexicon === undefined) return undefined
+  const diagnostics = arrayOf(value.diagnostics, decodeDiagnostic)
+  const generators = arrayOf(value.generators, decodeEngineSummary)
+  if (diagnostics === undefined || generators === undefined) return undefined
+  // Re-sorted into the documented total order, so a reader sees one canonical ordering.
+  const ordered = sortDiagnostics(diagnostics)
+  const elapsedMs = num(value.elapsedMs)
+  return {
+    lexicon,
+    counts: countsOf(ordered),
+    files: new Set(ordered.map((diagnostic) => diagnostic.location.file)).size,
+    diagnostics: ordered,
+    generators,
+    ...(elapsedMs === undefined ? {} : { elapsedMs }),
+  }
+}

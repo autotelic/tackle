@@ -1,0 +1,133 @@
+{
+  "hash": "5aad97ef12370ed5d9e351f3a8026ca28d0e3c500256233815f608230f6a6b6e",
+  "root": "/Users/togmund/autotelic/tackle/examples/self",
+  "tokens": {
+    "colors": [
+      "background",
+      "border",
+      "color-background",
+      "color-border",
+      "color-foreground",
+      "color-muted",
+      "color-primary",
+      "foreground",
+      "muted",
+      "primary"
+    ],
+    "type": [],
+    "shape": [],
+    "spacing": []
+  },
+  "tiers": {
+    "primitive": ["components/ui"],
+    "shared": ["components"],
+    "local": ["routes"]
+  },
+  "sharedRoots": ["components"],
+  "localRoots": ["routes"],
+  "components": [
+    {
+      "path": "src/components/project-toolbar.tsx",
+      "name": "project-toolbar",
+      "tier": "shared",
+      "owners": ["dashboard", "settings"],
+      "props": ["title"],
+      "tags": ["Button", "Card"],
+      "signature": ["hook:useTheme", "tag:Button", "tag:Card"],
+      "documented": true
+    },
+    {
+      "path": "src/components/theme-context.ts",
+      "name": "theme-context",
+      "tier": "shared",
+      "owners": ["shared"],
+      "props": [],
+      "tags": [],
+      "signature": [],
+      "documented": true
+    },
+    {
+      "path": "src/components/theme-provider.tsx",
+      "name": "theme-provider",
+      "tier": "shared",
+      "owners": ["dashboard", "settings"],
+      "props": ["children"],
+      "tags": ["ThemeContext.Provider"],
+      "signature": ["hook:useMemo", "hook:useState", "tag:ThemeContext.Provider"],
+      "documented": true
+    },
+    {
+      "path": "src/components/ui/badge.tsx",
+      "name": "badge",
+      "tier": "primitive",
+      "owners": [],
+      "props": ["children"],
+      "tags": ["span"],
+      "signature": ["tag:span"],
+      "documented": true
+    },
+    {
+      "path": "src/components/ui/button.tsx",
+      "name": "button",
+      "tier": "primitive",
+      "owners": ["shared"],
+      "props": ["children", "onClick", "size", "variant"],
+      "tags": ["button"],
+      "signature": ["tag:button"],
+      "documented": true
+    },
+    {
+      "path": "src/components/ui/card.tsx",
+      "name": "card",
+      "tier": "primitive",
+      "owners": ["dashboard", "settings", "shared"],
+      "props": ["children", "title"],
+      "tags": ["h2", "section"],
+      "signature": ["tag:h2", "tag:section"],
+      "documented": true
+    },
+    {
+      "path": "src/components/use-theme.ts",
+      "name": "use-theme",
+      "tier": "shared",
+      "owners": ["shared"],
+      "props": [],
+      "tags": [],
+      "signature": ["hook:useContext"],
+      "documented": true
+    },
+    {
+      "path": "src/routes/dashboard_.$id.sponsors.tsx",
+      "name": "dashboard_.$id.sponsors",
+      "tier": "local",
+      "owners": [],
+      "props": [],
+      "tags": ["Card", "ProjectToolbar"],
+      "signature": ["tag:Card", "tag:ProjectToolbar"],
+      "documented": true
+    },
+    {
+      "path": "src/routes/dashboard_.$id.tsx",
+      "name": "dashboard_.$id",
+      "tier": "local",
+      "owners": [],
+      "props": [],
+      "tags": ["Card", "ProjectToolbar", "ThemeProvider"],
+      "signature": ["hook:useParams", "tag:Card", "tag:ProjectToolbar", "tag:ThemeProvider"],
+      "documented": true
+    },
+    {
+      "path": "src/routes/settings_.tsx",
+      "name": "settings_",
+      "tier": "local",
+      "owners": [],
+      "props": [],
+      "tags": ["Card", "ProjectToolbar", "ThemeProvider"],
+      "signature": ["tag:Card", "tag:ProjectToolbar", "tag:ThemeProvider"],
+      "documented": true
+    }
+  ],
+  "orphans": ["src/components/ui/badge.tsx"],
+  "duplicates": [],
+  "protocolVersion": "0.1.0"
+}

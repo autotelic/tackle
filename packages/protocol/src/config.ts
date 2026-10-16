@@ -9,6 +9,8 @@
  * "repo-agnostic" a contract instead of an aspiration.
  */
 
+import { arrayOf, bool, isRecord, num, oneOf, str, strings } from "./decode.ts"
+
 /** Where a component sits in the tier pipeline. */
 export type TierName = "primitive" | "shared" | "local"
 
@@ -119,5 +121,219 @@ export interface HarnessConfig {
   readonly agent?: {
     readonly cookbook?: string
     readonly onboarding?: string
+  }
+}
+
+/*
+ * Decoders — the authored configs, read as untrusted input.
+ *
+ * Configs are the one thing a human writes, so a malformed value must not become a crash
+ * or a silently wrong vocabulary: the caller substitutes its default (`cutlist`'s
+ * `defaultConfig`, `jig`'s `defaultConfig`) when a decode returns `undefined`. Both engines
+ * currently decode through their own schema; these are the language-neutral twin, and the
+ * two are checked against each other by the schema-conformance suite.
+ */
+
+const decodeTiers = (value: unknown): Tiers | undefined => {
+  if (!isRecord(value)) return undefined
+  const primitive = strings(value.primitive)
+  const shared = strings(value.shared)
+  const local = strings(value.local)
+  if (primitive === undefined || shared === undefined || local === undefined) return undefined
+  return { primitive, shared, local }
+}
+
+const decodeTokenSource = (value: unknown): TokenSource | undefined => {
+  if (!isRecord(value)) return undefined
+  const from = str(value.from)
+  if (from === undefined) return undefined
+  const theme = str(value.theme)
+  const vars = str(value.vars)
+  return {
+    from,
+    ...(theme === undefined ? {} : { theme }),
+    ...(vars === undefined ? {} : { vars }),
+  }
+}
+
+const decodeOwnership = (value: unknown): Ownership | undefined => {
+  if (!isRecord(value)) return undefined
+  const routeOwner = oneOf(value.routeOwner, ["first-segment", "full"] as const)
+  const transitive = bool(value.transitive)
+  if (routeOwner === undefined || transitive === undefined) return undefined
+  return { routeOwner, transitive }
+}
+
+const decodePatterns = (value: unknown): Patterns | undefined => {
+  if (!isRecord(value)) return undefined
+  let composition: CompositionPattern | undefined
+  if ("composition" in value) {
+    if (!isRecord(value.composition)) return undefined
+    const providerSuffix = str(value.composition.providerSuffix)
+    const hookPrefix = str(value.composition.hookPrefix)
+    if (providerSuffix === undefined || hookPrefix === undefined) return undefined
+    composition = { providerSuffix, hookPrefix }
+  }
+  let urlState: UrlStatePattern | undefined
+  if ("urlState" in value) {
+    if (!isRecord(value.urlState)) return undefined
+    const router = oneOf(value.urlState.router, [
+      "remix",
+      "tanstack",
+      "next",
+      "react-router",
+    ] as const)
+    const reader = str(value.urlState.reader)
+    if (router === undefined || reader === undefined) return undefined
+    urlState = { router, reader }
+  }
+  const patterns: Patterns = {
+    ...(composition === undefined ? {} : { composition }),
+    ...(urlState === undefined ? {} : { urlState }),
+  }
+  return patterns
+}
+
+const decodeAlias = (
+  value: unknown,
+): Readonly<Record<string, ReadonlyArray<string>>> | undefined => {
+  if (!isRecord(value)) return undefined
+  const out: Record<string, ReadonlyArray<string>> = {}
+  for (const [key, targets] of Object.entries(value)) {
+    const decoded = strings(targets)
+    if (decoded === undefined) return undefined
+    out[key] = decoded
+  }
+  return out
+}
+
+/** Read `cutlist.config.json`, or `undefined` when it does not decode. */
+export const decodeCutlistConfig = (value: unknown): CutlistConfig | undefined => {
+  if (!isRecord(value)) return undefined
+  const roots = strings(value.roots)
+  const tiers = decodeTiers(value.tiers)
+  const tokens = decodeTokenSource(value.tokens)
+  const ownership = decodeOwnership(value.ownership)
+  if (
+    roots === undefined ||
+    roots.length === 0 ||
+    tiers === undefined ||
+    tokens === undefined ||
+    ownership === undefined
+  ) {
+    return undefined
+  }
+  const $schema = str(value.$schema)
+  const alias = "alias" in value ? decodeAlias(value.alias) : undefined
+  if ("alias" in value && alias === undefined) return undefined
+  let hooks: { readonly barrel?: string } | undefined
+  if ("hooks" in value) {
+    if (!isRecord(value.hooks)) return undefined
+    const barrel = str(value.hooks.barrel)
+    if ("barrel" in value.hooks && barrel === undefined) return undefined
+    hooks = barrel === undefined ? {} : { barrel }
+  }
+  const patterns = "patterns" in value ? decodePatterns(value.patterns) : undefined
+  if ("patterns" in value && patterns === undefined) return undefined
+  const output = "output" in value ? decodeOutput(value.output) : undefined
+  if ("output" in value && output === undefined) return undefined
+  return {
+    ...($schema === undefined ? {} : { $schema }),
+    roots,
+    tiers,
+    tokens,
+    ownership,
+    ...(alias === undefined ? {} : { alias }),
+    ...(hooks === undefined ? {} : { hooks }),
+    ...(patterns === undefined ? {} : { patterns }),
+    ...(output === undefined ? {} : { output }),
+  }
+}
+
+const decodeOutput = (value: unknown): CutlistOutput | undefined => {
+  if (!isRecord(value)) return undefined
+  const out: Record<string, string> = {}
+  for (const key of ["catalog", "manifest", "menu", "hooks", "tokens"] as const) {
+    if (!(key in value)) continue
+    const decoded = str(value[key])
+    if (decoded === undefined) return undefined
+    out[key] = decoded
+  }
+  return out
+}
+
+const decodeEngineRef = (value: unknown): EngineRef | undefined => {
+  if (!isRecord(value)) return undefined
+  const id = str(value.id)
+  const kind = oneOf(value.kind, ["process", "oxlint-plugin", "internal"] as const)
+  if (id === undefined || kind === undefined) return undefined
+  const command = str(value.command)
+  const config = str(value.config)
+  const enabled = bool(value.enabled)
+  return {
+    id,
+    kind,
+    ...(command === undefined ? {} : { command }),
+    ...(config === undefined ? {} : { config }),
+    ...(enabled === undefined ? {} : { enabled }),
+  }
+}
+
+const decodeGate = (value: unknown): Gate | undefined => {
+  if (!isRecord(value)) return undefined
+  const mode = oneOf(value.mode, ["touched-files", "all"] as const)
+  const baseline = str(value.baseline)
+  if (mode === undefined || baseline === undefined) return undefined
+  const failOn = oneOf(value.failOn, ["error", "warn", "any-new"] as const)
+  return { mode, baseline, ...(failOn === undefined ? {} : { failOn }) }
+}
+
+/** Read `jig.config.json`, or `undefined` when it does not decode. */
+export const decodeHarnessConfig = (value: unknown): HarnessConfig | undefined => {
+  if (!isRecord(value)) return undefined
+  const engines = arrayOf(value.engines, decodeEngineRef)
+  const gate = decodeGate(value.gate)
+  if (engines === undefined || gate === undefined) return undefined
+  const $schema = str(value.$schema)
+  const report = "report" in value ? decodeReportOptions(value.report) : undefined
+  if ("report" in value && report === undefined) return undefined
+  const agent = "agent" in value ? decodeAgentOptions(value.agent) : undefined
+  if ("agent" in value && agent === undefined) return undefined
+  return {
+    ...($schema === undefined ? {} : { $schema }),
+    engines,
+    gate,
+    ...(report === undefined ? {} : { report }),
+    ...(agent === undefined ? {} : { agent }),
+  }
+}
+
+const decodeReportOptions = (
+  value: unknown,
+):
+  | { readonly format?: "text" | "json" | "jsonl" | "github"; readonly maxWarnings?: number }
+  | undefined => {
+  if (!isRecord(value)) return undefined
+  const format = oneOf(value.format, ["text", "json", "jsonl", "github"] as const)
+  if ("format" in value && format === undefined) return undefined
+  const maxWarnings = num(value.maxWarnings)
+  if ("maxWarnings" in value && maxWarnings === undefined) return undefined
+  return {
+    ...(format === undefined ? {} : { format }),
+    ...(maxWarnings === undefined ? {} : { maxWarnings }),
+  }
+}
+
+const decodeAgentOptions = (
+  value: unknown,
+): { readonly cookbook?: string; readonly onboarding?: string } | undefined => {
+  if (!isRecord(value)) return undefined
+  const cookbook = str(value.cookbook)
+  const onboarding = str(value.onboarding)
+  if ("cookbook" in value && cookbook === undefined) return undefined
+  if ("onboarding" in value && onboarding === undefined) return undefined
+  return {
+    ...(cookbook === undefined ? {} : { cookbook }),
+    ...(onboarding === undefined ? {} : { onboarding }),
   }
 }

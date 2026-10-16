@@ -1,0 +1,44 @@
+{
+  "lexicon": { "name": "report", "version": 1 },
+  "counts": { "error": 0, "warn": 0, "info": 1 },
+  "files": 1,
+  "diagnostics": [
+    {
+      "engine": "joggle",
+      "ruleId": "joggle/unparsed-output",
+      "severity": "info",
+      "message": "jig could not parse joggle output (exit 1)",
+      "help": "readFileString: NotFound: FileSystem.readFile (<root>/tsc app.ts util.ts)",
+      "location": { "file": "joggle.config", "line": 1, "column": 1 }
+    }
+  ],
+  "generators": [
+    {
+      "id": "plumb",
+      "diagnostics": 0,
+      "error": 0,
+      "warn": 0,
+      "info": 0,
+      "durationMs": 3,
+      "note": "oxlint could not run: NotFound: ChildProcess.spawn (oxlint --format json)"
+    },
+    {
+      "id": "joggle",
+      "diagnostics": 1,
+      "error": 0,
+      "warn": 0,
+      "info": 1,
+      "durationMs": 1102
+    },
+    {
+      "id": "cutlist",
+      "diagnostics": 0,
+      "error": 0,
+      "warn": 0,
+      "info": 0,
+      "durationMs": 5,
+      "note": "cutlist could not run: NotFound: ChildProcess.spawn (cutlist build --check)"
+    }
+  ],
+  "elapsedMs": 1103
+}
