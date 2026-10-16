@@ -14,18 +14,24 @@ format in `protocol` instead.
 
 ## House style
 
-These packages follow the conventions already in `plumb` and `joggle`:
+These packages follow the conventions the tools established in `plumb` and `joggle` — both
+now in this workspace:
 
 - **Effect 4** (`effect@4.0.5`, stable), pinned through the pnpm `catalog:` — never a
   caret. `effect/cli` for commands, `effect/process` for subprocesses, `effect/Schema`
   for decoding. Note the move: what was `effect/unstable/*` in the rc line is now
-  top-level (`effect/cli`, `effect/process`).
+  top-level (`effect/cli`, `effect/process`). `joggle` is the standing exception until its
+  port lands: it is still on `4.0.0-rc.116`, and `pnpm-workspace.yaml` carries one
+  parent-scoped `overrides` entry to keep that rc tree resolvable without its old lockfile.
+  Do not clean up either without reading MIGRATION.md's unknowns.
 - **Typecheck and build with `tsgo`**, the native compiler (`@typescript/native-preview`)
   wearing Effect's language service (`@effect/tsgo`). `tsc` is not installed. The shared
   `prepare` script patches the integrations; `typecheck`/`build` in each package shell to
   `tsgo`, and the base `paths` map resolves `@autotelic/protocol` to source.
 - **Format with `oxfmt`** and lint with `oxlint` (type-aware, via `oxlint-tsgolint`).
-  `.oxfmtrc.json` is the house style: no semicolons, double quotes, 100 columns.
+  `.oxfmtrc.json` is the house style: no semicolons, double quotes, 100 columns. The two
+  imported trees sit in its `ignorePatterns` until their conversion lands (MIGRATION.md
+  item 3), so `pnpm format` will not touch `packages/plumb` or `packages/joggle`.
 - **Type-strippable TypeScript.** `erasableSyntaxOnly` is on: no `enum`, no
   namespaces, no parameter properties — Node runs the sources directly.
 - **`.ts` import extensions**, rewritten to `.js` at build (`rewriteRelativeImportExtensions`).
@@ -51,6 +57,11 @@ packages/<name>/
 
 `bin/<name>.js` is the installed entry point and runs `dist/`, never `src/` — Node
 refuses to strip types under `node_modules`, which is where a published file lives.
+
+`plumb` predates that shape in two ways, both open MIGRATION.md items: its `exports` point at
+`dist` only (no `development → src`), and it commits `dist` while its own `.gitignore` says
+`dist/`. So a build dirties its tree, and a stale `dist` there is a real defect — it is the
+artifact `joggle` consumes — not a formatting nit.
 
 ## Before you call it done
 
@@ -83,17 +94,23 @@ renderers instead.
 its generated catalog committed — kept runnable so the tools are exercised against a real
 tree. It is a workspace package so the `examples/*` glob resolves and for nothing else:
 it declares **no scripts**, so no `pnpm -r run …` can reach it — which matters, because the
-exemplar's own `check` would fail here (`plumb` is not installed in this workspace) — and it
-publishes nothing. It does link `@autotelic/cutlist` and `@autotelic/jig-cli`, so it has its
-own `node_modules/.bin`.
+exemplar's own `check` would fail here (it names rules from `plumb`, `plumb/ui`, and
+`@shadcn/lint`, none of which it depends on) — and it publishes nothing. It does link
+`@autotelic/cutlist` and `@autotelic/jig-cli`, so it has its own `node_modules/.bin`.
 
 Two consequences worth knowing before you touch it:
 
-- **`pnpm lint` passes `--ignore-pattern 'examples/**'`.** `examples/self/.oxlintrc.json`
-  names `@autotelic/plumb`, which this workspace has not moved in, and oxlint _builds_ a
-  directory's config before it applies any ignore — a root config's `ignorePatterns` does
-  not stop it, and neither does `.oxlintignore`. Only the command line does. If you add a
-  root `oxlint.config.ts` rule, it will not reach the exemplar.
+- **`pnpm lint` passes three `--ignore-pattern` flags** — `examples/**`,
+  `packages/plumb/**`, `packages/joggle/**`. The exemplar's `.oxlintrc.json` names
+  `@autotelic/plumb`, `@autotelic/plumb/ui`, and `@shadcn/lint`: `plumb` is in this workspace
+  now, but its `ui` export lives on the branch the move deliberately did not take, and
+  `@shadcn/lint` is external. The two packages are ignored for a different reason — each
+  carries its own `oxlint.config.ts`, and a _nested_ config may not declare
+  `options.typeAware`, so they lint themselves from their own directories
+  (`cd packages/joggle && pnpm lint`). In every case oxlint _builds_ a directory's config
+  before it applies any ignore — a root config's `ignorePatterns` does not stop it, and
+  neither does `.oxlintignore`. Only the command line does. If you add a root
+  `oxlint.config.ts` rule, it will not reach any of the three.
 - **A stale exemplar catalog is a real failure**, not a formatting nit: regenerate it with
   `pnpm cutlist build --cwd examples/self` in the same change that moves its `src/`. The
   generator writes plain pretty-JSON and markdown, so follow it with `pnpm format` — the

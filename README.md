@@ -52,8 +52,8 @@ tackle/
 │  ├─ protocol/   the four seams as types + JSON Schema + pure helpers (leaf)
 │  ├─ cutlist/    the crawler + renderers (binary)
 │  ├─ jig-cli/    the surface over engines (command: `jig`; binary + pi extension + opencode plugin)
-│  ├─ plumb/      ← moved in from ../plumb   (binary-as-plugin; host = oxlint)
-│  └─ joggle/     ← moved in from ../mess    (binary)
+│  ├─ plumb/      moved in from ../plumb (binary-as-plugin; host = oxlint)
+│  └─ joggle/     moved in from ../mess (binary)
 ├─ examples/self/ the exemplar client repo — a runnable config set, not a fixture
 ├─ .changeset/    independent versioning
 └─ pnpm-workspace.yaml  catalog: pins effect/oxlint/oxfmt/tsgo ONCE
@@ -66,9 +66,11 @@ and re-runs the same binary. Both hand the model what a human's terminal shows, 
 "the agent gets a different answer than CI" is the failure the whole workspace exists to
 prevent. `@opencode/plugin` is an optional peer — nothing else here needs it.
 
-`plumb` and `joggle` already exist as separate repositories; moving them in is a
-deliberate, history-preserving step — see [`MIGRATION.md`](./MIGRATION.md). Until
-then this workspace builds `protocol`, `cutlist`, and `jig-cli`.
+`plumb` and `joggle` were moved in from their own repositories with `git subtree`, history
+intact — see [`MIGRATION.md`](./MIGRATION.md) for which refs came in (`plumb/main`,
+`joggle/main`, deliberately not the branches carrying unreleased work) and for the
+reconciliation that follows the move. All five packages now build and test here, and
+`pnpm check` is green across them.
 
 ## Toolchain
 
@@ -113,6 +115,10 @@ why — including what `jig check` reports at the root today, which is honest bu
 - `jig-cli` — config, engine runner, one report, baseline, agent door, pi + opencode surfaces. **v0.**
 - `examples/self` — the exemplar client repo, kept runnable so the tools are exercised against
   a real tree. **Built.**
-- `plumb`, `joggle` — exist; migration pending.
+- `plumb` — moved in from `../plumb@main` (0.6.0 + 8): single-file Oxlint rules
+  (core / effect / react / meta), run as a `jsPlugin`. **Here**, with the reconciliation in
+  MIGRATION.md still open (catalog pins, `tsgo`, `protocol`, formatter).
+- `joggle` — moved in from `../mess@main` (0.1.0): cross-file _judged_ rules, run as
+  `joggle check`. **Here**, still on the Effect `rc.116` line until its port lands.
 - `@shadcn/lint` — external engine, curried by `jig`; reconciled by ownership, not
   reimplemented.
