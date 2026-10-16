@@ -2,7 +2,7 @@
   "window": "round-1",
   "ceilingTokens": 4000000,
   "ceilingUsd": 3.0,
-  "spent": { "tokens": 1152369, "usd": 0.402013278, "at": "2026-10-16 census" },
+  "spent": { "tokens": 1664438, "usd": 0.554211789, "at": "2026-10-16 post-witness" },
   "concurrency": 2,
   "pausedUntil": null,
   "note": "Provisional; the foreman set it pending a human ceiling. Two ways to the one model: opencode-go/deepseek-v4.1-flash then the free line. Cap concurrency at 2; raise only on meter headroom. Census spend is the account to date, not the round."
