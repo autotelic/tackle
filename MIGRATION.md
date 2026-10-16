@@ -5,9 +5,14 @@
 moved **with history and tags intact**, not copied.
 
 This is deliberately not done automatically. It rewrites package layout in two live
-repositories and changes every internal path — and `tackle/` is not yet a git repository,
-so step zero is `git init`. Do it as one reviewed step, on a branch, when the workspace's
-greenfield packages (`protocol`, `cutlist`, `jig-cli`) build.
+repositories and changes every internal path. Do it as one reviewed step, on a branch, when
+the workspace's greenfield packages (`protocol`, `cutlist`, `jig-cli`) build.
+
+`tackle/` is a git repository now (`autotelic/tackle`, default branch `main`), so step zero
+is done. Check where the two sources stand before pulling, though: `../mess` is on `main`,
+but `../plumb` is on `feat/plumb-ui-rules` — land that branch (or check it out deliberately)
+so the subtree import carries the rules you mean to bring in, not just whatever is checked
+out at the time.
 
 ## Target
 
@@ -177,6 +182,14 @@ Consumers see **zero change**: same npm names, same `bin`, same `exports`, same 
 7. **Publish.** `changeset` versioning covers every package under `packages/`. `plumb`
    publishes from `packages/plumb`, `joggle` from `packages/joggle`, each under its
    existing name — four publishes, not twelve.
+
+   Publishing is deliberately **off** in `.github/workflows/release.yml`: the workflow
+   versions and opens the "version packages" PR, but carries no `publish` input, because
+   `changesets/action` publishes any version npm does not have — which, with every package
+   still at 0.0.0, means publishing 0.0.0. (It tried exactly that on the first push to
+   `main`.) Turning it on is one input plus the version that should first exist:
+   `publish: pnpm release`, `registry-url` on the setup-node step, `NPM_TOKEN`, and the
+   `package-manager-cache: false` those docs ask for once credentials are in play.
 
 ## Wire the checks the root gate would otherwise skip
 
