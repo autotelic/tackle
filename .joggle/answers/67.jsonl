@@ -1,0 +1,4 @@
+6706fca9f2510e0d	1792252958	{"confidence":0.89,"kind":"Classify","label":"accounted_elsewhere","probabilities":{"accounted_elsewhere":0.93,"internal_only":0.04,"unaccounted":0.03}}
+675d8011b4681998	1792252958	{"consistency":1,"kind":"Probability","probability":0.8155555555555556}
+6770764150a90137	1792252958	{"consistency":1,"kind":"Probability","probability":0.8333333333333334}
+67ae6db3ff798063	1792252958	{"confidence":0.87,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.09,"same_module":0,"same_package":0.01,"sibling_packages":0.9}}

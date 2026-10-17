@@ -1,0 +1,6 @@
+1044da86baa9a087	1792252958	{"confidence":0.52,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.68,"unclear":0,"value":0.32}}
+10507d0bcc25f6dc	1792253093	{"confidence":0.61,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.04,"common_idiom":0.74,"shared_helper":0.22}}
+105aa6cb028903fe	1792252958	{"consistency":1,"kind":"Probability","probability":0.8288888888888889}
+10e3e32cb7df73f1	1792252958	{"confidence":0.48,"kind":"Classify","label":"move","probabilities":{"merge":0.18,"move":0.65,"no_issue":0.17}}
+10fcffa280043659	1792252958	{"confidence":0.52,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.16,"keep_variants":0.68,"no_issue":0.16}}
+10fe28a76c41c3bd	1792252958	{"consistency":1,"kind":"Probability","probability":0.8811111111111111}

@@ -3,13 +3,14 @@ import { join } from "node:path"
 import { Effect } from "effect"
 import {
   countsOf,
+  str as stringOf,
   type Diagnostic,
   type EngineRef,
   type EngineSummary,
   type Severity,
   type SourceLocation,
 } from "@autotelic/protocol"
-import { exec, type Spawner } from "./exec.ts"
+import { exec, type ExecOutcome, type Spawner } from "./exec.ts"
 /*
  * The engine adapters.
  *
@@ -34,13 +35,6 @@ export interface EngineOutcome {
 interface ParseContext {
   readonly engine: string
   readonly root: string
-}
-
-/** One engine run's captured streams and exit code. */
-interface EngineOutput {
-  readonly code: number
-  readonly stdout: string
-  readonly stderr: string
 }
 
 /** The args each known engine is invoked with. Overridable only by editing the id map. */
@@ -80,9 +74,6 @@ const record = (value: unknown): Record<string, unknown> | undefined =>
   typeof value === "object" && value !== null && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : undefined
-
-const stringOf = (value: unknown): string | undefined =>
-  typeof value === "string" ? value : undefined
 
 const numberOr = (value: unknown, fallback: number): number =>
   typeof value === "number" && Number.isFinite(value) ? value : fallback
@@ -439,7 +430,7 @@ export const parseEngineOutput = (
 }
 
 /** `cutlist build --check` speaks exit codes, not diagnostics: a non-zero exit is one. */
-const cutlistDiagnostics = ({ code, stdout, stderr }: EngineOutput): ReadonlyArray<Diagnostic> => {
+const cutlistDiagnostics = ({ code, stdout, stderr }: ExecOutcome): ReadonlyArray<Diagnostic> => {
   if (code === 0) return []
   const detail = (stdout.trim() === "" ? stderr : stdout).trim().split("\n")[0] ?? ""
   return [
@@ -460,7 +451,7 @@ const unparsed = ({
   code,
   stdout,
   stderr,
-}: { readonly id: string } & EngineOutput): ReadonlyArray<Diagnostic> => {
+}: { readonly id: string } & ExecOutcome): ReadonlyArray<Diagnostic> => {
   const output = (stderr.trim() === "" ? stdout : stderr).trim()
   // A silent, successful exit is a real "no findings". A silent FAILURE is not: the engine
   // said something (on stderr) or said nothing and died, and either way nothing was looked at.
@@ -493,7 +484,7 @@ const unparsed = ({
  */
 export const engineDiagnostics = (
   id: string,
-  output: EngineOutput,
+  output: ExecOutcome,
   root: string,
 ): ReadonlyArray<Diagnostic> => {
   const { code, stdout, stderr } = output

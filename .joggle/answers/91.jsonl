@@ -1,0 +1,5 @@
+911cda71f29655e8	1792252958	{"confidence":0.08,"kind":"Classify","label":"none","probabilities":{"none":0.54,"true":0.46}}
+914b1f69076afbb6	1792252958	{"consistency":1,"kind":"Probability","probability":0.8511111111111113}
+91d94304bf88b0cf	1792252958	{"confidence":0.93,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0,"wrong_behavior":0.04,"wrong_contract":0.01}}
+91df0d0c3c23921a	1792252958	{"consistency":1,"kind":"Probability","probability":0.7977777777777778}
+91ec66ef687c1be7	1792252958	{"consistency":1,"kind":"Probability","probability":0.8766666666666666}

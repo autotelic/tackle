@@ -1,0 +1,7 @@
+74142cbd94b7ebdf	1792252958	{"confidence":0.23,"kind":"Classify","label":"wire_contract","probabilities":{"domain_concept":0.18,"framework_glue":0.33,"implementation_detail":0.07,"wire_contract":0.42}}
+746626ad83949032	1792252958	{"confidence":0.59,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.21,"independent":0.73,"meaning_switched":0.06}}
+74a692c622fea6a2	1792252958	{"consistency":1,"kind":"Probability","probability":0.7244444444444444}
+74aec9ebbcabba49	1792252958	{"consistency":1,"kind":"Probability","probability":0.7811111111111111}
+74b4b933f17e9449	1792252958	{"confidence":0.53,"kind":"Classify","label":"same_module","probabilities":{"different_deployables":0,"same_module":0.65,"same_package":0.35,"sibling_packages":0}}
+74ea43447f30fca0	1792252958	{"confidence":0.38,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.01,"keep_variants":0.59,"no_issue":0.4}}
+74f1976ecf9735b8	1792253093	{"confidence":0.8,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.1,"member_1":0.9}}

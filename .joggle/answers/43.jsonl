@@ -1,0 +1,4 @@
+4365a2b49613f995	1792252958	{"confidence":0.84,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.88,"stale_reference":0,"wrong_behavior":0.09,"wrong_contract":0.03}}
+4365e06650038bf8	1792252958	{"confidence":0.96,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.97,"different_order":0.01,"different_work":0.02,"same_operation":0}}
+436b606ae20bbb71	1792252958	{"confidence":0.75,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.14,"framework_glue":0,"implementation_detail":0.81,"wire_contract":0.05}}
+43e71e5c7781db8e	1792252958	{"confidence":0.83,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.87,"stale_reference":0.01,"wrong_behavior":0.07,"wrong_contract":0.05}}

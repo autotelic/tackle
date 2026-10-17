@@ -6,6 +6,27 @@
     "joggle/naming-drift": "error",
     "joggle/duplicate-meaning": "error"
   },
+  "ignore": [
+    {
+      "path": "packages/plumb/**",
+      "reason": "plumb is the deterministic single-file linter: its rules are written once and applied everywhere, and its rule-authoring shapes are its own concern. joggle asks whether two things are the same and whether a thing fits THIS repository; plumb's rule internals are not that question, and the root lint already scopes plumb out. Judging them produced 82 `rule-judgment` readings about plumb's own rule metadata plus 4 `object-shape` readings about its metadata literals — none of them about this repository."
+    },
+    {
+      "rule": "joggle/compose-types",
+      "path": "packages/protocol/src/catalog.ts",
+      "reason": "`DuplicateCandidate` and joggle's `ScoredPair` are two packages' independent declarations of a scored pair. They cannot compose: the dependency law is that `protocol` depends on nothing, so it cannot import a type from `joggle`. The shared shape IS the seam — they agree on bytes, not on code."
+    },
+    {
+      "rule": "joggle/duplicate-call-run",
+      "path": "packages/protocol/src/catalog.ts",
+      "reason": "`decodeCatalogComponent` and `decodeMenuEntry` decode two different records that happen to share the field-by-field decode idiom (isRecord, then `str` per field). Factoring the idiom out would couple the two records' decoders to each other, which is the opposite of what each decoder exists for. The repetition is the boundary pattern, not a copy."
+    },
+    {
+      "rule": "joggle/field-type-drift",
+      "path": "packages/joggle/src/config.ts",
+      "reason": "`RuleSetting.onUnavailable` is the RESOLVED setting and may be `count`; a rule's own declaration (`PlannedRule.onUnavailable`) is `report` | `propagate`, because a rule saying `count` would be meaningless. The two are different levels of one policy and the widening is deliberate, not a drift."
+    }
+  ],
   "architecture": {
     "layers": [
       { "name": "protocol", "include": ["packages/protocol/**"] },

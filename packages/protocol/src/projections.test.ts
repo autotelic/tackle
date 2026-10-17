@@ -1,8 +1,8 @@
 import fc from "fast-check"
 import { describe, expect, it } from "vitest"
-import { decodeBaseline } from "./baseline.ts"
+import { decodeBaseline, identityOf, ruleNameOf } from "./baseline.ts"
 import { compileLexicon, loadJson, makeAjv } from "./fixture-support.ts"
-import { decodeReport, type Diagnostic, type Report, type Severity } from "./report.ts"
+import { decodeReport, type Report, type Severity } from "./report.ts"
 
 /*
  * The projections are SPECIFIED in `docs/projections.md` and implemented by a rendering
@@ -19,9 +19,6 @@ const baseline = decodeBaseline(loadJson("fixtures/projections/baseline.golden.j
 if (baseline === undefined) throw new Error("the projection baseline did not decode")
 const accepted: ReadonlySet<string> = new Set(baseline.identities)
 
-const nameOf = (diagnostic: Diagnostic): string => `${diagnostic.engine}/${diagnostic.ruleId}`
-const identityOf = (diagnostic: Diagnostic): string =>
-  diagnostic.identity ?? `${diagnostic.engine}/${diagnostic.ruleId}:${diagnostic.location.file}`
 const severity01 = (severity: Severity): "error" | "warning" | "note" =>
   severity === "error" ? "error" : severity === "warn" ? "warning" : "note"
 const severityNumeric = (severity: Severity): 1 | 2 | 3 =>
@@ -32,10 +29,10 @@ const severityCodeClimate = (severity: Severity): "major" | "minor" | "info" =>
 const toSarif = (report: Report, known?: ReadonlySet<string>) => {
   const rules = new Map<string, unknown>()
   for (const diagnostic of report.diagnostics) {
-    if (rules.has(nameOf(diagnostic))) continue
-    rules.set(nameOf(diagnostic), {
-      id: nameOf(diagnostic),
-      name: nameOf(diagnostic),
+    if (rules.has(ruleNameOf(diagnostic))) continue
+    rules.set(ruleNameOf(diagnostic), {
+      id: ruleNameOf(diagnostic),
+      name: ruleNameOf(diagnostic),
       shortDescription: { text: diagnostic.message },
       ...(diagnostic.help === undefined ? {} : { help: { text: diagnostic.help } }),
       ...(diagnostic.docsUrl === undefined ? {} : { helpUri: diagnostic.docsUrl }),
@@ -60,7 +57,7 @@ const toSarif = (report: Report, known?: ReadonlySet<string>) => {
           if (diagnostic.fixable === true) properties.fixable = true
           if (known !== undefined) properties.baseline = isKnown ? "known" : "novel"
           return {
-            ruleId: nameOf(diagnostic),
+            ruleId: ruleNameOf(diagnostic),
             level: severity01(diagnostic.severity),
             message: { text: diagnostic.message },
             ...(Object.keys(properties).length === 0 ? {} : { properties }),
@@ -108,7 +105,7 @@ const toLsp = (report: Report): unknown =>
         end: { line: (endLine ?? line) - 1, character: (endColumn ?? column) - 1 },
       },
       severity: severityNumeric(diagnostic.severity),
-      code: nameOf(diagnostic),
+      code: ruleNameOf(diagnostic),
       source: diagnostic.engine,
       message: diagnostic.message,
       ...(diagnostic.docsUrl === undefined
@@ -120,7 +117,7 @@ const toLsp = (report: Report): unknown =>
 const toCodeClimate = (report: Report): unknown =>
   report.diagnostics.map((diagnostic) => ({
     type: "issue",
-    check_name: nameOf(diagnostic),
+    check_name: ruleNameOf(diagnostic),
     description: diagnostic.message,
     categories: ["Style"],
     location: {

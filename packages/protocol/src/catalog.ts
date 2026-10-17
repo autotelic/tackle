@@ -1,6 +1,6 @@
 import { arrayOf, bool, isRecord, num, oneOf, readLexiconRef, str, strings } from "./decode.ts"
 import { lexiconRef, type LexiconRef } from "./lexicon.ts"
-import type { Tiers, TierName } from "./config.ts"
+import { decodeTiers, type Tiers, type TierName } from "./config.ts"
 
 /*
  * The catalog: the model `cutlist` computes once and renders many ways.
@@ -12,8 +12,8 @@ import type { Tiers, TierName } from "./config.ts"
  * not silent.
  */
 
-/** One component as the crawler classified it. */
-export interface CatalogComponent {
+/** Every field a component carries wherever it is rendered — the catalog's, and the manifest's. */
+interface ComponentFields {
   /** Repository-relative, forward-slashed. */
   readonly path: string
   readonly name: string
@@ -24,6 +24,10 @@ export interface CatalogComponent {
   readonly props: ReadonlyArray<string>
   /** Rendered JSX tag names. */
   readonly tags: ReadonlyArray<string>
+}
+
+/** One component as the crawler classified it. */
+export interface CatalogComponent extends ComponentFields {
   /**
    * The behavioral skeleton: the headless primitive it wraps, the headless
    * sub-components it renders, the hooks it calls, and its token-class categories.
@@ -77,13 +81,7 @@ export interface Catalog {
  */
 
 /** A component as the lint manifest carries it. */
-export interface ManifestComponent {
-  readonly path: string
-  readonly name: string
-  readonly tier: TierName
-  readonly owners: ReadonlyArray<string>
-  readonly props: ReadonlyArray<string>
-  readonly tags: ReadonlyArray<string>
+export interface ManifestComponent extends ComponentFields {
   /** Carried so a reader CAN use the corrected metric; older readers ignore it. */
   readonly signature?: ReadonlyArray<string>
 }
@@ -175,16 +173,6 @@ export const emptyCatalog = (root: string): Catalog => ({
  */
 
 const TIERS_NAMES: ReadonlyArray<TierName> = ["primitive", "shared", "local"]
-
-/** Read the tier name set, or `undefined` when malformed. */
-const decodeTiers = (value: unknown): Tiers | undefined => {
-  if (!isRecord(value)) return undefined
-  const primitive = strings(value.primitive)
-  const shared = strings(value.shared)
-  const local = strings(value.local)
-  if (primitive === undefined || shared === undefined || local === undefined) return undefined
-  return { primitive, shared, local }
-}
 
 /** Read one component, or `undefined` when malformed. */
 export const decodeCatalogComponent = (value: unknown): CatalogComponent | undefined => {

@@ -1,0 +1,8 @@
+5715e8c1b5563f07	1792252958	{"confidence":0.67,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.08,"keep_variants":0.78,"no_issue":0.14}}
+572707a3168d4e11	1792252958	{"confidence":0.89,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.92,"stale_reference":0.01,"wrong_behavior":0.06,"wrong_contract":0.01}}
+573725721636e7d7	1792252958	{"confidence":0.34,"kind":"Classify","label":"move","probabilities":{"merge":0.27,"move":0.56,"no_issue":0.17}}
+5737fb77a7f628a4	1792252958	{"confidence":0.56,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.01,"name_meaning":0.05,"no_issue":0.27,"semantic_verdict":0.67}}
+578d83da709f4074	1792252958	{"confidence":0.75,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.81,"stale_reference":0,"wrong_behavior":0.13,"wrong_contract":0.06}}
+579342be847ff0d7	1792252958	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0.01}}
+57b78d4585f7e8d1	1792252958	{"confidence":0.82,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.12,"names_a_caller":0,"shared_vocabulary":0.88}}
+57f8429475e5e674	1792252958	{"confidence":0.3,"kind":"Classify","label":"not_a_derivation","probabilities":{"legitimate_local":0.36,"not_a_derivation":0.53,"reimplements":0.11}}

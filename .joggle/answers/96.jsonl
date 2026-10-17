@@ -1,0 +1,4 @@
+96032e6a5142ba25	1792252958	{"consistency":1,"kind":"Probability","probability":0.89}
+960862e725f1f5f8	1792252958	{"confidence":0.81,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.03,"framework_glue":0,"implementation_detail":0.86,"wire_contract":0.11}}
+9624048761fea9fd	1792252958	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
+96381636131c56f8	1792252958	{"confidence":0.73,"kind":"Classify","label":"none","probabilities":{"choice":0.06,"none":0.82,"noul":0.12}}

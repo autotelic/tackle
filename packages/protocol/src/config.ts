@@ -140,7 +140,8 @@ export interface HarnessConfig {
  * two are checked against each other by the schema-conformance suite.
  */
 
-const decodeTiers = (value: unknown): Tiers | undefined => {
+/** Read the tier name set, or `undefined` when malformed. */
+export const decodeTiers = (value: unknown): Tiers | undefined => {
   if (!isRecord(value)) return undefined
   const primitive = strings(value.primitive)
   const shared = strings(value.shared)

@@ -1,0 +1,7 @@
+9e1dfb583287d54d	1792253160	{"confidence":0.68,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.14,"framework_glue":0,"implementation_detail":0.76,"wire_contract":0.1}}
+9e3e5cfaaa830ec0	1792252958	{"consistency":1,"kind":"Probability","probability":0.79}
+9e90c040c60ba0fb	1792252958	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0}}
+9e910bfb25db6bf8	1792252958	{"confidence":0.99,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.01,"framework_glue":0,"implementation_detail":0.99,"wire_contract":0}}
+9ec41bd8b29f6802	1792252958	{"confidence":0.52,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.68,"not_a_derivation":0.08,"reimplements":0.24}}
+9ee872b0ba63c6a8	1792252958	{"consistency":1,"kind":"Probability","probability":0.29555555555555557}
+9efe2a74b14fe204	1792252958	{"confidence":0.59,"kind":"Classify","label":"same_module","probabilities":{"different_deployables":0,"same_module":0.6900000000000001,"same_package":0.31,"sibling_packages":0}}

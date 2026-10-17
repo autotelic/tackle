@@ -23,9 +23,13 @@ export interface Baseline {
   readonly identities: ReadonlyArray<string>
 }
 
+/** The rule a finding names, engine and rule: `plumb/no-raw-html-layout`. */
+export const ruleNameOf = (diagnostic: Diagnostic): string =>
+  `${diagnostic.engine}/${diagnostic.ruleId}`
+
 /** A finding's stable name, falling back to engine+rule+file when it declared none. */
 export const identityOf = (diagnostic: Diagnostic): string =>
-  diagnostic.identity ?? `${diagnostic.engine}/${diagnostic.ruleId}:${diagnostic.location.file}`
+  diagnostic.identity ?? `${ruleNameOf(diagnostic)}:${diagnostic.location.file}`
 
 /** The baseline for the findings in front of you. What `--update-baseline` writes. */
 export const accept = (diagnostics: ReadonlyArray<Diagnostic>): Baseline => ({
@@ -87,7 +91,7 @@ export const diffBaseline = (
 export const ratchetViolations = (diff: BaselineDiff): ReadonlyArray<string> => {
   const byKey = new Map<string, number>()
   for (const diagnostic of diff.novel) {
-    const key = `${diagnostic.engine}/${diagnostic.ruleId}`
+    const key = ruleNameOf(diagnostic)
     byKey.set(key, (byKey.get(key) ?? 0) + 1)
   }
   return [...byKey.entries()]

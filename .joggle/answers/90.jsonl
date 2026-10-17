@@ -1,0 +1,12 @@
+900d3087321452f9	1792252958	{"confidence":0.43,"kind":"Classify","label":"name_meaning","probabilities":{"magic_threshold":0,"name_meaning":0.57,"no_issue":0.15,"semantic_verdict":0.28}}
+900e67954b3ba7ff	1792252958	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0}}
+905abef8fda2ebed	1792252958	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0.01}}
+905f55d945700ccb	1792252958	{"confidence":0.61,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.74,"not_a_derivation":0.26,"reimplements":0}}
+90a649ae814f34e1	1792252958	{"confidence":0.37,"kind":"Rate","label":"slightly_clearer","probabilities":{"meaningfully_better":0.36,"no_difference":0.07,"removes_a_hazard":0.1,"slightly_clearer":0.47},"rating":1.5}
+90a66e389e1bd816	1792252958	{"consistency":1,"kind":"Probability","probability":0.6066666666666666}
+90c38d9e965063fe	1792252958	{"confidence":0.77,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.83,"stale_reference":0,"wrong_behavior":0.12,"wrong_contract":0.05}}
+90c4c948c959d73d	1792252958	{"confidence":0.29,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.09,"merge":0.11,"move":0.36,"share_a_contract":0.43,"split":0.01}}
+90c961bed0b54095	1792252958	{"confidence":0.38,"kind":"Classify","label":"collapse","probabilities":{"collapse":0.59,"keep_variants":0.28,"no_issue":0.13}}
+90e3e06ef92b3353	1792252958	{"confidence":0.97,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.98,"not_a_derivation":0.01,"reimplements":0.01}}
+90fb7c15940c06bd	1792252958	{"confidence":0.87,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.1,"framework_glue":0,"implementation_detail":0.9,"wire_contract":0}}
+90fd2d3ce63bfd12	1792252958	{"confidence":0.82,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.02,"internal_only":0.88,"unaccounted":0.1}}

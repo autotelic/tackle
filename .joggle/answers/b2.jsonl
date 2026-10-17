@@ -1,0 +1,12 @@
+b208692ee1c8e7ed	1792252958	{"confidence":0.52,"kind":"Classify","label":"utilities","probabilities":{"domain_core":0,"infrastructure":0.04,"library_core":0.17,"not_applicable":0.2,"rendering_edge":0,"transport_edge":0,"utilities":0.59}}
+b223296a236d9299	1792252958	{"confidence":0.87,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.08,"same_module":0.01,"same_package":0.01,"sibling_packages":0.9}}
+b24b75d1ca330592	1792252958	{"confidence":0.51,"kind":"Classify","label":"value","probabilities":{"meaning":0.32,"unclear":0.01,"value":0.67}}
+b24cf7900a86838a	1792252958	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
+b260fb717541d94b	1792252958	{"consistency":1,"kind":"Probability","probability":0.39666666666666667}
+b269d293378f6928	1792252958	{"confidence":0.85,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.1,"same_module":0,"same_package":0.01,"sibling_packages":0.89}}
+b28ba4cd5d7966fa	1792252958	{"confidence":0.87,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.9,"stale_reference":0,"wrong_behavior":0.04,"wrong_contract":0.06}}
+b290f6714f751519	1792252958	{"confidence":0.34,"kind":"Classify","label":"one_concept","probabilities":{"already_named":0.13,"coincidental":0.31,"one_concept":0.56}}
+b2d31f0d54690cbb	1792252958	{"confidence":0.22,"kind":"Classify","label":"none","probabilities":{"none":0.61,"settings":0.39}}
+b2e911e8405fec7c	1792252958	{"confidence":0.91,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.9299999999999999,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0.04}}
+b2eaca178864e8b7	1792253092	{"confidence":0.28,"kind":"Classify","label":"shared_helper","probabilities":{"coincidental":0.05,"common_idiom":0.43,"shared_helper":0.52}}
+b2f2cf97f94a8357	1792252958	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}

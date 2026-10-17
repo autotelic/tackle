@@ -1,0 +1,5 @@
+c41dcb86a767be20	1792252958	{"confidence":0.31,"kind":"Classify","label":"not_a_derivation","probabilities":{"legitimate_local":0.28,"not_a_derivation":0.54,"reimplements":0.18}}
+c44f5651eff6e736	1792253092	{"confidence":0.43,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.62,"not_a_derivation":0.01,"reimplements":0.37}}
+c454f0fd9563e4a1	1792252958	{"confidence":0.59,"kind":"Classify","label":"no_issue","probabilities":{"magic_threshold":0.01,"name_meaning":0,"no_issue":0.69,"semantic_verdict":0.3}}
+c4614194ca061829	1792252958	{"confidence":0.37,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.35,"no_issue":0.12,"semantic_verdict":0.53}}
+c4c3ddd6b851a4e1	1792252958	{"confidence":0.41,"kind":"Classify","label":"general","probabilities":{"general":0.61,"names_a_caller":0.01,"shared_vocabulary":0.38}}

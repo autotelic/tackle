@@ -10,7 +10,7 @@ import {
 } from "./imports.ts"
 import { isIgnored, orderRules, rulesAt, type IgnoreRule } from "./gitignore.ts"
 import { shortHash } from "./state.ts"
-import { blockingErrors, componentName, isAstro, parseInputOf } from "./astro.ts"
+import { blockingErrors, componentName, isAstro, parseInputOf, type Region } from "./astro.ts"
 import { tsconfigScope } from "./tsconfig-scope.ts"
 import { looksLikeSource } from "./source.ts"
 import { manifestAt, type PackageManifest } from "./manifest.ts"
@@ -575,10 +575,8 @@ const collectIdentifiers = (root: unknown): ReadonlyArray<IdentifierSite> => {
   }))
 }
 
-interface Span {
-  readonly start: number
-  readonly end: number
-}
+/** The file span type is `Region`, declared once in `astro.ts`; this is the local name. */
+type Span = Region
 
 /**
  * Replace identifier names (and comments) with `_` / whitespace so that two

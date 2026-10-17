@@ -1,0 +1,4 @@
+f4703889b67f7b5f	1792252958	{"confidence":0.79,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.14,"names_a_caller":0,"shared_vocabulary":0.86}}
+f4b1aad73975c6a8	1792252958	{"confidence":0.52,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.68,"unclear":0.01,"value":0.31}}
+f4cebe39a7822777	1792253160	{"confidence":0.72,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.04,"framework_glue":0,"implementation_detail":0.79,"wire_contract":0.17}}
+f4f42f4fc6b64dda	1792252958	{"confidence":0.5,"kind":"Classify","label":"none","probabilities":{"none":0.75,"true":0.25}}

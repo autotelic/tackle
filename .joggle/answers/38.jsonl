@@ -1,0 +1,2 @@
+386f156a7f277669	1792253093	{"confidence":0.41,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.21,"keep_variants":0.61,"no_issue":0.18}}
+38b7fc1e3465d29b	1792252958	{"confidence":0.28,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.19,"no_issue":0.35,"semantic_verdict":0.46}}

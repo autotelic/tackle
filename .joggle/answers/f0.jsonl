@@ -1,0 +1,6 @@
+f008d9188c288f3a	1792252958	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0}}
+f059f7ffe6ba1484	1792252958	{"confidence":0.54,"kind":"Classify","label":"no_issue","probabilities":{"collapse":0.01,"keep_variants":0.3,"no_issue":0.6900000000000001}}
+f075afa5a3b6efb0	1792252958	{"confidence":0.22,"kind":"Classify","label":"move","probabilities":{"move":0.61,"no_issue":0.39}}
+f08510146bc620ed	1792252958	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
+f0b1799fc24f12d4	1792252958	{"confidence":0.62,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.25,"names_a_caller":0,"shared_vocabulary":0.75}}
+f0f65ebc6c942581	1792252958	{"confidence":0.91,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.94,"not_a_derivation":0.01,"reimplements":0.05}}

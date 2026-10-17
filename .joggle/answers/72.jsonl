@@ -1,0 +1,3 @@
+726762b17ca24ed3	1792252958	{"confidence":0.79,"kind":"Classify","label":"general","probabilities":{"general":0.86,"names_a_caller":0,"shared_vocabulary":0.14}}
+727f75995b036561	1792252958	{"confidence":0.93,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.01,"name_meaning":0,"no_issue":0.04,"semantic_verdict":0.95}}
+72dd6e42c2bf1cac	1792252958	{"confidence":0.85,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.01,"no_issue":0.1,"semantic_verdict":0.89}}

@@ -1,0 +1,2 @@
+a582b7fbffaa0ea7	1792252958	{"confidence":0.76,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.84,"not_a_derivation":0,"reimplements":0.16}}
+a5fbedc227662ea5	1792252958	{"consistency":1,"kind":"Probability","probability":0.75}
