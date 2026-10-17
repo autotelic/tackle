@@ -67,8 +67,57 @@
         "judged": { "type": "boolean" },
         "fixable": { "type": "boolean" },
         "docsUrl": { "type": "string" },
-        "engineVersion": { "type": "string" }
+        "engineVersion": { "type": "string" },
+        "move": { "$ref": "#/$defs/move" },
+        "score": { "type": "number" },
+        "confidence": { "type": "number" },
+        "repair": { "$ref": "#/$defs/repair" }
       }
+    },
+    "move": {
+      "enum": ["contract", "combine", "expand"],
+      "description": "The entropy reversal a judged finding proposes; absent when the finding is not about entropy."
+    },
+    "repairOperation": { "enum": ["merge", "split", "move", "replace", "migrate"] },
+    "repairEdit": {
+      "type": "object",
+      "required": ["file", "line", "column", "instruction"],
+      "additionalProperties": false,
+      "properties": {
+        "file": { "type": "string" },
+        "line": { "type": "integer", "minimum": 1 },
+        "column": { "type": "integer", "minimum": 1 },
+        "instruction": { "type": "string" }
+      }
+    },
+    "repair": {
+      "type": "object",
+      "required": ["operation", "remove", "cascade", "complete", "settled"],
+      "additionalProperties": false,
+      "properties": {
+        "operation": { "$ref": "#/$defs/repairOperation" },
+        "keep": { "$ref": "#/$defs/location" },
+        "remove": { "type": "array", "items": { "$ref": "#/$defs/location" } },
+        "cascade": { "type": "array", "items": { "$ref": "#/$defs/repairEdit" } },
+        "complete": {
+          "type": "boolean",
+          "description": "True when every affected site is listed, so the repair is a work order an agent can execute without a search of its own."
+        },
+        "settled": { "type": "string" }
+      }
+    },
+    "dropCount": {
+      "type": "object",
+      "required": ["stage", "count"],
+      "additionalProperties": false,
+      "properties": {
+        "stage": { "type": "string" },
+        "count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "engineStatus": {
+      "enum": ["ran", "replayed", "skipped", "errored"],
+      "description": "What an engine did, which is not the same as what it found. `replayed` means it served a cache and did not look."
     },
     "generator": {
       "type": "object",
@@ -82,7 +131,10 @@
         "warn": { "type": "integer", "minimum": 0 },
         "info": { "type": "integer", "minimum": 0 },
         "durationMs": { "type": "number" },
-        "note": { "type": "string" }
+        "note": { "type": "string" },
+        "status": { "$ref": "#/$defs/engineStatus" },
+        "unjudged": { "type": "integer", "minimum": 0 },
+        "drops": { "type": "array", "items": { "$ref": "#/$defs/dropCount" } }
       }
     }
   }

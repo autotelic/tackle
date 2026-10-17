@@ -3,10 +3,14 @@ import { join } from "node:path"
 import { Effect } from "effect"
 import {
   countsOf,
+  decodeRepair,
   str as stringOf,
   type Diagnostic,
+  type DropCount,
   type EngineRef,
+  type EngineStatus,
   type EngineSummary,
+  type Move,
   type Severity,
   type SourceLocation,
 } from "@autotelic/protocol"
@@ -159,6 +163,14 @@ const locationOf = (entry: Record<string, unknown>, root: string): SourceLocatio
   }
 }
 
+const MOVES: ReadonlyArray<Move> = ["contract", "combine", "expand"]
+
+/** A move outside the closed set is no move: the reader will not invent one. */
+const moveOf = (value: unknown): Move | undefined =>
+  typeof value === "string" && (MOVES as ReadonlyArray<string>).includes(value)
+    ? (value as Move)
+    : undefined
+
 /** Map one engine finding to a protocol diagnostic, or drop it when it is not one. */
 export const normalize = (raw: unknown, context: ParseContext): Diagnostic | undefined => {
   const { engine, root } = context
@@ -168,6 +180,13 @@ export const normalize = (raw: unknown, context: ParseContext): Diagnostic | und
   const help = stringOf(entry.help)
   const identity = stringOf(entry.identity)
   const docsUrl = stringOf(entry.url) ?? stringOf(entry.docsUrl)
+  const move = moveOf(entry.move)
+  const score = numberOr(entry.score, Number.NaN)
+  const confidence = numberOr(entry.confidence, Number.NaN)
+  // A repair that does not decode degrades to the finding's sentence, never to a dropped
+  // finding: the message is the part a reader can act on, and losing it to a bad cascade
+  // would turn a real finding into silence.
+  const repair = entry.repair === undefined ? undefined : decodeRepair(entry.repair)
   return {
     engine,
     ruleId: ruleIdOf({
@@ -182,6 +201,10 @@ export const normalize = (raw: unknown, context: ParseContext): Diagnostic | und
     ...(docsUrl === undefined ? {} : { docsUrl }),
     ...(typeof entry.judged === "boolean" ? { judged: entry.judged } : {}),
     ...(typeof entry.fixable === "boolean" ? { fixable: entry.fixable } : {}),
+    ...(move === undefined ? {} : { move }),
+    ...(Number.isFinite(score) ? { score } : {}),
+    ...(Number.isFinite(confidence) ? { confidence } : {}),
+    ...(repair === undefined ? {} : { repair }),
   }
 }
 
@@ -494,13 +517,84 @@ export const engineDiagnostics = (
   return unparsed({ id, code, stdout, stderr })
 }
 
+/**
+ * The stages that mean no judgement happened, as opposed to a judgement that said no.
+ *
+ * `declined` is the model looking and finding nothing; `gated` is a judgement below the
+ * threshold. Both are answers. `unreadable`/`no_evidence`/`budget` are candidates nobody
+ * judged, and folding them into "0 findings" is the lie the invariant forbids.
+ */
+const UNJUDGED_STAGES: ReadonlySet<string> = new Set(["unreadable", "no_evidence", "budget"])
+
+/** What an engine's own report says it did, beyond the findings it printed. */
+export interface Provenance {
+  readonly status: EngineStatus
+  readonly unjudged?: number
+  readonly drops?: ReadonlyArray<DropCount>
+  readonly note?: string
+}
+
+/**
+ * Read an engine's own summary, when its encoding has one.
+ *
+ * joggle's document carries `summary.drops` — every candidate it considered and did not
+ * report, by stage — plus a `replayed` flag and the rules it skipped. This is the material
+ * that must reach the report: without it, a replayed engine that judged nothing prints
+ * exactly like a fresh engine that found nothing.
+ */
+export const engineProvenance = (stdout: string): Provenance => {
+  const trimmed = stdout.trim()
+  if (!trimmed.startsWith("{")) return { status: "ran" }
+  let doc: Record<string, unknown> | undefined
+  try {
+    doc = record(JSON.parse(trimmed))
+  } catch {
+    return { status: "ran" }
+  }
+  const summary = record(doc?.summary)
+  if (summary === undefined) return { status: "ran" }
+
+  const byStage = new Map<string, number>()
+  if (Array.isArray(summary.drops)) {
+    for (const raw of summary.drops) {
+      const stage = stringOf(record(raw)?.stage)
+      if (stage === undefined) continue
+      byStage.set(stage, (byStage.get(stage) ?? 0) + 1)
+    }
+  }
+  const drops = [...byStage.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([stage, count]) => ({ stage, count }))
+  const unjudged = drops
+    .filter((drop) => UNJUDGED_STAGES.has(drop.stage))
+    .reduce((total, drop) => total + drop.count, 0)
+  const skipped = Array.isArray(summary.skipped) ? summary.skipped.length : 0
+  const note = skipped === 0 ? undefined : `${skipped} rule${skipped === 1 ? "" : "s"} skipped`
+
+  return {
+    status: summary.replayed === true ? "replayed" : "ran",
+    ...(unjudged === 0 ? {} : { unjudged }),
+    ...(drops.length === 0 ? {} : { drops }),
+    ...(note === undefined ? {} : { note }),
+  }
+}
+
 const summarize = (
   id: string,
   diagnostics: ReadonlyArray<Diagnostic>,
   durationMs: number,
-  note: string | undefined,
+  extra: { readonly note?: string; readonly provenance?: Provenance } = {},
 ): EngineSummary => {
   const counts = countsOf(diagnostics)
+  const provenance = extra.provenance
+  // An engine whose output jig could not read is `errored`, not `ran`: it exited, but
+  // nothing was looked at, and the status has to agree with the unparsed-output finding.
+  const status =
+    provenance?.status ??
+    (diagnostics.some((diagnostic) => diagnostic.ruleId === `${id}/unparsed-output`)
+      ? "errored"
+      : "ran")
+  const note = extra.note ?? provenance?.note
   return {
     id,
     diagnostics: diagnostics.length,
@@ -508,7 +602,10 @@ const summarize = (
     warn: counts.warn,
     info: counts.info,
     durationMs,
+    status,
     ...(note === undefined ? {} : { note }),
+    ...(provenance?.unjudged === undefined ? {} : { unjudged: provenance.unjudged }),
+    ...(provenance?.drops === undefined ? {} : { drops: provenance.drops }),
   }
 }
 
@@ -524,12 +621,10 @@ export const runEngine = (
     if (engine.kind === "internal") {
       return {
         id,
-        summary: summarize(
-          id,
-          [],
-          Date.now() - started,
-          "internal engines are host-owned, not process-run",
-        ),
+        summary: summarize(id, [], Date.now() - started, {
+          note: "internal engines are host-owned, not process-run",
+          provenance: { status: "skipped" },
+        }),
         diagnostics: [],
       }
     }
@@ -543,19 +638,23 @@ export const runEngine = (
     if (!outcome.ok) {
       return {
         id,
-        summary: summarize(
-          id,
-          [],
-          Date.now() - started,
-          `${binary} could not run: ${outcome.message}`,
-        ),
+        summary: summarize(id, [], Date.now() - started, {
+          note: `${binary} could not run: ${outcome.message}`,
+          provenance: { status: "errored" },
+        }),
         diagnostics: [],
       }
     }
 
     const { stdout, stderr, code } = outcome.value
     const diagnostics = engineDiagnostics(id, { code, stdout, stderr }, root)
-    return { id, summary: summarize(id, diagnostics, Date.now() - started, undefined), diagnostics }
+    return {
+      id,
+      summary: summarize(id, diagnostics, Date.now() - started, {
+        provenance: engineProvenance(stdout),
+      }),
+      diagnostics,
+    }
   })
 
 /** Every enabled engine, run concurrently. */

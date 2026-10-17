@@ -1,5 +1,7 @@
 281fef4e8b38fb54	1792252958	{"confidence":0.77,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.02,"internal_only":0.85,"unaccounted":0.13}}
 2846907eaca664a2	1792252958	{"consistency":1,"kind":"Probability","probability":0.6622222222222222}
+288605ef5123f9a2	1792265611	{"confidence":0.37,"kind":"Classify","label":"wire_contract","probabilities":{"domain_concept":0.06,"framework_glue":0,"implementation_detail":0.41,"wire_contract":0.53}}
 288634f19928f722	1792252958	{"consistency":1,"kind":"Probability","probability":0.7833333333333333}
+28e13b003030df57	1792265611	{"confidence":0.58,"kind":"Classify","label":"move","probabilities":{"move":0.79,"no_issue":0.21}}
 28e1fec934a9c424	1792252958	{"confidence":0.97,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.98,"not_a_derivation":0.02,"reimplements":0}}
 28fd81ee6c6526f8	1792252958	{"confidence":0.52,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.24,"no_issue":0.12,"semantic_verdict":0.64}}

@@ -30,6 +30,56 @@ export interface SourceLocation {
 }
 
 /**
+ * The entropy reversal a judged finding proposes.
+ *
+ * Not every engine judges, so `move` is optional: absent means the finding is not about
+ * entropy at all — it checks the code against a requirement rather than asking what the
+ * code could be rebuilt from.
+ */
+export type Move = "contract" | "combine" | "expand"
+
+/** The five operations a repair can propose. A decline is not one of them. */
+export type RepairOperation = "merge" | "split" | "move" | "replace" | "migrate"
+
+/** One place a repair says must change, and what to do there. */
+export interface RepairEdit {
+  readonly file: string
+  readonly line: number
+  readonly column: number
+  readonly instruction: string
+}
+
+/**
+ * The smaller form a judged finding proposes, when the rule can propose one.
+ *
+ * `complete` is the field an agent needs: when it is true every affected site is listed, so
+ * the repair is a work order and not a complaint. A host that ignores this still gets a
+ * linter.
+ */
+export interface Repair {
+  readonly operation: RepairOperation
+  readonly keep?: SourceLocation
+  readonly remove: ReadonlyArray<SourceLocation>
+  readonly cascade: ReadonlyArray<RepairEdit>
+  readonly complete: boolean
+  readonly settled: string
+}
+
+/**
+ * What an engine did, which is not the same as what it found.
+ *
+ * `replayed` is the load-bearing one: an engine that served a cache did not look, and a
+ * report that renders it as "0 findings" turns "not looked at" into "clean".
+ */
+export type EngineStatus = "ran" | "replayed" | "skipped" | "errored"
+
+/** Candidates an engine considered and did not report, under the engine's own stage name. */
+export interface DropCount {
+  readonly stage: string
+  readonly count: number
+}
+
+/**
  * One finding.
  *
  * `engine` and `ruleId` are separate on purpose: a host filters by engine ("show me
@@ -49,6 +99,14 @@ export interface Diagnostic {
   readonly fixable?: boolean
   readonly docsUrl?: string
   readonly engineVersion?: string
+  /** Which entropy reversal the finding proposes, when it proposes one. */
+  readonly move?: Move
+  /** How strongly a judgement says the finding is real; comparable across a run. */
+  readonly score?: number
+  /** How peaked the judgement's distribution was. Not comparable across findings. */
+  readonly confidence?: number
+  /** The smaller form the finding proposes, when the rule can propose one. */
+  readonly repair?: Repair
 }
 
 /** Severities, ordered. The report sorts by this first. */
@@ -72,6 +130,17 @@ export interface EngineSummary {
   readonly durationMs?: number
   /** A sentence about an engine that could not run, or ran degraded. */
   readonly note?: string
+  /** What the engine did: ran, replayed a cache, skipped, or errored. */
+  readonly status?: EngineStatus
+  /**
+   * Candidates the engine considered and did NOT judge, as a count.
+   *
+   * This is the number that must never fold into "0 findings": an engine that reported
+   * nothing because nothing was judged has not answered the question it was run to answer.
+   */
+  readonly unjudged?: number
+  /** The same candidates, by the engine's own stage, so a reader can see where they went. */
+  readonly drops?: ReadonlyArray<DropCount>
 }
 
 /** One run, across every engine, in one shape. */
@@ -172,6 +241,74 @@ export const parseJsonl = (text: string): ReadonlyArray<Diagnostic> =>
 
 const SEVERITIES: ReadonlyArray<Severity> = ["error", "warn", "info"]
 
+const MOVES: ReadonlyArray<Move> = ["contract", "combine", "expand"]
+
+const REPAIR_OPERATIONS: ReadonlyArray<RepairOperation> = [
+  "merge",
+  "split",
+  "move",
+  "replace",
+  "migrate",
+]
+
+const ENGINE_STATUSES: ReadonlyArray<EngineStatus> = ["ran", "replayed", "skipped", "errored"]
+
+/** Read one place a repair must change, or `undefined` when it is not one. */
+const decodeRepairEdit = (value: unknown): RepairEdit | undefined => {
+  if (!isRecord(value)) return undefined
+  const file = str(value.file)
+  const line = int(value.line)
+  const column = int(value.column)
+  const instruction = str(value.instruction)
+  if (
+    file === undefined ||
+    line === undefined ||
+    column === undefined ||
+    instruction === undefined
+  ) {
+    return undefined
+  }
+  return { file, line, column, instruction }
+}
+
+/** Read a repair, or `undefined` when it is not one. */
+export const decodeRepair = (value: unknown): Repair | undefined => {
+  if (!isRecord(value)) return undefined
+  const operation = oneOf(value.operation, REPAIR_OPERATIONS)
+  const remove = arrayOf(value.remove, decodeLocation)
+  const cascade = arrayOf(value.cascade, decodeRepairEdit)
+  const complete = bool(value.complete)
+  const settled = str(value.settled)
+  if (
+    operation === undefined ||
+    remove === undefined ||
+    cascade === undefined ||
+    complete === undefined ||
+    settled === undefined
+  ) {
+    return undefined
+  }
+  const keep = value.keep === undefined ? undefined : decodeLocation(value.keep)
+  if (value.keep !== undefined && keep === undefined) return undefined
+  return {
+    operation,
+    ...(keep === undefined ? {} : { keep }),
+    remove,
+    cascade,
+    complete,
+    settled,
+  }
+}
+
+/** Read one drop count, or `undefined` when it is not one. */
+export const decodeDropCount = (value: unknown): DropCount | undefined => {
+  if (!isRecord(value)) return undefined
+  const stage = str(value.stage)
+  const count = int(value.count)
+  if (stage === undefined || count === undefined) return undefined
+  return { stage, count }
+}
+
 /** Read a source location, or `undefined` when it is not one. */
 export const decodeLocation = (value: unknown): SourceLocation | undefined => {
   if (!isRecord(value)) return undefined
@@ -213,6 +350,14 @@ export const decodeDiagnostic = (value: unknown): Diagnostic | undefined => {
   const fixable = bool(value.fixable)
   const docsUrl = str(value.docsUrl)
   const engineVersion = str(value.engineVersion)
+  const move = oneOf(value.move, MOVES)
+  const score = num(value.score)
+  const confidence = num(value.confidence)
+  // A `repair` that is present but unreadable fails the record: a half-read repair would
+  // list fewer sites than the finding has, which is the repair lying about being complete.
+  const repair = value.repair === undefined ? undefined : decodeRepair(value.repair)
+  if (value.move !== undefined && move === undefined) return undefined
+  if (value.repair !== undefined && repair === undefined) return undefined
   return {
     engine,
     ruleId,
@@ -225,6 +370,10 @@ export const decodeDiagnostic = (value: unknown): Diagnostic | undefined => {
     ...(fixable === undefined ? {} : { fixable }),
     ...(docsUrl === undefined ? {} : { docsUrl }),
     ...(engineVersion === undefined ? {} : { engineVersion }),
+    ...(move === undefined ? {} : { move }),
+    ...(score === undefined ? {} : { score }),
+    ...(confidence === undefined ? {} : { confidence }),
+    ...(repair === undefined ? {} : { repair }),
   }
 }
 
@@ -248,6 +397,11 @@ export const decodeEngineSummary = (value: unknown): EngineSummary | undefined =
   const version = str(value.version)
   const durationMs = num(value.durationMs)
   const note = str(value.note)
+  const status = oneOf(value.status, ENGINE_STATUSES)
+  const unjudged = int(value.unjudged)
+  const drops = value.drops === undefined ? undefined : arrayOf(value.drops, decodeDropCount)
+  if (value.status !== undefined && status === undefined) return undefined
+  if (value.drops !== undefined && drops === undefined) return undefined
   return {
     id,
     diagnostics,
@@ -257,6 +411,9 @@ export const decodeEngineSummary = (value: unknown): EngineSummary | undefined =
     ...(version === undefined ? {} : { version }),
     ...(durationMs === undefined ? {} : { durationMs }),
     ...(note === undefined ? {} : { note }),
+    ...(status === undefined ? {} : { status }),
+    ...(unjudged === undefined ? {} : { unjudged }),
+    ...(drops === undefined ? {} : { drops }),
   }
 }
 

@@ -1,6 +1,7 @@
 2a44b4157c92b0c1	1792252958	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
 2a476ecd9a2750c1	1792252958	{"confidence":0.76,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.84,"not_a_derivation":0,"reimplements":0.16}}
 2a750c00ac6eb8d3	1792252958	{"confidence":0.91,"kind":"Classify","label":"general","probabilities":{"general":0.94,"names_a_caller":0.01,"shared_vocabulary":0.05}}
+2a8b2e9d9c6042f0	1792265611	{"confidence":0.68,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.76,"different_order":0,"different_work":0.24,"same_operation":0}}
 2aa7976378db5c8d	1792252958	{"confidence":0.62,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.75,"not_a_derivation":0.02,"reimplements":0.23}}
 2aaf6377276191ce	1792252958	{"confidence":0.93,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0.03,"wrong_behavior":0.01,"wrong_contract":0.01}}
 2ae1116179304349	1792252958	{"confidence":0.59,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.73,"unclear":0,"value":0.27}}

@@ -1,3 +1,4 @@
+415f4a4ef1bc8c22	1792265611	{"confidence":0.58,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.61,"no_difference":0.03,"removes_a_hazard":0.15,"slightly_clearer":0.21},"rating":1.88}
 4163f3d095861b18	1792252958	{"consistency":1,"kind":"Probability","probability":0.7144444444444445}
 4171113d85ae2cfb	1792252958	{"confidence":0.83,"kind":"Classify","label":"general","probabilities":{"general":0.89,"names_a_caller":0,"shared_vocabulary":0.11}}
 417e1a8f490f1368	1792252958	{"confidence":0.34,"kind":"Classify","label":"move","probabilities":{"move":0.67,"no_issue":0.33}}

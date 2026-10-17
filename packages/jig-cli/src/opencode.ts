@@ -99,7 +99,7 @@ export default Plugin.define({
       editor.add({
         name: "check",
         description:
-          "Run every conformance engine configured for this repository (plumb, joggle, cutlist, …) and return one merged report of errors, warnings, and notices, plus a note for any engine that could not run. A note means 'not looked at', never 'clean'.",
+          "Run every conformance engine configured for this repository (plumb, joggle, cutlist, …) and return one merged report of errors, warnings, and notices, plus a note for any engine that could not run — and whether an engine replayed a cache or skipped a rule, because a note means 'not looked at', never 'clean'.",
         input: {
           type: "object",
           properties: {

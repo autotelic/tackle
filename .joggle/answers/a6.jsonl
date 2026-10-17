@@ -3,3 +3,4 @@ a6518c75edfb1426	1792252958	{"consistency":1,"kind":"Probability","probability":
 a65fa47e75a16701	1792252958	{"consistency":1,"kind":"Probability","probability":0.38999999999999996}
 a6858f35c6b1d81e	1792253092	{"confidence":0.63,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.72,"different_order":0.01,"different_work":0.27,"same_operation":0}}
 a6aaee8d98c2b1b7	1792252958	{"confidence":0.44,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.58,"different_order":0,"different_work":0.42,"same_operation":0}}
+a6d261e61812f75f	1792265611	{"confidence":0.86,"kind":"Classify","label":"move","probabilities":{"move":0.93,"no_issue":0.07}}

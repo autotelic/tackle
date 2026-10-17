@@ -1,3 +1,4 @@
+0309508553906d1b	1792265611	{"consistency":1,"kind":"Probability","probability":0.5566666666666666}
 0323e0718354fcd5	1792252958	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0}}
 0348db7cef5864f5	1792252958	{"confidence":0.95,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.96,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0.01}}
 037d5095a4250ff7	1792252958	{"confidence":0.35,"kind":"Classify","label":"general","probabilities":{"general":0.57,"names_a_caller":0.03,"shared_vocabulary":0.4}}

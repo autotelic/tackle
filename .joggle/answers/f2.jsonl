@@ -6,3 +6,4 @@ f27dbf1423865f48	1792252958	{"confidence":0.69,"kind":"Classify","label":"legiti
 f2a67f8cc0189bbd	1792252958	{"confidence":0.89,"kind":"Classify","label":"general","probabilities":{"general":0.93,"names_a_caller":0,"shared_vocabulary":0.07}}
 f2c504c490963d42	1792253160	{"confidence":0.58,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.72,"not_a_derivation":0.06,"reimplements":0.22}}
 f2eaf97e36264bd1	1792252958	{"confidence":0.46,"kind":"Classify","label":"move","probabilities":{"merge":0.05,"move":0.64,"no_issue":0.31}}
+f2f7e4bf8e70f223	1792265611	{"confidence":0.25,"kind":"Classify","label":"appropriate","probabilities":{"appropriate":0.5,"independent":0.48,"meaning_switched":0.02}}

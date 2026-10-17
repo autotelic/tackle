@@ -15,7 +15,7 @@ describe("the independent reader", () => {
       ["scripts/read-report.mjs", "fixtures/report/golden.json"],
       { cwd: fixturePath("."), encoding: "utf8" },
     )
-    expect(output.trim()).toBe("1 finding(s) in 1 file(s): 0 error(s), 0 warning(s)")
+    expect(output.trim()).toBe("3 finding(s) in 3 file(s): 1 error(s), 1 warning(s)")
   })
 
   it("refuses a document that is not a report", () => {

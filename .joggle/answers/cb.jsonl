@@ -8,3 +8,4 @@ cb87eb8997ff3b37	1792252958	{"confidence":0.23,"kind":"Classify","label":"wire_c
 cbac6f149292c8f0	1792252958	{"confidence":0.77,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.83,"different_order":0,"different_work":0.17,"same_operation":0}}
 cbc0541bc3384b9c	1792252958	{"consistency":1,"kind":"Probability","probability":0.6633333333333334}
 cbc774bdb6df2e69	1792252958	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
+cbe7252abb241719	1792265611	{"confidence":0.85,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.09,"keep_variants":0.9,"no_issue":0.01}}

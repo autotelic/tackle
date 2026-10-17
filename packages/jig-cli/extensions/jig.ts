@@ -77,66 +77,13 @@ const run = async (
   return { stdout: result.stdout, stderr: result.stderr, code: result.code }
 }
 
-interface JsonReport {
-  readonly counts: { readonly error: number; readonly warn: number; readonly info: number }
-  readonly files: number
-  readonly diagnostics: ReadonlyArray<{
-    readonly engine: string
-    readonly ruleId: string
-    readonly severity: string
-    readonly message: string
-    readonly help?: string
-    readonly location: { readonly file: string; readonly line: number; readonly column: number }
-  }>
-  readonly generators: ReadonlyArray<{
-    readonly id: string
-    readonly diagnostics: number
-    readonly note?: string
-  }>
-}
-
-const parse = (stdout: string): JsonReport | undefined => {
-  try {
-    const value = JSON.parse(stdout) as unknown
-    if (typeof value === "object" && value !== null && "diagnostics" in value) {
-      return value as JsonReport
-    }
-    return undefined
-  } catch {
-    return undefined
-  }
-}
-
-/** The report, rendered for a model: the findings and the help that says what to do. */
-const render = (report: JsonReport, limit: number): string => {
-  const { counts } = report
-  const shown = limit > 0 ? report.diagnostics.slice(0, limit) : report.diagnostics
-  const lines = [
-    `${counts.error} error(s), ${counts.warn} warning(s), ${counts.info} notice(s) in ${report.files} file(s)`,
-  ]
-  shown.forEach((diagnostic, index) => {
-    const { file, line, column } = diagnostic.location
-    lines.push("")
-    lines.push(
-      `${index + 1}. [${diagnostic.severity}] ${diagnostic.engine}/${diagnostic.ruleId} ${file}:${line}:${column}`,
-    )
-    lines.push(`   ${diagnostic.message}`)
-    if (diagnostic.help !== undefined) lines.push(`   help: ${diagnostic.help}`)
-  })
-  if (shown.length < report.diagnostics.length) {
-    lines.push("")
-    lines.push(
-      `showing ${shown.length} of ${report.diagnostics.length} findings; raise limit to see the rest`,
-    )
-  }
-  // An engine that could not run is the difference between "clean" and "not looked at".
-  const notes = report.generators.filter((generator) => generator.note !== undefined)
-  if (notes.length > 0) {
-    lines.push("")
-    for (const generator of notes) lines.push(`note: ${generator.id} - ${generator.note}`)
-  }
-  return lines.join("\n").trimEnd()
-}
+/*
+ * There is deliberately no report parser and no renderer here.
+ *
+ * jig owns the one human form; this extension asks jig for it and hands the text back.
+ * A JSON parse plus a numbered list here would be a second renderer, and a second
+ * renderer is a second answer — the failure this whole workspace exists to prevent.
+ */
 
 interface ToolResult {
   readonly content: ReadonlyArray<{ readonly type: "text"; readonly text: string }>
@@ -182,11 +129,11 @@ export default function (pi: ExtensionAPI): void {
     name: "jig_check",
     label: "jig Check",
     description:
-      "Run every conformance engine configured for this repository (plumb, joggle, cutlist, …) and return one merged report of errors, warnings and notices, plus a note for any engine that could not run. Returns at most 50 findings; pass `limit` to change that (`0` returns all).",
+      "Run every conformance engine configured for this repository (plumb, joggle, cutlist, …) and return one merged report of errors, warnings and notices, plus a note for any engine that could not run — and whether an engine replayed a cache or skipped a rule, because a note means 'not looked at', never 'clean'. Returns at most 50 findings; pass `limit` to change that (`0` returns all).",
     promptSnippet: "Run every conformance engine in one pass with jig",
     promptGuidelines: [
       "Use jig_check after a batch of edits to see everything the repository enforces at once — lint, cross-file, and vocabulary findings in one report.",
-      "A note in the report means an engine did not run: that is 'not looked at', not 'clean'.",
+      "A note in the report means an engine did not run, or replayed a cache: that is 'not looked at', not 'clean'.",
     ],
     parameters: checkParameters,
     async execute(
@@ -198,18 +145,18 @@ export default function (pi: ExtensionAPI): void {
     ): Promise<ToolResult> {
       try {
         const target = targetFor(params.cwd, ctx)
-        const result = await run(pi, target, ["check", "--cwd", target, "--format", "json"], signal)
-        const report = parse(result.stdout)
-        if (report === undefined) {
-          const detail = (result.stderr.trim() === "" ? result.stdout : result.stderr).trim()
-          return failed(`jig check failed (exit ${result.code}): ${detail || "no output"}`, {
-            code: result.code,
-          })
-        }
-        return ok(render(report, params.limit === undefined ? 50 : params.limit), {
+        const limit = params.limit === undefined ? 50 : params.limit
+        const result = await run(
+          pi,
+          target,
+          ["check", "--cwd", target, "--format", "text", "--limit", String(limit)],
+          signal,
+        )
+        // A non-zero exit is a result, not an error: `jig check` exits non-zero on
+        // findings, and the report is on stdout either way.
+        const text = (result.stdout.trim() === "" ? result.stderr : result.stdout).trim()
+        return ok(text === "" ? `jig check exited ${result.code}` : text, {
           code: result.code,
-          errors: report.counts.error,
-          warnings: report.counts.warn,
           cwd: target,
         })
       } catch (error) {

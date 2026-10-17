@@ -53,10 +53,18 @@ report                                  sarif.runs[0]
     help (optional)                         .tool.driver.rules[].help.text
     docsUrl (optional)                      .tool.driver.rules[].helpUri
     fixable (optional true)                 .properties.fixable
+    judged (optional)                       .properties.judged
+    move (optional)                         .properties.move
+    score (optional)                        .properties.score
     location.file                           .locations[0].physicalLocation.artifactLocation.uri
     location.line/column/endLine/endColumn  .locations[0].physicalLocation.region.startLine/
                                             startColumn/endLine/endColumn
 ```
+
+`judged`, `move`, and `score` are the judged provenance, carried in `properties` — the
+extension point SARIF gives for exactly this. They are the difference between an outward
+report that says a finding was _judged_ and one that quietly says _determined_; a target that
+cannot express them drops them, but it must not hide that it did.
 
 `version` is `"2.1.0"` and `$schema` is the published SARIF 2.1.0 schema URL. `tool.driver.name`
 is the host's name, and `tool.driver.version` is the report's lexicon version as a string, so
@@ -120,6 +128,10 @@ taxonomy should map it from the rule id — and that mapping lives in the host, 
 - **A SARIF `fixes` array** from a real patch. `properties.fixable` says "this can be
   fixed"; `fixes` says how. The rule has to be able to emit an edit and prove it, and no
   rule can yet.
+- **`partialFingerprints`.** Code Climate deduplicates on `fingerprint`, which the report's
+  `identity` supplies; SARIF deduplicates on `partialFingerprints`, and GitHub code scanning
+  reads it. It belongs on every result, derived from the same identity, and it is the next
+  field this projection gains — the worked examples here simply predate it.
 - **Baseline annotations for LSP and Code Climate.** Both could carry the same
   novel/known distinction (an LSP `DiagnosticTag.Unnecessary`, a Code Climate
   `categories`/`severity` downgrade). Specified for SARIF first, because that is the

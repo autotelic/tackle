@@ -69,6 +69,9 @@ const BOUNDARY_FILES = [
   "packages/protocol/src/conformance.test.ts",
   "packages/protocol/src/compat.test.ts",
   "packages/protocol/src/projections.test.ts",
+  // The host's half of the same conformance: it reads the spec's fixture bytes and compares
+  // its own projection to them. Same crossing, same reason.
+  "packages/jig-cli/src/projections.test.ts",
 ]
 
 const BOUNDARY_RULES = {
@@ -99,6 +102,7 @@ const CONDITIONAL_SPREAD_FILES = [
   "packages/protocol/src/catalog.ts",
   "packages/protocol/src/doc.ts",
   "packages/protocol/src/projections.test.ts",
+  "packages/jig-cli/src/projections.test.ts",
   "packages/jig-cli/src/engines.ts",
   "packages/jig-cli/src/opencode.ts",
   "packages/jig-cli/extensions/jig.ts",

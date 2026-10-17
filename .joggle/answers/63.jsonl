@@ -2,6 +2,7 @@
 6347aef8c7a97e02	1792252958	{"confidence":0.69,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.21,"names_a_caller":0,"shared_vocabulary":0.79}}
 638fb11878a0a027	1792253092	{"confidence":0.95,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.96,"different_order":0.02,"different_work":0.02,"same_operation":0}}
 63a07ac5e0abbf31	1792252958	{"confidence":0.29,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.47,"member_1":0.05,"member_2":0.3,"member_3":0.18}}
+63bf6d4cc03a6a68	1792265611	{"confidence":0.18,"kind":"Classify","label":"none","probabilities":{"lab":0.41,"none":0.59}}
 63c2b9789e223111	1792252958	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0.02}}
 63d0f06668e1ae14	1792252958	{"confidence":0.41,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.39,"independent":0.61,"meaning_switched":0}}
 63d2293397f9e271	1792253160	{"confidence":0.25,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.04,"merge":0.34,"move":0.21,"share_a_contract":0.4,"split":0.01}}

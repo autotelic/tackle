@@ -1,34 +1,85 @@
 {
   "lexicon": { "name": "report", "version": 1 },
-  "counts": { "error": 0, "warn": 0, "info": 1 },
-  "files": 1,
+  "counts": { "error": 1, "warn": 1, "info": 1 },
+  "files": 3,
   "diagnostics": [
     {
+      "engine": "plumb",
+      "ruleId": "plumb/no-raw-html-layout",
+      "severity": "error",
+      "message": "raw <div> outside a primitive",
+      "help": "Render a Card primitive instead.",
+      "docsUrl": "https://autotelic.dev/plumb/no-raw-html-layout",
+      "identity": "plumb/plumb/no-raw-html-layout:src/routes/settings_.tsx:div",
+      "fixable": true,
+      "location": {
+        "file": "src/routes/settings_.tsx",
+        "line": 12,
+        "column": 5,
+        "endLine": 12,
+        "endColumn": 10
+      }
+    },
+    {
       "engine": "joggle",
-      "ruleId": "joggle/unparsed-output",
+      "ruleId": "layer-direction",
+      "severity": "warn",
+      "message": "a primitive imports a shared component",
+      "help": "Import the primitive directly, or move the shared piece down a tier.",
+      "identity": "joggle/layer-direction:src/components/ui/badge.tsx",
+      "judged": true,
+      "move": "combine",
+      "score": 0.82,
+      "confidence": 0.91,
+      "repair": {
+        "operation": "move",
+        "keep": { "file": "src/components/ui/badge.tsx", "line": 3, "column": 1 },
+        "remove": [],
+        "cascade": [
+          {
+            "file": "src/components/ui/badge.tsx",
+            "line": 3,
+            "column": 1,
+            "instruction": "Drop the shared import; inline the value the primitive can own."
+          }
+        ],
+        "complete": true,
+        "settled": "the destination exists and the source keeps one caller"
+      },
+      "location": { "file": "src/components/ui/badge.tsx", "line": 3, "column": 1 }
+    },
+    {
+      "engine": "joggle",
+      "ruleId": "unparsed-output",
       "severity": "info",
-      "message": "jig could not parse joggle output (exit 1)",
-      "help": "readFileString: NotFound: FileSystem.readFile (<root>/tsc app.ts util.ts)",
+      "message": "an engine could not run",
       "location": { "file": "joggle.config", "line": 1, "column": 1 }
     }
   ],
   "generators": [
     {
       "id": "plumb",
-      "diagnostics": 0,
-      "error": 0,
+      "diagnostics": 1,
+      "error": 1,
       "warn": 0,
       "info": 0,
-      "durationMs": 3,
-      "note": "oxlint could not run: NotFound: ChildProcess.spawn (oxlint --format json)"
+      "durationMs": 1204,
+      "status": "ran"
     },
     {
       "id": "joggle",
-      "diagnostics": 1,
+      "diagnostics": 2,
       "error": 0,
-      "warn": 0,
+      "warn": 1,
       "info": 1,
-      "durationMs": 1102
+      "durationMs": 4103,
+      "status": "ran",
+      "unjudged": 3,
+      "drops": [
+        { "stage": "declined", "count": 12 },
+        { "stage": "gated", "count": 2 },
+        { "stage": "unreadable", "count": 3 }
+      ]
     },
     {
       "id": "cutlist",
@@ -37,8 +88,9 @@
       "warn": 0,
       "info": 0,
       "durationMs": 5,
+      "status": "errored",
       "note": "cutlist could not run: NotFound: ChildProcess.spawn (cutlist build --check)"
     }
   ],
-  "elapsedMs": 1103
+  "elapsedMs": 4210
 }

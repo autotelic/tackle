@@ -2,11 +2,14 @@ e2023db81980853d	1792252958	{"confidence":0.56,"kind":"Classify","label":"semant
 e20bd20228852512	1792252958	{"confidence":0.7,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.19,"independent":0.8,"meaning_switched":0.01}}
 e215b5be461529d1	1792252958	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0}}
 e224749b3eaf8878	1792252958	{"confidence":0.71,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.78,"stale_reference":0.01,"wrong_behavior":0.17,"wrong_contract":0.04}}
+e2327023a0ee4a23	1792265611	{"confidence":0.37,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.02,"internal_only":0.58,"unaccounted":0.4}}
 e23a7d868a4b331f	1792252958	{"confidence":0.53,"kind":"Classify","label":"move","probabilities":{"merge":0.03,"move":0.69,"no_issue":0.28}}
 e2400c2415b2e9c7	1792252958	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0}}
 e2562d793758aaaf	1792252958	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0.01,"wrong_behavior":0.01,"wrong_contract":0.01}}
 e289b4e929a9e3c8	1792252958	{"confidence":0.37,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.58,"unclear":0,"value":0.42}}
 e29ac2eb7aeb3a20	1792252958	{"consistency":1,"kind":"Probability","probability":0.13555555555555557}
 e2a0c88138c05ee0	1792252958	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0.01}}
+e2a5806eb0f90620	1792265611	{"confidence":0.56,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.67,"different_order":0,"different_work":0.33,"same_operation":0}}
 e2b286a1b782ba6f	1792252958	{"confidence":0.36,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.27,"no_issue":0.21,"semantic_verdict":0.52}}
+e2ccaf82cee5c30f	1792265611	{"confidence":0.36,"kind":"Classify","label":"member_2","probabilities":{"member_0":0.17,"member_1":0.04,"member_2":0.52,"member_3":0.27}}
 e2fbaa89a9c62347	1792252958	{"confidence":0.37,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.58,"unclear":0.01,"value":0.41}}

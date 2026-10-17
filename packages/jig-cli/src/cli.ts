@@ -7,6 +7,7 @@ import { accept } from "@autotelic/protocol"
 import { emptyBaseline, readBaseline, writeBaseline } from "./baseline.ts"
 import { defaultConfig, loadConfig } from "./config.ts"
 import { resolveEngineCommand } from "./engines.ts"
+import { renderCodeClimate, renderJsonl, renderLsp, renderSarif } from "./projections.ts"
 import { renderGithub, renderJson, renderText } from "./render.ts"
 import { harnessRun } from "./run.ts"
 
@@ -40,9 +41,21 @@ const checkCommand = Command.make(
   {
     cwd: cwdFlag,
     config: configFlag,
-    format: Flag.Literals("format", ["text", "json", "github"]).pipe(
-      Flag.withDescription("How to render the report."),
+    format: Flag.Literals("format", [
+      "text",
+      "json",
+      "jsonl",
+      "github",
+      "sarif",
+      "lsp",
+      "codeclimate",
+    ]).pipe(
+      Flag.withDescription("How to render the report: the human form, or a standard shape."),
       Flag.withDefault("text"),
+    ),
+    limit: Flag.Int("limit").pipe(
+      Flag.withDescription("Maximum findings to print in the text report. 0 prints all."),
+      Flag.withDefault(0),
     ),
   },
   (options) =>
@@ -50,10 +63,34 @@ const checkCommand = Command.make(
       const { path, root, settings } = yield* context(options.cwd, options.config)
       const baseline = yield* readBaseline(path.resolve(root, settings.gate.baseline))
       const run = yield* harnessRun(root, settings, baseline)
+      // The accepted identities, so a projection can say novel from known. An empty
+      // baseline still counts as "given": everything is novel until it is accepted.
+      const known = new Set(baseline.identities)
+      const limit = options.limit
 
-      if (options.format === "json") yield* write(renderJson(run.report))
-      else if (options.format === "github") yield* write(renderGithub(run.report))
-      else yield* write(renderText(run))
+      switch (options.format) {
+        case "json":
+          yield* write(renderJson(run.report))
+          break
+        case "jsonl":
+          yield* write(renderJsonl(run.report))
+          break
+        case "github":
+          yield* write(renderGithub(run.report))
+          break
+        case "sarif":
+          yield* write(renderSarif(run.report, known))
+          break
+        case "lsp":
+          yield* write(renderLsp(run.report))
+          break
+        case "codeclimate":
+          yield* write(renderCodeClimate(run.report))
+          break
+        default:
+          yield* write(renderText(run, { limit }))
+          break
+      }
 
       const maxWarnings = settings.report?.maxWarnings ?? -1
       const failed =
@@ -72,6 +109,8 @@ const checkCommand = Command.make(
   Command.withExamples([
     { command: "jig check", description: "Run everything and print the census." },
     { command: "jig check --format github", description: "Emit GitHub Actions annotations." },
+    { command: "jig check --format sarif", description: "Emit SARIF 2.1.0 for code scanning." },
+    { command: "jig check --limit 20", description: "Print the census and the first 20 findings." },
   ]),
 )
 

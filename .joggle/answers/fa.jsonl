@@ -7,3 +7,4 @@ fab0a354f9f0a20f	1792252958	{"confidence":0.85,"kind":"Classify","label":"siblin
 fabb5efa55dd4673	1792252958	{"consistency":1,"kind":"Probability","probability":0.8133333333333334}
 facc9b88241c4c20	1792252958	{"confidence":0.62,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.75,"not_a_derivation":0.24,"reimplements":0.01}}
 fadbdd4c6bfbada1	1792252958	{"consistency":1,"kind":"Probability","probability":0.5133333333333333}
+faf41d7ea593dae8	1792265611	{"confidence":0.4,"kind":"Classify","label":"value","probabilities":{"meaning":0.4,"unclear":0,"value":0.6}}

@@ -47,6 +47,31 @@ An engine that speaks none of these is **not** silently treated as clean: it pro
 `<id>/unparsed-output` info finding, because "no findings" and "not understood" must never
 look the same.
 
+The same rule runs one level up. A report distinguishes what an engine **found** from what
+it **did**: an engine that replayed a cache, skipped a rule, or left candidates unjudged is
+marked `replayed`, `skipped`, or `<n> candidate(s) not judged` in the census, so `0 finding(s)`
+never stands in for "clean". A finding carries its judged provenance when it has one — the
+entropy `move`, a `score`, and whether an engine actually judged it — and that provenance
+rides out through every projection below.
+
+## Outward projections
+
+A finding does not leave the workspace in the report's shape; it leaves in the shape the host
+ingests. Each is a pure projection of the one report, specified in
+`protocol/docs/projections.md` and frozen against worked examples. The text form is the one
+human renderer — the pi extension and the OpenCode plugin hand a model that same text rather
+than re-rendering it.
+
+| `--format`    | Target                                      |
+| ------------- | ------------------------------------------- |
+| `text`        | the human report (default)                  |
+| `json`        | the report document, verbatim               |
+| `jsonl`       | one finding per line, the streaming form    |
+| `github`      | GitHub Actions workflow annotations         |
+| `sarif`       | SARIF 2.1.0 for code scanning and IDEs      |
+| `lsp`         | LSP 3.17 diagnostics (0-based), for editors |
+| `codeclimate` | Code Climate / GitLab Code Quality issues   |
+
 ## The ratchet
 
 The gate is `protocol`'s baseline: findings are accepted **by identity**, never by line.
@@ -54,11 +79,12 @@ A run fails on new identities only. `warn` repo-wide and `error` on what you tou
 the same file, not a second configuration.
 
 ```sh
-jig check             # run every engine; fail on errors and new findings
-jig check --format github   # GitHub Actions annotations
-jig baseline          # accept the current findings into the baseline
-jig engines           # what is configured, and whether it is on PATH
-jig init              # write jig.config.json, an empty baseline, and the cookbook
+jig check                    # run every engine; fail on errors and new findings
+jig check --format sarif     # SARIF 2.1.0 for code scanning
+jig check --limit 20         # the census, then the first 20 findings
+jig baseline                 # accept the current findings into the baseline
+jig engines                  # what is configured, and whether it is on PATH
+jig init                     # write jig.config.json, an empty baseline, and the cookbook
 ```
 
 ## Where it sits

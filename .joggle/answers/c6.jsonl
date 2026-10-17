@@ -10,3 +10,4 @@ c6cecbd85e1ae30a	1792252958	{"confidence":0.5,"kind":"Classify","label":"merge",
 c6ef7eb0d043446f	1792252958	{"consistency":1,"kind":"Probability","probability":0.86}
 c6f3b5dcc7d4075d	1792252958	{"confidence":0.68,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.08,"no_issue":0.16,"semantic_verdict":0.76}}
 c6f8393752d177b9	1792252958	{"confidence":0.94,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.96,"not_a_derivation":0.04,"reimplements":0}}
+c6fb98521f4614bb	1792265611	{"confidence":0.29,"kind":"Rate","label":"slightly_clearer","probabilities":{"meaningfully_better":0.39,"no_difference":0.08,"removes_a_hazard":0.12,"slightly_clearer":0.41},"rating":1.54}

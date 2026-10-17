@@ -1,3 +1,4 @@
+6b06365f28702f20	1792265611	{"confidence":0.28,"kind":"Classify","label":"move","probabilities":{"move":0.64,"no_issue":0.36}}
 6b33ab3a1ee49bdd	1792252958	{"confidence":0.7,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.8,"unclear":0,"value":0.2}}
 6b82c2a87fd0c254	1792252958	{"confidence":0.89,"kind":"Classify","label":"same_package","probabilities":{"different_deployables":0,"same_module":0.08,"same_package":0.92,"sibling_packages":0}}
 6b878bbe8c461d18	1792253093	{"consistency":0.6666666666666667,"kind":"Probability","probability":0.4966666666666666}

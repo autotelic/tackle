@@ -1,3 +1,4 @@
 060e6bcd1ce5b9d6	1792252958	{"confidence":0.58,"kind":"Rate","label":"no_difference","probabilities":{"meaningfully_better":0.06,"no_difference":0.68,"removes_a_hazard":0.02,"slightly_clearer":0.24},"rating":0.41}
+064159af15e3fa2d	1792265611	{"confidence":0.95,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.04,"same_module":0,"same_package":0,"sibling_packages":0.96}}
 0659056c30990f05	1792252958	{"confidence":0.56,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.3,"framework_glue":0.02,"implementation_detail":0.67,"wire_contract":0.01}}
 06e40232299248c7	1792252958	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
