@@ -28,8 +28,13 @@ import { plumbEffectRecommendedRules, plumbRecommendedRules } from "@autotelic/p
  */
 
 /** Every rule a recommended set ships, held at `warn` until Phase B ratchets it. */
-const atWarn = (rules: Readonly<Record<string, unknown>>): Record<string, "warn"> =>
+const atWarn = (rules: Readonly<Record<string, string>>): Record<string, "warn"> =>
   Object.fromEntries(Object.keys(rules).map((rule) => [rule, "warn"]))
+
+/** Every `plumb-effect` rule at `off` — for code that is not an Effect application. */
+const effectOff: Record<string, "off"> = Object.fromEntries(
+  Object.keys(plumbEffectRecommendedRules).map((rule) => [rule, "off"]),
+)
 
 /*
  * The boundary carve-out — `combine`, not a suppression.
@@ -56,10 +61,18 @@ const BOUNDARY_FILES = [
   "packages/protocol/src/lexicon.ts",
   "packages/protocol/src/fixture-support.ts",
   "packages/protocol/src/report.ts",
+  "packages/protocol/src/doc.ts",
   "packages/cutlist/src/crawl.ts",
+  "packages/cutlist/src/check.ts",
   "packages/jig-cli/src/engines.ts",
   "packages/jig-cli/src/opencode.ts",
+  "packages/jig-cli/src/baseline.ts",
   "packages/jig-cli/extensions/jig.ts",
+  // The conformance tests hold raw fixture bytes against a schema: the same crossing, in a
+  // test. The cast is the test's subject, not an accident.
+  "packages/protocol/src/conformance.test.ts",
+  "packages/protocol/src/compat.test.ts",
+  "packages/protocol/src/projections.test.ts",
 ]
 
 const BOUNDARY_RULES = {
@@ -149,6 +162,13 @@ export default {
       // walk's accumulator. joggle's `workspace.ts` exception is the same shape.
       files: ["packages/*/scripts/**", "packages/cutlist/src/tokens.ts"],
       rules: { "plumb/no-exported-mutable-state": "off" },
+    },
+    {
+      // Standalone Node scripts, not part of the Effect application. joggle states the
+      // principle: plumb-effect is consumer-opt-in upstream because plumb itself is not an
+      // Effect app, and these scripts are not either — they run under plain `node`.
+      files: ["packages/*/scripts/**"],
+      rules: effectOff,
     },
   ],
 }
