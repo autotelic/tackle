@@ -4,10 +4,6 @@
     "version": 1
   },
   "identities": [
-    "plumb/no-swappable-primitive-params:packages/cutlist/src/catalog.ts",
-    "plumb/no-swappable-primitive-params:packages/cutlist/src/crawl.ts",
-    "plumb/no-swappable-primitive-params:packages/cutlist/src/paths.ts",
-    "plumb/no-swappable-primitive-params:packages/cutlist/src/tokens.ts",
     "plumb/no-swappable-primitive-params:packages/jig-cli/src/engines.ts",
     "plumb/prefer-property-tests:packages/cutlist/src/catalog.test.ts",
     "plumb/prefer-property-tests:packages/jig-cli/src/engines.test.ts",

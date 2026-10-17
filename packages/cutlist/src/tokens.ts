@@ -20,7 +20,13 @@ const COLORISH =
   /(color|primary|secondary|accent|background|foreground|muted|border|input|ring|card|popover|destructive|success|warning|danger|info|brand)/u
 
 /** The identifier keys at any depth inside the first `field: { … }` block. */
-const keysInBlock = (text: string, field: string): ReadonlyArray<string> => {
+const keysInBlock = ({
+  text,
+  field,
+}: {
+  readonly text: string
+  readonly field: string
+}): ReadonlyArray<string> => {
   const index = text.indexOf(field)
   if (index < 0) return []
   const open = text.indexOf("{", index)
@@ -63,10 +69,10 @@ export const extractTokens = (
       fs.readFileString(path.resolve(root, source.from)),
       () => "",
     )
-    for (const key of keysInBlock(themeText, "colors")) colors.add(key)
-    const type = keysInBlock(themeText, "fontSize")
-    const shape = keysInBlock(themeText, "borderRadius")
-    const spacing = keysInBlock(themeText, "spacing")
+    for (const key of keysInBlock({ text: themeText, field: "colors" })) colors.add(key)
+    const type = keysInBlock({ text: themeText, field: "fontSize" })
+    const shape = keysInBlock({ text: themeText, field: "borderRadius" })
+    const spacing = keysInBlock({ text: themeText, field: "spacing" })
 
     if (source.vars !== undefined) {
       const css = yield* Effect.orElseSucceed(

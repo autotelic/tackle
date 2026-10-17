@@ -59,12 +59,19 @@ const aliasRules = (
 /** A source extension, written the way an import specifier spells it (`./Button.tsx`). */
 const SOURCE_EXTENSION = /\.(tsx?|jsx?|mts|cts|mjs|cjs)$/u
 
+/** What `resolveSpecifier` needs: the three values travel as one so a swap cannot compile. */
+interface SpecifierQuery {
+  readonly specifier: string
+  readonly importerDir: string
+  readonly rules: ReadonlyArray<AliasRule>
+}
+
 /** Resolve an import specifier to a candidate module base path, or nothing if external. */
-const resolveSpecifier = (
-  specifier: string,
-  importerDir: string,
-  rules: ReadonlyArray<AliasRule>,
-): string | undefined => {
+const resolveSpecifier = ({
+  specifier,
+  importerDir,
+  rules,
+}: SpecifierQuery): string | undefined => {
   let resolved: string | undefined
   if (specifier.startsWith(".")) {
     resolved = normalizePosix(`${importerDir}/${specifier}`)
@@ -99,7 +106,7 @@ export const importerGraph = (
   for (const module of modules) {
     const dir = dirnamePosix(module.path)
     for (const specifier of module.imports) {
-      const resolved = resolveSpecifier(specifier, dir, rules)
+      const resolved = resolveSpecifier({ specifier, importerDir: dir, rules })
       if (resolved === undefined) continue
       const target = byBase.get(resolved)
       if (target === undefined || target === module.path) continue
@@ -112,7 +119,13 @@ export const importerGraph = (
 }
 
 /** A route/page module — an entry point, not a component. */
-const isRouteModule = (path: string, routePrefix: string): boolean => path.startsWith(routePrefix)
+const isRouteModule = ({
+  path,
+  routePrefix,
+}: {
+  readonly path: string
+  readonly routePrefix: string
+}): boolean => path.startsWith(routePrefix)
 
 /** Pass 5b — the all-pairs candidate join. High recall; a judge in `joggle` decides. */
 const duplicateCandidates = (
@@ -130,7 +143,11 @@ const duplicateCandidates = (
       if (right === undefined || right.signature.length === 0) continue
       // Two route files rendering the same shared component are not duplicates; they
       // are two pages. Route-vs-component IS kept: a page that inlined a copy is a smell.
-      if (isRouteModule(left.path, routePrefix) && isRouteModule(right.path, routePrefix)) continue
+      if (
+        isRouteModule({ path: left.path, routePrefix }) &&
+        isRouteModule({ path: right.path, routePrefix })
+      )
+        continue
       const score = similarityOf(leftSignature, signatureOf(right))
       if (score < DUPLICATE_THRESHOLD) continue
       candidates.push({ left: left.path, right: right.path, score, basis: "skeleton" })
@@ -192,7 +209,8 @@ export const buildCatalog = (
     // flattened copies) in page files.
     const orphans = components
       .filter(
-        (component) => component.owners.length === 0 && !isRouteModule(component.path, routePrefix),
+        (component) =>
+          component.owners.length === 0 && !isRouteModule({ path: component.path, routePrefix }),
       )
       .map((component) => component.path)
 

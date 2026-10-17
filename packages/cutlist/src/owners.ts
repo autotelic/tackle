@@ -24,7 +24,7 @@ export interface OwnerOptions {
 
 /** The owner an importing module contributes to the component it imports. */
 export const ownerOf = (modulePath: string, options: OwnerOptions): string | undefined => {
-  const path = relativeToRoot(modulePath, options.root)
+  const path = relativeToRoot({ modulePath, root: options.root })
   if (underAny(path, options.sharedRoots)) return "shared"
   const prefix = `${options.routeDir}/`
   if (!path.startsWith(prefix)) return undefined

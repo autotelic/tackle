@@ -157,7 +157,13 @@ const langOf = (file: string): "ts" | "tsx" | "js" | "jsx" =>
   file.endsWith(".tsx") || file.endsWith(".jsx") ? (file.endsWith(".jsx") ? "jsx" : "tsx") : "ts"
 
 /** Parse one module. Parsing never throws: a syntax error yields an empty record. */
-export const parseModule = (filename: string, text: string): SourceModule => {
+export const parseModule = ({
+  filename,
+  text,
+}: {
+  readonly filename: string
+  readonly text: string
+}): SourceModule => {
   const parsed = parseSync(filename, text, { sourceType: "module", lang: langOf(filename) })
   const program = asRecord(parsed.program) ?? {}
   const tags = new Set<string>()
@@ -236,7 +242,7 @@ export const readModules = (
       const text = yield* Effect.orElseSucceed(fs.readFileString(file), () => undefined)
       if (text === undefined) continue
       const relative = path.relative(root, file).split(path.sep).join("/")
-      modules.push(parseModule(relative, text))
+      modules.push(parseModule({ filename: relative, text }))
     }
     return modules
   })

@@ -25,7 +25,7 @@ export function Combobox({ items, label }: { items: string[]; label: string }) {
 `
 
 describe("parseModule", () => {
-  const module = parseModule("app/components/Combobox.tsx", COMBOBOX)
+  const module = parseModule({ filename: "app/components/Combobox.tsx", text: COMBOBOX })
 
   it("reads the behavioral skeleton inputs", () => {
     expect(module.imports).toContain("@headlessui/react")
@@ -93,11 +93,23 @@ describe("importerGraph", () => {
   // Every reader in this workspace imports WITH an extension; the older test data here never
   // did, which is why the graph looked correct while every real component read as an orphan.
   const modules: ReadonlyArray<SourceModule> = [
-    parseModule("src/routes/dashboard.tsx", 'import { Button } from "../components/ui/button.tsx"'),
-    parseModule("src/components/ui/button.tsx", "export function Button() {}"),
-    parseModule("src/components/panel.tsx", 'import { Button } from "./ui/button"'),
-    parseModule("src/components/index.ts", 'export { Button } from "./ui/button.tsx"'),
-    parseModule("src/routes/settings.tsx", 'import { Panel } from "@/components/panel"'),
+    parseModule({
+      filename: "src/routes/dashboard.tsx",
+      text: 'import { Button } from "../components/ui/button.tsx"',
+    }),
+    parseModule({ filename: "src/components/ui/button.tsx", text: "export function Button() {}" }),
+    parseModule({
+      filename: "src/components/panel.tsx",
+      text: 'import { Button } from "./ui/button"',
+    }),
+    parseModule({
+      filename: "src/components/index.ts",
+      text: 'export { Button } from "./ui/button.tsx"',
+    }),
+    parseModule({
+      filename: "src/routes/settings.tsx",
+      text: 'import { Panel } from "@/components/panel"',
+    }),
   ]
   const alias = { "@/*": ["src/*"] }
 

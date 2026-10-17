@@ -25,7 +25,13 @@ export const dirnamePosix = (path: string): string => {
 }
 
 /** Drop the app root from a repository-relative module path. */
-export const relativeToRoot = (modulePath: string, root: string): string =>
+export const relativeToRoot = ({
+  modulePath,
+  root,
+}: {
+  readonly modulePath: string
+  readonly root: string
+}): string =>
   modulePath === root
     ? ""
     : modulePath.startsWith(`${root}/`)

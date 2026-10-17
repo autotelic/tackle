@@ -26,7 +26,7 @@ export const tierOf = (
   owners: ReadonlyArray<string>,
   options: TierOptions,
 ): TierName => {
-  const path = relativeToRoot(modulePath, options.root)
+  const path = relativeToRoot({ modulePath, root: options.root })
   if (underAny(path, options.primitiveRoots)) return "primitive"
   const routeOwners = owners.filter((owner) => owner !== "shared")
   if (routeOwners.length >= 2) return "shared"
