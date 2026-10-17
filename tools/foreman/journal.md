@@ -1110,3 +1110,56 @@ harness** — one rule, one workstream, one worktree, one conversation.
 
 **The `pi-durable` gap is a question for the human:** if that library exists elsewhere, the
 OpenCode-V2 harness here should be replaced by it, not grown beside it.
+
+---
+
+# Round 3 — the ratchet, by hand now, by rule (Phase B)
+
+**Opened:** 2026-10-16. **Goal:** drive the root ledger down, one rule at a time, in move order.
+
+## Progress, by commit
+
+| Commit    | Move                                                         | Identities |
+| --------- | ------------------------------------------------------------ | ---------- |
+| (Round 2) | boundary `combine` carried into the root config              | 149 → 91   |
+| `f931cff` | `contract`: explicit canonical sorts, JSDoc, prose fixes     | 91 → 78    |
+| `9582f81` | `combine`: four seam decisions stated                        | 78 → 58    |
+| `cc1bd6d` | boundary reach: decode tests + scripts                       | 58 → 41    |
+| `aebc68b` | `contract`: named launcher/level types, `Predicate`, nullish | 41 → 30    |
+| `f0ac0b5` | boundary finish; guarded-op lookups; duration `Date.now`     | 30 → 15    |
+
+Every step was witnessed the same way: `jig check` shows the drop, `jig baseline` shrinks the
+ledger, `pnpm check` stays green. Findings fell from 461 to 27.
+
+## What the grind taught
+
+- **The ledger was not 149 bugs; it was two classes.** Deliberate boundary crossings and
+  deliberate style, most of which `packages/joggle/oxlint.config.ts` had _already decided_, with
+  reasons, for its own tree. `combine` — applying the recorded decision to the code it also
+  describes — resolved the majority. The `contract` fixes were real but were the minority.
+- **A fix can introduce a finding.** The first `require-sort-comparator` fix hand-built
+  `-1/0/1`, which `no-sentinel-comparison-union` bans; `protocol` cannot import Effect's
+  `Order`, so the leaf uses `localeCompare` (the codebase's existing idiom). A named
+  `Launcher` type stacked JSDoc; the fix was ordering, not typing.
+- **The rules are not wrong, and the code is not wrong — they disagree, and the disagreement
+  is written down.** Each `combine` here cites a reason joggle or plumb already recorded. An
+  exception without a reason would be a suppression; these are not.
+
+## The remaining 15 — and why they stop here
+
+- **`no-swappable-primitive-params` (5 identities, 17 findings)** — a real refactor: the
+  parser helpers in `jig-cli/engines.ts` and four `cutlist` modules take adjacent `string`s.
+  The fix is a `ParseContext` object (engine + root travel together) and object params for the
+  3- and 4-string helpers. Mechanical, and next.
+- **`prefer-property-tests` (10 identities)** — the rule requires `fast-check` in _every_ test
+  file, and its escape hatch is an inline disable with a reason. Half these files assert a
+  frozen fixture against a schema: the property is over the corpus, not a generator. This is
+  the one place where the honest move is an `expand` — teach the rule to accept corpus-driven
+  coverage — or ten documented inline disables. **Needs a human call**, because it changes what
+  counts as an approved test.
+
+## Direction
+
+Continue the ratchet: `no-swappable-primitive-params` next; then decide
+`prefer-property-tests`. When a rule's baseline is empty, flip it to `error` in the root
+config (the ladder's rung 4) — none is there yet, but the boundary rules are close.
