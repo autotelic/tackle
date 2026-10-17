@@ -62,6 +62,7 @@ const BOUNDARY_FILES = [
   "packages/protocol/src/fixture-support.ts",
   "packages/protocol/src/report.ts",
   "packages/protocol/src/doc.ts",
+  "packages/protocol/src/baseline.ts",
   "packages/cutlist/src/crawl.ts",
   "packages/cutlist/src/check.ts",
   "packages/jig-cli/src/engines.ts",
@@ -77,11 +78,16 @@ const BOUNDARY_FILES = [
 
 const BOUNDARY_RULES = {
   "plumb/no-unknown-parameters": "off",
+  "plumb/no-unknown-returns": "off",
   "plumb/no-runtime-typeof": "off",
   "plumb/no-reinterpret-cast": "off",
   "plumb/no-unsafe-dictionary-type": "off",
   "plumb/require-safety-comment-for-type-assertion": "off",
   "plumb-effect/guarded-op-must-return-option": "off",
+  // A parse failure at a boundary is the ordinary case, and these are synchronous parsers
+  // with no Effect context to route the failure through. The `Effect.try` remedy needs an
+  // effect; a pure function has none.
+  "plumb-effect/no-try-catch": "off",
 } as const
 
 /*
@@ -187,6 +193,21 @@ export default {
       // rule's remedy is inexpressible here. Recorded as a vocabulary gap, not a suppression.
       files: ["packages/protocol/src/fixture-support.ts"],
       rules: { "plumb-effect/prefer-effect-predicate-over-boolean-function": "off" },
+    },
+    {
+      // Module-scope lookups whose absence is the ordinary answer: a specifier that does not
+      // resolve, a component with no owner. joggle's words: "absence is the ordinary answer
+      // ... and each miss is already recorded as a fact". Wrapping each hop in Option would
+      // move the same branch to every call site without adding a distinction the domain has.
+      files: ["packages/cutlist/src/catalog.ts", "packages/cutlist/src/owners.ts"],
+      rules: { "plumb-effect/guarded-op-must-return-option": "off" },
+    },
+    {
+      // `Date.now()` measures a wall-clock duration for the report's `durationMs`. It is not
+      // part of a finding's identity, of the baseline, or of any canonical byte, so it cannot
+      // make the ratchet non-reproducible — which is the harm the rule exists to prevent.
+      files: ["packages/jig-cli/src/engines.ts", "packages/jig-cli/src/run.ts"],
+      rules: { "plumb/no-nondeterministic-core": "off" },
     },
   ],
 }
