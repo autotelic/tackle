@@ -472,7 +472,7 @@ const summarize = (
   id: string,
   diagnostics: ReadonlyArray<Diagnostic>,
   durationMs: number,
-  note?: string,
+  note: string | undefined,
 ): EngineSummary => {
   const counts = countsOf(diagnostics)
   return {
@@ -529,7 +529,7 @@ export const runEngine = (
 
     const { stdout, stderr, code } = outcome.value
     const diagnostics = engineDiagnostics(id, code, stdout, stderr, root)
-    return { id, summary: summarize(id, diagnostics, Date.now() - started), diagnostics }
+    return { id, summary: summarize(id, diagnostics, Date.now() - started, undefined), diagnostics }
   })
 
 /** Every enabled engine, run concurrently. */

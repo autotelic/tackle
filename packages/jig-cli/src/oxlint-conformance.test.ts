@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
+import { Order } from "effect"
 import { describe, expect, it } from "vitest"
 import { engineDiagnostics, parseEngineOutput } from "./engines.ts"
 
@@ -40,7 +41,7 @@ describe.each(STRUCTURED)("oxlint --format %s", (_format, file) => {
 
   it("carries the two findings oxlint reported", () => {
     const diagnostics = parseEngineOutput(output, "oxlint", ROOT) ?? []
-    expect(diagnostics.map((diagnostic) => diagnostic.ruleId).sort()).toEqual([
+    expect(diagnostics.map((diagnostic) => diagnostic.ruleId).sort(Order.String)).toEqual([
       "eslint/no-debugger",
       "eslint/no-unused-vars",
     ])

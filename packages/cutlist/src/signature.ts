@@ -1,3 +1,4 @@
+import { Order } from "effect"
 import type { SourceModule } from "./crawl.ts"
 
 /*
@@ -35,5 +36,5 @@ export const skeletonOf = (module: SourceModule): ReadonlyArray<string> => {
       parts.add(`uses:${specifier}`)
     }
   }
-  return [...parts].sort()
+  return [...parts].sort(Order.String)
 }

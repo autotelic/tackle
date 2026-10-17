@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { Effect, FileSystem, Path } from "effect"
+import { Effect, FileSystem, Order, Path } from "effect"
 import {
   lexiconRef,
   signatureOf,
@@ -108,7 +108,7 @@ export const importerGraph = (
       importers.set(target, set)
     }
   }
-  return new Map([...importers].map(([key, value]) => [key, [...value].sort()]))
+  return new Map([...importers].map(([key, value]) => [key, [...value].sort(Order.String)]))
 }
 
 /** A route/page module — an entry point, not a component. */

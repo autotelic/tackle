@@ -26,7 +26,7 @@ const failures = []
 let checked = 0
 let skipped = 0
 
-for (const file of readdirSync(compatDir).sort()) {
+for (const file of readdirSync(compatDir).sort((a, b) => a.localeCompare(b))) {
   if (!file.endsWith(".json")) continue
   const lexicon = file.replace(/\.json$/u, "").replace(/\.v\d+$/u, "")
   const schemaPath = `${schemaDir}/${lexicon}.json`

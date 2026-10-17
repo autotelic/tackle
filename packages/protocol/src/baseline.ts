@@ -30,7 +30,7 @@ export const identityOf = (diagnostic: Diagnostic): string =>
 /** The baseline for the findings in front of you. What `--update-baseline` writes. */
 export const accept = (diagnostics: ReadonlyArray<Diagnostic>): Baseline => ({
   lexicon: lexiconRef("baseline"),
-  identities: [...new Set(diagnostics.map(identityOf))].sort(),
+  identities: [...new Set(diagnostics.map(identityOf))].sort((a, b) => a.localeCompare(b)),
 })
 
 /**
@@ -45,7 +45,7 @@ export const decodeBaseline = (value: unknown): Baseline | undefined => {
   const lexicon = readLexiconRef(value, "baseline")
   const identities = arrayOf(value.identities, str)
   if (lexicon === undefined || identities === undefined) return undefined
-  return { lexicon, identities: [...identities].sort() }
+  return { lexicon, identities: [...identities].sort((a, b) => a.localeCompare(b)) }
 }
 
 /** How a run compares to what was already accepted. */

@@ -1,3 +1,4 @@
+import { Order } from "effect"
 import { relativeToRoot, underAny } from "./paths.ts"
 
 /*
@@ -46,5 +47,5 @@ export const ownersOf = (
     const owner = ownerOf(importer, options)
     if (owner !== undefined) owners.add(owner)
   }
-  return [...owners].sort()
+  return [...owners].sort(Order.String)
 }

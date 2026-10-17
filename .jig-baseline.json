@@ -18,7 +18,6 @@
     "plumb/no-known-value-widening:packages/protocol/src/report.ts",
     "plumb/no-nondeterministic-core:packages/jig-cli/src/engines.ts",
     "plumb/no-nondeterministic-core:packages/jig-cli/src/run.ts",
-    "plumb/no-optional-function-parameters:packages/jig-cli/src/engines.ts",
     "plumb/no-reinterpret-cast:packages/cutlist/src/check.ts",
     "plumb/no-reinterpret-cast:packages/jig-cli/src/baseline.ts",
     "plumb/no-reinterpret-cast:packages/protocol/src/compat.test.ts",
@@ -79,21 +78,9 @@
     "plumb/prefer-property-tests:packages/protocol/src/projections.test.ts",
     "plumb/prefer-property-tests:packages/protocol/src/readers.test.ts",
     "plumb/prefer-property-tests:packages/protocol/src/report.test.ts",
-    "plumb/require-deprecated-tag-for-legacy-comments:packages/cutlist/src/render/menu.ts",
-    "plumb/require-deprecated-tag-for-legacy-comments:packages/protocol/src/fixture-support.ts",
-    "plumb/require-jsdoc-on-exported:packages/cutlist/src/render/manifest.ts",
     "plumb/require-safety-comment-for-type-assertion:packages/cutlist/src/check.ts",
     "plumb/require-safety-comment-for-type-assertion:packages/jig-cli/src/baseline.ts",
     "plumb/require-safety-comment-for-type-assertion:packages/protocol/src/compat.test.ts",
-    "plumb/require-safety-comment-for-type-assertion:packages/protocol/src/conformance.test.ts",
-    "plumb/require-sort-comparator:packages/cutlist/src/catalog.ts",
-    "plumb/require-sort-comparator:packages/cutlist/src/crawl.ts",
-    "plumb/require-sort-comparator:packages/cutlist/src/owners.ts",
-    "plumb/require-sort-comparator:packages/cutlist/src/render/hooks.ts",
-    "plumb/require-sort-comparator:packages/cutlist/src/signature.ts",
-    "plumb/require-sort-comparator:packages/cutlist/src/tokens.ts",
-    "plumb/require-sort-comparator:packages/jig-cli/src/oxlint-conformance.test.ts",
-    "plumb/require-sort-comparator:packages/protocol/scripts/lexicon-compat.mjs",
-    "plumb/require-sort-comparator:packages/protocol/src/baseline.ts"
+    "plumb/require-safety-comment-for-type-assertion:packages/protocol/src/conformance.test.ts"
   ]
 }

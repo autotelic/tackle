@@ -1,4 +1,4 @@
-import { Effect, FileSystem, Path } from "effect"
+import { Effect, FileSystem, Order, Path } from "effect"
 import type { CatalogTokens, TokenSource } from "@autotelic/protocol"
 
 /*
@@ -81,5 +81,5 @@ export const extractTokens = (
       }
     }
 
-    return { colors: [...colors].sort(), type, shape, spacing }
+    return { colors: [...colors].sort(Order.String), type, shape, spacing }
   })

@@ -1,4 +1,4 @@
-import { Effect, FileSystem, Path } from "effect"
+import { Effect, FileSystem, Order, Path } from "effect"
 import { parseSync } from "oxc-parser"
 
 /*
@@ -126,7 +126,7 @@ const exportsOf = (program: Ast): ReadonlyArray<string> => {
       }
     }
   })
-  return [...names].sort()
+  return [...names].sort(Order.String)
 }
 
 /**
@@ -149,7 +149,7 @@ const propsOf = (program: Ast): ReadonlyArray<string> => {
       if (first !== undefined && first.type === "ObjectPattern") collectBindingNames(first, props)
     }
   })
-  return [...props].sort()
+  return [...props].sort(Order.String)
 }
 
 /** The parser dialect for a file, by extension. */
@@ -186,9 +186,9 @@ export const parseModule = (filename: string, text: string): SourceModule => {
           ),
         ),
       ]),
-    ].sort(),
-    tags: [...tags].sort(),
-    hooks: [...hooks].sort(),
+    ].sort(Order.String),
+    tags: [...tags].sort(Order.String),
+    hooks: [...hooks].sort(Order.String),
     props: propsOf(program),
     documented: parsed.comments.some(
       (comment) => comment.type === "Block" && comment.value.startsWith("*"),
@@ -220,7 +220,7 @@ export const listSources = (
           found.add(path.join(absolute, name))
       }
     }
-    return [...found].sort()
+    return [...found].sort(Order.String)
   })
 
 /** Read and parse every listed file into a module record. */

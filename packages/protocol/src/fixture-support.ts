@@ -26,7 +26,7 @@ export const fixturePath = (relative: string): string =>
 export const loadJson = (relative: string): unknown =>
   JSON.parse(readFileSync(fixturePath(relative), "utf8")) as unknown
 
-/** Whether a fixture exists. `legacy.json` is not present for every lexicon. */
+/** Whether a fixture exists. The frozen pre-versioning record is not present everywhere. */
 export const fixtureExists = (relative: string): boolean => existsSync(fixturePath(relative))
 
 /** A fresh Ajv for draft 2020-12. `strict: false` because we use `$defs` freely. */

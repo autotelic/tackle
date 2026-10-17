@@ -6,7 +6,7 @@ import type { Catalog, CatalogComponent, TierName } from "@autotelic/protocol"
  * Half of an entry is derived (composed of), half is authored (what it is for, what to
  * reach for instead). cutlist fills the derived half and scaffolds the entry; the
  * authored half is a person's, and its absence is what the `require-catalog-entry` rule
- * flags. Pretending a deterministic tool can write "do not use for" would be a lie
+ * flags. Pretending a deterministic tool can write "what this is not for" would be a lie
  * dressed as completeness.
  */
 
