@@ -117,5 +117,38 @@ export default {
       files: CONDITIONAL_SPREAD_FILES,
       rules: { "plumb/no-conditional-empty-object-spread": "off" },
     },
+    {
+      // Reasoning belongs where the decision is made. joggle recorded exactly this for its
+      // own tree: plumb wants the note in JSDoc, but an inline comment sits beside the line
+      // it explains, and moving it onto a signature forty lines above separates the two.
+      files: ["packages/*/src/**", "packages/jig-cli/extensions/**"],
+      rules: { "plumb/no-stray-inline-comments": "off" },
+    },
+    {
+      // `shape` is the domain word in the vocabulary: a declaration's shape is its token
+      // sequence with every identifier blanked. The rule reads "shape" as
+      // structure-rather-than-ownership, which is meaningless here — the shape is of nothing
+      // in particular, so there is no owner to name. joggle's reason, the same words.
+      files: [
+        "packages/protocol/src/catalog.ts",
+        "packages/protocol/src/decode.ts",
+        "packages/cutlist/src/tokens.ts",
+        "packages/cutlist/src/render/tokens.ts",
+      ],
+      rules: { "plumb/no-shape-in-symbol-names": "off" },
+    },
+    {
+      // A package's `index.ts` IS the aggregate surface: one name a consumer imports, and one
+      // place to add the next export. A barrel hides ownership in an application; here the
+      // aggregation is the point. joggle excepted its `plugin.ts` for the same reason.
+      files: ["packages/*/src/index.ts"],
+      rules: { "plumb/no-barrel-export-star": "off" },
+    },
+    {
+      // `let` counters local to a module nothing exports — a script's pass/fail tallies, a
+      // walk's accumulator. joggle's `workspace.ts` exception is the same shape.
+      files: ["packages/*/scripts/**", "packages/cutlist/src/tokens.ts"],
+      rules: { "plumb/no-exported-mutable-state": "off" },
+    },
   ],
 }
