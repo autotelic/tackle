@@ -1,4 +1,4 @@
-import { Cause, Config, Console, Effect, Exit, FileSystem, Layer, Option, Path, Predicate, Result, Runtime } from "effect"
+import { Cause, Config, Effect, Exit, FileSystem, Layer, Option, Path, Predicate, Result, Runtime } from "effect"
 import { Argument, Command, Flag } from "effect/unstable/cli"
 import { DecisionModel } from "effect/unstable/ai"
 import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient"
@@ -7,7 +7,8 @@ import { checkRepository } from "./check.ts"
 import { layer as decisionLayer } from "./decision.ts"
 import { make as makeAnswerStore, mergeShardText, prune as pruneAnswers } from "./answer-store.ts"
 import { ask } from "./ask.ts"
-import { cacheDirFor, runCacheDirFor } from "./state.ts"
+import { cacheDirFor, runCacheDirFor, shortHash } from "./state.ts"
+import { canonical } from "./canonical.ts"
 import { loadConfig, isEnabled, severityFor } from "./config.ts"
 import { layer as gitLayer, Service as Git } from "./git.ts"
 import { loadPlugins, withDefaults } from "./plugins.ts"
@@ -27,13 +28,23 @@ import { manifestOf } from "./run-cache.ts"
 import { sourceFingerprint } from "./fingerprint.ts"
 
 /**
- * One report, through Effect's Console rather than a raw stdout write.
+ * One report, written and then WAITED for.
  *
- * `Console.log` appends the newline, so a body that already ends in one is
- * trimmed first; the output is byte-identical and a test can capture it.
+ * It used to be `Console.log`, which queues the write and returns. To a pipe --
+ * how a caller, CI and `jig` all read this -- stdout is asynchronous, so the
+ * bytes leave only once the reader has taken them; this process's own teardown
+ * then ends it with `process.exit`, which discards whatever is still queued. A
+ * report past the pipe's 64 KiB buffer was therefore cut off mid-sentence, and
+ * a JSON report cut off mid-sentence is not a clean run: the reader gets an
+ * unparseable engine and loses everything the run found. Measured against this
+ * repository, whose report is past the buffer: piped, `check --format json`
+ * delivered 65536 bytes and failed to parse; with the callback, all 97020
+ * arrive. The newline is explicit so the output stays byte-identical.
  */
 const write = (text: string): Effect.Effect<void> =>
-  Console.log(text.endsWith("\n") ? text.slice(0, -1) : text)
+  Effect.callback<void>((resume) => {
+    process.stdout.write(text.endsWith("\n") ? text : `${text}\n`, () => resume(Effect.void))
+  })
 
 /**
  * The repository's rule set: its config, its plugins, and the layer the run
@@ -450,7 +461,18 @@ const calibrateCommand = Command.make(
         let types: TypeIndex = emptyTypeIndex
         if (config.types) {
           const tool = yield* sourceFingerprint(policy.analysisVersion)
-          const manifest = manifestOf(cwd, [], new Map(), rules.map((rule) => rule.id), tool)
+          // The same manifest rule `checkRepository` follows: the config is part
+          // of the key, so a config edit retires a cached trace instead of
+          // borrowing one it did not earn. The trace itself depends only on the
+          // code and the tool, so this over-invalidates -- the safe direction.
+          const manifest = manifestOf({
+            root: cwd,
+            files: [],
+            contents: new Map(),
+            ruleIds: rules.map((rule) => rule.id),
+            tool,
+            settings: shortHash(canonical({ config: ruleSet.effective, types: config.types })),
+          })
           const loaded = yield* loadTypeFacts({ root: cwd, cacheDir, tool, manifest } satisfies TypeFactRequest)
           types = loaded.index
         }

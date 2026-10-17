@@ -73,6 +73,27 @@ describe("parseEngineOutput", () => {
     expect(parseEngineOutput(`${line}\n\n`, { engine: "engine", root: "/repo" })).toHaveLength(1)
   })
 
+  it("does not repeat an engine's own prefix in the rule ids it reports", () => {
+    const stdout = JSON.stringify({
+      diagnostics: [
+        {
+          ruleId: "joggle/import-cycle",
+          severity: "error",
+          message: "a cycle",
+          location: { file: "a.ts", line: 1, column: 1 },
+        },
+      ],
+    })
+    const diagnostics = parseEngineOutput(stdout, { engine: "joggle", root: "/repo" }) ?? []
+    // `engine` and `ruleId` are kept apart everywhere they are read -- the renderer,
+    // `ruleNameOf`, the baseline, `explain` -- so an id that already carries the engine
+    // is composed twice: `joggle/joggle/import-cycle`, a name no document uses and
+    // `explain joggle/import-cycle` cannot find.
+    expect(diagnostics.map((entry) => `${entry.engine}/${entry.ruleId}`)).toEqual([
+      "joggle/import-cycle",
+    ])
+  })
+
   it("returns undefined for output it does not recognize, so the caller can say so", () => {
     expect(
       parseEngineOutput("just some prose\nand more", { engine: "engine", root: "/repo" }),
@@ -98,7 +119,7 @@ describe("engineDiagnostics", () => {
       "/repo",
     )
     expect(diagnostics).toHaveLength(1)
-    expect(diagnostics[0]?.ruleId).toBe("joggle/unparsed-output")
+    expect(diagnostics[0]?.ruleId).toBe("unparsed-output")
     expect(diagnostics[0]?.severity).toBe("info")
     expect(diagnostics[0]?.help).toBe("boom: no tsconfig in sight")
   })
@@ -146,12 +167,29 @@ describe("engineDiagnostics", () => {
       "/repo",
     )
     expect(diagnostics).toHaveLength(1)
-    expect(diagnostics[0]?.ruleId).toBe("cutlist/stale-catalog")
+    expect(diagnostics[0]?.ruleId).toBe("stale-catalog")
     expect(diagnostics[0]?.severity).toBe("error")
   })
 })
 
 describe("argsFor", () => {
+  it("passes an oxlint plugin's config file, which oxlint would otherwise have to discover", () => {
+    expect(argsFor({ id: "plumb", kind: "oxlint-plugin", config: ".oxlintrc.json" })).toEqual([
+      "--format",
+      "json",
+      "--config",
+      ".oxlintrc.json",
+    ])
+  })
+
+  it("does not invent a config flag for a process engine", () => {
+    expect(argsFor({ id: "joggle", kind: "process", config: "joggle.config.json" })).toEqual([
+      "check",
+      "--format",
+      "json",
+    ])
+  })
+
   it("appends a plugin's configured args to its base args", () => {
     expect(
       argsFor({ id: "plumb", kind: "oxlint-plugin", args: ["--ignore-pattern", "examples/**"] }),

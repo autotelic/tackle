@@ -88,6 +88,35 @@ repository's root.
    it fixes the defect correctly on the first try. Report what you learned either way — the
    result is the point, not the claim.
 
+   **Ran 2026-10-17.** A scratch repo (`/tmp/jig-experiment`) with one file and one engine,
+   `plumb` over three house rules that need no type information:
+
+   ```ts
+   export const move = (from: string, to: string): string => `${from} -> ${to}`
+
+   export const tag = (options?: { readonly label?: string }): string => options?.label ?? ""
+   ```
+
+   `jig check` reported four errors, `jig baseline` accepted three identities (same rule and
+   file collapse to one identity — two `require-jsdoc-on-exported` findings share one), the
+   entries were deleted, and the resulting report was handed verbatim to a fresh agent, along
+   with the directory and three constraints: edit only there, change no config, add no
+   suppression. **The first try was clean**: `jig check` exited 0, the diff touched
+   `src/geometry.ts` alone, and no config or suppression changed. The agent branded the two
+   adjacent `string` parameters (`type From = string & { readonly __brand: "From" }`), spelled
+   `options: T | undefined` out, and wrote JSDoc with `@param`/`@returns` on both exports.
+
+   What that measures, and what it does not: the fix for three of the four findings is
+   idiomatic. The fourth is correct-as-asked and _incomplete as a fix_ — the brands have no
+   constructor, so a caller would need an assertion to produce a `From`. The rule's own
+   suggestion (`Brand.Brand`) would have supplied one, and `effect` was not resolvable in that
+   repo, so the agent's hand-rolled brand was the best available under the constraints. Lesson
+   worth keeping: when a rule's message names the remedy, the agent follows the message
+   literally; a rule whose `help` names a _technique_ rather than a _result_ can be satisfied
+   without finishing the job. The agent also had a working directory and shell, so this is
+   "report plus the repo", not "report in a vacuum" — and it re-ran oxlint itself to confirm,
+   which is the report being actionable rather than a second source of truth.
+
 ## Range — assemble the crew, and have each _do_ the verb
 
 - **Compiler-diagnostics engineer**: dedup with a count, source-accurate spans, stable frozen

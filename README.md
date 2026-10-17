@@ -106,6 +106,18 @@ this repository, one report, and fails on anything new. What it finds is frozen 
 in `.jig-baseline.json`; the ratchet only shrinks that file, and Phase B drives every `plumb`
 and `joggle` rule to `error` until it is empty.
 
+The `joggle` engine is asked for tsgo's own diagnostics (`--typecheck`), so the one report
+carries type errors beside the conformance findings — the same sentence, from the same
+command, whether a person, a pipeline, or an agent reads it. `--types`, the declaration trace
+the judged rules read, stays opt-in: it typechecks the whole program and only changes an answer
+when a judgement is going to be made.
+
+`pnpm judged` is the same run with joggle's key in the environment
+(`doppler run -p joggle -c dev -- pnpm jig check`). With the key, every candidate is judged and
+the census says so; without it, joggle replays the verdicts committed under `.joggle/answers/`
+and the report marks the engine `replayed`. The two runs can never be mistaken for each other —
+that difference is the whole point of the census.
+
 `jig check` exits with a code a CI can branch on, the same contract whether a person, a
 pipeline, or an agent triggered the run:
 

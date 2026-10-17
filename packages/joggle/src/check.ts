@@ -7,6 +7,7 @@ import { answerPlans, chunkPlans, type Plan, type PlanAnswers, type PlanChunk } 
 import { emptyTypeIndex, loadTypeFacts, type TypeFactRequest, type TypeIndex } from "./typetrace.ts"
 import { indexOfNodeTypes, typesAtPositions, type NodeTypeIndex, type NodeTypeQuery } from "./typefacts.ts"
 import { shortHash } from "./state.ts"
+import { canonical } from "./canonical.ts"
 import { sourceFingerprint } from "./fingerprint.ts"
 import { loadParses } from "./parsecache.ts"
 import {
@@ -284,13 +285,29 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
     yield* sourceFingerprint(policy.analysisVersion),
     ...(options.plugins?.fingerprints ?? []),
   ].join("\u0000")
-  const manifest = manifestOf(
-    options.cwd,
+  // The config and the run's own switches decide what is reported, so they travel
+  // in the manifest beside the rule ids. The rule set says WHICH rules ran; this
+  // says how they were configured to answer, and a stored run replayed across a
+  // config edit is a report for a repository that no longer exists. `canonical`
+  // rather than `JSON.stringify`, so a config that was only reordered is the same
+  // configuration.
+  const settings = shortHash(
+    canonical({
+      config: options.config,
+      types: options.types,
+      typecheck: options.typecheck,
+      useTsgo: options.useTsgo,
+      maxInputTokens: options.maxInputTokens ?? null,
+    }),
+  )
+  const manifest = manifestOf({
+    root: options.cwd,
     files,
     contents,
-    selected.map((rule) => rule.id),
-    toolFingerprint,
-  )
+    ruleIds: selected.map((rule) => rule.id),
+    tool: toolFingerprint,
+    settings,
+  })
   const hashOf = new Map(
     files.map((file) => [path.relative(options.cwd, file), shortHash(contents.get(file) ?? "")]),
   )

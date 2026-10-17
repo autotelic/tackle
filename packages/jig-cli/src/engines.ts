@@ -53,6 +53,12 @@ export const argsFor = (engine: EngineRef): ReadonlyArray<string> => [
     : engine.kind === "oxlint-plugin"
       ? ["--format", "json"]
       : (DEFAULT_ARGS[engine.id] ?? [])),
+  // `config` names the engine's own config file, relative to the root. Only the oxlint kind
+  // has a flag `jig` can write for it; cutlist and joggle discover theirs by convention, so
+  // for them the field is a pointer for a reader and never an argument.
+  ...(engine.kind === "oxlint-plugin" && engine.config !== undefined
+    ? ["--config", engine.config]
+    : []),
   ...(engine.args ?? []),
 ]
 
@@ -94,14 +100,22 @@ const severityOf = (value: unknown): Severity => {
  * `plumb-ui(no-raw-html-layout)`. The report keeps `engine` and `ruleId` apart, so a code
  * whose plugin is the engine itself must not repeat it: on engine `plumb`,
  * `plumb(no-raw-html-layout)` is ruleId `no-raw-html-layout`, while
- * `plumb-ui(no-raw-html-layout)` keeps the sub-plugin as a namespace. A bare code passes
- * through. Without this, `${engine}/${ruleId}` reads `plumb/plumb(no-raw-html-layout)`.
+ * `plumb-ui(no-raw-html-layout)` keeps the sub-plugin as a namespace. Without this,
+ * `${engine}/${ruleId}` reads `plumb/plumb(no-raw-html-layout)`.
+ *
+ * A bare code that already carries the engine's own prefix is the same mistake in a
+ * different spelling, because a tool that reports whole findings names its rules the way
+ * its reports do: `joggle` emits `joggle/import-cycle`, and the report would read
+ * `joggle/joggle/import-cycle` — a name no document uses and `explain` cannot find.
  */
 const RULE_CODE = /^([A-Za-z][\w-]*)\((.+)\)$/u
 
 const ruleIdOf = ({ code, engine }: { readonly code: string; readonly engine: string }): string => {
   const match = RULE_CODE.exec(code)
-  if (match === null) return code
+  if (match === null) {
+    const prefix = `${engine}/`
+    return code.startsWith(prefix) ? code.slice(prefix.length) : code
+  }
   const plugin = match[1] ?? ""
   const rule = match[2] ?? code
   return plugin === engine ? rule : `${plugin}/${rule}`
@@ -459,7 +473,7 @@ const cutlistDiagnostics = ({ code, stdout, stderr }: ExecOutcome): ReadonlyArra
   return [
     {
       engine: "cutlist",
-      ruleId: "cutlist/stale-catalog",
+      ruleId: "stale-catalog",
       severity: "error",
       message: detail === "" ? "the committed catalog is stale" : detail,
       help: "Run `cutlist build` and commit the result.",
@@ -482,7 +496,7 @@ const unparsed = ({
   return [
     {
       engine: id,
-      ruleId: `${id}/unparsed-output`,
+      ruleId: "unparsed-output",
       severity: "info",
       message:
         output === ""

@@ -14,31 +14,55 @@ import { Baseline, StoredRun } from "./schema.ts"
  * Analysis version, decision version, model, the rule set, the root, and the
  * content of every analysed file. If this is unchanged then the previous report
  * is the report -- no parsing, no candidate generation, and no tokens.
+ */
+export interface ManifestInput {
+  /** The analysed root. */
+  readonly root: string
+  /** Every analysed file, root-relative or absolute. */
+  readonly files: ReadonlyArray<string>
+  /** The text of each file. */
+  readonly contents: ReadonlyMap<string, string>
+  /** The rule set that ran. */
+  readonly ruleIds: ReadonlyArray<string>
+  /** The tool's own bytes, plugin fingerprints included. */
+  readonly tool: string
+  /**
+   * The run's configuration, already hashed by the caller: the decoded config
+   * and the switches (`types`, `typecheck`, `useTsgo`, the token budget).
+   *
+   * The rule ids say WHICH rules ran; this says how they were told to answer,
+   * and the two are not the same question. The same rule set under a moved
+   * severity, an added `ignore` path or a renamed architecture answers
+   * differently, so a report is only replayable when both are unchanged.
+   */
+  readonly settings: string
+}
+
+/**
+ * The manifest hash: the identity of a run's inputs.
  *
- * @param root - The analysed root.
- * @param files - Every analysed file, root-relative or absolute.
- * @param contents - The text of each file.
- * @param ruleIds - The rule set that ran.
- * @param toolFingerprint - The tool's own source hash.
+ * @param input - The root, the bytes, the rule set, the tool and the settings.
  * @returns The manifest hash.
  */
-export const manifestOf = (
-  root: string,
-  files: ReadonlyArray<string>,
-  contents: ReadonlyMap<string, string>,
-  ruleIds: ReadonlyArray<string>,
-  toolFingerprint: string,
-): string =>
+export const manifestOf = ({
+  root,
+  files,
+  contents,
+  ruleIds,
+  tool,
+  settings,
+}: ManifestInput): string =>
   shortHash(
     [
       // The tool's own source, so a rule change cannot be forgotten. The declared
       // version stays beside it as the documented fallback.
-      `tool=${toolFingerprint}`,
+      `tool=${tool}`,
       `analysis=${policy.analysisVersion}`,
       `decisions=${policy.decisionVersion}`,
       `model=${policy.model}`,
       `root=${root}`,
       `rules=${[...ruleIds].sort((left, right) => left.localeCompare(right)).join(",")}`,
+      `settings=${settings}`,
       `files=${files.length}`,
       ...files.map((file) => `${file}\u0000${shortHash(contents.get(file) ?? "")}`),
     ].join("\n"),

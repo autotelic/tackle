@@ -17,6 +17,7 @@
     "prepare": "effect-tsgo patch --no-typescript --oxlint",
     "cutlist": "node --conditions=development packages/cutlist/src/cli.ts",
     "jig": "node --conditions=development packages/jig-cli/src/cli.ts",
+    "judged": "doppler run -p joggle -c dev -- pnpm jig check",
     "foreman": "node tools/foreman/src/main.ts",
     "changeset": "changeset",
     "version": "changeset version",

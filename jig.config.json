@@ -23,7 +23,13 @@
         "tools/**"
       ]
     },
-    { "id": "joggle", "kind": "process", "command": "joggle", "config": "joggle.config.json" }
+    {
+      "id": "joggle",
+      "kind": "process",
+      "command": "joggle",
+      "config": "joggle.config.json",
+      "args": ["--typecheck"]
+    }
   ],
   "gate": { "mode": "all", "baseline": ".jig-baseline.json", "failOn": "any-new" },
   "report": { "format": "text", "maxWarnings": -1 },
