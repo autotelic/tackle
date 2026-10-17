@@ -94,6 +94,31 @@ this repository, one report, and fails on anything new. What it finds is frozen 
 in `.jig-baseline.json`; the ratchet only shrinks that file, and Phase B drives every `plumb`
 and `joggle` rule to `error` until it is empty.
 
+`jig check` exits with a code a CI can branch on, the same contract whether a person, a
+pipeline, or an agent triggered the run:
+
+| code | meaning                                                                       |
+| ---- | ----------------------------------------------------------------------------- |
+| `0`  | clean — the gate passed                                                       |
+| `1`  | findings — the gate failed on findings                                        |
+| `2`  | usage/config — the command line did not parse                                 |
+| `3`  | infrastructure — an engine could not run; the report is incomplete, not clean |
+
+Which findings fail is the repo's own config, read by the gate and nowhere else:
+
+- `gate.failOn` — `error` (any error), `warn` (any error or warning), or `any-new` (the
+  default: any finding not already in the baseline).
+- `gate.mode` — `all` (the default), or `touched-files`, which gates only on findings in
+  files the working tree touches. When git cannot say, the scope widens to `all`; it never
+  narrows to an empty set, which would pass everything.
+- `report.maxWarnings` — a second, severity-blind regime: more than this many warnings fail
+  whatever `failOn` says (`-1` disables it).
+- `report.format` — the default for `--format` when the flag is absent.
+
+Infrastructure outranks findings: an engine that could not run exits `3`, so an unread run
+never reads as a merely dirty one — the same invariant the report's census keeps with
+`replayed` and `unjudged`.
+
 `examples/self` is the exemplar client repo: the full config set (`cutlist.config.json`,
 `jig.config.json`, `joggle.config.json`, `.oxlintrc.json`), a small `src/` tree, and the
 generated catalog committed under `tools/ui-catalog/`. It is a workspace package so the

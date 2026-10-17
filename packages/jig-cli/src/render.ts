@@ -1,4 +1,5 @@
-import type { Diagnostic, EngineSummary, Report } from "@autotelic/protocol"
+import { ruleNameOf, type Diagnostic, type EngineSummary, type Report } from "@autotelic/protocol"
+import { EXIT, type GateVerdict } from "./gate.ts"
 import type { HarnessRun } from "./run.ts"
 
 /*
@@ -16,6 +17,20 @@ import type { HarnessRun } from "./run.ts"
 /** How much of the finding list to print. Zero means all of it. */
 export interface TextOptions {
   readonly limit?: number
+  /** The gate's verdict, so the text and the exit code can never disagree. */
+  readonly gate?: GateVerdict
+}
+
+/** One line per rule the gate holds against the run, so a reader sees what failed, not why. */
+const gateLines = (failing: ReadonlyArray<Diagnostic>): ReadonlyArray<string> => {
+  const byRule = new Map<string, number>()
+  for (const diagnostic of failing) {
+    const key = ruleNameOf(diagnostic)
+    byRule.set(key, (byRule.get(key) ?? 0) + 1)
+  }
+  return [...byRule.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([rule, count]) => `  ${rule}: ${count} failing finding${count === 1 ? "" : "s"}`)
 }
 
 /** One engine's census line: what it found, and what it did instead of looking. */
@@ -61,7 +76,7 @@ const findingLines = (diagnostic: Diagnostic, index: number): ReadonlyArray<stri
  * `limit`. Truncating a verdict ("did the ratchet hold?") would be a preview that lies.
  */
 export const renderText = (run: HarnessRun, options: TextOptions = {}): string => {
-  const { report, diff, violations } = run
+  const { report, diff } = run
   const limit = options.limit ?? 0
   const total = report.diagnostics.length
   const shown = limit > 0 ? report.diagnostics.slice(0, limit) : report.diagnostics
@@ -86,9 +101,18 @@ export const renderText = (run: HarnessRun, options: TextOptions = {}): string =
     }
   }
 
-  if (violations.length > 0) {
-    lines.push("", "ratchet")
-    for (const violation of violations) lines.push(`  ${violation}`)
+  // The gate's own section: the findings it holds, and the engines whose silence it cannot
+  // rule on. The census above never folds into this — a replayed engine is not a passing one.
+  const gate = options.gate
+  if (gate !== undefined && gate.infrastructure.length > 0) {
+    lines.push(
+      "",
+      `gate — engine(s) could not run: ${gate.infrastructure.join(", ")} (exit ${EXIT.infrastructure})`,
+    )
+  }
+  if (gate !== undefined && gate.failing.length > 0) {
+    lines.push("", `gate — failOn: ${gate.failOn}, scope: ${gate.scope}`)
+    lines.push(...gateLines(gate.failing))
   }
   if (diff.stale.length > 0) {
     lines.push(

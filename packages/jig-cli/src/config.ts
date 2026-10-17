@@ -26,7 +26,9 @@ const GateSchema = Schema.Struct({
 })
 
 const ReportSchema = Schema.Struct({
-  format: Schema.optionalKey(Schema.Literals(["text", "json", "jsonl", "github"])),
+  format: Schema.optionalKey(
+    Schema.Literals(["text", "json", "jsonl", "github", "sarif", "lsp", "codeclimate"]),
+  ),
   maxWarnings: Schema.optionalKey(Schema.Number),
 })
 

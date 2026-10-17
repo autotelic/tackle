@@ -2,7 +2,6 @@ import { Effect } from "effect"
 import {
   diffBaseline,
   makeReport,
-  ratchetViolations,
   type Baseline,
   type BaselineDiff,
   type HarnessConfig,
@@ -22,7 +21,6 @@ import { runEngines } from "./engines.ts"
 export interface HarnessRun {
   readonly report: Report
   readonly diff: BaselineDiff
-  readonly violations: ReadonlyArray<string>
 }
 
 /** Run every configured engine and compare the result to what was accepted. */
@@ -42,5 +40,5 @@ export const harnessRun = (
       elapsedMs: Date.now() - started,
     })
     const diff = diffBaseline(baseline, report.diagnostics)
-    return { report, diff, violations: ratchetViolations(diff) }
+    return { report, diff }
   })

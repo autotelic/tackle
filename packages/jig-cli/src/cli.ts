@@ -1,12 +1,14 @@
 import { existsSync } from "node:fs"
 import { join } from "node:path"
-import { Console, Effect, FileSystem, Option, Path } from "effect"
-import { Command, Flag } from "effect/cli"
+import { Console, Effect, FileSystem, Option, Path, Runtime } from "effect"
+import { CliError, Command, Flag } from "effect/cli"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
-import { accept } from "@autotelic/protocol"
+import { accept, REPORT_FORMATS } from "@autotelic/protocol"
 import { emptyBaseline, readBaseline, writeBaseline } from "./baseline.ts"
 import { defaultConfig, loadConfig } from "./config.ts"
 import { resolveEngineCommand } from "./engines.ts"
+import { EXIT, gateVerdict } from "./gate.ts"
+import { touchedFiles } from "./git.ts"
 import { renderCodeClimate, renderJsonl, renderLsp, renderSarif } from "./projections.ts"
 import { renderGithub, renderJson, renderText } from "./render.ts"
 import { harnessRun } from "./run.ts"
@@ -41,17 +43,11 @@ const checkCommand = Command.make(
   {
     cwd: cwdFlag,
     config: configFlag,
-    format: Flag.Literals("format", [
-      "text",
-      "json",
-      "jsonl",
-      "github",
-      "sarif",
-      "lsp",
-      "codeclimate",
-    ]).pipe(
-      Flag.withDescription("How to render the report: the human form, or a standard shape."),
-      Flag.withDefault("text"),
+    format: Flag.Literals("format", REPORT_FORMATS).pipe(
+      Flag.withDescription(
+        "How to render the report (default: the repo's `report.format`, else text).",
+      ),
+      Flag.optional,
     ),
     limit: Flag.Int("limit").pipe(
       Flag.withDescription("Maximum findings to print in the text report. 0 prints all."),
@@ -67,8 +63,19 @@ const checkCommand = Command.make(
       // baseline still counts as "given": everything is novel until it is accepted.
       const known = new Set(baseline.identities)
       const limit = options.limit
+      // The flag wins, then the repo's configured default, then the human form.
+      const format = Option.getOrUndefined(options.format) ?? settings.report?.format ?? "text"
+      // The gate reads the scope git reports; when git cannot say, it widens to everything
+      // rather than narrowing to nothing — an empty scope would pass every finding.
+      const touched = settings.gate.mode === "touched-files" ? yield* touchedFiles(root) : undefined
+      const verdict = gateVerdict(run, {
+        mode: touched === undefined ? "all" : "touched-files",
+        failOn: settings.gate.failOn ?? "any-new",
+        maxWarnings: settings.report?.maxWarnings ?? -1,
+        touched: touched ?? new Set<string>(),
+      })
 
-      switch (options.format) {
+      switch (format) {
         case "json":
           yield* write(renderJson(run.report))
           break
@@ -88,18 +95,13 @@ const checkCommand = Command.make(
           yield* write(renderCodeClimate(run.report))
           break
         default:
-          yield* write(renderText(run, { limit }))
+          yield* write(renderText(run, { limit, gate: verdict }))
           break
       }
 
-      const maxWarnings = settings.report?.maxWarnings ?? -1
-      const failed =
-        run.report.counts.error > 0 ||
-        run.violations.length > 0 ||
-        (maxWarnings >= 0 && run.report.counts.warn > maxWarnings)
-      if (failed) {
+      if (verdict.exitCode !== EXIT.clean) {
         yield* Effect.sync(() => {
-          process.exitCode = 1
+          process.exitCode = verdict.exitCode
         })
       }
     }),
@@ -200,6 +202,17 @@ const cli = Command.make("jig").pipe(
   Command.withSubcommands([checkCommand, baselineCommand, enginesCommand, initCommand]),
 )
 
-const program = Command.run(cli, { version: "0.0.0" }).pipe(Effect.provide(NodeServices.layer))
+// The run's own codes (0/1/3) are set on `process.exitCode` inside the handlers, and survive
+// the clean teardown the runner uses for them. A parse error instead FAILS the effect with a
+// `CliError`, which the runner would exit 1 for; catching it here maps it to the contract's 2,
+// while `--help` — a request, not a mistake — stays 0.
+const program = Command.run(cli, { version: "0.0.0" }).pipe(
+  Effect.catchIf(CliError.isCliError, (error) =>
+    Effect.sync(() => {
+      process.exitCode = Runtime.getErrorExitCode(error) === 0 ? EXIT.clean : EXIT.usage
+    }),
+  ),
+  Effect.provide(NodeServices.layer),
+)
 
 NodeRuntime.runMain(program, { disableErrorReporting: true })

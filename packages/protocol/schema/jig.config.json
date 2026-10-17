@@ -38,7 +38,9 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "format": { "enum": ["text", "json", "jsonl", "github"] },
+        "format": {
+          "enum": ["text", "json", "jsonl", "github", "sarif", "lsp", "codeclimate"]
+        },
         "maxWarnings": { "type": "number" }
       }
     },
