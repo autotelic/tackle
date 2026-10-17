@@ -990,3 +990,123 @@ that separately** — after `pnpm check`, `git status --short packages/plumb` is
 **Could not determine.** Which joggle binary the _census-time_ root run spawned: the mechanism
 fits the `mess` shim, but the 16:45 `PATH` is not recoverable from the repo and the root
 `node_modules/.bin/joggle` mtime postdates the census. The claim is well-grounded, not proven.
+
+---
+
+# Round 2 — the machinery, and a correction of direction
+
+**Opened:** 2026-10-16, the same day.
+
+**The human's challenge, recorded as this round's premise:** _"Did we build the
+pi-durable/opencode machinery to fan out and build this? It seems like we've jumped ahead to
+dealing with all the plumb and joggle errors/info/warnings."_
+
+**The honest answer at Round 1's close was: no, and yes.** No `tools/foreman` harness existed —
+only `journal.md`, `budget.json`, and ad-hoc `subagent` calls. And Round 2 had already begun
+grinding the 461 plumb findings before the machinery to fan that out existed. Round 2 corrects
+the order: build the machine, then let it run the ratchet.
+
+## 1. Census of the machinery
+
+The §4 instruments I skipped in Round 1 — `hands`, `fork`, `move`, `API`, `stream` — plus the
+`pi-durable` question.
+
+### 1.1 `pi-durable` is not in this environment
+
+`Harness.open`, `NodeExecutionEnv`, `openNodeSqliteStorage`, and `harness.usage` appear **only
+in `FOREMAN.md`**. No package provides them: not in `node_modules`, not in any sibling repo, not
+on npm (`pi-durable`, `@autotelic/pi-durable` both absent). `../oc-kit` is an unrelated OpenCode
+toolkit. So FOREMAN's "Durable and ambitious" rung is **blocked as written** — and the immediate
+rung ("a plain session, the journal as checkpoint") is what FOREMAN itself says "is enough to
+begin today". That is the rung Round 1 ran.
+
+### 1.2 The OpenCode V2 fan-out surface is fully present
+
+```
+$ opencode2 run --help
+  --session, -s string     Session ID to continue, or to create if it does not exist
+  --fork                   Fork the session before continuing
+  --model, -m string       provider/model#variant
+  --agent string
+  --format choice          default | json
+  --auto, --title, --file
+
+$ opencode2 session --help     → list | delete | export | import
+$ opencode2 serve --help       → the v2 API + web server
+$ opencode2 api --help         → any OpenAPI operation
+@opencode/client 2.0.31        → exports ./effect (typed Effect streams), ./promise, ./solid
+@opencode/plugin 2.0.31        → the plugin API jig's ./opencode surface already uses
+node:sqlite                    → available in Node 24 (a durable store needs no dependency)
+```
+
+### 1.3 The `hands` instrument, run
+
+```
+$ opencode2 run --title "foreman hands probe" --format json --auto --model opencode-go/deepseek-v4.1-flash "Reply with exactly the single word: ok"
+{"type":"step_start","timestamp":…,"sessionID":"ses_eb84053cfffeudAOz13Pi3WkAJ", …}
+{"type":"text","timestamp":…,"sessionID":"ses_eb84053cfffeudAOz13Pi3WkAJ","part":{"type":"text","text":"ok", …}}
+```
+
+So a new session is created when no id is passed, and the stream carries the `sessionID` a
+parent can continue or `--fork` later. That is the whole fan-out primitive.
+
+## 2. What was built
+
+`tools/foreman/` — the durable fan-out harness, dependency-free (Node built-ins only; no build
+step; `node src/main.ts` runs it). Not a fifth tool: outside `packages/`, joined to the
+workspace only so `pnpm check` reaches it.
+
+| File              | The thing it holds                                                                                                                                              |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/store.ts`    | the durable memory — documents + the task chain, in `node:sqlite`. A `requestId` is a task's identity; a task left `running` is _reported_, never auto-repeated |
+| `src/budget.ts`   | the governor — reads `opencode2 stats`, and every dispatch asks it before spending. A ceiling stops work from _starting_ (§9)                                   |
+| `src/dispatch.ts` | the `hands` instrument — one `opencode2 run --format json` child, its `sessionID` and answer captured                                                           |
+| `src/round.ts`    | the chain — seed a plan, dispatch the pending tasks a wave at a time under the budget                                                                           |
+| `src/main.ts`     | the front door — `status` / `seed` / `run [--dry-run]` / `dispatch`                                                                                             |
+
+Witnessed working, raw:
+
+```
+$ pnpm foreman status
+tasks: 0 (none)
+budget: window round-1, ceiling 4000000 tok / $3
+  round spend: 377454 tok / $0.1335
+  dispatch: ALLOWED
+
+$ pnpm foreman seed --file tools/foreman/rounds/round-1.plan.example.json
+seeded 3 new task(s) for round 1
+$ pnpm foreman run --dry-run
+would dispatch foreman/r1-census (census/self)
+would dispatch foreman/r1-w1-engine-location (dispatch/cartographer/combine)
+would dispatch foreman/r1-w4-witness (witness/witness)
+
+$ pnpm foreman dispatch --request-id foreman/probe --phase learn --role probe --prompt "Reply with exactly the single word: ready"
+session ses_eb83e2410ffePqCBKwyYfuGIFn · 3 event(s) · exit 0
+ready
+```
+
+`pnpm typecheck` and `pnpm test` cover it (4 tests: store round-trip, interruption reporting,
+and the budget governor's ceiling/concurrency/pause/unreadable-meter cases).
+
+## 3. The one Phase B move that did land, labelled
+
+Before the challenge, Round 2 had already made one ratchet move: a `combine` carrying the
+seam's **boundary/decode decisions** into the root `oxlint.config.ts` — the same carve-out
+`packages/joggle/oxlint.config.ts` and `plumb`'s own config already state, applied to the code
+it also describes. It took the root ledger from **461 findings / 149 identities to 198 / 91**,
+witnessed (`jig baseline` then `jig check` exit 0). It is kept, because it is witnessed and
+reversible, but it is not repeated by hand: **from Round 3 the ratchet runs through the
+harness** — one rule, one workstream, one worktree, one conversation.
+
+## 4. Direction for Round 3
+
+1. Route the round chain through `tools/foreman`: seed the plan, dispatch the benches as child
+   sessions, let the budget governor yield. The bench conversations are `opencode2 run --fork`
+   children; the witness is a different child on the merged worktree.
+2. Build the changed-files gate (F7) — still the missing primitive the whole ratchet needs,
+   still an `expand` to approve, now with a home to build it in.
+3. Hold `tools/foreman` itself to the rulebook it enforces (currently scoped out of `tools/**`).
+4. Then Phase B proper: the remaining 91 identities, rule by rule, contract first.
+
+**The `pi-durable` gap is a question for the human:** if that library exists elsewhere, the
+OpenCode-V2 harness here should be replaced by it, not grown beside it.

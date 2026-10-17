@@ -5,6 +5,20 @@ dist/
 .DS_Store
 coverage/
 
+# Local secrets — never commit these. joggle reads TYPESAFE_API_KEY through
+# Effect Config, so the value may arrive from the shell, Doppler, or a
+# gitignored .env.local; none of them may be committed. See .env.example.
+.env
+.env.*
+!.env.example
+*.pem
+.secrets*
+
 # joggle local caches (committed answers live in .joggle/answers, which IS tracked)
 .joggle/run-cache/
 .joggle/parsecache/
+
+# The foreman's SQLite store is a cache of the same chain the journal records by hand.
+# The journal is the committed checkpoint; the .sqlite is disposable.
+tools/foreman/*.sqlite
+tools/foreman/*.sqlite-journal

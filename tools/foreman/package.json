@@ -1,0 +1,21 @@
+{
+  "name": "@autotelic/foreman",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The foreman's durable fan-out harness: a resumable round chain that opens child OpenCode sessions, on one budget and one journal. Outside packages/ on purpose — it is not a fifth tool, it drives the four.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsgo --noEmit",
+    "test": "node --test src/*.test.ts",
+    "foreman": "node src/main.ts"
+  },
+  "devDependencies": {
+    "@effect/tsgo": "catalog:",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:"
+  },
+  "engines": {
+    "node": ">=24.18.0"
+  }
+}

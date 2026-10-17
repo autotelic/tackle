@@ -1,0 +1,7 @@
+$ pnpm lexicon:compat
+
+$ pnpm --filter @autotelic/protocol lexicon:compat
+$ node scripts/lexicon-compat.mjs
+lexicon-compat: 8 frozen record(s) valid against the current schemas
+
+exit=0

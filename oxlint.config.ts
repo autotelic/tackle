@@ -31,8 +31,77 @@ import { plumbEffectRecommendedRules, plumbRecommendedRules } from "@autotelic/p
 const atWarn = (rules: Readonly<Record<string, unknown>>): Record<string, "warn"> =>
   Object.fromEntries(Object.keys(rules).map((rule) => [rule, "warn"]))
 
+/*
+ * The boundary carve-out — `combine`, not a suppression.
+ *
+ * `protocol`, `cutlist`, and `jig-cli` are seam code: they decode raw JSON and raw AST into
+ * typed values. The rules below all say "do not widen, do not assert, return Option, parse
+ * at the edge" — and at a decode boundary that is exactly the job. `packages/joggle` made
+ * this same decision for its own crossers, with the reasoning written beside it: "the decode
+ * bridge: raw AST nodes and raw plugin modules in, typed values out ... they own the crossing
+ * between raw AST/config payloads and typed rule logic". `plumb`'s own config carves out its
+ * bridge module with the same sentence. This is that decision, applied to the code it also
+ * describes, rather than re-argued per file.
+ *
+ * The files are listed rather than globbed so the carve-out cannot grow silently: adding a
+ * boundary module is a visible line in this list. §5's rule holds — a growing exception list
+ * is a finding about the vocabulary, not the code — so the list's length is itself the
+ * metric to watch.
+ */
+const BOUNDARY_FILES = [
+  "packages/protocol/src/decode.ts",
+  "packages/protocol/src/config.ts",
+  "packages/protocol/src/compat.ts",
+  "packages/protocol/src/catalog.ts",
+  "packages/protocol/src/lexicon.ts",
+  "packages/protocol/src/fixture-support.ts",
+  "packages/protocol/src/report.ts",
+  "packages/cutlist/src/crawl.ts",
+  "packages/jig-cli/src/engines.ts",
+  "packages/jig-cli/src/opencode.ts",
+  "packages/jig-cli/extensions/jig.ts",
+]
+
+const BOUNDARY_RULES = {
+  "plumb/no-unknown-parameters": "off",
+  "plumb/no-runtime-typeof": "off",
+  "plumb/no-reinterpret-cast": "off",
+  "plumb/no-unsafe-dictionary-type": "off",
+  "plumb/require-safety-comment-for-type-assertion": "off",
+  "plumb-effect/guarded-op-must-return-option": "off",
+} as const
+
+/*
+ * `no-conditional-empty-object-spread` — the same disagreement `joggle` recorded.
+ *
+ * Under `exactOptionalPropertyTypes` an ABSENT key and a key present-and-`undefined` are
+ * different shapes, and `...(x === undefined ? {} : { x })` is how the absent one is built.
+ * The rule's alternatives set the key to `undefined`, which is the other shape. The sites are
+ * config merges, report builders, and projection helpers; the answer is the same at every one.
+ */
+const CONDITIONAL_SPREAD_FILES = [
+  "packages/protocol/src/config.ts",
+  "packages/protocol/src/report.ts",
+  "packages/protocol/src/catalog.ts",
+  "packages/protocol/src/doc.ts",
+  "packages/protocol/src/projections.test.ts",
+  "packages/jig-cli/src/engines.ts",
+  "packages/jig-cli/src/opencode.ts",
+  "packages/jig-cli/extensions/jig.ts",
+]
+
 export default {
-  ignorePatterns: ["node_modules", "examples/**", "packages/plumb/**", "packages/joggle/**"],
+  ignorePatterns: [
+    "node_modules",
+    "examples/**",
+    "packages/plumb/**",
+    "packages/joggle/**",
+    // The foreman is the ratchet's engine, not a specimen: a dependency-free Node program
+    // (node:sqlite + node:child_process) that is deliberately not an Effect app, so most of
+    // the rulebook's reasons do not apply to it. It is held to the rules in a later round;
+    // scoping it here keeps the seam packages' carve-out from growing to cover tooling.
+    "tools/**",
+  ],
   jsPlugins: [
     { name: "plumb", specifier: "@autotelic/plumb" },
     { name: "plumb-effect", specifier: "@autotelic/plumb/effect" },
@@ -42,4 +111,11 @@ export default {
     ...atWarn(plumbEffectRecommendedRules),
     "plumb-effect/require-schema-type-derivation": "off",
   },
+  overrides: [
+    { files: BOUNDARY_FILES, rules: BOUNDARY_RULES },
+    {
+      files: CONDITIONAL_SPREAD_FILES,
+      rules: { "plumb/no-conditional-empty-object-spread": "off" },
+    },
+  ],
 }

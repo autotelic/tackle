@@ -1,0 +1,24 @@
+{
+  "round": 1,
+  "tasks": [
+    {
+      "requestId": "foreman/r1-census",
+      "phase": "census",
+      "role": "self",
+      "prompt": "Read every instrument; commit the raw output. In-process (role self)."
+    },
+    {
+      "requestId": "foreman/r1-w1-engine-location",
+      "phase": "dispatch",
+      "role": "cartographer/combine",
+      "prompt": "Add EngineRef.args and resolve engines from the project's node_modules/.bin before PATH.",
+      "agent": "general"
+    },
+    {
+      "requestId": "foreman/r1-w4-witness",
+      "phase": "witness",
+      "role": "witness",
+      "prompt": "Run the outside judge on the merged trunk and report raw output. Never the bench's own conversation."
+    }
+  ]
+}

@@ -18,7 +18,9 @@
         "--ignore-pattern",
         "packages/plumb/**",
         "--ignore-pattern",
-        "packages/joggle/**"
+        "packages/joggle/**",
+        "--ignore-pattern",
+        "tools/**"
       ]
     },
     { "id": "joggle", "kind": "process", "command": "joggle", "config": "joggle.config.json" }

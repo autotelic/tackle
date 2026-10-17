@@ -9,7 +9,7 @@
     "build": "pnpm -r run build",
     "typecheck": "pnpm -r run typecheck",
     "test": "pnpm -r run test",
-    "lint": "oxlint --ignore-pattern 'examples/**' --ignore-pattern 'packages/plumb/**' --ignore-pattern 'packages/joggle/**' .",
+    "lint": "oxlint --ignore-pattern 'examples/**' --ignore-pattern 'packages/plumb/**' --ignore-pattern 'packages/joggle/**' --ignore-pattern 'tools/**' .",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
     "lexicon:compat": "pnpm --filter @autotelic/protocol lexicon:compat",
@@ -17,6 +17,7 @@
     "prepare": "effect-tsgo patch --no-typescript --oxlint",
     "cutlist": "node --conditions=development packages/cutlist/src/cli.ts",
     "jig": "node --conditions=development packages/jig-cli/src/cli.ts",
+    "foreman": "node tools/foreman/src/main.ts",
     "changeset": "changeset",
     "version": "changeset version",
     "release": "pnpm build && changeset publish"

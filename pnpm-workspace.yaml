@@ -10,6 +10,9 @@
 packages:
   - "packages/*"
   - "examples/*"
+  # The foreman's own harness. Deliberately outside `packages/`: it is not a fifth
+  # tool, it drives the four. It joins the workspace only so `pnpm check` reaches it.
+  - "tools/*"
 
 # Pin shared runtime versions ONCE. Effect is a shared runtime, so pin exactly —
 # never a caret — and bump deliberately across every package at the same time.

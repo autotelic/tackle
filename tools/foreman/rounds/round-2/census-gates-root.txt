@@ -1,0 +1,97 @@
+$ pnpm check
+
+$ pnpm format:check && pnpm typecheck && pnpm test && pnpm lexicon:compat && pnpm build
+$ oxfmt --check .
+Checking formatting...
+
+All matched files use the correct format.
+Finished in 10ms on 157 files using 10 threads.
+$ pnpm -r run typecheck
+Scope: 6 of 7 workspace projects
+packages/plumb typecheck$ tsc --noEmit
+packages/protocol typecheck$ tsgo --noEmit
+packages/protocol typecheck: Done
+packages/cutlist typecheck$ tsgo --noEmit
+packages/jig-cli typecheck$ tsgo --noEmit
+packages/cutlist typecheck: Done
+packages/jig-cli typecheck: Done
+packages/plumb typecheck: Done
+packages/joggle typecheck$ tsgo --noEmit
+packages/joggle typecheck: Done
+$ pnpm -r run test
+Scope: 6 of 7 workspace projects
+packages/plumb test$ vitest run --passWithNoTests
+packages/protocol test$ vitest run --passWithNoTests
+packages/plumb test: 
+packages/plumb test:  RUN  v4.1.12 /Users/togmund/autotelic/tackle/packages/plumb
+packages/plumb test: 
+packages/protocol test: 
+packages/protocol test:  RUN  v5.0.1 /Users/togmund/autotelic/tackle/packages/protocol
+packages/protocol test: 
+packages/protocol test: 
+packages/protocol test:  Test Files  7 passed (7)
+packages/protocol test:       Tests  89 passed (89)
+packages/protocol test:    Start at  19:39:02
+packages/protocol test:    Duration  621ms (tests 36%, import 31%, transform 31%, worker 2%)
+packages/protocol test: 
+packages/protocol test: Done
+packages/cutlist test$ vitest run --passWithNoTests
+packages/jig-cli test$ vitest run --passWithNoTests
+packages/jig-cli test: 
+packages/cutlist test: 
+packages/jig-cli test:  RUN  v5.0.1 /Users/togmund/autotelic/tackle/packages/jig-cli
+packages/jig-cli test: 
+packages/cutlist test:  RUN  v5.0.1 /Users/togmund/autotelic/tackle/packages/cutlist
+packages/cutlist test: 
+packages/jig-cli test: 
+packages/jig-cli test:  Test Files  2 passed (2)
+packages/jig-cli test:       Tests  38 passed (38)
+packages/jig-cli test:    Start at  19:39:03
+packages/jig-cli test:    Duration  233ms (import 70%, transform 26%, tests 3%, worker 1%)
+packages/jig-cli test: 
+packages/cutlist test: 
+packages/cutlist test:  Test Files  1 passed (1)
+packages/cutlist test:       Tests  11 passed (11)
+packages/cutlist test:    Start at  19:39:03
+packages/cutlist test:    Duration  249ms (import 64%, transform 33%, tests 1%, worker 1%)
+packages/cutlist test: 
+packages/jig-cli test: Done
+packages/plumb test: 
+packages/plumb test:  Test Files  12 passed (12)
+packages/plumb test:       Tests  85 passed (85)
+packages/plumb test:    Start at  19:39:02
+packages/plumb test:    Duration  1.08s (transform 611ms, setup 0ms, import 2.88s, tests 430ms, environment 20ms)
+packages/plumb test: 
+packages/plumb test: Done
+packages/joggle test$ vitest run
+packages/cutlist test: Done
+packages/joggle test: 
+packages/joggle test:  RUN  v5.0.1 /Users/togmund/autotelic/tackle/packages/joggle
+packages/joggle test: 
+packages/joggle test: 
+packages/joggle test:  Test Files  68 passed (68)
+packages/joggle test:       Tests  282 passed (282)
+packages/joggle test:    Start at  19:39:03
+packages/joggle test:    Duration  6.28s (import 78%, tests 16%, transform 6%)
+packages/joggle test: 
+packages/joggle test:     Isolate  68 workers spawned · ~97ms startup each (spawn + environment, per file)
+packages/joggle test:              at least ~636ms faster with isolate: false — reuses workers across files instead of one per file
+packages/joggle test: 
+packages/joggle test: Done
+$ pnpm --filter @autotelic/protocol lexicon:compat
+$ node scripts/lexicon-compat.mjs
+lexicon-compat: 8 frozen record(s) valid against the current schemas
+$ pnpm -r run build
+Scope: 6 of 7 workspace projects
+packages/protocol build$ tsgo -p tsconfig.build.json
+packages/plumb build$ tsc -p tsconfig.build.json
+packages/protocol build: Done
+packages/cutlist build$ tsgo -p tsconfig.build.json
+packages/jig-cli build$ tsgo -p tsconfig.build.json
+packages/cutlist build: Done
+packages/jig-cli build: Done
+packages/plumb build: Done
+packages/joggle build$ tsgo -p tsconfig.build.json
+packages/joggle build: Done
+
+exit=0

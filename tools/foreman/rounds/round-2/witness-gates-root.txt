@@ -1,0 +1,113 @@
+$ pnpm check
+
+$ pnpm format:check && pnpm typecheck && pnpm test && pnpm lexicon:compat && pnpm build
+$ oxfmt --check .
+Checking formatting...
+
+All matched files use the correct format.
+Finished in 7ms on 166 files using 10 threads.
+$ pnpm -r run typecheck
+Scope: 7 of 8 workspace projects
+packages/protocol typecheck$ tsgo --noEmit
+packages/plumb typecheck$ tsc --noEmit
+tools/foreman typecheck$ tsgo --noEmit
+tools/foreman typecheck: Done
+packages/protocol typecheck: Done
+packages/cutlist typecheck$ tsgo --noEmit
+packages/jig-cli typecheck$ tsgo --noEmit
+packages/cutlist typecheck: Done
+packages/jig-cli typecheck: Done
+packages/plumb typecheck: Done
+packages/joggle typecheck$ tsgo --noEmit
+packages/joggle typecheck: Done
+$ pnpm -r run test
+Scope: 7 of 8 workspace projects
+tools/foreman test$ node --test src/*.test.ts
+packages/plumb test$ vitest run --passWithNoTests
+packages/protocol test$ vitest run --passWithNoTests
+tools/foreman test: ✔ documents round-trip as JSON, and malformed is a miss (1.081125ms)
+tools/foreman test: ✔ a task keeps its identity, and only a running task is interrupted (0.25125ms)
+tools/foreman test: ✔ the budget governor stops on the ceiling, not on a feeling (0.112125ms)
+tools/foreman test: ✔ concurrency, a pause, and an unreadable meter all yield (1.093334ms)
+tools/foreman test: ℹ tests 4
+tools/foreman test: ℹ suites 0
+tools/foreman test: ℹ pass 4
+tools/foreman test: ℹ fail 0
+tools/foreman test: ℹ cancelled 0
+tools/foreman test: ℹ skipped 0
+tools/foreman test: ℹ todo 0
+tools/foreman test: ℹ duration_ms 74.77125
+tools/foreman test: Done
+packages/protocol test: 
+packages/protocol test:  RUN  v5.0.1 /Users/togmund/autotelic/tackle/packages/protocol
+packages/protocol test: 
+packages/plumb test: 
+packages/plumb test:  RUN  v4.1.12 /Users/togmund/autotelic/tackle/packages/plumb
+packages/plumb test: 
+packages/protocol test: 
+packages/protocol test:  Test Files  7 passed (7)
+packages/protocol test:       Tests  89 passed (89)
+packages/protocol test:    Start at  19:47:51
+packages/protocol test:    Duration  592ms (tests 39%, transform 37%, import 22%, worker 1%)
+packages/protocol test: 
+packages/protocol test: Done
+packages/jig-cli test$ vitest run --passWithNoTests
+packages/cutlist test$ vitest run --passWithNoTests
+packages/jig-cli test: 
+packages/cutlist test: 
+packages/jig-cli test:  RUN  v5.0.1 /Users/togmund/autotelic/tackle/packages/jig-cli
+packages/cutlist test:  RUN  v5.0.1 /Users/togmund/autotelic/tackle/packages/cutlist
+packages/cutlist test: 
+packages/jig-cli test: 
+packages/plumb test: 
+packages/plumb test:  Test Files  12 passed (12)
+packages/plumb test:       Tests  85 passed (85)
+packages/plumb test:    Start at  19:47:51
+packages/plumb test:    Duration  957ms (transform 670ms, setup 0ms, import 2.79s, tests 381ms, environment 2ms)
+packages/plumb test: 
+packages/plumb test: Done
+packages/joggle test$ vitest run
+packages/jig-cli test: 
+packages/jig-cli test:  Test Files  2 passed (2)
+packages/jig-cli test:       Tests  38 passed (38)
+packages/jig-cli test:    Start at  19:47:52
+packages/jig-cli test:    Duration  235ms (import 74%, transform 23%, tests 2%, worker 1%)
+packages/jig-cli test: 
+packages/cutlist test: 
+packages/cutlist test:  Test Files  1 passed (1)
+packages/cutlist test:       Tests  11 passed (11)
+packages/cutlist test:    Start at  19:47:52
+packages/cutlist test:    Duration  275ms (import 70%, transform 28%, tests 1%, worker 1%)
+packages/cutlist test: 
+packages/jig-cli test: Done
+packages/cutlist test: Done
+packages/joggle test: 
+packages/joggle test:  RUN  v5.0.1 /Users/togmund/autotelic/tackle/packages/joggle
+packages/joggle test: 
+packages/joggle test: 
+packages/joggle test:  Test Files  68 passed (68)
+packages/joggle test:       Tests  282 passed (282)
+packages/joggle test:    Start at  19:47:52
+packages/joggle test:    Duration  5.75s (import 77%, tests 16%, transform 6%, worker 1%)
+packages/joggle test: 
+packages/joggle test:     Isolate  68 workers spawned · ~90ms startup each (spawn + environment, per file)
+packages/joggle test:              at least ~591ms faster with isolate: false — reuses workers across files instead of one per file
+packages/joggle test: 
+packages/joggle test: Done
+$ pnpm --filter @autotelic/protocol lexicon:compat
+$ node scripts/lexicon-compat.mjs
+lexicon-compat: 8 frozen record(s) valid against the current schemas
+$ pnpm -r run build
+Scope: 7 of 8 workspace projects
+packages/protocol build$ tsgo -p tsconfig.build.json
+packages/plumb build$ tsc -p tsconfig.build.json
+packages/protocol build: Done
+packages/cutlist build$ tsgo -p tsconfig.build.json
+packages/jig-cli build$ tsgo -p tsconfig.build.json
+packages/cutlist build: Done
+packages/jig-cli build: Done
+packages/plumb build: Done
+packages/joggle build$ tsgo -p tsconfig.build.json
+packages/joggle build: Done
+
+exit=0

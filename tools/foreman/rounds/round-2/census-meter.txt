@@ -1,0 +1,151 @@
+$ opencode2 stats --json --full --project .
+
+{
+  "range": {
+    "from": 1767254400000,
+    "to": 1792204752729
+  },
+  "sessions": 4,
+  "subagents": 4,
+  "prompts": 13,
+  "steps": 424,
+  "tokens": {
+    "input": 1497801,
+    "output": 176688,
+    "reasoning": 252619,
+    "cache": {
+      "read": 47790515,
+      "write": 0
+    }
+  },
+  "cost": 0.6256258950000004,
+  "tools": {
+    "mode": "detail",
+    "totals": {
+      "calls": 715,
+      "succeeded": 708,
+      "failed": 6,
+      "unfinished": 1
+    },
+    "usage": [
+      {
+        "name": "read",
+        "calls": 287,
+        "succeeded": 287,
+        "failed": 0,
+        "unfinished": 0,
+        "durationP50": 15
+      },
+      {
+        "name": "shell",
+        "calls": 223,
+        "succeeded": 222,
+        "failed": 0,
+        "unfinished": 1,
+        "durationP50": 119.5
+      },
+      {
+        "name": "edit",
+        "calls": 81,
+        "succeeded": 78,
+        "failed": 3,
+        "unfinished": 0,
+        "durationP50": 9
+      },
+      {
+        "name": "write",
+        "calls": 62,
+        "succeeded": 62,
+        "failed": 0,
+        "unfinished": 0,
+        "durationP50": 7
+      },
+      {
+        "name": "glob",
+        "calls": 24,
+        "succeeded": 24,
+        "failed": 0,
+        "unfinished": 0,
+        "durationP50": 28.5
+      },
+      {
+        "name": "grep",
+        "calls": 16,
+        "succeeded": 16,
+        "failed": 0,
+        "unfinished": 0,
+        "durationP50": 31
+      },
+      {
+        "name": "webfetch",
+        "calls": 11,
+        "succeeded": 9,
+        "failed": 2,
+        "unfinished": 0,
+        "durationP50": 833
+      },
+      {
+        "name": "subagent",
+        "calls": 4,
+        "succeeded": 4,
+        "failed": 0,
+        "unfinished": 0,
+        "durationP50": 25780.5
+      },
+      {
+        "name": "question",
+        "calls": 4,
+        "succeeded": 3,
+        "failed": 1,
+        "unfinished": 0,
+        "durationP50": 30187.5
+      },
+      {
+        "name": "execute",
+        "calls": 2,
+        "succeeded": 2,
+        "failed": 0,
+        "unfinished": 0,
+        "durationP50": 117
+      },
+      {
+        "name": "skill",
+        "calls": 1,
+        "succeeded": 1,
+        "failed": 0,
+        "unfinished": 0,
+        "durationP50": 9
+      }
+    ]
+  },
+  "activeDays": 1,
+  "streak": 1,
+  "activity": [
+    {
+      "date": "2026-10-16",
+      "steps": 424
+    }
+  ],
+  "models": [
+    {
+      "model": {
+        "id": "deepseek-v4.1-flash",
+        "providerID": "opencode-go",
+        "variant": "default"
+      },
+      "steps": 424,
+      "tokens": {
+        "input": 1497801,
+        "output": 176688,
+        "reasoning": 252619,
+        "cache": {
+          "read": 47790515,
+          "write": 0
+        }
+      },
+      "cost": 0.6256258950000004
+    }
+  ]
+}
+
+exit=0
