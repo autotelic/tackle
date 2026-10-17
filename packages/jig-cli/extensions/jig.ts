@@ -32,12 +32,18 @@ const onPath = (name: string): string | undefined => {
   return undefined
 }
 
+/** How to launch jig: a command and its leading args. */
+interface Launcher {
+  readonly command: string
+  readonly args: ReadonlyArray<string>
+}
+
 /**
  * How to invoke jig: a `jig` on PATH first (so pi and the shell get the same result),
  * then this checkout's build, then the source through the `development` condition.
  * `JIG_BIN` overrides all of it.
  */
-const cli = (): { readonly command: string; readonly args: ReadonlyArray<string> } => {
+const cli = (): Launcher => {
   const override = process.env.JIG_BIN
   if (override !== undefined && override !== "") return { command: override, args: [] }
   const global = onPath("jig")
@@ -200,7 +206,7 @@ export default function (pi: ExtensionAPI): void {
             code: result.code,
           })
         }
-        return ok(render(report, params.limit ?? 50), {
+        return ok(render(report, params.limit === undefined ? 50 : params.limit), {
           code: result.code,
           errors: report.counts.error,
           warnings: report.counts.warn,

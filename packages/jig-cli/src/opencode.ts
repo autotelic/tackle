@@ -25,6 +25,12 @@ const ownBin = (): string => join(dirname(fileURLToPath(import.meta.url)), "..",
 const onPath = (name: string): boolean =>
   (process.env.PATH ?? "").split(":").some((dir) => dir !== "" && existsSync(join(dir, name)))
 
+/** How to launch jig: a command and its leading args. */
+interface Launcher {
+  readonly command: string
+  readonly args: ReadonlyArray<string>
+}
+
 /**
  * How to invoke jig.
  *
@@ -32,7 +38,7 @@ const onPath = (name: string): boolean =>
  * for a checkout under test; the package's own bin is the fallback, so an installed plugin
  * works with no `jig` on `PATH` at all.
  */
-const invoke = (): { readonly command: string; readonly args: ReadonlyArray<string> } => {
+const invoke = (): Launcher => {
   const override = process.env.JIG_BIN
   if (override !== undefined && override !== "") return { command: override, args: [] }
   if (onPath("jig")) return { command: "jig", args: [] }

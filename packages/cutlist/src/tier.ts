@@ -1,3 +1,4 @@
+import { Predicate } from "effect"
 import type { TierName } from "@autotelic/protocol"
 import { relativeToRoot, underAny } from "./paths.ts"
 
@@ -35,4 +36,4 @@ export const tierOf = (
 }
 
 /** A component nothing imports. Often a flattened copy of a shared one. */
-export const isOrphan = (owners: ReadonlyArray<string>): boolean => owners.length === 0
+export const isOrphan: Predicate.Predicate<ReadonlyArray<string>> = (owners) => owners.length === 0

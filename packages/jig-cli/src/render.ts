@@ -28,8 +28,10 @@ export const renderText = (run: HarnessRun): string => {
   return lines.join("\n")
 }
 
-const annotationLevel = (diagnostic: Diagnostic): string =>
-  diagnostic.severity === "error" ? "error" : diagnostic.severity === "warn" ? "warning" : "notice"
+/** GitHub counts three severities; the protocol's three map onto them by name. */
+const ANNOTATION_LEVEL = { error: "error", warn: "warning", info: "notice" } as const
+
+const annotationLevel = (diagnostic: Diagnostic): string => ANNOTATION_LEVEL[diagnostic.severity]
 
 /** GitHub Actions workflow commands, one per finding. */
 export const renderGithub = (report: Report): string =>

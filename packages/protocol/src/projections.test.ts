@@ -28,7 +28,7 @@ const severityNumeric = (severity: Severity): 1 | 2 | 3 =>
 const severityCodeClimate = (severity: Severity): "major" | "minor" | "info" =>
   severity === "error" ? "major" : severity === "warn" ? "minor" : "info"
 
-const toSarif = (report: Report, known?: ReadonlySet<string>): unknown => {
+const toSarif = (report: Report, known?: ReadonlySet<string>) => {
   const rules = new Map<string, unknown>()
   for (const diagnostic of report.diagnostics) {
     if (rules.has(nameOf(diagnostic))) continue
