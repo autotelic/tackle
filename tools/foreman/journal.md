@@ -1205,3 +1205,59 @@ a rule that never ran; `jig check` proves the rules ran and found nothing.
 **joggle, next.** Only four joggle rules are configured at the root; joggle ships more (the
 `presets/composition` set, the judged rules). Flipping those on is the next rung, and each new
 one starts at rung 1 with its findings accepted by identity.
+
+---
+
+# Round 4 — joggle's judged census, which had never actually run
+
+**Opened:** 2026-10-17.
+
+The rung after "plumb at zero" is joggle's judged rules. What the round found is that **they
+had never run at the root.** Without `TYPESAFE_API_KEY`, 14 of the 33 rules reported **zero**
+because their candidates were _not judged_ — and `jig` drops joggle's `skipped`/notes, so
+`pnpm jig check` printed `joggle: 0 finding(s)` over a rule set that had not looked. This is
+§13's lie in the wild: an engine that could not judge read as clean.
+
+**Two things were wrong, and neither was the model key.**
+
+1. **A poisoned wire cache.** `~/Library/Caches/joggle` (296M) held `MissingKey` responses from
+   earlier keyless runs. Clearing it let the key through — confirmed by a probe that read
+   `Config.option(Config.String("TYPESAFE_API_KEY"))` under joggle's exact runtime.
+2. **A stored run that outlived a config change.** `joggle check` reuses the stored run when
+   "nothing changed"; a `joggle.config.json` edit is not part of that check, so the `ignore`
+   I added did not apply until `--no-replay`.
+
+With both fixed: the judged census reports **98 findings → 0** after triage.
+
+## What the 98 were
+
+- **82 × `joggle/rule-judgment`, all in `packages/plumb`.** joggle auditing plumb's
+  deterministic single-file rules — metadata literals and rule internals that are not
+  this repository's question. Scoped out with a reason in `joggle.config.json`'s `ignore`.
+- **16 real readings** in the seam packages: a duplicated `decodeTiers`, two component shapes
+  that should compose, a re-declared `identityOf` in a test, jig-cli re-declaring protocol's
+  `str` and exec's `ExecOutcome`, and a local `Span` duplicating astro's `Region`. Each fixed
+  by `combine`/`contract`; three genuinely-cross-cutting ones (`DuplicateCandidate`/`ScoredPair`
+  across the dependency law, the shared decode idiom, an intentional policy widening) are
+  `ignore` entries with the reason written down.
+
+## Ratchet
+
+```
+joggle check (keyed):  98 -> 5 -> 1 -> 0 problems
+pnpm jig check:        0 findings
+pnpm check:            green
+```
+
+**Committed for free replay:** `.joggle/answers/` at the root now holds the 254 judged
+verdicts (§9). The next judged census replays them instead of spending, and CI needs no key.
+
+**Two findings this round surfaced, for the tool, not this repo:**
+
+- **`jig` drops joggle's `skipped` and `notes`.** A joggle run that judged 19 of 33 rules
+  renders as `0 finding(s)` with no indication that 14 were skipped. `jig` is careful about an
+  engine that _could not run_ (`unparsed-output`); it is not yet careful about an engine that
+  ran and _could not judge_. That is a `contract` in the joggle adapter, and the reason the
+  census lied for as long as it did.
+- **A config change does not invalidate joggle's stored run.** `--no-replay` is the only way
+  to apply it. Either the run cache should key on the config, or `check` should say it replayed.
