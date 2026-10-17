@@ -72,6 +72,10 @@ const BOUNDARY_FILES = [
   // The host's half of the same conformance: it reads the spec's fixture bytes and compares
   // its own projection to them. Same crossing, same reason.
   "packages/jig-cli/src/projections.test.ts",
+  // The other host's half, for the agent surfaces: it loads the pi extension by computed
+  // specifier (the package deliberately does not typecheck it) and fakes both hosts down to
+  // the three domains each touches. Asserting the runtime contract is the test's subject.
+  "packages/jig-cli/src/surfaces.test.ts",
 ]
 
 const BOUNDARY_RULES = {

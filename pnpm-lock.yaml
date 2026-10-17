@@ -223,7 +223,7 @@ importers:
         version: 4.10.2
       vitest:
         specifier: 'catalog:'
-        version: 5.0.1(@opentelemetry/api@1.9.0)(@types/node@24.13.5)(vite@8.3.4(@types/node@24.13.5))
+        version: 5.0.1(@opentelemetry/api@1.9.0)(@types/node@24.13.5)(vite@8.3.4(@types/node@24.13.5)(jiti@2.7.0)(yaml@2.9.0))
 
   packages/jig-cli:
     dependencies:
@@ -236,6 +236,9 @@ importers:
       effect:
         specifier: 'catalog:'
         version: 4.0.5
+      typebox:
+        specifier: 1.3.34
+        version: 1.3.34
     devDependencies:
       '@effect/tsgo':
         specifier: 'catalog:'
@@ -310,10 +313,10 @@ importers:
         version: 24.13.3
       '@typescript-eslint/parser':
         specifier: ^8.71.0
-        version: 8.71.2(eslint@10.12.0)(typescript@5.9.3)
+        version: 8.71.2(eslint@10.12.0(jiti@2.7.0))(typescript@5.9.3)
       eslint:
         specifier: ^10.11.0
-        version: 10.12.0
+        version: 10.12.0(jiti@2.7.0)
       fast-check:
         specifier: ^4.9.0
         version: 4.10.2
@@ -325,7 +328,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.1.11
-        version: 4.1.12(@opentelemetry/api@1.9.0)(@types/node@24.13.3)(vite@8.3.4(@types/node@24.13.3))
+        version: 4.1.12(@opentelemetry/api@1.9.0)(@types/node@24.13.3)(vite@8.3.4(@types/node@24.13.3)(jiti@2.7.0)(yaml@2.9.0))
 
   packages/protocol:
     devDependencies:
@@ -2563,6 +2566,10 @@ packages:
   jackspeak@3.4.3:
     resolution: {integrity: sha512-OGlZQpz2yfahA/Rd1Y8Cd9SIEsqvXkLVoSw/cgwhnhFMDbsQFeZYoJJ7bIZBS9BcamUW96asq/npPWugM+RQBw==}
 
+  jiti@2.7.0:
+    resolution: {integrity: sha512-AC/7JofJvZGrrneWNaEnJeOLUx+JlGt7tNa0wZiRPT4MY1wmfKjt2+6O2p2uz2+skll8OZZmJMNqeke7kKbNgQ==}
+    hasBin: true
+
   js-yaml@3.15.2:
     resolution: {integrity: sha512-6EuL879VkRA+1Cz578mKMiKvjPNEuk6+r1JaFzoSWejZmtf7xWbIyw1e3KkxlkzTIt9Taw6JBhEppG7utc1P+w==}
     hasBin: true
@@ -3473,6 +3480,11 @@ packages:
     resolution: {integrity: sha512-YgvUTfwqyc7UXVMrB+SImsVYSmTS8X/tSrtdNZMImM+n7+QTriRXyXim0mBrTXNeqzVF0KWGgHPeiyViFFrNDw==}
     engines: {node: '>=18'}
 
+  yaml@2.9.0:
+    resolution: {integrity: sha512-2AvhNX3mb8zd6Zy7INTtSpl1F15HW6Wnqj0srWlkKLcpYl/gMIMJiyuGq2KeI2YFxUPjdlB+3Lc10seMLtL4cA==}
+    engines: {node: '>= 14.6'}
+    hasBin: true
+
   yocto-queue@0.1.0:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
@@ -4001,9 +4013,9 @@ snapshots:
       effect: 4.0.0-rc.116
       vitest: 5.0.1(@opentelemetry/api@1.9.0)(@types/node@24.13.5)(vite@8.3.4(@types/node@24.13.5))
 
-  '@eslint-community/eslint-utils@4.10.1(eslint@10.12.0)':
+  '@eslint-community/eslint-utils@4.10.1(eslint@10.12.0(jiti@2.7.0))':
     dependencies:
-      eslint: 10.12.0
+      eslint: 10.12.0(jiti@2.7.0)
       eslint-visitor-keys: 3.4.3
 
   '@eslint-community/regexpp@4.12.2': {}
@@ -4932,14 +4944,14 @@ snapshots:
     dependencies:
       '@types/node': 24.13.5
 
-  '@typescript-eslint/parser@8.71.2(eslint@10.12.0)(typescript@5.9.3)':
+  '@typescript-eslint/parser@8.71.2(eslint@10.12.0(jiti@2.7.0))(typescript@5.9.3)':
     dependencies:
       '@typescript-eslint/scope-manager': 8.71.2
       '@typescript-eslint/types': 8.71.2
       '@typescript-eslint/typescript-estree': 8.71.2(typescript@5.9.3)
       '@typescript-eslint/visitor-keys': 8.71.2
       debug: 4.4.3
-      eslint: 10.12.0
+      eslint: 10.12.0(jiti@2.7.0)
       typescript: 5.9.3
     transitivePeerDependencies:
       - supports-color
@@ -5024,13 +5036,22 @@ snapshots:
       chai: 6.3.0
       tinyrainbow: 3.2.0
 
-  '@vitest/mocker@4.1.12(vite@8.3.4(@types/node@24.13.3))':
+  '@vitest/mocker@4.1.12(vite@8.3.4(@types/node@24.13.3)(jiti@2.7.0)(yaml@2.9.0))':
     dependencies:
       '@vitest/spy': 4.1.12
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 8.3.4(@types/node@24.13.3)
+      vite: 8.3.4(@types/node@24.13.3)(jiti@2.7.0)(yaml@2.9.0)
+
+  '@vitest/mocker@5.0.1(vite@8.3.4(@types/node@24.13.5)(jiti@2.7.0)(yaml@2.9.0))':
+    dependencies:
+      '@jridgewell/trace-mapping': 0.3.31
+      '@vitest/spy': 5.0.1
+      estree-walker: 3.0.3
+      magic-string: 1.4.3
+    optionalDependencies:
+      vite: 8.3.4(@types/node@24.13.5)(jiti@2.7.0)(yaml@2.9.0)
 
   '@vitest/mocker@5.0.1(vite@8.3.4(@types/node@24.13.5))':
     dependencies:
@@ -5269,9 +5290,9 @@ snapshots:
 
   eslint-visitor-keys@5.0.1: {}
 
-  eslint@10.12.0:
+  eslint@10.12.0(jiti@2.7.0):
     dependencies:
-      '@eslint-community/eslint-utils': 4.10.1(eslint@10.12.0)
+      '@eslint-community/eslint-utils': 4.10.1(eslint@10.12.0(jiti@2.7.0))
       '@eslint-community/regexpp': 4.12.2
       '@eslint/config-array': 0.23.5
       '@eslint/config-helpers': 0.7.0
@@ -5301,6 +5322,8 @@ snapshots:
       minimatch: 10.2.5
       natural-compare: 1.4.0
       optionator: 0.9.4
+    optionalDependencies:
+      jiti: 2.7.0
     transitivePeerDependencies:
       - supports-color
 
@@ -5588,6 +5611,9 @@ snapshots:
       '@isaacs/cliui': 8.0.2
     optionalDependencies:
       '@pkgjs/parseargs': 0.11.0
+
+  jiti@2.7.0:
+    optional: true
 
   js-yaml@3.15.2:
     dependencies:
@@ -6364,7 +6390,7 @@ snapshots:
 
   validate-npm-package-name@7.0.2: {}
 
-  vite@8.3.4(@types/node@24.13.3):
+  vite@8.3.4(@types/node@24.13.3)(jiti@2.7.0)(yaml@2.9.0):
     dependencies:
       lightningcss: 1.33.0
       picomatch: 4.0.7
@@ -6374,6 +6400,8 @@ snapshots:
     optionalDependencies:
       '@types/node': 24.13.3
       fsevents: 2.3.3
+      jiti: 2.7.0
+      yaml: 2.9.0
 
   vite@8.3.4(@types/node@24.13.5):
     dependencies:
@@ -6386,10 +6414,23 @@ snapshots:
       '@types/node': 24.13.5
       fsevents: 2.3.3
 
-  vitest@4.1.12(@opentelemetry/api@1.9.0)(@types/node@24.13.3)(vite@8.3.4(@types/node@24.13.3)):
+  vite@8.3.4(@types/node@24.13.5)(jiti@2.7.0)(yaml@2.9.0):
+    dependencies:
+      lightningcss: 1.33.0
+      picomatch: 4.0.7
+      postcss: 8.5.30
+      rolldown: 1.2.14
+      tinyglobby: 0.2.17
+    optionalDependencies:
+      '@types/node': 24.13.5
+      fsevents: 2.3.3
+      jiti: 2.7.0
+      yaml: 2.9.0
+
+  vitest@4.1.12(@opentelemetry/api@1.9.0)(@types/node@24.13.3)(vite@8.3.4(@types/node@24.13.3)(jiti@2.7.0)(yaml@2.9.0)):
     dependencies:
       '@vitest/expect': 4.1.12
-      '@vitest/mocker': 4.1.12(vite@8.3.4(@types/node@24.13.3))
+      '@vitest/mocker': 4.1.12(vite@8.3.4(@types/node@24.13.3)(jiti@2.7.0)(yaml@2.9.0))
       '@vitest/pretty-format': 4.1.12
       '@vitest/runner': 4.1.12
       '@vitest/snapshot': 4.1.12
@@ -6406,11 +6447,33 @@ snapshots:
       tinyexec: 1.3.0
       tinyglobby: 0.2.17
       tinyrainbow: 3.2.0
-      vite: 8.3.4(@types/node@24.13.3)
+      vite: 8.3.4(@types/node@24.13.3)(jiti@2.7.0)(yaml@2.9.0)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@opentelemetry/api': 1.9.0
       '@types/node': 24.13.3
+    transitivePeerDependencies:
+      - msw
+
+  vitest@5.0.1(@opentelemetry/api@1.9.0)(@types/node@24.13.5)(vite@8.3.4(@types/node@24.13.5)(jiti@2.7.0)(yaml@2.9.0)):
+    dependencies:
+      '@types/chai': 5.2.3
+      '@vitest/mocker': 5.0.1(vite@8.3.4(@types/node@24.13.5)(jiti@2.7.0)(yaml@2.9.0))
+      chai: 6.3.0
+      es-module-lexer: 2.3.2
+      expect-type: 1.4.0
+      magic-string: 1.4.3
+      obug: 2.2.1
+      picomatch: 4.0.7
+      std-env: 4.3.0
+      tinybench: 6.1.4
+      tinyexec: 1.3.0
+      tinyglobby: 0.2.17
+      vite: 8.3.4(@types/node@24.13.5)(jiti@2.7.0)(yaml@2.9.0)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@opentelemetry/api': 1.9.0
+      '@types/node': 24.13.5
     transitivePeerDependencies:
       - msw
 
@@ -6481,5 +6544,8 @@ snapshots:
   yallist@4.0.0: {}
 
   yallist@5.0.0: {}
+
+  yaml@2.9.0:
+    optional: true
 
   yocto-queue@0.1.0: {}

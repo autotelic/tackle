@@ -231,12 +231,18 @@ Consumers see **zero change**: same npm names, same `bin`, same `exports`, same 
      `jig check` at the root therefore exits non-zero today — honestly, and for both reasons
      above.
 
-   Also found by the dogfood and still open: **`packages/jig-cli/extensions/jig.ts` imports
+   Also found by the dogfood, now **resolved**: **`packages/jig-cli/extensions/jig.ts` imports
    `typebox` at runtime and `jig-cli` declares neither it nor the pi types**
-   (`joggle/dependency-fit`). `../mess` declares `typebox` as a devDependency, so mirroring it
-   is one catalog pin plus one install — but decide first whether the pi surface wants
-   `typebox` as a dependency, a devDependency, or an optional peer alongside `@opencode/plugin`,
-   because the extension ships in `files` and a published install would need it at runtime.
+   (`joggle/dependency-fit`). Decision: `typebox` is a **dependency** (`"typebox": "1.3.34"`,
+   mirroring `joggle`'s pin), because the extension ships in `files` and a published pi install
+   needs it at runtime — a devDependency resolves in this repo but not in the installed one. The
+   pi _types_ (`@earendil-works/pi-coding-agent`) stay undeclared on purpose: the import is
+   `import type`, erased at runtime, and the extension is deliberately outside the compiler's
+   program (`pi` strips types itself, `tsconfig.json` includes `src` only), so nothing needs the
+   types — while declaring them would pull a large transitive tree (and its ignored build
+   scripts) in for type-only use. `src/surfaces.test.ts` now drives both agent surfaces against
+   the real CLI and asserts byte-equality, so the runtime contract is checked even though the
+   extension is not typechecked.
 
    joggle's calibration rules (`compose-types` among them) also fire at `warn`/`info` against
    the workspace. Those are readings, not defects — accept them into the root

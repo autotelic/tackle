@@ -34,7 +34,8 @@
   "dependencies": {
     "@autotelic/protocol": "workspace:*",
     "@effect/platform-node": "catalog:",
-    "effect": "catalog:"
+    "effect": "catalog:",
+    "typebox": "1.3.34"
   },
   "devDependencies": {
     "@effect/tsgo": "catalog:",
