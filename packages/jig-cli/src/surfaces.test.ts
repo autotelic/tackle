@@ -182,16 +182,19 @@ afterAll(() => {
 })
 
 describe("the agent surfaces and the CLI", () => {
+  // Each test spawns the real CLI twice (once for the reference, once through a surface),
+  // and each CLI run drives the whole `plumb` engine. Under `pnpm check` seven packages do
+  // that at once, so the default five seconds is a coin toss rather than a signal.
   it("hands pi exactly the CLI's report bytes", async () => {
     const expected = cliBytes(checkArgs(repo.root, "text"))
     expect(expected).toContain("eslint/no-unused-vars")
     expect(await piCheckBytes(repo.root)).toBe(expected)
-  })
+  }, 60_000)
 
   it("hands OpenCode exactly the CLI's report bytes", async () => {
     const expected = cliBytes(checkArgs(repo.root, "text"))
     expect(await ocCheckBytes(repo.root, "text")).toBe(expected)
-  })
+  }, 60_000)
 
   it("is byte-identical for every format OpenCode offers (property)", async () => {
     await fc.assert(
