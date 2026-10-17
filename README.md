@@ -85,9 +85,21 @@ reconciliation that follows the move. All five packages now build and test here,
 pnpm install
 pnpm check        # format:check + typecheck + test + build, every package
 pnpm jig check    # every engine against this repo; holds the ratchet
+pnpm jig explain plumb/no-raw-html-layout  # one rule, everywhere it fires, with the fix
+pnpm jig promote                           # the ratchet's next rung (--write to drop it)
+pnpm jig learn                             # rewrite JIG.md from the rules this repo accepts
 pnpm cutlist --help
 pnpm jig --help
 ```
+
+`explain`, `promote`, and `learn` are the read-only answers around the one report. `explain
+<engine/ruleId>` expands a rule's findings in this repo — message, `help`, `docsUrl`, and any
+`repair` — so `help` is a fix rather than a restatement. `promote` shows the ratchet's next
+rung, the accepted identities a run no longer earns, and `--write` drops exactly those: it
+only ever shrinks the ledger, because accepting a finding stays a human decision (`jig
+baseline`). `learn` rewrites the agent cookbook (`agent.cookbook`, default `JIG.md`) from the
+rules the repo already accepts, and `jig init` also writes the onboarding prompt
+(`agent.onboarding`, default `ONBOARD.md`).
 
 `pnpm jig check` is the root dogfood gate: it runs `plumb`, `joggle`, and `cutlist` against
 this repository, one report, and fails on anything new. What it finds is frozen by identity

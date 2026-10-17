@@ -54,7 +54,7 @@ export const defaultConfig: HarnessConfig = {
   ],
   gate: { mode: "all", baseline: ".jig-baseline.json", failOn: "any-new" },
   report: { format: "text", maxWarnings: -1 },
-  agent: { cookbook: "JIG.md" },
+  agent: { cookbook: "JIG.md", onboarding: "ONBOARD.md" },
 }
 
 /** Read a repo's harness config, or the default when it has none or it does not decode. */

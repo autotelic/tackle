@@ -1,10 +1,11 @@
 import { existsSync } from "node:fs"
 import { join } from "node:path"
 import { Console, Effect, FileSystem, Option, Path, Runtime } from "effect"
-import { CliError, Command, Flag } from "effect/cli"
+import { Argument, CliError, Command, Flag } from "effect/cli"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { accept, REPORT_FORMATS } from "@autotelic/protocol"
 import { emptyBaseline, readBaseline, writeBaseline } from "./baseline.ts"
+import { explainRule, lesson, promotion, renderLesson, renderPromotion } from "./commands.ts"
 import { defaultConfig, loadConfig } from "./config.ts"
 import { resolveEngineCommand } from "./engines.ts"
 import { EXIT, gateVerdict } from "./gate.ts"
@@ -167,6 +168,32 @@ Grounded rules come from the vocabulary \`cutlist\` builds (the UI catalog and m
 prefer the components the menu already lists over new ones.
 `
 
+const ONBOARD = `# ONBOARD.md
+
+The agent door. \`jig init\` wrote this file; edit it to say what this repo is.
+
+## What this repo enforces
+
+One command answers it: \`jig check\` runs every configured engine, merges them into one
+report, and fails only on what is new. The vocabulary the rules are written in comes from
+this repo's own config, not from a tool's defaults.
+
+## In this order
+
+1. \`jig.config.json\` — which engines run, and how a run is gated.
+2. \`.jig-baseline.json\` — what this repo has already accepted.
+3. \`JIG.md\` — the cookbook for agents working here.
+
+## Then
+
+\`\`\`sh
+jig check
+\`\`\`
+
+An engine that could not run appears as a **note**, and a run that replayed a cache says so.
+Neither is "clean": they are the difference between "this repo is fine" and "nobody looked".
+`
+
 const initCommand = Command.make("init", { cwd: cwdFlag }, (options) =>
   Effect.gen(function* () {
     const path = yield* Path.Path
@@ -188,18 +215,114 @@ const initCommand = Command.make("init", { cwd: cwdFlag }, (options) =>
     if (!(yield* Effect.orElseSucceed(fs.exists(cookbook), () => false))) {
       yield* fs.writeFileString(cookbook, COOKBOOK)
     }
+    const onboarding = path.resolve(root, defaultConfig.agent?.onboarding ?? "ONBOARD.md")
+    if (!(yield* Effect.orElseSucceed(fs.exists(onboarding), () => false))) {
+      yield* fs.writeFileString(onboarding, ONBOARD)
+    }
     yield* write(`jig: initialised ${root}`)
   }),
 ).pipe(
-  Command.withDescription("Write jig.config.json, an empty baseline, and the agent cookbook."),
+  Command.withDescription(
+    "Write jig.config.json, an empty baseline, the agent cookbook, and the onboarding prompt.",
+  ),
   Command.withShortDescription("Scaffold the harness."),
+)
+
+const writeFlag = Flag.Boolean("write").pipe(
+  Flag.withDescription("Apply the change instead of printing it."),
+  Flag.withDefault(false),
+)
+
+const explainCommand = Command.make(
+  "explain",
+  { rule: Argument.String("rule"), cwd: cwdFlag, config: configFlag },
+  (options) =>
+    Effect.gen(function* () {
+      const { path, root, settings } = yield* context(options.cwd, options.config)
+      const baseline = yield* readBaseline(path.resolve(root, settings.gate.baseline))
+      const run = yield* harnessRun(root, settings, baseline)
+      const configured = settings.engines.map((engine) => engine.id)
+      yield* write(explainRule(run.report, options.rule, configured))
+    }),
+).pipe(
+  Command.withDescription("Everything jig knows about one rule in this repo, right now."),
+  Command.withShortDescription("Explain one rule."),
+  Command.withExamples([
+    {
+      command: "jig explain plumb/no-raw-html-layout",
+      description: "The rule's findings, with the fix.",
+    },
+  ]),
+)
+
+const promoteCommand = Command.make(
+  "promote",
+  { cwd: cwdFlag, config: configFlag, write: writeFlag },
+  (options) =>
+    Effect.gen(function* () {
+      const { path, root, settings } = yield* context(options.cwd, options.config)
+      const baseline = yield* readBaseline(path.resolve(root, settings.gate.baseline))
+      const run = yield* harnessRun(root, settings, baseline)
+      const plan = promotion(run.diff)
+      // `promote` only ever shrinks the ledger. Dropping the identities that no longer fire
+      // is the ratchet moving down; accepting a new one is `jig baseline`, a human's call.
+      if (options.write && plan.stale.length > 0) {
+        yield* writeBaseline(path.resolve(root, settings.gate.baseline), accept(run.diff.known))
+        yield* write(renderPromotion(plan, true))
+      } else {
+        yield* write(renderPromotion(plan, false))
+      }
+    }),
+).pipe(
+  Command.withDescription(
+    "Show the ratchet's next rung: accepted findings that no longer fire. Only ever shrinks.",
+  ),
+  Command.withShortDescription("Advance the ratchet."),
+)
+
+const learnCommand = Command.make(
+  "learn",
+  { cwd: cwdFlag, config: configFlag, write: writeFlag },
+  (options) =>
+    Effect.gen(function* () {
+      const { path, root, settings } = yield* context(options.cwd, options.config)
+      const baseline = yield* readBaseline(path.resolve(root, settings.gate.baseline))
+      const run = yield* harnessRun(root, settings, baseline)
+      const text = renderLesson(
+        lesson(
+          settings.engines.map((engine) => engine.id),
+          run.diff,
+        ),
+      )
+      const name = settings.agent?.cookbook ?? "JIG.md"
+      if (options.write) {
+        const fs = yield* FileSystem.FileSystem
+        yield* fs.writeFileString(path.resolve(root, name), `${text}\n`)
+        yield* write(`jig: wrote ${name}`)
+      } else {
+        yield* write(text)
+      }
+    }),
+).pipe(
+  Command.withDescription(
+    "Write the agent cookbook, scaffolded from the rules this repo already accepts.",
+  ),
+  Command.withShortDescription("Rewrite the cookbook."),
 )
 
 const cli = Command.make("jig").pipe(
   Command.withDescription(
     "The harness: run every conformance engine in one pass, merge them into one report, and hold the ratchet.",
   ),
-  Command.withSubcommands([checkCommand, baselineCommand, enginesCommand, initCommand]),
+  Command.withSubcommands([
+    checkCommand,
+    baselineCommand,
+    enginesCommand,
+    initCommand,
+    explainCommand,
+    promoteCommand,
+    learnCommand,
+  ]),
 )
 
 // The run's own codes (0/1/3) are set on `process.exitCode` inside the handlers, and survive
