@@ -101,7 +101,7 @@ const enginesCommand = Command.make("engines", { cwd: cwdFlag, config: configFla
       const enabled = engine.enabled === false ? " (disabled)" : ""
       // The column reports where the run WILL draw the command from, so it asks the
       // resolver rather than scanning PATH on its own: project install, PATH, or neither.
-      const resolved = resolveEngineCommand(root, command)
+      const resolved = resolveEngineCommand({ root, command })
       const source = resolved !== command ? "project" : onPath(command) ? "PATH" : "no"
       lines.push(
         `${engine.id.padEnd(19)} ${engine.kind.padEnd(15)} ${command.padEnd(14)} ${source}${enabled}`,

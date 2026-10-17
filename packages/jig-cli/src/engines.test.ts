@@ -31,7 +31,7 @@ const OXLINT = JSON.stringify({
 
 describe("parseEngineOutput", () => {
   it("reads an oxlint report and relativizes the path", () => {
-    const diagnostics = parseEngineOutput(OXLINT, "plumb", "/repo")
+    const diagnostics = parseEngineOutput(OXLINT, { engine: "plumb", root: "/repo" })
     expect(diagnostics).toEqual([
       {
         engine: "plumb",
@@ -57,7 +57,7 @@ describe("parseEngineOutput", () => {
         },
       ],
     })
-    const diagnostics = parseEngineOutput(stdout, "joggle", "/repo")
+    const diagnostics = parseEngineOutput(stdout, { engine: "joggle", root: "/repo" })
     expect(diagnostics?.[0]?.location.file).toBe("app/components/index.ts")
     expect(diagnostics?.[0]?.severity).toBe("error")
   })
@@ -69,27 +69,33 @@ describe("parseEngineOutput", () => {
       message: "m",
       location: { file: "a.ts", line: 2, column: 2 },
     })
-    expect(parseEngineOutput(`${line}\n\n`, "engine", "/repo")).toHaveLength(1)
+    expect(parseEngineOutput(`${line}\n\n`, { engine: "engine", root: "/repo" })).toHaveLength(1)
   })
 
   it("returns undefined for output it does not recognize, so the caller can say so", () => {
-    expect(parseEngineOutput("just some prose\nand more", "engine", "/repo")).toBeUndefined()
+    expect(
+      parseEngineOutput("just some prose\nand more", { engine: "engine", root: "/repo" }),
+    ).toBeUndefined()
   })
 
   it("returns nothing for a silent engine", () => {
-    expect(parseEngineOutput("", "engine", "/repo")).toEqual([])
+    expect(parseEngineOutput("", { engine: "engine", root: "/repo" })).toEqual([])
   })
 })
 
 describe("normalize", () => {
   it("drops an entry with no message rather than inventing one", () => {
-    expect(normalize({ code: "x" }, "e", "/repo")).toBeUndefined()
+    expect(normalize({ code: "x" }, { engine: "e", root: "/repo" })).toBeUndefined()
   })
 })
 
 describe("engineDiagnostics", () => {
   it("does not read a silent, failed engine as clean", () => {
-    const diagnostics = engineDiagnostics("joggle", 1, "", "boom: no tsconfig in sight", "/repo")
+    const diagnostics = engineDiagnostics(
+      "joggle",
+      { code: 1, stdout: "", stderr: "boom: no tsconfig in sight" },
+      "/repo",
+    )
     expect(diagnostics).toHaveLength(1)
     expect(diagnostics[0]?.ruleId).toBe("joggle/unparsed-output")
     expect(diagnostics[0]?.severity).toBe("info")
@@ -97,13 +103,13 @@ describe("engineDiagnostics", () => {
   })
 
   it("names the exit code when a failed engine printed nothing at all", () => {
-    const diagnostics = engineDiagnostics("joggle", 2, "", "", "/repo")
+    const diagnostics = engineDiagnostics("joggle", { code: 2, stdout: "", stderr: "" }, "/repo")
     expect(diagnostics[0]?.message).toBe("joggle exited 2 without output")
     expect(diagnostics[0]?.help).toBeUndefined()
   })
 
   it("reads a silent, successful engine as clean", () => {
-    expect(engineDiagnostics("joggle", 0, "", "", "/repo")).toEqual([])
+    expect(engineDiagnostics("joggle", { code: 0, stdout: "", stderr: "" }, "/repo")).toEqual([])
   })
 
   it("keeps the findings an engine printed, whatever it exited with", () => {
@@ -117,17 +123,27 @@ describe("engineDiagnostics", () => {
         },
       ],
     })
-    expect(engineDiagnostics("joggle", 1, stdout, "", "/repo")).toHaveLength(1)
+    expect(
+      engineDiagnostics("joggle", { code: 1, stdout: stdout, stderr: "" }, "/repo"),
+    ).toHaveLength(1)
   })
 
   it("reads an empty but understood report on a clean exit as clean", () => {
     expect(
-      engineDiagnostics("oxlint-engine", 0, JSON.stringify({ diagnostics: [] }), "", "/repo"),
+      engineDiagnostics(
+        "oxlint-engine",
+        { code: 0, stdout: JSON.stringify({ diagnostics: [] }), stderr: "" },
+        "/repo",
+      ),
     ).toEqual([])
   })
 
   it("turns a failed cutlist into one stale-catalog error, not a parse attempt", () => {
-    const diagnostics = engineDiagnostics("cutlist", 1, "the catalog is stale\n", "", "/repo")
+    const diagnostics = engineDiagnostics(
+      "cutlist",
+      { code: 1, stdout: "the catalog is stale\n", stderr: "" },
+      "/repo",
+    )
     expect(diagnostics).toHaveLength(1)
     expect(diagnostics[0]?.ruleId).toBe("cutlist/stale-catalog")
     expect(diagnostics[0]?.severity).toBe("error")
@@ -163,8 +179,10 @@ describe("resolveEngineCommand", () => {
       const bin = join(root, "node_modules", ".bin")
       mkdirSync(bin, { recursive: true })
       writeFileSync(join(bin, "oxlint"), "#!/bin/sh\n")
-      expect(resolveEngineCommand(root, "oxlint")).toBe(join(bin, "oxlint"))
-      expect(resolveEngineCommand(root, "not-installed-here")).toBe("not-installed-here")
+      expect(resolveEngineCommand({ root: root, command: "oxlint" })).toBe(join(bin, "oxlint"))
+      expect(resolveEngineCommand({ root: root, command: "not-installed-here" })).toBe(
+        "not-installed-here",
+      )
     } finally {
       rmSync(root, { recursive: true, force: true })
     }

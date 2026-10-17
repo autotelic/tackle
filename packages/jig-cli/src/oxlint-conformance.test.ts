@@ -40,7 +40,7 @@ describe.each(STRUCTURED)("oxlint --format %s", (_format, file) => {
   const output = read(file)
 
   it("carries the two findings oxlint reported", () => {
-    const diagnostics = parseEngineOutput(output, "oxlint", ROOT) ?? []
+    const diagnostics = parseEngineOutput(output, { engine: "oxlint", root: ROOT }) ?? []
     expect(diagnostics.map((diagnostic) => diagnostic.ruleId).sort(Order.String)).toEqual([
       "eslint/no-debugger",
       "eslint/no-unused-vars",
@@ -55,7 +55,7 @@ describe.each(STRUCTURED)("oxlint --format %s", (_format, file) => {
   })
 
   it("is never mistaken for unparsed output", () => {
-    const diagnostics = engineDiagnostics("oxlint", 0, output, "", ROOT)
+    const diagnostics = engineDiagnostics("oxlint", { code: 0, stdout: output, stderr: "" }, ROOT)
     expect(diagnostics.some((diagnostic) => diagnostic.ruleId === "oxlint/unparsed-output")).toBe(
       false,
     )
@@ -66,11 +66,11 @@ describe.each(UNREAD)("oxlint --format %s", (_format, file) => {
   const output = read(file)
 
   it("is not read as diagnostics", () => {
-    expect(parseEngineOutput(output, "oxlint", ROOT)).toBeUndefined()
+    expect(parseEngineOutput(output, { engine: "oxlint", root: ROOT })).toBeUndefined()
   })
 
   it("is reported as unparsed, never silently clean", () => {
-    const diagnostics = engineDiagnostics("oxlint", 0, output, "", ROOT)
+    const diagnostics = engineDiagnostics("oxlint", { code: 0, stdout: output, stderr: "" }, ROOT)
     expect(diagnostics).toHaveLength(1)
     expect(diagnostics[0]?.ruleId).toBe("oxlint/unparsed-output")
     expect(diagnostics[0]?.severity).toBe("info")
@@ -98,7 +98,7 @@ describe("the plugin prefix", () => {
         },
       ],
     })
-    const diagnostics = parseEngineOutput(code, "plumb", ROOT) ?? []
+    const diagnostics = parseEngineOutput(code, { engine: "plumb", root: ROOT }) ?? []
     expect(diagnostics.map((diagnostic) => `${diagnostic.engine}/${diagnostic.ruleId}`)).toEqual([
       "plumb/no-raw-html-layout",
       "plumb/plumb-ui/no-raw-interactive",

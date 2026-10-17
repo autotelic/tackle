@@ -30,6 +30,19 @@ export interface EngineOutcome {
   readonly diagnostics: ReadonlyArray<Diagnostic>
 }
 
+/** The two strings every parser needs travel as one, so a swap cannot compile. */
+interface ParseContext {
+  readonly engine: string
+  readonly root: string
+}
+
+/** One engine run's captured streams and exit code. */
+interface EngineOutput {
+  readonly code: number
+  readonly stdout: string
+  readonly stderr: string
+}
+
 /** The args each known engine is invoked with. Overridable only by editing the id map. */
 const DEFAULT_ARGS: Readonly<Record<string, ReadonlyArray<string>>> = {
   joggle: ["check", "--format", "json"],
@@ -52,7 +65,13 @@ export const argsFor = (engine: EngineRef): ReadonlyArray<string> => [
  * shadow the version this project pinned. When the project has its own `node_modules/.bin`
  * copy, that one wins; otherwise the bare command is left for `PATH` to resolve.
  */
-export const resolveEngineCommand = (root: string, command: string): string => {
+export const resolveEngineCommand = ({
+  root,
+  command,
+}: {
+  readonly root: string
+  readonly command: string
+}): string => {
   const local = join(root, "node_modules", ".bin", command)
   return existsSync(local) ? local : command
 }
@@ -85,7 +104,7 @@ const severityOf = (value: unknown): Severity => {
  */
 const RULE_CODE = /^([A-Za-z][\w-]*)\((.+)\)$/u
 
-const ruleIdOf = (code: string, engine: string): string => {
+const ruleIdOf = ({ code, engine }: { readonly code: string; readonly engine: string }): string => {
   const match = RULE_CODE.exec(code)
   if (match === null) return code
   const plugin = match[1] ?? ""
@@ -121,7 +140,7 @@ const codeClimateSeverity = (value: unknown): Severity => {
 }
 
 /** A path as the report wants it: repository-relative when it sits under the root. */
-const relativeTo = (file: string, root: string): string =>
+const relativeTo = ({ file, root }: { readonly file: string; readonly root: string }): string =>
   file.startsWith(`${root}/`) ? file.slice(root.length + 1) : file
 
 /** oxlint puts the position in the first label's span; a report document puts it inline. */
@@ -129,7 +148,10 @@ const locationOf = (entry: Record<string, unknown>, root: string): SourceLocatio
   const location = record(entry.location)
   if (location !== undefined) {
     return {
-      file: relativeTo(stringOf(location.file) ?? stringOf(entry.filename) ?? "<unknown>", root),
+      file: relativeTo({
+        file: stringOf(location.file) ?? stringOf(entry.filename) ?? "<unknown>",
+        root,
+      }),
       line: numberOr(location.line, 1),
       column: numberOr(location.column, 1),
     }
@@ -137,14 +159,18 @@ const locationOf = (entry: Record<string, unknown>, root: string): SourceLocatio
   const labels = entry.labels
   const span = record(record(Array.isArray(labels) ? labels[0] : undefined)?.span)
   return {
-    file: relativeTo(stringOf(entry.filename) ?? stringOf(entry.file) ?? "<unknown>", root),
+    file: relativeTo({
+      file: stringOf(entry.filename) ?? stringOf(entry.file) ?? "<unknown>",
+      root,
+    }),
     line: numberOr(span?.line, 1),
     column: numberOr(span?.column, 1),
   }
 }
 
 /** Map one engine finding to a protocol diagnostic, or drop it when it is not one. */
-export const normalize = (raw: unknown, engine: string, root: string): Diagnostic | undefined => {
+export const normalize = (raw: unknown, context: ParseContext): Diagnostic | undefined => {
+  const { engine, root } = context
   const entry = record(raw)
   const message = stringOf(entry?.message) ?? stringOf(entry?.text)
   if (entry === undefined || message === undefined) return undefined
@@ -153,10 +179,10 @@ export const normalize = (raw: unknown, engine: string, root: string): Diagnosti
   const docsUrl = stringOf(entry.url) ?? stringOf(entry.docsUrl)
   return {
     engine,
-    ruleId: ruleIdOf(
-      stringOf(entry.ruleId) ?? stringOf(entry.code) ?? stringOf(entry.rule) ?? "unknown",
+    ruleId: ruleIdOf({
+      code: stringOf(entry.ruleId) ?? stringOf(entry.code) ?? stringOf(entry.rule) ?? "unknown",
       engine,
-    ),
+    }),
     severity: severityOf(entry.severity),
     message,
     location: locationOf(entry, root),
@@ -199,7 +225,7 @@ const sarifLocation = (
   const endLine = typeof region?.endLine === "number" ? region.endLine : undefined
   const endColumn = typeof region?.endColumn === "number" ? region.endColumn : undefined
   return {
-    file: relativeTo(uri.replace(/^file:\/\//u, ""), root),
+    file: relativeTo({ file: uri.replace(/^file:\/\//u, ""), root }),
     line,
     column,
     ...(endLine === undefined ? {} : { endLine }),
@@ -209,9 +235,9 @@ const sarifLocation = (
 
 const parseSarif = (
   doc: Record<string, unknown>,
-  engine: string,
-  root: string,
+  context: ParseContext,
 ): ReadonlyArray<Diagnostic> | undefined => {
+  const { engine, root } = context
   const runs = arrayOfRecords(doc.runs)
   if (runs === undefined) return undefined
   const out: Array<Diagnostic> = []
@@ -225,7 +251,7 @@ const parseSarif = (
       if (message === undefined || ruleId === undefined || location === undefined) return undefined
       out.push({
         engine,
-        ruleId: ruleIdOf(ruleId, engine),
+        ruleId: ruleIdOf({ code: ruleId, engine }),
         severity: sarifSeverity(result.level),
         message,
         location,
@@ -239,9 +265,9 @@ const parseSarif = (
 
 const parseCodeClimate = (
   doc: unknown,
-  engine: string,
-  root: string,
+  context: ParseContext,
 ): ReadonlyArray<Diagnostic> | undefined => {
+  const { engine, root } = context
   const issues = arrayOfRecords(doc)
   if (issues === undefined) return undefined
   const out: Array<Diagnostic> = []
@@ -257,12 +283,12 @@ const parseCodeClimate = (
     const identity = stringOf(issue.fingerprint)
     out.push({
       engine,
-      ruleId: ruleIdOf(check, engine),
+      ruleId: ruleIdOf({ code: check, engine }),
       severity: codeClimateSeverity(issue.severity),
       message: description,
       ...(identity === undefined ? {} : { identity }),
       location: {
-        file: relativeTo(path, root),
+        file: relativeTo({ file: path, root }),
         line: begin,
         column: 1,
         ...(end === undefined ? {} : { endLine: end }),
@@ -277,16 +303,26 @@ const parseCodeClimate = (
 const GITHUB_ANNOTATION = /^::(?<level>error|warning|notice)\s+(?<props>.+?)::(?<message>.*)$/u
 
 /** oxlint repeats the position at the head of the message; the location field already has it. */
-const stripGithubPrefix = (message: string, file: string, line: number, column: number): string => {
+const stripGithubPrefix = ({
+  message,
+  file,
+  line,
+  column,
+}: {
+  readonly message: string
+  readonly file: string
+  readonly line: number
+  readonly column: number
+}): string => {
   const prefix = `${file}:${line}:${column}: `
   return message.startsWith(prefix) ? message.slice(prefix.length) : message
 }
 
 const parseGithub = (
   text: string,
-  engine: string,
-  root: string,
+  context: ParseContext,
 ): ReadonlyArray<Diagnostic> | undefined => {
+  const { engine, root } = context
   const lines = text
     .split("\n")
     .map((line) => line.trim())
@@ -313,11 +349,16 @@ const parseGithub = (
       : undefined
     out.push({
       engine,
-      ruleId: ruleIdOf(properties.get("title") ?? "unknown", engine),
+      ruleId: ruleIdOf({ code: properties.get("title") ?? "unknown", engine }),
       severity: githubSeverity(match.groups?.level),
-      message: stripGithubPrefix(match.groups?.message ?? "", file, lineNumber, column),
+      message: stripGithubPrefix({
+        message: match.groups?.message ?? "",
+        file,
+        line: lineNumber,
+        column,
+      }),
       location: {
-        file: relativeTo(file, root),
+        file: relativeTo({ file, root }),
         line: lineNumber,
         column,
         ...(endLine === undefined ? {} : { endLine }),
@@ -347,17 +388,16 @@ const parseGithub = (
  */
 export const parseEngineOutput = (
   stdout: string,
-  engine: string,
-  root: string,
+  context: ParseContext,
 ): ReadonlyArray<Diagnostic> | undefined => {
   const trimmed = stdout.trim()
   if (trimmed === "") return []
 
-  if (trimmed.startsWith("::")) return parseGithub(trimmed, engine, root)
+  if (trimmed.startsWith("::")) return parseGithub(trimmed, context)
 
   if (trimmed.startsWith("[")) {
     try {
-      const codeClimate = parseCodeClimate(JSON.parse(trimmed), engine, root)
+      const codeClimate = parseCodeClimate(JSON.parse(trimmed), context)
       if (codeClimate !== undefined) return codeClimate
     } catch {
       // Not a JSON array; a JSONL stream also contains `[` only inside lines, so fall through.
@@ -368,10 +408,10 @@ export const parseEngineOutput = (
     try {
       const entry = record(JSON.parse(trimmed))
       if (Array.isArray(entry?.diagnostics)) {
-        return entry.diagnostics.map((raw) => normalize(raw, engine, root)).filter(defined)
+        return entry.diagnostics.map((raw) => normalize(raw, context)).filter(defined)
       }
       if (entry !== undefined && Array.isArray(entry.runs)) {
-        const sarif = parseSarif(entry, engine, root)
+        const sarif = parseSarif(entry, context)
         if (sarif !== undefined) return sarif
       }
     } catch {
@@ -387,7 +427,7 @@ export const parseEngineOutput = (
     const parsed: Array<Diagnostic | undefined> = []
     for (const line of lines) {
       try {
-        parsed.push(normalize(JSON.parse(line), engine, root))
+        parsed.push(normalize(JSON.parse(line), context))
       } catch {
         return undefined
       }
@@ -399,11 +439,7 @@ export const parseEngineOutput = (
 }
 
 /** `cutlist build --check` speaks exit codes, not diagnostics: a non-zero exit is one. */
-const cutlistDiagnostics = (
-  code: number,
-  stdout: string,
-  stderr: string,
-): ReadonlyArray<Diagnostic> => {
+const cutlistDiagnostics = ({ code, stdout, stderr }: EngineOutput): ReadonlyArray<Diagnostic> => {
   if (code === 0) return []
   const detail = (stdout.trim() === "" ? stderr : stdout).trim().split("\n")[0] ?? ""
   return [
@@ -419,12 +455,12 @@ const cutlistDiagnostics = (
 }
 
 /** An engine whose output jig cannot read, said out loud rather than passed over. */
-const unparsed = (
-  id: string,
-  code: number,
-  stdout: string,
-  stderr: string,
-): ReadonlyArray<Diagnostic> => {
+const unparsed = ({
+  id,
+  code,
+  stdout,
+  stderr,
+}: { readonly id: string } & EngineOutput): ReadonlyArray<Diagnostic> => {
   const output = (stderr.trim() === "" ? stdout : stderr).trim()
   // A silent, successful exit is a real "no findings". A silent FAILURE is not: the engine
   // said something (on stderr) or said nothing and died, and either way nothing was looked at.
@@ -457,15 +493,14 @@ const unparsed = (
  */
 export const engineDiagnostics = (
   id: string,
-  code: number,
-  stdout: string,
-  stderr: string,
+  output: EngineOutput,
   root: string,
 ): ReadonlyArray<Diagnostic> => {
-  if (id === "cutlist") return cutlistDiagnostics(code, stdout, stderr)
-  const parsed = parseEngineOutput(stdout, id, root)
+  const { code, stdout, stderr } = output
+  if (id === "cutlist") return cutlistDiagnostics(output)
+  const parsed = parseEngineOutput(stdout, { engine: id, root })
   if (parsed !== undefined && (parsed.length > 0 || code === 0)) return parsed
-  return unparsed(id, code, stdout, stderr)
+  return unparsed({ id, code, stdout, stderr })
 }
 
 const summarize = (
@@ -509,7 +544,7 @@ export const runEngine = (
     }
 
     const binary = engine.command ?? id
-    const command = resolveEngineCommand(root, binary)
+    const command = resolveEngineCommand({ root, command: binary })
     const outcome = yield* Effect.match(exec(command, argsFor(engine), root), {
       onFailure: (message: string) => ({ ok: false as const, message }),
       onSuccess: (value) => ({ ok: true as const, value }),
@@ -528,7 +563,7 @@ export const runEngine = (
     }
 
     const { stdout, stderr, code } = outcome.value
-    const diagnostics = engineDiagnostics(id, code, stdout, stderr, root)
+    const diagnostics = engineDiagnostics(id, { code, stdout, stderr }, root)
     return { id, summary: summarize(id, diagnostics, Date.now() - started, undefined), diagnostics }
   })
 

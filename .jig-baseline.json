@@ -4,7 +4,6 @@
     "version": 1
   },
   "identities": [
-    "plumb/no-swappable-primitive-params:packages/jig-cli/src/engines.ts",
     "plumb/prefer-property-tests:packages/cutlist/src/catalog.test.ts",
     "plumb/prefer-property-tests:packages/jig-cli/src/engines.test.ts",
     "plumb/prefer-property-tests:packages/jig-cli/src/oxlint-conformance.test.ts",
