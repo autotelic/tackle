@@ -8,3 +8,4 @@
 93956e28b986bd4c	1792252958	{"consistency":1,"kind":"Probability","probability":0.8833333333333333}
 93c93d7e99e7a7d1	1792252958	{"confidence":0.33,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.02,"common_idiom":0.55,"shared_helper":0.43}}
 93fd0cc724d98bd5	1792252958	{"consistency":1,"kind":"Probability","probability":0.15666666666666665}
+93fde71953bf607a	1792269251	{"confidence":0.22,"kind":"Rate","label":"slightly_clearer","probabilities":{"meaningfully_better":0.32,"no_difference":0.18,"removes_a_hazard":0.14,"slightly_clearer":0.36},"rating":1.41}

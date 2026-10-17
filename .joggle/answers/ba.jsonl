@@ -5,5 +5,6 @@ ba40ac775dfd1fc5	1792252958	{"confidence":0.27,"kind":"Classify","label":"genera
 ba883ac4c7c375a4	1792252958	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
 ba958730fc3f2be7	1792252958	{"confidence":0.77,"kind":"Classify","label":"domain_concept","probabilities":{"domain_concept":0.83,"framework_glue":0,"implementation_detail":0.15,"wire_contract":0.02}}
 baa07a93c6199107	1792252958	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0.01}}
+baa9f2cf67cf2e6d	1792269251	{"confidence":0.97,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.98,"different_order":0.01,"different_work":0.01,"same_operation":0}}
 bae1c3361440175b	1792252958	{"confidence":0.94,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.03,"inferred":0.01,"not_applicable":0.96}}
 bae32ebd8f80534e	1792252958	{"consistency":1,"kind":"Probability","probability":0.8277777777777776}

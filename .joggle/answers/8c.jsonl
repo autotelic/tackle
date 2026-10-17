@@ -7,6 +7,7 @@
 8c52a5514f289650	1792252958	{"confidence":0.64,"kind":"Classify","label":"general","probabilities":{"general":0.76,"names_a_caller":0.01,"shared_vocabulary":0.23}}
 8c838f3836220383	1792252958	{"confidence":0.58,"kind":"Classify","label":"unclear","probabilities":{"meaning":0.08,"unclear":0.72,"value":0.2}}
 8c8d74af0f73d99a	1792265611	{"confidence":0.56,"kind":"Classify","label":"value","probabilities":{"meaning":0.29,"unclear":0,"value":0.71}}
+8c9dc617675f8f6d	1792269251	{"confidence":0.36,"kind":"Classify","label":"move","probabilities":{"move":0.68,"no_issue":0.32}}
 8cbfce8fdf063bb5	1792252958	{"consistency":1,"kind":"Probability","probability":0.83}
 8cc1f4620580abe3	1792252958	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0.01}}
 8cc7af36ff3b100e	1792265611	{"confidence":0.58,"kind":"Classify","label":"move","probabilities":{"move":0.79,"no_issue":0.21}}

@@ -1,5 +1,6 @@
 cf0cae0b8c7946ec	1792265611	{"confidence":0.92,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.02,"same_module":0.02,"same_package":0.02,"sibling_packages":0.94}}
 cf1ff252078e9cbe	1792252958	{"confidence":0.48,"kind":"Classify","label":"move","probabilities":{"merge":0.18,"move":0.65,"no_issue":0.17}}
+cf3524902044c038	1792269251	{"confidence":0.74,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.13,"keep_variants":0.83,"no_issue":0.04}}
 cf36051734b471e8	1792252958	{"consistency":1,"kind":"Probability","probability":0.8833333333333333}
 cf466a65dfc6322a	1792252958	{"consistency":1,"kind":"Probability","probability":0.8255555555555555}
 cf7ab2978f6fa5db	1792253092	{"confidence":0.59,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.69,"different_order":0.01,"different_work":0.3,"same_operation":0}}

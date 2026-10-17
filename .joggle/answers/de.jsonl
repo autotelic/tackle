@@ -2,6 +2,7 @@ de05f47899205257	1792252958	{"confidence":0.67,"kind":"Classify","label":"domain
 de1bcd7563a26ec1	1792252958	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
 de48f74903fb0341	1792252958	{"confidence":0.95,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.01,"internal_only":0.97,"unaccounted":0.02}}
 de7b20d172c30da7	1792252958	{"confidence":0.92,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.94,"stale_reference":0,"wrong_behavior":0.05,"wrong_contract":0.01}}
+de85222eae62e3a2	1792269251	{"confidence":0.74,"kind":"Classify","label":"value","probabilities":{"meaning":0.17,"unclear":0,"value":0.83}}
 dea835e04d281293	1792252958	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
 deb2ad34c4e7083e	1792253160	{"confidence":0.7,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.19,"inferred":0.01,"not_applicable":0.8}}
 dedcbab1f10d8e06	1792265610	{"confidence":0.79,"kind":"Classify","label":"library_core","probabilities":{"domain_core":0,"infrastructure":0.04,"library_core":0.82,"not_applicable":0.05,"rendering_edge":0.01,"transport_edge":0.07,"utilities":0.01}}

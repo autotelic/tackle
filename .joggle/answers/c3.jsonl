@@ -6,6 +6,7 @@ c38a965a613f0850	1792252958	{"confidence":0.91,"kind":"Classify","label":"no_iss
 c392c8059a390d54	1792265611	{"confidence":0.29,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.07,"merge":0.13,"move":0.36,"share_a_contract":0.43,"split":0.01}}
 c3943f095cf60e1f	1792252958	{"confidence":0.42,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.04,"merge":0.54,"move":0.2,"share_a_contract":0.22,"split":0}}
 c3a481d29fbcb111	1792252958	{"confidence":0.89,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.06,"inferred":0.01,"not_applicable":0.93}}
+c3c350dd816022eb	1792269251	{"confidence":0.68,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.76,"different_order":0,"different_work":0.24,"same_operation":0}}
 c3ceb4f492d4e7a0	1792252958	{"consistency":1,"kind":"Probability","probability":0.8133333333333334}
 c3d84ad68ace5b8b	1792252958	{"confidence":0.89,"kind":"Classify","label":"no_issue","probabilities":{"merge":0,"move":0.07,"no_issue":0.93}}
 c3f0ffbae4e88e4d	1792252958	{"confidence":0.84,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.12,"framework_glue":0,"implementation_detail":0.88,"wire_contract":0}}

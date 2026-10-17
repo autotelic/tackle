@@ -1,3 +1,4 @@
+a61d50c348b75b23	1792269251	{"confidence":0.76,"kind":"Classify","label":"value","probabilities":{"meaning":0.16,"unclear":0,"value":0.84}}
 a623e271e9fb126b	1792252958	{"confidence":0.69,"kind":"Classify","label":"value","probabilities":{"meaning":0.21,"unclear":0,"value":0.79}}
 a6518c75edfb1426	1792252958	{"consistency":1,"kind":"Probability","probability":0.5266666666666667}
 a65fa47e75a16701	1792252958	{"consistency":1,"kind":"Probability","probability":0.38999999999999996}

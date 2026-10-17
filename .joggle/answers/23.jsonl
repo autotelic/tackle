@@ -4,4 +4,5 @@
 2334ab6a21842015	1792252958	{"confidence":0.22,"kind":"Classify","label":"collapse","probabilities":{"collapse":0.48,"keep_variants":0.48,"no_issue":0.04}}
 237fac8c806b9f7f	1792252958	{"confidence":0.34,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.42,"keep_variants":0.56,"no_issue":0.02}}
 2381d61cb37eb476	1792252958	{"consistency":1,"kind":"Probability","probability":0.7866666666666667}
+2398eec0df5deb36	1792269251	{"confidence":0.97,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.98,"different_order":0.01,"different_work":0.01,"same_operation":0}}
 23cb4e30f2760db5	1792253160	{"confidence":0.52,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.57,"no_difference":0.05,"removes_a_hazard":0.09,"slightly_clearer":0.29},"rating":1.7}

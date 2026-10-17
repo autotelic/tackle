@@ -1,9 +1,14 @@
+ef05c10302ab51a6	1792269251	{"confidence":0.97,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.02,"inferred":0,"not_applicable":0.98}}
+ef0c1657a512f670	1792269251	{"confidence":0.99,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.01,"same_module":0,"same_package":0,"sibling_packages":0.99}}
 ef1072db2b02b823	1792252958	{"confidence":0.93,"kind":"Classify","label":"component_or_feature","probabilities":{"already_there":0.02,"component_or_feature":0.95,"not_applicable":0,"route_or_handler":0.03}}
 ef20a2d5808913a8	1792265611	{"consistency":1,"kind":"Probability","probability":0.3711111111111111}
+ef236aeecffa15d9	1792269251	{"confidence":0.3,"kind":"Classify","label":"not_a_derivation","probabilities":{"legitimate_local":0.45,"not_a_derivation":0.53,"reimplements":0.02}}
 ef2f3af6cb26be72	1792252958	{"confidence":0.28,"kind":"Classify","label":"one_concept","probabilities":{"already_named":0.4,"coincidental":0.08,"one_concept":0.52}}
+ef3266eebae7dfdb	1792269251	{"confidence":0.33,"kind":"Classify","label":"framework_glue","probabilities":{"domain_concept":0.15,"framework_glue":0.5,"implementation_detail":0.34,"wire_contract":0.01}}
 ef33bbe533000049	1792252958	{"confidence":0.56,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.22,"member_1":0.78}}
 ef588603e52588a9	1792252958	{"consistency":1,"kind":"Probability","probability":0.83}
 efad410e09c32913	1792252958	{"consistency":1,"kind":"Probability","probability":0.15777777777777777}
 efadfabfc166a175	1792252958	{"confidence":0.41,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.15,"no_issue":0.29,"semantic_verdict":0.5599999999999999}}
+efb58031e01aec35	1792269251	{"confidence":0.88,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.05,"framework_glue":0,"implementation_detail":0.91,"wire_contract":0.04}}
 efbbb446a3089a25	1792252958	{"confidence":0.47,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.06,"merge":0.58,"move":0.15,"share_a_contract":0.19,"split":0.02}}
 efd3f1b30e1e3a73	1792252958	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}

@@ -1,10 +1,13 @@
 480491c6c8177de2	1792252958	{"consistency":1,"kind":"Probability","probability":0.7888888888888889}
 482ea659a17ee6c4	1792252958	{"confidence":0.54,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.31,"names_a_caller":0,"shared_vocabulary":0.6900000000000001}}
+4836576e25a1f406	1792269251	{"confidence":0.92,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.06,"same_module":0,"same_package":0,"sibling_packages":0.9400000000000001}}
 48613a446fe11851	1792252958	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
+4864bd5800779f3c	1792269251	{"confidence":0.57,"kind":"Rate","label":"slightly_clearer","probabilities":{"meaningfully_better":0.21,"no_difference":0.14,"removes_a_hazard":0.04,"slightly_clearer":0.61},"rating":1.16}
 486f1523a0dda75f	1792252958	{"confidence":0.79,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.84,"stale_reference":0.1,"wrong_behavior":0.05,"wrong_contract":0.01}}
 4877b02a87cabc41	1792252958	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
 48a17e6b55c86e67	1792253160	{"consistency":1,"kind":"Probability","probability":0.3433333333333333}
 48a781891a99260d	1792252958	{"confidence":0.6,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.02,"no_issue":0.28,"semantic_verdict":0.7}}
+48a8f9907014a724	1792269251	{"confidence":0.57,"kind":"Rate","label":"slightly_clearer","probabilities":{"meaningfully_better":0.21,"no_difference":0.14,"removes_a_hazard":0.04,"slightly_clearer":0.61},"rating":1.16}
 48b54a352630916f	1792252958	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
 48d166ca833befb6	1792252958	{"confidence":0.93,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0.01,"wrong_behavior":0.02,"wrong_contract":0.02}}
 48ebed31d265a96a	1792252958	{"consistency":1,"kind":"Probability","probability":0.6966666666666667}

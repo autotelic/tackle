@@ -4,3 +4,5 @@
 003af0754f33ce77	1792252958	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0.01}}
 007b0d69cc714165	1792252958	{"confidence":0.89,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.05,"name_meaning":0,"no_issue":0.03,"semantic_verdict":0.92}}
 009407db0785566a	1792252958	{"confidence":0.95,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.96,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0.01}}
+00f256e34365ce17	1792269251	{"confidence":0.88,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.05,"framework_glue":0,"implementation_detail":0.91,"wire_contract":0.04}}
+00f7d69002453694	1792269251	{"confidence":0.92,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.04,"inferred":0.01,"not_applicable":0.95}}

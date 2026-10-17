@@ -1,3 +1,5 @@
+5019551c885931a9	1792269251	{"confidence":0.54,"kind":"Classify","label":"move","probabilities":{"move":0.77,"no_issue":0.23}}
+5020cb41e0a59278	1792269251	{"consistency":1,"kind":"Probability","probability":0.44777777777777783}
 504b79656735a7b4	1792252958	{"confidence":0.4,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.38,"no_issue":0.07,"semantic_verdict":0.55}}
 504c043474438cb4	1792252958	{"confidence":0.08,"kind":"Classify","label":"none","probabilities":{"none":0.54,"noul":0.46}}
 50b63a550b8efe06	1792252958	{"confidence":0.3,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.41,"no_difference":0.11,"removes_a_hazard":0.2,"slightly_clearer":0.28},"rating":1.69}

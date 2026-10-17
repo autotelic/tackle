@@ -1,3 +1,4 @@
+f32696a1984a7407	1792269251	{"confidence":0.97,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.02,"inferred":0,"not_applicable":0.98}}
 f34a5c3f9316e701	1792252958	{"consistency":1,"kind":"Probability","probability":0.5166666666666667}
 f34caa09d91856ab	1792252958	{"consistency":1,"kind":"Probability","probability":0.8688888888888888}
 f36b0876552238f5	1792252958	{"confidence":0.88,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.01,"no_issue":0.08,"semantic_verdict":0.91}}
