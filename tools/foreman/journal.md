@@ -1163,3 +1163,45 @@ ledger, `pnpm check` stays green. Findings fell from 461 to 27.
 Continue the ratchet: `no-swappable-primitive-params` next; then decide
 `prefer-property-tests`. When a rule's baseline is empty, flip it to `error` in the root
 config (the ladder's rung 4) — none is there yet, but the boundary rules are close.
+
+## Round 3, closed: the ratchet reached zero
+
+**Outcome: `.jig-baseline.json` is empty and `jig check` reports 0 findings.** The root
+config runs `plumbRecommendedRules` and `plumbEffectRecommendedRules` at **`error`** (rung 4),
+and `joggle.config.json`'s four rules are all `error`. 461 findings → 0; 149 identities → 0.
+
+The progression, all witnessed (`jig check` + `jig baseline` + `pnpm check`):
+
+| Commit    | Move                                      | Identities |
+| --------- | ----------------------------------------- | ---------- |
+| Round 2   | boundary `combine`                        | 149 → 91   |
+| `f931cff` | canonical sorts, JSDoc, prose             | 91 → 78    |
+| `9582f81` | four seam decisions stated                | 78 → 58    |
+| `cc1bd6d` | boundary reaches decode tests + scripts   | 58 → 41    |
+| `aebc68b` | named types, Predicate, nullish           | 41 → 30    |
+| `f0ac0b5` | boundary finish; lookups; durations       | 30 → 15    |
+| `ca2de95` | cutlist object params (`no-swappable`)    | 15 → 11    |
+| `2752e20` | jig-cli `ParseContext` (`no-swappable`)   | 11 → 10    |
+| `28185d6` | `prefer-property-tests`; rules to `error` | 10 → 0     |
+
+**How the last two rules fell, and why each is honest:**
+
+- **`no-swappable-primitive-params`** was a real refactor, not an exception: the parser
+  helpers take a `ParseContext` (engine and root travel as one) and object params elsewhere,
+  so a swapped call cannot compile.
+- **`prefer-property-tests`** required `fast-check` in every suite. Eight suites got a real
+  property (a baseline accept/read round-trip, severity tallies that sum to the input length,
+  lexicon-ref version monotonicity, parser totality on arbitrary bytes); the two
+  fixture-conformance suites carry the rule's own inline-disable escape hatch, with the reason
+  written down.
+
+**What "empty baseline" does not mean.** Fifteen file-scoped `overrides` remain in
+`oxlint.config.ts`. Each is a decision, each cites a reason joggle or plumb already recorded —
+boundary crossings, the domain word "shape", aggregate barrel surfaces, wall-clock durations —
+and none is a suppression. They are the residue of the vocabulary, and their length is the
+metric to watch. A rule at `error` with a documented corpus-level exception is not the same as
+a rule that never ran; `jig check` proves the rules ran and found nothing.
+
+**joggle, next.** Only four joggle rules are configured at the root; joggle ships more (the
+`presets/composition` set, the judged rules). Flipping those on is the next rung, and each new
+one starts at rung 1 with its findings accepted by identity.
