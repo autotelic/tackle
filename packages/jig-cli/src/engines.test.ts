@@ -1,3 +1,4 @@
+import fc from "fast-check"
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -205,5 +206,16 @@ describe("the ratchet wiring", () => {
     expect(ratchetViolations(diffBaseline(baseline, [finding, novel]))).toEqual([
       "joggle/no-dupes: 1 new finding not in the baseline",
     ])
+  })
+})
+
+describe("parseEngineOutput (property)", () => {
+  it("never throws, and answers only a list or undefined", () => {
+    fc.assert(
+      fc.property(fc.string(), (stdout) => {
+        const result = parseEngineOutput(stdout, { engine: "x", root: "/repo" })
+        expect(result === undefined || Array.isArray(result)).toBe(true)
+      }),
+    )
   })
 })

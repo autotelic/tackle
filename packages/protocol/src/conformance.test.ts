@@ -1,3 +1,4 @@
+/* oxlint-disable plumb/prefer-property-tests -- the input is a frozen corpus validated against a schema; there is no generator to vary, the fixtures are the property. */
 import { describe, expect, it } from "vitest"
 import { EMPTY_MANIFEST } from "./catalog.ts"
 import { LEXICON_NAMES, type LexiconName } from "./lexicon.ts"

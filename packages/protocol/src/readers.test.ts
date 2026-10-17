@@ -1,3 +1,4 @@
+/* oxlint-disable plumb/prefer-property-tests -- the subject is a child process reading one committed fixture; generating inputs would test the fixture writer, not the reader. */
 import { execFileSync } from "node:child_process"
 import { describe, expect, it } from "vitest"
 import { fixturePath } from "./fixture-support.ts"

@@ -1,3 +1,4 @@
+import fc from "fast-check"
 import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { Order } from "effect"
@@ -103,5 +104,15 @@ describe("the plugin prefix", () => {
       "plumb/no-raw-html-layout",
       "plumb/plumb-ui/no-raw-interactive",
     ])
+  })
+})
+
+describe("parseEngineOutput (property)", () => {
+  it("never throws on arbitrary bytes", () => {
+    fc.assert(
+      fc.property(fc.string(), (stdout) => {
+        expect(() => parseEngineOutput(stdout, { engine: "oxlint", root: ROOT })).not.toThrow()
+      }),
+    )
   })
 })

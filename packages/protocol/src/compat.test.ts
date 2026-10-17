@@ -1,3 +1,4 @@
+import fc from "fast-check"
 import { readdirSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import { schemaBreakingChanges } from "./compat.ts"
@@ -88,5 +89,19 @@ describe("the frozen corpus", () => {
     const ok = validate(loadJson(`fixtures/compat/${file}`))
     if (!ok) throw new Error(JSON.stringify(validate.errors))
     expect(ok).toBe(true)
+  })
+})
+
+describe("schemaBreakingChanges (property)", () => {
+  it("finds no breaking change between a schema and itself", () => {
+    fc.assert(
+      fc.property(
+        fc.dictionary(fc.stringMatching(/^[a-z]{1,6}$/u), fc.jsonValue()),
+        (properties) => {
+          const schema = { type: "object", properties }
+          expect(schemaBreakingChanges(schema, schema)).toEqual([])
+        },
+      ),
+    )
   })
 })

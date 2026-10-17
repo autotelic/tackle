@@ -7,12 +7,11 @@ import { plumbEffectRecommendedRules, plumbRecommendedRules } from "@autotelic/p
  * `plumb` and `plumb-effect` plugins and `rules` spreads their recommended sets, so `jig`'s
  * `plumb` engine runs real rules instead of bare oxlint wearing plumb's name.
  *
- * The rules sit at `warn`, not the recommended `error`, for one round. A single error-enable
- * puts ~450 findings across `protocol`, `cutlist`, and `jig-cli` behind a plain `pnpm lint`
- * that has no baseline to ratchet against — the "error over a growing baseline" FOREMAN §5
- * warns against. Phase B moves each rule to `error` under the ≤50-findings entry bar; until
- * then `pnpm jig check` freezes the same findings in `.jig-baseline.json` by identity, so
- * they are visible and cannot be re-reported.
+ * The rules are the recommended sets at `error` (FOREMAN §5, rung 4). They began at `warn`
+ * with every finding frozen in `.jig-baseline.json` by identity; Phase B drove that baseline
+ * from 149 identities to empty, then flipped the rules. The file-scoped `overrides` below are
+ * the places where the code and the rules disagree, each with the reason written down — they
+ * are where the last findings went, and their length is the metric to watch, not hide.
  *
  * `plumb-react` is absent on purpose: nothing here renders.
  *
@@ -26,10 +25,6 @@ import { plumbEffectRecommendedRules, plumbRecommendedRules } from "@autotelic/p
  * command line. They are documentation here; the command line is what actually works —
  * oxlint builds a directory's nested config before it applies any ignore.
  */
-
-/** Every rule a recommended set ships, held at `warn` until Phase B ratchets it. */
-const atWarn = (rules: Readonly<Record<string, string>>): Record<string, "warn"> =>
-  Object.fromEntries(Object.keys(rules).map((rule) => [rule, "warn"]))
 
 /** Every `plumb-effect` rule at `off` — for code that is not an Effect application. */
 const effectOff: Record<string, "off"> = Object.fromEntries(
@@ -126,8 +121,8 @@ export default {
     { name: "plumb-effect", specifier: "@autotelic/plumb/effect" },
   ],
   rules: {
-    ...atWarn(plumbRecommendedRules),
-    ...atWarn(plumbEffectRecommendedRules),
+    ...plumbRecommendedRules,
+    ...plumbEffectRecommendedRules,
     "plumb-effect/require-schema-type-derivation": "off",
   },
   overrides: [

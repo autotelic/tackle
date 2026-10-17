@@ -1,3 +1,4 @@
+import fc from "fast-check"
 import { describe, expect, it } from "vitest"
 import { decodeBaseline } from "./baseline.ts"
 import { compileLexicon, loadJson, makeAjv } from "./fixture-support.ts"
@@ -157,5 +158,17 @@ describe("report projections", () => {
 
   it("maps to the documented Code Climate example (identity, never line)", () => {
     expect(toCodeClimate(source)).toEqual(loadJson("fixtures/projections/codeclimate.golden.json"))
+  })
+})
+
+describe("severity mappings (property)", () => {
+  it("maps every severity to exactly one target value", () => {
+    fc.assert(
+      fc.property(fc.constantFrom<Severity>("error", "warn", "info"), (severity) => {
+        expect([1, 2, 3]).toContain(severityNumeric(severity))
+        expect(["error", "warning", "note"]).toContain(severity01(severity))
+        expect(["major", "minor", "info"]).toContain(severityCodeClimate(severity))
+      }),
+    )
   })
 })

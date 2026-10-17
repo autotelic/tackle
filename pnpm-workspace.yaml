@@ -32,6 +32,9 @@ catalog:
   oxfmt: "0.73.0" # the Oxc formatter, alongside the Oxc linter
   vitest: "5.0.1"
   "@types/node": "24.13.5"
+  # Property-based testing. `plumb/prefer-property-tests` requires it in every suite; the
+  # workspace's tests default to properties over examples where the claim is general.
+  "fast-check": "4.10.2"
   # The outside judge for the lexicon schemas: a JSON-Schema validator that is not the
   # TypeScript. Draft 2020-12, which is what schema/*.json declares. Dev-only; protocol's
   # runtime stays dependency-free.

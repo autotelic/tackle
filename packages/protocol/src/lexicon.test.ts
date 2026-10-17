@@ -1,3 +1,4 @@
+import fc from "fast-check"
 import { describe, expect, it } from "vitest"
 import {
   isLexiconName,
@@ -36,5 +37,20 @@ describe("the lexicon registry", () => {
     expect(isReadable({ name: "report", version: 1 }, known)).toBe(true)
     expect(isReadable({ name: "baseline", version: 1 }, known)).toBe(false)
     expect(names(known, "report")).toBe(true)
+  })
+})
+
+describe("isReadable (property)", () => {
+  it("reads a ref exactly when it names the lexicon at a not-older version", () => {
+    fc.assert(
+      fc.property(
+        fc.constantFrom(...LEXICON_NAMES),
+        fc.integer({ min: 1, max: 5 }),
+        fc.integer({ min: 1, max: 5 }),
+        (name, version, known) => {
+          expect(isReadable({ name, version }, { name, version: known })).toBe(version >= known)
+        },
+      ),
+    )
   })
 })

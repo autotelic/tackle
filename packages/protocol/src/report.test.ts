@@ -1,3 +1,4 @@
+import fc from "fast-check"
 import { describe, expect, it } from "vitest"
 import {
   countsOf,
@@ -86,5 +87,19 @@ describe("decodeReport", () => {
     expect(
       decodeReport({ lexicon: { name: "report", version: 1 }, diagnostics: "not an array" }),
     ).toBeUndefined()
+  })
+})
+
+describe("countsOf (property)", () => {
+  it("tallies every diagnostic exactly once", () => {
+    fc.assert(
+      fc.property(
+        fc.array(fc.constantFrom("error", "warn", "info"), { maxLength: 40 }),
+        (severities) => {
+          const counts = countsOf(severities.map((severity) => at({ severity })))
+          expect(counts.error + counts.warn + counts.info).toBe(severities.length)
+        },
+      ),
+    )
   })
 })

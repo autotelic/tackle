@@ -3,16 +3,5 @@
     "name": "baseline",
     "version": 1
   },
-  "identities": [
-    "plumb/prefer-property-tests:packages/cutlist/src/catalog.test.ts",
-    "plumb/prefer-property-tests:packages/jig-cli/src/engines.test.ts",
-    "plumb/prefer-property-tests:packages/jig-cli/src/oxlint-conformance.test.ts",
-    "plumb/prefer-property-tests:packages/protocol/src/baseline.test.ts",
-    "plumb/prefer-property-tests:packages/protocol/src/compat.test.ts",
-    "plumb/prefer-property-tests:packages/protocol/src/conformance.test.ts",
-    "plumb/prefer-property-tests:packages/protocol/src/lexicon.test.ts",
-    "plumb/prefer-property-tests:packages/protocol/src/projections.test.ts",
-    "plumb/prefer-property-tests:packages/protocol/src/readers.test.ts",
-    "plumb/prefer-property-tests:packages/protocol/src/report.test.ts"
-  ]
+  "identities": []
 }

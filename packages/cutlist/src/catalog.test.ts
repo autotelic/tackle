@@ -1,3 +1,4 @@
+import fc from "fast-check"
 import { describe, expect, it } from "vitest"
 import { importerGraph } from "./catalog.ts"
 import { parseModule, type SourceModule } from "./crawl.ts"
@@ -125,5 +126,15 @@ describe("importerGraph", () => {
   it("matches one that does not, and one written through an alias", () => {
     const graph = importerGraph(modules, alias)
     expect([...(graph.get("src/components/panel.tsx") ?? [])]).toEqual(["src/routes/settings.tsx"])
+  })
+})
+
+describe("parseModule (property)", () => {
+  it("never throws on arbitrary source text", () => {
+    fc.assert(
+      fc.property(fc.string(), (text) => {
+        expect(() => parseModule({ filename: "x.tsx", text })).not.toThrow()
+      }),
+    )
   })
 })

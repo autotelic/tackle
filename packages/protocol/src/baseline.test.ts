@@ -1,3 +1,4 @@
+import fc from "fast-check"
 import { describe, expect, it } from "vitest"
 import { accept, diffBaseline, identityOf, ratchetViolations } from "./baseline.ts"
 import type { Diagnostic } from "./report.ts"
@@ -47,5 +48,18 @@ describe("diffBaseline", () => {
   it("holds when nothing is new", () => {
     const baseline = accept([at("a")])
     expect(ratchetViolations(diffBaseline(baseline, [at("a")]))).toEqual([])
+  })
+})
+
+describe("the ratchet (property)", () => {
+  it("holds when the baseline is exactly what fires", () => {
+    fc.assert(
+      fc.property(fc.uniqueArray(fc.string(), { maxLength: 20 }), (identities) => {
+        const diagnostics = identities.map((identity) => at(identity))
+        const diff = diffBaseline(accept(diagnostics), diagnostics)
+        expect(diff.novel).toEqual([])
+        expect(diff.stale).toEqual([])
+      }),
+    )
   })
 })

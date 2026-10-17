@@ -41,6 +41,7 @@
     "@opencode/plugin": "catalog:",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
+    "fast-check": "catalog:",
     "vitest": "catalog:"
   },
   "peerDependencies": {

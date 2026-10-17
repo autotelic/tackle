@@ -3,8 +3,8 @@
   "rules": {
     "joggle/layer-direction": "error",
     "joggle/import-cycle": "error",
-    "joggle/naming-drift": "warn",
-    "joggle/duplicate-meaning": "warn"
+    "joggle/naming-drift": "error",
+    "joggle/duplicate-meaning": "error"
   },
   "architecture": {
     "layers": [
