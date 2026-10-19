@@ -1,4 +1,4 @@
-import { Console, Effect, FileSystem, Option, Order, Path } from "effect"
+import { Console, Data, Effect, FileSystem, Option, Order, Path } from "effect"
 import { Command, Flag } from "effect/cli"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { projectMenu } from "@autotelic/protocol"
@@ -7,7 +7,7 @@ import { compareCatalog, compareMenu, compareText, type StalenessResult } from "
 import { loadConfig, outputOf } from "./config.ts"
 import { readIntent } from "./intent.ts"
 import { renderCatalog } from "./render/catalog.ts"
-import { renderDiagrams } from "./render/diagram.ts"
+import { renderDiagramIndex, renderDiagrams } from "./render/diagram.ts"
 import { renderHooks } from "./render/hooks.ts"
 import { renderManifest } from "./render/manifest.ts"
 import { renderMenu, renderMenuJson } from "./render/menu.ts"
@@ -16,6 +16,18 @@ import { renderTokens } from "./render/tokens.ts"
 /** One report through Effect's Console, newline-normalized so a test can capture it. */
 const write = (text: string): Effect.Effect<void> =>
   Console.log(text.endsWith("\n") ? text.slice(0, -1) : text)
+
+/**
+ * A drawing failure, on the error channel rather than as a thrown `PeleError`.
+ *
+ * `pele` throws synchronously, and `NodeRuntime.runMain(..., { disableErrorReporting: true })`
+ * turns an unhandled throw into a silent exit 1 — which is how a source over the limit looked
+ * like `cutlist build` doing nothing. `Effect.try` names the failure, and the handler below
+ * prints it: a rendering that cannot be drawn is a report, not an absence.
+ */
+class DiagramError extends Data.TaggedError("DiagramError")<{
+  readonly detail: string
+}> {}
 
 const buildCommand = Command.make(
   "build",
@@ -72,12 +84,22 @@ const buildCommand = Command.make(
         return
       }
 
-      const diagramFiles: ReadonlyArray<readonly [string, string]> = renderDiagrams(
-        catalog,
-      ).flatMap((diagram) => [
-        [`${output.diagrams}/${diagram.name}.mmd`, diagram.mermaid] as const,
-        [`${output.diagrams}/${diagram.name}.svg`, diagram.svg] as const,
-      ])
+      const diagrams = yield* Effect.try({
+        try: () => renderDiagrams(catalog),
+        catch: (cause) =>
+          new DiagramError({
+            detail: cause instanceof Error ? cause.message : String(cause),
+          }),
+      })
+      const diagramFiles: ReadonlyArray<readonly [string, string]> = [
+        ...diagrams.flatMap((diagram) => [
+          [`${output.diagrams}/${diagram.name}.mmd`, diagram.mermaid] as const,
+          [`${output.diagrams}/${diagram.name}.svg`, diagram.svg] as const,
+        ]),
+        // The index is the macro reading, and part of the artifact: a `--check` that did not
+        // compare it would let the table drift from the panels it describes.
+        [`${output.diagrams}/README.md`, renderDiagramIndex(diagrams)] as const,
+      ]
 
       if (config.check) {
         const results: Array<readonly [string, StalenessResult]> = [
@@ -147,7 +169,16 @@ const buildCommand = Command.make(
       yield* write(
         `cutlist: wrote ${rendered.length} files; ${catalog.components.length} components, ${catalog.duplicates.length} duplicate candidates, ${catalog.orphans.length} orphans${staleNote}`,
       )
-    }),
+    }).pipe(
+      Effect.catchTag("DiagramError", (error) =>
+        Effect.gen(function* () {
+          yield* write(`cutlist: could not draw the diagrams: ${error.detail}`)
+          yield* Effect.sync(() => {
+            process.exitCode = 1
+          })
+        }),
+      ),
+    ),
 ).pipe(
   Command.withDescription(
     "Crawl the repo and render the catalog, the menu, the lint manifest, the graph diagrams, and the token vocabulary.",

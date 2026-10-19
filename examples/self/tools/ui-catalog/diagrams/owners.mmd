@@ -1,13 +1,16 @@
+---
+title: owners · 9 nodes, 10 edges
+---
 flowchart LR
-  n0["shared"]:::owner
-  n1["button"]:::primitive
-  n2["dashboard"]:::owner
-  n3["card"]:::primitive
-  n4["settings"]:::owner
-  n5["project-toolbar"]:::shared
-  n6["theme-context"]:::shared
-  n7["theme-provider"]:::shared
-  n8["use-theme"]:::shared
+  n0["shared"]
+  n1["button"]
+  n2["dashboard"]
+  n3["card"]
+  n4["settings"]
+  n5["project-toolbar"]
+  n6["theme-context"]
+  n7["theme-provider"]
+  n8["use-theme"]
   n0 --> n1
   n2 --> n3
   n4 --> n3
@@ -18,6 +21,10 @@ flowchart LR
   n2 --> n7
   n4 --> n7
   n0 --> n8
-  classDef owner fill:#f1f5f9,stroke:#64748b,color:#0f172a;
-  classDef primitive fill:#eef2ff,stroke:#6366f1,color:#312e81;
-  classDef shared fill:#ecfdf5,stroke:#10b981,color:#064e3b;
+  class n0,n2,n4 owner
+  class n1,n3 primitive
+  class n5,n6,n7,n8 shared
+  classDef default fill:#ffffff,stroke:#9ca3af,color:#111827;
+  classDef owner fill:#111827,stroke:#111827,color:#ffffff;
+  classDef primitive fill:#ffffff,stroke:#111827,stroke-width:2px,color:#111827;
+  classDef shared fill:#f3f4f6,stroke:#4b5563,color:#111827;

@@ -1,18 +1,23 @@
+---
+title: hooks · 9 nodes, 5 edges
+---
 flowchart LR
-  n0["useParams"]:::hook
-  n1["dashboard_.$id"]:::local
-  n2["useTheme"]:::hook
-  n3["project-toolbar"]:::shared
-  n4["useMemo"]:::hook
-  n5["theme-provider"]:::shared
-  n6["useState"]:::hook
-  n7["useContext"]:::hook
-  n8["use-theme"]:::shared
+  n0["useTheme"]
+  n1["project-toolbar"]
+  n2["useMemo"]
+  n3["theme-provider"]
+  n4["useState"]
+  n5["useContext"]
+  n6["use-theme"]
+  n7["useParams"]
+  n8["dashboard_.$id"]
   n0 --> n1
   n2 --> n3
-  n4 --> n5
-  n6 --> n5
+  n4 --> n3
+  n5 --> n6
   n7 --> n8
-  classDef hook fill:#fdf2f8,stroke:#db2777,color:#831843;
-  classDef local fill:#fef3c7,stroke:#f59e0b,color:#78350f;
-  classDef shared fill:#ecfdf5,stroke:#10b981,color:#064e3b;
+  class n0,n2,n4,n5,n7 hook
+  class n1,n3,n6 shared
+  classDef default fill:#ffffff,stroke:#9ca3af,color:#111827;
+  classDef hook fill:#fff1f2,stroke:#e11d48,color:#881337;
+  classDef shared fill:#f3f4f6,stroke:#4b5563,color:#111827;

@@ -1,4 +1,4 @@
-import { Effect, FileSystem, Order, Path } from "effect"
+import { Effect, FileSystem, Order, Path, Predicate } from "effect"
 import { parseSync } from "oxc-parser"
 
 /*
@@ -204,6 +204,21 @@ export const parseModule = ({
 
 const SOURCE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx"] as const
 
+/**
+ * A test, story, or declaration is source, but not a part of the UI model.
+ *
+ * A test imports components to exercise them, so leaving it in would draw test files as
+ * components and let a test import count as an owner. A story renders components to catalogue
+ * them, and a declaration describes types; neither is a part the app is made of. These are
+ * conventions rather than one repository's layout: `*.test.*` / `*.spec.*` suffixes and
+ * `__tests__`, `__mocks__`, `__fixtures__`, `test`, and `tests` directories are the shapes
+ * every JavaScript tree uses.
+ */
+const TEST_PATH =
+  /(^|\/)(?:__tests__|__mocks__|__fixtures__|tests?)\/|\.(?:test|spec|stories|story|d)\.[^/]+$/u
+
+export const isTestPath: Predicate.Predicate<string> = (path) => TEST_PATH.test(path)
+
 /** Every source file under the configured roots, absolute and sorted. */
 export const listSources = (
   root: string,
@@ -222,6 +237,7 @@ export const listSources = (
       )
       for (const name of names) {
         if (name.includes("node_modules")) continue
+        if (isTestPath(name)) continue
         if (extensions.some((extension) => name.endsWith(extension)))
           found.add(path.join(absolute, name))
       }
