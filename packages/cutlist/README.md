@@ -55,6 +55,13 @@ cutlist build            # crawl, render every output, write them
 cutlist build --check    # fail if the committed catalog is stale (like prettier --check)
 ```
 
+## The artifact (design note)
+
+The model is the truth; the artifact is the model made navigable. [docs/artifact.md](docs/artifact.md)
+records the shape it should grow into — one record per part, a stable id, a faceted index,
+a composition graph, and separate agent and human renderings — and separates what ships
+today from what is proposed. It is a decision record, not a commitment.
+
 ## Where it meets the others
 
 `cutlist` **produces** what `plumb` and `joggle` **consume**. It generates duplicate
