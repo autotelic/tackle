@@ -141,6 +141,14 @@ contract, and Code Climate is a courtesy. The report is the truth; a projection 
 rendering, and if a target cannot express something, the information is dropped, not bent
 back into the report.
 
+## Scoping a run
+
+A run can be narrowed to what a change introduced. The record — a proposed lexicon,
+`changeset` — and its two matchers are specified in [`docs/scoping.md`](./docs/scoping.md):
+`jig` computes the change set once, and any engine can read it. The **choice** of scope
+stays in the tools; only the measurement crosses the boundary. The proposal is not yet a
+schema, so the lexicons table above does not list it.
+
 ## What must never be in this package
 
 - No runtime dependency, no imports, no `effect`, no I/O, no rendering, no CLI.
