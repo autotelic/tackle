@@ -22,3 +22,13 @@ coverage/
 # The journal is the committed checkpoint; the .sqlite is disposable.
 tools/foreman/*.sqlite
 tools/foreman/*.sqlite-journal
+
+# pi's per-project caches. The install list itself (.pi/settings.json) IS committed —
+# it is what makes this repo's pi sessions dogfood the jig extension (see AGENTS.md).
+.pi/fabric/
+.pi/git/
+.pi/npm/
+.pi/sessions/
+
+# OpenCode may install local plugin dependencies under here; none are committed.
+.opencode/node_modules/

@@ -233,9 +233,13 @@ Consumers see **zero change**: same npm names, same `bin`, same `exports`, same 
 
    Also found by the dogfood, now **resolved**: **`packages/jig-cli/extensions/jig.ts` imports
    `typebox` at runtime and `jig-cli` declares neither it nor the pi types**
-   (`joggle/dependency-fit`). Decision: `typebox` is a **dependency** (`"typebox": "1.3.34"`,
-   mirroring `joggle`'s pin), because the extension ships in `files` and a published pi install
-   needs it at runtime — a devDependency resolves in this repo but not in the installed one. The
+   (`joggle/dependency-fit`). Decision: `typebox` is a **peerDependency with a `"*"` range**,
+   plus a pinned **devDependency** (`"typebox": "1.3.34"`, mirroring `joggle`'s pin) so the
+   monorepo resolves it for `surfaces.test.ts`. The first call — ship it as a **dependency** —
+   was wrong for pi's current loader: pi provides `typebox` to extensions as a host module and
+   warns "Installed copies can bypass the extension loader and create duplicate runtime
+   modules" when it appears in `dependencies` (the warning checks only `dependencies`, so the
+   devDependency is silent). A published `pi install` gets the module from the host. The
    pi _types_ (`@earendil-works/pi-coding-agent`) stay undeclared on purpose: the import is
    `import type`, erased at runtime, and the extension is deliberately outside the compiler's
    program (`pi` strips types itself, `tsconfig.json` includes `src` only), so nothing needs the

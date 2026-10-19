@@ -19,11 +19,18 @@ import { Plugin } from "@opencode/plugin"
 
 const run = promisify(execFile)
 
-/** This package's own installed `bin/jig.js`, one directory up from the built `dist/`. */
-const ownBin = (): string => join(dirname(fileURLToPath(import.meta.url)), "..", "bin", "jig.js")
+/** The package root: the directory above `src/` (source) or `dist/` (built). */
+const packageRoot = (): string => join(dirname(fileURLToPath(import.meta.url)), "..")
 
-const onPath = (name: string): boolean =>
-  (process.env.PATH ?? "").split(":").some((dir) => dir !== "" && existsSync(join(dir, name)))
+/** The first `name` on PATH, if any. */
+const onPath = (name: string): string | undefined => {
+  for (const dir of (process.env.PATH ?? "").split(":")) {
+    if (dir === "") continue
+    const candidate = join(dir, name)
+    if (existsSync(candidate)) return candidate
+  }
+  return undefined
+}
 
 /** How to launch jig: a command and its leading args. */
 interface Launcher {
@@ -31,19 +38,45 @@ interface Launcher {
   readonly args: ReadonlyArray<string>
 }
 
+/** The facts the fallback decision reads, injected so it can be tested without spawning. */
+export interface LaunchEnvironment {
+  readonly override: string | undefined
+  readonly onPath: (name: string) => string | undefined
+  readonly execPath: string
+  readonly exists: (path: string) => boolean
+  readonly root: string
+}
+
 /**
  * How to invoke jig.
  *
- * `PATH` wins so the plugin and the shell get the same answer; `JIG_BIN` overrides both
- * for a checkout under test; the package's own bin is the fallback, so an installed plugin
- * works with no `jig` on `PATH` at all.
+ * `PATH` wins so the plugin and the shell get the same answer; `JIG_BIN` overrides both.
+ * The fallback runs this package's own build, and it must name a real interpreter rather
+ * than `process.execPath`: the OpenCode server is a bun-compiled binary, so there
+ * `process.execPath` is OpenCode, not Node — launching `process.execPath <jig.js>` runs
+ * OpenCode, which prints its own help. Prefer a `jig` on `PATH`, then this checkout's build,
+ * then its source, each under a Node found on `PATH` (or, if none, whatever runs us).
  */
-const invoke = (): Launcher => {
-  const override = process.env.JIG_BIN
-  if (override !== undefined && override !== "") return { command: override, args: [] }
-  if (onPath("jig")) return { command: "jig", args: [] }
-  return { command: process.execPath, args: [ownBin()] }
+export const resolveLauncher = (env: LaunchEnvironment): Launcher => {
+  if (env.override !== undefined && env.override !== "") return { command: env.override, args: [] }
+  if (env.onPath("jig") !== undefined) return { command: "jig", args: [] }
+  const node = env.onPath("node") ?? env.execPath
+  const built = join(env.root, "dist", "cli.js")
+  if (env.exists(built)) return { command: node, args: [built] }
+  const source = join(env.root, "src", "cli.ts")
+  if (env.exists(source)) return { command: node, args: ["--conditions=development", source] }
+  // `bin/jig.js` forwards to `dist/cli.js`, so this arm only runs with nothing to run.
+  return { command: node, args: [join(env.root, "bin", "jig.js")] }
 }
+
+const invoke = (): Launcher =>
+  resolveLauncher({
+    override: process.env.JIG_BIN,
+    onPath,
+    execPath: process.execPath,
+    exists: existsSync,
+    root: packageRoot(),
+  })
 
 /** The report and the exit code. A non-zero exit is a result, not a thrown tool call. */
 interface Outcome {

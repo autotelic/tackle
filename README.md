@@ -66,6 +66,10 @@ and re-runs the same binary. Both hand the model what a human's terminal shows, 
 "the agent gets a different answer than CI" is the failure the whole workspace exists to
 prevent. `@opencode/plugin` is an optional peer — nothing else here needs it.
 
+This repo dogfoods both surfaces. `.pi/settings.json` installs the `jig-cli` package into
+pi project-locally, and `.opencode/plugins/jig.ts` re-exports the OpenCode plugin, so a
+session in `tackle` — human or agent — runs the same `jig check` the shell does.
+
 `plumb` and `joggle` were moved in from their own repositories with `git subtree`, history
 intact — see [`MIGRATION.md`](./MIGRATION.md) for which refs came in (`plumb/main`,
 `joggle/main`, deliberately not the branches carrying unreleased work) and for the

@@ -34,8 +34,7 @@
   "dependencies": {
     "@autotelic/protocol": "workspace:*",
     "@effect/platform-node": "catalog:",
-    "effect": "catalog:",
-    "typebox": "1.3.34"
+    "effect": "catalog:"
   },
   "devDependencies": {
     "@effect/tsgo": "catalog:",
@@ -43,13 +42,18 @@
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
     "fast-check": "catalog:",
+    "typebox": "1.3.34",
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "@opencode/plugin": "*"
+    "@opencode/plugin": "*",
+    "typebox": "*"
   },
   "peerDependenciesMeta": {
     "@opencode/plugin": {
+      "optional": true
+    },
+    "typebox": {
       "optional": true
     }
   },
