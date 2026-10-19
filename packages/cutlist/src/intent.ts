@@ -1,4 +1,4 @@
-import { Effect, FileSystem, Path, Result, Schema, SchemaParser } from "effect"
+import { Effect, FileSystem, Option, Order, Path, Result, Schema, SchemaParser } from "effect"
 import { decodeIntent, type Intent } from "@autotelic/protocol"
 
 /*
@@ -27,8 +27,10 @@ export interface IntentSet {
 }
 
 /** Parse JSON without a throw, the way every other reader here treats untrusted bytes. */
-const parseJson = (text: string): unknown =>
-  Result.getOrUndefined(SchemaParser.decodeResult(Schema.fromJsonString(Schema.Unknown))(text))
+const parseJson = (text: string): Option.Option<Schema.Json> =>
+  Option.fromUndefinedOr(
+    Result.getOrUndefined(SchemaParser.decodeResult(Schema.fromJsonString(Schema.Json))(text)),
+  )
 
 /**
  * Decode intent files. Pure, so the parser is tested without touching a disk.
@@ -41,9 +43,14 @@ export const decodeIntentFiles = (files: ReadonlyArray<IntentFile>): IntentSet =
   const malformed: Array<string> = []
   for (const file of files) {
     if (!file.name.endsWith(".json")) continue
-    const intent = decodeIntent(parseJson(file.text))
-    if (intent === undefined) malformed.push(file.name)
-    else byName.set(file.name.slice(0, -".json".length), intent)
+    const intent = Option.flatMap(parseJson(file.text), (value) =>
+      Option.fromUndefinedOr(decodeIntent(value)),
+    )
+    if (Option.isNone(intent)) {
+      malformed.push(file.name)
+      continue
+    }
+    byName.set(file.name.slice(0, -".json".length), intent.value)
   }
   return { byName, malformed }
 }
@@ -56,10 +63,13 @@ export const decodeIntentFiles = (files: ReadonlyArray<IntentFile>): IntentSet =
  * empty read; the menu is generated either way, and `--check` is the thing that must be
  * loud.
  */
-export const readIntent = (
-  root: string,
-  directory: string,
-): Effect.Effect<IntentSet, never, FileSystem.FileSystem | Path.Path> =>
+export const readIntent = ({
+  root,
+  directory,
+}: {
+  readonly root: string
+  readonly directory: string
+}): Effect.Effect<IntentSet, never, FileSystem.FileSystem | Path.Path> =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
@@ -68,7 +78,7 @@ export const readIntent = (
     if (!exists) return { byName: new Map(), malformed: [] }
     const entries = yield* Effect.orElseSucceed(fs.readDirectory(absolute), () => [])
     const files: Array<IntentFile> = []
-    for (const name of [...entries].sort()) {
+    for (const name of [...entries].sort(Order.String)) {
       if (!name.endsWith(".json")) continue
       const text = yield* Effect.orElseSucceed(
         fs.readFileString(path.join(absolute, name)),

@@ -24,10 +24,13 @@ export interface StalenessResult {
 }
 
 /** Compare the committed catalog's hash against a freshly computed one. */
-export const compareCatalog = (
-  file: string,
-  fresh: Catalog,
-): Effect.Effect<StalenessResult, never, FileSystem.FileSystem | Path.Path> =>
+export const compareCatalog = ({
+  file,
+  fresh,
+}: {
+  readonly file: string
+  readonly fresh: Catalog
+}): Effect.Effect<StalenessResult, never, FileSystem.FileSystem | Path.Path> =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const text = yield* Effect.orElseSucceed(fs.readFileString(file), () => undefined)
@@ -61,10 +64,13 @@ const parseJson = (text: string): unknown => {
  * the records keeps the gate about content — the same reason the catalog is checked by its
  * own `hash` rather than by a diff.
  */
-export const compareMenu = (
-  file: string,
-  fresh: Menu,
-): Effect.Effect<StalenessResult, never, FileSystem.FileSystem | Path.Path> =>
+export const compareMenu = ({
+  file,
+  fresh,
+}: {
+  readonly file: string
+  readonly fresh: Menu
+}): Effect.Effect<StalenessResult, never, FileSystem.FileSystem | Path.Path> =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const text = yield* Effect.orElseSucceed(fs.readFileString(file), () => undefined)
@@ -85,10 +91,13 @@ export const compareMenu = (
  * would — so a difference means content moved, not formatting. A file that is missing is
  * stale, never "fine because unreadable".
  */
-export const compareText = (
-  file: string,
-  fresh: string,
-): Effect.Effect<StalenessResult, never, FileSystem.FileSystem | Path.Path> =>
+export const compareText = ({
+  file,
+  fresh,
+}: {
+  readonly file: string
+  readonly fresh: string
+}): Effect.Effect<StalenessResult, never, FileSystem.FileSystem | Path.Path> =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const committed = yield* Effect.orElseSucceed(fs.readFileString(file), () => undefined)

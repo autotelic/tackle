@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import type { Menu } from "@autotelic/protocol"
+import { decodeMenu, type Menu } from "@autotelic/protocol"
 import { renderMenu, renderMenuJson } from "./menu.ts"
 
 /*
@@ -57,13 +57,11 @@ describe("renderMenu", () => {
 
 describe("renderMenuJson", () => {
   it("serializes the model, not a re-derivation", () => {
-    const parsed = JSON.parse(renderMenuJson(menu())) as {
-      lexicon: { name: string }
-      hash: string
-      entries: Array<{ name: string; summary?: string }>
-    }
-    expect(parsed.lexicon.name).toBe("menu")
-    expect(parsed.hash).toBe("abc123")
-    expect(parsed.entries[0]).toMatchObject({ name: "button", summary: "The one button." })
+    // Decoding proves the round trip: the bytes parse back into the same model, so a
+    // renderer that emits something the reader cannot read fails here, not in a consumer.
+    const parsed = decodeMenu(JSON.parse(renderMenuJson(menu())))
+    expect(parsed?.lexicon.name).toBe("menu")
+    expect(parsed?.hash).toBe("abc123")
+    expect(parsed?.entries[0]).toMatchObject({ name: "button", summary: "The one button." })
   })
 })

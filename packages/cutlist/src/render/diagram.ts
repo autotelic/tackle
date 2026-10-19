@@ -25,12 +25,18 @@ export interface Diagram {
   readonly svg: string
 }
 
+/** The closed set of node kinds a diagram draws. The style table is keyed by it. */
+type NodeKind = "primitive" | "shared" | "local" | "part" | "hook" | "pkg" | "owner" | "empty"
+
 /*
  * Colors by node kind. Tiers carry the catalog's own three, so the picture agrees with the
  * report a reader already has; everything else is a second layer of meaning: what a
  * component renders, the hooks it calls, the headless kit it wraps, who owns it.
+ *
+ * Left unannotated on purpose: inference keeps the keys, so indexing by `NodeKind` below
+ * fails to compile if a kind is ever added without a color.
  */
-const CLASS_STYLE: Readonly<Record<string, string>> = {
+const CLASS_STYLE = {
   primitive: "fill:#eef2ff,stroke:#6366f1,color:#312e81",
   shared: "fill:#ecfdf5,stroke:#10b981,color:#064e3b",
   local: "fill:#fef3c7,stroke:#f59e0b,color:#78350f",
@@ -40,27 +46,40 @@ const CLASS_STYLE: Readonly<Record<string, string>> = {
   owner: "fill:#f1f5f9,stroke:#64748b,color:#0f172a",
   empty: "fill:#ffffff,stroke:#cbd5e1,color:#64748b",
 }
-const FALLBACK_STYLE = "fill:#ffffff,stroke:#cbd5e1,color:#64748b"
+
+/** One node in a built flowchart: its positional id, its label, and its kind. */
+interface ChartNode {
+  readonly id: string
+  readonly label: string
+  readonly kind: NodeKind
+}
+
+/** One edge: endpoints as node ids, and whether it is a call rather than a render. */
+interface ChartEdge {
+  readonly from: string
+  readonly to: string
+  readonly dashed: boolean
+}
 
 /** A deterministic flowchart builder: nodes dedupe by label + kind, ids are positional. */
 interface Chart {
-  readonly node: (label: string, className: string) => string
+  readonly node: (label: string, kind: NodeKind) => string
   readonly edge: (from: string, to: string, dashed?: boolean) => void
   readonly render: () => string
 }
 
 const chart = (): Chart => {
   const ids = new Map<string, string>()
-  const nodes: Array<readonly [string, string, string]> = []
-  const edges: Array<readonly [string, string, boolean]> = []
+  const nodes: Array<ChartNode> = []
+  const edges: Array<ChartEdge> = []
 
-  const node = (label: string, className: string): string => {
-    const key = `${className}\u0000${label}`
+  const node = (label: string, kind: NodeKind): string => {
+    const key = `${kind}\u0000${label}`
     const existing = ids.get(key)
     if (existing !== undefined) return existing
     const id = `n${nodes.length}`
     ids.set(key, id)
-    nodes.push([id, label, className])
+    nodes.push({ id, label, kind })
     return id
   }
 
@@ -68,24 +87,24 @@ const chart = (): Chart => {
     // A tag that names the component itself (a primitive rendering its own element) is a
     // self-loop and only noise; the edge is dropped, the node stays.
     if (from === to) return
-    edges.push([from, to, dashed])
+    edges.push({ from, to, dashed })
   }
 
   const render = (): string => {
     const lines: Array<string> = ["flowchart LR"]
     if (nodes.length === 0) {
-      lines.push('  none["(nothing to draw)"]:::empty', `  classDef empty ${FALLBACK_STYLE};`)
+      lines.push('  none["(nothing to draw)"]:::empty', `  classDef empty ${CLASS_STYLE.empty};`)
       return `${lines.join("\n")}\n`
     }
-    for (const [id, label, className] of nodes) {
-      lines.push(`  ${id}["${label.replaceAll('"', "&quot;")}"]:::${className}`)
+    for (const { id, label, kind } of nodes) {
+      lines.push(`  ${id}["${label.replaceAll('"', "&quot;")}"]:::${kind}`)
     }
-    for (const [from, to, dashed] of edges) {
+    for (const { from, to, dashed } of edges) {
       lines.push(`  ${from} ${dashed ? "-.->" : "-->"} ${to}`)
     }
-    const used = [...new Set(nodes.map((entry) => entry[2]))].sort(Order.String)
-    for (const className of used) {
-      lines.push(`  classDef ${className} ${CLASS_STYLE[className] ?? FALLBACK_STYLE};`)
+    const used = [...new Set(nodes.map((entry) => entry.kind))].sort(Order.String)
+    for (const kind of used) {
+      lines.push(`  classDef ${kind} ${CLASS_STYLE[kind]};`)
     }
     return `${lines.join("\n")}\n`
   }

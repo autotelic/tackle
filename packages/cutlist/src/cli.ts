@@ -49,7 +49,7 @@ const buildCommand = Command.make(
       )
       const catalog = yield* buildCatalog(cwd, settings)
       const output = outputOf(settings)
-      const intent = yield* readIntent(cwd, output.intent)
+      const intent = yield* readIntent({ root: cwd, directory: output.intent })
 
       if (intent.malformed.length > 0) {
         yield* write(
@@ -81,12 +81,27 @@ const buildCommand = Command.make(
 
       if (config.check) {
         const results: Array<readonly [string, StalenessResult]> = [
-          [output.catalog, yield* compareCatalog(path.resolve(cwd, output.catalog), catalog)],
-          [output.menuJson, yield* compareMenu(path.resolve(cwd, output.menuJson), menu)],
-          [output.menu, yield* compareText(path.resolve(cwd, output.menu), renderMenu(menu))],
+          [
+            output.catalog,
+            yield* compareCatalog({ file: path.resolve(cwd, output.catalog), fresh: catalog }),
+          ],
+          [
+            output.menuJson,
+            yield* compareMenu({ file: path.resolve(cwd, output.menuJson), fresh: menu }),
+          ],
+          [
+            output.menu,
+            yield* compareText({
+              file: path.resolve(cwd, output.menu),
+              fresh: renderMenu(menu),
+            }),
+          ],
         ]
         for (const [relative, text] of diagramFiles) {
-          results.push([relative, yield* compareText(path.resolve(cwd, relative), text)])
+          results.push([
+            relative,
+            yield* compareText({ file: path.resolve(cwd, relative), fresh: text }),
+          ])
         }
         const stale = results.filter(([, result]) => result.stale)
         if (stale.length > 0 || staleIntent.length > 0) {
