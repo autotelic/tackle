@@ -38,6 +38,14 @@ must match the shape `plumb/src/ui/manifest.ts` parses, so lint stays a _lookup_
 than a second analysis. `plumb-ui` fails open on a malformed manifest (all rules go
 silent), which is why `cutlist check` exists: a stale catalog must be loud.
 
+The menu is the one **mixed** record: `menu.json` joins the derived composition with
+authored intent from `intent/<name>.json`, so regenerating the menu can never overwrite a
+sentence a person wrote; `MENU.md` is its cheap text view. `diagrams/` renders the same
+model as a graph — the composition of each part, the inverse hook view, and ownership —
+as Mermaid source beside the SVG `pele` drew from it, so the shape a list flattens is
+visible. `pele` is a rendering dependency, not a seam: nothing else in the workspace reads
+it, and it never touches the model.
+
 ## The signature is the whole point
 
 The proposal this project comes from claimed `Combobox`/`ComboBoxV2` would surface via
@@ -52,7 +60,7 @@ sub-components + called hooks.
 
 ```sh
 cutlist build            # crawl, render every output, write them
-cutlist build --check    # fail if the committed catalog is stale (like prettier --check)
+cutlist build --check    # fail if any committed rendering is stale (like prettier --check)
 ```
 
 ## The artifact (design note)

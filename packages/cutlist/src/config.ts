@@ -50,6 +50,7 @@ const OutputSchema = Schema.Struct({
   menuJson: Schema.optionalKey(Schema.String),
   menu: Schema.optionalKey(Schema.String),
   intent: Schema.optionalKey(Schema.String),
+  diagrams: Schema.optionalKey(Schema.String),
   hooks: Schema.optionalKey(Schema.String),
   tokens: Schema.optionalKey(Schema.String),
 })
@@ -74,6 +75,7 @@ export const defaultOutput: Required<CutlistOutput> = {
   menuJson: "tools/ui-catalog/menu.json",
   menu: "tools/ui-catalog/MENU.md",
   intent: "tools/ui-catalog/intent",
+  diagrams: "tools/ui-catalog/diagrams",
   hooks: "tools/ui-catalog/hooks.md",
   tokens: "tools/ui-catalog/tokens.md",
 }
@@ -115,6 +117,7 @@ export const outputOf = (config: CutlistConfig): Required<CutlistOutput> => ({
   menuJson: config.output?.menuJson ?? defaultOutput.menuJson,
   menu: config.output?.menu ?? defaultOutput.menu,
   intent: config.output?.intent ?? defaultOutput.intent,
+  diagrams: config.output?.diagrams ?? defaultOutput.diagrams,
   hooks: config.output?.hooks ?? defaultOutput.hooks,
   tokens: config.output?.tokens ?? defaultOutput.tokens,
 })

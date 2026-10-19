@@ -23,6 +23,7 @@
     "menuJson": "tools/ui-catalog/menu.json",
     "menu": "tools/ui-catalog/MENU.md",
     "intent": "tools/ui-catalog/intent",
+    "diagrams": "tools/ui-catalog/diagrams",
     "hooks": "tools/ui-catalog/hooks.md",
     "tokens": "tools/ui-catalog/tokens.md"
   }

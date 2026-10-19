@@ -1,0 +1,18 @@
+flowchart LR
+  n0["useParams"]:::hook
+  n1["dashboard_.$id"]:::local
+  n2["useTheme"]:::hook
+  n3["project-toolbar"]:::shared
+  n4["useMemo"]:::hook
+  n5["theme-provider"]:::shared
+  n6["useState"]:::hook
+  n7["useContext"]:::hook
+  n8["use-theme"]:::shared
+  n0 --> n1
+  n2 --> n3
+  n4 --> n5
+  n6 --> n5
+  n7 --> n8
+  classDef hook fill:#fdf2f8,stroke:#db2777,color:#831843;
+  classDef local fill:#fef3c7,stroke:#f59e0b,color:#78350f;
+  classDef shared fill:#ecfdf5,stroke:#10b981,color:#064e3b;

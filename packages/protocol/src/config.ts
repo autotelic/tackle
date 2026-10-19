@@ -85,6 +85,11 @@ export interface CutlistOutput {
   readonly menu?: string
   /** The directory of authored intent records, one JSON file per part name. */
   readonly intent?: string
+  /**
+   * The directory of graph renderings — Mermaid source beside the SVG `pele` drew from it.
+   * A directory, not a file, because one viewpoint is one diagram and a repo grows more.
+   */
+  readonly diagrams?: string
   readonly hooks?: string
   readonly tokens?: string
 }
@@ -285,6 +290,7 @@ const decodeOutput = (value: unknown): CutlistOutput | undefined => {
     "menuJson",
     "menu",
     "intent",
+    "diagrams",
     "hooks",
     "tokens",
   ] as const) {

@@ -7,6 +7,7 @@ import { compareCatalog, compareMenu, compareText, type StalenessResult } from "
 import { loadConfig, outputOf } from "./config.ts"
 import { readIntent } from "./intent.ts"
 import { renderCatalog } from "./render/catalog.ts"
+import { renderDiagrams } from "./render/diagram.ts"
 import { renderHooks } from "./render/hooks.ts"
 import { renderManifest } from "./render/manifest.ts"
 import { renderMenu, renderMenuJson } from "./render/menu.ts"
@@ -28,7 +29,9 @@ const buildCommand = Command.make(
       Flag.optional,
     ),
     check: Flag.Boolean("check").pipe(
-      Flag.withDescription("Fail when the committed catalog or menu is stale, instead of writing."),
+      Flag.withDescription(
+        "Fail when a committed rendering (catalog, menu, diagram) is stale, instead of writing.",
+      ),
       Flag.withDefault(false),
     ),
     format: Flag.Literals("format", ["text", "json"]).pipe(
@@ -69,12 +72,22 @@ const buildCommand = Command.make(
         return
       }
 
+      const diagramFiles: ReadonlyArray<readonly [string, string]> = renderDiagrams(
+        catalog,
+      ).flatMap((diagram) => [
+        [`${output.diagrams}/${diagram.name}.mmd`, diagram.mermaid] as const,
+        [`${output.diagrams}/${diagram.name}.svg`, diagram.svg] as const,
+      ])
+
       if (config.check) {
-        const results: ReadonlyArray<readonly [string, StalenessResult]> = [
+        const results: Array<readonly [string, StalenessResult]> = [
           [output.catalog, yield* compareCatalog(path.resolve(cwd, output.catalog), catalog)],
           [output.menuJson, yield* compareMenu(path.resolve(cwd, output.menuJson), menu)],
           [output.menu, yield* compareText(path.resolve(cwd, output.menu), renderMenu(menu))],
         ]
+        for (const [relative, text] of diagramFiles) {
+          results.push([relative, yield* compareText(path.resolve(cwd, relative), text)])
+        }
         const stale = results.filter(([, result]) => result.stale)
         if (stale.length > 0 || staleIntent.length > 0) {
           for (const [file, result] of stale) {
@@ -105,6 +118,7 @@ const buildCommand = Command.make(
         [output.menu, renderMenu(menu)],
         [output.hooks, renderHooks(catalog)],
         [output.tokens, renderTokens(catalog)],
+        ...diagramFiles,
       ]
       for (const [relative, text] of rendered) {
         const absolute = path.resolve(cwd, relative)
@@ -121,14 +135,14 @@ const buildCommand = Command.make(
     }),
 ).pipe(
   Command.withDescription(
-    "Crawl the repo and render the catalog, the menu, the lint manifest, and the token vocabulary.",
+    "Crawl the repo and render the catalog, the menu, the lint manifest, the graph diagrams, and the token vocabulary.",
   ),
   Command.withShortDescription("Crawl the repo and render the vocabulary."),
   Command.withExamples([
     { command: "cutlist build", description: "Render every output from the current tree." },
     {
       command: "cutlist build --check",
-      description: "Fail if the committed catalog or menu is stale.",
+      description: "Fail if a committed rendering is stale.",
     },
   ]),
 )

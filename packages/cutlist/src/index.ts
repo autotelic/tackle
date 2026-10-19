@@ -17,5 +17,12 @@ export * from "./intent.ts"
 export { renderCatalog } from "./render/catalog.ts"
 export { renderManifest } from "./render/manifest.ts"
 export { renderMenu, renderMenuJson } from "./render/menu.ts"
+export {
+  compositionMermaid,
+  hooksMermaid,
+  ownersMermaid,
+  renderDiagrams,
+  type Diagram,
+} from "./render/diagram.ts"
 export { renderHooks } from "./render/hooks.ts"
 export { renderTokens } from "./render/tokens.ts"

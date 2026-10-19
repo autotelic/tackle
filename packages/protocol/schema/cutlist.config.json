@@ -80,6 +80,7 @@
         "menuJson": { "type": "string" },
         "menu": { "type": "string" },
         "intent": { "type": "string" },
+        "diagrams": { "type": "string" },
         "hooks": { "type": "string" },
         "tokens": { "type": "string" }
       }

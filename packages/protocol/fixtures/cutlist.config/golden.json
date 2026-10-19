@@ -20,7 +20,10 @@
   "output": {
     "catalog": "tools/ui-catalog/catalog.json",
     "manifest": "tools/ui-catalog/plumb-ui.config.json",
+    "menuJson": "tools/ui-catalog/menu.json",
     "menu": "tools/ui-catalog/MENU.md",
+    "intent": "tools/ui-catalog/intent",
+    "diagrams": "tools/ui-catalog/diagrams",
     "hooks": "tools/ui-catalog/hooks.md",
     "tokens": "tools/ui-catalog/tokens.md"
   }

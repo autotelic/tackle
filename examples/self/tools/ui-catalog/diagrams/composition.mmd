@@ -1,0 +1,43 @@
+flowchart LR
+  n0["badge"]:::primitive
+  n1["span"]:::part
+  n2["button"]:::primitive
+  n3["card"]:::primitive
+  n4["h2"]:::part
+  n5["section"]:::part
+  n6["dashboard_.$id"]:::local
+  n7["useParams"]:::hook
+  n8["project-toolbar"]:::shared
+  n9["theme-provider"]:::shared
+  n10["dashboard_.$id.sponsors"]:::local
+  n11["useTheme"]:::hook
+  n12["settings_"]:::local
+  n13["theme-context"]:::shared
+  n14["useMemo"]:::hook
+  n15["useState"]:::hook
+  n16["use-theme"]:::shared
+  n17["useContext"]:::hook
+  n0 --> n1
+  n3 --> n4
+  n3 --> n5
+  n6 -.-> n7
+  n6 --> n3
+  n6 --> n8
+  n6 --> n9
+  n10 --> n3
+  n10 --> n8
+  n8 -.-> n11
+  n8 --> n2
+  n8 --> n3
+  n12 --> n3
+  n12 --> n8
+  n12 --> n9
+  n9 -.-> n14
+  n9 -.-> n15
+  n9 --> n13
+  n16 -.-> n17
+  classDef hook fill:#fdf2f8,stroke:#db2777,color:#831843;
+  classDef local fill:#fef3c7,stroke:#f59e0b,color:#78350f;
+  classDef part fill:#f8fafc,stroke:#cbd5e1,color:#334155;
+  classDef primitive fill:#eef2ff,stroke:#6366f1,color:#312e81;
+  classDef shared fill:#ecfdf5,stroke:#10b981,color:#064e3b;

@@ -1,7 +1,7 @@
 {
   "name": "@autotelic/cutlist",
   "version": "0.0.0",
-  "description": "The vocabulary: crawl a UI codebase into tokens, tiers, owners, and duplicate candidates; render the catalog, the lint manifest, and the menu.",
+  "description": "The vocabulary: crawl a UI codebase into tokens, tiers, owners, and duplicate candidates; render the catalog, the lint manifest, the menu, and the graph diagrams.",
   "license": "MIT",
   "bin": {
     "cutlist": "./bin/cutlist.js"
@@ -34,7 +34,8 @@
     "@autotelic/protocol": "workspace:*",
     "@effect/platform-node": "catalog:",
     "effect": "catalog:",
-    "oxc-parser": "catalog:"
+    "oxc-parser": "catalog:",
+    "pele": "catalog:"
   },
   "devDependencies": {
     "@effect/tsgo": "catalog:",

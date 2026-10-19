@@ -22,19 +22,20 @@ directory. A plan set is what you hand someone who has to build; it is not the b
 
 Two are sources, one is a join, one is a projection. Only the sources are authoritative.
 
-| Layer         | What it is                                         | Written by        | Rebuilt when        |
-| ------------- | -------------------------------------------------- | ----------------- | ------------------- |
-| **Model**     | the parts and what they are made of                | the crawler       | the tree moves      |
-| **Intent**    | what a part is _for_, and what to use instead      | a person or agent | someone explains it |
-| **Menu**      | model + intent, joined                             | `cutlist build`   | either changes      |
-| **Rendering** | `MENU.md`, `entries/`, `atlas/`, the lint manifest | projection        | the menu changes    |
+| Layer         | What it is                                                      | Written by        | Rebuilt when        |
+| ------------- | --------------------------------------------------------------- | ----------------- | ------------------- |
+| **Model**     | the parts and what they are made of                             | the crawler       | the tree moves      |
+| **Intent**    | what a part is _for_, and what to use instead                   | a person or agent | someone explains it |
+| **Menu**      | model + intent, joined                                          | `cutlist build`   | either changes      |
+| **Rendering** | `MENU.md`, `diagrams/`, `entries/`, `atlas/`, the lint manifest | projection        | the menu changes    |
 
-`protocol/src/doc.ts` already names the crucial split: composition, orphans, duplicates
-and the hash are **derived**; `summary` and `useInstead` are **authored**, and are the
-only reason the menu is not merely a rendering. The `menu` lexicon is declared and
-fixtured. No engine serializes it yet — `cutlist` renders `MENU.md` directly from the
-catalog. The first concrete move is to make the model real: emit `menu.json`, render
-`MENU.md` from it, and never let a renderer reach past it.
+`protocol/src/doc.ts` names the crucial split: composition, orphans, duplicates and the
+hash are **derived**; `summary` and `useInstead` are **authored**, and are the only reason
+the menu is not merely a rendering. The menu is now real, not a plan: `cutlist build`
+serializes `menu.json`, renders `MENU.md` from it and never lets a renderer reach past it,
+and `intent/<name>.json` holds the authored half so a rebuild cannot overwrite it. The id
+is still the part's `name`; the join moves to a stable id in one place, `projectMenu`, when
+ids land.
 
 The intent needs a home of its own. If authored fields live only inside the generated
 menu, every rebuild has to merge by hand and a deleted part takes its prose with it. Put
@@ -83,17 +84,39 @@ shape for the inventory:
 If the name index grows past a context budget, compress **the index** as a trie — a string
 lookup structure, not a semantic hierarchy. The taxonomy stays a graph.
 
+## The graph, drawn
+
+The inventory is a graph, and a graph is worth seeing. `cutlist build` emits a `diagrams/`
+projection: Mermaid source beside the SVG `pele` drew from it. Three viewpoints from the
+same edges, colored by the catalog's own tiers — the composition of each part, the inverse
+hook view (hook → its callers), and ownership (owner → its parts).
+
+This is a **rendering**, not a new model, and `pele` is a rendering dependency rather than
+a seam: the diagrams carry no authored intent and nothing parses them back, so they earn
+no lexicon of their own. The Mermaid source is committed beside the picture because a diff
+of the source is readable and a diff of the SVG is not, and `--check` compares both bytes.
+The proposed `graph/*.json` is the data half of the same edges, for an agent that would
+rather traverse them than look.
+
+Scope is deliberate: these draw what the catalog already knows. The per-route tree
+(`trees/<owner>`) and the monorepo matrix wait on their records — the tree on `graph/`, the
+matrix on the `workspace` dimension — so the diagrams never get ahead of the model.
+
 ## The artifact on disk
 
 ```
 tools/ui-catalog/              (configurable; committed)
 ├─ plan.json                   the manifest: what this is, what it can answer, where to look
 ├─ catalog.json                the model (now)
-├─ menu.json                   the menu: one row per part (proposed)
+├─ menu.json                   the menu: one row per part (now)
 ├─ MENU.md                     the cheap text rendering (now)
 ├─ hooks.md                    the hook barrel (now)
 ├─ tokens.md                   the token vocabulary (now)
 ├─ plumb-ui.config.json        the lint projection (now)
+├─ diagrams/                   the graph projection (now)
+│  ├─ composition.mmd/.svg     part → what it renders and calls
+│  ├─ hooks.mmd/.svg           hook → the components that call it
+│  └─ owners.mmd/.svg          owner → the components it owns
 ├─ entries/
 │  └─ <id>.json                one part, fully described
 ├─ index/
@@ -109,7 +132,7 @@ tools/ui-catalog/              (configurable; committed)
 ├─ trees/
 │  └─ <owner>.json             the composition tree of one page
 ├─ intent/
-│  └─ <id>.json                authored: summary, useInstead, notes
+│  └─ <name>.json               authored: summary, useInstead (now; <id> when ids land)
 └─ atlas/                      the human rendering (built, deployable)
 ```
 
@@ -271,10 +294,10 @@ lexicon name.** The ambition is in the contract around the records.
 
 The concrete format work, in order:
 
-1. **Emit `menu.json`.** `protocol/projectMenu` already computes it; `cutlist` should
-   serialize it and render `MENU.md` from it. _Now possible; not done._
-2. **Add `intent/<id>.json`.** Authored, never overwritten. The menu joins it. This
-   replaces the hand-merge inside a "mixed record" with a source that cannot be lost.
+1. **Emit `menu.json`.** _Shipped._ `cutlist` serializes `protocol/projectMenu`'s output
+   and renders `MENU.md` from it.
+2. **Add `intent/<name>.json`.** _Shipped._ Authored, never overwritten; the menu joins it
+   in `projectMenu`. The stable id that will replace `<name>` is the remaining half.
 3. **Menu v2.** Add `id`, `kind`, `owners`, `app`, `package`, `imports`, `exports`,
    `standalone`, `usedBy`, and resolve `composedOf` to ids. Bump the `menu` lexicon to 2;
    keep v1 fixtures; every new field optional.
@@ -304,13 +327,13 @@ The concrete format work, in order:
 
 ## Now, next, later
 
-| When      | What                                                                 | Where                                |
-| --------- | -------------------------------------------------------------------- | ------------------------------------ |
-| **Now**   | catalog, manifest, `MENU.md`, hooks, tokens                          | `cutlist/src`                        |
-| **Next**  | emit `menu.json`; `intent/`; stable id; relative `root`; `plan.json` | `cutlist/src/render`, `protocol/src` |
-| **Next**  | `menu` v2 + `workspace`; entries, index, graph, trees                | `protocol/schema`, `cutlist/src`     |
-| **Later** | atlas build; registry export; showroom scenes                        | new package / `cutlist` subcommands  |
-| **Later** | `jig build` as the one command that produces the artifact            | `jig-cli/src/engines.ts`             |
+| When      | What                                                                            | Where                                |
+| --------- | ------------------------------------------------------------------------------- | ------------------------------------ |
+| **Now**   | catalog, manifest, `MENU.md`/`menu.json`, `intent/`, `diagrams/`, hooks, tokens | `cutlist/src`                        |
+| **Next**  | stable id; relative `root`; `plan.json`                                         | `cutlist/src/render`, `protocol/src` |
+| **Next**  | `menu` v2 + `workspace`; entries, index, graph, trees                           | `protocol/schema`, `cutlist/src`     |
+| **Later** | atlas build; registry export; showroom scenes                                   | new package / `cutlist` subcommands  |
+| **Later** | `jig build` as the one command that produces the artifact                       | `jig-cli/src/engines.ts`             |
 
 A note on the command surface: `cutlist build` **produces** the artifact; `jig check`
 **verifies** it by running `cutlist build --check`, which writes nothing. If "by way of

@@ -27,6 +27,9 @@ catalog:
   "@effect/tsgo": "0.53.3"
   "@typescript/native-preview": "7.0.0-dev.20260707.2"
   oxc-parser: "0.150.0"
+  # Mermaid -> SVG, for cutlist's diagram projection. Pure: `render()` needs no DOM, falling
+  # back to a built-in width table, so the artifact carries rendered diagrams, not a promise.
+  pele: "1.7.0"
   oxlint: "1.88.0" # 1.88.0 is the newest @effect/tsgo 0.53.3 supports
   "oxlint-tsgolint": "7.0.2004" # type-aware oxlint glue, paired with oxlint 1.88.0
   oxfmt: "0.73.0" # the Oxc formatter, alongside the Oxc linter
@@ -66,3 +69,4 @@ minimumReleaseAgeExclude:
   - "@opencode/protocol@2.0.31"
   - "@opencode/schema@2.0.31"
   - "@opencode/util@2.0.31"
+  - pele@1.7.0

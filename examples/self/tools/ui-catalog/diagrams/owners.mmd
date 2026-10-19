@@ -1,0 +1,23 @@
+flowchart LR
+  n0["shared"]:::owner
+  n1["button"]:::primitive
+  n2["dashboard"]:::owner
+  n3["card"]:::primitive
+  n4["settings"]:::owner
+  n5["project-toolbar"]:::shared
+  n6["theme-context"]:::shared
+  n7["theme-provider"]:::shared
+  n8["use-theme"]:::shared
+  n0 --> n1
+  n2 --> n3
+  n4 --> n3
+  n0 --> n3
+  n2 --> n5
+  n4 --> n5
+  n0 --> n6
+  n2 --> n7
+  n4 --> n7
+  n0 --> n8
+  classDef owner fill:#f1f5f9,stroke:#64748b,color:#0f172a;
+  classDef primitive fill:#eef2ff,stroke:#6366f1,color:#312e81;
+  classDef shared fill:#ecfdf5,stroke:#10b981,color:#064e3b;
