@@ -114,10 +114,9 @@ describe("the engine-output conformance matrix", () => {
     { engine: "jig check", lexicon: "report", fixture: goldenPath("report") },
     { engine: "cutlist build", lexicon: "catalog", fixture: goldenPath("catalog") },
     { engine: "cutlist build", lexicon: "manifest", fixture: goldenPath("manifest") },
-    // `menu` and `onboarding` are declared lexicons: the menu model is a protocol
-    // projection of the real catalog, and no engine serializes either yet. When cutlist
-    // adopts `projectMenu`, this row's producer changes; the schema does not.
-    { engine: "protocol projectMenu", lexicon: "menu", fixture: goldenPath("menu") },
+    // `onboarding` is a declared lexicon no engine serializes yet; `menu` is written by
+    // `cutlist build`, and this fixture is what that engine emits against `examples/self`.
+    { engine: "cutlist build", lexicon: "menu", fixture: goldenPath("menu") },
     { engine: "jig init", lexicon: "baseline", fixture: goldenPath("baseline") },
     { engine: "jig init", lexicon: "jig.config", fixture: goldenPath("jig.config") },
     { engine: "hand-authored", lexicon: "cutlist.config", fixture: goldenPath("cutlist.config") },

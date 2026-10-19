@@ -79,7 +79,12 @@ export interface Vocabulary {
 export interface CutlistOutput {
   readonly catalog?: string
   readonly manifest?: string
+  /** The menu model as JSON. The machine rendering beside its Markdown twin. */
+  readonly menuJson?: string
+  /** The menu as Markdown. */
   readonly menu?: string
+  /** The directory of authored intent records, one JSON file per part name. */
+  readonly intent?: string
   readonly hooks?: string
   readonly tokens?: string
 }
@@ -274,7 +279,15 @@ export const decodeCutlistConfig = (value: unknown): CutlistConfig | undefined =
 const decodeOutput = (value: unknown): CutlistOutput | undefined => {
   if (!isRecord(value)) return undefined
   const out: Record<string, string> = {}
-  for (const key of ["catalog", "manifest", "menu", "hooks", "tokens"] as const) {
+  for (const key of [
+    "catalog",
+    "manifest",
+    "menuJson",
+    "menu",
+    "intent",
+    "hooks",
+    "tokens",
+  ] as const) {
     if (!(key in value)) continue
     const decoded = str(value[key])
     if (decoded === undefined) return undefined

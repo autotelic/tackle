@@ -47,7 +47,9 @@ const OwnershipSchema = Schema.Struct({
 const OutputSchema = Schema.Struct({
   catalog: Schema.optionalKey(Schema.String),
   manifest: Schema.optionalKey(Schema.String),
+  menuJson: Schema.optionalKey(Schema.String),
   menu: Schema.optionalKey(Schema.String),
+  intent: Schema.optionalKey(Schema.String),
   hooks: Schema.optionalKey(Schema.String),
   tokens: Schema.optionalKey(Schema.String),
 })
@@ -69,7 +71,9 @@ export const CutlistConfigSchema = Schema.Struct({
 export const defaultOutput: Required<CutlistOutput> = {
   catalog: "tools/ui-catalog/catalog.json",
   manifest: "tools/ui-catalog/plumb-ui.config.json",
+  menuJson: "tools/ui-catalog/menu.json",
   menu: "tools/ui-catalog/MENU.md",
+  intent: "tools/ui-catalog/intent",
   hooks: "tools/ui-catalog/hooks.md",
   tokens: "tools/ui-catalog/tokens.md",
 }
@@ -108,7 +112,9 @@ export const loadConfig = (
 export const outputOf = (config: CutlistConfig): Required<CutlistOutput> => ({
   catalog: config.output?.catalog ?? defaultOutput.catalog,
   manifest: config.output?.manifest ?? defaultOutput.manifest,
+  menuJson: config.output?.menuJson ?? defaultOutput.menuJson,
   menu: config.output?.menu ?? defaultOutput.menu,
+  intent: config.output?.intent ?? defaultOutput.intent,
   hooks: config.output?.hooks ?? defaultOutput.hooks,
   tokens: config.output?.tokens ?? defaultOutput.tokens,
 })

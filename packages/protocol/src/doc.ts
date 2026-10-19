@@ -17,8 +17,9 @@ import type { DuplicateCandidate } from "./catalog.ts"
  *
  * So the menu is a MIXED record and says so: `composedOf`, `orphans`, `duplicates` and
  * `hash` are derived and regenerated; `summary` and `useInstead` are authored and are the
- * only reason the menu is not simply a rendering. MENU.md is the rendering; this record is
- * the model.
+ * only reason the menu is not simply a rendering. `MENU.md` is the rendering; this record is
+ * the model. The authored half is stored in `intent/<name>.json` and joined in by
+ * `projectMenu`, so regenerating the menu can never overwrite a sentence a person wrote.
  */
 
 /** One component's row in the menu. */
@@ -31,6 +32,21 @@ export interface MenuEntry {
   /** Derived: the primitive/sub-components and hooks this is composed of. */
   readonly composedOf: ReadonlyArray<string>
   /** Authored: what to use instead, when a near-duplicate exists. */
+  readonly useInstead?: ReadonlyArray<string>
+}
+
+/**
+ * The authored half of a menu entry, as it is stored in `intent/<name>.json`.
+ *
+ * This is the one part of the artifact a tool cannot derive, and the reason the menu is
+ * not merely a rendering. It lives in its own file so `cutlist build` can replace the
+ * generated menu without ever touching a sentence a person wrote, and so a rename shows
+ * up as a stale file instead of silently discarding the intent.
+ */
+export interface Intent {
+  /** One line on when to reach for this part. */
+  readonly summary?: string
+  /** What to reach for instead, when a near-duplicate exists. */
   readonly useInstead?: ReadonlyArray<string>
 }
 
@@ -65,17 +81,36 @@ export const composedOf = (signature: ReadonlyArray<string>): ReadonlyArray<stri
   return [...parts]
 }
 
-/** The derived half of the menu: composition, orphans, duplicates, and the source hash. */
-export const projectMenu = (catalog: Catalog, title = "UI menu"): Menu => ({
+/** What `projectMenu` needs: the derived model, and whatever a person has written about it. */
+export interface MenuProjection {
+  readonly catalog: Catalog
+  /** Authored intent, keyed by the part's name. Absent means every entry is undocumented. */
+  readonly intent?: ReadonlyMap<string, Intent>
+  readonly title?: string
+}
+
+/**
+ * The derived half of the menu, joined with the authored half.
+ *
+ * The join is by `name` — the only identity a component carries today. When stable ids
+ * land, this is the single place the key changes, which is why the join lives here and
+ * not in a renderer.
+ */
+export const projectMenu = ({ catalog, intent, title = "UI menu" }: MenuProjection): Menu => ({
   lexicon: lexiconRef("menu"),
   title,
   hash: catalog.hash,
-  entries: catalog.components.map((component) => ({
-    name: component.name,
-    path: component.path,
-    tier: component.tier,
-    composedOf: composedOf(component.signature),
-  })),
+  entries: catalog.components.map((component) => {
+    const authored = intent?.get(component.name)
+    return {
+      name: component.name,
+      path: component.path,
+      tier: component.tier,
+      ...(authored?.summary === undefined ? {} : { summary: authored.summary }),
+      composedOf: composedOf(component.signature),
+      ...(authored?.useInstead === undefined ? {} : { useInstead: authored.useInstead }),
+    }
+  }),
   orphans: catalog.orphans,
   duplicates: catalog.duplicates,
 })
@@ -133,6 +168,24 @@ export const decodeMenu = (value: unknown): Menu | undefined => {
     return undefined
   }
   return { lexicon, title, hash, entries, orphans, duplicates }
+}
+
+/**
+ * Read one intent record, or `undefined` when it says nothing usable.
+ *
+ * An empty object is a miss, not an empty intent: a file that carries neither a summary
+ * nor alternatives is a file someone forgot to fill in, and treating it as authored
+ * would hide that from the `_(undocumented)_` flag.
+ */
+export const decodeIntent = (value: unknown): Intent | undefined => {
+  if (!isRecord(value)) return undefined
+  const summary = str(value.summary)
+  const useInstead = strings(value.useInstead)
+  if (summary === undefined && useInstead === undefined) return undefined
+  return {
+    ...(summary === undefined ? {} : { summary }),
+    ...(useInstead === undefined ? {} : { useInstead }),
+  }
 }
 
 /** Read the onboarding prompt, or `undefined` when malformed. */

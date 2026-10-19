@@ -1,5 +1,7 @@
+import { createHash } from "node:crypto"
+import { isDeepStrictEqual } from "node:util"
 import { Effect, FileSystem, Path } from "effect"
-import type { Catalog } from "@autotelic/protocol"
+import { decodeMenu, type Catalog, type Menu } from "@autotelic/protocol"
 
 /*
  * `cutlist build --check`, the staleness gate — `oxfmt --check` / `prettier --check` for
@@ -10,6 +12,9 @@ import type { Catalog } from "@autotelic/protocol"
  * quiet). A silently disabled rule is worse than a failing one, so the gate makes a
  * catalog that drifted from the tree loud, and CI fails until someone commits the fresh
  * one.
+ *
+ * The gate compares content, never bytes: the catalog by its own hash, the menu by its
+ * decoded model. Formatting is `oxfmt`'s business and must never be able to fail this.
  */
 
 export interface StalenessResult {
@@ -35,4 +40,59 @@ export const compareCatalog = (
       committed = undefined
     }
     return { stale: committed !== fresh.hash, committed, fresh: fresh.hash }
+  })
+
+const digestOf = (text: string): string => createHash("sha256").update(text).digest("hex")
+
+/** Parse JSON without a throw; a committed file that cannot be read is stale, not clean. */
+const parseJson = (text: string): unknown => {
+  try {
+    return JSON.parse(text)
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * Compare a committed `menu.json` against the fresh menu, by model rather than by bytes.
+ *
+ * The menu is generated as plain JSON and then formatted by `oxfmt`, so bytes would report
+ * a stale file every time the formatter touched an array. Decoding both sides and comparing
+ * the records keeps the gate about content — the same reason the catalog is checked by its
+ * own `hash` rather than by a diff.
+ */
+export const compareMenu = (
+  file: string,
+  fresh: Menu,
+): Effect.Effect<StalenessResult, never, FileSystem.FileSystem | Path.Path> =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const text = yield* Effect.orElseSucceed(fs.readFileString(file), () => undefined)
+    if (text === undefined) return { stale: true, committed: undefined, fresh: fresh.hash }
+    const committed = decodeMenu(parseJson(text))
+    if (committed === undefined) return { stale: true, committed: undefined, fresh: fresh.hash }
+    return {
+      stale: !isDeepStrictEqual(committed, fresh),
+      committed: digestOf(JSON.stringify(committed)),
+      fresh: digestOf(JSON.stringify(fresh)),
+    }
+  })
+
+/**
+ * Compare a committed rendering against the fresh one, by bytes.
+ *
+ * `MENU.md` is a generator-canonical rendering — the renderer ends it the way `oxfmt`
+ * would — so a difference means content moved, not formatting. A file that is missing is
+ * stale, never "fine because unreadable".
+ */
+export const compareText = (
+  file: string,
+  fresh: string,
+): Effect.Effect<StalenessResult, never, FileSystem.FileSystem | Path.Path> =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const committed = yield* Effect.orElseSucceed(fs.readFileString(file), () => undefined)
+    const freshHash = digestOf(fresh)
+    if (committed === undefined) return { stale: true, committed: undefined, fresh: freshHash }
+    return { stale: committed !== fresh, committed: digestOf(committed), fresh: freshHash }
   })

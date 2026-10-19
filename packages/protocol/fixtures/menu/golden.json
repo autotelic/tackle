@@ -10,60 +10,70 @@
       "name": "project-toolbar",
       "path": "src/components/project-toolbar.tsx",
       "tier": "shared",
+      "summary": "The controls above a project's or the app's content.",
       "composedOf": ["useTheme", "Button", "Card"]
     },
     {
       "name": "theme-context",
       "path": "src/components/theme-context.ts",
       "tier": "shared",
+      "summary": "The context the provider fills and the hook reads.",
       "composedOf": []
     },
     {
       "name": "theme-provider",
       "path": "src/components/theme-provider.tsx",
       "tier": "shared",
+      "summary": "Supplies the current theme to everything below it.",
       "composedOf": ["useMemo", "useState", "ThemeContext.Provider"]
     },
     {
       "name": "badge",
       "path": "src/components/ui/badge.tsx",
       "tier": "primitive",
+      "summary": "A status pill. Not used yet.",
       "composedOf": ["span"]
     },
     {
       "name": "button",
       "path": "src/components/ui/button.tsx",
       "tier": "primitive",
+      "summary": "The one button in the app. Everything interactive composes this.",
       "composedOf": ["button"]
     },
     {
       "name": "card",
       "path": "src/components/ui/card.tsx",
       "tier": "primitive",
+      "summary": "The surface everything else sits on.",
       "composedOf": ["h2", "section"]
     },
     {
       "name": "use-theme",
       "path": "src/components/use-theme.ts",
       "tier": "shared",
+      "summary": "Reads the theme the nearest ThemeProvider supplies.",
       "composedOf": ["useContext"]
     },
     {
       "name": "dashboard_.$id.sponsors",
       "path": "src/routes/dashboard_.$id.sponsors.tsx",
       "tier": "local",
+      "summary": "The sponsors tab of a project.",
       "composedOf": ["Card", "ProjectToolbar"]
     },
     {
       "name": "dashboard_.$id",
       "path": "src/routes/dashboard_.$id.tsx",
       "tier": "local",
+      "summary": "One project, by id.",
       "composedOf": ["useParams", "Card", "ProjectToolbar", "ThemeProvider"]
     },
     {
       "name": "settings_",
       "path": "src/routes/settings_.tsx",
       "tier": "local",
+      "summary": "Settings.",
       "composedOf": ["Card", "ProjectToolbar", "ThemeProvider"]
     }
   ],

@@ -1,13 +1,15 @@
-import { Console, Effect, FileSystem, Option, Path } from "effect"
+import { Console, Effect, FileSystem, Option, Order, Path } from "effect"
 import { Command, Flag } from "effect/cli"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
+import { projectMenu } from "@autotelic/protocol"
 import { buildCatalog } from "./catalog.ts"
-import { compareCatalog } from "./check.ts"
+import { compareCatalog, compareMenu, compareText, type StalenessResult } from "./check.ts"
 import { loadConfig, outputOf } from "./config.ts"
+import { readIntent } from "./intent.ts"
 import { renderCatalog } from "./render/catalog.ts"
 import { renderHooks } from "./render/hooks.ts"
 import { renderManifest } from "./render/manifest.ts"
-import { renderMenu } from "./render/menu.ts"
+import { renderMenu, renderMenuJson } from "./render/menu.ts"
 import { renderTokens } from "./render/tokens.ts"
 
 /** One report through Effect's Console, newline-normalized so a test can capture it. */
@@ -26,7 +28,7 @@ const buildCommand = Command.make(
       Flag.optional,
     ),
     check: Flag.Boolean("check").pipe(
-      Flag.withDescription("Fail when the committed catalog is stale, instead of writing."),
+      Flag.withDescription("Fail when the committed catalog or menu is stale, instead of writing."),
       Flag.withDefault(false),
     ),
     format: Flag.Literals("format", ["text", "json"]).pipe(
@@ -44,6 +46,23 @@ const buildCommand = Command.make(
       )
       const catalog = yield* buildCatalog(cwd, settings)
       const output = outputOf(settings)
+      const intent = yield* readIntent(cwd, output.intent)
+
+      if (intent.malformed.length > 0) {
+        yield* write(
+          `cutlist: ${intent.malformed.length} intent file(s) could not be read: ${intent.malformed.join(", ")}`,
+        )
+        yield* Effect.sync(() => {
+          process.exitCode = 1
+        })
+        return
+      }
+
+      const menu = projectMenu({ catalog, intent: intent.byName })
+      const names = new Set(catalog.components.map((component) => component.name))
+      const staleIntent = [...intent.byName.keys()]
+        .filter((name) => !names.has(name))
+        .sort(Order.String)
 
       if (config.format === "json") {
         yield* write(JSON.stringify(catalog, null, 2))
@@ -51,26 +70,39 @@ const buildCommand = Command.make(
       }
 
       if (config.check) {
-        const result = yield* compareCatalog(path.resolve(cwd, output.catalog), catalog)
-        if (result.stale) {
-          yield* write(
-            result.committed === undefined
-              ? `${output.catalog} is missing; run \`cutlist build\``
-              : `${output.catalog} is stale (committed ${result.committed.slice(0, 12)}, fresh ${result.fresh.slice(0, 12)}); run \`cutlist build\``,
-          )
+        const results: ReadonlyArray<readonly [string, StalenessResult]> = [
+          [output.catalog, yield* compareCatalog(path.resolve(cwd, output.catalog), catalog)],
+          [output.menuJson, yield* compareMenu(path.resolve(cwd, output.menuJson), menu)],
+          [output.menu, yield* compareText(path.resolve(cwd, output.menu), renderMenu(menu))],
+        ]
+        const stale = results.filter(([, result]) => result.stale)
+        if (stale.length > 0 || staleIntent.length > 0) {
+          for (const [file, result] of stale) {
+            yield* write(
+              result.committed === undefined
+                ? `${file} is missing; run \`cutlist build\``
+                : `${file} is stale (committed ${result.committed.slice(0, 12)}, fresh ${result.fresh.slice(0, 12)}); run \`cutlist build\``,
+            )
+          }
+          if (staleIntent.length > 0) {
+            yield* write(
+              `intent/ has ${staleIntent.length} file(s) for no existing part: ${staleIntent.join(", ")}`,
+            )
+          }
           yield* Effect.sync(() => {
             process.exitCode = 1
           })
           return
         }
-        yield* write(`${output.catalog} is up to date (${result.fresh.slice(0, 12)})`)
+        yield* write(`cutlist: up to date (${catalog.hash.slice(0, 12)})`)
         return
       }
 
       const rendered: ReadonlyArray<readonly [string, string]> = [
         [output.catalog, renderCatalog(catalog)],
         [output.manifest, renderManifest(catalog)],
-        [output.menu, renderMenu(catalog)],
+        [output.menuJson, renderMenuJson(menu)],
+        [output.menu, renderMenu(menu)],
         [output.hooks, renderHooks(catalog)],
         [output.tokens, renderTokens(catalog)],
       ]
@@ -82,18 +114,22 @@ const buildCommand = Command.make(
         )
         yield* fs.writeFileString(absolute, text)
       }
+      const staleNote = staleIntent.length === 0 ? "" : `, ${staleIntent.length} stale intent`
       yield* write(
-        `cutlist: wrote ${rendered.length} files; ${catalog.components.length} components, ${catalog.duplicates.length} duplicate candidates, ${catalog.orphans.length} orphans`,
+        `cutlist: wrote ${rendered.length} files; ${catalog.components.length} components, ${catalog.duplicates.length} duplicate candidates, ${catalog.orphans.length} orphans${staleNote}`,
       )
     }),
 ).pipe(
   Command.withDescription(
-    "Crawl the repo and render the catalog, the lint manifest, and the menu.",
+    "Crawl the repo and render the catalog, the menu, the lint manifest, and the token vocabulary.",
   ),
   Command.withShortDescription("Crawl the repo and render the vocabulary."),
   Command.withExamples([
     { command: "cutlist build", description: "Render every output from the current tree." },
-    { command: "cutlist build --check", description: "Fail if the committed catalog is stale." },
+    {
+      command: "cutlist build --check",
+      description: "Fail if the committed catalog or menu is stale.",
+    },
   ]),
 )
 
