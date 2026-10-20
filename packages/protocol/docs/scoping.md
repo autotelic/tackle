@@ -81,6 +81,22 @@ These are the semantics `joggle` proved out in its own `Scope` / `inScope` / `in
 lifting them here is the point, because the next engine with a graph should not re-derive
 them.
 
+## A third reader: the vocabulary diff
+
+The change set has a consumer newer than this note: a **producer** comparing two snapshots of
+its own artifact. `cutlist` measures a vocabulary at a revision, and the catalog committed at
+the base is the other snapshot. Reading `changed` tells it which parts are new; only those
+need to be compared against the existing ones. A new duplicate always has at least one changed
+member, so the old graph is not re-judged.
+
+This is the same measurement, not a second definition of "changed". The gate, the graph
+engine, and the vocabulary diff answer "what is this run about?" with one set of bytes, which
+is the reason the record exists. The diff itself — `catalog@base` against `catalog@head` —
+belongs to `cutlist`; this record only says which revisions to load.
+
+Scoping is not a gate on authoring. A run scoped to a change set is describing what a walk
+introduced; it is not a rule about what may be built. The closed world is for references.
+
 ## The boundary
 
 - **`jig` chooses the base and computes the record.** The knob — `gate.mode`, widened from

@@ -85,6 +85,36 @@ a second consumer that parses them differently is the drift this workspace exist
 So: declare the prefixes, and export the splitter beside the decoder. It is a pure function over
 an existing record, so it belongs here and not in cutlist.
 
+The other missing thing is the **stable id**. `DuplicateCandidate` keys on a path, and a path
+moves. The collection loop needs to tell a rebuilt part from a renamed one across two
+revisions, and the same id is what `artifact.md`'s `entries/<id>.json` is waiting on.
+
+## The collection trigger
+
+This section is newer than the proposal above and changes what the wiring is *for*. The first
+reading was "the catalog is a second shape source"; the loop in
+[`cutlist/docs/compression.md`](../../cutlist/docs/compression.md) makes the catalog rule the
+marking phase of a collector, and that changes **when** it runs.
+
+- **Nothing consumes the catalog today.** Measured in this workspace on 2026-10-20:
+  `decodeCatalog` is called only by `protocol`'s tests, and `plumb/ui` lives on the branch the
+  move did not take. This note is still a wiring plan, and the absence is the gap.
+- **The trigger is the change set, not a crawl.** A new duplicate always has at least one
+  changed member, so the candidates are **new × old** (plus new × new). Re-judging the whole
+  graph on every run is unaffordable and unnecessary; `protocol`'s change set already names
+  the revisions.
+- **The candidate carries the difference.** cutlist's `DuplicateCandidate` is a pair and a
+  score. To answer *which survives?* the judge needs the **signature delta** between the
+  sides, their tiers, the owner spread and the import count. That is an extension of the
+  record, not a new record.
+- **`promote` is a new prescription.** The verdict vocabulary can say `collapse`, and the
+  prescriptions can `merge` (keep the incumbent) or `move` (relocate the primitive), but none
+  of them says *the new member is the truer shape, retire the incumbent*. That is the case a
+  walk creates, and the one where "duplicate" is the wrong word.
+- **Silence is a result.** A genuinely new primitive matches nothing, and that is the
+  vocabulary growing. The rule must not manufacture a finding to look useful, and an empty
+  candidate set is not a failed run.
+
 ## The guardrails
 
 - **Absence is not clean.** No catalog means a note ("cutlist is not configured"), never a
@@ -108,3 +138,9 @@ an existing record, so it belongs here and not in cutlist.
 - **The catalog comment and the code disagree.** `catalog.ts` describes the signature as also
   carrying "token-class categories"; `skeletonOf` emits `tag:`, `hook:`, `uses:` and nothing
   else. The grammar has to be pinned before a second reader trusts it.
+- **Which revision does the rule read?** New × old needs `catalog@head` and `catalog@base`.
+  Does `jig` resolve both paths, or does the rule read the base snapshot from git? The change
+  set names the revisions, not the artifact paths.
+- **Promote's tie-break.** When the new shape is truer, what decides — fewer props, a superset
+  of behaviors, more owners, the primitive tier? The evidence is a list; the decision is a
+  question, and the answer must not become a threshold.

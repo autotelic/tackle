@@ -18,6 +18,12 @@ structure. The file format is JSON under the `protocol` lexicons; the ambition i
 Call the bundle a **plan set**: the parts list, the assembly, and the drawings in one
 directory. A plan set is what you hand someone who has to build; it is not the building.
 
+The artifact is a **memory of the vocabulary, not a fence around it**. It records what the
+codebase has already discovered; it does not decide what may be built next. A walk that
+ignores it and builds a second `Combobox` is doing the exploration half of the work, and the
+duplicate is the measurement that follows — see [compression.md](./compression.md) for the
+loop that collects it.
+
 ## The layers
 
 Two are sources, one is a join, one is a projection. Only the sources are authoritative.
@@ -42,6 +48,22 @@ menu, every rebuild has to merge by hand and a deleted part takes its prose with
 intent in `intent/<id>.json`, keyed by the stable id; `menu.json` is the generated join.
 The menu can then be deleted and rebuilt at any time — which is the test of whether
 something is derived.
+
+### Snapshots and the diff
+
+The model is measured **at a revision**. `catalog.json` committed at a commit is that
+revision's snapshot, and git is the snapshot store — no second mechanism is needed.
+
+The diff between two snapshots is how the vocabulary's growth is seen: which parts are new,
+which changed, which are gone. It is an operation over the artifact and not a second
+definition of "changed"; [the change set](../../protocol/docs/scoping.md) says which
+revisions to compare, and the comparison itself is by `id`, never by position.
+
+This is the reason the id is load-bearing rather than tidy. Without it, "this part was
+rebuilt" is indistinguishable from "this part was renamed" and from "this part was deleted
+and another added" — and the compression loop's whole input is the first of those. A pure
+rename must also stay distinguishable from a content change, which the change set already
+does by keeping `renamed` apart.
 
 ## Two readers, one record set
 
@@ -88,15 +110,24 @@ lookup structure, not a semantic hierarchy. The taxonomy stays a graph.
 
 The inventory is a graph, and a graph is worth seeing. `cutlist build` emits a `diagrams/`
 projection: Mermaid source beside the SVG `pele` drew from it. Three viewpoints from the
-same edges, colored by the catalog's own tiers — the composition of each part, the inverse
-hook view (hook → its callers), and ownership (owner → its parts).
+same edges — the composition of each part, the inverse hook view (hook → its callers), and
+ownership (owner → its parts) — each drawn at the largest scope that reads.
+
+A whole-app graph is a hairball at any size, and `pele` refuses a source over 50,000
+characters or 5,000 edges anyway. So the drawing is Tufte's small multiples: a view too
+large to read is contracted to one node per owner first (the overview: how the scopes
+compose each other), then drawn per owner and per page, each panel titled with its scope
+and counts. Tier is carried in grayscale rather than three hues, and the one accent is a
+hook call, because a call is a different kind of edge from a render. A graph draws edges: a
+part that renders nothing and is rendered by nothing is a line in `MENU.md`, not a panel.
 
 This is a **rendering**, not a new model, and `pele` is a rendering dependency rather than
 a seam: the diagrams carry no authored intent and nothing parses them back, so they earn
 no lexicon of their own. The Mermaid source is committed beside the picture because a diff
 of the source is readable and a diff of the SVG is not, and `--check` compares both bytes.
-The proposed `graph/*.json` is the data half of the same edges, for an agent that would
-rather traverse them than look.
+`diagrams/README.md` is the generated index — one row per panel, then the atlas — so the
+macro reading does not require opening a picture. The proposed `graph/*.json` is the data
+half of the same edges, for an agent that would rather traverse them than look.
 
 Scope is deliberate: these draw what the catalog already knows. The per-route tree
 (`trees/<owner>`) and the monorepo matrix wait on their records — the tree on `graph/`, the
@@ -114,9 +145,10 @@ tools/ui-catalog/              (configurable; committed)
 ├─ tokens.md                   the token vocabulary (now)
 ├─ plumb-ui.config.json        the lint projection (now)
 ├─ diagrams/                   the graph projection (now)
-│  ├─ composition.mmd/.svg     part → what it renders and calls
-│  ├─ hooks.mmd/.svg           hook → the components that call it
-│  └─ owners.mmd/.svg          owner → the components it owns
+│  ├─ README.md                the generated table and atlas (now)
+│  ├─ composition*.mmd/.svg    part → what it renders and calls
+│  ├─ hooks*.mmd/.svg          hook → the components that call it
+│  └─ owners*.mmd/.svg         owner → the components it owns
 ├─ entries/
 │  └─ <id>.json                one part, fully described
 ├─ index/
@@ -185,12 +217,19 @@ infer it:
 1. Read `plan.json`. If its hash is not the one you were given, stop.
 2. To build a page, read `index/by-owner.json` for the owner, then `trees/<owner>.json`.
 3. To use a part, read `entries/<id>.json`; import from `imports[0]`, render `exports[0]`.
-4. If no entry matches, do not invent a part. Record a gap.
+4. If no entry matches, do not cite one. For assembly, record a gap; for authoring, build
+   the part and record the gap as a demand signal.
 
-The inventory is a **closed world**. If a part is not in the menu, it does not exist for
-the purposes of assembly; it is a gap to fill, not something to hallucinate. That is the
-contract that makes the menu useful, and the reason the missing-intent flag belongs in
-lint rather than in a convention.
+The inventory is a **closed world for reference and an open one for creation**. If a part
+is not in the menu, it does not exist for the purposes of _assembly_ — do not cite it, do
+not pretend it is there. That is the contract that makes the menu useful, and the reason
+the missing-intent flag belongs in lint rather than in a convention.
+
+It does not follow that the part may not be _built_. The walk is allowed to ignore this
+document, and a part it builds that the menu did not have is how the vocabulary grows: the
+next measure either finds the duplicate that should be contracted or the new primitive that
+should be promoted, and [compression.md](./compression.md) is the loop that collects it. The
+failure the closed world prevents is a hallucinated citation, not a new idea.
 
 ### Budget
 
@@ -204,8 +243,12 @@ because a budget that is not enforced is a wish.
 
 The artifact must be byte-identical for the same tree and config, or `--check` is theater.
 
-- No absolute paths. **`catalog.root` is absolute today** — a portability bug to fix
-  before the artifact is shared across machines.
+- No absolute paths. **`catalog.root` is absolute today, and it is inside the hash.** The
+  same tree measured through `--cwd /var/…` and through `process.cwd()`
+  (`/private/var/…`) produced two model hashes, `e5e14a63…` and `2b081cab…`, so `jig check`
+  reported a catalog it had just built as stale. Resolve the root once, store it relative to
+  the repository, and hash the relative form. Until then the staleness gate and the snapshot
+  diff are both noise.
 - No timestamps, hostnames, or run ids.
 - Every array sorted by a stated key; every map emitted in a stated order.
 - A hash over the model and a per-file hash in `plan.json`, so a stale `atlas/` is caught,
@@ -297,7 +340,8 @@ The concrete format work, in order:
 1. **Emit `menu.json`.** _Shipped._ `cutlist` serializes `protocol/projectMenu`'s output
    and renders `MENU.md` from it.
 2. **Add `intent/<name>.json`.** _Shipped._ Authored, never overwritten; the menu joins it
-   in `projectMenu`. The stable id that will replace `<name>` is the remaining half.
+   in `projectMenu`. The stable id that will replace `<name>` is the remaining half — and it
+   is now the linchpin of the diff, not only of the menu.
 3. **Menu v2.** Add `id`, `kind`, `owners`, `app`, `package`, `imports`, `exports`,
    `standalone`, `usedBy`, and resolve `composedOf` to ids. Bump the `menu` lexicon to 2;
    keep v1 fixtures; every new field optional.
@@ -306,8 +350,16 @@ The concrete format work, in order:
    depends on it; until then, a documented convention is enough.
 5. **Entries, index, graph, trees.** One record per part; facets; edges. These are
    projections, not new truth, so they can be added without touching the model.
-6. **The atlas.** A static build from the projections. No new data.
-7. **The registry export.** A shadcn-compatible item per part, projected from the same
+6. **The snapshot diff.** Compare `catalog@base` with `catalog@head` by id: new, changed,
+   gone. It is what makes a walk's candidates affordable — new × old, never the whole graph
+   — and it needs the id and the per-part records before it is cheap. `protocol`'s change
+   set says which revisions to compare; the diff is an operation over the artifact.
+7. **Candidate evidence.** A duplicate candidate carries both sides and their **difference**
+   — signature delta, tier, owners, spread, import count — not only a score. Without the
+   delta a judge can answer "are these one?" but not "which survives?", and that second
+   question is the reason to collect after a walk. See [compression.md](./compression.md).
+8. **The atlas.** A static build from the projections. No new data.
+9. **The registry export.** A shadcn-compatible item per part, projected from the same
    entry. Do it after the entry shape is stable; a registry is a distribution format, not
    a second catalog.
 
@@ -320,6 +372,9 @@ The concrete format work, in order:
 - A tree over the inventory. It will duplicate shared parts or lie about ownership.
 - A static page that pretends to be the app. The atlas says which fidelity level it is on.
 - A non-deterministic artifact. Then `--check` is theater and the hash is decoration.
+- **A gate on authoring.** A menu that says "you may only build what is listed" stops the
+  exploration half and produces a curated catalog by another route. The closed world is for
+  references; the walk is open ([compression.md](./compression.md)).
 - Generating the authored half. A tool that invents "what this is for" is a tool that
   makes the menu untrustworthy.
 - Building the showroom before the artifact is right. The showroom consumes the menu; a
@@ -330,8 +385,10 @@ The concrete format work, in order:
 | When      | What                                                                            | Where                                |
 | --------- | ------------------------------------------------------------------------------- | ------------------------------------ |
 | **Now**   | catalog, manifest, `MENU.md`/`menu.json`, `intent/`, `diagrams/`, hooks, tokens | `cutlist/src`                        |
-| **Next**  | stable id; relative `root`; `plan.json`                                         | `cutlist/src/render`, `protocol/src` |
+| **Next**  | determinism: relative `root`, one hash for one tree                             | `cutlist/src`                        |
+| **Next**  | stable id; `plan.json`                                                          | `cutlist/src/render`, `protocol/src` |
 | **Next**  | `menu` v2 + `workspace`; entries, index, graph, trees                           | `protocol/schema`, `cutlist/src`     |
+| **Next**  | the snapshot diff; candidate evidence (the signature delta)                     | `cutlist/src/render`                 |
 | **Later** | atlas build; registry export; showroom scenes                                   | new package / `cutlist` subcommands  |
 | **Later** | `jig build` as the one command that produces the artifact                       | `jig-cli/src/engines.ts`             |
 
@@ -344,7 +401,14 @@ it would shell out with different args. The producer and the proof stay separate
 ## Open questions
 
 - **Id policy.** Name-derived ids survive promotion and path moves but collide across
-  apps. Is the disambiguator `app/name`, `package/name`, or a first-seen registry?
+  apps. Is the disambiguator `app/name`, `package/name`, or a first-seen registry? The
+  measured scale: 316 of 1,278 modules on `shakti-v2` share a name with another.
+- **Which survives.** When a walk rebuilds a part and the new one is truer, the move is
+  `promote`, not `contract`. What evidence decides it, and who decides — the model, with
+  the signature delta in its state, or a rule? See [compression.md](./compression.md).
+- **The gap record.** A walk that finds nothing suitable is a demand signal. Is it a
+  committed fragment, and what closes it — the part landing, or a person accepting the
+  answer "it is not needed"?
 - **Artifact root.** Committed `tools/ui-catalog/` (reviewable, `--check`-able) or
   generated `.cutlist/` (clean tree, no diffs)? The current answer is committed; the atlas
   should probably be generated, not committed.
