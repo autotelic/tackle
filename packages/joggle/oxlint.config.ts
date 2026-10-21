@@ -194,9 +194,7 @@ export default {
       // term to please a linter is the tool editing the domain.
       files: [
         "src/workspace.ts",
-        "src/similarity.ts",
         "src/parsecache.ts",
-        "src/rules/compose-types.ts",
         "src/rules/cluster-verdict.ts",
         "src/rules/object-shape.ts",
         "src/rules/duplicate-implementation.ts",
@@ -205,16 +203,6 @@ export default {
         "src/policy.ts",
       ],
       rules: { "plumb/no-shape-in-symbol-names": "off" },
-    },
-    {
-      // The remedy requires an API this Effect version does not have: there is no
-      // `decodeUnknownResult`, and `SchemaParser.decodeResult` takes a schema's
-      // ENCODED type, which a JSON file read as `unknown` cannot supply without a
-      // cast. The concern behind the rule is addressed instead -- a cache file
-      // that fails to decode is recorded and reported, so a cache that quietly
-      // stopped working no longer looks exactly like a cold one.
-      files: ["src/parsecache.ts"],
-      rules: { "plumb-effect/no-decode-unknown-option": "off" },
     },
     {
       // The decode bridge: raw AST nodes and raw plugin modules in, typed values
@@ -317,15 +305,6 @@ export default {
         "plumb/no-unsafe-dictionary-type": "off",
         "plumb/no-known-value-widening": "off",
       },
-    },
-    {
-      // `Effect.gen(function* () { ... return x })` with no `yield` is idiomatic
-      // Effect: the generator IS the effect, and a rule body with no effectful
-      // steps still returns through one. eslint's rule predates Effect and cannot
-      // see that, which is a gap worth reporting upstream rather than a decision
-      // to make here -- but it is six sites, not a policy.
-      files: ["src/rules/**"],
-      rules: { "eslint/require-yield": "off" },
     },
     {
       // Policy, decided rather than drifted into. joggle keeps inline comments

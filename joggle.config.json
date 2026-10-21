@@ -14,12 +14,7 @@
     },
     {
       "path": "packages/plumb/**",
-      "reason": "plumb is the deterministic single-file linter: its rules are written once and applied everywhere, and its rule-authoring shapes are its own concern. joggle asks whether two things are the same and whether a thing fits THIS repository; plumb's rule internals are not that question, and the root lint already scopes plumb out. Judging them produced 82 `rule-judgment` readings about plumb's own rule metadata plus 4 `object-shape` readings about its metadata literals — none of them about this repository."
-    },
-    {
-      "rule": "joggle/compose-types",
-      "path": "packages/protocol/src/catalog.ts",
-      "reason": "`DuplicateCandidate` and joggle's `ScoredPair` are two packages' independent declarations of a scored pair. They cannot compose: the dependency law is that `protocol` depends on nothing, so it cannot import a type from `joggle`. The shared shape IS the seam — they agree on bytes, not on code."
+      "reason": "plumb is the deterministic single-file linter: its rules are written once and applied everywhere, and its rule-authoring shapes are its own concern. joggle asks whether two things are the same and whether a thing fits THIS repository; plumb's rule internals are not that question, and the root lint already scopes plumb out. Judging them produced 82 `rule-judgment` readings about plumb's own rule metadata, 4 `object-shape` readings about its metadata literals, 3 `duplicate-meaning` and 2 `compose-types` readings within its own rule internals — none of them about this repository."
     },
     {
       "rule": "joggle/duplicate-call-run",
@@ -45,11 +40,6 @@
       "rule": "joggle/duplicate-implementation",
       "path": "packages/joggle/src/bundles.ts",
       "reason": "The other side of the `dirOf`/`baseOf` pair: joggle and cutlist each carry the five-line path scan because the tools never import each other. The ignore is recorded on both files so the finding cannot move with whichever side the detector names."
-    },
-    {
-      "rule": "joggle/language-drift",
-      "path": "packages/jig-cli/src/opencode.ts",
-      "reason": "The prose names OpenCode, the host product, and `open` is not a domain term this file declares. The rule's vocabulary sample is the prose, not a claim about the code."
     },
     {
       "rule": "joggle/duplicate-meaning",

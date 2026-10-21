@@ -75,10 +75,6 @@ const EFFECT_TSGO = recommended.rules ?? {}
  * metric to watch.
  */
 const BOUNDARY_FILES = [
-  // The config itself is a boundary: it reads two plugins' raw metadata records and the
-  // Effect presets' loosely-typed rule maps into typed rule settings. Broad records are
-  // the input's shape, not a widened contract of our own.
-  "oxlint.config.ts",
   "packages/protocol/src/decode.ts",
   "packages/protocol/src/json.ts",
   "packages/protocol/src/config.ts",
@@ -93,12 +89,10 @@ const BOUNDARY_FILES = [
   "packages/protocol/src/recipes.ts",
   "packages/protocol/src/baseline.ts",
   "packages/cutlist/src/crawl.ts",
-  "packages/cutlist/src/check.ts",
   "packages/jig-cli/src/engines.ts",
   "packages/jig-cli/src/menu.ts",
   "packages/jig-cli/src/menu.test.ts",
   "packages/jig-cli/src/opencode.ts",
-  "packages/jig-cli/src/baseline.ts",
   "packages/jig-cli/extensions/jig.ts",
   // The conformance tests hold raw fixture bytes against a schema: the same crossing, in a
   // test. The cast is the test's subject, not an accident.
@@ -316,7 +310,7 @@ export default {
       // resolve, a component with no owner. joggle's words: "absence is the ordinary answer
       // ... and each miss is already recorded as a fact". Wrapping each hop in Option would
       // move the same branch to every call site without adding a distinction the domain has.
-      files: ["packages/cutlist/src/catalog.ts", "packages/cutlist/src/owners.ts"],
+      files: ["packages/cutlist/src/owners.ts"],
       rules: { "plumb-effect/guarded-op-must-return-option": "off" },
     },
     {
@@ -325,13 +319,6 @@ export default {
       // make the ratchet non-reproducible — which is the harm the rule exists to prevent.
       files: ["packages/jig-cli/src/engines.ts", "packages/jig-cli/src/run.ts"],
       rules: { "plumb/no-nondeterministic-core": "off" },
-    },
-    {
-      // `Effect.provide` is correct at an application entry point — the rule says so in its
-      // own message — and a test provides its layers once per case. Both are the exception
-      // the rule names, not a scope lifetime hazard.
-      files: ["packages/*/src/cli.ts", "packages/*/src/*.test.ts"],
-      rules: { "effecttsgo/strict-effect-provide": "off" },
     },
   ],
 }
