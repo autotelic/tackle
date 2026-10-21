@@ -1,5 +1,5 @@
 {
-  "hash": "8592260c519a6bb9fbb2a239a3e6c3d0ff38df02812ec4753fc781eea7a12a38",
+  "hash": "f36aea8a90eadbcc6e9e373243903de01a972c071ce2c3b6b5a6fc81172096bb",
   "lexicon": {
     "name": "catalog",
     "version": 1
@@ -341,8 +341,8 @@
   ],
   "health": {
     "parts": 10,
-    "sharedReach": 0.6666666666666666,
-    "localOnly": 3,
+    "sharedReach": 1,
+    "localOnly": 0,
     "duplicateClusters": 0
   },
   "clusters": [],

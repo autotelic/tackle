@@ -130,7 +130,7 @@ describe("renderMenu", () => {
     )
     expect(markdown).toContain("## health")
     expect(markdown).toContain("1 documented (50%)")
-    expect(markdown).toContain("50% of UI modules import a shared part")
+    expect(markdown).toContain("50% of local UI modules import a shared part")
     expect(markdown).toContain("1 deprecated part still imported")
     expect(markdown).toContain("exports `Button`")
     expect(markdown).toContain("7 importers")

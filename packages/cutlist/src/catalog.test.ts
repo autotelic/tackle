@@ -1,7 +1,13 @@
 import fc from "fast-check"
 import { describe, expect, it } from "vitest"
 import type { CatalogComponent, PartRole } from "@autotelic/protocol"
-import { duplicateCandidates, duplicateClusters, idOfModule, importerGraph } from "./catalog.ts"
+import {
+  duplicateCandidates,
+  duplicateClusters,
+  healthOf,
+  idOfModule,
+  importerGraph,
+} from "./catalog.ts"
 import { parseModule, type SourceModule } from "./crawl.ts"
 import { ownerOf } from "./owners.ts"
 import { skeletonOf } from "./signature.ts"
@@ -260,6 +266,50 @@ describe("importerGraph", () => {
   it("matches one that does not, and one written through an alias", () => {
     const graph = importerGraph(modules, alias)
     expect([...(graph.get("src/components/panel.tsx") ?? [])]).toEqual(["src/routes/settings.tsx"])
+  })
+})
+
+describe("healthOf", () => {
+  const part = (
+    path: string,
+    kind: PartRole,
+    tier: "primitive" | "shared" | "local",
+  ): CatalogComponent => ({
+    path,
+    name: path.split("/").pop() ?? path,
+    tier,
+    kind,
+    owners: [],
+    props: [],
+    tags: [],
+    signature: [],
+    documented: false,
+  })
+
+  it("measures adoption among the modules outside the shared layer", () => {
+    const components = [
+      part("src/components/ui/button.tsx", "component", "primitive"),
+      part("src/components/card.tsx", "component", "shared"),
+      part("src/app/page.tsx", "route", "local"),
+      part("src/app/other.tsx", "route", "local"),
+    ]
+    const graph = new Map([["src/components/ui/button.tsx", ["src/app/page.tsx"]]])
+    const health = healthOf({
+      components,
+      graph,
+      sourceRoot: "src",
+      primitiveRoots: ["components/ui"],
+      sharedRoots: ["components"],
+    })
+    // The two shared-layer parts are the system, not adopters of it: two app modules are,
+    // and one of them imports the button. Counting the library in the denominator used to
+    // report this tree as 25% instead of 50%.
+    expect(health).toMatchObject({
+      parts: 4,
+      sharedReach: 0.5,
+      localOnly: 1,
+      duplicateClusters: 0,
+    })
   })
 })
 

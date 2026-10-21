@@ -137,13 +137,14 @@ export interface DuplicateCluster {
  *
  * `sharedReach` is a ratio rather than a count because the denominator is the thing that
  * grows: a repo with a thousand local pages and ten shared imports is not healthier than
- * a smaller one, and a count would reward the wrong direction.
+ * a smaller one, and a count would reward the wrong direction. The denominator is the
+ * modules OUTSIDE the shared layer: the library importing itself is not adoption.
  */
 export interface CatalogHealth {
   readonly parts: number
-  /** Share of component/hook/route modules that import at least one shared or primitive part. */
+  /** Share of component/hook/route modules outside the shared layer that import a shared part. */
   readonly sharedReach: number
-  /** UI modules that import no shared or primitive part. */
+  /** Adopter modules that import no shared or primitive part. */
   readonly localOnly: number
   readonly duplicateClusters: number
 }

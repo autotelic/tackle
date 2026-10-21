@@ -13,6 +13,7 @@
 3faada3ac3604136	1792252958	{"confidence":0.4,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.4,"names_a_caller":0,"shared_vocabulary":0.6}}
 3fb716e69b8365e6	1792252958	{"confidence":0.22,"kind":"Classify","label":"none","probabilities":{"none":0.61,"settings":0.39}}
 3fbdf78c4f04f96b	1792542864	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
+3fd7db2e656d9c08	1792593149	{"confidence":0.45,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.59,"different_order":0,"different_work":0.41,"same_operation":0}}
 3fdd960f59c8aa44	1792252958	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
 3fef10c741d72788	1792592274	{"confidence":0.77,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.1,"framework_glue":0,"implementation_detail":0.83,"wire_contract":0.07}}
 3ff993e274b8886b	1792252958	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0.01}}

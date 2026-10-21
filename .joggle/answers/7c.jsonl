@@ -14,3 +14,4 @@
 7ca8a871cb12b0aa	1792269251	{"confidence":0.31,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.37,"no_difference":0.06,"removes_a_hazard":0.36,"slightly_clearer":0.21},"rating":2.03}
 7ca8d7aab4680f9e	1792535009	{"confidence":0.65,"kind":"Classify","label":"mechanical","probabilities":{"domain_logic":0.11,"infrastructure":0,"input_adaptation":0.04,"mechanical":0.6900000000000001,"not_applicable":0.15,"orchestration":0.01,"rendering":0,"request_validation":0,"transport_concern":0}}
 7cc99e611fd2c21b	1792252958	{"confidence":0.57,"kind":"Classify","label":"same_module","probabilities":{"different_deployables":0,"same_module":0.68,"same_package":0.32,"sibling_packages":0}}
+7ceed6dd94dfe6d4	1792593149	{"confidence":0.87,"kind":"Classify","label":"component_or_feature","probabilities":{"already_there":0.03,"component_or_feature":0.9,"not_applicable":0,"route_or_handler":0.07}}

@@ -71,7 +71,7 @@ export const renderMenu = (menu: Menu): string => {
     lines.push("## health", "")
     lines.push(
       `- ${plural(health.parts, ["part", "parts"])}; ${health.documented} documented (${health.parts === 0 ? 0 : Math.round((health.documented / health.parts) * 100)}%)`,
-      `- ${Math.round(health.sharedReach * 100)}% of UI modules import a shared part; ${health.localOnly} local-only`,
+      `- ${Math.round(health.sharedReach * 100)}% of local UI modules import a shared part; ${health.localOnly} local-only`,
       `- ${plural(menu.duplicates.length, ["candidate pair", "candidate pairs"])} in ${plural(health.duplicateClusters, ["cluster", "clusters"])}`,
       `- ${health.deprecatedInUse} deprecated ${health.deprecatedInUse === 1 ? "part" : "parts"} still imported`,
       "",

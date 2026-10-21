@@ -296,10 +296,14 @@ export const duplicateClusters = (
  * lives in the shared layer — the primitive or shared roots. The test is by LOCATION, not
  * by the tier a file acquired: a component used by one route today is still shared material
  * that route reached for, and counting only multi-owner parts made a well-composed app look
- * unattached. The denominator is UI modules — components, hooks, and routes — because
- * counting every type module would make adoption look worse as a repo documented itself.
+ * unattached.
+ *
+ * The denominator is UI modules OUTSIDE the shared layer. A primitive importing a utility
+ * is the system, not an adopter of the system; counting the library made adoption read as
+ * a failure of the library. Type modules stay out for the same reason: documenting a repo
+ * should not lower its adoption score.
  */
-const healthOf = ({
+export const healthOf = ({
   components,
   graph,
   sourceRoot,
@@ -326,6 +330,7 @@ const healthOf = ({
     (component) =>
       component.kind === "component" || component.kind === "hook" || component.kind === "route",
   )
+  const adopters = ui.filter((component) => !shared.has(component.path))
   const importsByPath = new Map<string, Set<string>>()
   for (const [target, importers] of graph) {
     for (const importer of importers) {
@@ -334,13 +339,13 @@ const healthOf = ({
       importsByPath.set(importer, set)
     }
   }
-  const consumers = ui.filter((component) =>
+  const consumers = adopters.filter((component) =>
     [...(importsByPath.get(component.path) ?? [])].some((target) => shared.has(target)),
   ).length
   return {
     parts: components.length,
-    sharedReach: ui.length === 0 ? 0 : consumers / ui.length,
-    localOnly: ui.length - consumers,
+    sharedReach: adopters.length === 0 ? 0 : consumers / adopters.length,
+    localOnly: adopters.length - consumers,
     duplicateClusters: 0,
   }
 }

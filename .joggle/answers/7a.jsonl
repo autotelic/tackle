@@ -9,10 +9,12 @@
 7a717b468d844995	1792535008	{"confidence":0.58,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.63,"infrastructure":0,"input_adaptation":0,"mechanical":0.3,"not_applicable":0.07,"orchestration":0,"rendering":0,"request_validation":0,"transport_concern":0}}
 7a74be5bfb61b02c	1792269251	{"confidence":0.84,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.08,"member_1":0.92}}
 7a92278dd483db69	1792252958	{"confidence":0.89,"kind":"Classify","label":"accounted_elsewhere","probabilities":{"accounted_elsewhere":0.93,"internal_only":0.04,"unaccounted":0.03}}
+7aa183ff76d32be0	1792593149	{"confidence":0.56,"kind":"Classify","label":"same_module","probabilities":{"different_deployables":0,"same_module":0.67,"same_package":0.33,"sibling_packages":0}}
 7aa3e3792bb9c9d8	1792252958	{"consistency":1,"kind":"Probability","probability":0.7211111111111111}
 7ab803323be4c66e	1792252958	{"confidence":0.87,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.9,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0.07}}
 7adbc52be6fceb31	1792252958	{"confidence":0.77,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.07,"name_meaning":0.01,"no_issue":0.09,"semantic_verdict":0.83}}
 7ae01fec76dc2531	1792252958	{"confidence":0.79,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0,"no_issue":0.16,"semantic_verdict":0.84}}
+7ae3f5384c641ef3	1792593149	{"confidence":0.86,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.09,"inferred":0,"not_applicable":0.91}}
 7aedc5247decba77	1792252958	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
 7af111d7f6399f6d	1792535008	{"confidence":0.6,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.7,"component_or_feature":0.23,"not_applicable":0.04,"route_or_handler":0.03}}
 7af59c83f733b89e	1792535008	{"confidence":0.96,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.97,"component_or_feature":0.02,"not_applicable":0.01,"route_or_handler":0}}
