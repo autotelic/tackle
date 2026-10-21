@@ -90,9 +90,10 @@ what stops a generic-hook pair from scoring a perfect 1.0.
 `PATTERNS.md` and `patterns.json` are the pattern language view. A pattern has a context
 (tier, owners, feature), forces (adoption, variants, lifecycle), a solution (exports and
 composition), and relations to the parts it uses and the variants around it. The stable
-shape is ranked by a transparent five-factor score: tier, adoption, ownership, variant
-status, and documentation. `compression` names the three moves the facts support — remove
-orphans, converge variants on their canonical, migrate retired parts still imported.
+shape is ranked by a transparent five-factor score — tier 0.35, adoption 0.30, ownership
+0.15, variant status 0.10, documentation 0.10 — and every pattern carries its factors.
+`compression` names the three moves the facts support — remove orphans, converge variants
+on their canonical, migrate retired parts still imported.
 
 `RECIPES.md` and `recipes.json` turn the load-bearing patterns into a next turn: the import
 line, a minimal shape with the declared props, the feature's blocks and hook, and a note on

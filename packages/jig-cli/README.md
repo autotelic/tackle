@@ -93,6 +93,8 @@ jig check --format sarif     # SARIF 2.1.0 for code scanning
 jig check --limit 20         # the census, then the first 20 findings
 jig baseline                 # accept the current findings into the baseline
 jig engines                  # what is configured, and whether it is on PATH
+jig menu                     # the cutlist stable shape and artifact files
+jig menu dialog              # the parts, features, and recipes that answer a concept
 jig init                     # write jig.config.json, an empty baseline, and the cookbook
 ```
 
