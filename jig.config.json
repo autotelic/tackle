@@ -42,7 +42,7 @@
       "kind": "process",
       "command": "joggle",
       "config": "joggle.config.json",
-      "args": ["--typecheck"]
+      "args": ["--typecheck", "--types", "--no-replay"]
     }
   ],
   "gate": { "mode": "all", "baseline": ".jig-baseline.json", "failOn": "any-new" },

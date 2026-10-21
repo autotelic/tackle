@@ -12,4 +12,5 @@ a6965b0cff91972f	1792535008	{"confidence":0.02,"kind":"Classify","label":"move",
 a6aaee8d98c2b1b7	1792252958	{"confidence":0.44,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.58,"different_order":0,"different_work":0.42,"same_operation":0}}
 a6b87ba2032b8ebd	1792617317	{"confidence":0.35,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.02,"keep_variants":0.57,"no_issue":0.41}}
 a6d261e61812f75f	1792265611	{"confidence":0.86,"kind":"Classify","label":"move","probabilities":{"move":0.93,"no_issue":0.07}}
+a6db73f561d33743	1792621702	{"confidence":0.68,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.23,"framework_glue":0,"implementation_detail":0.76,"wire_contract":0.01}}
 a6f321715dd79379	1792535008	{"confidence":0.66,"kind":"Classify","label":"rendering","probabilities":{"domain_logic":0.23,"infrastructure":0,"input_adaptation":0,"mechanical":0.01,"not_applicable":0.05,"orchestration":0,"rendering":0.7,"request_validation":0,"transport_concern":0.01}}

@@ -5,6 +5,7 @@
 0153c88c57c362c8	1792543728	{"confidence":0.95,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.03,"framework_glue":0,"implementation_detail":0.96,"wire_contract":0.01}}
 015646cfc16e3284	1792535008	{"confidence":0.91,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.92,"infrastructure":0,"input_adaptation":0,"mechanical":0.06,"not_applicable":0.02,"orchestration":0,"rendering":0,"request_validation":0,"transport_concern":0}}
 016eb9194944885a	1792617317	{"confidence":0.58,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.06,"common_idiom":0.72,"shared_helper":0.22}}
+01715e89bf0e399c	1792621702	{"confidence":0.55,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.17,"keep_variants":0.7,"no_issue":0.13}}
 0173988c3bc5e201	1792265611	{"consistency":1,"kind":"Probability","probability":0.2877777777777778}
 018dce6c2cf38864	1792253160	{"confidence":0.97,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.98,"not_a_derivation":0.01,"reimplements":0.01}}
 01906d77955fb7e5	1792542865	{"confidence":0.98,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.01,"member_1":0.99}}

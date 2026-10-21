@@ -50,16 +50,42 @@
       "rule": "joggle/language-drift",
       "path": "packages/jig-cli/src/opencode.ts",
       "reason": "The prose names OpenCode, the host product, and `open` is not a domain term this file declares. The rule's vocabulary sample is the prose, not a claim about the code."
+    },
+    {
+      "rule": "joggle/duplicate-meaning",
+      "path": "packages/jig-cli/src/git.ts",
+      "reason": "`lines` is a five-line split-and-trim that exists in jig-cli and joggle because the harness never links an engine. They also answer differently on purpose: joggle splits on CRLF, jig-cli on LF. Same seam as `dirOf`/`baseOf` — two deployables that agree on bytes, not code."
+    },
+    {
+      "rule": "joggle/duplicate-meaning",
+      "path": "packages/joggle/src/git.ts",
+      "reason": "The other side of the `lines` pair: jig-cli and joggle each carry the helper because the tools never import each other. Recorded on both files so the finding cannot move with whichever side the detector names."
     }
   ],
   "architecture": {
     "layers": [
-      { "name": "protocol", "include": ["packages/protocol/**"] },
+      {
+        "name": "protocol",
+        "include": ["packages/protocol/**"],
+        "forbid": ["effect", "effect/**", "@autotelic/**"]
+      },
       {
         "name": "engine",
-        "include": ["packages/plumb/**", "packages/joggle/**", "packages/cutlist/**"]
+        "include": ["packages/plumb/**", "packages/joggle/**", "packages/cutlist/**"],
+        "forbid": ["@autotelic/jig-cli", "@autotelic/jig-cli/**"]
       },
-      { "name": "harness", "include": ["packages/jig-cli/**"] }
+      {
+        "name": "harness",
+        "include": ["packages/jig-cli/**"],
+        "forbid": [
+          "@autotelic/plumb",
+          "@autotelic/plumb/**",
+          "@autotelic/joggle",
+          "@autotelic/joggle/**",
+          "@autotelic/cutlist",
+          "@autotelic/cutlist/**"
+        ]
+      }
     ]
   },
   "evidence": {

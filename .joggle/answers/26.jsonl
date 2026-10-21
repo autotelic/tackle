@@ -1,3 +1,4 @@
+260429180c620d96	1792621702	{"confidence":0.54,"kind":"Classify","label":"move","probabilities":{"move":0.77,"no_issue":0.23}}
 261a3a2331d794c2	1792535008	{"confidence":0.35,"kind":"Classify","label":"move","probabilities":{"leave_it":0.17,"merge":0.06,"move":0.48,"share_a_contract":0.27,"split":0.02}}
 261d002eb29d4217	1792617317	{"consistency":1,"kind":"Probability","probability":0.6166666666666667}
 2627812f077dd24e	1792252958	{"confidence":0.63,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.28,"framework_glue":0,"implementation_detail":0.72,"wire_contract":0}}

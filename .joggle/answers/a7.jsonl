@@ -20,9 +20,11 @@ a77abfb264904ec8	1792542865	{"confidence":0.8,"kind":"Classify","label":"keep_va
 a77b265ff515e79b	1792543161	{"confidence":0.93,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.05,"framework_glue":0,"implementation_detail":0.95,"wire_contract":0}}
 a78500502f25a181	1792535008	{"confidence":0.83,"kind":"Classify","label":"mechanical","probabilities":{"domain_logic":0.04,"infrastructure":0,"input_adaptation":0.09999999999999999,"mechanical":0.85,"not_applicable":0.01,"orchestration":0,"rendering":0,"request_validation":0,"transport_concern":0}}
 a7961ec94bd7fff9	1792617317	{"confidence":0.97,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.02,"inferred":0,"not_applicable":0.98}}
+a79d3ef65892afd1	1792621702	{"confidence":0.78,"kind":"Classify","label":"move","probabilities":{"move":0.89,"no_issue":0.11}}
 a7aa22cb8757012d	1792535008	{"confidence":0.29,"kind":"Classify","label":"route_or_handler","probabilities":{"already_there":0.23,"component_or_feature":0.23,"not_applicable":0.07,"route_or_handler":0.47000000000000003}}
 a7b97a3f4fec3094	1792617316	{"consistency":1,"kind":"Probability","probability":0.15333333333333332}
 a7bddd61d31f49fc	1792252958	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0.02}}
+a7cbe621e796fa29	1792621702	{"confidence":0.97,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.02,"same_module":0,"same_package":0,"sibling_packages":0.98}}
 a7dad8796b18ace6	1792252958	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
 a7df2c54153ccf88	1792619055	{"confidence":0.31,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.54,"not_a_derivation":0.46,"reimplements":0}}
 a7efa74d4272810f	1792618754	{"confidence":0.45,"kind":"Classify","label":"unaccounted","probabilities":{"accounted_elsewhere":0.15,"internal_only":0.22,"unaccounted":0.63}}

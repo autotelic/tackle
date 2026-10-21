@@ -1,4 +1,5 @@
 85067ef0714328e4	1792535008	{"confidence":0.53,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.65,"component_or_feature":0.09,"not_applicable":0.23,"route_or_handler":0.03}}
+850c9272a92a799b	1792621702	{"confidence":0.7,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.8,"not_a_derivation":0.03,"reimplements":0.17}}
 851702c2f0902420	1792618754	{"confidence":0.67,"kind":"Rate","label":"no_difference","probabilities":{"meaningfully_better":0.04,"no_difference":0.73,"removes_a_hazard":0.01,"slightly_clearer":0.22},"rating":0.33}
 8531f252d8323675	1792535008	{"confidence":0.64,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.73,"component_or_feature":0.2,"not_applicable":0.05,"route_or_handler":0.02}}
 853cf86935250af6	1792252958	{"confidence":0.38,"kind":"Classify","label":"collapse","probabilities":{"collapse":0.59,"keep_variants":0.36,"no_issue":0.05}}
@@ -16,6 +17,7 @@
 85ae75a11fae6780	1792252958	{"confidence":0.38,"kind":"Classify","label":"value","probabilities":{"meaning":0.22,"unclear":0.19,"value":0.59}}
 85b287d4244146af	1792535008	{"confidence":0.98,"kind":"Classify","label":"orchestration","probabilities":{"domain_logic":0.01,"infrastructure":0.01,"input_adaptation":0,"mechanical":0,"not_applicable":0,"orchestration":0.98,"rendering":0,"request_validation":0,"transport_concern":0}}
 85c3cb718a792681	1792617316	{"confidence":0.91,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.93,"stale_reference":0,"wrong_behavior":0.04,"wrong_contract":0.03}}
+85d21ccb782204c6	1792621702	{"confidence":0.35,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.57,"unclear":0.01,"value":0.42}}
 85ed622de9730283	1792619451	{"confidence":0.31,"kind":"Classify","label":"not_a_derivation","probabilities":{"legitimate_local":0.42,"not_a_derivation":0.54,"reimplements":0.04}}
 85f161787953d269	1792542865	{"confidence":0.58,"kind":"Classify","label":"collapse","probabilities":{"collapse":0.72,"keep_variants":0.22,"no_issue":0.06}}
 85fd19cd4bae8b1e	1792252958	{"confidence":0.28,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.52,"not_a_derivation":0.27,"reimplements":0.21}}

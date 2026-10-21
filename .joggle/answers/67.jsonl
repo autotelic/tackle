@@ -2,12 +2,14 @@
 6706fca9f2510e0d	1792252958	{"confidence":0.89,"kind":"Classify","label":"accounted_elsewhere","probabilities":{"accounted_elsewhere":0.93,"internal_only":0.04,"unaccounted":0.03}}
 670f2033a4104347	1792535008	{"confidence":0.88,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.89,"infrastructure":0,"input_adaptation":0,"mechanical":0.03,"not_applicable":0.07,"orchestration":0.01,"rendering":0,"request_validation":0,"transport_concern":0}}
 671423968c778a49	1792619055	{"confidence":0.84,"kind":"Classify","label":"same_module","probabilities":{"different_deployables":0,"same_module":0.88,"same_package":0.12,"sibling_packages":0}}
+67277521fa27096b	1792621702	{"confidence":0.48,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.74,"member_1":0.26}}
 674534f2f21de293	1792535008	{"confidence":0.35,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.51,"component_or_feature":0.17,"not_applicable":0.14,"route_or_handler":0.18}}
 675d8011b4681998	1792252958	{"consistency":1,"kind":"Probability","probability":0.8155555555555556}
 6770764150a90137	1792252958	{"consistency":1,"kind":"Probability","probability":0.8333333333333334}
 6775ec467b5f40e5	1792617317	{"consistency":1,"kind":"Probability","probability":0.6544444444444445}
 67ae6db3ff798063	1792252958	{"confidence":0.87,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.09,"same_module":0,"same_package":0.01,"sibling_packages":0.9}}
 67b426777fb02d82	1792618754	{"confidence":0.67,"kind":"Classify","label":"general","probabilities":{"general":0.78,"names_a_caller":0,"shared_vocabulary":0.22}}
+67b47744a871fb63	1792621702	{"confidence":0.27,"kind":"Classify","label":"move","probabilities":{"merge":0.2,"move":0.51,"no_issue":0.29}}
 67bbce9c4670e688	1792535007	{"confidence":0.19,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.39,"component_or_feature":0.28,"not_applicable":0.29,"route_or_handler":0.04}}
 67eceb88554215bf	1792593149	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0.01}}
 67efaa31070dfbb3	1792542865	{"confidence":0.66,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.01,"merge":0.73,"move":0.15,"share_a_contract":0.01,"split":0.1}}

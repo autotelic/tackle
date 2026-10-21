@@ -1,5 +1,6 @@
 2b11dc80ae0fbc14	1792252958	{"consistency":1,"kind":"Probability","probability":0.3522222222222222}
 2b1d3aac3c4687d9	1792269251	{"confidence":0.34,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.08,"merge":0.05,"move":0.39,"share_a_contract":0.47,"split":0.01}}
+2b263cd88595b607	1792621702	{"confidence":0.97,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.98,"not_a_derivation":0,"reimplements":0.02}}
 2b366f9d9c5ebbd8	1792269250	{"confidence":0.81,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.86,"stale_reference":0.02,"wrong_behavior":0.1,"wrong_contract":0.02}}
 2b45bf193d73fce9	1792269251	{"confidence":0.85,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.03,"keep_variants":0.9,"no_issue":0.07}}
 2b480e8806d637d0	1792252958	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0.01}}
@@ -8,6 +9,8 @@
 2b6656a5580b933a	1792619451	{"confidence":0.28,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.52,"not_a_derivation":0.46,"reimplements":0.02}}
 2b66e0841b388c16	1792543161	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
 2b6cdc4f33b6593c	1792252958	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
+2b7d9361058ab1f2	1792621702	{"consistency":1,"kind":"Probability","probability":0.40111111111111114}
+2b7ec6976a3a4630	1792621702	{"confidence":0.68,"kind":"Classify","label":"move","probabilities":{"move":0.84,"no_issue":0.16}}
 2b9b75979593e034	1792252958	{"confidence":0.87,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.9,"stale_reference":0.01,"wrong_behavior":0.06,"wrong_contract":0.03}}
 2ba4114c8ca309bd	1792252958	{"consistency":1,"kind":"Probability","probability":0.8866666666666667}
 2bae8dbbdd7f7f3b	1792252958	{"confidence":0.95,"kind":"Classify","label":"component_or_feature","probabilities":{"already_there":0.02,"component_or_feature":0.96,"not_applicable":0,"route_or_handler":0.02}}

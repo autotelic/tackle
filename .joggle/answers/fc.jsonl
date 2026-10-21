@@ -4,6 +4,7 @@ fc117fea43e007f0	1792617317	{"confidence":0.28,"kind":"Classify","label":"no_iss
 fc12b6846206db21	1792252958	{"confidence":0.92,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.94,"stale_reference":0,"wrong_behavior":0.05,"wrong_contract":0.01}}
 fc3f4385eba3f8a2	1792535008	{"confidence":0.65,"kind":"Classify","label":"component_or_feature","probabilities":{"already_there":0.19,"component_or_feature":0.74,"not_applicable":0.02,"route_or_handler":0.05}}
 fc46b5b3302238e8	1792619412	{"confidence":0.73,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.82,"not_a_derivation":0.05,"reimplements":0.13}}
+fc4805be1abe387d	1792621702	{"confidence":0.37,"kind":"Classify","label":"same_module","probabilities":{"different_deployables":0,"same_module":0.53,"same_package":0.47,"sibling_packages":0}}
 fc4db9eb218d283e	1792535008	{"confidence":0.36,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.52,"component_or_feature":0.16,"not_applicable":0.15,"route_or_handler":0.17}}
 fc7af2d63ccb2f8b	1792252958	{"confidence":0.35,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.42,"no_difference":0.07,"removes_a_hazard":0.25,"slightly_clearer":0.26},"rating":1.84}
 fc7b1d70e39a0d43	1792535008	{"confidence":0.75,"kind":"Classify","label":"input_adaptation","probabilities":{"domain_logic":0.11,"infrastructure":0,"input_adaptation":0.78,"mechanical":0.03,"not_applicable":0.05,"orchestration":0.01,"rendering":0,"request_validation":0.01,"transport_concern":0.01}}
@@ -17,3 +18,4 @@ fce2cc84dfcf8a2c	1792252958	{"confidence":1,"kind":"Classify","label":"no_issue"
 fce51bf7037e89ce	1792535009	{"confidence":0.64,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.73,"component_or_feature":0.07,"not_applicable":0.18,"route_or_handler":0.02}}
 fcec3fe10ab64db5	1792253160	{"consistency":1,"kind":"Probability","probability":0.3666666666666667}
 fcfb6a22f68982d1	1792617317	{"confidence":0.88,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.91,"different_order":0.02,"different_work":0.03,"same_operation":0.04}}
+fcfe8d674aa02709	1792621702	{"confidence":0.68,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.23,"framework_glue":0,"implementation_detail":0.76,"wire_contract":0.01}}

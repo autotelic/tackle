@@ -9,10 +9,12 @@ a066daf37bb8f8e4	1792618754	{"confidence":0.95,"kind":"Classify","label":"legiti
 a06d3a97b9a1361b	1792535008	{"confidence":0.79,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.84,"component_or_feature":0.05,"not_applicable":0.1,"route_or_handler":0.01}}
 a06f0d2294fca3c0	1792252958	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0}}
 a07e74b21e47059c	1792619412	{"confidence":0.55,"kind":"Classify","label":"not_a_derivation","probabilities":{"legitimate_local":0.24,"not_a_derivation":0.7,"reimplements":0.06}}
+a0843e54b480afd1	1792621702	{"confidence":0.91,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.07,"framework_glue":0,"implementation_detail":0.93,"wire_contract":0}}
 a0881a95b7fe05d3	1792252958	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0.01}}
 a08cee055460ed56	1792252958	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
 a0a49257a48103b6	1792252958	{"confidence":0.98,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.99,"member_1":0.01}}
 a0aebc00f0b27b5a	1792269251	{"confidence":0.44,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.08,"framework_glue":0,"implementation_detail":0.58,"wire_contract":0.34}}
+a0bb0ec4a93058bb	1792621702	{"confidence":0.49,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.59,"member_1":0.11,"member_2":0.15,"member_3":0.06,"member_4":0.09}}
 a0bce729a594d386	1792535008	{"confidence":0.33,"kind":"Classify","label":"infrastructure","probabilities":{"domain_logic":0.39,"infrastructure":0.4,"input_adaptation":0,"mechanical":0.15,"not_applicable":0.02,"orchestration":0.03,"rendering":0,"request_validation":0,"transport_concern":0.01}}
 a0c2191b335787b9	1792619412	{"confidence":0.79,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.86,"not_a_derivation":0.06,"reimplements":0.08}}
 a0c335bb673d2ff2	1792252958	{"confidence":0.18,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.59,"member_1":0.41}}

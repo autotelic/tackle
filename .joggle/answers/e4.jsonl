@@ -9,6 +9,7 @@ e46ecba0090bad8c	1792252958	{"confidence":0.7,"kind":"Classify","label":"value",
 e47f353365deb6c8	1792252958	{"confidence":0.87,"kind":"Classify","label":"library_core","probabilities":{"domain_core":0.05,"infrastructure":0,"library_core":0.89,"not_applicable":0,"rendering_edge":0,"transport_edge":0,"utilities":0.06}}
 e49247bd20f07b9f	1792252958	{"confidence":0.65,"kind":"Classify","label":"wire_contract","probabilities":{"domain_concept":0.14,"framework_glue":0.08,"implementation_detail":0.04,"wire_contract":0.74}}
 e493a380615d56a2	1792619412	{"confidence":0.53,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.69,"not_a_derivation":0.02,"reimplements":0.29}}
+e49f3fc991753e17	1792621702	{"confidence":0.34,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.06,"merge":0.1,"move":0.36,"share_a_contract":0.47,"split":0.01}}
 e4aad1e126533633	1792252958	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0.01}}
 e4ad73f61970be08	1792542865	{"confidence":0.21,"kind":"Rate","label":"slightly_clearer","probabilities":{"meaningfully_better":0.29,"no_difference":0.16,"removes_a_hazard":0.17,"slightly_clearer":0.38},"rating":1.47}
 e4b5bd67608a1220	1792535008	{"confidence":0.83,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.87,"component_or_feature":0.09,"not_applicable":0.03,"route_or_handler":0.01}}

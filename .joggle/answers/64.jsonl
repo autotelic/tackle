@@ -1,3 +1,4 @@
+640468d89cee9155	1792621702	{"confidence":0.61,"kind":"Classify","label":"domain_concept","probabilities":{"domain_concept":0.71,"framework_glue":0,"implementation_detail":0.29,"wire_contract":0}}
 640c9fe3684d522f	1792252958	{"confidence":0.7,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.19,"independent":0.8,"meaning_switched":0.01}}
 642f3cc650fa441f	1792535008	{"confidence":1,"kind":"Classify","label":"already_there","probabilities":{"already_there":1,"component_or_feature":0,"not_applicable":0,"route_or_handler":0}}
 643043503451adb9	1792535008	{"confidence":0.93,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0,"wrong_behavior":0.04,"wrong_contract":0.01}}

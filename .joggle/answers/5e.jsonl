@@ -1,3 +1,4 @@
+5e0609904f597a4b	1792621702	{"confidence":0.34,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.06,"merge":0.1,"move":0.36,"share_a_contract":0.47,"split":0.01}}
 5e0a4ef67422d2c9	1792252958	{"confidence":0.93,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0,"wrong_behavior":0.04,"wrong_contract":0.01}}
 5e0e68a686c1882b	1792535008	{"confidence":0.74,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.77,"infrastructure":0,"input_adaptation":0,"mechanical":0.1,"not_applicable":0.11,"orchestration":0.02,"rendering":0,"request_validation":0,"transport_concern":0}}
 5e1c06bbd815c906	1792252958	{"confidence":0.86,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.09,"independent":0.91,"meaning_switched":0}}
@@ -12,6 +13,7 @@
 5e74e13df33a08ea	1792252958	{"confidence":0.43,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.38,"names_a_caller":0,"shared_vocabulary":0.62}}
 5e81ec5ff0ce8478	1792269251	{"confidence":0.92,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.04,"inferred":0.01,"not_applicable":0.95}}
 5e8c08764a2aa42c	1792252958	{"confidence":0.61,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.74,"unclear":0.01,"value":0.25}}
+5e8dbf1d22c01f99	1792621702	{"confidence":0.91,"kind":"Classify","label":"same_package","probabilities":{"different_deployables":0,"same_module":0.050505050505050504,"same_package":0.9393939393939393,"sibling_packages":0.0101010101010101}}
 5e9fb0b626d39fc3	1792535008	{"confidence":0.66,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.7,"infrastructure":0,"input_adaptation":0,"mechanical":0.3,"not_applicable":0,"orchestration":0,"rendering":0,"request_validation":0,"transport_concern":0}}
 5eb670f57201de07	1792542864	{"confidence":0.33,"kind":"Classify","label":"different_work","probabilities":{"different_inputs":0.5,"different_order":0,"different_work":0.5,"same_operation":0}}
 5ecb15b5ef35cf94	1792617317	{"confidence":0.73,"kind":"Classify","label":"different_work","probabilities":{"different_inputs":0.11,"different_order":0.02,"different_work":0.8,"same_operation":0.07}}

@@ -3,7 +3,9 @@
 780fe984f08b1dd7	1792252958	{"confidence":0.4,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.16,"merge":0.04,"move":0.27,"share_a_contract":0.52,"split":0.01}}
 78194b64eb6e5aed	1792593149	{"consistency":1,"kind":"Probability","probability":0.3611111111111111}
 78236b308be6a82c	1792535008	{"confidence":0.75,"kind":"Classify","label":"input_adaptation","probabilities":{"domain_logic":0.11,"infrastructure":0,"input_adaptation":0.78,"mechanical":0.03,"not_applicable":0.05,"orchestration":0.01,"rendering":0,"request_validation":0.01,"transport_concern":0.01}}
+783f750f4a54908a	1792621702	{"confidence":0.45,"kind":"Classify","label":"move","probabilities":{"merge":0.02,"move":0.63,"no_issue":0.35}}
 78405892505eef4e	1792252958	{"confidence":0.49,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.01,"name_meaning":0.19,"no_issue":0.18,"semantic_verdict":0.62}}
+785276793a0728b5	1792621702	{"confidence":0.87,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.04,"merge":0.01,"move":0.05,"share_a_contract":0.9,"split":0}}
 786162f398eac377	1792252958	{"confidence":0.76,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.12,"member_1":0.88}}
 78681a57cb30a89c	1792252958	{"confidence":0.27,"kind":"Classify","label":"one_concept","probabilities":{"already_named":0.07,"coincidental":0.42,"one_concept":0.51}}
 7869746c38b89535	1792252958	{"consistency":1,"kind":"Probability","probability":0.7955555555555556}
@@ -13,6 +15,7 @@
 78827612cc83eaf0	1792542865	{"confidence":0.33,"kind":"Classify","label":"move","probabilities":{"merge":0.04,"move":0.55,"no_issue":0.41}}
 788dec1e093ce350	1792253160	{"confidence":0.88,"kind":"Classify","label":"collapse","probabilities":{"collapse":0.92,"keep_variants":0.05,"no_issue":0.03}}
 78900c96220a51d7	1792269251	{"confidence":0.74,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.83,"not_a_derivation":0.17,"reimplements":0}}
+7891583b406d643e	1792621702	{"confidence":0.59,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.03,"merge":0.67,"move":0.22,"share_a_contract":0.07,"split":0.01}}
 78983abdf1c23b75	1792252958	{"confidence":0.33,"kind":"Classify","label":"no_issue","probabilities":{"merge":0.02,"move":0.43,"no_issue":0.55}}
 78a534881c63e792	1792535008	{"confidence":0.47,"kind":"Classify","label":"input_adaptation","probabilities":{"domain_logic":0.03,"infrastructure":0,"input_adaptation":0.53,"mechanical":0,"not_applicable":0,"orchestration":0,"rendering":0,"request_validation":0.32,"transport_concern":0.12}}
 78b2717e558a977c	1792535008	{"confidence":0.55,"kind":"Classify","label":"input_adaptation","probabilities":{"domain_logic":0.05,"infrastructure":0,"input_adaptation":0.6,"mechanical":0,"not_applicable":0.08,"orchestration":0.09,"rendering":0,"request_validation":0.15,"transport_concern":0.03}}
