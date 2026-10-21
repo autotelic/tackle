@@ -15,6 +15,7 @@ import { decodeBaseline } from "./baseline.ts"
 import { decodeCatalog, decodeManifest } from "./catalog.ts"
 import { decodeCutlistConfig, decodeHarnessConfig } from "./config.ts"
 import { decodeMenu, decodeOnboarding } from "./doc.ts"
+import { decodeIntent } from "./intent.ts"
 import type { LexiconName } from "./lexicon.ts"
 import { decodeReport } from "./report.ts"
 
@@ -49,6 +50,7 @@ export const DECODERS: Readonly<Record<LexiconName, (value: unknown) => unknown>
   catalog: (value) => decodeCatalog(value),
   manifest: (value) => decodeManifest(value),
   menu: (value) => decodeMenu(value),
+  intent: (value) => decodeIntent(value),
   onboarding: (value) => decodeOnboarding(value),
   "cutlist.config": (value) => decodeCutlistConfig(value),
   "jig.config": (value) => decodeHarnessConfig(value),

@@ -32,6 +32,7 @@ export const LEXICON_NAMES = [
   "catalog",
   "manifest",
   "menu",
+  "intent",
   "onboarding",
   "cutlist.config",
   "jig.config",
@@ -117,6 +118,15 @@ const lexicons: Readonly<Record<LexiconName, Lexicon>> = {
     schema: "schema/menu.json",
     fixture: "fixtures/menu",
     summary: "The parts list a reader works from: derived composition, authored intent.",
+  },
+  intent: {
+    name: "intent",
+    version: 1,
+    kind: "authored",
+    owner: "@autotelic/cutlist",
+    schema: "schema/intent.json",
+    fixture: "fixtures/intent",
+    summary: "The authored half of a part: what it is for, when it is wrong, and its lifecycle.",
   },
   onboarding: {
     name: "onboarding",

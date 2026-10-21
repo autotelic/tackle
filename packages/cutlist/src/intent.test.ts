@@ -1,3 +1,4 @@
+import fc from "fast-check"
 import { describe, expect, it } from "vitest"
 import type { CatalogComponent } from "@autotelic/protocol"
 import { decodeIntentFiles, validateIntent } from "./intent.ts"
@@ -30,6 +31,15 @@ describe("decodeIntentFiles", () => {
     ])
     expect(set.malformed).toEqual(["bad.json", "empty.json"])
     expect([...set.byName.keys()]).toEqual(["good"])
+  })
+
+  it("never throws on arbitrary file text", () => {
+    fc.assert(
+      fc.property(fc.string(), (text) => {
+        const set = decodeIntentFiles([{ name: "x.json", text }])
+        return set.byName.size <= 1 && Array.isArray(set.malformed)
+      }),
+    )
   })
 })
 

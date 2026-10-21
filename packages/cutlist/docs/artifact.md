@@ -344,9 +344,11 @@ The concrete format work, in order:
    in `projectMenu`. _Shipped:_ the catalog carries a path-derived `id` and the join prefers
    it, falling back to `<name>` for existing files. The intent file naming follows in the
    same change that gives `id` a shorter spelling.
-3. **Menu v2.** Add `id`, `kind`, `owners`, `app`, `package`, `imports`, `exports`,
+3. **The part record.** Add `id`, `kind`, `owners`, `app`, `package`, `imports`, `exports`,
    `standalone`, `usedBy`, and resolve `composedOf` to ids. Bump the `menu` lexicon to 2;
-   keep v1 fixtures; every new field optional.
+   keep the version-1 fixtures; every new field optional. _Shipped in part:_ `id`, `kind`,
+   `owners`, `exports`, `usedBy`, health, features, and duplicate clusters; `app`, `package`,
+   `imports`, `standalone`, and the id-resolved composition remain.
 4. **`plan.json`.** The artifact manifest: `lexicon`, `hash`, `generator`, `capabilities`,
    `counts`, `paths`, `files` (path + sha256). A new lexicon only if a non-cutlist reader
    depends on it; until then, a documented convention is enough.
@@ -388,8 +390,8 @@ The concrete format work, in order:
 | --------- | ------------------------------------------------------------------------------- | ------------------------------------ |
 | **Now**   | catalog, manifest, `MENU.md`/`menu.json`, `intent/`, `diagrams/`, hooks, tokens | `cutlist/src`                        |
 | **Next**  | determinism: relative `root`, one hash for one tree                             | `cutlist/src`                        |
-| **Next**  | stable id; `plan.json`                                                          | `cutlist/src/render`, `protocol/src` |
-| **Next**  | `menu` v2 + `workspace`; entries, index, graph, trees                           | `protocol/schema`, `cutlist/src`     |
+| **Next**  | `plan.json`                                                                     | `cutlist/src/render`, `protocol/src` |
+| **Next**  | the part record + `workspace`; entries, index, graph, trees                     | `protocol/schema`, `cutlist/src`     |
 | **Next**  | the snapshot diff; candidate evidence (the signature delta)                     | `cutlist/src/render`                 |
 | **Later** | atlas build; registry export; showroom scenes                                   | new package / `cutlist` subcommands  |
 | **Later** | `jig build` as the one command that produces the artifact                       | `jig-cli/src/engines.ts`             |

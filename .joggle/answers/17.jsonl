@@ -9,6 +9,7 @@
 17762b15fa00868d	1792252958	{"consistency":1,"kind":"Probability","probability":0.8855555555555555}
 1782a278edf672c2	1792265611	{"confidence":0.43,"kind":"Rate","label":"slightly_clearer","probabilities":{"meaningfully_better":0.26,"no_difference":0.15,"removes_a_hazard":0.08,"slightly_clearer":0.51},"rating":1.26}
 1788ab6eb357fdf3	1792269251	{"confidence":0.31,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.37,"no_difference":0.06,"removes_a_hazard":0.36,"slightly_clearer":0.21},"rating":2.03}
+1799a3a5a98c1200	1792592675	{"confidence":0.33,"kind":"Classify","label":"value","probabilities":{"meaning":0.45,"unclear":0,"value":0.55}}
 17a238998b698d22	1792252958	{"confidence":0.91,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.93,"stale_reference":0,"wrong_behavior":0.05,"wrong_contract":0.02}}
 17a2468178d66123	1792535008	{"confidence":0.41,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.56,"component_or_feature":0.17,"not_applicable":0.16,"route_or_handler":0.11}}
 17a5c2378a330539	1792535009	{"confidence":0.53,"kind":"Classify","label":"infrastructure","probabilities":{"domain_logic":0.17,"infrastructure":0.58,"input_adaptation":0,"mechanical":0.01,"not_applicable":0,"orchestration":0.24,"rendering":0,"request_validation":0,"transport_concern":0}}

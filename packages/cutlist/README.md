@@ -21,15 +21,15 @@ Only what `cutlist.config.json` declares — never shakti's paths hardcoded:
 
 ## The pipeline
 
-| Pass          | What it does                                                                                                                |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| 1 · Parse     | every module → exports, imports, rendered tags, called hooks, declared props                                                |
-| 2 · Use-graph | for each module, the modules that import it                                                                                 |
-| 3 · Owners    | an importer's owner is the **first route segment** (`projects_.$id.sponsors` → `projects`), or `shared` under a shared root |
-| 4 · Tier      | primitive · ≥2 route owners → shared · 1 → local · 0 → orphan                                                               |
-| 5 · Signature | the **behavioral skeleton**, not props ∪ tags                                                                               |
-| 6 · Tokens    | closed sets: colors, type, shape, spacing                                                                                   |
-| 7 · Emit      | one model, rendered N ways                                                                                                  |
+| Pass          | What it does                                                                                                                                                                 |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 · Parse     | every module → exports, imports, rendered tags, called hooks, declared props                                                                                                 |
+| 2 · Use-graph | for each module, the modules that import it                                                                                                                                  |
+| 3 · Owners    | an importer's owner is the **first route segment** (`projects_.$id.sponsors` → `projects`), or `shared` under a shared root                                                  |
+| 4 · Tier      | primitive root → primitive; ≥2 route owners → shared; 1 → local; no route owners under a shared root → shared; otherwise local. Zero owners is an orphan, counted separately |
+| 5 · Signature | the **behavioral skeleton**, not props ∪ tags                                                                                                                                |
+| 6 · Tokens    | closed sets: colors, type, shape, spacing                                                                                                                                    |
+| 7 · Emit      | one model, rendered N ways                                                                                                                                                   |
 
 ## One model, several renderings
 
@@ -48,6 +48,16 @@ as Mermaid source beside the SVG `pele` drew from it, drawn at the largest scope
 and indexed by a generated table, so the shape a list flattens is visible. `pele` is a
 rendering dependency, not a seam: nothing else in the workspace reads it, and it never
 touches the model.
+
+## What a part carries
+
+A part is a module, not "a component": roles are read from declarations (`createContext`,
+`.Provider`, a `use*` export), so hooks, providers, contexts, barrels, and routes sit in the
+same model as components. Each part also carries the public `exports`, how many modules
+`usedBy` it, its `feature` directory, and a `kind`. Features themselves are a **query** over
+those facts — a context plus a provider or barrel — not a classifier with its own schema.
+The menu reports the consequences: `sharedReach`/`localOnly` adoption, duplicate clusters
+with a canonical survivor, orphans, and authored parts still imported after retirement.
 
 ## The signature is the whole point
 
@@ -79,13 +89,10 @@ and `joggle` is the marking phase. The menu is a memory, not a fence.
 
 ## Where it meets the others
 
-`cutlist` **produces** what `plumb` and `joggle` **consume**. It generates duplicate
-_candidates_ deterministically (high recall, low precision); `joggle` decides whether two
-candidates are one concept (the judgement — the two-regimes split). Doc §9.5's "do not
-merge" holds: cutlist is not a rule engine, and the patterns are enforced by rules, not
-catalogued by cutlist.
-
-That is the design; the wiring is not yet here. `decodeCatalog` is used only by `protocol`'s
-tests, and the `ui` rulebook that reads the manifest lives on the branch the move did not
-take — so the consumer whose absence matters is named rather than implied. The plan for it
-is in [`joggle/docs/catalog-rules.md`](../joggle/docs/catalog-rules.md).
+`cutlist` **produces** the catalog, the menu, and the lint manifest. `plumb-ui` reads the
+manifest now: `no-deprecated-parts` turns an authored `status: deprecated` plus `useInstead`
+into a finding at the import that has not migrated, and fails open when the manifest is
+missing or malformed. `joggle` consumes the duplicate candidates deterministically emitted
+here and decides whether two candidates are one concept; `jig` runs cutlist's staleness gate
+and the other engines through one report. The seam stays the format: neither consumer
+imports `cutlist`, and `decodeCatalog` is what a reader uses when it wants the raw model.

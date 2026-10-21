@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autotelic.dev/tackle/protocol/intent.json",
+  "title": "Intent",
+  "description": "The authored half of a part: what it is for, when it is wrong, its lifecycle, and what to reach for instead. Stored beside the generated catalog, never inside it, so a rebuild cannot overwrite a sentence someone wrote.",
+  "type": "object",
+  "minProperties": 1,
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "summary": {
+      "type": "string",
+      "description": "One line on what this part is for."
+    },
+    "whenToUse": {
+      "type": "string",
+      "description": "The situation the part is the right answer for."
+    },
+    "whenNotToUse": {
+      "type": "string",
+      "description": "The situation it is the wrong answer for, and what to do instead."
+    },
+    "states": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Named states the part handles: loading, empty, error, disabled."
+    },
+    "status": {
+      "enum": ["stable", "beta", "experimental", "deprecated"],
+      "description": "The lifecycle a consumer can rely on."
+    },
+    "examples": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Real call sites or canonical snippets that show the approved use."
+    },
+    "useInstead": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "What to reach for instead, when a near-duplicate or a retirement exists."
+    }
+  }
+}

@@ -1,3 +1,4 @@
+import fc from "fast-check"
 import { describe, expect, it } from "vitest"
 import { isTestPath } from "./crawl.ts"
 
@@ -18,5 +19,14 @@ describe("isTestPath", () => {
     expect(isTestPath("app/components/Testimonial.tsx")).toBe(false)
     expect(isTestPath("app/components/testing/card.tsx")).toBe(false)
     expect(isTestPath("app/routes/test-results.tsx")).toBe(false)
+  })
+
+  it("recognises any path ending in a test suffix", () => {
+    fc.assert(
+      fc.property(fc.string(), (stem) => {
+        expect(isTestPath(`${stem}.test.ts`)).toBe(true)
+        expect(isTestPath(`${stem}.spec.tsx`)).toBe(true)
+      }),
+    )
   })
 })

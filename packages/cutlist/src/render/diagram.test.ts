@@ -1,3 +1,4 @@
+import fc from "fast-check"
 import { describe, expect, it } from "vitest"
 import { emptyCatalog, type Catalog, type CatalogComponent } from "@autotelic/protocol"
 import {
@@ -97,6 +98,17 @@ describe("compositionMermaid", () => {
     expect(mermaid).toContain('["one"]')
     expect(mermaid).toContain('["two"]')
     expect(mermaid).not.toContain("-->")
+  })
+
+  it("renders the same bytes for the same model, whatever the names", () => {
+    fc.assert(
+      fc.property(fc.array(fc.string()), (names) => {
+        const model = catalog(
+          names.map((name, index) => component({ path: `p/${String(index)}.tsx`, name })),
+        )
+        return compositionMermaid(model) === compositionMermaid(model)
+      }),
+    )
   })
 })
 

@@ -1,3 +1,4 @@
+import fc from "fast-check"
 import { describe, expect, it } from "vitest"
 import { decodeMenu, type Menu } from "@autotelic/protocol"
 import { renderMenu, renderMenuJson } from "./menu.ts"
@@ -70,6 +71,26 @@ describe("renderMenu", () => {
     )
     expect(markdown).toContain("exports `A`, `B`, `C` +2 more")
     expect(markdown).toContain("composed of `a`, `b`, `c`, `d` +1 more")
+  })
+
+  it("keeps every entry name in the rendered index", () => {
+    fc.assert(
+      fc.property(
+        fc.array(
+          fc.record({
+            name: fc.string({ minLength: 1 }),
+            path: fc.string(),
+            tier: fc.constantFrom("primitive", "shared", "local"),
+            composedOf: fc.array(fc.string()),
+          }),
+          { maxLength: 10 },
+        ),
+        (entries) => {
+          const markdown = renderMenu(menu({ entries }))
+          return entries.every((entry) => markdown.includes(`\`${entry.name}\``))
+        },
+      ),
+    )
   })
 
   it("renders health, adoption, lifecycle and clusters", () => {

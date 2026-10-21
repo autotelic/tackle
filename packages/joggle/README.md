@@ -34,6 +34,11 @@ is built out of the ones you can now see. A live repository *should* be full of
 these, because each is a place the code ran ahead of its vocabulary. **The number
 is not the product.** [Why, and the three moves](./docs/thesis.md).
 
+One rule is about promises rather than duplicates: `intent-drift` reads `@deprecated`
+tags, checks that the replacement they name exists, and asks the model whether a live
+import is a migration to finish or an intentional compatibility path. The facts stay
+deterministic; only the "should this change?" question is judged.
+
 ## Jev
 
 A judgement model, not a generator. It answers typed questions (yes or no, a choice

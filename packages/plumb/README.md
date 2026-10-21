@@ -7,6 +7,7 @@ Opinionated [Oxlint](https://oxc.rs) rules that keep TypeScript *true*: a plumb 
 - **`plumb`**: generic rules that reject low-evidence and low-signal implementation patterns (49 rules).
 - **`plumb-effect`**: opt-in rules for Effect service and Layer architecture (26 rules). Enable only in repos that depend on `effect`.
 - **`plumb-react`**: opt-in React composition rules (4 rules). Enable only in React repos.
+- **`plumb-ui`**: opt-in catalog rules (1 rule). Reads cutlist's generated manifest; `no-deprecated-parts` reports an import of a part whose authored intent marks it `deprecated`, naming the recorded replacement. Fails open when the manifest is missing or malformed; `cutlist build --check` is the gate that keeps it current.
 - **`plumb/configs`**: shared rule sets (`plumbRecommendedRules`, `plumbEffectRecommendedRules`, `plumbReactRecommendedRules`) that enable every rule in a plugin at `error`, for either linter.
 - **`plumb/testing`**: RuleTester lifecycle adapter (`testableRule`, `wireRuleTester`, `createTester`) so `createOnce` rules with `before`/`after` hooks test correctly under the ESLint-compatible `create` path.
 
@@ -67,6 +68,24 @@ export default defineConfig({
 ```
 
 The rule ids assume each plugin is registered under its own name: `plumb`, `plumb-effect`, `plumb-react`.
+
+### 4. Catalog rules (`plumb-ui`)
+
+`plumb-ui` is separate from the recommended sets because it needs a generated manifest. Point it at the file `cutlist build` writes:
+
+```ts
+// oxlint.config.ts
+jsPlugins: [{ name: "plumb-ui", specifier: "@autotelic/plumb/ui" }],
+rules: {
+  "plumb-ui/no-deprecated-parts": [
+    "error",
+    { manifest: "tools/ui-catalog/plumb-ui.config.json" },
+  ],
+},
+```
+
+The manifest option is a path or an already-decoded manifest object; it defaults to `tools/ui-catalog/plumb-ui.config.json`. A part is a promise: the catalog records `status: deprecated` and `useInstead`, and the rule makes an unmigrated import visible at the call site. If the manifest cannot be read, the rule reports nothing rather than inventing a migration.
+
 
 ## Using Plumb with ESLint
 

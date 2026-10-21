@@ -1,0 +1,10 @@
+{
+  "$schema": "https://autotelic.dev/tackle/protocol/intent.json",
+  "summary": "The legacy square button.",
+  "whenToUse": "Existing screens that have not migrated.",
+  "whenNotToUse": "New work; use Button.",
+  "states": ["default", "disabled"],
+  "status": "deprecated",
+  "examples": ["<OldButton>Save</OldButton>"],
+  "useInstead": ["Button"]
+}

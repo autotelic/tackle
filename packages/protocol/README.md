@@ -54,22 +54,27 @@ and another reads. Every record has a named, versioned **lexicon**: its contract
 | `catalog`        | `@autotelic/cutlist` | derived  | 1   | `schema/catalog.json`        | `fixtures/catalog/`        |
 | `manifest`       | `@autotelic/cutlist` | derived  | 1   | `schema/manifest.json`       | `fixtures/manifest/`       |
 | `menu`           | `@autotelic/cutlist` | derived  | 1   | `schema/menu.json`           | `fixtures/menu/`           |
+| `intent`         | `@autotelic/cutlist` | authored | 1   | `schema/intent.json`         | `fixtures/intent/`         |
 | `onboarding`     | `@autotelic/jig-cli` | authored | 1   | `schema/onboarding.json`     | `fixtures/onboarding/`     |
 | `cutlist.config` | `@autotelic/cutlist` | authored | 1   | `schema/cutlist.config.json` | `fixtures/cutlist.config/` |
 | `jig.config`     | `@autotelic/jig-cli` | authored | 1   | `schema/jig.config.json`     | `fixtures/jig.config/`     |
 
-Authored configs name their lexicon by `$schema` (`$schema/*.json` is exported for
-autocomplete). The manifest's reference is optional because its first readers predate
+Authored records name their lexicon by `$schema` (`$schema/*.json` is exported for
+autocomplete), or by their path when the format is one file per key: an `intent/<key>.json`
+sidecar may omit both. The manifest's reference is optional because its first readers predate
 versioning; `cutlist`'s projector always writes it.
 
 `menu` is a **mixed** record: `composedOf`, `orphans`, `duplicates`, and `hash` are derived
-and regenerated; `summary` and `useInstead` are authored intent. `MENU.md` is the rendering;
-this record is the model.
+and regenerated; `summary`, `status`, and `useInstead` are authored intent. `MENU.md` is the
+rendering; this record is the model.
 
-`menu` and `onboarding` are **declared** lexicons: their schemas and fixtures exist and are
-checked, but no engine serializes them yet (cutlist writes `MENU.md`; `jig` writes a
-cookbook). When cutlist adopts `projectMenu(catalog)`, the menu becomes another derived
-output and only the producer changes — the schema does not.
+`intent` is the authored sidecar: one file per part, keyed by the part's stable id or name.
+It is where the lifecycle (`stable`, `beta`, `experimental`, `deprecated`) and the sentence
+that says what a part is for live, beside the generated catalog rather than inside it.
+
+`onboarding` is a **declared** lexicon: its schema and fixtures exist and are checked, but no
+engine serializes it yet (`jig` writes a cookbook, not this record). When `jig` adopts it, the
+schema does not change.
 
 ## The evolution rule, enforced
 
@@ -104,13 +109,14 @@ reads; a known field of the wrong type fails the record whole, because a partial
 false finding waiting to happen.
 
 ```ts
-import { decodeReport, decodeCatalog, decodeManifest } from "@autotelic/protocol"
+import { decodeCatalog, decodeManifest, decodeReport, parseJson } from "@autotelic/protocol"
 
-const report = decodeReport(JSON.parse(text)) // Report | undefined
-const manifest = decodeManifest(JSON.parse(text)) // UiManifest; EMPTY_MANIFEST on junk
+const report = decodeReport(parseJson(text)) // Report | undefined
+const manifest = decodeManifest(parseJson(text)) // UiManifest; EMPTY_MANIFEST on junk
 ```
 
-Nothing here does I/O. The caller owns `JSON.parse`; this owns "is it a record".
+Nothing here does I/O. `parseJson` is the format's one text reader — a malformed document is
+a miss, never a throw — and every decoder takes the `unknown` it produced.
 
 ## The judges
 

@@ -1,3 +1,4 @@
+import fc from "fast-check"
 import { describe, expect, it } from "vitest"
 import { commonRootOf } from "./paths.ts"
 
@@ -16,5 +17,19 @@ describe("commonRootOf", () => {
 
   it("does not invent a root from nothing", () => {
     expect(commonRootOf([])).toBe("")
+  })
+
+  it("answers an ancestor of every root", () => {
+    fc.assert(
+      fc.property(
+        fc.array(fc.stringMatching(/^[a-z]+$/u), { minLength: 1, maxLength: 5 }),
+        (roots) => {
+          const common = commonRootOf(roots)
+          return roots.every(
+            (root) => common === "" || root === common || root.startsWith(`${common}/`),
+          )
+        },
+      ),
+    )
   })
 })
