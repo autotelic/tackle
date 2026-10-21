@@ -80,7 +80,10 @@ The proposal this project comes from claimed `Combobox`/`ComboBoxV2` would surfa
 are surface area; they are the wrong signature.** Two components that wrap the same
 headless primitive and render the same skeleton are the same concept however their
 props differ. So cutlist scores the skeleton: wrapped primitive + rendered
-sub-components + called hooks.
+sub-components + called hooks. The frame is removed before scoring: host tags are not
+composition, and React's own hooks (`useState`, `useEffect`, `useRef`, …) are not a
+domain signal. The join compares the remaining composition at Jaccard ≥ 0.7, which is
+what stops a generic-hook pair from scoring a perfect 1.0.
 
 ## Commands
 

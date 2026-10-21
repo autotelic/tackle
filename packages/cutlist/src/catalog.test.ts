@@ -104,6 +104,19 @@ describe("duplicateCandidates", () => {
     expect(candidates).toEqual([])
   })
 
+  it("does not compare components that share only React's frame", () => {
+    const candidates = duplicateCandidates(
+      [
+        component("app/components/First.tsx", ["hook:useState", "hook:useEffect"]),
+        component("app/components/Second.tsx", ["hook:useState", "hook:useEffect"]),
+      ],
+      ["app"],
+      "routes",
+      [],
+    )
+    expect(candidates).toEqual([])
+  })
+
   it("keeps a rich pair that shares enough of its skeleton", () => {
     const signature = ["uses:@headlessui/react", "tag:Combobox", "tag:Combobox.Input"]
     const candidates = duplicateCandidates(
@@ -120,7 +133,7 @@ describe("duplicateCandidates", () => {
   })
 
   it("never compares a hook with a component, however alike their skeletons", () => {
-    const signature = ["hook:useEffect", "hook:useRef"]
+    const signature = ["hook:useProjectFilters", "hook:useProjectSort"]
     const candidates = duplicateCandidates(
       [
         component("app/hooks/useFirst.ts", signature, "hook"),

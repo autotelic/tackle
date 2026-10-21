@@ -49,3 +49,37 @@ export const skeletonOf = (module: SourceModule): ReadonlyArray<string> => {
   }
   return [...parts].sort(Order.String)
 }
+
+/**
+ * React's own mechanics, not the part's domain.
+ *
+ * `useState`/`useEffect`/`useRef` are the frame every interactive component is built in,
+ * exactly like a host `<div>`. Two components that share only those are not thereby the same
+ * concept, and keeping them made a page of generic hook matches score 1.0 and swamp the real
+ * duplicates. They stay in the catalog signature — an agent may want them — but not in the
+ * signature the duplicate join compares.
+ */
+export const INCIDENTAL_HOOKS: ReadonlySet<string> = new Set([
+  "hook:use",
+  "hook:useActionState",
+  "hook:useCallback",
+  "hook:useContext",
+  "hook:useDebugValue",
+  "hook:useDeferredValue",
+  "hook:useEffect",
+  "hook:useId",
+  "hook:useImperativeHandle",
+  "hook:useInsertionEffect",
+  "hook:useLayoutEffect",
+  "hook:useMemo",
+  "hook:useOptimistic",
+  "hook:useReducer",
+  "hook:useRef",
+  "hook:useState",
+  "hook:useSyncExternalStore",
+  "hook:useTransition",
+])
+
+/** The signature the duplicate join compares: the part's composition, not React's frame. */
+export const comparableSignatureOf = (signature: ReadonlyArray<string>): ReadonlySet<string> =>
+  new Set(signature.filter((token) => !INCIDENTAL_HOOKS.has(token)))

@@ -115,8 +115,9 @@ What the numbers say:
   primitive — a different move.
 - **The pair graph is not a partition.** 49 connected components, 8 with ≥5 members. The
   largest is a **chain**, not a family: `Tooltip.tsx`, `useTableState.ts` and
-  `ProjectMapboxMap.tsx` in one component. Pair-wise Jaccard at 0.6 is a graph; the cluster
-  is what gets judged.
+  `ProjectMapboxMap.tsx` in one component. Pair-wise Jaccard at the then-0.6 threshold is a
+  graph; the cluster is what gets judged. (The current threshold is 0.7 and the join drops
+  React's own hooks first, so this measurement is a historical baseline.)
 - **The context family is `expand`.** 21 members, every one `context.ts`/`context.tsx`, all
   tiny. Not 21 copies of one thing: one unnamed pattern repeated 21 times.
 - **The combobox family is the case.** 15 files match `*combobox*` outside tests (including

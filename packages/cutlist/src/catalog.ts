@@ -2,7 +2,6 @@ import { createHash } from "node:crypto"
 import { Effect, FileSystem, Order, Path } from "effect"
 import {
   lexiconRef,
-  signatureOf,
   similarityOf,
   type Catalog,
   type CatalogComponent,
@@ -17,7 +16,7 @@ import { dirOf, featuresOf } from "./features.ts"
 import { dirnamePosix, normalizePosix, isEntryPoint, isRouteEntry, underAnyRoot } from "./paths.ts"
 import { ownersOf } from "./owners.ts"
 import { kindOf, rolesOf } from "./roles.ts"
-import { skeletonOf } from "./signature.ts"
+import { comparableSignatureOf, skeletonOf } from "./signature.ts"
 import { tierOf } from "./tier.ts"
 import { extractTokens } from "./tokens.ts"
 
@@ -31,7 +30,7 @@ import { extractTokens } from "./tokens.ts"
  */
 
 /** Re-derived from real pairs, not guessed: the known `Combobox`/`ComboBoxV2` sits near 1.0. */
-export const DUPLICATE_THRESHOLD = 0.6
+export const DUPLICATE_THRESHOLD = 0.7
 
 const stripExtension = (path: string): string => path.replace(/\.(tsx?|jsx?)$/u, "")
 
@@ -177,7 +176,9 @@ const isRouteModule = ({
  *
  * Two components that both render a `Dialog` are not thereby duplicates, and every
  * `useContext` wrapper would match every other one. A single shared feature is the
- * weakest possible evidence, and at Jaccard 1.0 it sorts above the real pairs.
+ * weakest possible evidence, and at Jaccard 1.0 it sorts above the real pairs. The count
+ * runs over the COMPARABLE signature, so a component whose only facts are React's own
+ * hooks has nothing to compare.
  */
 const MIN_COMPARABLE_SIGNATURE = 2
 
@@ -199,11 +200,13 @@ export const duplicateCandidates = (
   for (let leftIndex = 0; leftIndex < components.length; leftIndex += 1) {
     const left = components[leftIndex]
     if (left === undefined) continue
-    const leftSignature = signatureOf(left)
+    const leftSignature = comparableSignatureOf(left.signature)
     if (leftSignature.size < MIN_COMPARABLE_SIGNATURE) continue
     for (let rightIndex = leftIndex + 1; rightIndex < components.length; rightIndex += 1) {
       const right = components[rightIndex]
-      if (right === undefined || right.signature.length < MIN_COMPARABLE_SIGNATURE) continue
+      if (right === undefined) continue
+      const rightSignature = comparableSignatureOf(right.signature)
+      if (rightSignature.size < MIN_COMPARABLE_SIGNATURE) continue
       const leftRoute = isRouteModule({ path: left.path, roots, routeDir, entries })
       const rightRoute = isRouteModule({ path: right.path, roots, routeDir, entries })
       // Two route files rendering the same shared component are not duplicates; they
@@ -215,7 +218,7 @@ export const duplicateCandidates = (
       ) {
         continue
       }
-      const score = similarityOf(leftSignature, signatureOf(right))
+      const score = similarityOf(leftSignature, rightSignature)
       if (score < DUPLICATE_THRESHOLD) continue
       candidates.push({ left: left.path, right: right.path, score, basis: "skeleton" })
     }
@@ -223,8 +226,8 @@ export const duplicateCandidates = (
   /*
    * A component pair and a hook pair are never compared, but they still share one
    * list, and the menu shows its head. Put components first: they are the parts a UI
-   * review acts on, and a perfect `useEffect` pair should not fill the first screen.
-   * Within a kind, score decides; paths make the order deterministic.
+   * review acts on, and a hook pair should not fill the first screen. Within a kind,
+   * score decides; paths make the order deterministic.
    */
   const kindByPath = new Map(components.map((component) => [component.path, component.kind]))
   const rank = (path: string): number => KIND_RANK[kindByPath.get(path) ?? "module"]
