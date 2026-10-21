@@ -1,5 +1,5 @@
 import { Effect, FileSystem, Path, Result, Schema, SchemaParser } from "effect"
-import type { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
+import type { ChildProcessSpawner } from "effect/process/ChildProcessSpawner"
 import { Service as Tsgo } from "./tsgo.ts"
 
 /* -------------------------------------------------------------------------- */

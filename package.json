@@ -13,8 +13,9 @@
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
     "lexicon:compat": "pnpm --filter @autotelic/protocol lexicon:compat",
-    "check": "pnpm format:check && pnpm typecheck && pnpm test && pnpm lexicon:compat && pnpm build",
-    "prepare": "effect-tsgo patch --no-typescript --oxlint",
+    "check:catalog": "node scripts/check-catalog.mjs",
+    "check": "pnpm format:check && pnpm typecheck && pnpm test && pnpm lexicon:compat && pnpm check:catalog && pnpm build",
+    "prepare": "effect-tsgo patch --typescript-package @typescript/native --typescript --oxlint",
     "cutlist": "node --conditions=development packages/cutlist/src/cli.ts",
     "jig": "node --conditions=development packages/jig-cli/src/cli.ts",
     "judged": "doppler run -p joggle -c dev -- pnpm jig check",
@@ -30,10 +31,11 @@
     "@changesets/cli": "^2.29.0",
     "@effect/tsgo": "catalog:",
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:",
+    "@typescript/native": "catalog:",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
-    "oxlint-tsgolint": "catalog:"
+    "oxlint-tsgolint": "catalog:",
+    "typescript": "catalog:"
   },
   "engines": {
     "node": ">=24.18.0"

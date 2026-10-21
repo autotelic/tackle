@@ -1,5 +1,7 @@
 070207bda7522afe	1792535008	{"confidence":0.99,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.99,"component_or_feature":0,"not_applicable":0,"route_or_handler":0.01}}
+070a0f6e3fae08e3	1792617317	{"confidence":0.64,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.08,"common_idiom":0.76,"shared_helper":0.16}}
 0711373e2e09a002	1792535008	{"confidence":0.74,"kind":"Classify","label":"input_adaptation","probabilities":{"domain_logic":0.07,"infrastructure":0,"input_adaptation":0.77,"mechanical":0,"not_applicable":0,"orchestration":0,"rendering":0,"request_validation":0.06,"transport_concern":0.1}}
+0723a1033339744c	1792617317	{"confidence":0.83,"kind":"Classify","label":"component_or_feature","probabilities":{"already_there":0.04,"component_or_feature":0.87,"not_applicable":0.01,"route_or_handler":0.08}}
 072ac90d6a4c287b	1792542865	{"confidence":0.92,"kind":"Classify","label":"rendering","probabilities":{"domain_logic":0.07,"infrastructure":0,"input_adaptation":0,"mechanical":0,"not_applicable":0,"orchestration":0,"rendering":0.93,"request_validation":0,"transport_concern":0}}
 073041510161c38f	1792252958	{"confidence":0.55,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.25,"no_issue":0.09,"semantic_verdict":0.66}}
 075188149f4c088c	1792252958	{"confidence":0.89,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.03,"name_meaning":0.01,"no_issue":0.04,"semantic_verdict":0.92}}
@@ -8,6 +10,7 @@
 0762d164d35dce53	1792253160	{"confidence":0.88,"kind":"Classify","label":"collapse","probabilities":{"collapse":0.92,"keep_variants":0.05,"no_issue":0.03}}
 07769633235c1c09	1792252958	{"confidence":0.33,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.55,"not_a_derivation":0.44,"reimplements":0.01}}
 0790d66d18e978ad	1792252958	{"confidence":0.92,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.05,"same_module":0,"same_package":0.01,"sibling_packages":0.94}}
+07a32c0598df697f	1792619054	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0}}
 07a8b3f7bd573847	1792252958	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
 07aa4f2d74cbf742	1792535007	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
 07b30b3d1d4e3deb	1792252958	{"confidence":0.91,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.93,"stale_reference":0,"wrong_behavior":0.05,"wrong_contract":0.02}}
@@ -20,5 +23,7 @@
 07d4056dd16712a4	1792535008	{"confidence":0.23,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.42,"component_or_feature":0.35,"not_applicable":0.12,"route_or_handler":0.11}}
 07d999c2b7d3ccdc	1792535008	{"confidence":0.16,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.37,"component_or_feature":0.13,"not_applicable":0.15,"route_or_handler":0.35}}
 07e5646f242035b1	1792542865	{"confidence":0.49,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.66,"unclear":0,"value":0.34}}
+07f37f97a0e392dd	1792619412	{"confidence":0.34,"kind":"Classify","label":"not_a_derivation","probabilities":{"legitimate_local":0.4,"not_a_derivation":0.56,"reimplements":0.04}}
 07f4c54dee947391	1792252958	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0}}
 07f6c98379b2a7d7	1792252958	{"confidence":0.95,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.96,"stale_reference":0.01,"wrong_behavior":0.03,"wrong_contract":0}}
+07ff8c83ca741168	1792617317	{"confidence":0.66,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.23,"names_a_caller":0,"shared_vocabulary":0.77}}

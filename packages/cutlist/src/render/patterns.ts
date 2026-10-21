@@ -1,4 +1,6 @@
 import type { Pattern, PatternView } from "@autotelic/protocol"
+import { authoredLines } from "./authored.ts"
+import { plural } from "./text.ts"
 
 /*
  * `PATTERNS.md` and `patterns.json`.
@@ -8,9 +10,6 @@ import type { Pattern, PatternView } from "@autotelic/protocol"
  * view for an agent that wants to sort or filter without re-deriving stability.
  */
 
-const plural = (count: number, forms: readonly [one: string, many: string]): string =>
-  `${count} ${count === 1 ? forms[0] : forms[1]}`
-
 const list = (items: ReadonlyArray<string>, limit: number): string => {
   const shown = items
     .slice(0, limit)
@@ -18,24 +17,6 @@ const list = (items: ReadonlyArray<string>, limit: number): string => {
     .join(", ")
   const rest = items.length - limit
   return rest > 0 ? `${shown} +${String(rest)} more` : shown
-}
-
-const authored = (pattern: Pattern): ReadonlyArray<string> => {
-  const parts: Array<string> = []
-  if (pattern.summary !== undefined) parts.push(pattern.summary)
-  if (pattern.whenToUse !== undefined) parts.push(`when: ${pattern.whenToUse}`)
-  if (pattern.whenNotToUse !== undefined) parts.push(`avoid: ${pattern.whenNotToUse}`)
-  if (pattern.states !== undefined && pattern.states.length > 0) {
-    parts.push(`states: ${pattern.states.join(", ")}`)
-  }
-  if (pattern.status !== undefined) parts.push(`status: ${pattern.status}`)
-  if (pattern.examples !== undefined && pattern.examples.length > 0) {
-    parts.push(`examples: ${pattern.examples.join(", ")}`)
-  }
-  if (pattern.useInstead !== undefined && pattern.useInstead.length > 0) {
-    parts.push(`use ${pattern.useInstead.join(", ")} instead`)
-  }
-  return parts
 }
 
 const factorLine = (pattern: Pattern): string =>
@@ -59,7 +40,7 @@ const patternLine = (pattern: Pattern): ReadonlyArray<string> => {
     `${plural(pattern.usedBy, ["importer", "importers"])}`,
     `${plural(pattern.owners.length, ["owner", "owners"])}`,
   ].join(" · ")
-  const text = authored(pattern)
+  const text = authoredLines(pattern)
   const lines = [
     `- \`${pattern.name}\` — \`${pattern.path}\` — stability ${pattern.stability.toFixed(2)} — ${context}${text.length === 0 ? "" : ` — ${text.join(" — ")}`}`,
     `  factors: ${factorLine(pattern)}`,
@@ -73,7 +54,7 @@ const patternLine = (pattern: Pattern): ReadonlyArray<string> => {
 }
 
 const compositionSection = (pattern: Pattern): ReadonlyArray<string> => {
-  const authoredText = authored(pattern)
+  const authoredText = authoredLines(pattern)
   const lines = [
     `### \`${pattern.name}\` — \`${pattern.path}\``,
     "",
@@ -142,7 +123,7 @@ export const renderPatterns = (view: PatternView): string => {
       `- canonical: \`${pattern.path}\`; ${plural(pattern.usedBy, ["importer", "importers"])}`,
       `- variants: ${variants.length === 0 ? "none" : list(variants, 8)}`,
     )
-    const text = authored(pattern)
+    const text = authoredLines(pattern)
     if (text.length > 0) lines.push(`- authored: ${text.join(" — ")}`)
     lines.push("")
   }

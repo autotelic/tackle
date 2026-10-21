@@ -19,15 +19,31 @@ now in this workspace:
 
 - **Effect 4** (`effect@4.0.5`, stable), pinned through the pnpm `catalog:` — never a
   caret. `effect/cli` for commands, `effect/process` for subprocesses, `effect/Schema`
-  for decoding. Note the move: what was `effect/unstable/*` in the rc line is now
-  top-level (`effect/cli`, `effect/process`). `joggle` is the standing exception until its
-  port lands: it is still on `4.0.0-rc.116`, and `pnpm-workspace.yaml` carries one
-  parent-scoped `overrides` entry to keep that rc tree resolvable without its old lockfile.
-  Do not clean up either without reading MIGRATION.md's unknowns.
-- **Typecheck and build with `tsgo`**, the native compiler (`@typescript/native-preview`)
-  wearing Effect's language service (`@effect/tsgo`). `tsc` is not installed. The shared
-  `prepare` script patches the integrations; `typecheck`/`build` in each package shell to
-  `tsgo`, and the base `paths` map resolves `@autotelic/protocol` to source.
+  for decoding, `effect/ai` for joggle's judgement model. Note the move: what was
+  `effect/unstable/*` in the rc line is now top-level (`effect/cli`, `effect/process`,
+  `effect/ai`). Every package is on the stable line now; the rc-era parent-scoped
+  `overrides` entry went with joggle's port.
+- **Typecheck and build with TypeScript 7's native compiler.** The compiler is the
+  `@typescript/native` alias (`npm:typescript@7.0.2`; its binary is `tsc`). The `typescript`
+  name is aliased to the TypeScript 6 compatibility package
+  (`npm:@typescript/typescript6@^6.0.2`; binary `tsc6`) because typescript-eslint still
+  imports the TS 6 API and TypeScript 7 ships no programmatic API. The shared `prepare`
+  script runs `effect-tsgo patch --typescript-package @typescript/native --typescript
+  --oxlint`, which patches the native compiler and oxlint; `typecheck`/`build` in each
+  package shell to `tsc`, and the base `paths` map resolves `@autotelic/protocol` to source.
+  `@effect/tsgo` names the compiler and oxlint versions it supports, so bump all three
+  together.
+- **The Effect language service's rules are on.** Root `oxlint.config.ts` enables
+  `effecttsgo/*` with `options.typeAware` (correctness and anti-pattern at `error`, the
+  Effect-native and style rules at `warn`), beside plumb's rules, which are severity-split
+  by their own `meta.type`. `pnpm check:catalog` fails if any Effect, TypeScript, or Oxc pin
+  stops going through the catalog, and `renovate.json` groups their updates.
+- **Secrets are the environment; the host owns them.** A judged engine reads its key from
+  the environment it was started with; `jig` passes its environment through; both agent
+  surfaces inherit it. Do not add a `.env.local` loader to a tool or a `joggle` PATH shim —
+  neither is portable and both diverge from the host. CI and fresh checkouts replay the
+  committed verdicts instead. [SECRETS.md](./SECRETS.md) has the contract, the launchers, and
+  the two hosts' differences.
 - **Format with `oxfmt`** and lint with `oxlint` (type-aware, via `oxlint-tsgolint`).
   `.oxfmtrc.json` is the house style: no semicolons, double quotes, 100 columns. The two
   imported trees sit in its `ignorePatterns` until their conversion lands (MIGRATION.md

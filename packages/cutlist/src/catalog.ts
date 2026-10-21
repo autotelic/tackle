@@ -13,7 +13,14 @@ import {
 } from "@autotelic/protocol"
 import { listSources, readModules, type SourceModule } from "./crawl.ts"
 import { dirOf, featuresOf } from "./features.ts"
-import { dirnamePosix, normalizePosix, isEntryPoint, isRouteEntry, underAnyRoot } from "./paths.ts"
+import {
+  dirnamePosix,
+  normalizePosix,
+  isEntryPoint,
+  isRouteEntry,
+  stripSourceExtension,
+  underAnyRoot,
+} from "./paths.ts"
 import { ownersOf } from "./owners.ts"
 import { kindOf, rolesOf } from "./roles.ts"
 import { comparableSignatureOf, skeletonOf } from "./signature.ts"
@@ -32,8 +39,6 @@ import { extractTokens } from "./tokens.ts"
 /** Re-derived from real pairs, not guessed: the known `Combobox`/`ComboBoxV2` sits near 1.0. */
 export const DUPLICATE_THRESHOLD = 0.7
 
-const stripExtension = (path: string): string => path.replace(/\.(tsx?|jsx?)$/u, "")
-
 /** A component's name: its file, or the directory for `index`/`route` conventions. */
 const nameOfModule = (path: string): string => {
   const file = path.slice(path.lastIndexOf("/") + 1).replace(/\.(tsx?|jsx?)$/u, "")
@@ -48,7 +53,7 @@ const nameOfModule = (path: string): string => {
  * is joined by this id so one part's summary can never land on another.
  */
 export const idOfModule = (path: string): string =>
-  stripExtension(path)
+  stripSourceExtension(path)
     .replace(/^\.?\//u, "")
     .split("/")
     .join("--")
@@ -125,7 +130,7 @@ export const importerGraph = (
 ): ReadonlyMap<string, ReadonlyArray<string>> => {
   const byBase = new Map<string, string>()
   for (const module of modules) {
-    const base = stripExtension(module.path)
+    const base = stripSourceExtension(module.path)
     byBase.set(base, module.path)
     if (base.endsWith("/index")) byBase.set(base.slice(0, -"/index".length), module.path)
   }

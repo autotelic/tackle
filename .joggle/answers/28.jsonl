@@ -1,6 +1,7 @@
 280ac406f04d9ea8	1792535008	{"confidence":0.8,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.85,"component_or_feature":0.09,"not_applicable":0.05,"route_or_handler":0.01}}
 280f20747a548613	1792543728	{"confidence":0.95,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.03,"framework_glue":0,"implementation_detail":0.96,"wire_contract":0.01}}
 281fef4e8b38fb54	1792252958	{"confidence":0.77,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.02,"internal_only":0.85,"unaccounted":0.13}}
+283521a395367584	1792617316	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0.01}}
 2846907eaca664a2	1792252958	{"consistency":1,"kind":"Probability","probability":0.6622222222222222}
 2852f4a3cac83e9b	1792535008	{"confidence":0.48,"kind":"Classify","label":"input_adaptation","probabilities":{"domain_logic":0.01,"infrastructure":0,"input_adaptation":0.54,"mechanical":0.41,"not_applicable":0,"orchestration":0.03,"rendering":0,"request_validation":0,"transport_concern":0.01}}
 2879e7300ab8fcf8	1792542865	{"confidence":0.33,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.05,"common_idiom":0.55,"shared_helper":0.4}}
@@ -11,4 +12,5 @@
 28dc2d2549f62d0b	1792269251	{"confidence":0.33,"kind":"Rate","label":"slightly_clearer","probabilities":{"meaningfully_better":0.36,"no_difference":0.15,"removes_a_hazard":0.08,"slightly_clearer":0.41000000000000003},"rating":1.37}
 28e13b003030df57	1792265611	{"confidence":0.58,"kind":"Classify","label":"move","probabilities":{"move":0.79,"no_issue":0.21}}
 28e1fec934a9c424	1792252958	{"confidence":0.97,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.98,"not_a_derivation":0.02,"reimplements":0}}
+28ee93a79e4d0169	1792617316	{"confidence":0.83,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.87,"stale_reference":0.09,"wrong_behavior":0.04,"wrong_contract":0}}
 28fd81ee6c6526f8	1792252958	{"confidence":0.52,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.24,"no_issue":0.12,"semantic_verdict":0.64}}

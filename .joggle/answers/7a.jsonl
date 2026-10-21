@@ -8,10 +8,13 @@
 7a67252db768268b	1792535008	{"confidence":0.52,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.64,"component_or_feature":0.1,"not_applicable":0.22,"route_or_handler":0.04}}
 7a717b468d844995	1792535008	{"confidence":0.58,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.63,"infrastructure":0,"input_adaptation":0,"mechanical":0.3,"not_applicable":0.07,"orchestration":0,"rendering":0,"request_validation":0,"transport_concern":0}}
 7a74be5bfb61b02c	1792269251	{"confidence":0.84,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.08,"member_1":0.92}}
+7a7ced4958254c3e	1792617317	{"confidence":0.28,"kind":"Classify","label":"move","probabilities":{"merge":0.39,"move":0.52,"no_issue":0.09}}
 7a92278dd483db69	1792252958	{"confidence":0.89,"kind":"Classify","label":"accounted_elsewhere","probabilities":{"accounted_elsewhere":0.93,"internal_only":0.04,"unaccounted":0.03}}
 7aa183ff76d32be0	1792593149	{"confidence":0.56,"kind":"Classify","label":"same_module","probabilities":{"different_deployables":0,"same_module":0.67,"same_package":0.33,"sibling_packages":0}}
 7aa3e3792bb9c9d8	1792252958	{"consistency":1,"kind":"Probability","probability":0.7211111111111111}
 7ab803323be4c66e	1792252958	{"confidence":0.87,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.9,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0.07}}
+7abbdfb639f43ccb	1792619451	{"confidence":0.46,"kind":"Classify","label":"no_concept","probabilities":{"no_concept":0.73,"noul":0.27}}
+7adbbbe2faece0e2	1792618754	{"confidence":0.26,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.39,"no_difference":0.13,"removes_a_hazard":0.17,"slightly_clearer":0.31},"rating":1.61}
 7adbc52be6fceb31	1792252958	{"confidence":0.77,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.07,"name_meaning":0.01,"no_issue":0.09,"semantic_verdict":0.83}}
 7ae01fec76dc2531	1792252958	{"confidence":0.79,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0,"no_issue":0.16,"semantic_verdict":0.84}}
 7ae3f5384c641ef3	1792593149	{"confidence":0.86,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.09,"inferred":0,"not_applicable":0.91}}

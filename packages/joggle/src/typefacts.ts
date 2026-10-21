@@ -1,5 +1,5 @@
 import { resolve } from "node:path"
-import { API } from "@typescript/native-preview/unstable/async"
+import { API } from "@typescript/native/unstable/async"
 
 /**
  * The checker's type for a node, by file and offset.
@@ -10,8 +10,8 @@ import { API } from "@typescript/native-preview/unstable/async"
  * EXPRESSION -- and it joins by BYTE OFFSET, which both the checker and the oxc
  * parser read from the same file, so the join is exact.
  *
- * It is the native-preview API (`getTypeAtPosition`), which ships with the `tsgo`
- * binary joggle already runs, so there is no fork: one program, a lookup per
+ * It is the compiler API (`getTypeAtPosition`), which ships with the `tsc` binary
+ * joggle already runs, so there is no fork: one program, a lookup per
  * position, and the checker's own printed type.
  *
  * It is deliberately a REQUEST LIST rather than a whole-project dump. The output

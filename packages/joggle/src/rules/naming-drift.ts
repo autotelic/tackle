@@ -1,5 +1,5 @@
 import { Effect, type Predicate } from "effect"
-import { Decision } from "effect/unstable/ai"
+import { Decision } from "effect/ai"
 import { Atoms } from "../atoms.ts"
 import { describeOperation, permitted, settle } from "../operation.ts"
 import { policy } from "../policy.ts"

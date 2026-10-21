@@ -437,13 +437,6 @@ export const policy = {
   },
 
   /**
-   * One field name with incompatible types in two declarations.
-   *
-   * Deterministic: it compares the recorded type text of every interface and type
-   * alias field. The bound is against a pathological repository rather than a
-   * budget anybody should reach.
-   */
-  /**
    * Deprecation promises checked in one run.
    *
    * Deprecated declarations are rare by construction, so this is a guard against a
@@ -456,6 +449,13 @@ export const policy = {
     maxImports: 20,
   },
 
+  /**
+   * One field name with incompatible types in two declarations.
+   *
+   * Deterministic: it compares the recorded type text of every interface and type
+   * alias field. The bound is against a pathological repository rather than a
+   * budget anybody should reach.
+   */
   fieldTypeDrift: {
     maxFindings: 200,
     /**

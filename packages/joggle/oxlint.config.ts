@@ -25,7 +25,7 @@
  * possible at all.
  */
 
-import { antipattern, correctness, effectNative, style } from "@effect/tsgo/oxlint-presets"
+import { recommended } from "@effect/tsgo/oxlint-presets"
 
 const GENERIC = [
   "no-anonymous-wide-tuples",
@@ -113,24 +113,16 @@ const every = (): Record<string, "error"> =>
   ]);
 
 /**
- * The Effect language service's rulebook, at one severity.
+ * The Effect language service's rulebook: its own `recommended` preset.
  *
- * The presets ship their rules as warnings; the category decides the severity
- * here, so a correctness rule is an error and a style rule is a warning without
- * listing 116 names. The union of the four categories is the whole rulebook.
+ * The tool ships `recommended` (87 rules, 13 at `error` and 74 at `warn`) and a `strict`
+ * variant that is the same set at `error`. We take `recommended` and its severities rather
+ * than the union of the `correctness`, `antipattern`, `effectNative`, and `style` categories:
+ * the union is 129 rules, and the 42 it adds are the noisy ones (`prefer-effect-array`,
+ * `missing-pipeable-signature`, `async-function`, …). Adopting the tool's own recommendation
+ * is the point; enabling the union and then silencing its noisiest members is not.
  */
-const atSeverity = (
-  rules: Readonly<Record<string, unknown>> | undefined,
-  severity: "error" | "warn",
-): Record<string, "error" | "warn"> =>
-  Object.fromEntries(Object.keys(rules ?? {}).map((id) => [id, severity]));
-
-const EFFECT_TSGO = {
-  ...atSeverity(correctness.rules, "error"),
-  ...atSeverity(antipattern.rules, "error"),
-  ...atSeverity(effectNative.rules, "warn"),
-  ...atSeverity(style.rules, "warn"),
-};
+const EFFECT_TSGO = recommended.rules ?? {};
 
 export default {
   ignorePatterns: ["node_modules", "tests/fixtures/**"],
@@ -160,15 +152,12 @@ export default {
     // depending on the order files are visited. Both need fixing upstream before
     // this can hold a baseline; until then it cannot be part of a ratchet that is
     // supposed to be reproducible.
-    // plumb-effect/require-schema-type-derivation is off (see above).
-    //
-    // deterministic-keys wants a path-derived key like
-    // `<package>/<dir>/<ClassName>`. joggle's services are keyed
-    // `@joggle/<ClassName>`: readable, stable, and set by hand beside the class.
-    // The rule's key would be longer and no more honest, and the rule takes no
-    // Oxlint options, so it is off with the reason rather than renamed to please
-    // it.
-    "effecttsgo/deterministic-keys": "off",
+    "plumb-effect/require-schema-type-derivation": "off",
+    // Effect 4.0.5 still marks the AI, HTTP, and process modules joggle is built on as
+    // `@stability unstable`, so `recommended`'s own `unstable-api-usage` fires on nearly
+    // every file. The fact is accepted; the rule stays available to a consumer who wants the
+    // inventory. It is the only rule in `recommended` this repository cannot satisfy.
+    "effecttsgo/unstable-api-usage": "off",
     // joggle's own schema-excludes-domain-value rule requires a wire schema to
     // admit what the domain produces, and the domain's offsets, counts and
     // probabilities are `number`. `Schema.Finite` narrows the wire format below
@@ -176,15 +165,6 @@ export default {
     // `Schema.Number` and this rule -- a style preference -- is the one that
     // yields. The house rule wins.
     "effecttsgo/schema-number": "off",
-    //
-    // effecttsgo/missing-pipeable-signature wants every exported fixed-arity
-    // function to also carry a pipeable overload. That is right for a library
-    // whose functions compose through `.pipe`; joggle's exported functions are
-    // data-first and called directly, and its pipeable surface is the Effect
-    // ones, not these. Re-spelling 80 exports to satisfy it would be ceremony
-    // around an API shape nobody uses, so it is off with the reason instead.
-    "effecttsgo/missing-pipeable-signature": "off",
-    "plumb-effect/require-schema-type-derivation": "off",
   },
 
   /**
@@ -363,23 +343,23 @@ export default {
       rules: { "plumb/no-stray-inline-comments": "off" },
     },
     {
-      // The rule wants every layer composed and provided once, at the entry
-      // point. These three ARE the entry points, and each builds the layers its
-      // own command needs: main.ts is the CLI root, check.ts composes the
-      // per-run layers, and testing.ts is a test's. There is no earlier place to
-      // provide them, which is the exception the rule itself names.
-      files: ["src/main.ts", "src/check.ts", "src/testing.ts"],
-      rules: { "effecttsgo/strict-effect-provide": "off" },
-    },
-    {
       // A key that is ABSENT and a key present-and-undefined are different
       // shapes under exactOptionalPropertyTypes, and the conditional spread is
       // how one is omitted. The alternatives set the key to undefined, which is
       // the other shape. This is the rule and the code disagreeing about which
       // of the two a config merge should produce, and the code's answer is
       // written beside it.
-      files: ["src/plugins.ts", "src/parsecache.ts"],
+      files: ["src/plugins.ts", "src/parsecache.ts", "src/rules/intent-drift.ts"],
       rules: { "plumb/no-conditional-empty-object-spread": "off" },
+    },
+    {
+      // joggle's domain noun is the deprecation: `intent-drift` checks `@deprecated`
+      // tags, and `policy.ts` names the bounds of that check. The rule reads the word
+      // as a claim that the code is deprecated, which is the opposite of what these
+      // comments do. Renaming the domain to please the linter would be the tool editing
+      // the domain, so the rule stands down where the domain word lives.
+      files: ["src/rules/intent-drift.ts", "src/policy.ts"],
+      rules: { "plumb/require-deprecated-tag-for-legacy-comments": "off" },
     },
     {
       // Lookup tables indexed by a runtime string. The annotation is what gives
@@ -394,22 +374,6 @@ export default {
         "src/workspace.ts",
       ],
       rules: { "plumb/no-known-value-widening": "off" },
-    },
-    {
-      // joggle writes its caches with canonical JSON on purpose: identity is a
-      // canonical string, and plumb's own
-      // require-canonical-stringify-for-identity is the same decision from the
-      // other side. Every read already decodes with a Schema. Re-encoding the
-      // writes through Schema would change the on-disk bytes and buy nothing
-      // the canonical form does not.
-      files: [
-        "src/typetrace.ts",
-        "src/decision.ts",
-        "src/run-cache.ts",
-        "src/parsecache.ts",
-        "src/main.ts",
-      ],
-      rules: { "effecttsgo/prefer-schema-over-json": "off" },
     },
     {
       // The rule reads "hoist ... into <name>", "import it from all of them" and
@@ -465,22 +429,6 @@ export default {
       // and no caller can see the mutation.
       files: ["src/workspace.ts"],
       rules: { "plumb/no-exported-mutable-state": "off" },
-    },
-    {
-      // The Effect `Crypto` and `Path` are services, and these are synchronous
-      // boundaries with no Effect context: the content hash in the canonical
-      // cache key, and path arithmetic inside sync helpers. The service is used
-      // wherever a run has one; the platform module is what is left at the edge.
-      files: ["src/state.ts", "src/tsgo.ts", "src/typefacts.ts"],
-      rules: { "effecttsgo/node-builtin-import": "off" },
-    },
-    {
-      // The TypeScript compiler API is async, so this boundary is too, and its
-      // caller already wraps the whole call in Effect.tryPromise -- which is
-      // where the Effect value is made. Making the implementation itself Effect
-      // would put tryPromise around each await and change the export for no gain.
-      files: ["src/typefacts.ts"],
-      rules: { "effecttsgo/async-function": "off" },
     },
     {
       // `Options` is a bag of independent run choices -- carry tsgo's own

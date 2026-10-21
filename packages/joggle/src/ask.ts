@@ -1,6 +1,6 @@
 import { Effect, Result, Schema } from "effect"
-import * as AiError from "effect/unstable/ai/AiError"
-import { Decision, DecisionModel } from "effect/unstable/ai"
+import * as AiError from "effect/ai/AiError"
+import { Decision, DecisionModel } from "effect/ai"
 import { isUnreachable } from "./decision.ts"
 import { policy } from "./policy.ts"
 import type { Unit, UnitKind, Workspace } from "./workspace.ts"

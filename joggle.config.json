@@ -8,6 +8,11 @@
   },
   "ignore": [
     {
+      "rule": "joggle/hoist-to-domain",
+      "path": "packages/cutlist/src/render/recipes.ts",
+      "reason": "`recipesOf` renders the catalog and pattern view into copyable imports and usage skeletons. The business rules it appears to hold belong to the catalog it reads; the function itself decides only how to spell an import."
+    },
+    {
       "path": "packages/plumb/**",
       "reason": "plumb is the deterministic single-file linter: its rules are written once and applied everywhere, and its rule-authoring shapes are its own concern. joggle asks whether two things are the same and whether a thing fits THIS repository; plumb's rule internals are not that question, and the root lint already scopes plumb out. Judging them produced 82 `rule-judgment` readings about plumb's own rule metadata plus 4 `object-shape` readings about its metadata literals — none of them about this repository."
     },

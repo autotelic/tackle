@@ -19,8 +19,8 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsgo -p tsconfig.build.json",
-    "typecheck": "tsgo --noEmit",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
     "lexicon:compat": "node scripts/lexicon-compat.mjs",
     "lexicon:read": "node scripts/read-report.mjs"
@@ -28,7 +28,7 @@
   "devDependencies": {
     "@effect/tsgo": "catalog:",
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:",
+    "@typescript/native": "catalog:",
     "ajv": "catalog:",
     "fast-check": "catalog:",
     "vitest": "catalog:"

@@ -1,6 +1,6 @@
 import { Context, Effect, FileSystem, Layer, Order, Path, Stream } from "effect"
-import { ChildProcess } from "effect/unstable/process"
-import type { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
+import { ChildProcess } from "effect/process"
+import type { ChildProcessSpawner } from "effect/process/ChildProcessSpawner"
 import { resolve, sep } from "node:path"
 import { TsgoError } from "./schema.ts"
 import { looksLikeSource } from "./source.ts"
@@ -75,7 +75,7 @@ const run = (binary: string, args: ReadonlyArray<string>, cwd: string) =>
     Effect.mapError(
       (cause) =>
         TsgoError.make({
-          operation: `tsgo ${args.join(" ")}`,
+          operation: `tsc ${args.join(" ")}`,
           detail: cause instanceof Error ? cause.message : String(cause),
         }),
     ),
@@ -168,7 +168,7 @@ export const layer = (
 ): Layer.Layer<Service, never, Path.Path> =>
   Layer.effect(Service, Effect.map(Path.Path, (path) => make(binary, path)))
 
-/** Resolve the project's own tsgo, falling back to PATH. */
+/** Resolve the project's own compiler, falling back to PATH. */
 export const layerFromConfig = (
   root: string,
 ): Layer.Layer<Service, never, ChildProcessSpawner | FileSystem.FileSystem | Path.Path> =>
@@ -177,8 +177,8 @@ export const layerFromConfig = (
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem
       const path = yield* Path.Path
-      const local = path.join(root, "node_modules", ".bin", "tsgo")
-      const resolved = (yield* Effect.orElseSucceed(fs.exists(local), () => false)) ? local : "tsgo"
+      const local = path.join(root, "node_modules", ".bin", "tsc")
+      const resolved = (yield* Effect.orElseSucceed(fs.exists(local), () => false)) ? local : "tsc"
       return make(resolved, path)
     }),
   )

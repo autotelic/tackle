@@ -1,6 +1,6 @@
 import { expect, it } from "@effect/vitest"
 import { Effect } from "effect"
-import { Decision } from "effect/unstable/ai"
+import { Decision } from "effect/ai"
 import { Atoms, layer as atomsLayer } from "../src/atoms.ts"
 import { answerPlansRaw, consistencyOf, reduceRepeats } from "../src/plans.ts"
 import { decisionStub, planAnswersLayer } from "../src/testing.ts"

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":dependencyDashboard"],
+  "rangeStrategy": "pin",
+  "packageRules": [
+    {
+      "description": "Effect is one runtime shared by every package; bump the whole line together.",
+      "groupName": "effect",
+      "matchPackageNames": ["effect", "@effect/**", "!@effect/tsgo"],
+      "rangeStrategy": "pin"
+    },
+    {
+      "description": "The compiler and the Effect language service must move together; @effect/tsgo lists the versions it supports.",
+      "groupName": "typescript",
+      "matchPackageNames": ["typescript", "@typescript/native", "@effect/tsgo"],
+      "rangeStrategy": "pin"
+    },
+    {
+      "description": "Oxlint, the type-aware glue, and the formatter track one another.",
+      "groupName": "oxc",
+      "matchPackageNames": ["oxlint", "oxlint-tsgolint", "oxfmt", "@oxlint/plugins"],
+      "rangeStrategy": "pin"
+    }
+  ],
+  "lockFileMaintenance": { "enabled": true, "schedule": ["before 5am on monday"] }
+}

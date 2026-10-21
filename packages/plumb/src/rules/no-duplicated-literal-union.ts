@@ -8,7 +8,7 @@ import { isRecordObject, isString } from "../shared/structural.ts";
  * @param {ESTree.TSType} annotation - The annotation to inspect.
  * @returns {string[] | null} Sorted literal members, or null when not a literal union.
  */
-function literalUnionKey(annotation: ESTree.TSType): string[] | null {
+export function literalUnionKey(annotation: ESTree.TSType): string[] | null {
 	const types = annotation.type === "TSUnionType" ? annotation.types : [annotation];
 	const literals: string[] = [];
 	for (const member of types) {

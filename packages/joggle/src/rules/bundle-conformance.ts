@@ -1,5 +1,5 @@
 import { Effect } from "effect"
-import { Decision } from "effect/unstable/ai"
+import { Decision } from "effect/ai"
 import {
   blocksIn,
   findBundles,

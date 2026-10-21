@@ -1,5 +1,5 @@
 import { Effect } from "effect"
-import { Decision } from "effect/unstable/ai"
+import { Decision } from "effect/ai"
 import { Atoms } from "../atoms.ts"
 import { lineAt } from "../cascade.ts"
 import { type PlannedCandidate } from "../plans.ts"

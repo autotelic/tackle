@@ -48,7 +48,7 @@ export * from "./similarity.ts"
  * two namespaces, and `Schema` for the input panel, are what that takes, so they
  * are part of the promise rather than an import a rule author has to find.
  */
-export { Decision, DecisionModel } from "effect/unstable/ai"
+export { Decision, DecisionModel } from "effect/ai"
 
 /*
  * The shared facts, and the engine that answers questions about them.

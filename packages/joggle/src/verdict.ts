@@ -1,4 +1,4 @@
-import type { Decision } from "effect/unstable/ai"
+import type { Decision } from "effect/ai"
 import type { Consistency } from "./rule.ts"
 
 /**

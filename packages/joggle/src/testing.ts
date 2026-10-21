@@ -1,6 +1,6 @@
 import { Effect, Layer } from "effect"
-import * as AiError from "effect/unstable/ai/AiError"
-import { DecisionModel } from "effect/unstable/ai"
+import * as AiError from "effect/ai/AiError"
+import { DecisionModel } from "effect/ai"
 import { Atoms, layer as atomsLayer } from "./atoms.ts"
 import { unavailableFor } from "./config.ts"
 import { decisionError, isUnreachable } from "./decision.ts"
@@ -200,14 +200,14 @@ export const decisionStub = (
                       _tag: "Rate" as const,
                       rating: 0,
                       probabilities: Object.fromEntries(
-                        levels.map((level, index) => [level, index === 0 ? 1 : 0]),
+                        levels.map((level, index) => [level.label, index === 0 ? 1 : 0]),
                       ),
                       confidence: 0.9,
                     },
                   ]
                 }
                 const provided = answer.probabilities ?? {}
-                const missing = levels.filter((level) => provided[level] === undefined)
+                const missing = levels.filter((level) => provided[level.label] === undefined)
                 const total = Object.values(provided).reduce((sum, value) => sum + value, 0)
                 const remainder = missing.length === 0 ? 0 : Math.max(0, (1 - total) / missing.length)
                 return [
@@ -216,7 +216,7 @@ export const decisionStub = (
                     _tag: "Rate" as const,
                     rating: answer.rating,
                     probabilities: Object.fromEntries(
-                      levels.map((level) => [level, provided[level] ?? remainder]),
+                      levels.map((level) => [level.label, provided[level.label] ?? remainder]),
                     ),
                     confidence: answer.confidence ?? 0.9,
                   },

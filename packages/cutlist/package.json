@@ -26,8 +26,8 @@
   },
   "scripts": {
     "cutlist": "node --conditions=development src/cli.ts",
-    "build": "tsgo -p tsconfig.build.json",
-    "typecheck": "tsgo --noEmit",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
@@ -40,7 +40,7 @@
   "devDependencies": {
     "@effect/tsgo": "catalog:",
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:",
+    "@typescript/native": "catalog:",
     "fast-check": "catalog:",
     "vitest": "catalog:"
   },

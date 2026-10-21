@@ -15,9 +15,9 @@ import {
   SchemaParser,
   Semaphore,
 } from "effect"
-import * as AiError from "effect/unstable/ai/AiError"
-import { DecisionModel } from "effect/unstable/ai"
-import type * as HttpClient from "effect/unstable/http/HttpClient"
+import * as AiError from "effect/ai/AiError"
+import { DecisionModel } from "effect/ai"
+import type * as HttpClient from "effect/http/HttpClient"
 import { TypeSafeClient, TypeSafeDecisionModel, TypeSafeSchema } from "@effect/ai-typesafe"
 import { canonical } from "./canonical.ts"
 import { policy } from "./policy.ts"

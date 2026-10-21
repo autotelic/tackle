@@ -15,6 +15,7 @@
     "isolatedModules": true,
     "moduleDetection": "force",
     "skipLibCheck": true,
+    "types": ["node"],
     "noEmit": true
   },
   "include": ["src"]

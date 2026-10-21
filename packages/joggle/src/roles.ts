@@ -1,6 +1,6 @@
 import { Effect, Option, Order, Schema } from "effect"
-import * as AiError from "effect/unstable/ai/AiError"
-import { Decision, DecisionModel } from "effect/unstable/ai"
+import * as AiError from "effect/ai/AiError"
+import { Decision, DecisionModel } from "effect/ai"
 import { isUnreachable } from "./decision.ts"
 import { policy } from "./policy.ts"
 import { budgetNote, type RunContext } from "./rule.ts"
@@ -47,7 +47,7 @@ export const moduleOf = (unit: Unit): string => {
 }
 
 /**
- * The package a specifier names: `react`, `@oxlint/plugins`, `effect/unstable/...`.
+ * The package a specifier names: `react`, `@oxlint/plugins`, `effect/...`.
  *
  * Shared with the dependency check, which learned it first: `fastify-cli/start.js`
  * is a path INTO `fastify-cli`, and comparing raw specifiers reports subpath

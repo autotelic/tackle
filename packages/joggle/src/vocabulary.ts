@@ -1,5 +1,5 @@
 import { Schema } from "effect"
-import { Decision } from "effect/unstable/ai"
+import { Decision } from "effect/ai"
 
 /*
  * Every word the model is asked to choose between, in one file.

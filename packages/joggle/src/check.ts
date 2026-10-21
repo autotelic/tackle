@@ -1,6 +1,6 @@
 import { Clock, Effect, FileSystem, Order, Path, Result } from "effect"
-import * as AiError from "effect/unstable/ai/AiError"
-import type { DecisionModel } from "effect/unstable/ai"
+import * as AiError from "effect/ai/AiError"
+import type { DecisionModel } from "effect/ai"
 import { layer as atomsLayer, type Atoms } from "./atoms.ts"
 import { isUnreachable, DecisionStats } from "./decision.ts"
 import { answerPlans, chunkPlans, type Plan, type PlanAnswers, type PlanChunk } from "./plans.ts"

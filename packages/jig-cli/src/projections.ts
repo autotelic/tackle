@@ -156,10 +156,7 @@ interface SarifDocument {
  * finding has it — the extension point SARIF gives for exactly this, and the difference
  * between an outward report that says "judged" and one that quietly says "determined".
  */
-export const projectSarif = (
-  report: Report,
-  known: ReadonlySet<string> | undefined = undefined,
-): SarifDocument => {
+export const projectSarif = (report: Report, known?: ReadonlySet<string>): SarifDocument => {
   const rules = new Map<string, SarifRule>()
   for (const diagnostic of report.diagnostics) {
     const name = ruleNameOf(diagnostic)
@@ -318,10 +315,8 @@ export const projectCodeClimate = (report: Report): ReadonlyArray<CodeClimateIss
 const pretty = <Value>(value: Value): string => `${JSON.stringify(value, null, 2)}\n`
 
 /** Render a report as SARIF 2.1.0. */
-export const renderSarif = (
-  report: Report,
-  known: ReadonlySet<string> | undefined = undefined,
-): string => pretty(projectSarif(report, known))
+export const renderSarif = (report: Report, known?: ReadonlySet<string>): string =>
+  pretty(projectSarif(report, known))
 
 /** Render a report as LSP 3.17 diagnostics. */
 export const renderLsp = (report: Report): string => pretty(projectLsp(report))

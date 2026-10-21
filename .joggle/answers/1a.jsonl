@@ -2,10 +2,12 @@
 1a34ca7e97f6569b	1792535008	{"confidence":0.96,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.97,"component_or_feature":0.02,"not_applicable":0.01,"route_or_handler":0}}
 1a3d0de69eb90467	1792592674	{"consistency":1,"kind":"Probability","probability":0.14333333333333334}
 1a543cdff0746aa2	1792542865	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0.01,"wrong_behavior":0,"wrong_contract":0}}
+1a5765d313c01941	1792617317	{"consistency":1,"kind":"Probability","probability":0.19000000000000003}
 1a59b5f7111ff894	1792252958	{"consistency":1,"kind":"Probability","probability":0.6766666666666667}
 1a62efb408fad174	1792543728	{"confidence":0.76,"kind":"Classify","label":"library_core","probabilities":{"domain_core":0.19,"infrastructure":0,"library_core":0.79,"not_applicable":0,"rendering_edge":0,"transport_edge":0.01,"utilities":0.01}}
 1a68f223332949e6	1792535009	{"confidence":0.74,"kind":"Classify","label":"not_applicable","probabilities":{"domain_logic":0.1,"infrastructure":0,"input_adaptation":0,"mechanical":0.07,"not_applicable":0.77,"orchestration":0.06,"rendering":0,"request_validation":0,"transport_concern":0}}
 1a6a23442994eff1	1792252958	{"confidence":0.8,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.87,"not_a_derivation":0.12,"reimplements":0.01}}
+1a6cc31109042189	1792617317	{"consistency":1,"kind":"Probability","probability":0.6166666666666667}
 1a904850175f6739	1792543728	{"confidence":0.41,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.51,"no_difference":0.1,"removes_a_hazard":0.22,"slightly_clearer":0.17},"rating":1.85}
 1a935cc56154bee0	1792535008	{"confidence":0.92,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.94,"component_or_feature":0.03,"not_applicable":0.02,"route_or_handler":0.01}}
 1aa656d2290ad2d1	1792592274	{"confidence":0.34,"kind":"Classify","label":"collapse","probabilities":{"collapse":0.56,"keep_variants":0.39,"no_issue":0.05}}

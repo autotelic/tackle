@@ -1,5 +1,5 @@
 import { Effect } from "effect"
-import { Decision } from "effect/unstable/ai"
+import { Decision } from "effect/ai"
 import { Atoms } from "../atoms.ts"
 import { locator, messages, reporter } from "../reporting.ts"
 import { layersFrom } from "../architecture.ts"

@@ -1,6 +1,6 @@
 import { expect, it } from "@effect/vitest"
 import { Effect } from "effect"
-import * as AiError from "effect/unstable/ai/AiError"
+import * as AiError from "effect/ai/AiError"
 import { NodeServices } from "@effect/platform-node"
 import { reimplementedPrimitive } from "../src/rules/reimplemented-primitive.ts"
 import type { WorkspaceError } from "../src/schema.ts"

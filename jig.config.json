@@ -24,6 +24,20 @@
       ]
     },
     {
+      "id": "plumb-plumb",
+      "kind": "oxlint-plugin",
+      "command": "oxlint",
+      "config": "packages/plumb/oxlint.config.ts",
+      "args": ["packages/plumb/src"]
+    },
+    {
+      "id": "plumb-joggle",
+      "kind": "oxlint-plugin",
+      "command": "oxlint",
+      "config": "packages/joggle/oxlint.config.ts",
+      "args": ["packages/joggle/src"]
+    },
+    {
       "id": "joggle",
       "kind": "process",
       "command": "joggle",

@@ -6,6 +6,33 @@ import { Predicate } from "effect"
  * time it reaches here; the crawler normalizes at the boundary.
  */
 
+/**
+ * A module path and the configured source roots it is read against.
+ *
+ * Owners, tiers, roles, and the route predicates all ask about "this path, seen from
+ * these roots"; naming the pair once keeps the same three fields from being spelled
+ * afresh at every call site.
+ */
+export interface RootedModule {
+  readonly modulePath: string
+  readonly roots: ReadonlyArray<string>
+}
+
+/** A rooted module plus where routes live within a root. */
+export interface RoutedModule extends RootedModule {
+  readonly routeDir: string
+}
+
+/** A rooted module plus the roots a predicate is asked about. */
+export interface TargetedModule extends RootedModule {
+  readonly targets: ReadonlyArray<string>
+}
+
+/** A rooted module plus the declared entry-point names. */
+export interface EntryModule extends RootedModule {
+  readonly entries: ReadonlyArray<string>
+}
+
 /** Collapse `.`/`..` and repeated slashes in a forward-slashed path. */
 export const normalizePosix = (path: string): string => {
   const parts: Array<string> = []
@@ -25,6 +52,17 @@ export const dirnamePosix = (path: string): string => {
   const index = path.lastIndexOf("/")
   return index < 0 ? "" : path.slice(0, index)
 }
+
+/**
+ * Drop a TypeScript or JavaScript source extension from a module path.
+ *
+ * One rule, written twice while the catalog and the recipe renderer each learned it; the
+ * extension set is a fact about source files, so it lives beside the other path helpers.
+ *
+ * @param path - A repository-relative module path.
+ * @returns The path without a trailing `.ts`, `.tsx`, `.js`, or `.jsx`.
+ */
+export const stripSourceExtension = (path: string): string => path.replace(/\.(?:tsx?|jsx?)$/u, "")
 
 /** Drop the app root from a repository-relative module path. */
 export const relativeToRoot = ({
@@ -66,11 +104,7 @@ const pathCandidates = (
 }
 
 /** Whether a module is under one of the targets, seen from itself or any configured root. */
-export const underAnyRoot: Predicate.Predicate<{
-  readonly modulePath: string
-  readonly roots: ReadonlyArray<string>
-  readonly targets: ReadonlyArray<string>
-}> = ({ modulePath, roots, targets }) =>
+export const underAnyRoot: Predicate.Predicate<TargetedModule> = ({ modulePath, roots, targets }) =>
   pathCandidates(modulePath, roots).some((path) => underAny(path, targets))
 
 /**
@@ -84,11 +118,7 @@ export const afterRouteDir = ({
   modulePath,
   roots,
   routeDir,
-}: {
-  readonly modulePath: string
-  readonly roots: ReadonlyArray<string>
-  readonly routeDir: string
-}): string | undefined => {
+}: RoutedModule): string | undefined => {
   for (const path of pathCandidates(modulePath, roots)) {
     if (path === routeDir) return ""
     if (path.startsWith(`${routeDir}/`)) return path.slice(routeDir.length + 1)
@@ -107,11 +137,11 @@ const ROUTE_FILE =
   /^(?:route|page|layout|template|default|error|global-error|loading|not-found|404|500)\.(?:[cm]?[jt]sx?)$/u
 
 /** Whether a module is a route entry, as opposed to a component owned by a route. */
-export const isRouteEntry: Predicate.Predicate<{
-  readonly modulePath: string
-  readonly roots: ReadonlyArray<string>
-  readonly routeDir: string
-}> = ({ modulePath, roots, routeDir }) => {
+export const isRouteEntry: Predicate.Predicate<RoutedModule> = ({
+  modulePath,
+  roots,
+  routeDir,
+}) => {
   const tail = afterRouteDir({ modulePath, roots, routeDir })
   if (tail === undefined || tail === "") return false
   const segments = tail.split("/").filter((segment) => segment !== "")
@@ -127,11 +157,7 @@ export const isRouteEntry: Predicate.Predicate<{
  * spell it differently (`entry.client.tsx`, `root.tsx`, `main.tsx`), so the repository declares
  * the names rather than cutlist guessing them. A suffix matches inside any configured root.
  */
-export const isEntryPoint: Predicate.Predicate<{
-  readonly modulePath: string
-  readonly roots: ReadonlyArray<string>
-  readonly entries: ReadonlyArray<string>
-}> = ({ modulePath, roots, entries }) =>
+export const isEntryPoint: Predicate.Predicate<EntryModule> = ({ modulePath, roots, entries }) =>
   entries.some((entry) =>
     pathCandidates(modulePath, roots).some((path) => path === entry || path.endsWith(`/${entry}`)),
   )

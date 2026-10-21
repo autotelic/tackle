@@ -1,6 +1,6 @@
 import { expect, it } from "@effect/vitest"
 import { Effect, Layer, Option, Ref } from "effect"
-import { DecisionModel } from "effect/unstable/ai"
+import { DecisionModel } from "effect/ai"
 import { checkRepository } from "../src/check.ts"
 import { DecisionStats } from "../src/decision.ts"
 import { PlanAnswers } from "../src/plans.ts"
@@ -32,7 +32,7 @@ const countingModel = (calls: Ref.Ref<number>): Layer.Layer<DecisionModel.Decisi
                 _tag: "Rate",
                 rating: 0,
                 probabilities: Object.fromEntries(
-                  decision.criteria.map((level) => [level, 1 / decision.criteria.length]),
+                  decision.criteria.map((level) => [level.label, 1 / decision.criteria.length]),
                 ),
                 confidence: 0.9,
               }

@@ -5,6 +5,8 @@ import {
   type PartRole,
   type TierName,
 } from "@autotelic/protocol"
+import { authoredLines } from "./authored.ts"
+import { plural } from "./text.ts"
 
 /*
  * `menu.json` and `MENU.md`.
@@ -33,9 +35,6 @@ const MENU_KIND_ORDER: ReadonlyArray<PartRole> = [
   "module",
 ]
 
-const plural = (count: number, forms: readonly [one: string, many: string]): string =>
-  `${count} ${count === 1 ? forms[0] : forms[1]}`
-
 /**
  * A capped list, because the menu is an index and the catalog is the raw material.
  *
@@ -54,25 +53,6 @@ const some = (items: ReadonlyArray<string>, limit: number): string => {
 
 /** The menu model as JSON. The machine rendering an agent reads. */
 export const renderMenuJson = (menu: Menu): string => `${JSON.stringify(menu, null, 2)}\n`
-
-/** One entry's authored fields, in the order a reader meets them. */
-const authoredOf = (entry: MenuEntry): ReadonlyArray<string> => {
-  const parts: Array<string> = []
-  if (entry.summary !== undefined) parts.push(entry.summary)
-  if (entry.whenToUse !== undefined) parts.push(`when: ${entry.whenToUse}`)
-  if (entry.whenNotToUse !== undefined) parts.push(`avoid: ${entry.whenNotToUse}`)
-  if (entry.states !== undefined && entry.states.length > 0) {
-    parts.push(`states: ${entry.states.join(", ")}`)
-  }
-  if (entry.status !== undefined) parts.push(`status: ${entry.status}`)
-  if (entry.examples !== undefined && entry.examples.length > 0) {
-    parts.push(`examples: ${entry.examples.join(", ")}`)
-  }
-  if (entry.useInstead !== undefined && entry.useInstead.length > 0) {
-    parts.push(`use ${entry.useInstead.join(", ")} instead`)
-  }
-  return parts
-}
 
 /**
  * One line of the index.
@@ -95,7 +75,7 @@ const entryLine = (entry: MenuEntry): string => {
   const usage =
     entry.usedBy === undefined || entry.usedBy === 0 ? "" : ` — ${entry.usedBy} importers`
   const feature = entry.feature === undefined ? "" : ` — part of \`${entry.feature}\``
-  const authored = authoredOf(entry)
+  const authored = authoredLines(entry)
   const summary = authored.length === 0 ? "" : ` — ${authored.join(" — ")}`
   const composed =
     entry.composedOf.length === 0 ? "" : ` — composed of ${some(entry.composedOf, 4)}`

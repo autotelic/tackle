@@ -14,5 +14,6 @@ bbcb874fc5225fe2	1792252958	{"confidence":0.74,"kind":"Classify","label":"shared
 bbcca83d1aff2f51	1792592274	{"confidence":0.98,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.01,"member_1":0.99}}
 bbd1981172d4beed	1792535008	{"confidence":0.91,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.93,"stale_reference":0,"wrong_behavior":0.06,"wrong_contract":0.01}}
 bbd4a742b546f1c7	1792535008	{"confidence":0.97,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.98,"component_or_feature":0.01,"not_applicable":0.01,"route_or_handler":0}}
+bbe9a959891a76df	1792618754	{"confidence":0.98,"kind":"Classify","label":"general","probabilities":{"general":0.99,"names_a_caller":0,"shared_vocabulary":0.01}}
 bbf595fe6beae678	1792265611	{"confidence":0.37,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.25,"keep_variants":0.58,"no_issue":0.17}}
 bbfb64ebeca1e49e	1792543161	{"confidence":0.69,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.79,"unclear":0,"value":0.21}}

@@ -41,11 +41,13 @@ const onPath = (name: string): string | undefined => {
 /**
  * How to invoke joggle.
  *
- * A `joggle` on PATH is the machine's own command, and here it is the wrapper
- * that supplies the model key through doppler -- so it is preferred, and pi and
- * the shell get the same judged results. Otherwise the build in this checkout
- * is used, falling back to the source with the `development` export condition.
- * `JOGGLE_BIN` overrides all of it.
+ * A `joggle` on PATH is the machine's own command, so it is preferred and pi and the shell
+ * get the same judged results. Otherwise the build in this checkout is used, falling back to
+ * the source with the `development` export condition. `JOGGLE_BIN` overrides all of it.
+ *
+ * The model key is not supplied here: this extension inherits pi's environment, and
+ * `pi.exec` children inherit it in turn, so the key belongs in the environment of whatever
+ * started pi (see SECRETS.md). With no key, judged rules replay the committed verdicts.
  */
 const cli = (): { readonly command: string; readonly args: ReadonlyArray<string> } => {
   const override = process.env.JOGGLE_BIN

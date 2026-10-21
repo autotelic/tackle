@@ -1,5 +1,5 @@
 import { Effect } from "effect"
-import { Decision } from "effect/unstable/ai"
+import { Decision } from "effect/ai"
 import { Atoms } from "../atoms.ts"
 import { policy } from "../policy.ts"
 import { verdictsOf, type Plan } from "../plans.ts"
@@ -124,10 +124,10 @@ const findingsFor = (
   report: Report,
   candidate: Deprecation,
   mode: "migrate" | "fix_tag" | "unjudged",
-  judged: boolean,
-  review: boolean,
+  provenance: { readonly judged: boolean; readonly review: boolean },
   confidence: number | undefined,
 ): ReadonlyArray<Diagnostic> => {
+  const { judged, review } = provenance
   const diagnostics: Array<Diagnostic> = []
   const severity = review ? "info" : undefined
   for (const name of mode === "migrate" ? [] : candidate.unknown) {
@@ -304,7 +304,9 @@ export const intentDrift: PlannedRule = {
           const answer = verdicts[index]
           const verdict = verdictOf(answer?.["verdict"], VIOLATIONS.verdict)
           if (verdict === undefined) {
-            diagnostics.push(...findingsFor(report, candidate, "unjudged", false, false, undefined))
+            diagnostics.push(
+              ...findingsFor(report, candidate, "unjudged", { judged: false, review: false }, undefined),
+            )
             return
           }
           const quality = qualityOf({
@@ -358,8 +360,7 @@ export const intentDrift: PlannedRule = {
               report,
               candidate,
               repair,
-              true,
-              quality.quality === "review",
+              { judged: true, review: quality.quality === "review" },
               verdict.confidence,
             ),
           )

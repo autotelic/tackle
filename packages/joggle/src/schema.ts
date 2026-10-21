@@ -268,7 +268,10 @@ export type Baseline = typeof Baseline.Type
 /* Typed errors                                                                */
 /* -------------------------------------------------------------------------- */
 
-export class WorkspaceError extends Schema.TaggedError<WorkspaceError>()(
+export class WorkspaceError extends Schema.TaggedError<
+  WorkspaceError,
+  { readonly brand: unique symbol }
+>()(
   "joggle/WorkspaceError",
   {
     path: Schema.String,
@@ -277,21 +280,30 @@ export class WorkspaceError extends Schema.TaggedError<WorkspaceError>()(
   },
 ) {}
 
-export class TsgoError extends Schema.TaggedError<TsgoError>()("joggle/TsgoError", {
-  operation: Schema.String,
-  detail: Schema.String,
-}) {}
+export class TsgoError extends Schema.TaggedError<TsgoError, { readonly brand: unique symbol }>()(
+  "joggle/TsgoError",
+  {
+    operation: Schema.String,
+    detail: Schema.String,
+  },
+) {}
 
-export class GitError extends Schema.TaggedError<GitError>()("joggle/GitError", {
-  operation: Schema.String,
-  detail: Schema.String,
-}) {}
+export class GitError extends Schema.TaggedError<GitError, { readonly brand: unique symbol }>()(
+  "joggle/GitError",
+  {
+    operation: Schema.String,
+    detail: Schema.String,
+  },
+) {}
 
 /**
  * A rule reported a message its own registry does not declare, or a template hole
  * it gave no data for. That is a bug in the rule, not in the code under analysis.
  */
-export class RuleAuthoringError extends Schema.TaggedError<RuleAuthoringError>()(
+export class RuleAuthoringError extends Schema.TaggedError<
+  RuleAuthoringError,
+  { readonly brand: unique symbol }
+>()(
   "joggle/RuleAuthoringError",
   {
     ruleId: Schema.String,

@@ -34,16 +34,17 @@
     "check:config": "node scripts/check-config.mjs"
   },
   "dependencies": {
-    "@oxlint/plugins": "1.79.0"
+    "@oxlint/plugins": "catalog:"
   },
   "devDependencies": {
-    "@types/node": "24.13.3",
+    "@types/node": "catalog:",
     "@typescript-eslint/parser": "^8.71.0",
     "eslint": "^10.11.0",
-    "fast-check": "^4.9.0",
-    "oxlint": "1.79.0",
-    "typescript": "5.9.3",
-    "vitest": "^4.1.11"
+    "fast-check": "catalog:",
+    "oxlint": "catalog:",
+    "typescript": "catalog:",
+    "@typescript/native": "catalog:",
+    "vitest": "catalog:"
   },
   "engines": {
     "node": ">=20"

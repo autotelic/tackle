@@ -31,22 +31,47 @@ const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$/u;
 
 const CACHE = new Map<string, UiManifest | undefined>();
 
+/**
+ * Whether a value is a plain object.
+ *
+ * @param {unknown} value - The value to test.
+ * @returns {boolean} True when the value is a non-null, non-array object.
+ */
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/**
+ * Decode a configured manifest, by inline value or by path.
+ *
+ * An inline manifest is what a rule test uses; a path is what a config uses. Both decode
+ * through the same reader, so a test cannot pass a shape the real rule rejects. A path is
+ * read once and remembered, because one program visits many files against one manifest.
+ *
+ * @param {unknown} value - The rule option: an inline manifest or a manifest path.
+ * @returns {UiManifest | undefined} The manifest, or `undefined` when it cannot be read.
+ */
 function manifestFrom(value: unknown): UiManifest | undefined {
-	// An inline manifest is what a rule test uses; a path is what a config uses. Both
-	// decode through the same reader, so a test cannot pass a shape the real rule rejects.
 	if (isRecord(value) && Array.isArray(value.components)) return decodeUiManifest(value);
 	if (typeof value !== "string") return undefined;
 	if (!CACHE.has(value)) CACHE.set(value, manifestAt(value));
 	return CACHE.get(value);
 }
 
-/** A module path without its source extension or trailing `/index`. */
+/**
+ * A module path without its source extension or trailing `/index`.
+ *
+ * @param {string} path - The manifest part path.
+ * @returns {string} The importable module path.
+ */
 function moduleOf(path: string): string {
 	return path.replace(/\.(?:tsx?|jsx?)$/u, "").replace(/\/index$/u, "");
+}
+
+/** One import site: the specifier and the imported binding. */
+interface ImportRef {
+	readonly source: string;
+	readonly imported: string;
 }
 
 /**
@@ -56,16 +81,25 @@ function moduleOf(path: string): string {
  * rule has no tsconfig reader, and every alias in use (`@/`, `~/`, relative) leaves the
  * tail of the path intact. A named import must also match an exported name when the
  * manifest carries one; a default or namespace import matches by path alone.
+ *
+ * @param {ImportRef} ref - The import's specifier and imported binding.
+ * @param {UiPart} part - The manifest part to test against.
+ * @returns {boolean} True when the import names the part.
  */
-function namesPart(source: string, imported: string, part: UiPart): boolean {
-	const clean = source.replace(/^[.@~]+/u, "").replace(/^\/+/u, "").replace(/\.(?:tsx?|jsx?)$/u, "");
+function namesPart(ref: ImportRef, part: UiPart): boolean {
+	const clean = ref.source.replace(/^[.@~]+/u, "").replace(/^\/+/u, "").replace(/\.(?:tsx?|jsx?)$/u, "");
 	const target = moduleOf(part.path);
 	const pathMatches = target === clean || target.endsWith("/" + clean);
-	if (imported === "default" || imported === "*") return pathMatches;
-	return pathMatches || (part.exports?.includes(imported) ?? false);
+	if (ref.imported === "default" || ref.imported === "*") return pathMatches;
+	return pathMatches || (part.exports?.includes(ref.imported) ?? false);
 }
 
-/** The imported binding name, or `*` for a namespace import. */
+/**
+ * The imported binding name, or `*` for a namespace import.
+ *
+ * @param {ESTree.ImportDeclaration["specifiers"][number]} specifier - The import specifier.
+ * @returns {string} The imported name, `default`, or `*`.
+ */
 function importedOf(specifier: ESTree.ImportDeclaration["specifiers"][number]): string {
 	if (specifier.type === "ImportSpecifier") {
 		return specifier.imported.type === "Identifier"
@@ -76,17 +110,26 @@ function importedOf(specifier: ESTree.ImportDeclaration["specifiers"][number]): 
 	return "*";
 }
 
+/**
+ * The local binding name a specifier introduces.
+ *
+ * @param {ESTree.ImportDeclaration["specifiers"][number]} specifier - The import specifier.
+ * @returns {string} The name the file uses locally.
+ */
 function localOf(specifier: ESTree.ImportDeclaration["specifiers"][number]): string {
 	return specifier.local.name;
 }
 
-function deprecatedPartFor(
-	manifest: UiManifest,
-	source: string,
-	imported: string,
-): UiPart | undefined {
+/**
+ * The deprecated part an import site reaches, if any.
+ *
+ * @param {UiManifest} manifest - The decoded manifest.
+ * @param {ImportRef} ref - The import's specifier and imported binding.
+ * @returns {UiPart | undefined} The deprecated part, or `undefined` when the import is clean.
+ */
+function deprecatedPartFor(manifest: UiManifest, ref: ImportRef): UiPart | undefined {
 	return manifest.components.find(
-		(part) => part.status === "deprecated" && namesPart(source, imported, part),
+		(part) => part.status === "deprecated" && namesPart(ref, part),
 	);
 }
 
@@ -132,7 +175,7 @@ export const noDeprecatedPartsRule = defineRule({
 				if (typeof source !== "string") return;
 				for (const specifier of node.specifiers) {
 					const imported = importedOf(specifier);
-					const part = deprecatedPartFor(manifest, source, imported);
+					const part = deprecatedPartFor(manifest, { source, imported });
 					if (part === undefined) continue;
 					const useInstead = part.useInstead ?? [];
 					context.report({

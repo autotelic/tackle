@@ -1,5 +1,5 @@
 import { Effect, Option, Schema } from "effect"
-import { Decision, DecisionModel } from "effect/unstable/ai"
+import { Decision, DecisionModel } from "effect/ai"
 import { policy } from "../policy.ts"
 import { locator, messages, reporter, type Report } from "../reporting.ts"
 import {

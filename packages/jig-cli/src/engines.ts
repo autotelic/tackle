@@ -675,7 +675,8 @@ export const runEngines = (
   root: string,
   engines: ReadonlyArray<EngineRef>,
 ): Effect.Effect<ReadonlyArray<EngineOutcome>, never, Spawner> =>
-  Effect.all(
-    engines.filter((engine) => engine.enabled !== false).map((engine) => runEngine(root, engine)),
+  Effect.forEach(
+    engines.filter((engine) => engine.enabled !== false),
+    (engine) => runEngine(root, engine),
     { concurrency: "unbounded" },
   )

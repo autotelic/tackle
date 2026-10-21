@@ -1,7 +1,7 @@
 import { Effect } from "effect"
 import { parseSync } from "oxc-parser"
 import { blockingErrors, isAstro, parseInputOf } from "../astro.ts"
-import { Decision } from "effect/unstable/ai"
+import { Decision } from "effect/ai"
 import { Atoms } from "../atoms.ts"
 import { policy } from "../policy.ts"
 import { verdictsOf, type Plan } from "../plans.ts"

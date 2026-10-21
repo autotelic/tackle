@@ -1,5 +1,5 @@
 import { Effect } from "effect"
-import { Decision } from "effect/unstable/ai"
+import { Decision } from "effect/ai"
 import { Atoms } from "../atoms.ts"
 import { policy } from "../policy.ts"
 import { verdictsOf, type Plan } from "../plans.ts"
@@ -20,6 +20,17 @@ import type { SourceFile, Workspace } from "../workspace.ts"
 // meta-allow: no-pattern-classifier -- `termsOf` tokenises prose -- a capitalised word, a sentence end -- which is
 // unavoidable text parsing of a doc block, not a classification of the code. docs/rule-coupling.md.
 const RULE_ID = "joggle/language-drift"
+
+/**
+ * The label that means "none of these words is a concept".
+ *
+ * A reserved word, not `none`: the candidate words come from prose, and a doc block that
+ * says `None` mid-sentence becomes the term `none`. With `none` as the sentinel the two
+ * collide into one label, and Effect 4.0.5 rejects a `Classify` with fewer than two labels
+ * — a real crash the older line allowed. An underscore cannot survive `termsOf`, so this
+ * label can never be a candidate.
+ */
+const NO_CONCEPT = "no_concept"
 
 /**
  * A domain word the prose uses and the code does not.
@@ -72,7 +83,7 @@ interface Candidate {
 /** The one question about a file, pointing at its atom by id. */
 const languageReview = (id: string, words: ReadonlyArray<string>) => {
   const criteria: Record<string, string> = {
-    none: "None of these is a concept the code names differently.",
+    [NO_CONCEPT]: "None of these is a concept the code names differently.",
   }
   for (const word of words) criteria[word] = "The prose says \"" + word + "\" and no name uses it."
   return {
@@ -81,7 +92,7 @@ const languageReview = (id: string, words: ReadonlyArray<string>) => {
         `The doc blocks of \`atoms[${id}].file.path\` repeat the words in \`atoms[${id}].file.words\`, and no declaration, path or import uses any of them.`,
         "Which one, if any, names a concept this code calls something else?",
         "Choose a word when the prose is naming a thing -- an entity, a process, a rule -- and the code names that thing differently.",
-        "Choose `none` when the words are ordinary English, the technology stack, or something the code does not model at all.",
+        "Choose `" + NO_CONCEPT + "` when the words are ordinary English, the technology stack, or something the code does not model at all.",
       ].join("\n"),
       criteria,
     }),
@@ -196,7 +207,7 @@ export const languageDrift: PlannedRule = {
         drops.push({ ruleId: RULE_ID, subject: candidate.source.path, stage: "unreadable", reason: "the response did not contain a verdict" })
         return
       }
-      if (verdict.label === "none" || declined(verdict.label)) {
+      if (verdict.label === NO_CONCEPT || declined(verdict.label)) {
         drops.push({ ruleId: RULE_ID, subject: candidate.source.path, stage: "declined", reason: "none of the words names a concept" })
         return
       }

@@ -1,4 +1,9 @@
-import { plumbEffectRecommendedRules, plumbRecommendedRules } from "@autotelic/plumb/configs"
+import {
+  plumbEffectRecommendedRules,
+  plumbEffectRulesByMetaType,
+  plumbRulesByMetaType,
+} from "@autotelic/plumb/configs"
+import { recommended } from "@effect/tsgo/oxlint-presets"
 
 /*
  * The workspace's own lint config — where plumb runs on the code that ships plumb.
@@ -32,6 +37,27 @@ const effectOff: Record<string, "off"> = Object.fromEntries(
 )
 
 /*
+ * The Effect language service's own rulebook, enabled alongside plumb.
+ *
+ * `@effect/tsgo` ships type-aware Oxlint rules derived from the LSP diagnostics. They are the
+ * second Effect rulebook: plumb asks whether one file is well formed; these ask whether the
+ * Effect code is idiomatic.
+ *
+ * We adopt the tool's own `recommended` preset — 87 rules, 13 at `error` and 74 at `warn` —
+ * rather than the union of its `correctness`, `antipattern`, `effectNative`, and `style`
+ * categories. The union is 129 rules, and the 42 the vendor left out of `recommended` are the
+ * noisy ones (`prefer-effect-array`, `prefer-effect-string`, `missing-pipeable-signature`,
+ * `async-function`, `node-builtin-import`, …). Enabling the union and then silencing its
+ * noisiest members would be us overruling the tool's own recommendation; using the
+ * recommendation is the point.
+ *
+ * The rules are type-aware, so this config declares `options.typeAware` and the `effecttsgo`
+ * plugin; the oxlint binary must be patched by `effect-tsgo patch --oxlint` (the root
+ * `prepare` script does it) or the rules silently do not exist.
+ */
+const EFFECT_TSGO = recommended.rules ?? {}
+
+/*
  * The boundary carve-out — `combine`, not a suppression.
  *
  * `protocol`, `cutlist`, and `jig-cli` are seam code: they decode raw JSON and raw AST into
@@ -49,6 +75,10 @@ const effectOff: Record<string, "off"> = Object.fromEntries(
  * metric to watch.
  */
 const BOUNDARY_FILES = [
+  // The config itself is a boundary: it reads two plugins' raw metadata records and the
+  // Effect presets' loosely-typed rule maps into typed rule settings. Broad records are
+  // the input's shape, not a widened contract of our own.
+  "oxlint.config.ts",
   "packages/protocol/src/decode.ts",
   "packages/protocol/src/json.ts",
   "packages/protocol/src/config.ts",
@@ -177,14 +207,33 @@ export default {
     // scoping it here keeps the seam packages' carve-out from growing to cover tooling.
     "tools/**",
   ],
+  plugins: ["eslint", "oxc", "typescript", "unicorn", "jsdoc", "node", "effecttsgo"],
+  // The Effect language service's rules need types; the patched oxlint answers them.
+  options: { typeAware: true },
+  settings: { jsdoc: { mode: "typescript" } },
   jsPlugins: [
     { name: "plumb", specifier: "@autotelic/plumb" },
     { name: "plumb-effect", specifier: "@autotelic/plumb/effect" },
   ],
   rules: {
-    ...plumbRecommendedRules,
-    ...plumbEffectRecommendedRules,
+    ...plumbRulesByMetaType,
+    ...plumbEffectRulesByMetaType,
+    ...EFFECT_TSGO,
     "plumb-effect/require-schema-type-derivation": "off",
+    // A direct conflict between our own rule and the ecosystem's. plumb wants an optional
+    // parameter spelled `T | undefined` so the absence is explicit at every call site;
+    // `typescript/no-useless-default-assignment` wants `?`, because `= undefined` is
+    // redundant and `?` is the idiom. There is no shape that satisfies both. Effect's own
+    // APIs use `?`, and the ecosystem rule is the one with the wider convention, so `?`
+    // wins here and plumb's rule stands down. This is a plumb bug to revisit, not a call-site
+    // problem: the rule should either yield to `?` or be scoped to public API surfaces.
+    "plumb/no-optional-function-parameters": "off",
+    // The one rule in the vendor's `recommended` that this repository cannot satisfy:
+    // Effect 4.0.5 still labels the AI, CLI, process, FileSystem, and Path modules the
+    // workspace is built on `@stability unstable`, so every file that touches them carries
+    // the notice. The fact is accepted, not a defect; the rule stays available to a consumer
+    // who wants the inventory. Recorded here rather than repeated 132 times in a baseline.
+    "effecttsgo/unstable-api-usage": "off",
   },
   overrides: [
     { files: BOUNDARY_FILES, rules: BOUNDARY_RULES },
@@ -276,6 +325,13 @@ export default {
       // make the ratchet non-reproducible — which is the harm the rule exists to prevent.
       files: ["packages/jig-cli/src/engines.ts", "packages/jig-cli/src/run.ts"],
       rules: { "plumb/no-nondeterministic-core": "off" },
+    },
+    {
+      // `Effect.provide` is correct at an application entry point — the rule says so in its
+      // own message — and a test provides its layers once per case. Both are the exception
+      // the rule names, not a scope lifetime hazard.
+      files: ["packages/*/src/cli.ts", "packages/*/src/*.test.ts"],
+      rules: { "effecttsgo/strict-effect-provide": "off" },
     },
   ],
 }

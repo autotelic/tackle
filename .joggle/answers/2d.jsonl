@@ -1,5 +1,6 @@
 2d0ba6de5caeb118	1792543161	{"confidence":0.83,"kind":"Classify","label":"wire_contract","probabilities":{"domain_concept":0.06,"framework_glue":0,"implementation_detail":0.07,"wire_contract":0.87}}
 2d2414ad148dc850	1792269251	{"confidence":0.82,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.03,"keep_variants":0.88,"no_issue":0.09}}
+2d25de81a9c87963	1792617317	{"confidence":0.88,"kind":"Classify","label":"collapse","probabilities":{"collapse":0.92,"keep_variants":0.07,"no_issue":0.01}}
 2d2729e2209ce8b0	1792252958	{"confidence":0.83,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.08,"inferred":0.03,"not_applicable":0.89}}
 2d2e4b7338558084	1792542865	{"confidence":0.92,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.06,"framework_glue":0,"implementation_detail":0.94,"wire_contract":0}}
 2d389f9c60f7fa7f	1792535008	{"confidence":0.39,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.54,"component_or_feature":0.28,"not_applicable":0.11,"route_or_handler":0.07}}

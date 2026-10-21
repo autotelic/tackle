@@ -9,6 +9,7 @@ import {
   type RecipeMode,
   type RecipeView,
 } from "@autotelic/protocol"
+import { stripSourceExtension } from "../paths.ts"
 
 /*
  * `RECIPES.md` and `recipes.json`.
@@ -19,10 +20,8 @@ import {
  * catalog's, and the adapter notes say where the real call site may spell them differently.
  */
 
-const moduleOf = (path: string): string => path.replace(/\.(?:tsx?|jsx?)$/u, "")
-
 const stemOf = (path: string): string => {
-  const module = moduleOf(path)
+  const module = stripSourceExtension(path)
   return module.slice(module.lastIndexOf("/") + 1)
 }
 
@@ -52,7 +51,7 @@ const importOf = ({
   readonly binding: string
   readonly mode: RecipeMode
 }): RecipeImport => ({
-  from: moduleOf(path),
+  from: stripSourceExtension(path),
   binding,
   mode,
 })

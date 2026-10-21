@@ -1,6 +1,6 @@
 import { Effect, Layer, Option } from "effect"
 import { NodeServices } from "@effect/platform-node"
-import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient"
+import * as FetchHttpClient from "effect/http/FetchHttpClient"
 import { decisionStub, refusingModel, type StubAnswer } from "../src/testing.ts"
 import type { WorkspaceError } from "../src/schema.ts"
 import { Service as TsgoService } from "../src/tsgo.ts"

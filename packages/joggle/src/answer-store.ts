@@ -136,7 +136,10 @@ export const mergeEntries = (
  * A tagged error rather than `Option.none`, because the reason is the whole
  * value: "ours" or "theirs" is what the driver prints and what a person acts on.
  */
-export class NotAShard extends Schema.TaggedError<NotAShard>()("joggle/NotAShard", {
+export class NotAShard extends Schema.TaggedError<
+  NotAShard,
+  { readonly brand: unique symbol }
+>()("joggle/NotAShard", {
   side: Schema.String,
 }) {}
 

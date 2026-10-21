@@ -24,6 +24,27 @@ it.effect("an ordinary English word is not a candidate", () =>
 
 const fixture = () => loadWorkspace("tests/fixtures/language-drift", ["src"])
 
+/**
+ * A prose word equal to the sentinel cannot collapse the choice to one label.
+ *
+ * Effect 4.0.5 rejects a `Classify` with fewer than two criteria. The sentinel used to be
+ * `none`; a doc block repeating `None` mid-sentence produced the term `none`, the two
+ * merged into one label, and the run threw while building the question. The sentinel is
+ * reserved now, and this is the shape that used to crash.
+ */
+it.effect("a prose word that used to equal the decline label no longer crashes the run", () =>
+  Effect.gen(function* () {
+    const workspace = yield* loadWorkspace("tests/fixtures/language-drift-sentinel", ["src"])
+    const result = yield* plannedDiagnosticsOf(languageDrift, workspace)
+    // The candidate exists and is judged; before the fix the run threw while building the
+    // question, so reaching a finding at all is the regression.
+    expect(result.diagnostics.some((entry) => entry.message.includes("none"))).toBe(true)
+  }).pipe(
+    Effect.provide(modelStub({ concept: choice("none", 0.95) })),
+    Effect.provide(NodeServices.layer),
+  ),
+)
+
 it.effect("a confident answer is a finding", () =>
   Effect.gen(function* () {
     const workspace = yield* fixture()

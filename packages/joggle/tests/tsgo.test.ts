@@ -6,7 +6,7 @@ import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { Service as Tsgo, layer as tsgoLayer } from "../src/tsgo.ts"
 
-const binary = resolve("node_modules/.bin/tsgo")
+const binary = resolve("node_modules/.bin/tsc")
 
 test("the compiler's view keeps every source file it lists, JavaScript included", async () => {
   const dir = realpathSync(mkdtempSync(join(tmpdir(), "joggle-tsgo-")))

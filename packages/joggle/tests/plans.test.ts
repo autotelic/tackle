@@ -1,6 +1,6 @@
 import { expect, test } from "vitest"
 import { Effect, Layer, Option, Ref, Result, SchemaParser } from "effect"
-import { Decision, DecisionModel } from "effect/unstable/ai"
+import { Decision, DecisionModel } from "effect/ai"
 import { Atoms, layer as atomsLayer } from "../src/atoms.ts"
 import {
   answerOf,
@@ -49,7 +49,7 @@ const countingModel = (
                 _tag: "Rate",
                 rating: 0,
                 probabilities: Object.fromEntries(
-                  decision.criteria.map((level) => [level, 1 / decision.criteria.length]),
+                  decision.criteria.map((level) => [level.label, 1 / decision.criteria.length]),
                 ),
                 confidence: 0.9,
               }

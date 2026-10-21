@@ -1,6 +1,9 @@
 4b0ff4af9579769c	1792252958	{"confidence":0.85,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.1,"same_module":0,"same_package":0.01,"sibling_packages":0.89}}
+4b248ace1780b67e	1792617317	{"confidence":0.4,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.11,"merge":0.03,"move":0.31,"share_a_contract":0.52,"split":0.03}}
 4b2b131ab5bc5a70	1792252958	{"confidence":0.76,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.13,"internal_only":0.84,"unaccounted":0.03}}
+4b3a7b3447475554	1792619451	{"confidence":0.62,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.75,"not_a_derivation":0.25,"reimplements":0}}
 4b3b304b2041563d	1792252958	{"consistency":1,"kind":"Probability","probability":0.8066666666666666}
+4b40b281bb19a1c5	1792618754	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
 4b46911c4625be19	1792252958	{"confidence":0.14,"kind":"Classify","label":"move","probabilities":{"leave_it":0.25,"merge":0.18,"move":0.31,"share_a_contract":0.24,"split":0.02}}
 4b48fb642413a433	1792535008	{"confidence":0.88,"kind":"Classify","label":"infrastructure","probabilities":{"domain_logic":0.04,"infrastructure":0.89,"input_adaptation":0.01,"mechanical":0.03,"not_applicable":0,"orchestration":0.03,"rendering":0,"request_validation":0,"transport_concern":0}}
 4b4f76216f256304	1792535008	{"confidence":0.4,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.55,"component_or_feature":0.15,"not_applicable":0.23,"route_or_handler":0.07}}
@@ -8,10 +11,13 @@
 4b5b2424e0aa30f6	1792543728	{"confidence":0.84,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.07,"framework_glue":0,"implementation_detail":0.88,"wire_contract":0.05}}
 4b72d14b41b2978e	1792269251	{"confidence":0.31,"kind":"Classify","label":"move","probabilities":{"leave_it":0.12,"merge":0.16,"move":0.45,"share_a_contract":0.26,"split":0.01}}
 4b72e4d26f460bce	1792535008	{"confidence":0.88,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.89,"infrastructure":0,"input_adaptation":0,"mechanical":0.07,"not_applicable":0.04,"orchestration":0,"rendering":0,"request_validation":0,"transport_concern":0}}
+4b8204269c88ca38	1792617317	{"confidence":0.06,"kind":"Classify","label":"move","probabilities":{"move":0.53,"no_issue":0.47}}
+4b8729d1bcdbbd0e	1792617317	{"confidence":0.28,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.02,"common_idiom":0.52,"shared_helper":0.46}}
 4b97197c8ce5848d	1792252958	{"consistency":1,"kind":"Probability","probability":0.7722222222222223}
 4ba5e812bee4b365	1792265611	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
 4bab3293de2aa923	1792269251	{"confidence":0.53,"kind":"Classify","label":"same_module","probabilities":{"different_deployables":0,"same_module":0.65,"same_package":0.35,"sibling_packages":0}}
 4bb72b9ad52c7171	1792252958	{"confidence":0.55,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.7,"unclear":0.01,"value":0.29}}
 4bb8f80c86a30cb2	1792535008	{"confidence":0.8,"kind":"Classify","label":"input_adaptation","probabilities":{"domain_logic":0.01,"infrastructure":0,"input_adaptation":0.82,"mechanical":0,"not_applicable":0,"orchestration":0.02,"rendering":0,"request_validation":0.07,"transport_concern":0.08}}
 4bb92fa68db72838	1792535009	{"confidence":0.85,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.89,"component_or_feature":0.03,"not_applicable":0.07,"route_or_handler":0.01}}
+4be5743806922f0e	1792617317	{"confidence":0.42,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.02,"merge":0.54,"move":0.38,"share_a_contract":0.05,"split":0.01}}
 4bffbb0f62de1a70	1792252958	{"confidence":0.77,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.83,"different_order":0,"different_work":0.17,"same_operation":0}}

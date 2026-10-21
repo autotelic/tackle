@@ -112,6 +112,12 @@ export default defineConfig({
         "src/shared/structural.ts",
         "src/shared/rule-options.ts",
         "src/shared/ancestors.ts",
+        // The ui manifest and the deprecation rule are the same crossing: raw catalog
+        // JSON and raw part records in, typed values out. `manifest.ts` decodes the
+        // catalog a host wrote, and `no-deprecated-parts.ts` reads a part's declaration
+        // out of that payload; representation checks and broad parameters are their job.
+        "src/ui/manifest.ts",
+        "src/ui/rules/no-deprecated-parts.ts",
       ],
       rules: {
         // plumb:allow-off: typed bridge over raw payloads; casts JSDoc-documented
@@ -124,7 +130,22 @@ export default defineConfig({
         // plumb:allow-off: bridge-module casts carry JSDoc SAFETY notes
         "plumb/no-chained-type-assertions": "off", // plumb:allow-off bridge casts documented in JSDoc
         "plumb/require-safety-comment-for-type-assertion": "off", // plumb:allow-off bridge casts documented in JSDoc
+        // An absent key and a key present-and-undefined are different shapes under
+        // exactOptionalPropertyTypes, and the conditional spread is how the manifest
+        // decoder omits the optional fields it did not find.
+        "plumb/no-conditional-empty-object-spread": "off", // plumb:allow-off optional-key omission at a decode boundary
+        // The manifest is read once per program and remembered by path; the cache is the
+        // rule's own reader state, not shared application state a caller could observe.
+        "plumb/no-exported-mutable-state": "off", // plumb:allow-off per-program manifest cache
       },
+    },
+    {
+      // `ui`'s subject IS the deprecated part: `no-deprecated-parts` checks imports
+      // against a manifest's `status: "deprecated"`, and the comments name that status.
+      // The rule reads the domain noun as a claim that the code is deprecated; renaming
+      // the domain to please the linter would be the tool editing the domain.
+      files: ["src/ui/**"],
+      rules: { "plumb/require-deprecated-tag-for-legacy-comments": "off" },
     },
     {
       // Test harnesses adapt plugin objects to RuleTester; the adapter casts

@@ -5,7 +5,7 @@ import { isRecordObject, isString } from "../shared/structural.js";
  * @param {ESTree.TSType} annotation - The annotation to inspect.
  * @returns {string[] | null} Sorted literal members, or null when not a literal union.
  */
-function literalUnionKey(annotation) {
+export function literalUnionKey(annotation) {
     const types = annotation.type === "TSUnionType" ? annotation.types : [annotation];
     const literals = [];
     for (const member of types) {

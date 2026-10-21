@@ -10,6 +10,7 @@ db6b8c1717752358	1792542864	{"confidence":0.3,"kind":"Classify","label":"one_con
 db77408f7966dd31	1792543161	{"confidence":0.29,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.4,"no_difference":0.11,"removes_a_hazard":0.09,"slightly_clearer":0.39999999999999997},"rating":1.46}
 db77830251080a20	1792265611	{"confidence":0.97,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.02,"same_module":0,"same_package":0,"sibling_packages":0.98}}
 db7926765f9109e4	1792253093	{"confidence":0.89,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.06,"keep_variants":0.93,"no_issue":0.01}}
+db82ed842c4ad31f	1792618754	{"confidence":0.32,"kind":"Rate","label":"slightly_clearer","probabilities":{"meaningfully_better":0.41,"no_difference":0.07,"removes_a_hazard":0.1,"slightly_clearer":0.42},"rating":1.55}
 db8c830bdb31cae1	1792535008	{"confidence":0.8,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.85,"component_or_feature":0.09,"not_applicable":0.05,"route_or_handler":0.01}}
 db8d5ec01ff8d9b5	1792252958	{"confidence":0.85,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0,"no_issue":0.11,"semantic_verdict":0.89}}
 db8d969ca36b2e6d	1792252958	{"confidence":0.89,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.04,"framework_glue":0,"implementation_detail":0.92,"wire_contract":0.04}}

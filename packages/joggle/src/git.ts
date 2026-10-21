@@ -1,6 +1,6 @@
 import { Context, Effect, Layer, Schema, Stream } from "effect"
-import { ChildProcess } from "effect/unstable/process"
-import type { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
+import { ChildProcess } from "effect/process"
+import type { ChildProcessSpawner } from "effect/process/ChildProcessSpawner"
 import { GitError } from "./schema.ts"
 
 /**

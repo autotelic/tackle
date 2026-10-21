@@ -135,7 +135,7 @@ const chart = (options: { readonly pruneIsolated?: boolean } = {}): Chart => {
     from: string,
     to: string,
     dashed: boolean | undefined = false,
-    label: string | undefined = undefined,
+    label?: string,
   ): void => {
     // A tag that names the component itself (a primitive rendering its own element) is a
     // self-loop and only noise; the edge is dropped.

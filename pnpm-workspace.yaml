@@ -19,20 +19,31 @@ packages:
 catalog:
   effect: "4.0.5" # stable v4
   # The OpenCode plugin API, used only by jig's optional `./opencode` surface.
-  "@opencode/plugin": "2.0.31"
+  "@opencode/plugin": "2.1.2"
   "@effect/platform-node": "4.0.5"
   "@effect/vitest": "4.0.5"
-  # Typechecking and building run on `tsgo`, the native compiler, wearing Effect's
-  # language service (@effect/tsgo) via the `prepare` patch. `tsc` is not installed.
-  "@effect/tsgo": "0.53.3"
-  "@typescript/native-preview": "7.0.0-dev.20260707.2"
+  # joggle's judgement model: Effect's AI surface plus the TypeSafe provider. On the
+  # stable line with the rest of the workspace now that joggle's port landed.
+  "@effect/ai-typesafe": "4.0.5"
+  # Typechecking and building run on TypeScript 7's native compiler, wearing
+  # Effect's language service (@effect/tsgo) via the `prepare` patch. TypeScript 7
+  # ships no programmatic API, so the `typescript` name stays aliased to the
+  # TypeScript 6 compatibility package for the tooling that imports it
+  # (typescript-eslint), and the compiler is the `@typescript/native` alias —
+  # `tsc` is 7, `tsc6` is 6, and both sit side by side. Keep them on the versions
+  # @effect/tsgo lists as supported.
+  "@effect/tsgo": "0.56.0"
+  typescript: "npm:@typescript/typescript6@^6.0.2"
+  "@typescript/native": "npm:typescript@7.0.2"
+  # plumb's rules import the plugin API, so it must track the oxlint that loads it.
+  "@oxlint/plugins": "1.89.0"
   oxc-parser: "0.150.0"
   # Mermaid -> SVG, for cutlist's diagram projection. Pure: `render()` needs no DOM, falling
   # back to a built-in width table, so the artifact carries rendered diagrams, not a promise.
   pele: "1.7.0"
-  oxlint: "1.88.0" # 1.88.0 is the newest @effect/tsgo 0.53.3 supports
-  "oxlint-tsgolint": "7.0.2004" # type-aware oxlint glue, paired with oxlint 1.88.0
-  oxfmt: "0.73.0" # the Oxc formatter, alongside the Oxc linter
+  oxlint: "1.89.0" # pinned in lockstep with @effect/tsgo 0.56.0
+  "oxlint-tsgolint": "7.0.2004" # type-aware oxlint glue, paired with oxlint 1.89.0
+  oxfmt: "0.74.0" # the Oxc formatter, alongside the Oxc linter
   vitest: "5.0.1"
   "@types/node": "24.13.5"
   # Property-based testing. `plumb/prefer-property-tests` requires it in every suite; the
@@ -43,30 +54,31 @@ catalog:
   # runtime stays dependency-free.
   ajv: "8.17.1"
 
-# The rc line is not resolvable from its ranges alone. The published
-# `@effect/platform-node@4.0.0-rc.116` carries a *caret* on
-# `@effect/platform-node-shared`, so a resolve without joggle's (now deleted)
-# nested lockfile floats that one package onto the stable line — where it then
-# imports `effect/dist/process/ChildProcess.js`, which rc.116's `effect` does not
-# have. `joggle` is still on `4.0.0-rc.116`; its port to 4.0.5 is its own step.
-# Pin that single edge so the rc tree stays coherent, and leave the 4.0.5
-# consumers (cutlist, jig-cli, the OpenCode plugin) untouched.
+# `@opencode/plugin` (jig's optional, dev-only peer) pins `effect@4.0.1` and its own
+# `@effect/*` tree. In this workspace that installs a SECOND copy of Effect, which the
+# type-aware lint reports as `effecttsgo/duplicate-package` — and two Effect identities
+# in one program is a real hazard, even in a dev tree. Pin the whole graph to the
+# workspace's line; the plugin is never shipped, and the public surface still gets the
+# host's own `@opencode/plugin` at runtime.
 overrides:
-  "@effect/platform-node@4.0.0-rc.116>@effect/platform-node-shared": "4.0.0-rc.116"
+  effect: "4.0.5"
+  "@effect/platform-node": "4.0.5"
+  "@effect/platform-node-shared": "4.0.5"
+  "@effect/opentelemetry": "4.0.5"
 
 minimumReleaseAgeExclude:
-  - "@effect/tsgo-darwin-arm64@0.53.3"
-  - "@effect/tsgo-darwin-x64@0.53.3"
-  - "@effect/tsgo-linux-arm64@0.53.3"
-  - "@effect/tsgo-linux-arm@0.53.3"
-  - "@effect/tsgo-linux-x64@0.53.3"
-  - "@effect/tsgo-win32-arm64@0.53.3"
-  - "@effect/tsgo-win32-x64@0.53.3"
-  - "@effect/tsgo@0.53.3"
-  - "@opencode/ai@2.0.31"
-  - "@opencode/client@2.0.31"
-  - "@opencode/plugin@2.0.31"
-  - "@opencode/protocol@2.0.31"
-  - "@opencode/schema@2.0.31"
-  - "@opencode/util@2.0.31"
+  - "@effect/tsgo-darwin-arm64@0.56.0"
+  - "@effect/tsgo-darwin-x64@0.56.0"
+  - "@effect/tsgo-linux-arm64@0.56.0"
+  - "@effect/tsgo-linux-arm@0.56.0"
+  - "@effect/tsgo-linux-x64@0.56.0"
+  - "@effect/tsgo-win32-arm64@0.56.0"
+  - "@effect/tsgo-win32-x64@0.56.0"
+  - "@effect/tsgo@0.56.0"
+  - "@opencode/ai@2.1.2"
+  - "@opencode/client@2.1.2"
+  - "@opencode/plugin@2.1.2"
+  - "@opencode/protocol@2.1.2"
+  - "@opencode/schema@2.1.2"
+  - "@opencode/util@2.1.2"
   - pele@1.7.0

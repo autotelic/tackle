@@ -29,7 +29,7 @@ const ReportSchema = Schema.Struct({
   format: Schema.optionalKey(
     Schema.Literals(["text", "json", "jsonl", "github", "sarif", "lsp", "codeclimate"]),
   ),
-  maxWarnings: Schema.optionalKey(Schema.Number),
+  maxWarnings: Schema.optionalKey(Schema.Finite),
 })
 
 const AgentSchema = Schema.Struct({

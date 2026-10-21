@@ -1,5 +1,5 @@
 import { Effect, Order } from "effect"
-import { Decision } from "effect/unstable/ai"
+import { Decision } from "effect/ai"
 import { Atoms } from "../atoms.ts"
 import { policy } from "../policy.ts"
 import { type PlannedCandidate } from "../plans.ts"

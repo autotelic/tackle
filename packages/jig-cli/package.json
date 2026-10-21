@@ -27,8 +27,8 @@
   },
   "scripts": {
     "jig": "node --conditions=development src/cli.ts",
-    "build": "tsgo -p tsconfig.build.json",
-    "typecheck": "tsgo --noEmit",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
@@ -40,7 +40,7 @@
     "@effect/tsgo": "catalog:",
     "@opencode/plugin": "catalog:",
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:",
+    "@typescript/native": "catalog:",
     "fast-check": "catalog:",
     "typebox": "1.3.34",
     "vitest": "catalog:"

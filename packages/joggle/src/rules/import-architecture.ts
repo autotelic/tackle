@@ -1,5 +1,5 @@
 import { Effect, Order } from "effect"
-import { Decision } from "effect/unstable/ai"
+import { Decision } from "effect/ai"
 import {
   cyclesIn,
   directionViolations,

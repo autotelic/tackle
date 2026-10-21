@@ -1,6 +1,6 @@
 import { expect, test } from "vitest"
 import { Effect, Layer, Option, Ref } from "effect"
-import { Decision, DecisionModel } from "effect/unstable/ai"
+import { Decision, DecisionModel } from "effect/ai"
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -83,7 +83,15 @@ const recordingModel = (seen: Ref.Ref<ReadonlyArray<string>>): Layer.Layer<Decis
     DecisionModel.make({
       decide: ({ decisions }) =>
         Effect.gen(function* () {
-          yield* Ref.update(seen, (current) => [...current, ...Object.values(decisions).map((d) => d.instructions)])
+          yield* Ref.update(seen, (current) => [
+            ...current,
+            // `instructions` widened to `Description` (string | JsonObject | JsonArray) in
+            // Effect 4.0.5; the probe here sends prose, and a structured instruction is
+            // recorded as its canonical JSON so the assertion stays a string comparison.
+            ...Object.values(decisions).map((d) =>
+              typeof d.instructions === "string" ? d.instructions : JSON.stringify(d.instructions),
+            ),
+          ])
           const answers: Record<string, DecisionModel.ProviderAnswer> = {}
           for (const [key, decision] of Object.entries(decisions)) {
             if (decision._tag === "Classify") {
@@ -98,7 +106,7 @@ const recordingModel = (seen: Ref.Ref<ReadonlyArray<string>>): Layer.Layer<Decis
               answers[key] = {
                 _tag: "Rate",
                 rating: 0,
-                probabilities: Object.fromEntries(decision.criteria.map((level) => [level, 1 / decision.criteria.length])),
+                probabilities: Object.fromEntries(decision.criteria.map((level) => [level.label, 1 / decision.criteria.length])),
                 confidence: 0.9,
               }
             } else {
