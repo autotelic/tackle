@@ -101,15 +101,15 @@ exemplar's own `check` would fail here (it names rules from `plumb`, `plumb/ui`,
 Two consequences worth knowing before you touch it:
 
 - **`pnpm lint` passes three `--ignore-pattern` flags** — `examples/**`,
-  `packages/plumb/**`, `packages/joggle/**`. The exemplar's `.oxlintrc.json` names
-  `@autotelic/plumb`, `@autotelic/plumb/ui`, and `@shadcn/lint`: `plumb` is in this workspace
-  now, but its `ui` export lives on the branch the move deliberately did not take, and
-  `@shadcn/lint` is external. The two packages are ignored for a different reason — each
-  carries its own `oxlint.config.ts`, and a _nested_ config may not declare
-  `options.typeAware`, so they lint themselves from their own directories
-  (`cd packages/joggle && pnpm lint`). In every case oxlint _builds_ a directory's config
-  before it applies any ignore — a root config's `ignorePatterns` does not stop it, and
-  neither does `.oxlintignore`. Only the command line does. If you add a root
+  `packages/plumb/**`, `packages/joggle/**` — and names the three seam packages explicitly,
+  because a bare `.` silently skipped their nested files. The exemplar's `.oxlintrc.json`
+  names `@autotelic/plumb`, `@autotelic/plumb/ui`, and `@shadcn/lint`: `plumb` and its `ui`
+  rulebook are both in this workspace now, and `@shadcn/lint` is external. The two packages
+  are ignored for a different reason — each carries its own `oxlint.config.ts`, and a
+  _nested_ config may not declare `options.typeAware`, so they lint themselves from their own
+  directories (`cd packages/joggle && pnpm lint`). In every case oxlint _builds_ a
+  directory's config before it applies any ignore — a root config's `ignorePatterns` does not
+  stop it, and neither does `.oxlintignore`. Only the command line does. If you add a root
   `oxlint.config.ts` rule, it will not reach any of the three.
 - **A stale exemplar catalog is a real failure**, not a formatting nit: regenerate it with
   `pnpm cutlist build --cwd examples/self` in the same change that moves its `src/`. The
