@@ -148,34 +148,36 @@ export const renderPatterns = (view: PatternView): string => {
   }
   if (view.families.length === 0) lines.push("- none", "")
 
-  lines.push("## compression", "")
+  lines.push("## entropy signals", "")
   lines.push(
-    "Three moves the model can name without judging: remove what nothing reaches, converge variants on their canonical, and migrate what is retired but still imported.",
+    "Signals for the tools that reign the codebase and for the next discovery pass. Cutlist does not compress: it shows where the vocabulary is under pressure, and leaves the move to Plumb, Joggle, or a person.",
     "",
   )
-  lines.push(`### orphans (${view.compression.orphans.length})`, "")
-  if (view.compression.orphans.length === 0) lines.push("- none")
+  lines.push(`### unreached (${view.signals.orphans.length})`, "")
+  if (view.signals.orphans.length === 0) lines.push("- none")
   else {
-    for (const orphan of view.compression.orphans.slice(0, 40)) lines.push(`- \`${orphan}\``)
-    if (view.compression.orphans.length > 40) {
-      lines.push(`- … ${String(view.compression.orphans.length - 40)} more in \`catalog.json\``)
+    for (const orphan of view.signals.orphans.slice(0, 40)) lines.push(`- \`${orphan}\``)
+    if (view.signals.orphans.length > 40) {
+      lines.push(`- … ${String(view.signals.orphans.length - 40)} more in \`catalog.json\``)
     }
   }
   lines.push("")
 
-  lines.push(`### variant families (${view.compression.variants.length})`, "")
-  for (const variant of view.compression.variants.slice(0, 20)) {
-    lines.push(`- keep \`${variant.canonical}\`; converge ${list(variant.members, 6)}`)
+  lines.push(`### variant families (${view.signals.variants.length})`, "")
+  for (const variant of view.signals.variants.slice(0, 20)) {
+    lines.push(
+      `- canonical \`${variant.canonical}\`; variants ${list(variant.members, 6)} (the canonical is the most-used member, not a command)`,
+    )
   }
-  if (view.compression.variants.length === 0) lines.push("- none")
-  if (view.compression.variants.length > 20) {
-    lines.push(`- … ${String(view.compression.variants.length - 20)} more in \`patterns.json\``)
+  if (view.signals.variants.length === 0) lines.push("- none")
+  if (view.signals.variants.length > 20) {
+    lines.push(`- … ${String(view.signals.variants.length - 20)} more in \`patterns.json\``)
   }
   lines.push("")
 
-  lines.push(`### retired in use (${view.compression.deprecated.length})`, "")
-  if (view.compression.deprecated.length === 0) lines.push("- none")
-  else for (const path of view.compression.deprecated) lines.push(`- \`${path}\``)
+  lines.push(`### retired in use (${view.signals.deprecated.length})`, "")
+  if (view.signals.deprecated.length === 0) lines.push("- none")
+  else for (const path of view.signals.deprecated) lines.push(`- \`${path}\``)
   lines.push("")
 
   return `${lines.join("\n").trimEnd()}\n`

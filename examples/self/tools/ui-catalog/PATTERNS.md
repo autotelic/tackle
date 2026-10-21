@@ -77,11 +77,11 @@ A family is a demand signal: the system is being worked around. The canonical is
 
 - none
 
-## compression
+## entropy signals
 
-Three moves the model can name without judging: remove what nothing reaches, converge variants on their canonical, and migrate what is retired but still imported.
+Signals for the tools that reign the codebase and for the next discovery pass. Cutlist does not compress: it shows where the vocabulary is under pressure, and leaves the move to Plumb, Joggle, or a person.
 
-### orphans (1)
+### unreached (1)
 
 - `src/components/ui/badge.tsx`
 

@@ -6,5 +6,5 @@
   "primitives": [],
   "shared": [],
   "families": [],
-  "compression": { "orphans": [], "variants": [], "deprecated": [] }
+  "signals": { "orphans": [], "variants": [], "deprecated": [] }
 }

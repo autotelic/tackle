@@ -73,13 +73,13 @@ const intent = new Map<string, Intent>([
 describe("patternsOf", () => {
   const view = patternsOf({ catalog, intent })
 
-  it("keeps the primitive, composition, family, and compression views", () => {
+  it("keeps the primitive, composition, family, and entropy-signal views", () => {
     expect(view.primitives.map((pattern) => pattern.name)).toEqual(["button"])
     expect(view.compositions.map((pattern) => pattern.name)).toEqual(["Components"])
     expect(view.families).toHaveLength(1)
-    expect(view.compression.orphans).toEqual([page.path])
-    expect(view.compression.deprecated).toEqual([oldButton.path])
-    expect(view.compression.variants[0]?.members).toEqual([oldButton.path])
+    expect(view.signals.orphans).toEqual([page.path])
+    expect(view.signals.deprecated).toEqual([oldButton.path])
+    expect(view.signals.variants[0]?.members).toEqual([oldButton.path])
   })
 
   it("carries authored intent and the facts around it", () => {

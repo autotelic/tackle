@@ -86,7 +86,7 @@ write("patterns.json", {
   primitives: [],
   shared: [],
   families: [],
-  compression: { orphans: [], variants: [], deprecated: [] },
+  signals: { orphans: [], variants: [], deprecated: [] },
 })
 write("recipes.json", {
   lexicon: { name: "recipes", version: 1 },

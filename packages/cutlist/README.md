@@ -92,8 +92,9 @@ what stops a generic-hook pair from scoring a perfect 1.0.
 composition), and relations to the parts it uses and the variants around it. The stable
 shape is ranked by a transparent five-factor score — tier 0.35, adoption 0.30, ownership
 0.15, variant status 0.10, documentation 0.10 — and every pattern carries its factors.
-`compression` names the three moves the facts support — remove orphans, converge variants
-on their canonical, migrate retired parts still imported.
+`signals` names where the vocabulary is under pressure — unreached parts, variant families,
+and retired parts still imported. Cutlist does not compress; the signal is for Plumb, Joggle,
+or a person.
 
 `RECIPES.md` and `recipes.json` turn the load-bearing patterns into a next turn: the import
 line, a minimal shape with the declared props, the feature's blocks and hook, and a note on

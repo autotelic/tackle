@@ -63,7 +63,7 @@ export interface Pattern {
   readonly factors: StabilityFactors
 }
 
-export interface Compression {
+export interface EntropySignals {
   readonly orphans: ReadonlyArray<string>
   readonly variants: ReadonlyArray<{
     readonly canonical: string
@@ -80,7 +80,7 @@ export interface PatternView {
   readonly primitives: ReadonlyArray<Pattern>
   readonly shared: ReadonlyArray<Pattern>
   readonly families: ReadonlyArray<Pattern>
-  readonly compression: Compression
+  readonly signals: EntropySignals
 }
 
 const PATTERN_KINDS: ReadonlyArray<PatternKind> = ["composition", "primitive", "shared", "family"]
@@ -197,7 +197,7 @@ export const decodePattern = (value: unknown): Pattern | undefined => {
   }
 }
 
-const decodeCompression = (value: unknown): Compression | undefined => {
+const decodeSignals = (value: unknown): EntropySignals | undefined => {
   if (!isRecord(value)) return undefined
   const orphans = strings(value.orphans)
   const deprecated = strings(value.deprecated)
@@ -222,7 +222,7 @@ export const decodePatternView = (value: unknown): PatternView | undefined => {
   const primitives = arrayOf(value.primitives, decodePattern)
   const shared = arrayOf(value.shared, decodePattern)
   const families = arrayOf(value.families, decodePattern)
-  const compression = decodeCompression(value.compression)
+  const signals = decodeSignals(value.signals)
   if (
     lexicon === undefined ||
     hash === undefined ||
@@ -231,7 +231,7 @@ export const decodePatternView = (value: unknown): PatternView | undefined => {
     primitives === undefined ||
     shared === undefined ||
     families === undefined ||
-    compression === undefined
+    signals === undefined
   ) {
     return undefined
   }
@@ -243,6 +243,6 @@ export const decodePatternView = (value: unknown): PatternView | undefined => {
     primitives,
     shared,
     families,
-    compression,
+    signals,
   }
 }

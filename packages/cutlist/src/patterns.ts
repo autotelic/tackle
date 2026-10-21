@@ -205,7 +205,7 @@ const patternOf = ({
   ...stable,
 })
 
-/** The whole pattern view, including the stable-shape ranking and the compression moves. */
+/** The whole pattern view, including the stable-shape ranking and the entropy signals. */
 export const patternsOf = ({
   catalog,
   intent,
@@ -387,7 +387,7 @@ export const patternsOf = ({
     primitives,
     shared,
     families,
-    compression: {
+    signals: {
       orphans: catalog.orphans,
       variants,
       deprecated,

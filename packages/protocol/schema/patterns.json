@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://autotelic.dev/tackle/protocol/patterns.json",
   "title": "Patterns",
-  "description": "The pattern-language view: each pattern has a context, forces, a solution, and relations; the view also carries the stable shape and the compression moves.",
+  "description": "The pattern-language view: each pattern has a context, forces, a solution, and relations; the view also carries the stable shape and the entropy signals.",
   "type": "object",
   "required": [
     "lexicon",
@@ -12,7 +12,7 @@
     "primitives",
     "shared",
     "families",
-    "compression"
+    "signals"
   ],
   "additionalProperties": false,
   "properties": {
@@ -23,7 +23,7 @@
     "primitives": { "type": "array", "items": { "$ref": "#/$defs/pattern" } },
     "shared": { "type": "array", "items": { "$ref": "#/$defs/pattern" } },
     "families": { "type": "array", "items": { "$ref": "#/$defs/pattern" } },
-    "compression": { "$ref": "#/$defs/compression" }
+    "signals": { "$ref": "#/$defs/signals" }
   },
   "$defs": {
     "lexicon": {
@@ -116,7 +116,7 @@
         "factors": { "$ref": "#/$defs/factors" }
       }
     },
-    "compression": {
+    "signals": {
       "type": "object",
       "required": ["orphans", "variants", "deprecated"],
       "additionalProperties": false,
