@@ -149,10 +149,7 @@ Most of this is artifact.md's list; the loop is what makes each item load-bearin
   evidence of a wrapper, not of a duplicate concept.
 - **Fragments for accepted compressions.** One file per accepted cut, the baseline pattern:
   it cannot conflict, it is citable, and it is the ratchet.
-- **A consumer.** Nothing in this workspace decodes `catalog.json` today; `decodeCatalog` is
-  used only by `protocol`'s tests, and `plumb/ui` lives on the branch the move did not take.
-  Until a joggle catalog rule reads it, cutlist produces a diagram of the vocabulary rather
-  than a force on it.
+- **A consumer.** `catalog.json` is decoded by `protocol`'s conformance tests and projected into the menu and the manifest that `plumb-ui` reads; `jig` runs the producer's staleness gate. What is still missing is a **joggle** rule that reads the duplicate candidates and clusters, so cutlist's deterministic half can aim the judged half. Until then, cutlist produces a navigable diagram of the vocabulary rather than a force on it.
 
 ## What would make this bad
 
