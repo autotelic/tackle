@@ -35,9 +35,10 @@ export interface ArtifactPaths {
 
 export interface Artifact {
   readonly paths: ArtifactPaths
-  readonly menu?: Menu
-  readonly patterns?: PatternView
-  readonly recipes?: RecipeView
+  /** Each view is `undefined` when its file is missing or malformed; the key is always present. */
+  readonly menu: Menu | undefined
+  readonly patterns: PatternView | undefined
+  readonly recipes: RecipeView | undefined
 }
 
 export interface MenuMatch {
@@ -102,12 +103,7 @@ export const readArtifact = (root: string): Artifact => {
   const menu = decodeMenu(readJson(paths.menuJson))
   const patterns = decodePatternView(readJson(paths.patternsJson))
   const recipes = decodeRecipeView(readJson(paths.recipesJson))
-  return {
-    paths,
-    ...(menu === undefined ? {} : { menu }),
-    ...(patterns === undefined ? {} : { patterns }),
-    ...(recipes === undefined ? {} : { recipes }),
-  }
+  return { paths, menu, patterns, recipes }
 }
 
 const importLine = (path: string, exports: ReadonlyArray<string>, name: string): string => {
