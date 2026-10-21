@@ -1,6 +1,6 @@
 import { Predicate } from "effect"
 import type { TierName } from "@autotelic/protocol"
-import { relativeToRoot, underAny } from "./paths.ts"
+import { underAnyRoot } from "./paths.ts"
 
 /*
  * Pass 4 — tier.
@@ -14,7 +14,7 @@ import { relativeToRoot, underAny } from "./paths.ts"
  */
 
 export interface TierOptions {
-  readonly root: string
+  readonly roots: ReadonlyArray<string>
   readonly primitiveRoots: ReadonlyArray<string>
   readonly sharedRoots: ReadonlyArray<string>
   readonly localRoots: ReadonlyArray<string>
@@ -26,12 +26,27 @@ export const tierOf = (
   owners: ReadonlyArray<string>,
   options: TierOptions,
 ): TierName => {
-  const path = relativeToRoot({ modulePath, root: options.root })
-  if (underAny(path, options.primitiveRoots)) return "primitive"
+  if (
+    underAnyRoot({
+      modulePath,
+      roots: options.roots,
+      targets: options.primitiveRoots,
+    })
+  ) {
+    return "primitive"
+  }
   const routeOwners = owners.filter((owner) => owner !== "shared")
   if (routeOwners.length >= 2) return "shared"
   if (routeOwners.length === 1) return "local"
-  if (underAny(path, options.sharedRoots)) return "shared"
+  if (
+    underAnyRoot({
+      modulePath,
+      roots: options.roots,
+      targets: options.sharedRoots,
+    })
+  ) {
+    return "shared"
+  }
   return "local"
 }
 

@@ -23,10 +23,18 @@ The composition pattern, where the tree attempts it: a context, a provider, one 
 
 ## shared (4)
 
+### component (2)
+
 - `project-toolbar` — `src/components/project-toolbar.tsx` — exports `ProjectToolbar` — 3 importers — part of `src/components` — The controls above a project's or the app's content. — composed of `useTheme`, `Button`, `Card`
-- `theme-context` — `src/components/theme-context.ts` — exports `ThemeContext` — 2 importers — part of `src/components` — The context the provider fills and the hook reads.
 - `theme-provider` `[provider]` — `src/components/theme-provider.tsx` — exports `ThemeProvider` — 2 importers — part of `src/components` — Supplies the current theme to everything below it. — composed of `useMemo`, `useState`, `ThemeContext.Provider`
-- `use-theme` — `src/components/use-theme.ts` — exports `useTheme` — 1 importers — part of `src/components` — Reads the theme the nearest ThemeProvider supplies. — composed of `useContext`
+
+### hook (1)
+
+- `use-theme` `[hook]` — `src/components/use-theme.ts` — exports `useTheme` — 1 importers — part of `src/components` — Reads the theme the nearest ThemeProvider supplies. — composed of `useContext`
+
+### context (1)
+
+- `theme-context` `[context]` — `src/components/theme-context.ts` — exports `ThemeContext` — 2 importers — part of `src/components` — The context the provider fills and the hook reads.
 
 ## local (3)
 

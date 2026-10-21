@@ -42,6 +42,11 @@ export interface Ownership {
   readonly routeOwner: "first-segment" | "full"
   /** Whether an importer's own importers count toward ownership transitively. */
   readonly transitive: boolean
+  /**
+   * Entry-point suffixes, relative to any source root (`entry.client.tsx`, `root.tsx`).
+   * Nothing imports an entry by design, so it is an orphan only when this list forgets it.
+   */
+  readonly entries?: ReadonlyArray<string>
 }
 
 /** The names a composition pattern is spelled with in this repo. */
@@ -198,7 +203,13 @@ const decodeOwnership = (value: unknown): Ownership | undefined => {
   const routeOwner = oneOf(value.routeOwner, ["first-segment", "full"] as const)
   const transitive = bool(value.transitive)
   if (routeOwner === undefined || transitive === undefined) return undefined
-  return { routeOwner, transitive }
+  const entries = "entries" in value ? strings(value.entries) : undefined
+  if ("entries" in value && entries === undefined) return undefined
+  return {
+    routeOwner,
+    transitive,
+    ...(entries === undefined ? {} : { entries }),
+  }
 }
 
 const decodePatterns = (value: unknown): Patterns | undefined => {

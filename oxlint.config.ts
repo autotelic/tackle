@@ -126,7 +126,17 @@ const CONDITIONAL_SPREAD_FILES = [
  * `Option` would allocate on every declaration to express a sentinel the caller reads
  * once. No operation is being guarded, so the Option contract has nothing to protect.
  */
-const PURE_LOOKUP_FILES = ["packages/cutlist/src/roles.ts"]
+const PURE_LOOKUP_FILES = ["packages/cutlist/src/roles.ts", "packages/cutlist/src/paths.ts"]
+
+/**
+ * Rooted option bags, not parallel derivations.
+ *
+ * `roots` is where the source tree lives; `primitiveRoots`, `sharedRoots`, and `localRoots`
+ * are categories INSIDE that tree. They are not two spellings of one collection, and the
+ * category lists change independently of the roots. The rule sees adjacent arrays and guesses
+ * a redundant field; here the guess is wrong.
+ */
+const ROOTED_OPTION_FILES = ["packages/cutlist/src/tier.ts", "packages/cutlist/src/owners.ts"]
 
 export default {
   ignorePatterns: [
@@ -158,6 +168,10 @@ export default {
     {
       files: PURE_LOOKUP_FILES,
       rules: { "plumb-effect/guarded-op-must-return-option": "off" },
+    },
+    {
+      files: ROOTED_OPTION_FILES,
+      rules: { "plumb/no-redundant-derived-field": "off" },
     },
     {
       // Reasoning belongs where the decision is made. joggle recorded exactly this for its

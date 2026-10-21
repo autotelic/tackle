@@ -1,5 +1,6 @@
 import type { PartRole } from "@autotelic/protocol"
 import type { SourceModule } from "./crawl.ts"
+import { isEntryPoint, isRouteEntry } from "./paths.ts"
 
 /*
  * A part's roles, read from its declarations rather than its filename.
@@ -24,8 +25,11 @@ export interface CompositionOptions {
 /** Everything role inference is allowed to know beyond the module itself. */
 export interface RoleOptions {
   readonly composition?: CompositionOptions
-  /** The declared local root, used to recognise a route. */
-  readonly routePrefix: string
+  /** The configured source roots and the route directory within each one. */
+  readonly roots: ReadonlyArray<string>
+  readonly routeDir: string
+  /** Declared entry-point suffixes; the same "nothing imports it" fact as a route. */
+  readonly entries: ReadonlyArray<string>
 }
 
 /** A declared hook, spelled with the repo's own prefix and a capitalised head. */
@@ -76,7 +80,16 @@ export const rolesOf = (module: SourceModule, options: RoleOptions): ReadonlyArr
     }
     if (dotExportOf(module, composition) !== undefined) roles.add("barrel")
   }
-  if (module.path.startsWith(options.routePrefix)) roles.add("route")
+  if (
+    isRouteEntry({
+      modulePath: module.path,
+      roots: options.roots,
+      routeDir: options.routeDir,
+    }) ||
+    isEntryPoint({ modulePath: module.path, roots: options.roots, entries: options.entries })
+  ) {
+    roles.add("route")
+  }
   if (roles.size === 0) roles.add("module")
 
   return [...roles].sort((left, right) => left.localeCompare(right))
@@ -84,12 +97,12 @@ export const rolesOf = (module: SourceModule, options: RoleOptions): ReadonlyArr
 
 /** The one role a part is listed under. The rest stay available as facets. */
 const KIND_ORDER: ReadonlyArray<PartRole> = [
+  "route",
   "component",
+  "provider",
   "hook",
   "context",
-  "provider",
   "barrel",
-  "route",
   "module",
 ]
 

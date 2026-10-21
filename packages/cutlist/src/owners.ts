@@ -1,5 +1,5 @@
 import { Order } from "effect"
-import { relativeToRoot, underAny } from "./paths.ts"
+import { afterRouteDir, underAnyRoot } from "./paths.ts"
 
 /*
  * Pass 3 — owner attribution.
@@ -13,22 +13,35 @@ import { relativeToRoot, underAny } from "./paths.ts"
  */
 
 export interface OwnerOptions {
-  /** The app root, repository-relative (e.g. "app"). */
-  readonly root: string
-  /** Where routes live, relative to the root (e.g. "routes"). */
+  /** The source roots, repository-relative. A monorepo has one per app. */
+  readonly roots: ReadonlyArray<string>
+  /** Where routes live, relative to a source root (e.g. "routes" or "app"). */
   readonly routeDir: string
   /** Roots whose importers all read as the single "shared" owner. */
   readonly sharedRoots: ReadonlyArray<string>
   readonly routeOwner: "first-segment" | "full"
+  /** Whether an importer's own importers count toward ownership transitively. */
+  readonly transitive: boolean
 }
 
 /** The owner an importing module contributes to the component it imports. */
 export const ownerOf = (modulePath: string, options: OwnerOptions): string | undefined => {
-  const path = relativeToRoot({ modulePath, root: options.root })
-  if (underAny(path, options.sharedRoots)) return "shared"
-  const prefix = `${options.routeDir}/`
-  if (!path.startsWith(prefix)) return undefined
-  const segment = path.slice(prefix.length).split("/")[0] ?? ""
+  if (
+    underAnyRoot({
+      modulePath,
+      roots: options.roots,
+      targets: options.sharedRoots,
+    })
+  ) {
+    return "shared"
+  }
+  const rest = afterRouteDir({
+    modulePath,
+    roots: options.roots,
+    routeDir: options.routeDir,
+  })
+  if (rest === undefined) return undefined
+  const segment = rest.split("/")[0] ?? ""
   if (segment === "") return undefined
   if (options.routeOwner === "full") return segment
   // A flat-file route is dotted (`projects_.$id.sponsors`); its domain is before the dot.
@@ -37,15 +50,30 @@ export const ownerOf = (modulePath: string, options: OwnerOptions): string | und
   return trimmed === "" ? undefined : trimmed
 }
 
-/** The distinct owners a component's importer paths contribute, sorted. */
+/**
+ * The distinct owners a component's importer paths contribute, sorted.
+ *
+ * Direct importers are the default. With `transitive` on, ownership follows the importers of
+ * importers as well: a leaf used by one wrapper that three routes use is shared, and calling it
+ * local because only the wrapper imports it directly is the wrong granularity for promotion.
+ */
 export const ownersOf = (
   importers: ReadonlyArray<string>,
   options: OwnerOptions,
+  graph: ReadonlyMap<string, ReadonlyArray<string>> | undefined,
 ): ReadonlyArray<string> => {
   const owners = new Set<string>()
-  for (const importer of importers) {
+  const seen = new Set<string>()
+  const queue = [...importers]
+  while (queue.length > 0) {
+    const importer = queue.pop()
+    if (importer === undefined || seen.has(importer)) continue
+    seen.add(importer)
     const owner = ownerOf(importer, options)
     if (owner !== undefined) owners.add(owner)
+    if (options.transitive && graph !== undefined) {
+      for (const next of graph.get(importer) ?? []) queue.push(next)
+    }
   }
   return [...owners].sort(Order.String)
 }

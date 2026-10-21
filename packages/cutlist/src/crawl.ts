@@ -279,11 +279,34 @@ const declarationsOf = (program: Ast): ReadonlyArray<Declaration> => {
     if (node.type === "ExportNamedDeclaration") {
       add(asRecord(node.declaration), true)
       for (const specifier of asArray(node.specifiers)) {
-        const exported = nameOf(asRecord(specifier)?.exported)
-        if (exported !== undefined) exportedNames.add(exported)
+        // The LOCAL name is what marks the declaration; the exported name may be an alias
+        // (`export { Badge as default }`). `exportsOf` records the public spelling.
+        const local = nameOf(asRecord(specifier)?.local)
+        if (local !== undefined) exportedNames.add(local)
       }
     } else if (node.type === "ExportDefaultDeclaration") {
-      add(asRecord(node.declaration), true)
+      const declaration = asRecord(node.declaration)
+      if (declaration?.type === "Identifier") {
+        const name = nameOf(declaration)
+        if (name !== undefined) exportedNames.add(name)
+      } else if (declaration === undefined) {
+        continue
+      } else if (
+        declaration.type === "ArrowFunctionExpression" ||
+        declaration.type === "FunctionExpression"
+      ) {
+        drafts.push({ name: "default", kind: "function", exported: true, node: declaration })
+      } else if (
+        declaration.type === "FunctionDeclaration" ||
+        declaration.type === "ClassDeclaration" ||
+        declaration.type === "VariableDeclaration"
+      ) {
+        add(declaration, true)
+      } else {
+        // `export default memo(...)`, `forwardRef(...)`, and similar expressions carry the
+        // component inside a call. Keep the expression so `renders` can still see its JSX.
+        drafts.push({ name: "default", kind: "variable", exported: true, node: declaration })
+      }
     } else {
       add(node, false)
     }

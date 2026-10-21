@@ -5,7 +5,9 @@ import { parseModule } from "./crawl.ts"
 import { featuresOf } from "./features.ts"
 
 const options = {
-  routePrefix: "routes/",
+  roots: ["components"],
+  routeDir: "routes",
+  entries: [],
   composition: { providerSuffix: "Provider", hookPrefix: "use" },
 }
 

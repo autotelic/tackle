@@ -1,5 +1,5 @@
 {
-  "hash": "f36aea8a90eadbcc6e9e373243903de01a972c071ce2c3b6b5a6fc81172096bb",
+  "hash": "767f577e6ee8cd40506267ea9460458787ad699566f88f970a4f0fd2087c520a",
   "lexicon": {
     "name": "catalog",
     "version": 1
@@ -268,7 +268,7 @@
       "tags": ["Card", "ProjectToolbar"],
       "signature": ["tag:Card", "tag:ProjectToolbar"],
       "documented": true,
-      "kind": "component",
+      "kind": "route",
       "roles": ["component", "route"],
       "exports": ["DashboardProjectSponsors"],
       "declarations": [
@@ -291,7 +291,7 @@
       "tags": ["Card", "ProjectToolbar", "ThemeProvider"],
       "signature": ["hook:useParams", "tag:Card", "tag:ProjectToolbar", "tag:ThemeProvider"],
       "documented": true,
-      "kind": "component",
+      "kind": "route",
       "roles": ["component", "route"],
       "exports": ["DashboardProject"],
       "declarations": [
@@ -314,7 +314,7 @@
       "tags": ["Card", "ProjectToolbar", "ThemeProvider"],
       "signature": ["tag:Card", "tag:ProjectToolbar", "tag:ThemeProvider"],
       "documented": true,
-      "kind": "component",
+      "kind": "route",
       "roles": ["component", "route"],
       "exports": ["SettingsPage"],
       "declarations": [

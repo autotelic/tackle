@@ -119,7 +119,7 @@
       "owners": [],
       "props": [],
       "tags": ["Card", "ProjectToolbar"],
-      "kind": "component",
+      "kind": "route",
       "roles": ["component", "route"],
       "exports": ["DashboardProjectSponsors"],
       "signature": ["tag:Card", "tag:ProjectToolbar"]
@@ -131,7 +131,7 @@
       "owners": [],
       "props": [],
       "tags": ["Card", "ProjectToolbar", "ThemeProvider"],
-      "kind": "component",
+      "kind": "route",
       "roles": ["component", "route"],
       "exports": ["DashboardProject"],
       "signature": ["hook:useParams", "tag:Card", "tag:ProjectToolbar", "tag:ThemeProvider"]
@@ -143,7 +143,7 @@
       "owners": [],
       "props": [],
       "tags": ["Card", "ProjectToolbar", "ThemeProvider"],
-      "kind": "component",
+      "kind": "route",
       "roles": ["component", "route"],
       "exports": ["SettingsPage"],
       "signature": ["tag:Card", "tag:ProjectToolbar", "tag:ThemeProvider"]

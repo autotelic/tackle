@@ -25,7 +25,7 @@ Only what `cutlist.config.json` declares — never shakti's paths hardcoded:
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1 · Parse     | every module → exports, imports, rendered tags, called hooks, declared props                                                                                                 |
 | 2 · Use-graph | for each module, the modules that import it                                                                                                                                  |
-| 3 · Owners    | an importer's owner is the **first route segment** (`projects_.$id.sponsors` → `projects`), or `shared` under a shared root                                                  |
+| 3 · Owners    | an importer's owner is the **first route segment** (`projects_.$id.sponsors` → `projects`), or `shared` under a shared root; `transitive` follows the importers of importers |
 | 4 · Tier      | primitive root → primitive; ≥2 route owners → shared; 1 → local; no route owners under a shared root → shared; otherwise local. Zero owners is an orphan, counted separately |
 | 5 · Signature | the **behavioral skeleton**, not props ∪ tags                                                                                                                                |
 | 6 · Tokens    | closed sets: colors, type, shape, spacing                                                                                                                                    |
@@ -37,7 +37,7 @@ Because every rendering derives from one computed model, they cannot drift from 
 other. The load-bearing output is the **lint manifest** — `plumb-ui.config.json` — which
 must match the shape `plumb/src/ui/manifest.ts` parses, so lint stays a _lookup_ rather
 than a second analysis. `plumb-ui` fails open on a malformed manifest (all rules go
-silent), which is why `cutlist check` exists: a stale catalog must be loud.
+silent), which is why `cutlist build --check` exists: a stale catalog must be loud.
 
 The menu is the one **mixed** record: `menu.json` joins the derived composition with
 authored intent from `intent/<name>.json`, so regenerating the menu can never overwrite a
@@ -53,11 +53,24 @@ touches the model.
 
 A part is a module, not "a component": roles are read from declarations (`createContext`,
 `.Provider`, a `use*` export), so hooks, providers, contexts, barrels, and routes sit in the
-same model as components. Each part also carries the public `exports`, how many modules
-`usedBy` it, its `feature` directory, and a `kind`. Features themselves are a **query** over
-those facts — a context plus a provider or barrel — not a classifier with its own schema.
-The menu reports the consequences: `sharedReach`/`localOnly` adoption, duplicate clusters
-with a canonical survivor, orphans, and authored parts still imported after retirement.
+same model as components. A default-exported component is a component even when the binding
+is declared first and exported later. Routes are entries (`routes/foo.tsx`,
+`routes/foo/route.tsx`) while a component under `routes/foo/components/` is owned by that
+route but is not one. Each part also carries the public `exports` (including `default`), how
+many modules `usedBy` it, its `feature` directory, and a `kind`. Features themselves are a
+**query** over those facts — a context plus a provider or barrel — not a classifier with its
+own schema. The menu reports the consequences: `sharedReach`/`localOnly` adoption, duplicate
+clusters with a canonical survivor, orphans, and authored parts still imported after
+retirement.
+
+## Multiple roots
+
+Tiers, routes, and aliases are written once and matched inside each configured source root.
+That is what lets one catalog cover a monorepo: `apps/auth/ui/app` and `apps/shop/ui/app` both
+have a `components/ui`, a `routes/`, and a `~/*` alias. An alias target is an array because a
+`paths` entry is an array; the graph tries each target and prefers the one in the importer's
+own root. `ownership.entries` declares the entry points nothing imports by design
+(`entry.client.tsx`, `root.tsx`), so they read as routes rather than orphans.
 
 ## The signature is the whole point
 

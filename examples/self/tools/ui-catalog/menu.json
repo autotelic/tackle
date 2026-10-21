@@ -4,7 +4,7 @@
     "version": 1
   },
   "title": "UI menu",
-  "hash": "f36aea8a90eadbcc6e9e373243903de01a972c071ce2c3b6b5a6fc81172096bb",
+  "hash": "767f577e6ee8cd40506267ea9460458787ad699566f88f970a4f0fd2087c520a",
   "features": [
     {
       "dir": "src/components",
@@ -118,7 +118,7 @@
       "name": "dashboard_.$id.sponsors",
       "path": "src/routes/dashboard_.$id.sponsors.tsx",
       "tier": "local",
-      "kind": "component",
+      "kind": "route",
       "roles": ["component", "route"],
       "exports": ["DashboardProjectSponsors"],
       "summary": "The sponsors tab of a project.",
@@ -129,7 +129,7 @@
       "name": "dashboard_.$id",
       "path": "src/routes/dashboard_.$id.tsx",
       "tier": "local",
-      "kind": "component",
+      "kind": "route",
       "roles": ["component", "route"],
       "exports": ["DashboardProject"],
       "summary": "One project, by id.",
@@ -140,7 +140,7 @@
       "name": "settings_",
       "path": "src/routes/settings_.tsx",
       "tier": "local",
-      "kind": "component",
+      "kind": "route",
       "roles": ["component", "route"],
       "exports": ["SettingsPage"],
       "summary": "Settings.",

@@ -1,6 +1,6 @@
 import fc from "fast-check"
 import { describe, expect, it } from "vitest"
-import { isTestPath } from "./crawl.ts"
+import { isTestPath, parseModule } from "./crawl.ts"
 
 /*
  * A test file is source, but it is not a part of the UI model. The catalog is derived from
@@ -28,5 +28,41 @@ describe("isTestPath", () => {
         expect(isTestPath(`${stem}.spec.tsx`)).toBe(true)
       }),
     )
+  })
+})
+
+describe("default exports", () => {
+  const declarations = (text: string) => parseModule({ filename: "x.tsx", text }).declarations
+
+  it("marks a default-exported declaration as exported", () => {
+    const found = declarations("const Badge = () => <span />\nexport default Badge")
+    expect(found.find((declaration) => declaration.name === "Badge")).toMatchObject({
+      exported: true,
+      renders: true,
+    })
+  })
+
+  it("marks an aliased default export", () => {
+    const found = declarations("const Badge = () => <span />\nexport { Badge as default }")
+    expect(found.find((declaration) => declaration.name === "Badge")).toMatchObject({
+      exported: true,
+      renders: true,
+    })
+  })
+
+  it("keeps an anonymous default expression", () => {
+    const found = declarations("export default () => <span />")
+    expect(found.find((declaration) => declaration.name === "default")).toMatchObject({
+      exported: true,
+      renders: true,
+    })
+  })
+
+  it("keeps a named default function", () => {
+    const found = declarations("export default function Button() { return <button /> }")
+    expect(found.find((declaration) => declaration.name === "Button")).toMatchObject({
+      exported: true,
+      renders: true,
+    })
   })
 })

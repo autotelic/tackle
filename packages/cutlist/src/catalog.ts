@@ -14,7 +14,7 @@ import {
 } from "@autotelic/protocol"
 import { listSources, readModules, type SourceModule } from "./crawl.ts"
 import { dirOf, featuresOf } from "./features.ts"
-import { dirnamePosix, normalizePosix, commonRootOf, relativeToRoot, underAny } from "./paths.ts"
+import { dirnamePosix, normalizePosix, isEntryPoint, isRouteEntry, underAnyRoot } from "./paths.ts"
 import { ownersOf } from "./owners.ts"
 import { kindOf, rolesOf } from "./roles.ts"
 import { skeletonOf } from "./signature.ts"
@@ -56,7 +56,7 @@ export const idOfModule = (path: string): string =>
 
 interface AliasRule {
   readonly prefix: string
-  readonly replacement: string
+  readonly replacements: ReadonlyArray<string>
 }
 
 const aliasRules = (
@@ -64,10 +64,12 @@ const aliasRules = (
 ): ReadonlyArray<AliasRule> => {
   const rules: Array<AliasRule> = []
   for (const [pattern, targets] of Object.entries(alias)) {
-    const target = targets[0]
-    if (target !== undefined && pattern.endsWith("/*")) {
-      rules.push({ prefix: pattern.slice(0, -1), replacement: target.slice(0, -1) })
-    }
+    if (!pattern.endsWith("/*")) continue
+    const replacements = targets
+      .filter((target) => target.endsWith("/*"))
+      .map((target) => target.slice(0, -1))
+    if (replacements.length === 0) continue
+    rules.push({ prefix: pattern.slice(0, -1), replacements })
   }
   return rules
 }
@@ -82,34 +84,38 @@ interface SpecifierQuery {
   readonly rules: ReadonlyArray<AliasRule>
 }
 
-/** Resolve an import specifier to a candidate module base path, or nothing if external. */
+/**
+ * Resolve an import specifier to candidate module base paths, or none if external.
+ *
+ * The result is extension-less because the graph keys a module by its base however a caller
+ * spells it; readers here import WITH an extension (`allowImportingTsExtensions`), so dropping
+ * it is the difference between a real use-graph and one where every component is an orphan.
+ */
 const resolveSpecifier = ({
   specifier,
   importerDir,
   rules,
-}: SpecifierQuery): string | undefined => {
-  let resolved: string | undefined
+}: SpecifierQuery): ReadonlyArray<string> => {
   if (specifier.startsWith(".")) {
-    resolved = normalizePosix(`${importerDir}/${specifier}`)
-  } else {
-    for (const rule of rules) {
-      if (specifier.startsWith(rule.prefix)) {
-        resolved = normalizePosix(rule.replacement + specifier.slice(rule.prefix.length))
-        break
-      }
-    }
+    return [normalizePosix(`${importerDir}/${specifier}`).replace(SOURCE_EXTENSION, "")]
   }
-  // The graph is keyed by the extension-less base, because one module is one module however
-  // a caller spells it. Readers in this workspace import WITH an extension
-  // (`allowImportingTsExtensions`), so dropping it here is the difference between a real
-  // use-graph and one where every component is an orphan.
-  return resolved === undefined ? undefined : resolved.replace(SOURCE_EXTENSION, "")
+  for (const rule of rules) {
+    if (!specifier.startsWith(rule.prefix)) continue
+    const tail = specifier.slice(rule.prefix.length)
+    // A `paths` entry is an array for a reason: one alias can point at several apps.
+    // Keep the order, and let the graph pick the candidate that names a real module.
+    return rule.replacements.map((replacement) =>
+      normalizePosix(replacement + tail).replace(SOURCE_EXTENSION, ""),
+    )
+  }
+  return []
 }
 
 /** Pass 2 — for each module, the modules that import it. Exported for the graph's own test. */
 export const importerGraph = (
   modules: ReadonlyArray<SourceModule>,
   alias: Readonly<Record<string, ReadonlyArray<string>>>,
+  roots: ReadonlyArray<string> = [],
 ): ReadonlyMap<string, ReadonlyArray<string>> => {
   const byBase = new Map<string, string>()
   for (const module of modules) {
@@ -121,27 +127,50 @@ export const importerGraph = (
   const importers = new Map<string, Set<string>>()
   for (const module of modules) {
     const dir = dirnamePosix(module.path)
+    // An alias target is global, but a monorepo has one `components/Button` per app. Read
+    // the aliased import from the importer's own root first; a target under another root is
+    // still a candidate, which is what lets a shared package alias out of the app.
+    const importerRoot = roots
+      .filter((root) => module.path === root || module.path.startsWith(`${root}/`))
+      .sort((left, right) => right.length - left.length)[0]
     for (const specifier of module.imports) {
       const resolved = resolveSpecifier({ specifier, importerDir: dir, rules })
-      if (resolved === undefined) continue
-      const target = byBase.get(resolved)
-      if (target === undefined || target === module.path) continue
-      const set = importers.get(target) ?? new Set<string>()
-      set.add(module.path)
-      importers.set(target, set)
+      const ordered =
+        importerRoot === undefined || resolved.length < 2
+          ? resolved
+          : [...resolved].sort((left, right) => {
+              const leftSame = left === importerRoot || left.startsWith(`${importerRoot}/`) ? 1 : 0
+              const rightSame =
+                right === importerRoot || right.startsWith(`${importerRoot}/`) ? 1 : 0
+              return rightSame - leftSame
+            })
+      for (const candidate of ordered) {
+        const target = byBase.get(candidate)
+        if (target === undefined || target === module.path) continue
+        const set = importers.get(target) ?? new Set<string>()
+        set.add(module.path)
+        importers.set(target, set)
+        break
+      }
     }
   }
   return new Map([...importers].map(([key, value]) => [key, [...value].sort(Order.String)]))
 }
 
-/** A route/page module — an entry point, not a component. */
+/** A route or entry module — an entry point, not a component. */
 const isRouteModule = ({
   path,
-  routePrefix,
+  roots,
+  routeDir,
+  entries,
 }: {
   readonly path: string
-  readonly routePrefix: string
-}): boolean => path.startsWith(routePrefix)
+  readonly roots: ReadonlyArray<string>
+  readonly routeDir: string
+  readonly entries: ReadonlyArray<string>
+}): boolean =>
+  isRouteEntry({ modulePath: path, roots, routeDir }) ||
+  isEntryPoint({ modulePath: path, roots, entries })
 
 /**
  * A signature must carry more than one fact to be worth comparing.
@@ -162,7 +191,9 @@ const MIN_COMPARABLE_SIGNATURE = 2
  */
 export const duplicateCandidates = (
   components: ReadonlyArray<CatalogComponent>,
-  routePrefix: string,
+  roots: ReadonlyArray<string>,
+  routeDir: string,
+  entries: ReadonlyArray<string>,
 ): ReadonlyArray<DuplicateCandidate> => {
   const candidates: Array<DuplicateCandidate> = []
   for (let leftIndex = 0; leftIndex < components.length; leftIndex += 1) {
@@ -173,14 +204,17 @@ export const duplicateCandidates = (
     for (let rightIndex = leftIndex + 1; rightIndex < components.length; rightIndex += 1) {
       const right = components[rightIndex]
       if (right === undefined || right.signature.length < MIN_COMPARABLE_SIGNATURE) continue
-      if (left.kind !== right.kind) continue
+      const leftRoute = isRouteModule({ path: left.path, roots, routeDir, entries })
+      const rightRoute = isRouteModule({ path: right.path, roots, routeDir, entries })
       // Two route files rendering the same shared component are not duplicates; they
       // are two pages. Route-vs-component IS kept: a page that inlined a copy is a smell.
+      if (leftRoute && rightRoute) continue
       if (
-        isRouteModule({ path: left.path, routePrefix }) &&
-        isRouteModule({ path: right.path, routePrefix })
-      )
+        left.kind !== right.kind &&
+        !((leftRoute && right.kind === "component") || (rightRoute && left.kind === "component"))
+      ) {
         continue
+      }
       const score = similarityOf(leftSignature, signatureOf(right))
       if (score < DUPLICATE_THRESHOLD) continue
       candidates.push({ left: left.path, right: right.path, score, basis: "skeleton" })
@@ -306,23 +340,26 @@ export const duplicateClusters = (
 export const healthOf = ({
   components,
   graph,
-  sourceRoot,
+  roots,
   primitiveRoots,
   sharedRoots,
+  entries,
 }: {
   readonly components: ReadonlyArray<CatalogComponent>
   readonly graph: ReadonlyMap<string, ReadonlyArray<string>>
-  readonly sourceRoot: string
+  readonly roots: ReadonlyArray<string>
   readonly primitiveRoots: ReadonlyArray<string>
   readonly sharedRoots: ReadonlyArray<string>
+  readonly entries: ReadonlyArray<string>
 }): CatalogHealth => {
   const shared = new Set(
     components
       .filter((component) =>
-        underAny(relativeToRoot({ modulePath: component.path, root: sourceRoot }), [
-          ...primitiveRoots,
-          ...sharedRoots,
-        ]),
+        underAnyRoot({
+          modulePath: component.path,
+          roots,
+          targets: [...primitiveRoots, ...sharedRoots],
+        }),
       )
       .map((component) => component.path),
   )
@@ -330,7 +367,10 @@ export const healthOf = ({
     (component) =>
       component.kind === "component" || component.kind === "hook" || component.kind === "route",
   )
-  const adopters = ui.filter((component) => !shared.has(component.path))
+  const adopters = ui.filter(
+    (component) =>
+      !shared.has(component.path) && !isEntryPoint({ modulePath: component.path, roots, entries }),
+  )
   const importsByPath = new Map<string, Set<string>>()
   for (const [target, importers] of graph) {
     for (const importer of importers) {
@@ -358,19 +398,19 @@ export const buildCatalog = (
   Effect.gen(function* () {
     const files = yield* listSources(root, config.roots)
     const modules = yield* readModules(root, files)
-    const graph = importerGraph(modules, config.alias ?? {})
+    const graph = importerGraph(modules, config.alias ?? {}, config.roots)
 
-    const appRoot = commonRootOf(config.roots)
     const routeDir = config.tiers.local[0] ?? "routes"
-    const routePrefix = appRoot === "" ? `${routeDir}/` : `${appRoot}/${routeDir}/`
+    const entries = config.ownership.entries ?? []
     const ownerOptions = {
-      root: appRoot,
+      roots: config.roots,
       routeDir,
       sharedRoots: config.tiers.shared,
       routeOwner: config.ownership.routeOwner,
+      transitive: config.ownership.transitive,
     }
     const tierOptions = {
-      root: appRoot,
+      roots: config.roots,
       primitiveRoots: config.tiers.primitive,
       sharedRoots: config.tiers.shared,
       localRoots: config.tiers.local,
@@ -379,7 +419,9 @@ export const buildCatalog = (
       ...(config.patterns?.composition === undefined
         ? {}
         : { composition: config.patterns.composition }),
-      routePrefix,
+      roots: config.roots,
+      routeDir,
+      entries,
     }
     const rolesByPath = new Map(
       modules.map((module) => [module.path, rolesOf(module, roleOptions)]),
@@ -391,7 +433,7 @@ export const buildCatalog = (
 
     const components: ReadonlyArray<CatalogComponent> = modules
       .map((module) => {
-        const owners = ownersOf(graph.get(module.path) ?? [], ownerOptions)
+        const owners = ownersOf(graph.get(module.path) ?? [], ownerOptions, graph)
         const roles = rolesByPath.get(module.path) ?? ["module"]
         const dir = dirOf(module.path)
         // A type is part of the module's surface but not something a consumer imports
@@ -401,7 +443,7 @@ export const buildCatalog = (
             .filter((declaration) => declaration.kind === "type")
             .map((declaration) => declaration.name),
         )
-        const exports = module.exports.filter((name) => name !== "default" && !typeNames.has(name))
+        const exports = module.exports.filter((name) => !typeNames.has(name))
         const usedBy = graph.get(module.path)?.length ?? 0
         return {
           id: idOfModule(module.path),
@@ -432,19 +474,21 @@ export const buildCatalog = (
     const orphans = components
       .filter(
         (component) =>
-          component.owners.length === 0 && !isRouteModule({ path: component.path, routePrefix }),
+          component.owners.length === 0 &&
+          !isRouteModule({ path: component.path, roots: config.roots, routeDir, entries }),
       )
       .map((component) => component.path)
 
-    const duplicates = duplicateCandidates(components, routePrefix)
+    const duplicates = duplicateCandidates(components, config.roots, routeDir, entries)
     const clusters = duplicateClusters(components, duplicates)
     const health = {
       ...healthOf({
         components,
         graph,
-        sourceRoot: appRoot,
+        roots: config.roots,
         primitiveRoots: config.tiers.primitive,
         sharedRoots: config.tiers.shared,
+        entries,
       }),
       duplicateClusters: clusters.length,
     }

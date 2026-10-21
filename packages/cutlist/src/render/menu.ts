@@ -1,4 +1,10 @@
-import { hasIntent, type Menu, type MenuEntry, type TierName } from "@autotelic/protocol"
+import {
+  hasIntent,
+  type Menu,
+  type MenuEntry,
+  type PartRole,
+  type TierName,
+} from "@autotelic/protocol"
 
 /*
  * `menu.json` and `MENU.md`.
@@ -15,6 +21,17 @@ import { hasIntent, type Menu, type MenuEntry, type TierName } from "@autotelic/
  */
 
 const TIER_ORDER: ReadonlyArray<TierName> = ["primitive", "shared", "local"]
+
+/** The order a tier's kind groups appear in: entry points first, plumbing last. */
+const MENU_KIND_ORDER: ReadonlyArray<PartRole> = [
+  "route",
+  "component",
+  "provider",
+  "hook",
+  "context",
+  "barrel",
+  "module",
+]
 
 const plural = (count: number, forms: readonly [one: string, many: string]): string =>
   `${count} ${count === 1 ? forms[0] : forms[1]}`
@@ -57,6 +74,35 @@ const authoredOf = (entry: MenuEntry): ReadonlyArray<string> => {
   return parts
 }
 
+/**
+ * One line of the index.
+ *
+ * The role tag names the part's SPECIFIC roles, not the default `component`: a route line
+ * says `[route]`, a provider says `[provider]`, and ordinary components carry no tag. That is
+ * the difference between an app index and a list of files.
+ */
+const entryLine = (entry: MenuEntry): string => {
+  const extras = (entry.roles ?? []).filter((role) => role !== entry.kind && role !== "component")
+  const shown =
+    entry.kind === undefined || entry.kind === "component" || entry.kind === "module"
+      ? extras
+      : [entry.kind, ...extras]
+  const kind = shown.length === 0 ? "" : ` \`[${shown.join(", ")}]\``
+  const exportsOf =
+    entry.exports === undefined || entry.exports.length === 0
+      ? ""
+      : ` — exports ${some(entry.exports, 3)}`
+  const usage =
+    entry.usedBy === undefined || entry.usedBy === 0 ? "" : ` — ${entry.usedBy} importers`
+  const feature = entry.feature === undefined ? "" : ` — part of \`${entry.feature}\``
+  const authored = authoredOf(entry)
+  const summary = authored.length === 0 ? "" : ` — ${authored.join(" — ")}`
+  const composed =
+    entry.composedOf.length === 0 ? "" : ` — composed of ${some(entry.composedOf, 4)}`
+  const flag = hasIntent(entry) ? "" : " _(undocumented)_"
+  return `- \`${entry.name}\`${kind} — \`${entry.path}\`${exportsOf}${usage}${feature}${summary}${composed}${flag}`
+}
+
 /** The menu as Markdown — the same model, for a person or an agent's first look. */
 export const renderMenu = (menu: Menu): string => {
   const lines: Array<string> = [
@@ -97,24 +143,23 @@ export const renderMenu = (menu: Menu): string => {
   for (const tier of TIER_ORDER) {
     const entries = menu.entries.filter((entry) => entry.tier === tier)
     lines.push(`## ${tier} (${entries.length})`, "")
+    const groups = new Map<PartRole, Array<MenuEntry>>()
     for (const entry of entries) {
-      const extraRoles = (entry.roles ?? []).filter((role) => role !== entry.kind)
-      const kind = extraRoles.length === 0 ? "" : ` \`[${extraRoles.join(", ")}]\``
-      const exportsOf =
-        entry.exports === undefined || entry.exports.length === 0
-          ? ""
-          : ` — exports ${some(entry.exports, 3)}`
-      const usage =
-        entry.usedBy === undefined || entry.usedBy === 0 ? "" : ` — ${entry.usedBy} importers`
-      const feature = entry.feature === undefined ? "" : ` — part of \`${entry.feature}\``
-      const authored = authoredOf(entry)
-      const summary = authored.length === 0 ? "" : ` — ${authored.join(" — ")}`
-      const composed =
-        entry.composedOf.length === 0 ? "" : ` — composed of ${some(entry.composedOf, 4)}`
-      const flag = hasIntent(entry) ? "" : " _(undocumented)_"
-      lines.push(
-        `- \`${entry.name}\`${kind} — \`${entry.path}\`${exportsOf}${usage}${feature}${summary}${composed}${flag}`,
-      )
+      const kind = entry.kind ?? "component"
+      const group = groups.get(kind) ?? []
+      group.push(entry)
+      groups.set(kind, group)
+    }
+    if (groups.size <= 1) {
+      for (const entry of entries) lines.push(entryLine(entry))
+    } else {
+      for (const kind of MENU_KIND_ORDER) {
+        const group = groups.get(kind)
+        if (group === undefined) continue
+        lines.push(`### ${kind} (${group.length})`, "")
+        for (const entry of group) lines.push(entryLine(entry))
+        lines.push("")
+      }
     }
     lines.push("")
   }

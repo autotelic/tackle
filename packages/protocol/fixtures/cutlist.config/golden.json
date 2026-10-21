@@ -12,7 +12,11 @@
     "vars": "src/styles/app.css"
   },
   "hooks": { "barrel": "src/components" },
-  "ownership": { "routeOwner": "first-segment", "transitive": false },
+  "ownership": {
+    "routeOwner": "first-segment",
+    "transitive": false,
+    "entries": ["entry.client.tsx"]
+  },
   "patterns": {
     "composition": { "providerSuffix": "Provider", "hookPrefix": "use" },
     "urlState": { "router": "tanstack", "reader": "useSearch" }

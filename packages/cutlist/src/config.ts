@@ -43,6 +43,7 @@ const HooksSchema = Schema.Struct({ barrel: Schema.optionalKey(Schema.String) })
 const OwnershipSchema = Schema.Struct({
   routeOwner: Schema.Literals(["first-segment", "full"]),
   transitive: Schema.Boolean,
+  entries: Schema.optionalKey(Schema.Array(Schema.String)),
 })
 
 const OutputSchema = Schema.Struct({

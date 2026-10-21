@@ -97,7 +97,9 @@ describe("duplicateCandidates", () => {
         component("app/components/FirstContext.ts", ["hook:useContext"]),
         component("app/components/SecondContext.ts", ["hook:useContext"]),
       ],
-      "app/routes/",
+      ["app"],
+      "routes",
+      [],
     )
     expect(candidates).toEqual([])
   })
@@ -109,7 +111,9 @@ describe("duplicateCandidates", () => {
         component("app/components/Combobox.tsx", signature),
         component("app/components/ComboBoxV2.tsx", signature),
       ],
-      "app/routes/",
+      ["app"],
+      "routes",
+      [],
     )
     expect(candidates).toHaveLength(1)
     expect(candidates[0]?.score).toBe(1)
@@ -128,7 +132,9 @@ describe("duplicateCandidates", () => {
           "hook:useState",
         ]),
       ],
-      "app/routes/",
+      ["app"],
+      "routes",
+      [],
     )
     expect(candidates.map((candidate) => [candidate.left, candidate.right])).toEqual([
       ["app/components/FirstDialog.tsx", "app/components/SecondDialog.tsx"],
@@ -190,10 +196,11 @@ describe("duplicateClusters", () => {
 
 describe("ownerOf", () => {
   const options = {
-    root: "app",
+    roots: ["app"],
     routeDir: "routes",
     sharedRoots: ["components"],
     routeOwner: "first-segment" as const,
+    transitive: false,
   }
 
   it("collapses a deep route to its first segment", () => {
@@ -207,11 +214,20 @@ describe("ownerOf", () => {
   it("reads nothing from an unrelated module", () => {
     expect(ownerOf("app/services/db.ts", options)).toBeUndefined()
   })
+
+  it("reads a route owner inside a monorepo app root", () => {
+    expect(
+      ownerOf("apps/auth/ui/app/routes/login._index.tsx", {
+        ...options,
+        roots: ["apps/auth/ui/app", "apps/shop/ui/app"],
+      }),
+    ).toBe("login")
+  })
 })
 
 describe("tierOf", () => {
   const options = {
-    root: "app",
+    roots: ["app"],
     primitiveRoots: ["components/ui"],
     sharedRoots: ["components"],
     localRoots: ["routes"],
@@ -227,6 +243,15 @@ describe("tierOf", () => {
 
   it("keeps one route owner local", () => {
     expect(tierOf("app/components/Badge.tsx", ["accounts"], options)).toBe("local")
+  })
+
+  it("finds a primitive inside any monorepo app root", () => {
+    expect(
+      tierOf("apps/shop/ui/app/components/ui/button.tsx", [], {
+        ...options,
+        roots: ["apps/auth/ui/app", "apps/shop/ui/app"],
+      }),
+    ).toBe("primitive")
   })
 })
 
@@ -267,6 +292,37 @@ describe("importerGraph", () => {
     const graph = importerGraph(modules, alias)
     expect([...(graph.get("src/components/panel.tsx") ?? [])]).toEqual(["src/routes/settings.tsx"])
   })
+
+  it("tries every target of a multi-app alias", () => {
+    const mono: ReadonlyArray<SourceModule> = [
+      parseModule({
+        filename: "apps/auth/ui/app/routes/page.tsx",
+        text: 'import { Button } from "~/components/Button"',
+      }),
+      parseModule({
+        filename: "apps/auth/ui/app/components/Button.tsx",
+        text: "export function Button() {}",
+      }),
+      parseModule({
+        filename: "apps/shop/ui/app/routes/page.tsx",
+        text: 'import { Button } from "~/components/Button"',
+      }),
+      parseModule({
+        filename: "apps/shop/ui/app/components/Button.tsx",
+        text: "export function Button() {}",
+      }),
+    ]
+    const graph = importerGraph(mono, { "~/*": ["apps/auth/ui/app/*", "apps/shop/ui/app/*"] }, [
+      "apps/auth/ui/app",
+      "apps/shop/ui/app",
+    ])
+    expect([...(graph.get("apps/auth/ui/app/components/Button.tsx") ?? [])]).toEqual([
+      "apps/auth/ui/app/routes/page.tsx",
+    ])
+    expect([...(graph.get("apps/shop/ui/app/components/Button.tsx") ?? [])]).toEqual([
+      "apps/shop/ui/app/routes/page.tsx",
+    ])
+  })
 })
 
 describe("healthOf", () => {
@@ -297,9 +353,10 @@ describe("healthOf", () => {
     const health = healthOf({
       components,
       graph,
-      sourceRoot: "src",
+      roots: ["src"],
       primitiveRoots: ["components/ui"],
       sharedRoots: ["components"],
+      entries: [],
     })
     // The two shared-layer parts are the system, not adopters of it: two app modules are,
     // and one of them imports the button. Counting the library in the denominator used to

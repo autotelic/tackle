@@ -44,7 +44,12 @@
       "additionalProperties": false,
       "properties": {
         "routeOwner": { "enum": ["first-segment", "full"] },
-        "transitive": { "type": "boolean" }
+        "transitive": { "type": "boolean" },
+        "entries": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Entry-point suffixes relative to any source root; nothing imports them by design."
+        }
       }
     },
     "patterns": {
