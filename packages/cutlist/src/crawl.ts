@@ -14,6 +14,27 @@ import { parseSync } from "oxc-parser"
  * would buy nothing and couple this pass to a parser version.
  */
 
+/** An object literal, and the name it was bound to when it has one. */
+export interface ObjectLiteral {
+  /** The declarator's name — `Settings` in `export const Settings = { … }`. */
+  readonly name?: string
+  /** The keys written in source order. Spread properties contribute none. */
+  readonly keys: ReadonlyArray<string>
+}
+
+/** One declaration in a module. A part's kind is a question about these, not about the file. */
+export interface Declaration {
+  readonly name: string
+  readonly kind: "function" | "class" | "variable" | "type"
+  readonly exported: boolean
+  /** Whether the declaration's own body renders JSX. */
+  readonly renders: boolean
+  /** Callee names inside the declaration; `useState`, `createContext`, `memo`. */
+  readonly calls: ReadonlyArray<string>
+  /** Keys, when a variable is bound to an object literal. */
+  readonly objectKeys?: ReadonlyArray<string>
+}
+
 /** One parsed module, reduced to what the catalog needs. */
 export interface SourceModule {
   /** Repository-relative, forward-slashed. */
@@ -23,6 +44,12 @@ export interface SourceModule {
   readonly tags: ReadonlyArray<string>
   readonly hooks: ReadonlyArray<string>
   readonly props: ReadonlyArray<string>
+  /** Object literals in the module. The composition pattern lives in their keys. */
+  readonly objects: ReadonlyArray<ObjectLiteral>
+  /** Declarations in source order. The unit a kind is assigned to. */
+  readonly declarations: ReadonlyArray<Declaration>
+  /** Whether the module calls `createContext` — the pattern's structural signature. */
+  readonly createsContext: boolean
   readonly documented: boolean
 }
 
@@ -152,6 +179,127 @@ const propsOf = (program: Ast): ReadonlyArray<string> => {
   return [...props].sort(Order.String)
 }
 
+/** The keys of an object literal, skipping spreads and computed properties. */
+const objectKeysOf = (object: Ast): ReadonlyArray<string> => {
+  const keys: Array<string> = []
+  for (const property of asArray(object.properties)) {
+    const entry = asRecord(property)
+    if (entry === undefined || entry.type !== "Property") continue
+    const key = nameOf(entry.key) ?? stringField(entry.key, "value")
+    if (key !== undefined) keys.push(key)
+  }
+  return keys
+}
+
+/** Callee names anywhere under a node, deduplicated. */
+const calleeNamesIn = (node: Ast): ReadonlyArray<string> => {
+  const names = new Set<string>()
+  walk(node, (child) => {
+    if (child.type !== "CallExpression") return
+    const name = calleeNameOf(child.callee)
+    if (name !== undefined) names.add(name)
+  })
+  return [...names].sort(Order.String)
+}
+
+/** Whether JSX appears anywhere under a node. A declaration renders, or it does not. */
+const rendersIn = (node: Ast): boolean => {
+  let renders = false
+  walk(node, (child) => {
+    if (child.type === "JSXOpeningElement") renders = true
+  })
+  return renders
+}
+
+/**
+ * The module's top-level declarations.
+ *
+ * A file is not one thing. `settings-context.tsx` declares a context *and* the hook that
+ * reads it; `settings-provider.tsx` declares the component that supplies it. Assigning a
+ * kind per file forces a lie, so the crawler keeps each declaration and lets the kind
+ * query choose.
+ */
+const declarationsOf = (program: Ast): ReadonlyArray<Declaration> => {
+  interface Draft {
+    readonly name: string
+    readonly kind: Declaration["kind"]
+    readonly exported: boolean
+    readonly node: Ast
+    readonly objectKeys?: ReadonlyArray<string>
+  }
+  const drafts: Array<Draft> = []
+  const exportedNames = new Set<string>()
+
+  const add = (declaration: Ast | undefined, exported: boolean): void => {
+    if (declaration === undefined) return
+    if (declaration.type === "FunctionDeclaration" || declaration.type === "ClassDeclaration") {
+      const name = nameOf(declaration.id)
+      if (name === undefined) return
+      drafts.push({
+        name,
+        kind: declaration.type === "FunctionDeclaration" ? "function" : "class",
+        exported,
+        node: declaration,
+      })
+      return
+    }
+    if (declaration.type === "VariableDeclaration") {
+      for (const declarator of asArray(declaration.declarations)) {
+        const entry = asRecord(declarator)
+        const name = nameOf(entry?.id)
+        if (entry === undefined || name === undefined) continue
+        const init = asRecord(entry.init)
+        const functionLike =
+          init !== undefined &&
+          (init.type === "ArrowFunctionExpression" || init.type === "FunctionExpression")
+        const objectKeys = init?.type === "ObjectExpression" ? objectKeysOf(init) : undefined
+        drafts.push({
+          name,
+          kind: functionLike ? "function" : "variable",
+          exported,
+          node: entry,
+          ...(objectKeys === undefined ? {} : { objectKeys }),
+        })
+      }
+      return
+    }
+    if (
+      declaration.type === "TSInterfaceDeclaration" ||
+      declaration.type === "TSTypeAliasDeclaration" ||
+      declaration.type === "TSEnumDeclaration"
+    ) {
+      const name = nameOf(declaration.id)
+      if (name !== undefined) drafts.push({ name, kind: "type", exported, node: declaration })
+    }
+  }
+
+  for (const statement of asArray(program.body)) {
+    const node = asRecord(statement)
+    if (node === undefined) continue
+    if (node.type === "ExportNamedDeclaration") {
+      add(asRecord(node.declaration), true)
+      for (const specifier of asArray(node.specifiers)) {
+        const exported = nameOf(asRecord(specifier)?.exported)
+        if (exported !== undefined) exportedNames.add(exported)
+      }
+    } else if (node.type === "ExportDefaultDeclaration") {
+      add(asRecord(node.declaration), true)
+    } else {
+      add(node, false)
+    }
+  }
+
+  // `export { Settings }` marks a declaration written above it; it does not repeat it.
+  return drafts.map(({ name, kind, exported, node, objectKeys }) => ({
+    name,
+    kind,
+    exported: exported || exportedNames.has(name),
+    renders: rendersIn(node),
+    calls: calleeNamesIn(node),
+    ...(objectKeys === undefined ? {} : { objectKeys }),
+  }))
+}
+
 /** The parser dialect for a file, by extension. */
 const langOf = (file: string): "ts" | "tsx" | "js" | "jsx" =>
   file.endsWith(".tsx") || file.endsWith(".jsx") ? (file.endsWith(".jsx") ? "jsx" : "tsx") : "ts"
@@ -168,6 +316,9 @@ export const parseModule = ({
   const program = asRecord(parsed.program) ?? {}
   const tags = new Set<string>()
   const hooks = new Set<string>()
+  const objectKeys = new Map<object, ReadonlyArray<string>>()
+  const objectNames = new Map<object, string>()
+  let createsContext = false
   walk(program, (node) => {
     if (node.type === "JSXOpeningElement") {
       const name = jsxNameOf(node.name)
@@ -175,7 +326,24 @@ export const parseModule = ({
     } else if (node.type === "CallExpression") {
       const name = calleeNameOf(node.callee)
       if (name !== undefined && name.startsWith("use")) hooks.add(name)
+      // `createContext` is the composition pattern's one unambiguous structural signal.
+      // React itself is spelled `React.createContext`; a repo alias may add a path, so
+      // the suffix is the test rather than an exact name.
+      if (name === "createContext" || name?.endsWith(".createContext") === true) {
+        createsContext = true
+      }
+    } else if (node.type === "ObjectExpression") {
+      objectKeys.set(node, objectKeysOf(node))
+    } else if (node.type === "VariableDeclarator") {
+      const name = nameOf(node.id)
+      const init = asRecord(node.init)
+      if (name !== undefined && init?.type === "ObjectExpression") objectNames.set(init, name)
     }
+  })
+  // Map insertion order is AST order, which is deterministic for the same source.
+  const objects: ReadonlyArray<ObjectLiteral> = [...objectKeys].map(([node, keys]) => {
+    const name = objectNames.get(node)
+    return name === undefined ? { keys } : { name, keys }
   })
   return {
     path: filename,
@@ -196,6 +364,9 @@ export const parseModule = ({
     tags: [...tags].sort(Order.String),
     hooks: [...hooks].sort(Order.String),
     props: propsOf(program),
+    objects,
+    declarations: declarationsOf(program),
+    createsContext,
     documented: parsed.comments.some(
       (comment) => comment.type === "Block" && comment.value.startsWith("*"),
     ),

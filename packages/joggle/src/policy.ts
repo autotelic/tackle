@@ -443,6 +443,19 @@ export const policy = {
    * alias field. The bound is against a pathological repository rather than a
    * budget anybody should reach.
    */
+  /**
+   * Deprecation promises checked in one run.
+   *
+   * Deprecated declarations are rare by construction, so this is a guard against a
+   * pathological repository rather than a budget anybody should reach. The import
+   * ceiling is per declaration because one old primitive can have hundreds of call
+   * sites, and the question is the same for all of them.
+   */
+  intentDrift: {
+    maxDeclarations: 200,
+    maxImports: 20,
+  },
+
   fieldTypeDrift: {
     maxFindings: 200,
     /**

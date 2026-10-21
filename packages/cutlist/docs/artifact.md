@@ -39,9 +39,10 @@ Two are sources, one is a join, one is a projection. Only the sources are author
 hash are **derived**; `summary` and `useInstead` are **authored**, and are the only reason
 the menu is not merely a rendering. The menu is now real, not a plan: `cutlist build`
 serializes `menu.json`, renders `MENU.md` from it and never lets a renderer reach past it,
-and `intent/<name>.json` holds the authored half so a rebuild cannot overwrite it. The id
-is still the part's `name`; the join moves to a stable id in one place, `projectMenu`, when
-ids land.
+and `intent/<name>.json` holds the authored half so a rebuild cannot overwrite it. The
+catalog now carries a stable `id` derived from the path, and `projectMenu` joins on it with
+`name` as the fallback for intent written before ids landed; two parts named `Comments` no
+longer share one sentence.
 
 The intent needs a home of its own. If authored fields live only inside the generated
 menu, every rebuild has to merge by hand and a deleted part takes its prose with it. Put
@@ -340,8 +341,9 @@ The concrete format work, in order:
 1. **Emit `menu.json`.** _Shipped._ `cutlist` serializes `protocol/projectMenu`'s output
    and renders `MENU.md` from it.
 2. **Add `intent/<name>.json`.** _Shipped._ Authored, never overwritten; the menu joins it
-   in `projectMenu`. The stable id that will replace `<name>` is the remaining half — and it
-   is now the linchpin of the diff, not only of the menu.
+   in `projectMenu`. _Shipped:_ the catalog carries a path-derived `id` and the join prefers
+   it, falling back to `<name>` for existing files. The intent file naming follows in the
+   same change that gives `id` a shorter spelling.
 3. **Menu v2.** Add `id`, `kind`, `owners`, `app`, `package`, `imports`, `exports`,
    `standalone`, `usedBy`, and resolve `composedOf` to ids. Bump the `menu` lexicon to 2;
    keep v1 fixtures; every new field optional.

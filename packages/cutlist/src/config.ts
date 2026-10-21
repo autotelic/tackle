@@ -25,6 +25,7 @@ const TokenSourceSchema = Schema.Struct({
 const CompositionPatternSchema = Schema.Struct({
   providerSuffix: Schema.String,
   hookPrefix: Schema.String,
+  valueKeys: Schema.optionalKey(Schema.Array(Schema.String)),
 })
 
 const UrlStatePatternSchema = Schema.Struct({

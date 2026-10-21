@@ -50,8 +50,56 @@ describe("renderMenu", () => {
         duplicates: [{ left: "a.tsx", right: "b.tsx", score: 0.9, basis: "skeleton" }],
       }),
     )
-    expect(markdown).toContain("## duplicate candidates (1)")
+    expect(markdown).toContain("## duplicate candidate pairs (1)")
     expect(markdown).toContain("## orphans (1)")
+  })
+
+  it("renders health, adoption, lifecycle and clusters", () => {
+    const markdown = renderMenu(
+      menu({
+        health: {
+          parts: 2,
+          sharedReach: 0.5,
+          localOnly: 1,
+          duplicateClusters: 1,
+          documented: 1,
+          deprecatedInUse: 1,
+        },
+        clusters: [
+          {
+            canonical: "src/components/ui/button.tsx",
+            name: "button",
+            members: ["src/components/ui/button.tsx", "src/components/ui/old-button.tsx"],
+            score: 0.92,
+            usedBy: 7,
+          },
+        ],
+        entries: [
+          {
+            name: "button",
+            path: "src/components/ui/button.tsx",
+            tier: "primitive",
+            exports: ["Button"],
+            usedBy: 7,
+            status: "deprecated",
+            useInstead: ["IconButton"],
+            whenToUse: "A primary action.",
+            composedOf: ["button"],
+          },
+        ],
+      }),
+    )
+    expect(markdown).toContain("## health")
+    expect(markdown).toContain("1 documented (50%)")
+    expect(markdown).toContain("50% of UI modules import a shared part")
+    expect(markdown).toContain("1 deprecated part still imported")
+    expect(markdown).toContain("exports `Button`")
+    expect(markdown).toContain("7 importers")
+    expect(markdown).toContain("when: A primary action.")
+    expect(markdown).toContain("status: deprecated")
+    expect(markdown).toContain("use IconButton instead")
+    expect(markdown).toContain("## duplicate clusters (1)")
+    expect(markdown).toContain("keep `src/components/ui/button.tsx`")
   })
 })
 

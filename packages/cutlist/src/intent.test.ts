@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { decodeIntentFiles } from "./intent.ts"
+import type { CatalogComponent } from "@autotelic/protocol"
+import { decodeIntentFiles, validateIntent } from "./intent.ts"
 
 /*
  * The intent reader's pure half. The point of the module is that a file a person wrote is
@@ -29,5 +30,60 @@ describe("decodeIntentFiles", () => {
     ])
     expect(set.malformed).toEqual(["bad.json", "empty.json"])
     expect([...set.byName.keys()]).toEqual(["good"])
+  })
+})
+
+describe("validateIntent", () => {
+  const component = (
+    name: string,
+    path: string,
+    exports: ReadonlyArray<string> = [],
+  ): CatalogComponent => ({
+    id: path,
+    path,
+    name,
+    tier: "shared",
+    owners: [],
+    props: [],
+    tags: [],
+    signature: [],
+    documented: false,
+    exports,
+  })
+
+  const components = [
+    component("Button", "src/components/button.tsx", ["Button"]),
+    component("OldButton", "src/components/old-button.tsx", ["OldButton"]),
+  ]
+
+  it("accepts ids, names and exported names", () => {
+    const issues = validateIntent({
+      byName: new Map([
+        ["src/components/old-button.tsx", { status: "deprecated", useInstead: ["Button"] }],
+        ["Button", { summary: "The one button." }],
+      ]),
+      components,
+    })
+    expect(issues).toEqual({ stale: [], unknownTargets: [], stranded: [] })
+  })
+
+  it("reports a key that names no part and a target that does not exist", () => {
+    const issues = validateIntent({
+      byName: new Map([
+        ["Gone", { summary: "No longer here." }],
+        ["Button", { status: "deprecated", useInstead: ["Ghost"] }],
+      ]),
+      components,
+    })
+    expect(issues.stale).toEqual(["Gone"])
+    expect(issues.unknownTargets).toEqual(["Button -> Ghost"])
+  })
+
+  it("reports a deprecated part with no migration target", () => {
+    const issues = validateIntent({
+      byName: new Map([["OldButton", { status: "deprecated" }]]),
+      components,
+    })
+    expect(issues.stranded).toEqual(["OldButton"])
   })
 })

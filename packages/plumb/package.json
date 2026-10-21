@@ -21,6 +21,7 @@
     "./meta": "./dist/meta/index.js",
     "./testing": "./dist/testing/index.js",
     "./react": "./dist/react/index.js",
+    "./ui": "./dist/ui/index.js",
     "./configs": "./dist/configs/recommended-rules.js"
   },
   "scripts": {

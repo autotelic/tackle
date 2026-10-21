@@ -26,10 +26,21 @@ const HEADLESS_PACKAGES: ReadonlyArray<string> = [
   "ariakit",
 ]
 
+/**
+ * A JSX tag that names a composition, not a host element.
+ *
+ * `<div>`, `<span>`, and `<path>` are the frame every component is built in, so two
+ * components that both render a `<span>` are not thereby the same concept. Keeping host
+ * tags made `Badge` and `AnimatedRainbow` score a perfect 1.0 and put a page of
+ * one-tag matches at the top of every duplicate list. JSX capitalisation is the language's
+ * own boundary: a lowercase name is an intrinsic element, an uppercase one is a reference.
+ */
+const isCompositionTag = (tag: string): boolean => /^[A-Z]/u.test(tag)
+
 /** The behavioral skeleton of one module. */
 export const skeletonOf = (module: SourceModule): ReadonlyArray<string> => {
   const parts = new Set<string>()
-  for (const tag of module.tags) parts.add(`tag:${tag}`)
+  for (const tag of module.tags) if (isCompositionTag(tag)) parts.add(`tag:${tag}`)
   for (const hook of module.hooks) parts.add(`hook:${hook}`)
   for (const specifier of module.imports) {
     if (HEADLESS_PACKAGES.some((pkg) => specifier === pkg || specifier.startsWith(pkg))) {

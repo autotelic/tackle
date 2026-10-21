@@ -1,4 +1,4 @@
-import { projectManifest, type Catalog } from "@autotelic/protocol"
+import { projectManifest, type Catalog, type Intent } from "@autotelic/protocol"
 
 /*
  * The projection `plumb-ui` parses. One source, one lookup table — the rules never
@@ -6,6 +6,11 @@ import { projectManifest, type Catalog } from "@autotelic/protocol"
  * fields it does not know, so this may carry more than its reader currently uses.
  */
 
-/** The manifest projection as JSON, pretty-printed and newline-terminated for git. */
-export const renderManifest = (catalog: Catalog): string =>
-  `${JSON.stringify(projectManifest(catalog), null, 2)}\n`
+/**
+ * The manifest projection as JSON, pretty-printed and newline-terminated for git.
+ *
+ * Intent is joined here as well as in the menu: a lint rule that cannot see `deprecated`
+ * can only describe the shape of a part, not whether importing it is still allowed.
+ */
+export const renderManifest = (catalog: Catalog, intent?: ReadonlyMap<string, Intent>): string =>
+  `${JSON.stringify(projectManifest(catalog, intent), null, 2)}\n`

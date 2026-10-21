@@ -1,5 +1,5 @@
 import { Effect, FileSystem, Option, Order, Path, Result, Schema, SchemaParser } from "effect"
-import { decodeIntent, type Intent } from "@autotelic/protocol"
+import { decodeIntent, type CatalogComponent, type Intent } from "@autotelic/protocol"
 
 /*
  * `intent/` — the authored half of the menu, one file per part, named for the part.
@@ -12,6 +12,60 @@ import { decodeIntent, type Intent } from "@autotelic/protocol"
  * The name is the key because `name` is the only identity a component carries today. When
  * stable ids land, this reader changes with `projectMenu` and nowhere else.
  */
+
+/** The three ways authored intent can disagree with the tree. */
+export interface IntentIssues {
+  /** Intent files whose key names no part by id or name. */
+  readonly stale: ReadonlyArray<string>
+  /** `useInstead` targets that name no existing part or export. */
+  readonly unknownTargets: ReadonlyArray<string>
+  /** Deprecated parts with no migration target. */
+  readonly stranded: ReadonlyArray<string>
+}
+
+/**
+ * Check authored intent against the computed model.
+ *
+ * The menu can only join what exists; it cannot tell an author that the thing they wrote
+ * about was renamed, or that the replacement they named never existed. These are the three
+ * answers a person can act on, and they are reported rather than repaired: a tool that
+ * guesses which part a stale sentence meant is worse than one that asks.
+ */
+export const validateIntent = ({
+  byName,
+  components,
+}: {
+  readonly byName: ReadonlyMap<string, Intent>
+  readonly components: ReadonlyArray<CatalogComponent>
+}): IntentIssues => {
+  const keys = new Set<string>()
+  const targets = new Set<string>()
+  for (const component of components) {
+    if (component.id !== undefined) keys.add(component.id)
+    keys.add(component.name)
+    targets.add(component.name)
+    if (component.id !== undefined) targets.add(component.id)
+    for (const name of component.exports ?? []) targets.add(name)
+  }
+
+  const stale: Array<string> = []
+  const unknownTargets: Array<string> = []
+  const stranded: Array<string> = []
+  for (const [key, intent] of byName) {
+    if (!keys.has(key)) stale.push(key)
+    for (const target of intent.useInstead ?? []) {
+      if (!targets.has(target)) unknownTargets.push(`${key} -> ${target}`)
+    }
+    if (intent.status === "deprecated" && (intent.useInstead?.length ?? 0) === 0) {
+      stranded.push(key)
+    }
+  }
+  return {
+    stale: stale.sort(Order.String),
+    unknownTargets: unknownTargets.sort(Order.String),
+    stranded: stranded.sort(Order.String),
+  }
+}
 
 /** One intent file as read: its basename (the key) and its text. */
 export interface IntentFile {

@@ -1,9 +1,24 @@
-import type { Catalog } from "./catalog.ts"
-import { decodeDuplicate } from "./catalog.ts"
-import { arrayOf, isRecord, oneOf, readLexiconRef, str, strings } from "./decode.ts"
+import type {
+  Catalog,
+  CatalogFeature,
+  CatalogHealth,
+  DuplicateCluster,
+  PartRole,
+} from "./catalog.ts"
+import {
+  decodeDuplicate,
+  decodeFeature,
+  decodeHealth,
+  decodeCluster,
+  PART_ROLES,
+} from "./catalog.ts"
+import { arrayOf, isRecord, num, oneOf, readLexiconRef, str, strings } from "./decode.ts"
+import { decodeIntent, hasIntent, type Intent, type PartStatus } from "./intent.ts"
 import { lexiconRef, type LexiconRef } from "./lexicon.ts"
 import type { TierName } from "./config.ts"
 import type { DuplicateCandidate } from "./catalog.ts"
+
+export { decodeIntent, hasIntent, type Intent, type PartStatus } from "./intent.ts"
 
 /*
  * The document seam: the parts of the catalog and the onboarding that a human or an
@@ -24,30 +39,50 @@ import type { DuplicateCandidate } from "./catalog.ts"
 
 /** One component's row in the menu. */
 export interface MenuEntry {
+  /** The stable path-derived identity, when the catalog carries one. */
+  readonly id?: string
   readonly name: string
   readonly path: string
   readonly tier: TierName
-  /** Authored: one line on when to reach for this. */
+  /** What the part is: component, hook, context, provider, barrel, route, module. */
+  readonly kind?: PartRole
+  /** Every role it carries; `kind` is the one it is listed under. */
+  readonly roles?: ReadonlyArray<PartRole>
+  /** The composition feature's directory, when the part belongs to one. */
+  readonly feature?: string
+  /** The public names a consumer imports from this module, types excluded. */
+  readonly exports?: ReadonlyArray<string>
+  /** How many modules import it. The adoption signal, beside the inventory one. */
+  readonly usedBy?: number
+  /** Authored: one line on what this part is for. */
   readonly summary?: string
+  /** Authored: the situation this part is the right answer for. */
+  readonly whenToUse?: string
+  /** Authored: the situation it is the wrong answer for. */
+  readonly whenNotToUse?: string
+  /** Authored: named states the part handles. */
+  readonly states?: ReadonlyArray<string>
+  /** Authored: the lifecycle a consumer can rely on. */
+  readonly status?: PartStatus
+  /** Authored: real call sites or canonical snippets showing approved use. */
+  readonly examples?: ReadonlyArray<string>
   /** Derived: the primitive/sub-components and hooks this is composed of. */
   readonly composedOf: ReadonlyArray<string>
-  /** Authored: what to use instead, when a near-duplicate exists. */
+  /** Authored: what to use instead, when a near-duplicate or deprecation exists. */
   readonly useInstead?: ReadonlyArray<string>
 }
 
 /**
- * The authored half of a menu entry, as it is stored in `intent/<name>.json`.
+ * The catalog's health, plus the two numbers only authored intent can supply.
  *
- * This is the one part of the artifact a tool cannot derive, and the reason the menu is
- * not merely a rendering. It lives in its own file so `cutlist build` can replace the
- * generated menu without ever touching a sentence a person wrote, and so a rename shows
- * up as a stale file instead of silently discarding the intent.
+ * Inventory is not adoption. A repo can have four hundred parts and almost no UI built
+ * from them, and the menu should say so in the same breath as the count.
  */
-export interface Intent {
-  /** One line on when to reach for this part. */
-  readonly summary?: string
-  /** What to reach for instead, when a near-duplicate exists. */
-  readonly useInstead?: ReadonlyArray<string>
+export interface MenuHealth extends CatalogHealth {
+  /** Parts carrying any authored intent. */
+  readonly documented: number
+  /** Parts marked deprecated that something still imports. */
+  readonly deprecatedInUse: number
 }
 
 /** `MENU.md`'s model: the parts list an engineer works from. */
@@ -56,6 +91,12 @@ export interface Menu {
   readonly title: string
   readonly hash: string
   readonly entries: ReadonlyArray<MenuEntry>
+  /** Composition features, so a renderer never reaches past the menu into the catalog. */
+  readonly features?: ReadonlyArray<CatalogFeature>
+  /** Adoption and pressure, in one place a reader can act on. */
+  readonly health?: MenuHealth
+  /** Near-duplicate clusters, each with the most-used member as its canonical. */
+  readonly clusters?: ReadonlyArray<DuplicateCluster>
   readonly orphans: ReadonlyArray<string>
   readonly duplicates: ReadonlyArray<DuplicateCandidate>
 }
@@ -84,7 +125,10 @@ export const composedOf = (signature: ReadonlyArray<string>): ReadonlyArray<stri
 /** What `projectMenu` needs: the derived model, and whatever a person has written about it. */
 export interface MenuProjection {
   readonly catalog: Catalog
-  /** Authored intent, keyed by the part's name. Absent means every entry is undocumented. */
+  /**
+   * Authored intent, keyed by the part's id (or its name in a catalog that predates ids).
+   * Absent means every entry is undocumented.
+   */
   readonly intent?: ReadonlyMap<string, Intent>
   readonly title?: string
 }
@@ -92,28 +136,56 @@ export interface MenuProjection {
 /**
  * The derived half of the menu, joined with the authored half.
  *
- * The join is by `name` — the only identity a component carries today. When stable ids
- * land, this is the single place the key changes, which is why the join lives here and
- * not in a renderer.
+ * `id` is the join key: it is derived from the path, so two parts that share a `name`
+ * (`Comments`, `types`) no longer overwrite each other's intent. The name fallback keeps
+ * intent written before ids landed readable; a rebuild only rewrites the generated menu,
+ * never a sentence a person wrote.
  */
-export const projectMenu = ({ catalog, intent, title = "UI menu" }: MenuProjection): Menu => ({
-  lexicon: lexiconRef("menu"),
-  title,
-  hash: catalog.hash,
-  entries: catalog.components.map((component) => {
-    const authored = intent?.get(component.name)
+export const projectMenu = ({ catalog, intent, title = "UI menu" }: MenuProjection): Menu => {
+  const entries: ReadonlyArray<MenuEntry> = catalog.components.map((component) => {
+    const authored =
+      (component.id === undefined ? undefined : intent?.get(component.id)) ??
+      intent?.get(component.name)
     return {
+      ...(component.id === undefined ? {} : { id: component.id }),
       name: component.name,
       path: component.path,
       tier: component.tier,
-      ...(authored?.summary === undefined ? {} : { summary: authored.summary }),
+      ...(component.kind === undefined ? {} : { kind: component.kind }),
+      ...(component.roles === undefined ? {} : { roles: component.roles }),
+      ...(component.feature === undefined ? {} : { feature: component.feature }),
+      ...(component.exports === undefined ? {} : { exports: component.exports }),
+      ...(component.usedBy === undefined ? {} : { usedBy: component.usedBy }),
+      ...(authored === undefined ? {} : authored),
       composedOf: composedOf(component.signature),
-      ...(authored?.useInstead === undefined ? {} : { useInstead: authored.useInstead }),
     }
-  }),
-  orphans: catalog.orphans,
-  duplicates: catalog.duplicates,
-})
+  })
+
+  const documented = entries.filter((entry) => hasIntent(entry)).length
+  const deprecatedInUse = entries.filter(
+    (entry) => entry.status === "deprecated" && (entry.usedBy ?? 0) > 0,
+  ).length
+
+  return {
+    lexicon: lexiconRef("menu"),
+    title,
+    hash: catalog.hash,
+    features: catalog.features ?? [],
+    ...(catalog.health === undefined
+      ? {}
+      : {
+          health: {
+            ...catalog.health,
+            documented,
+            deprecatedInUse,
+          },
+        }),
+    ...(catalog.clusters === undefined ? {} : { clusters: catalog.clusters }),
+    entries,
+    orphans: catalog.orphans,
+    duplicates: catalog.duplicates,
+  }
+}
 
 /*
  * Decoders — untrusted input in, a model or an empty one out.
@@ -129,6 +201,12 @@ const TIERS_NAMES: ReadonlyArray<TierName> = ["primitive", "shared", "local"]
 /** Read one menu entry, or `undefined` when malformed. */
 export const decodeMenuEntry = (value: unknown): MenuEntry | undefined => {
   if (!isRecord(value)) return undefined
+  const id = str(value.id)
+  const kind = oneOf(value.kind, PART_ROLES)
+  const roles = arrayOf(value.roles, (role) => oneOf(role, PART_ROLES))
+  const feature = str(value.feature)
+  const exports = strings(value.exports)
+  const usedBy = num(value.usedBy)
   const name = str(value.name)
   const path = str(value.path)
   const tier = oneOf(value.tier, TIERS_NAMES)
@@ -136,16 +214,28 @@ export const decodeMenuEntry = (value: unknown): MenuEntry | undefined => {
   if (name === undefined || path === undefined || tier === undefined || composedOf === undefined) {
     return undefined
   }
-  const summary = str(value.summary)
-  const useInstead = strings(value.useInstead)
   return {
+    ...(id === undefined ? {} : { id }),
+    ...(kind === undefined ? {} : { kind }),
+    ...(roles === undefined ? {} : { roles }),
+    ...(feature === undefined ? {} : { feature }),
+    ...(exports === undefined ? {} : { exports }),
+    ...(usedBy === undefined ? {} : { usedBy }),
+    ...(decodeIntent(value) ?? {}),
     name,
     path,
     tier,
     composedOf,
-    ...(summary === undefined ? {} : { summary }),
-    ...(useInstead === undefined ? {} : { useInstead }),
   }
+}
+
+const decodeMenuHealth = (value: unknown): MenuHealth | undefined => {
+  const base = decodeHealth(value)
+  if (base === undefined || !isRecord(value)) return undefined
+  const documented = num(value.documented)
+  const deprecatedInUse = num(value.deprecatedInUse)
+  if (documented === undefined || deprecatedInUse === undefined) return undefined
+  return { ...base, documented, deprecatedInUse }
 }
 
 /** Read a menu, or `undefined` when the model is malformed. */
@@ -155,6 +245,9 @@ export const decodeMenu = (value: unknown): Menu | undefined => {
   const title = str(value.title)
   const hash = str(value.hash)
   const entries = arrayOf(value.entries, decodeMenuEntry)
+  const features = arrayOf(value.features, decodeFeature)
+  const health = decodeMenuHealth(value.health)
+  const clusters = arrayOf(value.clusters, decodeCluster)
   const orphans = strings(value.orphans)
   const duplicates = arrayOf(value.duplicates, decodeDuplicate)
   if (
@@ -167,24 +260,16 @@ export const decodeMenu = (value: unknown): Menu | undefined => {
   ) {
     return undefined
   }
-  return { lexicon, title, hash, entries, orphans, duplicates }
-}
-
-/**
- * Read one intent record, or `undefined` when it says nothing usable.
- *
- * An empty object is a miss, not an empty intent: a file that carries neither a summary
- * nor alternatives is a file someone forgot to fill in, and treating it as authored
- * would hide that from the `_(undocumented)_` flag.
- */
-export const decodeIntent = (value: unknown): Intent | undefined => {
-  if (!isRecord(value)) return undefined
-  const summary = str(value.summary)
-  const useInstead = strings(value.useInstead)
-  if (summary === undefined && useInstead === undefined) return undefined
   return {
-    ...(summary === undefined ? {} : { summary }),
-    ...(useInstead === undefined ? {} : { useInstead }),
+    lexicon,
+    title,
+    hash,
+    entries,
+    ...(features === undefined ? {} : { features }),
+    ...(health === undefined ? {} : { health }),
+    ...(clusters === undefined ? {} : { clusters }),
+    orphans,
+    duplicates,
   }
 }
 

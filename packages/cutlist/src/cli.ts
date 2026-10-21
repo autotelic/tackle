@@ -1,11 +1,11 @@
-import { Console, Data, Effect, FileSystem, Option, Order, Path } from "effect"
+import { Console, Data, Effect, FileSystem, Option, Path } from "effect"
 import { Command, Flag } from "effect/cli"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { projectMenu } from "@autotelic/protocol"
 import { buildCatalog } from "./catalog.ts"
 import { compareCatalog, compareMenu, compareText, type StalenessResult } from "./check.ts"
 import { loadConfig, outputOf } from "./config.ts"
-import { readIntent } from "./intent.ts"
+import { readIntent, validateIntent } from "./intent.ts"
 import { renderCatalog } from "./render/catalog.ts"
 import { renderDiagramIndex, renderDiagrams } from "./render/diagram.ts"
 import { renderHooks } from "./render/hooks.ts"
@@ -74,10 +74,8 @@ const buildCommand = Command.make(
       }
 
       const menu = projectMenu({ catalog, intent: intent.byName })
-      const names = new Set(catalog.components.map((component) => component.name))
-      const staleIntent = [...intent.byName.keys()]
-        .filter((name) => !names.has(name))
-        .sort(Order.String)
+      const issues = validateIntent({ byName: intent.byName, components: catalog.components })
+      const issueCount = issues.stale.length + issues.unknownTargets.length + issues.stranded.length
 
       if (config.format === "json") {
         yield* write(JSON.stringify(catalog, null, 2))
@@ -126,7 +124,7 @@ const buildCommand = Command.make(
           ])
         }
         const stale = results.filter(([, result]) => result.stale)
-        if (stale.length > 0 || staleIntent.length > 0) {
+        if (stale.length > 0 || issueCount > 0) {
           for (const [file, result] of stale) {
             yield* write(
               result.committed === undefined
@@ -134,9 +132,19 @@ const buildCommand = Command.make(
                 : `${file} is stale (committed ${result.committed.slice(0, 12)}, fresh ${result.fresh.slice(0, 12)}); run \`cutlist build\``,
             )
           }
-          if (staleIntent.length > 0) {
+          if (issues.stale.length > 0) {
             yield* write(
-              `intent/ has ${staleIntent.length} file(s) for no existing part: ${staleIntent.join(", ")}`,
+              `intent/ has ${issues.stale.length} file(s) for no existing part: ${issues.stale.join(", ")}`,
+            )
+          }
+          if (issues.unknownTargets.length > 0) {
+            yield* write(
+              `intent/ points at ${issues.unknownTargets.length} unknown useInstead target(s): ${issues.unknownTargets.join(", ")}`,
+            )
+          }
+          if (issues.stranded.length > 0) {
+            yield* write(
+              `intent/ marks ${issues.stranded.length} part(s) deprecated without a useInstead target: ${issues.stranded.join(", ")}`,
             )
           }
           yield* Effect.sync(() => {
@@ -150,7 +158,7 @@ const buildCommand = Command.make(
 
       const rendered: ReadonlyArray<readonly [string, string]> = [
         [output.catalog, renderCatalog(catalog)],
-        [output.manifest, renderManifest(catalog)],
+        [output.manifest, renderManifest(catalog, intent.byName)],
         [output.menuJson, renderMenuJson(menu)],
         [output.menu, renderMenu(menu)],
         [output.hooks, renderHooks(catalog)],
@@ -165,9 +173,23 @@ const buildCommand = Command.make(
         )
         yield* fs.writeFileString(absolute, text)
       }
-      const staleNote = staleIntent.length === 0 ? "" : `, ${staleIntent.length} stale intent`
+      if (issues.stale.length > 0) {
+        yield* write(
+          `cutlist: ${issues.stale.length} intent file(s) name no existing part: ${issues.stale.join(", ")}`,
+        )
+      }
+      if (issues.unknownTargets.length > 0) {
+        yield* write(
+          `cutlist: ${issues.unknownTargets.length} useInstead target(s) name no existing part: ${issues.unknownTargets.join(", ")}`,
+        )
+      }
+      if (issues.stranded.length > 0) {
+        yield* write(
+          `cutlist: ${issues.stranded.length} deprecated part(s) have no useInstead target: ${issues.stranded.join(", ")}`,
+        )
+      }
       yield* write(
-        `cutlist: wrote ${rendered.length} files; ${catalog.components.length} components, ${catalog.duplicates.length} duplicate candidates, ${catalog.orphans.length} orphans${staleNote}`,
+        `cutlist: wrote ${rendered.length} files; ${catalog.components.length} components, ${catalog.duplicates.length} duplicate candidates, ${catalog.clusters?.length ?? 0} clusters, ${catalog.orphans.length} orphans`,
       )
     }).pipe(
       Effect.catchTag("DiagramError", (error) =>

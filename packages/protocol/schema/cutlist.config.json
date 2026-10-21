@@ -57,7 +57,12 @@
           "additionalProperties": false,
           "properties": {
             "providerSuffix": { "type": "string" },
-            "hookPrefix": { "type": "string" }
+            "hookPrefix": { "type": "string" },
+            "valueKeys": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "The keys of the object a provider supplies. Defaults to state/actions/meta."
+            }
           }
         },
         "urlState": {

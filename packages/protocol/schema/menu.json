@@ -14,6 +14,20 @@
       "description": "The catalog hash the derived half was computed from, so a reader can verify it is current."
     },
     "entries": { "type": "array", "items": { "$ref": "#/$defs/entry" } },
+    "features": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/feature" },
+      "description": "Composition features, so a renderer never reaches past the menu into the catalog."
+    },
+    "health": {
+      "$ref": "#/$defs/health",
+      "description": "Adoption and duplication pressure, plus the two numbers only authored intent can supply."
+    },
+    "clusters": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/cluster" },
+      "description": "Near-duplicate clusters, each with the most-used member as its canonical."
+    },
     "orphans": { "type": "array", "items": { "type": "string" } },
     "duplicates": { "type": "array", "items": { "$ref": "#/$defs/duplicate" } }
   },
@@ -33,19 +47,111 @@
       "required": ["name", "path", "tier", "composedOf"],
       "additionalProperties": false,
       "properties": {
+        "id": {
+          "type": "string",
+          "description": "The catalog part's stable identity, when it carries one. The join key for authored intent."
+        },
+        "kind": { "$ref": "#/$defs/role" },
+        "roles": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/role" }
+        },
+        "feature": { "type": "string" },
+        "exports": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "The public names a consumer imports from this module, types excluded."
+        },
+        "usedBy": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "How many modules import it."
+        },
         "name": { "type": "string" },
         "path": { "type": "string" },
         "tier": { "$ref": "#/$defs/tier" },
         "summary": {
           "type": "string",
-          "description": "Authored: one line on when to reach for this."
+          "description": "Authored: one line on what this part is for."
+        },
+        "whenToUse": {
+          "type": "string",
+          "description": "Authored: the situation this part is the right answer for."
+        },
+        "whenNotToUse": {
+          "type": "string",
+          "description": "Authored: the situation it is the wrong answer for."
+        },
+        "states": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Authored: named states the part handles."
+        },
+        "status": {
+          "enum": ["stable", "beta", "experimental", "deprecated"],
+          "description": "Authored: the lifecycle a consumer can rely on."
+        },
+        "examples": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Authored: real call sites or canonical snippets showing approved use."
         },
         "composedOf": { "type": "array", "items": { "type": "string" } },
         "useInstead": {
           "type": "array",
           "items": { "type": "string" },
-          "description": "Authored: what to reach for instead, when a near-duplicate exists."
+          "description": "Authored: what to reach for instead, when a near-duplicate or deprecation exists."
         }
+      }
+    },
+    "role": {
+      "enum": ["component", "hook", "context", "provider", "barrel", "route", "module"]
+    },
+    "feature": {
+      "type": "object",
+      "required": ["dir", "name", "context", "blocks", "hooks", "valueKeys"],
+      "additionalProperties": false,
+      "properties": {
+        "dir": { "type": "string" },
+        "name": { "type": "string" },
+        "context": { "type": "string" },
+        "provider": { "type": "string" },
+        "barrel": { "type": "string" },
+        "blocks": { "type": "array", "items": { "type": "string" } },
+        "hooks": { "type": "array", "items": { "type": "string" } },
+        "valueKeys": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "health": {
+      "type": "object",
+      "required": [
+        "parts",
+        "sharedReach",
+        "localOnly",
+        "duplicateClusters",
+        "documented",
+        "deprecatedInUse"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "parts": { "type": "integer", "minimum": 0 },
+        "sharedReach": { "type": "number", "minimum": 0, "maximum": 1 },
+        "localOnly": { "type": "integer", "minimum": 0 },
+        "duplicateClusters": { "type": "integer", "minimum": 0 },
+        "documented": { "type": "integer", "minimum": 0 },
+        "deprecatedInUse": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "cluster": {
+      "type": "object",
+      "required": ["canonical", "name", "members", "score", "usedBy"],
+      "additionalProperties": false,
+      "properties": {
+        "canonical": { "type": "string" },
+        "name": { "type": "string" },
+        "members": { "type": "array", "items": { "type": "string" }, "minItems": 2 },
+        "score": { "type": "number", "minimum": 0, "maximum": 1 },
+        "usedBy": { "type": "integer", "minimum": 0 }
       }
     },
     "duplicate": {

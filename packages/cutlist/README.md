@@ -41,7 +41,8 @@ silent), which is why `cutlist check` exists: a stale catalog must be loud.
 
 The menu is the one **mixed** record: `menu.json` joins the derived composition with
 authored intent from `intent/<name>.json`, so regenerating the menu can never overwrite a
-sentence a person wrote; `MENU.md` is its cheap text view. `diagrams/` renders the same
+sentence a person wrote; `MENU.md` is its cheap text view. Each catalog part also carries a
+path-derived `id`, and the join prefers it over the colliding `name`. `diagrams/` renders the same
 model as a graph — the composition of each part, the inverse hook view, and ownership —
 as Mermaid source beside the SVG `pele` drew from it, drawn at the largest scope that reads
 and indexed by a generated table, so the shape a list flattens is visible. `pele` is a

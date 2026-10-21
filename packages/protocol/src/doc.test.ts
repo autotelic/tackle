@@ -40,7 +40,7 @@ describe("projectMenu", () => {
     expect(menu.hash).toBe("abc123")
   })
 
-  it("joins authored intent by name", () => {
+  it("joins authored intent by name when the catalog has no id", () => {
     const intent = new Map([
       ["button", { summary: "The one button in the app.", useInstead: ["link-button"] }],
     ])
@@ -49,10 +49,68 @@ describe("projectMenu", () => {
     expect(menu.entries[0]?.useInstead).toEqual(["link-button"])
   })
 
+  it("joins by stable id, so two parts named the same keep their own intent", () => {
+    const menu = projectMenu({
+      catalog: catalog([
+        component({ id: "a--Comments", name: "Comments", path: "a/Comments.tsx" }),
+        component({ id: "b--Comments", name: "Comments", path: "b/Comments.tsx" }),
+      ]),
+      intent: new Map([
+        ["a--Comments", { summary: "The first comments panel." }],
+        ["b--Comments", { summary: "The second comments panel." }],
+      ]),
+    })
+    expect(menu.entries.map((entry) => entry.summary)).toEqual([
+      "The first comments panel.",
+      "The second comments panel.",
+    ])
+    expect(menu.entries.map((entry) => entry.id)).toEqual(["a--Comments", "b--Comments"])
+  })
+
   it("leaves a part with no intent undocumented", () => {
     const intent = new Map([["other", { summary: "Nope." }]])
     const menu = projectMenu({ catalog: catalog([component()]), intent })
     expect(menu.entries[0]?.summary).toBeUndefined()
+  })
+
+  it("carries exports, adoption, lifecycle and the catalog's health", () => {
+    const menu = projectMenu({
+      catalog: {
+        ...catalog([
+          component({ exports: ["Button"], usedBy: 4 }),
+          component({ id: "old", name: "old", path: "old.tsx", usedBy: 1 }),
+        ]),
+        health: { parts: 2, sharedReach: 0.5, localOnly: 1, duplicateClusters: 1 },
+        clusters: [
+          {
+            canonical: "src/components/ui/button.tsx",
+            name: "button",
+            members: ["src/components/ui/button.tsx", "old.tsx"],
+            score: 0.9,
+            usedBy: 5,
+          },
+        ],
+      },
+      intent: new Map([
+        ["button", { status: "deprecated", useInstead: ["IconButton"], whenToUse: "An action." }],
+      ]),
+    })
+    expect(menu.entries[0]).toMatchObject({
+      exports: ["Button"],
+      usedBy: 4,
+      status: "deprecated",
+      useInstead: ["IconButton"],
+      whenToUse: "An action.",
+    })
+    expect(menu.health).toEqual({
+      parts: 2,
+      sharedReach: 0.5,
+      localOnly: 1,
+      duplicateClusters: 1,
+      documented: 1,
+      deprecatedInUse: 1,
+    })
+    expect(menu.clusters).toHaveLength(1)
   })
 })
 
@@ -67,6 +125,24 @@ describe("decodeIntent", () => {
 
   it("treats an empty record as a miss, not an empty intent", () => {
     expect(decodeIntent({})).toBeUndefined()
+  })
+
+  it("reads lifecycle, states and examples", () => {
+    expect(
+      decodeIntent({
+        status: "deprecated",
+        states: ["loading", "empty"],
+        examples: ["<Button />"],
+        whenToUse: "A primary action.",
+        whenNotToUse: "A destructive action.",
+      }),
+    ).toEqual({
+      status: "deprecated",
+      states: ["loading", "empty"],
+      examples: ["<Button />"],
+      whenToUse: "A primary action.",
+      whenNotToUse: "A destructive action.",
+    })
   })
 
   it("rejects a badly typed field rather than half-reading it", () => {

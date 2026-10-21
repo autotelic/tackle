@@ -48,6 +48,12 @@ export interface Ownership {
 export interface CompositionPattern {
   readonly providerSuffix: string
   readonly hookPrefix: string
+  /**
+   * The keys of the object a provider supplies. The canonical pattern is
+   * `state/actions/meta`; declaring the shape keeps the catalog from guessing, and lets
+   * a repo whose context is `state/dispatch` record that instead of being called broken.
+   */
+  readonly valueKeys?: ReadonlyArray<string>
 }
 
 /** How URL state is read in this repo's router. */
@@ -202,8 +208,13 @@ const decodePatterns = (value: unknown): Patterns | undefined => {
     if (!isRecord(value.composition)) return undefined
     const providerSuffix = str(value.composition.providerSuffix)
     const hookPrefix = str(value.composition.hookPrefix)
+    const valueKeys = strings(value.composition.valueKeys)
     if (providerSuffix === undefined || hookPrefix === undefined) return undefined
-    composition = { providerSuffix, hookPrefix }
+    composition = {
+      providerSuffix,
+      hookPrefix,
+      ...(valueKeys === undefined ? {} : { valueKeys }),
+    }
   }
   let urlState: UrlStatePattern | undefined
   if ("urlState" in value) {

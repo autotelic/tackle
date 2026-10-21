@@ -28,11 +28,32 @@
       }
     },
     "tier": { "enum": ["primitive", "shared", "local"] },
+    "role": {
+      "enum": ["component", "hook", "context", "provider", "barrel", "route", "module"]
+    },
     "component": {
       "type": "object",
       "required": ["path", "name", "tier", "owners", "props", "tags"],
       "additionalProperties": false,
       "properties": {
+        "kind": { "$ref": "#/$defs/role" },
+        "roles": { "type": "array", "items": { "$ref": "#/$defs/role" } },
+        "feature": { "type": "string" },
+        "exports": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "The names a consumer imports, so a rule can match an import binding to a part."
+        },
+        "usedBy": { "type": "integer", "minimum": 0 },
+        "status": {
+          "enum": ["stable", "beta", "experimental", "deprecated"],
+          "description": "Authored lifecycle. A rule can refuse a direct import of a deprecated part."
+        },
+        "useInstead": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Authored migration target, carried to the rule that reports the import."
+        },
         "path": { "type": "string" },
         "name": { "type": "string" },
         "tier": { "$ref": "#/$defs/tier" },

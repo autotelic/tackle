@@ -43,6 +43,20 @@
     "sharedRoots": { "type": "array", "items": { "type": "string" } },
     "localRoots": { "type": "array", "items": { "type": "string" } },
     "components": { "type": "array", "items": { "$ref": "#/$defs/component" } },
+    "features": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/feature" },
+      "description": "Composition features, derived from parts: a context plus a provider or a dot-notation barrel in one directory."
+    },
+    "health": {
+      "$ref": "#/$defs/health",
+      "description": "Adoption and duplication pressure: the numbers inventory alone cannot show."
+    },
+    "clusters": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/cluster" },
+      "description": "Near-duplicate clusters, each with the most-used member as its canonical."
+    },
     "orphans": { "type": "array", "items": { "type": "string" } },
     "duplicates": { "type": "array", "items": { "$ref": "#/$defs/duplicate" } }
   },
@@ -72,6 +86,35 @@
       "required": ["path", "name", "tier", "owners", "props", "tags", "signature", "documented"],
       "additionalProperties": false,
       "properties": {
+        "id": {
+          "type": "string",
+          "description": "Stable path-derived identity: the repository-relative path without its source extension, with `/` flattened to `--`. Optional so catalogs written before ids landed still read; readers fall back to `name`."
+        },
+        "kind": { "$ref": "#/$defs/role" },
+        "roles": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/role" },
+          "description": "Every role the part carries; `kind` is the one a list files it under."
+        },
+        "feature": {
+          "type": "string",
+          "description": "The composition feature's directory, when the part belongs to one."
+        },
+        "exports": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "The public names a consumer imports from this module, types excluded."
+        },
+        "usedBy": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "How many modules import it. Inventory says it exists; this says it is used."
+        },
+        "declarations": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/declaration" },
+          "description": "Top-level declarations, the raw material a rule reads instead of re-parsing source."
+        },
         "path": { "type": "string" },
         "name": { "type": "string" },
         "tier": { "$ref": "#/$defs/tier" },
@@ -84,6 +127,68 @@
           "description": "The behavioral skeleton — the similarity signature, not props ∪ tags."
         },
         "documented": { "type": "boolean" }
+      }
+    },
+    "role": {
+      "enum": ["component", "hook", "context", "provider", "barrel", "route", "module"]
+    },
+    "declaration": {
+      "type": "object",
+      "required": ["name", "kind", "exported", "renders", "calls"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "kind": { "enum": ["function", "class", "variable", "type"] },
+        "exported": { "type": "boolean" },
+        "renders": { "type": "boolean" },
+        "calls": { "type": "array", "items": { "type": "string" } },
+        "objectKeys": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "feature": {
+      "type": "object",
+      "required": ["dir", "name", "context", "blocks", "hooks", "valueKeys"],
+      "additionalProperties": false,
+      "properties": {
+        "dir": { "type": "string" },
+        "name": { "type": "string" },
+        "context": { "type": "string" },
+        "provider": { "type": "string" },
+        "barrel": { "type": "string" },
+        "blocks": { "type": "array", "items": { "type": "string" } },
+        "hooks": { "type": "array", "items": { "type": "string" } },
+        "valueKeys": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "health": {
+      "type": "object",
+      "required": ["parts", "sharedReach", "localOnly", "duplicateClusters"],
+      "additionalProperties": false,
+      "properties": {
+        "parts": { "type": "integer", "minimum": 0 },
+        "sharedReach": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Share of component/hook/route modules that import at least one shared or primitive part."
+        },
+        "localOnly": { "type": "integer", "minimum": 0 },
+        "duplicateClusters": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "cluster": {
+      "type": "object",
+      "required": ["canonical", "name", "members", "score", "usedBy"],
+      "additionalProperties": false,
+      "properties": {
+        "canonical": {
+          "type": "string",
+          "description": "The path of the member with the most importers."
+        },
+        "name": { "type": "string" },
+        "members": { "type": "array", "items": { "type": "string" }, "minItems": 2 },
+        "score": { "type": "number", "minimum": 0, "maximum": 1 },
+        "usedBy": { "type": "integer", "minimum": 0 }
       }
     },
     "duplicate": {

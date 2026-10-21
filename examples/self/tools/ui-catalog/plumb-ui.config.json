@@ -52,7 +52,7 @@
       "owners": [],
       "props": ["children"],
       "tags": ["span"],
-      "signature": ["tag:span"]
+      "signature": []
     },
     {
       "path": "src/components/ui/button.tsx",
@@ -61,7 +61,7 @@
       "owners": ["shared"],
       "props": ["children", "onClick", "size", "variant"],
       "tags": ["button"],
-      "signature": ["tag:button"]
+      "signature": []
     },
     {
       "path": "src/components/ui/card.tsx",
@@ -70,7 +70,7 @@
       "owners": ["dashboard", "settings", "shared"],
       "props": ["children", "title"],
       "tags": ["h2", "section"],
-      "signature": ["tag:h2", "tag:section"]
+      "signature": []
     },
     {
       "path": "src/components/use-theme.ts",

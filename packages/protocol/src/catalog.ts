@@ -1,6 +1,7 @@
 import { arrayOf, bool, isRecord, num, oneOf, readLexiconRef, str, strings } from "./decode.ts"
 import { lexiconRef, type LexiconRef } from "./lexicon.ts"
 import { decodeTiers, type Tiers, type TierName } from "./config.ts"
+import { PART_STATUSES, type Intent, type PartStatus } from "./intent.ts"
 
 /*
  * The catalog: the model `cutlist` computes once and renders many ways.
@@ -26,8 +27,70 @@ interface ComponentFields {
   readonly tags: ReadonlyArray<string>
 }
 
+/**
+ * What a part IS, as opposed to where it sits.
+ *
+ * A file is not one thing: a context module can also export the hook that reads it, and a
+ * provider is a component that supplies a context. `kind` is the one a list puts it under;
+ * `roles` is every fact that holds. Both are derived from declarations, not filenames.
+ */
+export type PartRole = "component" | "hook" | "context" | "provider" | "barrel" | "route" | "module"
+
+/** One top-level declaration, the unit a role is read from. Raw material for rules. */
+export interface CatalogDeclaration {
+  readonly name: string
+  readonly kind: "function" | "class" | "variable" | "type"
+  readonly exported: boolean
+  readonly renders: boolean
+  readonly calls: ReadonlyArray<string>
+  readonly objectKeys?: ReadonlyArray<string>
+}
+
+/**
+ * One composition feature: the provider/context/hook pattern as the tree attempts it.
+ *
+ * This is a derived view over parts — a context in a directory plus a provider or a
+ * dot-notation barrel — not a stored classification. It exists so a consumer can read a
+ * feature as one thing without re-joining the declarations itself.
+ */
+export interface CatalogFeature {
+  /** Repository-relative directory the parts share. */
+  readonly dir: string
+  /** The public name: the barrel's object name, else a PascalCase directory. */
+  readonly name: string
+  /** The module that calls `createContext`. */
+  readonly context: string
+  readonly provider?: string
+  readonly barrel?: string
+  /** Component modules in the feature that are not the context, provider, or barrel. */
+  readonly blocks: ReadonlyArray<string>
+  readonly hooks: ReadonlyArray<string>
+  /** Keys of the provider's supplied value; `state/actions/meta` when tripartite. */
+  readonly valueKeys: ReadonlyArray<string>
+}
+
 /** One component as the crawler classified it. */
 export interface CatalogComponent extends ComponentFields {
+  /**
+   * The part's stable identity: its repository-relative path without the source
+   * extension, with `/` flattened to `--`. `name` is for reading; this is for joining.
+   *
+   * Optional because catalogs written before ids landed carry none. A reader falls back
+   * to `name` — the old join — so a stale artifact degrades rather than disappears.
+   */
+  readonly id?: string
+  /** The role a list puts this part under. Optional: older catalogs called everything a component. */
+  readonly kind?: PartRole
+  /** Every role the part carries, of which `kind` is the first by convention. */
+  readonly roles?: ReadonlyArray<PartRole>
+  /** The directory of the composition feature this part belongs to, when it is in one. */
+  readonly feature?: string
+  /** The public names a consumer imports from this module, types excluded. */
+  readonly exports?: ReadonlyArray<string>
+  /** How many modules import it. Inventory says it exists; this says it is used. */
+  readonly usedBy?: number
+  /** Top-level declarations. The raw material a rule reads instead of re-parsing source. */
+  readonly declarations?: ReadonlyArray<CatalogDeclaration>
   /**
    * The behavioral skeleton: the headless primitive it wraps, the headless
    * sub-components it renders, the hooks it calls, and its token-class categories.
@@ -49,6 +112,42 @@ export interface DuplicateCandidate {
   readonly basis: "skeleton"
 }
 
+/**
+ * A connected group of near-duplicates, with the most-used member as the canonical.
+ *
+ * A pair is a finding; a cluster is a decision. When three variants of one dialog exist,
+ * the useful question is not "are these two the same?" but "which one is the system, and
+ * why were the others written?" The canonical is chosen by adoption rather than by file
+ * order, because the version people already import is the one a migration should keep.
+ */
+export interface DuplicateCluster {
+  /** The path of the member with the most importers. */
+  readonly canonical: string
+  /** The canonical's name, for a heading a person can read. */
+  readonly name: string
+  readonly members: ReadonlyArray<string>
+  /** The strongest pair in the cluster. */
+  readonly score: number
+  /** Summed importers across every member; the size of the workaround. */
+  readonly usedBy: number
+}
+
+/**
+ * The adoption facts a catalog can know without reading authored intent.
+ *
+ * `sharedReach` is a ratio rather than a count because the denominator is the thing that
+ * grows: a repo with a thousand local pages and ten shared imports is not healthier than
+ * a smaller one, and a count would reward the wrong direction.
+ */
+export interface CatalogHealth {
+  readonly parts: number
+  /** Share of component/hook/route modules that import at least one shared or primitive part. */
+  readonly sharedReach: number
+  /** UI modules that import no shared or primitive part. */
+  readonly localOnly: number
+  readonly duplicateClusters: number
+}
+
 /** The token vocabulary, as four closed sets. */
 export interface CatalogTokens {
   readonly colors: ReadonlyArray<string>
@@ -68,6 +167,12 @@ export interface Catalog {
   readonly sharedRoots: ReadonlyArray<string>
   readonly localRoots: ReadonlyArray<string>
   readonly components: ReadonlyArray<CatalogComponent>
+  /** Composition features, derived from parts. Absent in catalogs that predate them. */
+  readonly features?: ReadonlyArray<CatalogFeature>
+  /** Adoption and duplication pressure. Absent in catalogs that predate them. */
+  readonly health?: CatalogHealth
+  /** Near-duplicate clusters, derived from the candidate pairs. */
+  readonly clusters?: ReadonlyArray<DuplicateCluster>
   readonly orphans: ReadonlyArray<string>
   readonly duplicates: ReadonlyArray<DuplicateCandidate>
 }
@@ -82,6 +187,18 @@ export interface Catalog {
 
 /** A component as the lint manifest carries it. */
 export interface ManifestComponent extends ComponentFields {
+  /** What it is. A rule can scope itself to components without re-deriving the role. */
+  readonly kind?: PartRole
+  readonly roles?: ReadonlyArray<PartRole>
+  /** The composition feature's directory, when it belongs to one. */
+  readonly feature?: string
+  /** The names a consumer imports, so a rule can match an import binding to a part. */
+  readonly exports?: ReadonlyArray<string>
+  readonly usedBy?: number
+  /** Authored lifecycle. A rule can refuse a direct import of a deprecated part. */
+  readonly status?: PartStatus
+  /** Authored migration target, carried to the rule that reports the import. */
+  readonly useInstead?: ReadonlyArray<string>
   /** Carried so a reader CAN use the corrected metric; older readers ignore it. */
   readonly signature?: ReadonlyArray<string>
 }
@@ -95,21 +212,43 @@ export interface UiManifest {
   readonly components: ReadonlyArray<ManifestComponent>
 }
 
-/** Project the catalog onto the lint manifest. One source, one lookup table. */
-export const projectManifest = (catalog: Catalog): UiManifest => ({
+/**
+ * Project the catalog onto the lint manifest. One source, one lookup table.
+ *
+ * Intent is optional because the catalog is derived and the manifest is a projection:
+ * a caller that has not read `intent/` still gets a valid manifest, just one whose rules
+ * cannot see a deprecation. The caller that HAS read it passes the same map the menu uses,
+ * so a rule and a person never disagree about which part is deprecated.
+ */
+export const projectManifest = (
+  catalog: Catalog,
+  intent?: ReadonlyMap<string, Intent>,
+): UiManifest => ({
   lexicon: lexiconRef("manifest"),
   colors: catalog.tokens.colors,
   sharedRoots: catalog.sharedRoots,
   localRoots: catalog.localRoots,
-  components: catalog.components.map((component) => ({
-    path: component.path,
-    name: component.name,
-    tier: component.tier,
-    owners: component.owners,
-    props: component.props,
-    tags: component.tags,
-    signature: component.signature,
-  })),
+  components: catalog.components.map((component) => {
+    const authored =
+      (component.id === undefined ? undefined : intent?.get(component.id)) ??
+      intent?.get(component.name)
+    return {
+      path: component.path,
+      name: component.name,
+      tier: component.tier,
+      owners: component.owners,
+      props: component.props,
+      tags: component.tags,
+      ...(component.kind === undefined ? {} : { kind: component.kind }),
+      ...(component.roles === undefined ? {} : { roles: component.roles }),
+      ...(component.feature === undefined ? {} : { feature: component.feature }),
+      ...(component.exports === undefined ? {} : { exports: component.exports }),
+      ...(component.usedBy === undefined ? {} : { usedBy: component.usedBy }),
+      ...(authored?.status === undefined ? {} : { status: authored.status }),
+      ...(authored?.useInstead === undefined ? {} : { useInstead: authored.useInstead }),
+      signature: component.signature,
+    }
+  }),
 })
 
 /** The signature a component is compared by. */
@@ -174,9 +313,130 @@ export const emptyCatalog = (root: string): Catalog => ({
 
 const TIERS_NAMES: ReadonlyArray<TierName> = ["primitive", "shared", "local"]
 
+export const PART_ROLES: ReadonlyArray<PartRole> = [
+  "component",
+  "hook",
+  "context",
+  "provider",
+  "barrel",
+  "route",
+  "module",
+]
+
+const DECLARATION_KINDS: ReadonlyArray<CatalogDeclaration["kind"]> = [
+  "function",
+  "class",
+  "variable",
+  "type",
+]
+
+const decodeDeclaration = (value: unknown): CatalogDeclaration | undefined => {
+  if (!isRecord(value)) return undefined
+  const name = str(value.name)
+  const kind = oneOf(value.kind, DECLARATION_KINDS)
+  const exported = bool(value.exported)
+  const renders = bool(value.renders)
+  const calls = strings(value.calls)
+  if (
+    name === undefined ||
+    kind === undefined ||
+    exported === undefined ||
+    renders === undefined ||
+    calls === undefined
+  ) {
+    return undefined
+  }
+  const objectKeys = strings(value.objectKeys)
+  return {
+    name,
+    kind,
+    exported,
+    renders,
+    calls,
+    ...(objectKeys === undefined ? {} : { objectKeys }),
+  }
+}
+
+export const decodeFeature = (value: unknown): CatalogFeature | undefined => {
+  if (!isRecord(value)) return undefined
+  const dir = str(value.dir)
+  const name = str(value.name)
+  const context = str(value.context)
+  const blocks = strings(value.blocks)
+  const hooks = strings(value.hooks)
+  const valueKeys = strings(value.valueKeys)
+  if (
+    dir === undefined ||
+    name === undefined ||
+    context === undefined ||
+    blocks === undefined ||
+    hooks === undefined ||
+    valueKeys === undefined
+  ) {
+    return undefined
+  }
+  const provider = str(value.provider)
+  const barrel = str(value.barrel)
+  return {
+    dir,
+    name,
+    context,
+    ...(provider === undefined ? {} : { provider }),
+    ...(barrel === undefined ? {} : { barrel }),
+    blocks,
+    hooks,
+    valueKeys,
+  }
+}
+
+/** Read a health block, or `undefined` when malformed. */
+export const decodeHealth = (value: unknown): CatalogHealth | undefined => {
+  if (!isRecord(value)) return undefined
+  const parts = num(value.parts)
+  const sharedReach = num(value.sharedReach)
+  const localOnly = num(value.localOnly)
+  const duplicateClusters = num(value.duplicateClusters)
+  if (
+    parts === undefined ||
+    sharedReach === undefined ||
+    localOnly === undefined ||
+    duplicateClusters === undefined
+  ) {
+    return undefined
+  }
+  return { parts, sharedReach, localOnly, duplicateClusters }
+}
+
+/** Read one duplicate cluster, or `undefined` when malformed. */
+export const decodeCluster = (value: unknown): DuplicateCluster | undefined => {
+  if (!isRecord(value)) return undefined
+  const canonical = str(value.canonical)
+  const name = str(value.name)
+  const members = strings(value.members)
+  const score = num(value.score)
+  const usedBy = num(value.usedBy)
+  if (
+    canonical === undefined ||
+    name === undefined ||
+    members === undefined ||
+    score === undefined ||
+    usedBy === undefined
+  ) {
+    return undefined
+  }
+  return { canonical, name, members, score, usedBy }
+}
+
 /** Read one component, or `undefined` when malformed. */
 export const decodeCatalogComponent = (value: unknown): CatalogComponent | undefined => {
   if (!isRecord(value)) return undefined
+  const id = str(value.id)
+  const kind = oneOf(value.kind, PART_ROLES)
+  const roles = arrayOf(value.roles, (role) => oneOf(role, PART_ROLES))
+  const feature = str(value.feature)
+  const exports = strings(value.exports)
+  const usedBy = num(value.usedBy)
+  const declarations = arrayOf(value.declarations, decodeDeclaration)
   const path = str(value.path)
   const name = str(value.name)
   const tier = oneOf(value.tier, TIERS_NAMES)
@@ -197,7 +457,23 @@ export const decodeCatalogComponent = (value: unknown): CatalogComponent | undef
   ) {
     return undefined
   }
-  return { path, name, tier, owners, props, tags, signature, documented }
+  return {
+    ...(id === undefined ? {} : { id }),
+    ...(kind === undefined ? {} : { kind }),
+    ...(roles === undefined ? {} : { roles }),
+    ...(feature === undefined ? {} : { feature }),
+    ...(exports === undefined ? {} : { exports }),
+    ...(usedBy === undefined ? {} : { usedBy }),
+    ...(declarations === undefined ? {} : { declarations }),
+    path,
+    name,
+    tier,
+    owners,
+    props,
+    tags,
+    signature,
+    documented,
+  }
 }
 
 /** Read one duplicate candidate, or `undefined` when malformed. */
@@ -236,6 +512,9 @@ export const decodeCatalog = (value: unknown): Catalog | undefined => {
   const sharedRoots = strings(value.sharedRoots)
   const localRoots = strings(value.localRoots)
   const components = arrayOf(value.components, decodeCatalogComponent)
+  const features = arrayOf(value.features, decodeFeature)
+  const health = decodeHealth(value.health)
+  const clusters = arrayOf(value.clusters, decodeCluster)
   const orphans = strings(value.orphans)
   const duplicates = arrayOf(value.duplicates, decodeDuplicate)
   if (
@@ -261,6 +540,9 @@ export const decodeCatalog = (value: unknown): Catalog | undefined => {
     sharedRoots,
     localRoots,
     components,
+    ...(features === undefined ? {} : { features }),
+    ...(health === undefined ? {} : { health }),
+    ...(clusters === undefined ? {} : { clusters }),
     orphans,
     duplicates,
   }
@@ -286,6 +568,13 @@ export const decodeManifestComponent = (value: unknown): ManifestComponent | und
     return undefined
   }
   const signature = strings(value.signature)
+  const kind = oneOf(value.kind, PART_ROLES)
+  const roles = arrayOf(value.roles, (role) => oneOf(role, PART_ROLES))
+  const feature = str(value.feature)
+  const exports = strings(value.exports)
+  const usedBy = num(value.usedBy)
+  const status = oneOf(value.status, PART_STATUSES)
+  const useInstead = strings(value.useInstead)
   return {
     path,
     name,
@@ -293,6 +582,13 @@ export const decodeManifestComponent = (value: unknown): ManifestComponent | und
     owners,
     props,
     tags,
+    ...(kind === undefined ? {} : { kind }),
+    ...(roles === undefined ? {} : { roles }),
+    ...(feature === undefined ? {} : { feature }),
+    ...(exports === undefined ? {} : { exports }),
+    ...(usedBy === undefined ? {} : { usedBy }),
+    ...(status === undefined ? {} : { status }),
+    ...(useInstead === undefined ? {} : { useInstead }),
     ...(signature === undefined ? {} : { signature }),
   }
 }
