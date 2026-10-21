@@ -1,3 +1,4 @@
+4e041bd9874b430d	1792542864	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0}}
 4e062b925aea08dd	1792535008	{"confidence":0.59,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.69,"different_order":0,"different_work":0.31,"same_operation":0}}
 4e0f94e305613249	1792252958	{"confidence":0.3,"kind":"Classify","label":"move","probabilities":{"merge":0.09,"move":0.53,"no_issue":0.38}}
 4e1a19ef7733ed20	1792253160	{"confidence":0.97,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.98,"not_a_derivation":0.01,"reimplements":0.01}}
@@ -5,8 +6,10 @@
 4e55d450df897783	1792252958	{"confidence":0.89,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.06,"independent":0.93,"meaning_switched":0.01}}
 4e60c6debb5bfb42	1792252958	{"confidence":0.73,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.18,"names_a_caller":0,"shared_vocabulary":0.8200000000000001}}
 4e725cff3b70c8e3	1792252958	{"confidence":0.89,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0,"no_issue":0.08,"semantic_verdict":0.92}}
+4e774930609d1cdf	1792542864	{"confidence":0.3,"kind":"Classify","label":"one_concept","probabilities":{"already_named":0.24,"coincidental":0.23,"one_concept":0.53}}
 4ea9523a64f7927b	1792535008	{"confidence":0.91,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.94,"same_use_left":0.02,"same_use_right":0.04}}
 4eadb7953389f047	1792535008	{"confidence":0.81,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.86,"component_or_feature":0.08,"not_applicable":0.03,"route_or_handler":0.03}}
+4ecd3d9c1894448b	1792542865	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0.01}}
 4edadf8dcf9d2e4f	1792252958	{"confidence":0.87,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.08,"same_module":0.01,"same_package":0.01,"sibling_packages":0.9}}
 4ee10ffbdb96efec	1792253160	{"confidence":0.38,"kind":"Classify","label":"value","probabilities":{"meaning":0.41,"unclear":0,"value":0.59}}
 4ee46197b279b72e	1792252958	{"consistency":1,"kind":"Probability","probability":0.7200000000000001}

@@ -1,8 +1,11 @@
+93083924f95a46bb	1792543161	{"confidence":0.69,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.12,"keep_variants":0.79,"no_issue":0.09}}
 930adce7e839b5c2	1792252958	{"confidence":0.7,"kind":"Classify","label":"library_core","probabilities":{"domain_core":0.1,"infrastructure":0.02,"library_core":0.74,"not_applicable":0.03,"rendering_edge":0,"transport_edge":0.03,"utilities":0.08}}
 9316649e8fdaf24b	1792252958	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0.01}}
 9318639d6d1126f5	1792252958	{"confidence":0.49,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.16,"no_issue":0.22,"semantic_verdict":0.62}}
+9323b73cbde7abc3	1792542865	{"confidence":0.96,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.03,"framework_glue":0,"implementation_detail":0.97,"wire_contract":0}}
 932be4c489ef12f0	1792535008	{"confidence":0.55,"kind":"Classify","label":"not_applicable","probabilities":{"domain_logic":0.22,"infrastructure":0,"input_adaptation":0.05,"mechanical":0.12,"not_applicable":0.6,"orchestration":0,"rendering":0,"request_validation":0.01,"transport_concern":0}}
 93377b95081d8f48	1792252958	{"confidence":0.28,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.52,"not_a_derivation":0.4,"reimplements":0.08}}
+9344462c38303395	1792542865	{"confidence":0.72,"kind":"Classify","label":"value","probabilities":{"meaning":0.18,"unclear":0.01,"value":0.81}}
 9346d4a69f7f203b	1792252958	{"confidence":0.92,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.94,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0.03}}
 935a3ed928533674	1792252958	{"consistency":1,"kind":"Probability","probability":0.26555555555555554}
 9363ca32754d3168	1792535008	{"confidence":0.81,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.86,"component_or_feature":0.05,"not_applicable":0.08,"route_or_handler":0.01}}

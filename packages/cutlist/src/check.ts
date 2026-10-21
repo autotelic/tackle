@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto"
 import { isDeepStrictEqual } from "node:util"
 import { Effect, FileSystem, Path } from "effect"
-import { decodeMenu, type Catalog, type Menu } from "@autotelic/protocol"
+import { decodeMenu, parseJson, type Catalog, type Menu } from "@autotelic/protocol"
 
 /*
  * `cutlist build --check`, the staleness gate — `oxfmt --check` / `prettier --check` for
@@ -46,15 +46,6 @@ export const compareCatalog = ({
   })
 
 const digestOf = (text: string): string => createHash("sha256").update(text).digest("hex")
-
-/** Parse JSON without a throw; a committed file that cannot be read is stale, not clean. */
-const parseJson = (text: string): unknown => {
-  try {
-    return JSON.parse(text)
-  } catch {
-    return undefined
-  }
-}
 
 /**
  * Compare a committed `menu.json` against the fresh menu, by model rather than by bytes.

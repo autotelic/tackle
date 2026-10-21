@@ -195,7 +195,7 @@ export interface ManifestComponent extends ComponentFields {
   /** The names a consumer imports, so a rule can match an import binding to a part. */
   readonly exports?: ReadonlyArray<string>
   readonly usedBy?: number
-  /** Authored lifecycle. A rule can refuse a direct import of a deprecated part. */
+  /** Authored lifecycle. A rule can refuse a direct import of a retired part. */
   readonly status?: PartStatus
   /** Authored migration target, carried to the rule that reports the import. */
   readonly useInstead?: ReadonlyArray<string>
@@ -217,12 +217,12 @@ export interface UiManifest {
  *
  * Intent is optional because the catalog is derived and the manifest is a projection:
  * a caller that has not read `intent/` still gets a valid manifest, just one whose rules
- * cannot see a deprecation. The caller that HAS read it passes the same map the menu uses,
- * so a rule and a person never disagree about which part is deprecated.
+ * cannot see a retirement. The caller that HAS read it passes the same map the menu uses,
+ * so a rule and a person never disagree about which part is retired.
  */
 export const projectManifest = (
   catalog: Catalog,
-  intent?: ReadonlyMap<string, Intent>,
+  intent: ReadonlyMap<string, Intent> | undefined,
 ): UiManifest => ({
   lexicon: lexiconRef("manifest"),
   colors: catalog.tokens.colors,
@@ -357,6 +357,7 @@ const decodeDeclaration = (value: unknown): CatalogDeclaration | undefined => {
   }
 }
 
+/** Read one feature record, or `undefined` when it is not one. */
 export const decodeFeature = (value: unknown): CatalogFeature | undefined => {
   if (!isRecord(value)) return undefined
   const dir = str(value.dir)

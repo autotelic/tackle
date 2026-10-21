@@ -2,6 +2,7 @@ df06d4cb6e063fa9	1792252958	{"confidence":0.31,"kind":"Classify","label":"move",
 df08b3da71feb7bf	1792252958	{"confidence":0.43,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.62,"not_a_derivation":0.35,"reimplements":0.03}}
 df2995933548dfe2	1792269251	{"confidence":0.74,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.83,"not_a_derivation":0.17,"reimplements":0}}
 df436330a0aa3593	1792252958	{"confidence":0.8,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.85,"stale_reference":0,"wrong_behavior":0.13,"wrong_contract":0.02}}
+df5756f11d565924	1792592274	{"confidence":0.27,"kind":"Classify","label":"value","probabilities":{"meaning":0.05,"unclear":0.44,"value":0.51}}
 df66766263697b73	1792253092	{"confidence":0.59,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.69,"different_order":0.01,"different_work":0.3,"same_operation":0}}
 df73b96a5af4a913	1792252958	{"confidence":0.5,"kind":"Classify","label":"none","probabilities":{"none":0.75,"true":0.25}}
 df79eddb3ac590a8	1792269251	{"confidence":0.35,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.07,"merge":0.48,"move":0.43,"share_a_contract":0.01,"split":0.01}}

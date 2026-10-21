@@ -1,4 +1,5 @@
 7a08f31ba92cfc80	1792252958	{"confidence":0.69,"kind":"Classify","label":"value","probabilities":{"meaning":0.21,"unclear":0,"value":0.79}}
+7a1bdd42d11e7ec1	1792542865	{"confidence":0.91,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.9299999999999999,"different_order":0.04,"different_work":0.03,"same_operation":0}}
 7a2fc8ecc78b7b4f	1792252958	{"confidence":0.66,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.09,"keep_variants":0.77,"no_issue":0.14}}
 7a4b23f62410ee57	1792253093	{"confidence":0.28,"kind":"Classify","label":"value","probabilities":{"meaning":0.47,"unclear":0.01,"value":0.52}}
 7a56feb5312f3ad8	1792535008	{"confidence":0.43,"kind":"Classify","label":"input_adaptation","probabilities":{"domain_logic":0.05,"infrastructure":0,"input_adaptation":0.49,"mechanical":0,"not_applicable":0,"orchestration":0,"rendering":0,"request_validation":0.3,"transport_concern":0.16}}

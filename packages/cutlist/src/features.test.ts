@@ -1,3 +1,4 @@
+import fc from "fast-check"
 import { describe, expect, it } from "vitest"
 import { importerGraph } from "./catalog.ts"
 import { parseModule } from "./crawl.ts"
@@ -49,5 +50,21 @@ describe("featuresOf", () => {
       dir: "components/feature",
       blocks: ["components/feature/block.tsx"],
     })
+  })
+
+  it("does not let arbitrary same-directory modules become blocks", () => {
+    fc.assert(
+      fc.property(fc.array(fc.nat({ max: 10_000 }), { maxLength: 12 }), (suffixes) => {
+        const strangers = suffixes.map((suffix) =>
+          parseModule({
+            filename: `components/feature/extra-${String(suffix)}.tsx`,
+            text: "export function Extra() { return <span /> }",
+          }),
+        )
+        const all = [...modules, ...strangers]
+        const features = featuresOf(all, options, importerGraph(all, {}))
+        return features.length === 1 && features[0]?.blocks.length === 1
+      }),
+    )
   })
 })

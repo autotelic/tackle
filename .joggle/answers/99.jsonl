@@ -2,6 +2,7 @@
 996187315d4ee702	1792252958	{"confidence":0.55,"kind":"Classify","label":"move","probabilities":{"merge":0.05,"move":0.7,"no_issue":0.25}}
 9965d04c7a8223f5	1792535008	{"confidence":0.88,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.03,"internal_only":0.92,"unaccounted":0.05}}
 9976ea74dbcece3f	1792535008	{"confidence":0.83,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.87,"component_or_feature":0.04,"not_applicable":0.06,"route_or_handler":0.03}}
+9991eb6cc5b8ea28	1792543161	{"confidence":0.4,"kind":"Classify","label":"same_module","probabilities":{"different_deployables":0,"same_module":0.55,"same_package":0.45,"sibling_packages":0}}
 99b217a379e16523	1792252958	{"consistency":1,"kind":"Probability","probability":0.7044444444444444}
 99d0b28e22392270	1792535008	{"confidence":1,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":1,"infrastructure":0,"input_adaptation":0,"mechanical":0,"not_applicable":0,"orchestration":0,"rendering":0,"request_validation":0,"transport_concern":0}}
 99f777ba27e8ea3a	1792252958	{"consistency":1,"kind":"Probability","probability":0.6466666666666666}

@@ -1,3 +1,5 @@
+ea10b77edb37a512	1792543161	{"confidence":0.89,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.92,"different_order":0.02,"different_work":0.06,"same_operation":0}}
+ea26a764bfc0faf3	1792542865	{"confidence":0.7,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.15,"inferred":0.05,"not_applicable":0.8}}
 ea470c8f50c5d1a6	1792252958	{"confidence":0.97,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.01,"framework_glue":0.01,"implementation_detail":0.98,"wire_contract":0}}
 ea63340dfd16d2a6	1792535008	{"confidence":0.47,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.6,"different_order":0,"different_work":0.4,"same_operation":0}}
 ea67f968bb3e3bac	1792252958	{"confidence":0.89,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.93,"not_a_derivation":0.06,"reimplements":0.01}}

@@ -8,6 +8,7 @@
  */
 export * from "./lexicon.ts"
 export * from "./decode.ts"
+export * from "./json.ts"
 export * from "./report.ts"
 export * from "./baseline.ts"
 export * from "./config.ts"

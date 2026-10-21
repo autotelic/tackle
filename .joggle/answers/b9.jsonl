@@ -1,9 +1,11 @@
 b917bc956e0b9c5e	1792252958	{"confidence":0.68,"kind":"Classify","label":"framework_glue","probabilities":{"domain_concept":0.14,"framework_glue":0.76,"implementation_detail":0.06,"wire_contract":0.04}}
 b92018690ea5e97e	1792253092	{"confidence":0.43,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.62,"not_a_derivation":0.01,"reimplements":0.37}}
+b9399568cfe20522	1792542865	{"consistency":1,"kind":"Probability","probability":0.21666666666666667}
 b940ea2bfd744238	1792265611	{"confidence":0.56,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.67,"different_order":0.01,"different_work":0.32,"same_operation":0}}
 b943c0af0c33b9e5	1792252958	{"confidence":0.93,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.05,"same_module":0,"same_package":0,"sibling_packages":0.95}}
 b9487071b663dbc8	1792535008	{"confidence":0.13,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.35,"component_or_feature":0.24,"not_applicable":0.07,"route_or_handler":0.34}}
 b95e45bee2f1b122	1792535007	{"confidence":0.73,"kind":"Classify","label":"library_core","probabilities":{"domain_core":0.1,"infrastructure":0.02,"library_core":0.77,"not_applicable":0.03,"rendering_edge":0,"transport_edge":0.02,"utilities":0.06}}
+b9636ff606fff5cf	1792542865	{"confidence":0.72,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.79,"different_order":0,"different_work":0.21,"same_operation":0}}
 b966efd3649e3ac0	1792252958	{"confidence":0.37,"kind":"Classify","label":"not_a_derivation","probabilities":{"legitimate_local":0.42,"not_a_derivation":0.58,"reimplements":0}}
 b97c5efeee20d81e	1792252958	{"consistency":1,"kind":"Probability","probability":0.79}
 b98150d8624c3492	1792535008	{"confidence":0.68,"kind":"Classify","label":"move","probabilities":{"move":0.84,"no_issue":0.16}}

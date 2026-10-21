@@ -19,7 +19,7 @@ export interface IntentIssues {
   readonly stale: ReadonlyArray<string>
   /** `useInstead` targets that name no existing part or export. */
   readonly unknownTargets: ReadonlyArray<string>
-  /** Deprecated parts with no migration target. */
+  /** Retired parts with no migration target. */
   readonly stranded: ReadonlyArray<string>
 }
 

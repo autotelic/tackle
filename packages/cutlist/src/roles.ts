@@ -93,6 +93,7 @@ const KIND_ORDER: ReadonlyArray<PartRole> = [
   "module",
 ]
 
+/** The one role a part is listed under, or `module` when it carries none of the named ones. */
 export const kindOf = (roles: ReadonlyArray<PartRole>): PartRole =>
   KIND_ORDER.find((kind) => roles.includes(kind)) ?? "module"
 

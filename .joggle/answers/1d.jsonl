@@ -1,9 +1,13 @@
 1d1434f6a7beabc5	1792252958	{"confidence":0.34,"kind":"Classify","label":"one_concept","probabilities":{"already_named":0.26,"coincidental":0.18,"one_concept":0.56}}
 1d188ed0335ccf89	1792252958	{"confidence":0.45,"kind":"Classify","label":"not_a_derivation","probabilities":{"legitimate_local":0.31,"not_a_derivation":0.63,"reimplements":0.06}}
 1d2bdd6317893e0e	1792253197	{"confidence":0.95,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.97,"not_a_derivation":0.02,"reimplements":0.01}}
+1d319080aab723f0	1792542865	{"confidence":0.23,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.27,"keep_variants":0.49,"no_issue":0.24}}
 1d3219c52793f725	1792265611	{"confidence":0.64,"kind":"Classify","label":"value","probabilities":{"meaning":0.24,"unclear":0,"value":0.76}}
+1d3b1be84176031a	1792542865	{"confidence":0.34,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.42,"no_difference":0.08,"removes_a_hazard":0.16,"slightly_clearer":0.34},"rating":1.66}
 1d44b5ec8ff26e58	1792535008	{"confidence":0.97,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.98,"component_or_feature":0.01,"not_applicable":0.01,"route_or_handler":0}}
+1d492e33a7eb1e0c	1792542865	{"confidence":0.68,"kind":"Classify","label":"move","probabilities":{"move":0.84,"no_issue":0.16}}
 1d626941eb992518	1792252958	{"confidence":0.95,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.96,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0.01}}
+1d64096d2ed76554	1792542865	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
 1d64fb76113d0f0f	1792252958	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0.01}}
 1d6ed210c736b290	1792252958	{"confidence":0.64,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.76,"unclear":0,"value":0.24}}
 1d7a703500602747	1792535008	{"confidence":0.57,"kind":"Classify","label":"mechanical","probabilities":{"domain_logic":0.32,"infrastructure":0,"input_adaptation":0,"mechanical":0.62,"not_applicable":0.03,"orchestration":0.03,"rendering":0,"request_validation":0,"transport_concern":0}}

@@ -10,8 +10,10 @@
 4695eeac3924a97e	1792252958	{"confidence":0.66,"kind":"Classify","label":"move","probabilities":{"move":0.83,"no_issue":0.17}}
 46b2fb1b40cb020c	1792252958	{"confidence":0.94,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.96,"not_a_derivation":0.03,"reimplements":0.01}}
 46bb371772c6ada2	1792535008	{"confidence":0.84,"kind":"Classify","label":"input_adaptation","probabilities":{"domain_logic":0.01,"infrastructure":0,"input_adaptation":0.86,"mechanical":0,"not_applicable":0,"orchestration":0,"rendering":0,"request_validation":0.07,"transport_concern":0.06}}
+46bc1623fb4628c0	1792542865	{"confidence":0.8,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.08,"keep_variants":0.87,"no_issue":0.05}}
 46d451be72eb1631	1792252958	{"confidence":0.93,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.01,"name_meaning":0,"no_issue":0.04,"semantic_verdict":0.95}}
 46d72fdeeff7e43c	1792252958	{"confidence":0.62,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.25,"names_a_caller":0,"shared_vocabulary":0.75}}
 46d75ba47be8e464	1792535008	{"confidence":0.92,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.94,"component_or_feature":0.03,"not_applicable":0.02,"route_or_handler":0.01}}
 46f7425dc670d217	1792535007	{"confidence":0.66,"kind":"Classify","label":"input_adaptation","probabilities":{"domain_logic":0.16,"infrastructure":0,"input_adaptation":0.7,"mechanical":0.08,"not_applicable":0.05,"orchestration":0,"rendering":0,"request_validation":0,"transport_concern":0.01}}
+46fbca3c7fb38534	1792542865	{"confidence":0.23,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.27,"keep_variants":0.49,"no_issue":0.24}}
 46fd279982a2a87d	1792535008	{"confidence":0.93,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.95,"component_or_feature":0.02,"not_applicable":0.02,"route_or_handler":0.01}}

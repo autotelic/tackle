@@ -6,3 +6,4 @@
 26bdd28a80834c05	1792252958	{"confidence":0.82,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.02,"keep_variants":0.88,"no_issue":0.1}}
 26c19f4b2f9c0e1f	1792535009	{"confidence":0.59,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.69,"component_or_feature":0.17,"not_applicable":0.11,"route_or_handler":0.03}}
 26d4d100ae83701b	1792535008	{"confidence":0.23,"kind":"Classify","label":"collapse","probabilities":{"collapse":0.49,"keep_variants":0.46,"no_issue":0.05}}
+26e088acf5d9120c	1792542865	{"confidence":0.6,"kind":"Classify","label":"same_module","probabilities":{"different_deployables":0,"same_module":0.7,"same_package":0.3,"sibling_packages":0}}

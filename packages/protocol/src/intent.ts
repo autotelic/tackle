@@ -37,7 +37,7 @@ export interface Intent {
   readonly status?: PartStatus
   /** Real call sites or canonical snippets that show the approved use. */
   readonly examples?: ReadonlyArray<string>
-  /** What to reach for instead, when a near-duplicate or a deprecation exists. */
+  /** What to reach for instead, when a near-duplicate or a retirement exists. */
   readonly useInstead?: ReadonlyArray<string>
 }
 
@@ -81,7 +81,7 @@ export const decodeIntent = (value: unknown): Intent | undefined => {
 }
 
 /** Whether an intent record carries anything a reader can act on. */
-export const hasIntent = (intent: Intent | undefined): boolean =>
+export const hasIntent = (intent: Intent | undefined) =>
   intent !== undefined &&
   (intent.summary !== undefined ||
     intent.whenToUse !== undefined ||

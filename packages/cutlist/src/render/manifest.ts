@@ -9,8 +9,10 @@ import { projectManifest, type Catalog, type Intent } from "@autotelic/protocol"
 /**
  * The manifest projection as JSON, pretty-printed and newline-terminated for git.
  *
- * Intent is joined here as well as in the menu: a lint rule that cannot see `deprecated`
- * can only describe the shape of a part, not whether importing it is still allowed.
+ * Intent is joined here as well as in the menu: a lint rule that cannot see a part's
+ * lifecycle can only describe its shape, not whether importing it is still allowed.
  */
-export const renderManifest = (catalog: Catalog, intent?: ReadonlyMap<string, Intent>): string =>
-  `${JSON.stringify(projectManifest(catalog, intent), null, 2)}\n`
+export const renderManifest = (
+  catalog: Catalog,
+  intent: ReadonlyMap<string, Intent> | undefined,
+): string => `${JSON.stringify(projectManifest(catalog, intent), null, 2)}\n`

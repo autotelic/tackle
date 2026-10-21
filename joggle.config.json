@@ -25,6 +25,26 @@
       "rule": "joggle/field-type-drift",
       "path": "packages/joggle/src/config.ts",
       "reason": "`RuleSetting.onUnavailable` is the RESOLVED setting and may be `count`; a rule's own declaration (`PlannedRule.onUnavailable`) is `report` | `propagate`, because a rule saying `count` would be meaningless. The two are different levels of one policy and the widening is deliberate, not a drift."
+    },
+    {
+      "rule": "joggle/duplicate-implementation",
+      "path": "packages/cutlist/src/features.ts",
+      "reason": "`dirOf` is a five-line path scan that exists in cutlist and joggle because the tools never import each other; sharing it would turn the format seam into a runtime dependency. The two also answer differently at the top level (`\"\"` here, `\".\"` in joggle), so a common helper would change one caller's meaning."
+    },
+    {
+      "rule": "joggle/duplicate-implementation",
+      "path": "packages/cutlist/src/roles.ts",
+      "reason": "`baseOf` is a filename scan used to read a declaration's name; joggle's copy serves bundle naming. Same seam as `dirOf`: two engines that agree on bytes, not code."
+    },
+    {
+      "rule": "joggle/duplicate-implementation",
+      "path": "packages/joggle/src/bundles.ts",
+      "reason": "The other side of the `dirOf`/`baseOf` pair: joggle and cutlist each carry the five-line path scan because the tools never import each other. The ignore is recorded on both files so the finding cannot move with whichever side the detector names."
+    },
+    {
+      "rule": "joggle/language-drift",
+      "path": "packages/jig-cli/src/opencode.ts",
+      "reason": "The prose names OpenCode, the host product, and `open` is not a domain term this file declares. The rule's vocabulary sample is the prose, not a claim about the code."
     }
   ],
   "architecture": {

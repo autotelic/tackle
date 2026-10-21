@@ -5,6 +5,7 @@
 2b480e8806d637d0	1792252958	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0.01}}
 2b56a51aabd55ba5	1792252958	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
 2b651ff8162ea2ac	1792253093	{"confidence":0.65,"kind":"Classify","label":"wire_contract","probabilities":{"domain_concept":0.25,"framework_glue":0,"implementation_detail":0.01,"wire_contract":0.74}}
+2b66e0841b388c16	1792543161	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
 2b6cdc4f33b6593c	1792252958	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
 2b9b75979593e034	1792252958	{"confidence":0.87,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.9,"stale_reference":0.01,"wrong_behavior":0.06,"wrong_contract":0.03}}
 2ba4114c8ca309bd	1792252958	{"consistency":1,"kind":"Probability","probability":0.8866666666666667}

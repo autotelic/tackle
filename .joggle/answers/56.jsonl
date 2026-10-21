@@ -1,7 +1,11 @@
 560652b065324ef6	1792265611	{"confidence":0.8,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.04,"keep_variants":0.87,"no_issue":0.09}}
 56226904f199a76c	1792252958	{"confidence":0.93,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0,"wrong_behavior":0.04,"wrong_contract":0.01}}
+5655501d1ef4c8a8	1792542864	{"consistency":1,"kind":"Probability","probability":0.33111111111111113}
 566e831d59608086	1792535008	{"confidence":0.97,"kind":"Classify","label":"rendering","probabilities":{"domain_logic":0,"infrastructure":0,"input_adaptation":0,"mechanical":0,"not_applicable":0,"orchestration":0,"rendering":0.97,"request_validation":0,"transport_concern":0.03}}
 567265dbf6aca4ed	1792535008	{"confidence":0.6,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.7,"component_or_feature":0.21,"not_applicable":0.08,"route_or_handler":0.01}}
 567dcc7c8bc01701	1792269251	{"confidence":0.33,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.45,"names_a_caller":0,"shared_vocabulary":0.55}}
 56aaeff1365bd8b6	1792535008	{"confidence":0.61,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.71,"component_or_feature":0.12,"not_applicable":0.16,"route_or_handler":0.01}}
+56acff8d64031b5a	1792543161	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0.01}}
+56e658fc0cb3812c	1792542865	{"confidence":0.21,"kind":"Rate","label":"slightly_clearer","probabilities":{"meaningfully_better":0.29,"no_difference":0.16,"removes_a_hazard":0.17,"slightly_clearer":0.38},"rating":1.47}
+56e669c7d5ae4793	1792542864	{"confidence":0.93,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0.03,"wrong_behavior":0.02,"wrong_contract":0}}
 56fa7286179ef9bb	1792252958	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}

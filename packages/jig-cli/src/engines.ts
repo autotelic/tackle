@@ -4,6 +4,7 @@ import { Effect } from "effect"
 import {
   countsOf,
   decodeRepair,
+  isRecord,
   str as stringOf,
   type Diagnostic,
   type DropCount,
@@ -80,10 +81,8 @@ export const resolveEngineCommand = ({
   return existsSync(local) ? local : command
 }
 
-const record = (value: unknown): Record<string, unknown> | undefined =>
-  typeof value === "object" && value !== null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : undefined
+const recordAt = (value: unknown): Record<string, unknown> | undefined =>
+  isRecord(value) ? value : undefined
 
 const numberOr = (value: unknown, fallback: number): number =>
   typeof value === "number" && Number.isFinite(value) ? value : fallback
@@ -154,7 +153,7 @@ const relativeTo = ({ file, root }: { readonly file: string; readonly root: stri
 
 /** oxlint puts the position in the first label's span; a report document puts it inline. */
 const locationOf = (entry: Record<string, unknown>, root: string): SourceLocation => {
-  const location = record(entry.location)
+  const location = recordAt(entry.location)
   if (location !== undefined) {
     return {
       file: relativeTo({
@@ -166,7 +165,7 @@ const locationOf = (entry: Record<string, unknown>, root: string): SourceLocatio
     }
   }
   const labels = entry.labels
-  const span = record(record(Array.isArray(labels) ? labels[0] : undefined)?.span)
+  const span = recordAt(recordAt(Array.isArray(labels) ? labels[0] : undefined)?.span)
   return {
     file: relativeTo({
       file: stringOf(entry.filename) ?? stringOf(entry.file) ?? "<unknown>",
@@ -188,7 +187,7 @@ const moveOf = (value: unknown): Move | undefined =>
 /** Map one engine finding to a protocol diagnostic, or drop it when it is not one. */
 export const normalize = (raw: unknown, context: ParseContext): Diagnostic | undefined => {
   const { engine, root } = context
-  const entry = record(raw)
+  const entry = recordAt(raw)
   const message = stringOf(entry?.message) ?? stringOf(entry?.text)
   if (entry === undefined || message === undefined) return undefined
   const help = stringOf(entry.help)
@@ -228,7 +227,7 @@ const arrayOfRecords = (value: unknown): ReadonlyArray<Record<string, unknown>> 
   if (!Array.isArray(value)) return undefined
   const out: Array<Record<string, unknown>> = []
   for (const element of value) {
-    const entry = record(element)
+    const entry = recordAt(element)
     if (entry === undefined) return undefined
     out.push(entry)
   }
@@ -242,12 +241,12 @@ const sarifLocation = (
   root: string,
 ): SourceLocation | undefined => {
   const locations = result.locations
-  const physical = record(
-    record(Array.isArray(locations) ? locations[0] : undefined)?.physicalLocation,
+  const physical = recordAt(
+    recordAt(Array.isArray(locations) ? locations[0] : undefined)?.physicalLocation,
   )
-  const uri = stringOf(record(physical?.artifactLocation)?.uri)
+  const uri = stringOf(recordAt(physical?.artifactLocation)?.uri)
   if (uri === undefined) return undefined
-  const region = record(physical?.region)
+  const region = recordAt(physical?.region)
   const line = numberOr(region?.startLine, 1)
   const column = numberOr(region?.startColumn, 1)
   const endLine = typeof region?.endLine === "number" ? region.endLine : undefined
@@ -273,7 +272,7 @@ const parseSarif = (
     const results = arrayOfRecords(run.results)
     if (results === undefined) return undefined
     for (const result of results) {
-      const message = stringOf(record(result.message)?.text)
+      const message = stringOf(recordAt(result.message)?.text)
       const ruleId = stringOf(result.ruleId)
       const location = sarifLocation(result, root)
       if (message === undefined || ruleId === undefined || location === undefined) return undefined
@@ -300,8 +299,8 @@ const parseCodeClimate = (
   if (issues === undefined) return undefined
   const out: Array<Diagnostic> = []
   for (const issue of issues) {
-    const location = record(issue.location)
-    const lines = record(location?.lines)
+    const location = recordAt(issue.location)
+    const lines = recordAt(location?.lines)
     const description = stringOf(issue.description)
     const check = stringOf(issue.check_name)
     const path = stringOf(location?.path)
@@ -434,7 +433,7 @@ export const parseEngineOutput = (
 
   if (trimmed.startsWith("{")) {
     try {
-      const entry = record(JSON.parse(trimmed))
+      const entry = recordAt(JSON.parse(trimmed))
       if (Array.isArray(entry?.diagnostics)) {
         return entry.diagnostics.map((raw) => normalize(raw, context)).filter(defined)
       }
@@ -561,17 +560,17 @@ export const engineProvenance = (stdout: string): Provenance => {
   if (!trimmed.startsWith("{")) return { status: "ran" }
   let doc: Record<string, unknown> | undefined
   try {
-    doc = record(JSON.parse(trimmed))
+    doc = recordAt(JSON.parse(trimmed))
   } catch {
     return { status: "ran" }
   }
-  const summary = record(doc?.summary)
+  const summary = recordAt(doc?.summary)
   if (summary === undefined) return { status: "ran" }
 
   const byStage = new Map<string, number>()
   if (Array.isArray(summary.drops)) {
     for (const raw of summary.drops) {
-      const stage = stringOf(record(raw)?.stage)
+      const stage = stringOf(recordAt(raw)?.stage)
       if (stage === undefined) continue
       byStage.set(stage, (byStage.get(stage) ?? 0) + 1)
     }

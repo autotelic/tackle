@@ -68,7 +68,7 @@ export interface MenuEntry {
   readonly examples?: ReadonlyArray<string>
   /** Derived: the primitive/sub-components and hooks this is composed of. */
   readonly composedOf: ReadonlyArray<string>
-  /** Authored: what to use instead, when a near-duplicate or deprecation exists. */
+  /** Authored: what to use instead, when a near-duplicate or a retirement exists. */
   readonly useInstead?: ReadonlyArray<string>
 }
 
@@ -81,7 +81,7 @@ export interface MenuEntry {
 export interface MenuHealth extends CatalogHealth {
   /** Parts carrying any authored intent. */
   readonly documented: number
-  /** Parts marked deprecated that something still imports. */
+  /** Parts marked retired that something still imports. */
   readonly deprecatedInUse: number
 }
 
@@ -137,7 +137,7 @@ export interface MenuProjection {
  * The derived half of the menu, joined with the authored half.
  *
  * `id` is the join key: it is derived from the path, so two parts that share a `name`
- * (`Comments`, `types`) no longer overwrite each other's intent. The name fallback keeps
+ * (`Comments`, `types`) do not overwrite each other's intent. The name fallback keeps
  * intent written before ids landed readable; a rebuild only rewrites the generated menu,
  * never a sentence a person wrote.
  */
@@ -221,7 +221,7 @@ export const decodeMenuEntry = (value: unknown): MenuEntry | undefined => {
     ...(feature === undefined ? {} : { feature }),
     ...(exports === undefined ? {} : { exports }),
     ...(usedBy === undefined ? {} : { usedBy }),
-    ...(decodeIntent(value) ?? {}),
+    ...decodeIntent(value),
     name,
     path,
     tier,

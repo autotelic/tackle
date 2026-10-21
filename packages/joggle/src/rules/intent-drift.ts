@@ -15,7 +15,7 @@ import {
   type PlannedRule,
   type Scope,
 } from "../rule.ts"
-import type { Diagnostic, Drop } from "../schema.ts"
+import type { Diagnostic, Drop, SourceLocation } from "../schema.ts"
 import type { ImportEdge } from "../imports.ts"
 import type { SourceFile, Unit, Workspace } from "../workspace.ts"
 
@@ -58,12 +58,6 @@ interface Deprecation {
   readonly declared: ReadonlyArray<string>
   readonly unknown: ReadonlyArray<string>
   readonly imports: ReadonlyArray<{ readonly edge: ImportEdge; readonly site: SourceLocation }>
-}
-
-interface SourceLocation {
-  readonly file: string
-  readonly line: number
-  readonly column: number
 }
 
 /**

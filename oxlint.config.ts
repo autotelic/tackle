@@ -50,6 +50,7 @@ const effectOff: Record<string, "off"> = Object.fromEntries(
  */
 const BOUNDARY_FILES = [
   "packages/protocol/src/decode.ts",
+  "packages/protocol/src/json.ts",
   "packages/protocol/src/config.ts",
   "packages/protocol/src/compat.ts",
   "packages/protocol/src/catalog.ts",
@@ -57,6 +58,7 @@ const BOUNDARY_FILES = [
   "packages/protocol/src/fixture-support.ts",
   "packages/protocol/src/report.ts",
   "packages/protocol/src/doc.ts",
+  "packages/protocol/src/intent.ts",
   "packages/protocol/src/baseline.ts",
   "packages/cutlist/src/crawl.ts",
   "packages/cutlist/src/check.ts",
@@ -105,12 +107,26 @@ const CONDITIONAL_SPREAD_FILES = [
   "packages/protocol/src/report.ts",
   "packages/protocol/src/catalog.ts",
   "packages/protocol/src/doc.ts",
+  "packages/protocol/src/intent.ts",
+  "packages/cutlist/src/catalog.ts",
+  "packages/cutlist/src/crawl.ts",
+  "packages/cutlist/src/features.ts",
   "packages/protocol/src/projections.test.ts",
   "packages/jig-cli/src/projections.test.ts",
   "packages/jig-cli/src/engines.ts",
   "packages/jig-cli/src/opencode.ts",
   "packages/jig-cli/extensions/jig.ts",
 ]
+
+/**
+ * Pure scanners, not effectful operations.
+ *
+ * `dotExportOf` and `barrelNameOf` look for a shape in a list and answer `undefined`
+ * when it is not there. They are synchronous probes inside a reducer; wrapping each in
+ * `Option` would allocate on every declaration to express a sentinel the caller reads
+ * once. No operation is being guarded, so the Option contract has nothing to protect.
+ */
+const PURE_LOOKUP_FILES = ["packages/cutlist/src/roles.ts"]
 
 export default {
   ignorePatterns: [
@@ -138,6 +154,10 @@ export default {
     {
       files: CONDITIONAL_SPREAD_FILES,
       rules: { "plumb/no-conditional-empty-object-spread": "off" },
+    },
+    {
+      files: PURE_LOOKUP_FILES,
+      rules: { "plumb-effect/guarded-op-must-return-option": "off" },
     },
     {
       // Reasoning belongs where the decision is made. joggle recorded exactly this for its

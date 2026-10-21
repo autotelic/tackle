@@ -1,6 +1,7 @@
 330edb20aa0bcf2f	1792269251	{"confidence":0.34,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.04,"common_idiom":0.56,"shared_helper":0.4}}
 3315dd1a1f4ac7d5	1792252958	{"confidence":0.89,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.05,"name_meaning":0,"no_issue":0.03,"semantic_verdict":0.92}}
 334c0482182a8937	1792535008	{"confidence":0.89,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.9,"infrastructure":0,"input_adaptation":0,"mechanical":0.03,"not_applicable":0.06999999999999999,"orchestration":0,"rendering":0,"request_validation":0,"transport_concern":0}}
+33508cdda9c0871b	1792542865	{"confidence":0.38,"kind":"Classify","label":"value","probabilities":{"meaning":0.4,"unclear":0.01,"value":0.59}}
 335f45a9ca4a4368	1792252958	{"confidence":0.41,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.37,"no_issue":0.07,"semantic_verdict":0.56}}
 335f8437f39e4ad2	1792253160	{"confidence":0.75,"kind":"Classify","label":"same_module","probabilities":{"different_deployables":0,"same_module":0.81,"same_package":0.19,"sibling_packages":0}}
 3370afcbe1a5c670	1792252958	{"confidence":0.83,"kind":"Classify","label":"general","probabilities":{"general":0.89,"names_a_caller":0,"shared_vocabulary":0.11}}

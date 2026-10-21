@@ -3,6 +3,7 @@
 662dbf05f46a5536	1792265611	{"confidence":0.34,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.43,"no_difference":0.09,"removes_a_hazard":0.17,"slightly_clearer":0.31},"rating":1.69}
 6631bbb4b5e656d4	1792252958	{"confidence":0.93,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0.01,"wrong_behavior":0.02,"wrong_contract":0.02}}
 6632f6c90dcd4293	1792252958	{"confidence":0.72,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.09,"name_meaning":0,"no_issue":0.12,"semantic_verdict":0.79}}
+66333408940741da	1792542865	{"confidence":0.53,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.65,"different_order":0,"different_work":0.35,"same_operation":0}}
 665d5566122ff421	1792252958	{"confidence":0.8,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.87,"not_a_derivation":0.11,"reimplements":0.02}}
 668aac87363131f6	1792252958	{"confidence":0.64,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.02,"keep_variants":0.76,"no_issue":0.22}}
 66916ea8875cf452	1792253160	{"confidence":0.95,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.04,"same_module":0,"same_package":0,"sibling_packages":0.96}}

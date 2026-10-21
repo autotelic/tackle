@@ -203,7 +203,7 @@ export const duplicateCandidates = (
   )
 }
 
-const KIND_RANK: Readonly<Record<PartRole, number>> = {
+const KIND_RANK = {
   component: 0,
   provider: 1,
   hook: 2,
@@ -211,7 +211,7 @@ const KIND_RANK: Readonly<Record<PartRole, number>> = {
   barrel: 4,
   route: 5,
   module: 6,
-}
+} as const satisfies Readonly<Record<PartRole, number>>
 
 /**
  * Group candidate pairs into connected clusters and pick a canonical by adoption.

@@ -1,5 +1,5 @@
 import { Effect, FileSystem, Path } from "effect"
-import { decodeBaseline, lexiconRef, type Baseline } from "@autotelic/protocol"
+import { decodeBaseline, lexiconRef, parseJson, type Baseline } from "@autotelic/protocol"
 
 /*
  * The baseline file, in the protocol's shape.
@@ -14,15 +14,6 @@ import { decodeBaseline, lexiconRef, type Baseline } from "@autotelic/protocol"
 
 export const emptyBaseline: Baseline = { lexicon: lexiconRef("baseline"), identities: [] }
 
-/** Parse JSON without throwing; a malformed document is a miss. */
-const safeJson = (text: string): unknown => {
-  try {
-    return JSON.parse(text) as unknown
-  } catch {
-    return undefined
-  }
-}
-
 /** Read the committed baseline; a missing or malformed file is an empty one. */
 export const readBaseline = (file: string): Effect.Effect<Baseline, never, FileSystem.FileSystem> =>
   Effect.gen(function* () {
@@ -30,7 +21,7 @@ export const readBaseline = (file: string): Effect.Effect<Baseline, never, FileS
     const exists = yield* Effect.orElseSucceed(fs.exists(file), () => false)
     if (!exists) return emptyBaseline
     const text = yield* Effect.orElseSucceed(fs.readFileString(file), () => "")
-    return decodeBaseline(safeJson(text)) ?? emptyBaseline
+    return decodeBaseline(parseJson(text)) ?? emptyBaseline
   })
 
 /** Write the baseline, creating its directory if needed. */

@@ -37,6 +37,7 @@ const nameOfDir = (dir: string): string => {
     .join("")
 }
 
+/** The directory of a forward-slashed module path, or `.` at the top level. */
 export const dirOf = (path: string): string => {
   const cut = path.lastIndexOf("/")
   return cut === -1 ? "." : path.slice(0, cut)

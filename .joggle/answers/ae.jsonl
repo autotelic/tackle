@@ -1,4 +1,6 @@
+ae1edd703a4b5ecc	1792592274	{"consistency":1,"kind":"Probability","probability":0.4877777777777778}
 ae2a26cd1d2bd86f	1792535008	{"confidence":0.22,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.39,"member_1":0.61}}
+ae2f27105471df53	1792542864	{"confidence":0.67,"kind":"Classify","label":"composes","probabilities":{"already_composed":0.01,"composes":0.75,"independent":0.24,"same_name_drift":0}}
 ae31ad0df6ea04a3	1792535008	{"confidence":0.28,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.46,"component_or_feature":0.22,"not_applicable":0.29,"route_or_handler":0.03}}
 ae351d887491023c	1792253160	{"confidence":0.97,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.02,"same_module":0,"same_package":0,"sibling_packages":0.98}}
 ae54aa8477c84871	1792253160	{"confidence":0.52,"kind":"Classify","label":"unclear","probabilities":{"meaning":0.06,"unclear":0.68,"value":0.26}}
@@ -7,6 +9,8 @@ ae8536afbb1d23b1	1792252958	{"confidence":0.3,"kind":"Classify","label":"none","
 ae934b5902a9b744	1792252958	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
 aebdacc8c2e97a18	1792252958	{"confidence":0.35,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.42,"no_difference":0.07,"removes_a_hazard":0.25,"slightly_clearer":0.26},"rating":1.84}
 aec9d0c6dc14ee00	1792252958	{"confidence":0.86,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.09,"independent":0.91,"meaning_switched":0}}
+aec9fa98e2427122	1792542865	{"consistency":1,"kind":"Probability","probability":0.64}
 aecf99b94ed7b11f	1792252958	{"consistency":1,"kind":"Probability","probability":0.5733333333333333}
+aee553b57c379d0b	1792542865	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
 aeeec98a3feb381c	1792535008	{"confidence":0.51,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.63,"component_or_feature":0.11,"not_applicable":0.16,"route_or_handler":0.1}}
 aef615eb3b13ba12	1792252958	{"consistency":1,"kind":"Probability","probability":0.4466666666666666}

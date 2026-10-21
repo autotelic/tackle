@@ -388,6 +388,7 @@ const SOURCE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx"] as const
 const TEST_PATH =
   /(^|\/)(?:__tests__|__mocks__|__fixtures__|tests?)\/|\.(?:test|spec|stories|story|d)\.[^/]+$/u
 
+/** Whether a repository-relative path names a test, story, or declaration file. */
 export const isTestPath: Predicate.Predicate<string> = (path) => TEST_PATH.test(path)
 
 /** Every source file under the configured roots, absolute and sorted. */

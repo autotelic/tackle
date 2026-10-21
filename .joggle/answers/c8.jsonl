@@ -12,6 +12,9 @@ c8b1cc8df3df2a16	1792535008	{"confidence":0.46,"kind":"Classify","label":"domain
 c8b3d5533608ce60	1792252958	{"confidence":0.18,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.29,"merge":0.34,"move":0.34,"share_a_contract":0.02,"split":0.01}}
 c8c9821986dabc00	1792252958	{"consistency":1,"kind":"Probability","probability":0.5466666666666667}
 c8d2147a32bd4ad4	1792252958	{"confidence":0.65,"kind":"Classify","label":"wire_contract","probabilities":{"domain_concept":0.14,"framework_glue":0.08,"implementation_detail":0.04,"wire_contract":0.74}}
+c8d2301cb292e719	1792542865	{"confidence":0.62,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.25,"independent":0.75,"meaning_switched":0}}
+c8d69c5b1d71936a	1792543161	{"confidence":0.23,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.06,"common_idiom":0.49,"shared_helper":0.45}}
 c8d95f95fec28cfa	1792252958	{"confidence":0.66,"kind":"Classify","label":"general","probabilities":{"general":0.77,"names_a_caller":0.01,"shared_vocabulary":0.22}}
+c8f024d2d15eed3d	1792543161	{"confidence":0.93,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.05,"same_module":0,"same_package":0,"sibling_packages":0.95}}
 c8f9d154cc483321	1792253092	{"confidence":0.36,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.52,"different_order":0.01,"different_work":0.47,"same_operation":0}}
 c8ffc03a6013a370	1792253160	{"confidence":0.62,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.75,"not_a_derivation":0.1,"reimplements":0.15}}

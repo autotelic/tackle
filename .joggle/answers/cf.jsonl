@@ -12,4 +12,5 @@ cf87bb9a566503bf	1792535007	{"confidence":0.97,"kind":"Classify","label":"no_iss
 cfb4cdea039c40fb	1792535008	{"confidence":0.39,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.07,"merge":0.13,"move":0.28,"share_a_contract":0.51,"split":0.01}}
 cfe5df84acff7891	1792252958	{"confidence":0.12,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.37,"no_difference":0.25,"removes_a_hazard":0.13,"slightly_clearer":0.25},"rating":1.38}
 cfe7a740131960e4	1792252958	{"confidence":0.95,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.96,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0.03}}
+cfea6af716cbe342	1792543161	{"confidence":0.83,"kind":"Classify","label":"wire_contract","probabilities":{"domain_concept":0.06,"framework_glue":0,"implementation_detail":0.07,"wire_contract":0.87}}
 cffaf6fac0358d20	1792253160	{"confidence":0.95,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.04,"same_module":0,"same_package":0,"sibling_packages":0.96}}

@@ -1,3 +1,4 @@
+402424385e9bf0fe	1792542865	{"confidence":0.93,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.04,"framework_glue":0,"implementation_detail":0.95,"wire_contract":0.01}}
 40528731ae174cff	1792252958	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0.01}}
 40563de32af78905	1792252958	{"confidence":0.88,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.92,"not_a_derivation":0.08,"reimplements":0}}
 406115cccc316094	1792252958	{"confidence":0.79,"kind":"Classify","label":"library_core","probabilities":{"domain_core":0.01,"infrastructure":0.04,"library_core":0.82,"not_applicable":0.04,"rendering_edge":0.01,"transport_edge":0.07,"utilities":0.01}}

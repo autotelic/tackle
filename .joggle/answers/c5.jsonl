@@ -15,4 +15,5 @@ c58a8b34677e8c69	1792253160	{"confidence":0.36,"kind":"Rate","label":"slightly_c
 c5a362fb00975526	1792252958	{"confidence":0.79,"kind":"Classify","label":"accounted_elsewhere","probabilities":{"accounted_elsewhere":0.86,"internal_only":0.03,"unaccounted":0.11}}
 c5bd18354a69bcd7	1792252958	{"confidence":0.92,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.94,"stale_reference":0,"wrong_behavior":0.05,"wrong_contract":0.01}}
 c5cbaba02db831d1	1792535008	{"confidence":0.41,"kind":"Classify","label":"component_or_feature","probabilities":{"already_there":0.12,"component_or_feature":0.56,"not_applicable":0.01,"route_or_handler":0.31}}
+c5e6f44e6362b6bb	1792542865	{"confidence":0.73,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.2,"framework_glue":0,"implementation_detail":0.8,"wire_contract":0}}
 c5ee3ae0a69b719e	1792252958	{"confidence":0.27,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.48,"names_a_caller":0.01,"shared_vocabulary":0.51}}
