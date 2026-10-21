@@ -3,3 +3,5 @@ a440200ab14fe3bd	1792252958	{"consistency":0.6666666666666667,"kind":"Probabilit
 a44b54cf16a87669	1792252958	{"consistency":1,"kind":"Probability","probability":0.8533333333333334}
 a4702af0991fe754	1792252958	{"confidence":0.37,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.05,"merge":0.5,"move":0.22,"share_a_contract":0.18,"split":0.05}}
 a4d32709ba2b164b	1792252958	{"consistency":1,"kind":"Probability","probability":0.10777777777777779}
+a4e3eee7f2f89683	1792535009	{"confidence":0.8,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.85,"component_or_feature":0.08,"not_applicable":0.06,"route_or_handler":0.01}}
+a4fa215bb79b0bd6	1792535008	{"confidence":0.98,"kind":"Classify","label":"infrastructure","probabilities":{"domain_logic":0,"infrastructure":0.98,"input_adaptation":0,"mechanical":0.01,"not_applicable":0,"orchestration":0.01,"rendering":0,"request_validation":0,"transport_concern":0}}

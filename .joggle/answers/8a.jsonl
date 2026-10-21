@@ -3,6 +3,12 @@
 8a57751025c1c0be	1792252958	{"confidence":0.89,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.93,"not_a_derivation":0.04,"reimplements":0.03}}
 8a5921ade74ab8c4	1792252958	{"confidence":0.88,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.91,"stale_reference":0,"wrong_behavior":0.08,"wrong_contract":0.01}}
 8a6214ddd66d5c63	1792252958	{"confidence":0.94,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.96,"not_a_derivation":0.04,"reimplements":0}}
+8a87790448b281b5	1792535008	{"confidence":0.3,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.02,"common_idiom":0.53,"shared_helper":0.45}}
+8a8ba7298aaeafd1	1792535008	{"confidence":0.41,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.5599999999999999,"component_or_feature":0.08,"not_applicable":0.32,"route_or_handler":0.04}}
+8a9f1ba1448bfafa	1792535008	{"confidence":0.33,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.41,"no_difference":0.08,"removes_a_hazard":0.22,"slightly_clearer":0.29},"rating":1.76}
 8ab3f894c67951f6	1792252958	{"consistency":1,"kind":"Probability","probability":0.6411111111111111}
+8ac13db33e01d7aa	1792535008	{"confidence":0.88,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.89,"infrastructure":0,"input_adaptation":0.01,"mechanical":0,"not_applicable":0,"orchestration":0.08,"rendering":0,"request_validation":0.02,"transport_concern":0}}
+8ae2e845864a2da7	1792535008	{"confidence":0.64,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.73,"different_order":0,"different_work":0.27,"same_operation":0}}
 8ae86c5967892e2c	1792252958	{"confidence":0.88,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.92,"not_a_derivation":0.08,"reimplements":0}}
+8af2bf10eab42024	1792535007	{"confidence":0.81,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.86,"component_or_feature":0.09,"not_applicable":0.04,"route_or_handler":0.01}}
 8af47285b45263b3	1792252958	{"confidence":0.89,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.92,"stale_reference":0.01,"wrong_behavior":0.05,"wrong_contract":0.02}}

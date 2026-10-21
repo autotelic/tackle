@@ -7,4 +7,6 @@ bb85b179cad25dd7	1792252958	{"consistency":1,"kind":"Probability","probability":
 bbb9354917c2ec27	1792252958	{"confidence":0.47,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.06,"merge":0.58,"move":0.15,"share_a_contract":0.19,"split":0.02}}
 bbbbef4199c96aa4	1792252958	{"consistency":1,"kind":"Probability","probability":0.51}
 bbcb874fc5225fe2	1792252958	{"confidence":0.74,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.17,"names_a_caller":0,"shared_vocabulary":0.83}}
+bbd1981172d4beed	1792535008	{"confidence":0.91,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.93,"stale_reference":0,"wrong_behavior":0.06,"wrong_contract":0.01}}
+bbd4a742b546f1c7	1792535008	{"confidence":0.97,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.98,"component_or_feature":0.01,"not_applicable":0.01,"route_or_handler":0}}
 bbf595fe6beae678	1792265611	{"confidence":0.37,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.25,"keep_variants":0.58,"no_issue":0.17}}

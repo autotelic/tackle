@@ -1,4 +1,11 @@
+f4008b3c3c6b3935	1792535008	{"confidence":0.05,"kind":"Classify","label":"component_or_feature","probabilities":{"already_there":0.23,"component_or_feature":0.29,"not_applicable":0.23,"route_or_handler":0.25}}
+f403ec7bff8f0e4f	1792535008	{"confidence":0.56,"kind":"Classify","label":"move","probabilities":{"move":0.78,"no_issue":0.22}}
 f4703889b67f7b5f	1792252958	{"confidence":0.79,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.14,"names_a_caller":0,"shared_vocabulary":0.86}}
+f49d4ea77df3ee76	1792535008	{"confidence":0.61,"kind":"Classify","label":"input_adaptation","probabilities":{"domain_logic":0.28,"infrastructure":0,"input_adaptation":0.65,"mechanical":0.02,"not_applicable":0.02,"orchestration":0.02,"rendering":0,"request_validation":0.01,"transport_concern":0}}
+f4a5b07b66494eb1	1792535007	{"confidence":0.9,"kind":"Classify","label":"mechanical","probabilities":{"domain_logic":0.02,"infrastructure":0.07,"input_adaptation":0,"mechanical":0.91,"not_applicable":0,"orchestration":0,"rendering":0,"request_validation":0,"transport_concern":0}}
 f4b1aad73975c6a8	1792252958	{"confidence":0.52,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.68,"unclear":0.01,"value":0.31}}
+f4be9507299b3fe7	1792535008	{"confidence":0.76,"kind":"Classify","label":"value","probabilities":{"meaning":0.16,"unclear":0,"value":0.84}}
 f4cebe39a7822777	1792253160	{"confidence":0.72,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.04,"framework_glue":0,"implementation_detail":0.79,"wire_contract":0.17}}
+f4d092cf977dcb82	1792535008	{"confidence":0.37,"kind":"Classify","label":"not_applicable","probabilities":{"domain_logic":0.37,"infrastructure":0.01,"input_adaptation":0.01,"mechanical":0.02,"not_applicable":0.44,"orchestration":0.02,"rendering":0,"request_validation":0.06,"transport_concern":0.07}}
 f4f42f4fc6b64dda	1792252958	{"confidence":0.5,"kind":"Classify","label":"none","probabilities":{"none":0.75,"true":0.25}}
+f4fe4cafa55a8bda	1792535008	{"confidence":0.89,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.9,"infrastructure":0,"input_adaptation":0,"mechanical":0.02,"not_applicable":0.01,"orchestration":0,"rendering":0.06,"request_validation":0,"transport_concern":0.01}}

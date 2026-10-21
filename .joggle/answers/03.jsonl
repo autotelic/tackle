@@ -1,8 +1,13 @@
 03013fff90364901	1792269250	{"confidence":0.48,"kind":"Classify","label":"domain_core","probabilities":{"domain_core":0.55,"infrastructure":0,"library_core":0.45,"not_applicable":0,"rendering_edge":0,"transport_edge":0,"utilities":0}}
+0305e604ab195c4d	1792535009	{"confidence":0.8,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.85,"component_or_feature":0.08,"not_applicable":0.06,"route_or_handler":0.01}}
 0309508553906d1b	1792265611	{"consistency":1,"kind":"Probability","probability":0.5566666666666666}
+030f11401953b586	1792535008	{"confidence":0.6,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.7,"component_or_feature":0.1,"not_applicable":0.17,"route_or_handler":0.03}}
+031a6a0d5697a5e8	1792535007	{"confidence":0.93,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0,"wrong_behavior":0.04,"wrong_contract":0.01}}
 0323e0718354fcd5	1792252958	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0}}
+0329510b75ad120f	1792535008	{"confidence":0.15,"kind":"Classify","label":"component_or_feature","probabilities":{"already_there":0.28,"component_or_feature":0.36,"not_applicable":0.06,"route_or_handler":0.3}}
 0348db7cef5864f5	1792252958	{"confidence":0.95,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.96,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0.01}}
 037d5095a4250ff7	1792252958	{"confidence":0.35,"kind":"Classify","label":"general","probabilities":{"general":0.57,"names_a_caller":0.03,"shared_vocabulary":0.4}}
+037f5a043bf2c87f	1792535008	{"confidence":1,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":1,"infrastructure":0,"input_adaptation":0,"mechanical":0,"not_applicable":0,"orchestration":0,"rendering":0,"request_validation":0,"transport_concern":0}}
 03a3280bd117c543	1792252958	{"confidence":0.04,"kind":"Classify","label":"none","probabilities":{"lab":0.48,"none":0.52}}
 03a5f8acff243db9	1792252958	{"confidence":0.35,"kind":"Classify","label":"same_module","probabilities":{"different_deployables":0,"same_module":0.51,"same_package":0.49,"sibling_packages":0}}
 03fb1d50b4370ae6	1792253160	{"confidence":0.51,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.07,"merge":0.61,"move":0.23,"share_a_contract":0.09,"split":0}}

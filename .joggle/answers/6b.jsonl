@@ -1,5 +1,7 @@
 6b06365f28702f20	1792265611	{"confidence":0.28,"kind":"Classify","label":"move","probabilities":{"move":0.64,"no_issue":0.36}}
+6b2c291d749fecbb	1792535008	{"confidence":0.55,"kind":"Classify","label":"input_adaptation","probabilities":{"domain_logic":0.05,"infrastructure":0,"input_adaptation":0.6,"mechanical":0,"not_applicable":0.08,"orchestration":0.09,"rendering":0,"request_validation":0.15,"transport_concern":0.03}}
 6b33ab3a1ee49bdd	1792252958	{"confidence":0.7,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.8,"unclear":0,"value":0.2}}
+6b5a22f26394aff4	1792535008	{"confidence":0.9,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.91,"infrastructure":0,"input_adaptation":0,"mechanical":0.08,"not_applicable":0,"orchestration":0.01,"rendering":0,"request_validation":0,"transport_concern":0}}
 6b82c2a87fd0c254	1792252958	{"confidence":0.89,"kind":"Classify","label":"same_package","probabilities":{"different_deployables":0,"same_module":0.08,"same_package":0.92,"sibling_packages":0}}
 6b878bbe8c461d18	1792253093	{"consistency":0.6666666666666667,"kind":"Probability","probability":0.4966666666666666}
 6b8ff5a9539e8675	1792253092	{"confidence":0.72,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.79,"stale_reference":0.04,"wrong_behavior":0.11,"wrong_contract":0.06}}
@@ -7,4 +9,5 @@
 6baf83bb189f7efb	1792252958	{"confidence":0.54,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.31,"independent":0.6900000000000001,"meaning_switched":0}}
 6bb22831f1ec7e3c	1792252958	{"consistency":1,"kind":"Probability","probability":0.7933333333333334}
 6bca6ceed832d47e	1792252958	{"confidence":0.51,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.1,"no_issue":0.27,"semantic_verdict":0.63}}
+6bddf2d98a5f6279	1792535009	{"confidence":0.65,"kind":"Classify","label":"mechanical","probabilities":{"domain_logic":0.11,"infrastructure":0,"input_adaptation":0.04,"mechanical":0.6900000000000001,"not_applicable":0.15,"orchestration":0.01,"rendering":0,"request_validation":0,"transport_concern":0}}
 6bfedb0060d2e3cf	1792252958	{"confidence":0.73,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.01,"no_issue":0.19,"semantic_verdict":0.8}}

@@ -1,3 +1,4 @@
+ca003a7fa6940a42	1792535008	{"confidence":0.32,"kind":"Classify","label":"route_or_handler","probabilities":{"already_there":0.25,"component_or_feature":0.19,"not_applicable":0.07,"route_or_handler":0.49}}
 ca161042d797ef04	1792269251	{"consistency":1,"kind":"Probability","probability":0.3566666666666667}
 ca20f8334c539073	1792252958	{"consistency":1,"kind":"Probability","probability":0.87}
 ca34ebc104a3e483	1792253093	{"confidence":0.7,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.15,"member_1":0.85}}
