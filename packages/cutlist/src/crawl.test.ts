@@ -65,4 +65,15 @@ describe("default exports", () => {
       renders: true,
     })
   })
+
+  it("parses JSX in a plain .js file", () => {
+    const found = parseModule({
+      filename: "Button.js",
+      text: "export default function Button() { return <button /> }",
+    }).declarations
+    expect(found.find((declaration) => declaration.name === "Button")).toMatchObject({
+      exported: true,
+      renders: true,
+    })
+  })
 })

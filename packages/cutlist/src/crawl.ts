@@ -323,9 +323,15 @@ const declarationsOf = (program: Ast): ReadonlyArray<Declaration> => {
   }))
 }
 
-/** The parser dialect for a file, by extension. */
-const langOf = (file: string): "ts" | "tsx" | "js" | "jsx" =>
-  file.endsWith(".tsx") || file.endsWith(".jsx") ? (file.endsWith(".jsx") ? "jsx" : "tsx") : "ts"
+/**
+ * The parser dialect for a file, by extension.
+ *
+ * `.js` is parsed as JSX: a create-react-app tree puts JSX in plain `.js`, and a parser that
+ * assumes TypeScript there reads every component as an empty module. The JSX dialect parses
+ * ordinary JavaScript too, so this is a superset rather than a guess.
+ */
+const langOf = (file: string): "ts" | "tsx" | "jsx" =>
+  file.endsWith(".tsx") ? "tsx" : file.endsWith(".ts") ? "ts" : "jsx"
 
 /** Parse one module. Parsing never throws: a syntax error yields an empty record. */
 export const parseModule = ({
