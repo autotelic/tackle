@@ -19,6 +19,22 @@ const TIER_ORDER: ReadonlyArray<TierName> = ["primitive", "shared", "local"]
 const plural = (count: number, one: string, many: string): string =>
   `${count} ${count === 1 ? one : many}`
 
+/**
+ * A capped list, because the menu is an index and the catalog is the raw material.
+ *
+ * One `Dialog` exports eleven names and one provider can compose twenty atoms; printing
+ * every one made the menu a quarter-megabyte of text a reader scrolls past. The first few
+ * names answer "is this the thing I want"; the catalog and manifest carry the rest.
+ */
+const some = (items: ReadonlyArray<string>, limit: number): string => {
+  const shown = items
+    .slice(0, limit)
+    .map((item) => `\`${item}\``)
+    .join(", ")
+  const rest = items.length - limit
+  return rest > 0 ? `${shown} +${String(rest)} more` : shown
+}
+
 /** The menu model as JSON. The machine rendering an agent reads. */
 export const renderMenuJson = (menu: Menu): string => `${JSON.stringify(menu, null, 2)}\n`
 
@@ -71,10 +87,7 @@ export const renderMenu = (menu: Menu): string => {
     )
     for (const feature of features) {
       const blocks = plural(feature.blocks.length, "block", "blocks")
-      const hooks =
-        feature.hooks.length === 0
-          ? ""
-          : `, ${feature.hooks.map((hook) => `\`${hook}\``).join(", ")}`
+      const hooks = feature.hooks.length === 0 ? "" : `, ${some(feature.hooks, 3)}`
       const value = feature.valueKeys.length === 0 ? "" : ` — ${feature.valueKeys.join(" · ")}`
       lines.push(`- \`${feature.name}\` — \`${feature.dir}\` — ${blocks}${hooks}${value}`)
     }
@@ -90,14 +103,14 @@ export const renderMenu = (menu: Menu): string => {
       const exportsOf =
         entry.exports === undefined || entry.exports.length === 0
           ? ""
-          : ` — exports ${entry.exports.map((name) => `\`${name}\``).join(", ")}`
+          : ` — exports ${some(entry.exports, 3)}`
       const usage =
         entry.usedBy === undefined || entry.usedBy === 0 ? "" : ` — ${entry.usedBy} importers`
       const feature = entry.feature === undefined ? "" : ` — part of \`${entry.feature}\``
       const authored = authoredOf(entry)
       const summary = authored.length === 0 ? "" : ` — ${authored.join(" — ")}`
       const composed =
-        entry.composedOf.length === 0 ? "" : ` — composed of ${entry.composedOf.join(", ")}`
+        entry.composedOf.length === 0 ? "" : ` — composed of ${some(entry.composedOf, 4)}`
       const flag = hasIntent(entry) ? "" : " _(undocumented)_"
       lines.push(
         `- \`${entry.name}\`${kind} — \`${entry.path}\`${exportsOf}${usage}${feature}${summary}${composed}${flag}`,
@@ -114,18 +127,25 @@ export const renderMenu = (menu: Menu): string => {
       "",
     )
     for (const cluster of clusters) {
+      const others = cluster.members.filter((member) => member !== cluster.canonical)
       lines.push(
-        `- \`${cluster.name}\` — ${plural(cluster.members.length, "part", "parts")}, ${plural(cluster.usedBy, "importer", "importers")}, max ${cluster.score.toFixed(2)} — keep \`${cluster.canonical}\`; members ${cluster.members.map((member) => `\`${member}\``).join(", ")}`,
+        `- \`${cluster.name}\` — ${plural(cluster.members.length, "part", "parts")}, ${plural(cluster.usedBy, "importer", "importers")}, max ${cluster.score.toFixed(2)} — keep \`${cluster.canonical}\`; also ${some(others, 4)}`,
       )
     }
     lines.push("")
   }
 
   if (menu.duplicates.length > 0) {
+    const shown = menu.duplicates.slice(0, 12)
     lines.push(`## duplicate candidate pairs (${menu.duplicates.length})`, "")
     lines.push("Deterministic candidates; a judge decides whether two are one concept.", "")
-    for (const duplicate of menu.duplicates.slice(0, 20)) {
+    for (const duplicate of shown) {
       lines.push(`- \`${duplicate.left}\` ≈ \`${duplicate.right}\` (${duplicate.score.toFixed(2)})`)
+    }
+    if (shown.length < menu.duplicates.length) {
+      lines.push(
+        `- … ${String(menu.duplicates.length - shown.length)} more in \`menu.json\` and \`catalog.json\``,
+      )
     }
     lines.push("")
   }

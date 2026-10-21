@@ -25,6 +25,11 @@
       "owners": ["dashboard", "settings"],
       "props": ["title"],
       "tags": ["Button", "Card"],
+      "kind": "component",
+      "roles": ["component"],
+      "feature": "src/components",
+      "exports": ["ProjectToolbar"],
+      "usedBy": 3,
       "signature": ["hook:useTheme", "tag:Button", "tag:Card"]
     },
     {
@@ -34,6 +39,11 @@
       "owners": ["shared"],
       "props": [],
       "tags": [],
+      "kind": "context",
+      "roles": ["context"],
+      "feature": "src/components",
+      "exports": ["ThemeContext"],
+      "usedBy": 2,
       "signature": []
     },
     {
@@ -43,6 +53,11 @@
       "owners": ["dashboard", "settings"],
       "props": ["children"],
       "tags": ["ThemeContext.Provider"],
+      "kind": "component",
+      "roles": ["component", "provider"],
+      "feature": "src/components",
+      "exports": ["ThemeProvider"],
+      "usedBy": 2,
       "signature": ["hook:useMemo", "hook:useState", "tag:ThemeContext.Provider"]
     },
     {
@@ -52,6 +67,9 @@
       "owners": [],
       "props": ["children"],
       "tags": ["span"],
+      "kind": "component",
+      "roles": ["component"],
+      "exports": ["Badge"],
       "signature": []
     },
     {
@@ -61,6 +79,10 @@
       "owners": ["shared"],
       "props": ["children", "onClick", "size", "variant"],
       "tags": ["button"],
+      "kind": "component",
+      "roles": ["component"],
+      "exports": ["Button"],
+      "usedBy": 1,
       "signature": []
     },
     {
@@ -70,6 +92,10 @@
       "owners": ["dashboard", "settings", "shared"],
       "props": ["children", "title"],
       "tags": ["h2", "section"],
+      "kind": "component",
+      "roles": ["component"],
+      "exports": ["Card"],
+      "usedBy": 4,
       "signature": []
     },
     {
@@ -79,6 +105,11 @@
       "owners": ["shared"],
       "props": [],
       "tags": [],
+      "kind": "hook",
+      "roles": ["hook"],
+      "feature": "src/components",
+      "exports": ["useTheme"],
+      "usedBy": 1,
       "signature": ["hook:useContext"]
     },
     {
@@ -88,6 +119,9 @@
       "owners": [],
       "props": [],
       "tags": ["Card", "ProjectToolbar"],
+      "kind": "component",
+      "roles": ["component", "route"],
+      "exports": ["DashboardProjectSponsors"],
       "signature": ["tag:Card", "tag:ProjectToolbar"]
     },
     {
@@ -97,6 +131,9 @@
       "owners": [],
       "props": [],
       "tags": ["Card", "ProjectToolbar", "ThemeProvider"],
+      "kind": "component",
+      "roles": ["component", "route"],
+      "exports": ["DashboardProject"],
       "signature": ["hook:useParams", "tag:Card", "tag:ProjectToolbar", "tag:ThemeProvider"]
     },
     {
@@ -106,6 +143,9 @@
       "owners": [],
       "props": [],
       "tags": ["Card", "ProjectToolbar", "ThemeProvider"],
+      "kind": "component",
+      "roles": ["component", "route"],
+      "exports": ["SettingsPage"],
       "signature": ["tag:Card", "tag:ProjectToolbar", "tag:ThemeProvider"]
     }
   ]

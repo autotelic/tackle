@@ -14,7 +14,7 @@ import {
 } from "@autotelic/protocol"
 import { listSources, readModules, type SourceModule } from "./crawl.ts"
 import { dirOf, featuresOf } from "./features.ts"
-import { dirnamePosix, normalizePosix } from "./paths.ts"
+import { dirnamePosix, normalizePosix, commonRootOf, relativeToRoot, underAny } from "./paths.ts"
 import { ownersOf } from "./owners.ts"
 import { kindOf, rolesOf } from "./roles.ts"
 import { skeletonOf } from "./signature.ts"
@@ -292,20 +292,34 @@ export const duplicateClusters = (
 /**
  * Adoption, from the reverse import graph.
  *
- * A module "reaches the system" when at least one of its imports resolves to a shared or
- * primitive part. The denominator is UI modules — components, hooks, and routes — because
+ * A module "reaches the system" when at least one of its imports resolves to a part that
+ * lives in the shared layer — the primitive or shared roots. The test is by LOCATION, not
+ * by the tier a file acquired: a component used by one route today is still shared material
+ * that route reached for, and counting only multi-owner parts made a well-composed app look
+ * unattached. The denominator is UI modules — components, hooks, and routes — because
  * counting every type module would make adoption look worse as a repo documented itself.
  */
 const healthOf = ({
   components,
   graph,
+  sourceRoot,
+  primitiveRoots,
+  sharedRoots,
 }: {
   readonly components: ReadonlyArray<CatalogComponent>
   readonly graph: ReadonlyMap<string, ReadonlyArray<string>>
+  readonly sourceRoot: string
+  readonly primitiveRoots: ReadonlyArray<string>
+  readonly sharedRoots: ReadonlyArray<string>
 }): CatalogHealth => {
   const shared = new Set(
     components
-      .filter((component) => component.tier === "primitive" || component.tier === "shared")
+      .filter((component) =>
+        underAny(relativeToRoot({ modulePath: component.path, root: sourceRoot }), [
+          ...primitiveRoots,
+          ...sharedRoots,
+        ]),
+      )
       .map((component) => component.path),
   )
   const ui = components.filter(
@@ -341,9 +355,9 @@ export const buildCatalog = (
     const modules = yield* readModules(root, files)
     const graph = importerGraph(modules, config.alias ?? {})
 
-    const appRoot = config.roots[0] ?? "app"
+    const appRoot = commonRootOf(config.roots)
     const routeDir = config.tiers.local[0] ?? "routes"
-    const routePrefix = `${appRoot}/${routeDir}/`
+    const routePrefix = appRoot === "" ? `${routeDir}/` : `${appRoot}/${routeDir}/`
     const ownerOptions = {
       root: appRoot,
       routeDir,
@@ -367,7 +381,7 @@ export const buildCatalog = (
     )
     // Features are a join over the same parts, computed before the parts are shaped so a
     // part can carry its feature directory rather than a reader re-querying the graph.
-    const features = featuresOf(modules, roleOptions)
+    const features = featuresOf(modules, roleOptions, graph)
     const featureDirs = new Set(features.map((feature) => feature.dir))
 
     const components: ReadonlyArray<CatalogComponent> = modules
@@ -419,7 +433,16 @@ export const buildCatalog = (
 
     const duplicates = duplicateCandidates(components, routePrefix)
     const clusters = duplicateClusters(components, duplicates)
-    const health = { ...healthOf({ components, graph }), duplicateClusters: clusters.length }
+    const health = {
+      ...healthOf({
+        components,
+        graph,
+        sourceRoot: appRoot,
+        primitiveRoots: config.tiers.primitive,
+        sharedRoots: config.tiers.shared,
+      }),
+      duplicateClusters: clusters.length,
+    }
     const withoutHash = {
       lexicon: lexiconRef("catalog"),
       root,

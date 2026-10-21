@@ -71,6 +71,7 @@ const valueKeysOf = (
 export const featuresOf = (
   modules: ReadonlyArray<SourceModule>,
   options: RoleOptions,
+  graph: ReadonlyMap<string, ReadonlyArray<string>>,
 ): ReadonlyArray<CatalogFeature> => {
   const composition = options.composition
   if (composition === undefined) return []
@@ -98,8 +99,14 @@ export const featuresOf = (
     if (provider === undefined && barrel === undefined) continue
 
     const excluded = new Set([context, provider, barrel])
+    // A block is a component that CONSUMES the composition, not merely a file that
+    // happens to sit in the same directory. At a shared root, that difference is a
+    // 60-block "feature" made of unrelated components that never touch the context.
+    const consumers = new Set(graph.get(context.path) ?? [])
     const blocks = group
-      .filter((module) => !excluded.has(module) && has(module, "component"))
+      .filter(
+        (module) => !excluded.has(module) && has(module, "component") && consumers.has(module.path),
+      )
       .map((module) => module.path)
       .sort((left, right) => left.localeCompare(right))
     const hooks = [

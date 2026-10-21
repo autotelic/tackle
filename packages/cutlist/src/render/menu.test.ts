@@ -36,10 +36,10 @@ describe("renderMenu", () => {
   it("shows an authored summary and flags a part without one", () => {
     const markdown = renderMenu(menu())
     expect(markdown).toContain(
-      "- `button` — `src/components/ui/button.tsx` — The one button. — composed of button",
+      "- `button` — `src/components/ui/button.tsx` — The one button. — composed of `button`",
     )
     expect(markdown).toContain(
-      "- `badge` — `src/components/ui/badge.tsx` — composed of span _(undocumented)_",
+      "- `badge` — `src/components/ui/badge.tsx` — composed of `span` _(undocumented)_",
     )
   })
 
@@ -52,6 +52,24 @@ describe("renderMenu", () => {
     )
     expect(markdown).toContain("## duplicate candidate pairs (1)")
     expect(markdown).toContain("## orphans (1)")
+  })
+
+  it("caps long export and composition lists so the menu stays an index", () => {
+    const markdown = renderMenu(
+      menu({
+        entries: [
+          {
+            name: "dialog",
+            path: "src/components/ui/dialog.tsx",
+            tier: "primitive",
+            exports: ["A", "B", "C", "D", "E"],
+            composedOf: ["a", "b", "c", "d", "e"],
+          },
+        ],
+      }),
+    )
+    expect(markdown).toContain("exports `A`, `B`, `C` +2 more")
+    expect(markdown).toContain("composed of `a`, `b`, `c`, `d` +1 more")
   })
 
   it("renders health, adoption, lifecycle and clusters", () => {

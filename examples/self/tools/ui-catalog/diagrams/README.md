@@ -21,7 +21,7 @@ a call rather than a render.
 
 | scope       | nodes | edges | files                                                  |
 | ----------- | ----: | ----: | ------------------------------------------------------ |
-| composition |    18 |    19 | [source](./composition.mmd) · [svg](./composition.svg) |
+| composition |    14 |    16 | [source](./composition.mmd) · [svg](./composition.svg) |
 | hooks       |     9 |     5 | [source](./hooks.mmd) · [svg](./hooks.svg)             |
 | owners      |     9 |    10 | [source](./owners.mmd) · [svg](./owners.svg)           |
 
