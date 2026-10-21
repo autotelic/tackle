@@ -135,29 +135,3 @@ export const isEntryPoint: Predicate.Predicate<{
   entries.some((entry) =>
     pathCandidates(modulePath, roots).some((path) => path === entry || path.endsWith(`/${entry}`)),
   )
-
-/**
- * The directory every configured root lives under.
- *
- * Tiers, owners and routes are written relative to the source root (`src`, `app`, or the
- * repository root), not relative to whichever root happens to be listed first. A config
- * that lists `components` before `app` used to make `components/ui` invisible as a
- * primitive root and every component look local, which turned adoption into a coin flip.
- * The common ancestor is the only root that is true for every root list.
- */
-export const commonRootOf = (roots: ReadonlyArray<string>): string => {
-  const split = roots.map((root) =>
-    normalizePosix(root)
-      .split("/")
-      .filter((part) => part !== ""),
-  )
-  const first = split[0]
-  if (first === undefined) return ""
-  let length = first.length
-  for (const parts of split.slice(1)) {
-    while (length > 0 && parts.slice(0, length).join("/") !== first.slice(0, length).join("/")) {
-      length -= 1
-    }
-  }
-  return first.slice(0, length).join("/")
-}
