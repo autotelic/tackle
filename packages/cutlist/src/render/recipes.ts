@@ -1,5 +1,14 @@
-import type { Catalog, CatalogComponent } from "@autotelic/protocol"
-import type { Pattern, PatternView } from "../patterns.ts"
+import {
+  lexiconRef,
+  type Catalog,
+  type CatalogComponent,
+  type Pattern,
+  type PatternView,
+  type Recipe,
+  type RecipeImport,
+  type RecipeMode,
+  type RecipeView,
+} from "@autotelic/protocol"
 
 /*
  * `RECIPES.md` and `recipes.json`.
@@ -9,38 +18,6 @@ import type { Pattern, PatternView } from "../patterns.ts"
  * blocks and hook. It is deliberately a skeleton, not a generated app: the names are the
  * catalog's, and the adapter notes say where the real call site may spell them differently.
  */
-
-export type RecipeMode = "named" | "default" | "namespace"
-
-export interface RecipeImport {
-  readonly from: string
-  readonly binding: string
-  readonly mode: RecipeMode
-}
-
-export interface Recipe {
-  readonly id: string
-  readonly name: string
-  readonly kind: "feature" | "part"
-  readonly path: string
-  readonly source: string
-  readonly stability?: number
-  readonly import: RecipeImport
-  readonly extraImports?: ReadonlyArray<RecipeImport>
-  readonly usage: string
-  readonly props?: ReadonlyArray<string>
-  readonly blocks?: ReadonlyArray<string>
-  readonly hooks?: ReadonlyArray<string>
-  readonly valueKeys?: ReadonlyArray<string>
-  readonly notes: ReadonlyArray<string>
-}
-
-export interface RecipeView {
-  readonly lexicon: { readonly name: "recipes"; readonly version: 1 }
-  readonly hash: string
-  readonly features: ReadonlyArray<Recipe>
-  readonly parts: ReadonlyArray<Recipe>
-}
 
 const moduleOf = (path: string): string => path.replace(/\.(?:tsx?|jsx?)$/u, "")
 
@@ -312,7 +289,7 @@ export const recipesOf = ({
     parts.push(partRecipe(pattern, byPath.get(pattern.path)))
   }
   return {
-    lexicon: { name: "recipes", version: 1 },
+    lexicon: lexiconRef("recipes"),
     hash: view.hash,
     features,
     parts,

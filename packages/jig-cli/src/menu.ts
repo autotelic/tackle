@@ -2,12 +2,16 @@ import { existsSync, readFileSync } from "node:fs"
 import { join, relative, resolve } from "node:path"
 import {
   decodeMenu,
+  decodePatternView,
+  decodeRecipeView,
   isRecord,
-  num,
   str,
-  strings,
   type Menu,
   type MenuEntry,
+  type Pattern,
+  type PatternView,
+  type Recipe,
+  type RecipeView,
 } from "@autotelic/protocol"
 
 /*
@@ -32,8 +36,8 @@ export interface ArtifactPaths {
 export interface Artifact {
   readonly paths: ArtifactPaths
   readonly menu?: Menu
-  readonly patterns?: Record<string, unknown>
-  readonly recipes?: Record<string, unknown>
+  readonly patterns?: PatternView
+  readonly recipes?: RecipeView
 }
 
 export interface MenuMatch {
@@ -95,21 +99,15 @@ export const artifactPaths = (root: string): ArtifactPaths => {
 /** Read the artifact, or the parts of it that exist. A missing file is a miss, not a throw. */
 export const readArtifact = (root: string): Artifact => {
   const paths = artifactPaths(root)
-  const menuValue = readJson(paths.menuJson)
-  const menu = decodeMenu(menuValue)
-  const patternsValue = readJson(paths.patternsJson)
-  const recipesValue = readJson(paths.recipesJson)
+  const menu = decodeMenu(readJson(paths.menuJson))
+  const patterns = decodePatternView(readJson(paths.patternsJson))
+  const recipes = decodeRecipeView(readJson(paths.recipesJson))
   return {
     paths,
     ...(menu === undefined ? {} : { menu }),
-    ...(isRecord(patternsValue) ? { patterns: patternsValue } : {}),
-    ...(isRecord(recipesValue) ? { recipes: recipesValue } : {}),
+    ...(patterns === undefined ? {} : { patterns }),
+    ...(recipes === undefined ? {} : { recipes }),
   }
-}
-
-const arrayAt = (value: unknown, key: string): ReadonlyArray<Record<string, unknown>> => {
-  if (!isRecord(value) || !Array.isArray(value[key])) return []
-  return (value[key] as ReadonlyArray<unknown>).filter(isRecord)
 }
 
 const importLine = (path: string, exports: ReadonlyArray<string>, name: string): string => {
@@ -147,30 +145,17 @@ const mergeMatch = (left: MenuMatch, right: MenuMatch): MenuMatch => ({
   ...(left.role === undefined && right.role !== undefined ? { role: right.role } : {}),
 })
 
-const matchFromPattern = (
-  record: Record<string, unknown>,
-  kind: MenuMatch["kind"],
-): MenuMatch | undefined => {
-  const name = str(record.name)
-  const path = str(record.path)
-  if (name === undefined || path === undefined) return undefined
-  const summary = str(record.summary)
-  const stability = num(record.stability)
-  const usedBy = num(record.usedBy)
-  const tier = str(record.tier)
-  const role = str(record.role)
-  return {
-    kind,
-    name,
-    path,
-    ...(tier === undefined ? {} : { tier }),
-    ...(role === undefined ? {} : { role }),
-    ...(summary === undefined ? {} : { summary }),
-    ...(usedBy === undefined ? {} : { usedBy }),
-    ...(stability === undefined ? {} : { stability }),
-    notes: [],
-  }
-}
+const matchFromPattern = (pattern: Pattern, kind: MenuMatch["kind"]): MenuMatch => ({
+  kind,
+  name: pattern.name,
+  path: pattern.path,
+  tier: pattern.tier,
+  ...(pattern.role === undefined ? {} : { role: pattern.role }),
+  ...(pattern.summary === undefined ? {} : { summary: pattern.summary }),
+  usedBy: pattern.usedBy,
+  stability: pattern.stability,
+  notes: pattern.relations.map((relation) => `${relation.kind} ${relation.target}`),
+})
 
 const importText = ({
   from,
@@ -186,32 +171,20 @@ const importText = ({
   return `import { ${binding} } from "${from}"`
 }
 
-const matchFromRecipe = (
-  record: Record<string, unknown>,
-  kind: "feature" | "part",
-): MenuMatch | undefined => {
-  const name = str(record.name)
-  const path = str(record.path)
-  if (name === undefined || path === undefined) return undefined
-  const source = str(record.source)
-  const usage = str(record.usage)
-  const stability = num(record.stability)
-  const notes = strings(record.notes) ?? []
-  const importRecord = isRecord(record.import) ? record.import : undefined
-  const from = importRecord === undefined ? undefined : str(importRecord.from)
-  const binding = importRecord === undefined ? undefined : str(importRecord.binding)
-  const mode = importRecord === undefined ? undefined : str(importRecord.mode)
-  const line =
-    from === undefined || binding === undefined ? undefined : importText({ from, binding, mode })
-  const noteList = source === undefined ? notes : [...notes, `source: ${source}`]
+const matchFromRecipe = (recipe: Recipe): MenuMatch => {
+  const line = importText({
+    from: recipe.import.from,
+    binding: recipe.import.binding,
+    mode: recipe.import.mode,
+  })
   return {
-    kind,
-    name,
-    path,
-    ...(stability === undefined ? {} : { stability }),
-    ...(line === undefined ? {} : { importLine: line }),
-    ...(usage === undefined ? {} : { usage }),
-    notes: noteList,
+    kind: recipe.kind,
+    name: recipe.name,
+    path: recipe.path,
+    ...(recipe.stability === undefined ? {} : { stability: recipe.stability }),
+    importLine: line,
+    usage: recipe.usage,
+    notes: [...recipe.notes, `source: ${recipe.source}`],
   }
 }
 
@@ -235,14 +208,15 @@ export const candidatesOf = (artifact: Artifact): ReadonlyArray<MenuMatch> => {
     const existing = byPath.get(match.path)
     byPath.set(match.path, existing === undefined ? match : mergeMatch(existing, match))
   }
-  for (const record of arrayAt(artifact.recipes, "features"))
-    add(matchFromRecipe(record, "feature"))
-  for (const record of arrayAt(artifact.recipes, "parts")) add(matchFromRecipe(record, "part"))
-  for (const section of ["stable", "compositions", "primitives", "shared", "families"]) {
-    for (const record of arrayAt(artifact.patterns, section)) {
-      add(matchFromPattern(record, section === "compositions" ? "feature" : "pattern"))
-    }
-  }
+  for (const recipe of artifact.recipes?.features ?? []) add(matchFromRecipe(recipe))
+  for (const recipe of artifact.recipes?.parts ?? []) add(matchFromRecipe(recipe))
+  for (const pattern of artifact.patterns?.stable ?? []) add(matchFromPattern(pattern, "pattern"))
+  for (const pattern of artifact.patterns?.compositions ?? [])
+    add(matchFromPattern(pattern, "feature"))
+  for (const pattern of artifact.patterns?.primitives ?? [])
+    add(matchFromPattern(pattern, "pattern"))
+  for (const pattern of artifact.patterns?.shared ?? []) add(matchFromPattern(pattern, "pattern"))
+  for (const pattern of artifact.patterns?.families ?? []) add(matchFromPattern(pattern, "pattern"))
   for (const entry of artifact.menu?.entries ?? []) add(matchFromEntry(entry))
   return [...byPath.values()]
 }

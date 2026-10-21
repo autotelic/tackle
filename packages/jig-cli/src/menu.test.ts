@@ -56,16 +56,30 @@ write("menu.json", {
   duplicates: [],
 })
 write("patterns.json", {
+  lexicon: { name: "patterns", version: 1 },
   hash: "abc123",
   stable: [
     {
+      id: "src/components/dialog",
       name: "dialog",
+      kind: "primitive",
       path: "src/components/dialog.tsx",
       stability: 0.8,
       usedBy: 4,
       summary: "The modal primitive.",
       tier: "primitive",
       role: "component",
+      owners: [],
+      exports: ["Dialog"],
+      composedOf: [],
+      relations: [],
+      factors: {
+        tier: 1,
+        adoption: 1,
+        ownership: 0,
+        variant: 0.8,
+        documented: 0.3,
+      },
     },
   ],
   compositions: [],
@@ -75,10 +89,12 @@ write("patterns.json", {
   compression: { orphans: [], variants: [], deprecated: [] },
 })
 write("recipes.json", {
+  lexicon: { name: "recipes", version: 1 },
   hash: "abc123",
   features: [],
   parts: [
     {
+      id: "src/components/dialog",
       name: "dialog",
       path: "src/components/dialog.tsx",
       kind: "part",

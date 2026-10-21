@@ -1,0 +1,479 @@
+{
+  "lexicon": {
+    "name": "patterns",
+    "version": 1
+  },
+  "hash": "767f577e6ee8cd40506267ea9460458787ad699566f88f970a4f0fd2087c520a",
+  "stable": [
+    {
+      "id": "src--components--ui--card",
+      "name": "card",
+      "kind": "primitive",
+      "role": "component",
+      "path": "src/components/ui/card.tsx",
+      "tier": "primitive",
+      "summary": "The surface everything else sits on.",
+      "usedBy": 4,
+      "owners": ["dashboard", "settings", "shared"],
+      "exports": ["Card"],
+      "composedOf": [],
+      "relations": [],
+      "stability": 0.93,
+      "factors": {
+        "tier": 1,
+        "adoption": 1,
+        "ownership": 0.667,
+        "variant": 0.8,
+        "documented": 1
+      }
+    },
+    {
+      "id": "src--components--project-toolbar",
+      "name": "project-toolbar",
+      "kind": "composition",
+      "role": "component",
+      "path": "src/components/project-toolbar.tsx",
+      "tier": "shared",
+      "feature": "src/components",
+      "summary": "The controls above a project's or the app's content.",
+      "usedBy": 3,
+      "owners": ["dashboard", "settings"],
+      "exports": ["ProjectToolbar"],
+      "composedOf": ["hook:useTheme", "tag:Button", "tag:Card"],
+      "relations": [
+        {
+          "kind": "uses",
+          "target": "src/components/use-theme.ts"
+        },
+        {
+          "kind": "uses",
+          "target": "src/components/ui/button.tsx"
+        },
+        {
+          "kind": "uses",
+          "target": "src/components/ui/card.tsx"
+        },
+        {
+          "kind": "part-of",
+          "target": "src/components"
+        }
+      ],
+      "stability": 0.818,
+      "factors": {
+        "tier": 0.8,
+        "adoption": 0.861,
+        "ownership": 0.667,
+        "variant": 0.8,
+        "documented": 1
+      }
+    },
+    {
+      "id": "feature:src/components",
+      "name": "Components",
+      "kind": "composition",
+      "role": "component",
+      "path": "src/components",
+      "tier": "shared",
+      "feature": "src/components",
+      "summary": "Supplies the current theme to everything below it.",
+      "usedBy": 2,
+      "owners": ["dashboard", "settings"],
+      "exports": ["ThemeProvider"],
+      "composedOf": [],
+      "blocks": [],
+      "hooks": ["useTheme"],
+      "valueKeys": [],
+      "relations": [
+        {
+          "kind": "context",
+          "target": "src/components/theme-context.ts"
+        },
+        {
+          "kind": "provider",
+          "target": "src/components/theme-provider.tsx"
+        },
+        {
+          "kind": "hook",
+          "target": "useTheme"
+        }
+      ],
+      "stability": 0.765,
+      "factors": {
+        "tier": 0.8,
+        "adoption": 0.683,
+        "ownership": 0.667,
+        "variant": 0.8,
+        "documented": 1
+      }
+    },
+    {
+      "id": "src--components--theme-provider",
+      "name": "theme-provider",
+      "kind": "composition",
+      "role": "component",
+      "path": "src/components/theme-provider.tsx",
+      "tier": "shared",
+      "feature": "src/components",
+      "summary": "Supplies the current theme to everything below it.",
+      "usedBy": 2,
+      "owners": ["dashboard", "settings"],
+      "exports": ["ThemeProvider"],
+      "composedOf": ["hook:useMemo", "hook:useState", "tag:ThemeContext.Provider"],
+      "relations": [
+        {
+          "kind": "part-of",
+          "target": "src/components"
+        }
+      ],
+      "stability": 0.765,
+      "factors": {
+        "tier": 0.8,
+        "adoption": 0.683,
+        "ownership": 0.667,
+        "variant": 0.8,
+        "documented": 1
+      }
+    },
+    {
+      "id": "src--components--theme-context",
+      "name": "theme-context",
+      "kind": "composition",
+      "role": "context",
+      "path": "src/components/theme-context.ts",
+      "tier": "shared",
+      "feature": "src/components",
+      "summary": "The context the provider fills and the hook reads.",
+      "usedBy": 2,
+      "owners": ["shared"],
+      "exports": ["ThemeContext"],
+      "composedOf": [],
+      "relations": [
+        {
+          "kind": "part-of",
+          "target": "src/components"
+        }
+      ],
+      "stability": 0.665,
+      "factors": {
+        "tier": 0.8,
+        "adoption": 0.683,
+        "ownership": 0,
+        "variant": 0.8,
+        "documented": 1
+      }
+    },
+    {
+      "id": "src--components--ui--button",
+      "name": "button",
+      "kind": "primitive",
+      "role": "component",
+      "path": "src/components/ui/button.tsx",
+      "tier": "primitive",
+      "summary": "The one button in the app. Everything interactive composes this.",
+      "usedBy": 1,
+      "owners": ["shared"],
+      "exports": ["Button"],
+      "composedOf": [],
+      "relations": [],
+      "stability": 0.659,
+      "factors": {
+        "tier": 1,
+        "adoption": 0.431,
+        "ownership": 0,
+        "variant": 0.8,
+        "documented": 1
+      }
+    },
+    {
+      "id": "src--components--use-theme",
+      "name": "use-theme",
+      "kind": "composition",
+      "role": "hook",
+      "path": "src/components/use-theme.ts",
+      "tier": "shared",
+      "feature": "src/components",
+      "summary": "Reads the theme the nearest ThemeProvider supplies.",
+      "usedBy": 1,
+      "owners": ["shared"],
+      "exports": ["useTheme"],
+      "composedOf": ["hook:useContext"],
+      "relations": [
+        {
+          "kind": "part-of",
+          "target": "src/components"
+        }
+      ],
+      "stability": 0.589,
+      "factors": {
+        "tier": 0.8,
+        "adoption": 0.431,
+        "ownership": 0,
+        "variant": 0.8,
+        "documented": 1
+      }
+    },
+    {
+      "id": "src--components--ui--badge",
+      "name": "badge",
+      "kind": "primitive",
+      "role": "component",
+      "path": "src/components/ui/badge.tsx",
+      "tier": "primitive",
+      "summary": "A status pill. Not used yet.",
+      "usedBy": 0,
+      "owners": [],
+      "exports": ["Badge"],
+      "composedOf": [],
+      "relations": [],
+      "stability": 0.53,
+      "factors": {
+        "tier": 1,
+        "adoption": 0,
+        "ownership": 0,
+        "variant": 0.8,
+        "documented": 1
+      }
+    }
+  ],
+  "compositions": [
+    {
+      "id": "feature:src/components",
+      "name": "Components",
+      "kind": "composition",
+      "role": "component",
+      "path": "src/components",
+      "tier": "shared",
+      "feature": "src/components",
+      "summary": "Supplies the current theme to everything below it.",
+      "usedBy": 2,
+      "owners": ["dashboard", "settings"],
+      "exports": ["ThemeProvider"],
+      "composedOf": [],
+      "blocks": [],
+      "hooks": ["useTheme"],
+      "valueKeys": [],
+      "relations": [
+        {
+          "kind": "context",
+          "target": "src/components/theme-context.ts"
+        },
+        {
+          "kind": "provider",
+          "target": "src/components/theme-provider.tsx"
+        },
+        {
+          "kind": "hook",
+          "target": "useTheme"
+        }
+      ],
+      "stability": 0.765,
+      "factors": {
+        "tier": 0.8,
+        "adoption": 0.683,
+        "ownership": 0.667,
+        "variant": 0.8,
+        "documented": 1
+      }
+    }
+  ],
+  "primitives": [
+    {
+      "id": "src--components--ui--badge",
+      "name": "badge",
+      "kind": "primitive",
+      "role": "component",
+      "path": "src/components/ui/badge.tsx",
+      "tier": "primitive",
+      "summary": "A status pill. Not used yet.",
+      "usedBy": 0,
+      "owners": [],
+      "exports": ["Badge"],
+      "composedOf": [],
+      "relations": [],
+      "stability": 0.53,
+      "factors": {
+        "tier": 1,
+        "adoption": 0,
+        "ownership": 0,
+        "variant": 0.8,
+        "documented": 1
+      }
+    },
+    {
+      "id": "src--components--ui--button",
+      "name": "button",
+      "kind": "primitive",
+      "role": "component",
+      "path": "src/components/ui/button.tsx",
+      "tier": "primitive",
+      "summary": "The one button in the app. Everything interactive composes this.",
+      "usedBy": 1,
+      "owners": ["shared"],
+      "exports": ["Button"],
+      "composedOf": [],
+      "relations": [],
+      "stability": 0.659,
+      "factors": {
+        "tier": 1,
+        "adoption": 0.431,
+        "ownership": 0,
+        "variant": 0.8,
+        "documented": 1
+      }
+    },
+    {
+      "id": "src--components--ui--card",
+      "name": "card",
+      "kind": "primitive",
+      "role": "component",
+      "path": "src/components/ui/card.tsx",
+      "tier": "primitive",
+      "summary": "The surface everything else sits on.",
+      "usedBy": 4,
+      "owners": ["dashboard", "settings", "shared"],
+      "exports": ["Card"],
+      "composedOf": [],
+      "relations": [],
+      "stability": 0.93,
+      "factors": {
+        "tier": 1,
+        "adoption": 1,
+        "ownership": 0.667,
+        "variant": 0.8,
+        "documented": 1
+      }
+    }
+  ],
+  "shared": [
+    {
+      "id": "src--components--project-toolbar",
+      "name": "project-toolbar",
+      "kind": "composition",
+      "role": "component",
+      "path": "src/components/project-toolbar.tsx",
+      "tier": "shared",
+      "feature": "src/components",
+      "summary": "The controls above a project's or the app's content.",
+      "usedBy": 3,
+      "owners": ["dashboard", "settings"],
+      "exports": ["ProjectToolbar"],
+      "composedOf": ["hook:useTheme", "tag:Button", "tag:Card"],
+      "relations": [
+        {
+          "kind": "uses",
+          "target": "src/components/use-theme.ts"
+        },
+        {
+          "kind": "uses",
+          "target": "src/components/ui/button.tsx"
+        },
+        {
+          "kind": "uses",
+          "target": "src/components/ui/card.tsx"
+        },
+        {
+          "kind": "part-of",
+          "target": "src/components"
+        }
+      ],
+      "stability": 0.818,
+      "factors": {
+        "tier": 0.8,
+        "adoption": 0.861,
+        "ownership": 0.667,
+        "variant": 0.8,
+        "documented": 1
+      }
+    },
+    {
+      "id": "src--components--theme-provider",
+      "name": "theme-provider",
+      "kind": "composition",
+      "role": "component",
+      "path": "src/components/theme-provider.tsx",
+      "tier": "shared",
+      "feature": "src/components",
+      "summary": "Supplies the current theme to everything below it.",
+      "usedBy": 2,
+      "owners": ["dashboard", "settings"],
+      "exports": ["ThemeProvider"],
+      "composedOf": ["hook:useMemo", "hook:useState", "tag:ThemeContext.Provider"],
+      "relations": [
+        {
+          "kind": "part-of",
+          "target": "src/components"
+        }
+      ],
+      "stability": 0.765,
+      "factors": {
+        "tier": 0.8,
+        "adoption": 0.683,
+        "ownership": 0.667,
+        "variant": 0.8,
+        "documented": 1
+      }
+    },
+    {
+      "id": "src--components--theme-context",
+      "name": "theme-context",
+      "kind": "composition",
+      "role": "context",
+      "path": "src/components/theme-context.ts",
+      "tier": "shared",
+      "feature": "src/components",
+      "summary": "The context the provider fills and the hook reads.",
+      "usedBy": 2,
+      "owners": ["shared"],
+      "exports": ["ThemeContext"],
+      "composedOf": [],
+      "relations": [
+        {
+          "kind": "part-of",
+          "target": "src/components"
+        }
+      ],
+      "stability": 0.665,
+      "factors": {
+        "tier": 0.8,
+        "adoption": 0.683,
+        "ownership": 0,
+        "variant": 0.8,
+        "documented": 1
+      }
+    },
+    {
+      "id": "src--components--use-theme",
+      "name": "use-theme",
+      "kind": "composition",
+      "role": "hook",
+      "path": "src/components/use-theme.ts",
+      "tier": "shared",
+      "feature": "src/components",
+      "summary": "Reads the theme the nearest ThemeProvider supplies.",
+      "usedBy": 1,
+      "owners": ["shared"],
+      "exports": ["useTheme"],
+      "composedOf": ["hook:useContext"],
+      "relations": [
+        {
+          "kind": "part-of",
+          "target": "src/components"
+        }
+      ],
+      "stability": 0.589,
+      "factors": {
+        "tier": 0.8,
+        "adoption": 0.431,
+        "ownership": 0,
+        "variant": 0.8,
+        "documented": 1
+      }
+    }
+  ],
+  "families": [],
+  "compression": {
+    "orphans": ["src/components/ui/badge.tsx"],
+    "variants": [],
+    "deprecated": []
+  }
+}

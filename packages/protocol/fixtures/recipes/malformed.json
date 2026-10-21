@@ -1,0 +1,6 @@
+{
+  "lexicon": { "name": "recipes", "version": 1 },
+  "hash": "nope",
+  "features": [],
+  "parts": [{ "name": "missing import and usage" }]
+}

@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autotelic.dev/tackle/protocol/patterns.json",
+  "title": "Patterns",
+  "description": "The pattern-language view: each pattern has a context, forces, a solution, and relations; the view also carries the stable shape and the compression moves.",
+  "type": "object",
+  "required": [
+    "lexicon",
+    "hash",
+    "stable",
+    "compositions",
+    "primitives",
+    "shared",
+    "families",
+    "compression"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "lexicon": { "$ref": "#/$defs/lexicon" },
+    "hash": { "type": "string" },
+    "stable": { "type": "array", "items": { "$ref": "#/$defs/pattern" } },
+    "compositions": { "type": "array", "items": { "$ref": "#/$defs/pattern" } },
+    "primitives": { "type": "array", "items": { "$ref": "#/$defs/pattern" } },
+    "shared": { "type": "array", "items": { "$ref": "#/$defs/pattern" } },
+    "families": { "type": "array", "items": { "$ref": "#/$defs/pattern" } },
+    "compression": { "$ref": "#/$defs/compression" }
+  },
+  "$defs": {
+    "lexicon": {
+      "type": "object",
+      "required": ["name", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "enum": ["patterns"] },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "tier": { "enum": ["primitive", "shared", "local"] },
+    "role": {
+      "enum": ["component", "hook", "context", "provider", "barrel", "route", "module"]
+    },
+    "relation": {
+      "type": "object",
+      "required": ["kind", "target"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "uses",
+            "part-of",
+            "variant-of",
+            "replaces",
+            "block",
+            "hook",
+            "context",
+            "provider",
+            "barrel"
+          ]
+        },
+        "target": { "type": "string" }
+      }
+    },
+    "factors": {
+      "type": "object",
+      "required": ["tier", "adoption", "ownership", "variant", "documented"],
+      "additionalProperties": false,
+      "properties": {
+        "tier": { "type": "number", "minimum": 0, "maximum": 1 },
+        "adoption": { "type": "number", "minimum": 0, "maximum": 1 },
+        "ownership": { "type": "number", "minimum": 0, "maximum": 1 },
+        "variant": { "type": "number", "minimum": 0, "maximum": 1 },
+        "documented": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "pattern": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "kind",
+        "path",
+        "tier",
+        "usedBy",
+        "owners",
+        "exports",
+        "composedOf",
+        "relations",
+        "stability",
+        "factors"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "kind": { "enum": ["composition", "primitive", "shared", "family"] },
+        "role": { "$ref": "#/$defs/role" },
+        "path": { "type": "string" },
+        "tier": { "$ref": "#/$defs/tier" },
+        "feature": { "type": "string" },
+        "summary": { "type": "string" },
+        "whenToUse": { "type": "string" },
+        "whenNotToUse": { "type": "string" },
+        "states": { "type": "array", "items": { "type": "string" } },
+        "status": { "enum": ["stable", "beta", "experimental", "deprecated"] },
+        "examples": { "type": "array", "items": { "type": "string" } },
+        "useInstead": { "type": "array", "items": { "type": "string" } },
+        "usedBy": { "type": "integer", "minimum": 0 },
+        "owners": { "type": "array", "items": { "type": "string" } },
+        "exports": { "type": "array", "items": { "type": "string" } },
+        "composedOf": { "type": "array", "items": { "type": "string" } },
+        "blocks": { "type": "array", "items": { "type": "string" } },
+        "hooks": { "type": "array", "items": { "type": "string" } },
+        "valueKeys": { "type": "array", "items": { "type": "string" } },
+        "relations": { "type": "array", "items": { "$ref": "#/$defs/relation" } },
+        "stability": { "type": "number", "minimum": 0, "maximum": 1 },
+        "factors": { "$ref": "#/$defs/factors" }
+      }
+    },
+    "compression": {
+      "type": "object",
+      "required": ["orphans", "variants", "deprecated"],
+      "additionalProperties": false,
+      "properties": {
+        "orphans": { "type": "array", "items": { "type": "string" } },
+        "variants": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["canonical", "members"],
+            "additionalProperties": false,
+            "properties": {
+              "canonical": { "type": "string" },
+              "members": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        "deprecated": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

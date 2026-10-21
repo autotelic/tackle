@@ -1,0 +1,10 @@
+{
+  "lexicon": { "name": "patterns", "version": 1 },
+  "hash": "nope",
+  "stable": [{ "name": "missing everything else" }],
+  "compositions": [],
+  "primitives": [],
+  "shared": [],
+  "families": [],
+  "compression": { "orphans": [], "variants": [], "deprecated": [] }
+}

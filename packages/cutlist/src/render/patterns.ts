@@ -1,4 +1,4 @@
-import type { Pattern, PatternView } from "../patterns.ts"
+import type { Pattern, PatternView } from "@autotelic/protocol"
 
 /*
  * `PATTERNS.md` and `patterns.json`.

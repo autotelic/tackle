@@ -1,0 +1,147 @@
+{
+  "lexicon": {
+    "name": "recipes",
+    "version": 1
+  },
+  "hash": "767f577e6ee8cd40506267ea9460458787ad699566f88f970a4f0fd2087c520a",
+  "features": [
+    {
+      "id": "feature:src/components",
+      "name": "Components",
+      "kind": "feature",
+      "path": "src/components",
+      "source": "src/components/theme-provider.tsx",
+      "stability": 0.765,
+      "import": {
+        "from": "src/components/theme-provider",
+        "binding": "ThemeProvider",
+        "mode": "named"
+      },
+      "extraImports": [
+        {
+          "from": "src/components/use-theme",
+          "binding": "useTheme",
+          "mode": "named"
+        }
+      ],
+      "usage": "  <ThemeProvider>…</ThemeProvider>",
+      "hooks": ["useTheme"],
+      "notes": [
+        "const value = useTheme()",
+        "Imports for the blocks and hook are listed above; the feature has no barrel."
+      ]
+    }
+  ],
+  "parts": [
+    {
+      "id": "src--components--ui--badge",
+      "name": "badge",
+      "kind": "part",
+      "path": "src/components/ui/badge.tsx",
+      "source": "src/components/ui/badge.tsx",
+      "stability": 0.53,
+      "import": {
+        "from": "src/components/ui/badge",
+        "binding": "Badge",
+        "mode": "named"
+      },
+      "usage": "<Badge>Example</Badge>",
+      "props": ["children"],
+      "notes": []
+    },
+    {
+      "id": "src--components--ui--button",
+      "name": "button",
+      "kind": "part",
+      "path": "src/components/ui/button.tsx",
+      "source": "src/components/ui/button.tsx",
+      "stability": 0.659,
+      "import": {
+        "from": "src/components/ui/button",
+        "binding": "Button",
+        "mode": "named"
+      },
+      "usage": "<Button onClick={handler} size=\"…\" variant=\"…\">Example</Button>",
+      "props": ["children", "onClick", "size", "variant"],
+      "notes": ["1 importer(s)"]
+    },
+    {
+      "id": "src--components--ui--card",
+      "name": "card",
+      "kind": "part",
+      "path": "src/components/ui/card.tsx",
+      "source": "src/components/ui/card.tsx",
+      "stability": 0.93,
+      "import": {
+        "from": "src/components/ui/card",
+        "binding": "Card",
+        "mode": "named"
+      },
+      "usage": "<Card title=\"…\">Example</Card>",
+      "props": ["children", "title"],
+      "notes": ["4 importer(s)"]
+    },
+    {
+      "id": "src--components--project-toolbar",
+      "name": "project-toolbar",
+      "kind": "part",
+      "path": "src/components/project-toolbar.tsx",
+      "source": "src/components/project-toolbar.tsx",
+      "stability": 0.818,
+      "import": {
+        "from": "src/components/project-toolbar",
+        "binding": "ProjectToolbar",
+        "mode": "named"
+      },
+      "usage": "<ProjectToolbar title=\"…\" />",
+      "props": ["title"],
+      "notes": ["part of `src/components`", "3 importer(s)"]
+    },
+    {
+      "id": "src--components--theme-provider",
+      "name": "theme-provider",
+      "kind": "part",
+      "path": "src/components/theme-provider.tsx",
+      "source": "src/components/theme-provider.tsx",
+      "stability": 0.765,
+      "import": {
+        "from": "src/components/theme-provider",
+        "binding": "ThemeProvider",
+        "mode": "named"
+      },
+      "usage": "<ThemeProvider>Example</ThemeProvider>",
+      "props": ["children"],
+      "notes": ["part of `src/components`", "2 importer(s)"]
+    },
+    {
+      "id": "src--components--theme-context",
+      "name": "theme-context",
+      "kind": "part",
+      "path": "src/components/theme-context.ts",
+      "source": "src/components/theme-context.ts",
+      "stability": 0.665,
+      "import": {
+        "from": "src/components/theme-context",
+        "binding": "ThemeContext",
+        "mode": "named"
+      },
+      "usage": "const value = useContext(ThemeContext)",
+      "notes": ["part of `src/components`", "2 importer(s)"]
+    },
+    {
+      "id": "src--components--use-theme",
+      "name": "use-theme",
+      "kind": "part",
+      "path": "src/components/use-theme.ts",
+      "source": "src/components/use-theme.ts",
+      "stability": 0.589,
+      "import": {
+        "from": "src/components/use-theme",
+        "binding": "useTheme",
+        "mode": "named"
+      },
+      "usage": "const value = useTheme()",
+      "notes": ["part of `src/components`", "1 importer(s)"]
+    }
+  ]
+}

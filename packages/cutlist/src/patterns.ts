@@ -1,12 +1,16 @@
 import {
   hasIntent,
+  lexiconRef,
   type Catalog,
   type CatalogComponent,
   type CatalogFeature,
   type DuplicateCluster,
   type Intent,
   type PartRole,
-  type PartStatus,
+  type Pattern,
+  type PatternRelation,
+  type PatternView,
+  type StabilityFactors,
   type TierName,
 } from "@autotelic/protocol"
 
@@ -24,82 +28,6 @@ import {
  * a primitive, a load-bearing shared part, or a variant family. Routes and local plumbing are
  * consumers; they belong in the menu and the recipes, not in the pattern language.
  */
-
-export type PatternKind = "composition" | "primitive" | "shared" | "family"
-
-/** A link to another pattern or part. The target is a name, path, or authored label. */
-export interface PatternRelation {
-  readonly kind:
-    | "uses"
-    | "part-of"
-    | "variant-of"
-    | "replaces"
-    | "block"
-    | "hook"
-    | "context"
-    | "provider"
-    | "barrel"
-  readonly target: string
-}
-
-/** The transparent factors behind the stability score. */
-export interface StabilityFactors {
-  readonly tier: number
-  readonly adoption: number
-  readonly ownership: number
-  readonly variant: number
-  readonly documented: number
-}
-
-/** One named pattern. Authored fields are absent when the intent has not been written. */
-export interface Pattern {
-  readonly id: string
-  readonly name: string
-  readonly kind: PatternKind
-  /** The part's own role, kept apart from the pattern kind. */
-  readonly role?: PartRole
-  readonly path: string
-  readonly tier: TierName
-  readonly feature?: string
-  readonly summary?: string
-  readonly whenToUse?: string
-  readonly whenNotToUse?: string
-  readonly states?: ReadonlyArray<string>
-  readonly status?: PartStatus
-  readonly examples?: ReadonlyArray<string>
-  readonly useInstead?: ReadonlyArray<string>
-  readonly usedBy: number
-  readonly owners: ReadonlyArray<string>
-  readonly exports: ReadonlyArray<string>
-  readonly composedOf: ReadonlyArray<string>
-  readonly blocks?: ReadonlyArray<string>
-  readonly hooks?: ReadonlyArray<string>
-  readonly valueKeys?: ReadonlyArray<string>
-  readonly relations: ReadonlyArray<PatternRelation>
-  readonly stability: number
-  readonly factors: StabilityFactors
-}
-
-/** The three compression moves the view can make from the model. */
-export interface Compression {
-  readonly orphans: ReadonlyArray<string>
-  readonly variants: ReadonlyArray<{
-    readonly canonical: string
-    readonly members: ReadonlyArray<string>
-  }>
-  readonly deprecated: ReadonlyArray<string>
-}
-
-export interface PatternView {
-  readonly lexicon: { readonly name: "patterns"; readonly version: 1 }
-  readonly hash: string
-  readonly stable: ReadonlyArray<Pattern>
-  readonly compositions: ReadonlyArray<Pattern>
-  readonly primitives: ReadonlyArray<Pattern>
-  readonly shared: ReadonlyArray<Pattern>
-  readonly families: ReadonlyArray<Pattern>
-  readonly compression: Compression
-}
 
 const round = (value: number): number => Math.round(value * 1000) / 1000
 
@@ -452,7 +380,7 @@ export const patternsOf = ({
   }))
 
   return {
-    lexicon: { name: "patterns", version: 1 },
+    lexicon: lexiconRef("patterns"),
     hash: catalog.hash,
     stable,
     compositions,

@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autotelic.dev/tackle/protocol/recipes.json",
+  "title": "Recipes",
+  "description": "Copyable imports and minimal shapes for the load-bearing parts and every composition, derived from the catalog and the pattern view.",
+  "type": "object",
+  "required": ["lexicon", "hash", "features", "parts"],
+  "additionalProperties": false,
+  "properties": {
+    "lexicon": { "$ref": "#/$defs/lexicon" },
+    "hash": { "type": "string" },
+    "features": { "type": "array", "items": { "$ref": "#/$defs/recipe" } },
+    "parts": { "type": "array", "items": { "$ref": "#/$defs/recipe" } }
+  },
+  "$defs": {
+    "lexicon": {
+      "type": "object",
+      "required": ["name", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "enum": ["recipes"] },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "import": {
+      "type": "object",
+      "required": ["from", "binding", "mode"],
+      "additionalProperties": false,
+      "properties": {
+        "from": { "type": "string" },
+        "binding": { "type": "string" },
+        "mode": { "enum": ["named", "default", "namespace"] }
+      }
+    },
+    "recipe": {
+      "type": "object",
+      "required": ["id", "name", "kind", "path", "source", "import", "usage", "notes"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "kind": { "enum": ["feature", "part"] },
+        "path": { "type": "string" },
+        "source": { "type": "string" },
+        "stability": { "type": "number", "minimum": 0, "maximum": 1 },
+        "import": { "$ref": "#/$defs/import" },
+        "extraImports": { "type": "array", "items": { "$ref": "#/$defs/import" } },
+        "usage": { "type": "string" },
+        "props": { "type": "array", "items": { "type": "string" } },
+        "blocks": { "type": "array", "items": { "type": "string" } },
+        "hooks": { "type": "array", "items": { "type": "string" } },
+        "valueKeys": { "type": "array", "items": { "type": "string" } },
+        "notes": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

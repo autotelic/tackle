@@ -55,6 +55,8 @@ and another reads. Every record has a named, versioned **lexicon**: its contract
 | `manifest`       | `@autotelic/cutlist` | derived  | 1   | `schema/manifest.json`       | `fixtures/manifest/`       |
 | `menu`           | `@autotelic/cutlist` | derived  | 1   | `schema/menu.json`           | `fixtures/menu/`           |
 | `intent`         | `@autotelic/cutlist` | authored | 1   | `schema/intent.json`         | `fixtures/intent/`         |
+| `patterns`       | `@autotelic/cutlist` | derived  | 1   | `schema/patterns.json`       | `fixtures/patterns/`       |
+| `recipes`        | `@autotelic/cutlist` | derived  | 1   | `schema/recipes.json`        | `fixtures/recipes/`        |
 | `onboarding`     | `@autotelic/jig-cli` | authored | 1   | `schema/onboarding.json`     | `fixtures/onboarding/`     |
 | `cutlist.config` | `@autotelic/cutlist` | authored | 1   | `schema/cutlist.config.json` | `fixtures/cutlist.config/` |
 | `jig.config`     | `@autotelic/jig-cli` | authored | 1   | `schema/jig.config.json`     | `fixtures/jig.config/`     |
@@ -71,6 +73,11 @@ rendering; this record is the model.
 `intent` is the authored sidecar: one file per part, keyed by the part's stable id or name.
 It is where the lifecycle (`stable`, `beta`, `experimental`, `deprecated`) and the sentence
 that says what a part is for live, beside the generated catalog rather than inside it.
+
+`patterns` and `recipes` are the derived views an agent reads next: the stable shape and the
+relations around it, then the import and minimal shape for a composition or load-bearing
+part. `jig menu` reads both without importing cutlist; they are records for the same reason
+the menu is.
 
 `onboarding` is a **declared** lexicon: its schema and fixtures exist and are checked, but no
 engine serializes it yet (`jig` writes a cookbook, not this record). When `jig` adopts it, the
