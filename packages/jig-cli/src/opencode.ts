@@ -167,6 +167,57 @@ export default Plugin.define({
       })
 
       editor.add({
+        name: "menu",
+        description:
+          "Read the cutlist artifact for this repository: the stable shape, or the parts/features/recipes that answer a query. Use this before building UI; it reads the generated menu, patterns, and recipes.",
+        input: {
+          type: "object",
+          properties: {
+            cwd: {
+              type: "string",
+              description: "Repository to read, relative to this location. Default: this location.",
+            },
+            query: {
+              type: "string",
+              description: "A part, feature, or concept to find. Omit for the stable shape.",
+            },
+            limit: {
+              type: "number",
+              description: "Maximum matches. Default 12.",
+            },
+          },
+          additionalProperties: false,
+        },
+        options: { namespace: "jig", codemode: true },
+        execute: async (input, context) => {
+          const options = (input ?? {}) as {
+            readonly cwd?: unknown
+            readonly query?: unknown
+            readonly limit?: unknown
+          }
+          const directory = directoryFor(options.cwd, root)
+          const query = typeof options.query === "string" ? options.query : undefined
+          const limit = typeof options.limit === "number" ? options.limit : 12
+          const outcome = await runJig(
+            directory,
+            [
+              "menu",
+              "--cwd",
+              directory,
+              "--limit",
+              String(limit),
+              ...(query === undefined || query === "" ? [] : [query]),
+            ],
+            context.signal,
+          )
+          return {
+            content: outcome.output === "" ? `jig menu exited ${outcome.code}` : outcome.output,
+            metadata: { exitCode: outcome.code, cwd: directory },
+          }
+        },
+      })
+
+      editor.add({
         name: "engines",
         description:
           "List the conformance engines jig is configured to run here, and whether each engine's command is on PATH.",

@@ -90,6 +90,10 @@
         "menuJson": { "type": "string" },
         "menu": { "type": "string" },
         "intent": { "type": "string" },
+        "patterns": { "type": "string" },
+        "patternsJson": { "type": "string" },
+        "recipes": { "type": "string" },
+        "recipesJson": { "type": "string" },
         "diagrams": { "type": "string" },
         "hooks": { "type": "string" },
         "tokens": { "type": "string" }

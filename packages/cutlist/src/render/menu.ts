@@ -152,6 +152,7 @@ export const renderMenu = (menu: Menu): string => {
     }
     if (groups.size <= 1) {
       for (const entry of entries) lines.push(entryLine(entry))
+      lines.push("")
     } else {
       for (const kind of MENU_KIND_ORDER) {
         const group = groups.get(kind)
@@ -161,7 +162,6 @@ export const renderMenu = (menu: Menu): string => {
         lines.push("")
       }
     }
-    lines.push("")
   }
 
   const clusters = menu.clusters ?? []

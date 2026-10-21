@@ -196,6 +196,57 @@ export default function (pi: ExtensionAPI): void {
     },
   })
 
+  pi.registerTool({
+    name: "jig_menu",
+    label: "jig Menu",
+    description:
+      "Read the cutlist artifact for this repository: the stable shape, or the parts/features/recipes that answer a query. Use this to find the right component before writing UI; it reads the generated menu, patterns, and recipes instead of re-analysing the tree.",
+    promptSnippet: "Find a component or pattern in the cutlist menu",
+    promptGuidelines: [
+      "Use jig_menu before building a new interface: search for the concept (for example `dialog` or `wizard`) and prefer the recipe's import and shape over inventing a new part.",
+      "A recipe is a skeleton, not a generated app; adapt its props and children to the call site.",
+    ],
+    parameters: Type.Object({
+      cwd: Type.Optional(
+        Type.String({ description: "Repository to read. Default: pi's working directory." }),
+      ),
+      query: Type.Optional(
+        Type.String({
+          description: "A part, feature, or concept to find. Omit for the stable shape.",
+        }),
+      ),
+      limit: Type.Optional(Type.Number({ description: "Maximum matches. Default 12." })),
+    }),
+    async execute(
+      _toolCallId: string,
+      params: { readonly cwd?: string; readonly query?: string; readonly limit?: number },
+      signal: AbortSignal | undefined,
+      _onUpdate: unknown,
+      ctx: ExtensionContext,
+    ): Promise<ToolResult> {
+      try {
+        const target = targetFor(params.cwd, ctx)
+        const limit = params.limit === undefined ? 12 : params.limit
+        const args = [
+          "menu",
+          "--cwd",
+          target,
+          "--limit",
+          String(limit),
+          ...(params.query === undefined || params.query === "" ? [] : [params.query]),
+        ]
+        const result = await run(pi, target, args, signal)
+        const text = (result.stdout.trim() === "" ? result.stderr : result.stdout).trim()
+        return ok(text === "" ? `jig menu exited ${result.code}` : text, {
+          code: result.code,
+          cwd: target,
+        })
+      } catch (error) {
+        return failed(`jig could not read the menu: ${reason(error)}`, { command: "jig menu" })
+      }
+    },
+  })
+
   pi.registerCommand("jig", {
     description:
       "Run jig check on this repository. Arguments pass through, e.g. /jig --cwd ../other-repo.",

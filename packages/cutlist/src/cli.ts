@@ -3,14 +3,23 @@ import { Command, Flag } from "effect/cli"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { projectMenu } from "@autotelic/protocol"
 import { buildCatalog } from "./catalog.ts"
-import { compareCatalog, compareMenu, compareText, type StalenessResult } from "./check.ts"
+import {
+  compareCatalog,
+  compareJson,
+  compareMenu,
+  compareText,
+  type StalenessResult,
+} from "./check.ts"
 import { loadConfig, outputOf } from "./config.ts"
 import { readIntent, validateIntent } from "./intent.ts"
+import { patternsOf } from "./patterns.ts"
 import { renderCatalog } from "./render/catalog.ts"
 import { renderDiagramIndex, renderDiagrams } from "./render/diagram.ts"
 import { renderHooks } from "./render/hooks.ts"
 import { renderManifest } from "./render/manifest.ts"
 import { renderMenu, renderMenuJson } from "./render/menu.ts"
+import { renderPatterns, renderPatternsJson } from "./render/patterns.ts"
+import { recipesOf, renderRecipes, renderRecipesJson } from "./render/recipes.ts"
 import { renderTokens } from "./render/tokens.ts"
 
 /** One report through Effect's Console, newline-normalized so a test can capture it. */
@@ -74,6 +83,8 @@ const buildCommand = Command.make(
       }
 
       const menu = projectMenu({ catalog, intent: intent.byName })
+      const patterns = patternsOf({ catalog, intent: intent.byName })
+      const recipes = recipesOf({ catalog, view: patterns })
       const issues = validateIntent({ byName: intent.byName, components: catalog.components })
       const issueCount = issues.stale.length + issues.unknownTargets.length + issues.stranded.length
 
@@ -114,6 +125,34 @@ const buildCommand = Command.make(
             yield* compareText({
               file: path.resolve(cwd, output.menu),
               fresh: renderMenu(menu),
+            }),
+          ],
+          [
+            output.patterns,
+            yield* compareText({
+              file: path.resolve(cwd, output.patterns),
+              fresh: renderPatterns(patterns),
+            }),
+          ],
+          [
+            output.patternsJson,
+            yield* compareJson({
+              file: path.resolve(cwd, output.patternsJson),
+              fresh: patterns,
+            }),
+          ],
+          [
+            output.recipes,
+            yield* compareText({
+              file: path.resolve(cwd, output.recipes),
+              fresh: renderRecipes(recipes),
+            }),
+          ],
+          [
+            output.recipesJson,
+            yield* compareJson({
+              file: path.resolve(cwd, output.recipesJson),
+              fresh: recipes,
             }),
           ],
         ]
@@ -161,6 +200,10 @@ const buildCommand = Command.make(
         [output.manifest, renderManifest(catalog, intent.byName)],
         [output.menuJson, renderMenuJson(menu)],
         [output.menu, renderMenu(menu)],
+        [output.patterns, renderPatterns(patterns)],
+        [output.patternsJson, renderPatternsJson(patterns)],
+        [output.recipes, renderRecipes(recipes)],
+        [output.recipesJson, renderRecipesJson(recipes)],
         [output.hooks, renderHooks(catalog)],
         [output.tokens, renderTokens(catalog)],
         ...diagramFiles,
@@ -203,7 +246,7 @@ const buildCommand = Command.make(
     ),
 ).pipe(
   Command.withDescription(
-    "Crawl the repo and render the catalog, the menu, the lint manifest, the graph diagrams, and the token vocabulary.",
+    "Crawl the repo and render the catalog, the menu, the pattern language, the recipes, the lint manifest, the graph diagrams, and the token vocabulary.",
   ),
   Command.withShortDescription("Crawl the repo and render the vocabulary."),
   Command.withExamples([

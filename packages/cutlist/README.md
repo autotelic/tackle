@@ -85,6 +85,25 @@ composition, and React's own hooks (`useState`, `useEffect`, `useRef`, …) are 
 domain signal. The join compares the remaining composition at Jaccard ≥ 0.7, which is
 what stops a generic-hook pair from scoring a perfect 1.0.
 
+## Patterns and recipes
+
+`PATTERNS.md` and `patterns.json` are the pattern language view. A pattern has a context
+(tier, owners, feature), forces (adoption, variants, lifecycle), a solution (exports and
+composition), and relations to the parts it uses and the variants around it. The stable
+shape is ranked by a transparent five-factor score: tier, adoption, ownership, variant
+status, and documentation. `compression` names the three moves the facts support — remove
+orphans, converge variants on their canonical, migrate retired parts still imported.
+
+`RECIPES.md` and `recipes.json` turn the load-bearing patterns into a next turn: the import
+line, a minimal shape with the declared props, the feature's blocks and hook, and a note on
+where the call site may spell the binding differently. They are skeletons, not generated
+applications.
+
+Both are agents' first stop. `jig menu` reads the same artifact without importing cutlist:
+`jig menu` shows the stable shape and the files; `jig menu dialog` finds the import and
+shape for a concept. The pi extension exposes it as `jig_menu`, and the OpenCode plugin as
+`jig.menu`.
+
 ## Commands
 
 ```sh

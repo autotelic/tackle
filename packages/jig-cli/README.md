@@ -54,6 +54,15 @@ never stands in for "clean". A finding carries its judged provenance when it has
 entropy `move`, a `score`, and whether an engine actually judged it — and that provenance
 rides out through every projection below.
 
+## Reading the vocabulary
+
+`jig check` enforces the tree; `jig menu` reads the cutlist artifact without importing
+cutlist. No query prints the stable shape and the files; `jig menu dialog` ranks the parts,
+features, and recipes that answer a concept and returns the import and next shape. The pi
+extension exposes the same command as `jig_menu`, the OpenCode plugin as `jig.menu`. This is
+how the menu reaches an agent without turning the agent into a second renderer: cutlist writes
+the artifact, jig reads it at the seam.
+
 ## Outward projections
 
 A finding does not leave the workspace in the report's shape; it leaves in the shape the host

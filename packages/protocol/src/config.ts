@@ -96,6 +96,14 @@ export interface CutlistOutput {
   readonly menu?: string
   /** The directory of authored intent records, one JSON file per part name. */
   readonly intent?: string
+  /** The pattern language: compositions, primitives, families, and the stable shape. */
+  readonly patterns?: string
+  /** The same pattern view as JSON, for an agent that wants to sort or filter it. */
+  readonly patternsJson?: string
+  /** Copyable imports and usage skeletons for features and load-bearing parts. */
+  readonly recipes?: string
+  /** The same recipes as JSON, for an agent building a mockup. */
+  readonly recipesJson?: string
   /**
    * The directory of graph renderings — Mermaid source beside the SVG `pele` drew from it.
    * A directory, not a file, because one viewpoint is one diagram and a repo grows more.

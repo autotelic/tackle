@@ -10,6 +10,7 @@ import { defaultConfig, loadConfig } from "./config.ts"
 import { resolveEngineCommand } from "./engines.ts"
 import { EXIT, gateVerdict } from "./gate.ts"
 import { touchedFiles } from "./git.ts"
+import { findMatches, readArtifact, renderMatches, renderMenuJson, renderSummary } from "./menu.ts"
 import { renderCodeClimate, renderJsonl, renderLsp, renderSarif } from "./projections.ts"
 import { renderGithub, renderJson, renderText } from "./render.ts"
 import { harnessRun } from "./run.ts"
@@ -163,6 +164,8 @@ one vocabulary. Reach for these instead of re-deriving them:
 
 - \`jig check\` — run every engine, one oxlint-shaped report, fail on what is new.
 - \`jig baseline\` — accept the current findings; the ledger only shrinks after that.
+- \`jig menu\` — read the cutlist artifact: the stable shape, then \`jig menu <query>\` for
+  the import and shape of the part that answers it.
 
 Grounded rules come from the vocabulary \`cutlist\` builds (the UI catalog and menu);
 prefer the components the menu already lists over new ones.
@@ -310,6 +313,68 @@ const learnCommand = Command.make(
   Command.withShortDescription("Rewrite the cookbook."),
 )
 
+const menuCommand = Command.make(
+  "menu",
+  {
+    cwd: cwdFlag,
+    query: Argument.String("query").pipe(
+      Argument.withDescription(
+        'A part, feature, or concept to find, for example "dialog" or "wizard".',
+      ),
+      Argument.optional,
+    ),
+    format: Flag.Literals("format", ["text", "json"]).pipe(
+      Flag.withDescription("Human text or the same view as JSON."),
+      Flag.withDefault("text"),
+    ),
+    limit: Flag.Int("limit").pipe(
+      Flag.withDescription("Maximum matches to print. Default 12."),
+      Flag.withDefault(12),
+    ),
+  },
+  (options) =>
+    Effect.gen(function* () {
+      const path = yield* Path.Path
+      const root = path.resolve(Option.getOrUndefined(options.cwd) ?? process.cwd())
+      const artifact = readArtifact(root)
+      const query = Option.getOrUndefined(options.query)
+      const missing =
+        artifact.menu === undefined &&
+        artifact.patterns === undefined &&
+        artifact.recipes === undefined
+      if (missing) {
+        yield* write(renderSummary(artifact, options.limit))
+        yield* Effect.sync(() => {
+          process.exitCode = 1
+        })
+        return
+      }
+      const matches = findMatches(artifact, query, options.limit)
+      if (options.format === "json") {
+        yield* write(renderMenuJson(artifact, matches, query ?? ""))
+        return
+      }
+      yield* write(
+        query === undefined
+          ? renderSummary(artifact, options.limit)
+          : renderMatches(artifact, matches, query),
+      )
+    }),
+).pipe(
+  Command.withDescription(
+    "Read the cutlist artifact: the stable shape, or the parts and recipes that answer a query. This is the agent door to the menu; it does not re-analyse the tree.",
+  ),
+  Command.withShortDescription("Find a part in the cutlist menu."),
+  Command.withExamples([
+    { command: "jig menu", description: "Show the stable shape and the artifact files." },
+    {
+      command: "jig menu dialog",
+      description: "Find parts, features, and recipes matching a word.",
+    },
+    { command: "jig menu wizard --format json", description: "Return the same view for a tool." },
+  ]),
+)
+
 const cli = Command.make("jig").pipe(
   Command.withDescription(
     "The harness: run every conformance engine in one pass, merge them into one report, and hold the ratchet.",
@@ -318,6 +383,7 @@ const cli = Command.make("jig").pipe(
     checkCommand,
     baselineCommand,
     enginesCommand,
+    menuCommand,
     initCommand,
     explainCommand,
     promoteCommand,

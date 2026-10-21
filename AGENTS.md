@@ -84,9 +84,11 @@ Two, and neither re-implements anything:
 - `src/opencode.ts`, published as `@autotelic/jig-cli/opencode` — the **OpenCode** plugin.
   `@opencode/plugin` is an optional peer.
 
-Both shell out to the `jig` binary and hand back what a human's terminal shows. If you find
-yourself rendering a report a second time in either one, the report belongs in `jig`'s
-renderers instead.
+Both shell out to the `jig` binary and hand back what a human's terminal shows. Both expose
+`check`, `engines`, and `menu`: `jig_menu` / `jig.menu` returns the cutlist artifact's stable
+shape or the parts and recipes that answer a query, so an agent can find the right component
+without opening the generated menu. If you find yourself rendering a report a second time in
+either one, the report belongs in `jig`'s renderers instead.
 
 ## The exemplar is a client, not a fixture
 

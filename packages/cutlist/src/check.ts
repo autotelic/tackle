@@ -76,6 +76,36 @@ export const compareMenu = ({
   })
 
 /**
+ * Compare a committed JSON rendering against the fresh model.
+ *
+ * `patterns.json` and `recipes.json` are pretty-printed and then formatted by `oxfmt`, so
+ * bytes would report a stale file after every formatter run. Decoding and deep-comparing the
+ * model keeps the gate about content, the same reason `menu.json` is compared by its model.
+ * A file that cannot be parsed is stale, never clean.
+ */
+export const compareJson = ({
+  file,
+  fresh,
+}: {
+  readonly file: string
+  readonly fresh: unknown
+}): Effect.Effect<StalenessResult, never, FileSystem.FileSystem | Path.Path> =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const text = yield* Effect.orElseSucceed(fs.readFileString(file), () => undefined)
+    if (text === undefined)
+      return { stale: true, committed: undefined, fresh: digestOf(JSON.stringify(fresh)) }
+    const committed = parseJson(text)
+    if (committed === undefined)
+      return { stale: true, committed: undefined, fresh: digestOf(JSON.stringify(fresh)) }
+    return {
+      stale: !isDeepStrictEqual(committed, fresh),
+      committed: digestOf(JSON.stringify(committed)),
+      fresh: digestOf(JSON.stringify(fresh)),
+    }
+  })
+
+/**
  * Compare a committed rendering against the fresh one, by bytes.
  *
  * `MENU.md` is a generator-canonical rendering — the renderer ends it the way `oxfmt`

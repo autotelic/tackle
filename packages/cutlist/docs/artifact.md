@@ -386,15 +386,15 @@ The concrete format work, in order:
 
 ## Now, next, later
 
-| When      | What                                                                            | Where                                |
-| --------- | ------------------------------------------------------------------------------- | ------------------------------------ |
-| **Now**   | catalog, manifest, `MENU.md`/`menu.json`, `intent/`, `diagrams/`, hooks, tokens | `cutlist/src`                        |
-| **Next**  | determinism: relative `root`, one hash for one tree                             | `cutlist/src`                        |
-| **Next**  | `plan.json`                                                                     | `cutlist/src/render`, `protocol/src` |
-| **Next**  | the part record + `workspace`; entries, index, graph, trees                     | `protocol/schema`, `cutlist/src`     |
-| **Next**  | the snapshot diff; candidate evidence (the signature delta)                     | `cutlist/src/render`                 |
-| **Later** | atlas build; registry export; showroom scenes                                   | new package / `cutlist` subcommands  |
-| **Later** | `jig build` as the one command that produces the artifact                       | `jig-cli/src/engines.ts`             |
+| When      | What                                                                                                                                        | Where                                |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| **Now**   | catalog, manifest, `MENU.md`/`menu.json`, `PATTERNS.md`/`patterns.json`, `RECIPES.md`/`recipes.json`, `intent/`, `diagrams/`, hooks, tokens | `cutlist/src`                        |
+| **Next**  | determinism: relative `root`, one hash for one tree                                                                                         | `cutlist/src`                        |
+| **Next**  | `plan.json`                                                                                                                                 | `cutlist/src/render`, `protocol/src` |
+| **Next**  | the part record + `workspace`; entries, index, graph, trees                                                                                 | `protocol/schema`, `cutlist/src`     |
+| **Next**  | the snapshot diff; candidate evidence (the signature delta)                                                                                 | `cutlist/src/render`                 |
+| **Later** | atlas build; registry export; showroom scenes                                                                                               | new package / `cutlist` subcommands  |
+| **Later** | `jig build` as the one command that produces the artifact                                                                                   | `jig-cli/src/engines.ts`             |
 
 A note on the command surface: `cutlist build` **produces** the artifact; `jig check`
 **verifies** it by running `cutlist build --check`, which writes nothing. If "by way of

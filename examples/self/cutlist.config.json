@@ -23,6 +23,10 @@
     "menuJson": "tools/ui-catalog/menu.json",
     "menu": "tools/ui-catalog/MENU.md",
     "intent": "tools/ui-catalog/intent",
+    "patterns": "tools/ui-catalog/PATTERNS.md",
+    "patternsJson": "tools/ui-catalog/patterns.json",
+    "recipes": "tools/ui-catalog/RECIPES.md",
+    "recipesJson": "tools/ui-catalog/recipes.json",
     "diagrams": "tools/ui-catalog/diagrams",
     "hooks": "tools/ui-catalog/hooks.md",
     "tokens": "tools/ui-catalog/tokens.md"

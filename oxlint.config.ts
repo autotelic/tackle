@@ -63,6 +63,8 @@ const BOUNDARY_FILES = [
   "packages/cutlist/src/crawl.ts",
   "packages/cutlist/src/check.ts",
   "packages/jig-cli/src/engines.ts",
+  "packages/jig-cli/src/menu.ts",
+  "packages/jig-cli/src/menu.test.ts",
   "packages/jig-cli/src/opencode.ts",
   "packages/jig-cli/src/baseline.ts",
   "packages/jig-cli/extensions/jig.ts",
@@ -111,6 +113,9 @@ const CONDITIONAL_SPREAD_FILES = [
   "packages/cutlist/src/catalog.ts",
   "packages/cutlist/src/crawl.ts",
   "packages/cutlist/src/features.ts",
+  "packages/cutlist/src/patterns.ts",
+  "packages/cutlist/src/render/recipes.ts",
+  "packages/jig-cli/src/menu.ts",
   "packages/protocol/src/projections.test.ts",
   "packages/jig-cli/src/projections.test.ts",
   "packages/jig-cli/src/engines.ts",
@@ -126,7 +131,12 @@ const CONDITIONAL_SPREAD_FILES = [
  * `Option` would allocate on every declaration to express a sentinel the caller reads
  * once. No operation is being guarded, so the Option contract has nothing to protect.
  */
-const PURE_LOOKUP_FILES = ["packages/cutlist/src/roles.ts", "packages/cutlist/src/paths.ts"]
+const PURE_LOOKUP_FILES = [
+  "packages/cutlist/src/roles.ts",
+  "packages/cutlist/src/paths.ts",
+  "packages/cutlist/src/patterns.ts",
+  "packages/cutlist/src/render/recipes.ts",
+]
 
 /**
  * Rooted option bags, not parallel derivations.
@@ -137,6 +147,19 @@ const PURE_LOOKUP_FILES = ["packages/cutlist/src/roles.ts", "packages/cutlist/sr
  * a redundant field; here the guess is wrong.
  */
 const ROOTED_OPTION_FILES = ["packages/cutlist/src/tier.ts", "packages/cutlist/src/owners.ts"]
+
+/**
+ * Text renderers, not query builders.
+ *
+ * `recipes.ts` and `menu.ts` build Markdown and import lines with template interpolation. The
+ * rule reads `${...}` as SQL; here the interpolation IS the output, and every value is a
+ * catalog field or a validated identifier, not a query fragment.
+ */
+const TEXT_RENDERER_FILES = [
+  "packages/cutlist/src/render/patterns.ts",
+  "packages/cutlist/src/render/recipes.ts",
+  "packages/jig-cli/src/menu.ts",
+]
 
 export default {
   ignorePatterns: [
@@ -172,6 +195,10 @@ export default {
     {
       files: ROOTED_OPTION_FILES,
       rules: { "plumb/no-redundant-derived-field": "off" },
+    },
+    {
+      files: TEXT_RENDERER_FILES,
+      rules: { "plumb/no-sql-string-interpolation": "off" },
     },
     {
       // Reasoning belongs where the decision is made. joggle recorded exactly this for its
