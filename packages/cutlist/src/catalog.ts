@@ -56,6 +56,8 @@ export const idOfModule = (path: string): string =>
 interface AliasRule {
   readonly prefix: string
   readonly replacements: ReadonlyArray<string>
+  /** `@/*` style: the specifier continues past the prefix. Exact aliases stop at it. */
+  readonly wildcard: boolean
 }
 
 const aliasRules = (
@@ -63,12 +65,16 @@ const aliasRules = (
 ): ReadonlyArray<AliasRule> => {
   const rules: Array<AliasRule> = []
   for (const [pattern, targets] of Object.entries(alias)) {
-    if (!pattern.endsWith("/*")) continue
-    const replacements = targets
-      .filter((target) => target.endsWith("/*"))
-      .map((target) => target.slice(0, -1))
-    if (replacements.length === 0) continue
-    rules.push({ prefix: pattern.slice(0, -1), replacements })
+    if (pattern.endsWith("/*")) {
+      const replacements = targets
+        .filter((target) => target.endsWith("/*"))
+        .map((target) => target.slice(0, -1))
+      if (replacements.length > 0) {
+        rules.push({ prefix: pattern.slice(0, -1), replacements, wildcard: true })
+      }
+    } else if (targets.length > 0) {
+      rules.push({ prefix: pattern, replacements: targets, wildcard: false })
+    }
   }
   return rules
 }
@@ -99,8 +105,9 @@ const resolveSpecifier = ({
     return [normalizePosix(`${importerDir}/${specifier}`).replace(SOURCE_EXTENSION, "")]
   }
   for (const rule of rules) {
-    if (!specifier.startsWith(rule.prefix)) continue
-    const tail = specifier.slice(rule.prefix.length)
+    const matches = rule.wildcard ? specifier.startsWith(rule.prefix) : specifier === rule.prefix
+    if (!matches) continue
+    const tail = rule.wildcard ? specifier.slice(rule.prefix.length) : ""
     // A `paths` entry is an array for a reason: one alias can point at several apps.
     // Keep the order, and let the graph pick the candidate that names a real module.
     return rule.replacements.map((replacement) =>

@@ -336,6 +336,23 @@ describe("importerGraph", () => {
       "apps/shop/ui/app/routes/page.tsx",
     ])
   })
+
+  it("resolves an exact alias through an index module", () => {
+    const graph = importerGraph(
+      [
+        parseModule({
+          filename: "src/app.ts",
+          text: 'import { Thing } from "services"',
+        }),
+        parseModule({
+          filename: "src/services/index.ts",
+          text: "export const Thing = 1",
+        }),
+      ],
+      { services: ["src/services"] },
+    )
+    expect([...(graph.get("src/services/index.ts") ?? [])]).toEqual(["src/app.ts"])
+  })
 })
 
 describe("healthOf", () => {
