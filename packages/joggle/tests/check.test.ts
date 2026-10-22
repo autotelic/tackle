@@ -41,20 +41,25 @@ it.effect("refuses to persist judgements for code outside the analysis root", ()
     expect(report.rules).toBe(0)
     expect(report.diagnostics.every((entry) => !entry.judged)).toBe(true)
     expect(report.skipped.map((skip) => skip.ruleId).sort()).toEqual([
+      "joggle/append-only-honoured",
       "joggle/call-pattern",
       "joggle/compose-types",
       "joggle/data-error-as-outage",
+      "joggle/declared-staleness",
       "joggle/dependency-fit",
+      "joggle/deviation-has-a-shape",
       "joggle/doc-matches-code",
       "joggle/duplicate-call-run",
       "joggle/duplicate-implementation",
       "joggle/duplicate-meaning",
+      "joggle/fact-or-derivation",
       "joggle/field-type-drift",
       "joggle/generic-carries-a-caller",
       "joggle/hoist-to-domain",
       "joggle/import-cycle",
       "joggle/inferred-over-recorded",
       "joggle/intent-drift",
+      "joggle/invariant-has-a-reconciler",
       "joggle/language-drift",
       "joggle/layer-direction",
       "joggle/layer-purity",
@@ -106,7 +111,7 @@ it.effect("runs the deterministic rules and reports judged rules as skipped", ()
     expect(report.files).toBe(2)
     // The built-in rules. The composition rules are a preset and are not in this
     // run at all, which is what makes them an opinion rather than an inheritance.
-    expect(report.rules).toBe(34)
+    expect(report.rules).toBe(39)
     expect(report.diagnostics.length).toBe(1)
     // The fixture has no bundles, pages or modals, so the structural rules find
     // nothing and the page rule produces no candidates. A rule with nothing to
@@ -188,5 +193,34 @@ it.effect("a rule filter runs exactly one rule and skips nothing", () =>
     expect(report.rules).toBe(1)
     expect(report.skipped.length).toBe(0)
     expect(report.diagnostics.length).toBe(1)
+  }),
+)
+
+it.effect("reports content-mapped extensions it did not index", () =>
+  Effect.gen(function* () {
+    const report = yield* checkRepository({
+      cwd: "tests/fixtures/content-mappers",
+      paths: ["src"],
+      rules: undefined,
+      typecheck: false,
+      types: "off",
+      useTsgo: false,
+      cacheDirExplicit: true,
+      cacheDir,
+      replayUnchanged: false,
+      changed: false,
+      baselinePath: undefined,
+      updateBaselinePath: undefined,
+      config: {},
+    }).pipe(
+      Effect.provide(decisionLayer({ cacheDir, offline: true, apiKey: Option.none() })),
+      Effect.provide(tsgoStub),
+      Effect.provide(builtIn),
+      Effect.provide(nodeLayer),
+    )
+
+    const coverage = report.notes.find((note) => note.reason.includes("content mappers"))
+    expect(coverage?.reason).toContain(".vue")
+    expect(coverage?.reason).toContain("--run-external-code")
   }),
 )
