@@ -1,4 +1,5 @@
 bf02d367ff5d833f	1792252958	{"confidence":0.91,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.93,"stale_reference":0,"wrong_behavior":0.05,"wrong_contract":0.02}}
+bf0b4d73bdef23c9	1792689876	{"confidence":0.84,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.88,"stale_reference":0.06,"wrong_behavior":0.05,"wrong_contract":0.01}}
 bf10dc60cc9aa6b2	1792543161	{"confidence":0.6,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.3,"framework_glue":0,"implementation_detail":0.7,"wire_contract":0}}
 bf16ec61a65cc3f9	1792253160	{"confidence":0.98,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.99,"member_1":0.01}}
 bf1932326144df3a	1792617317	{"confidence":0.76,"kind":"Classify","label":"value","probabilities":{"meaning":0.16,"unclear":0,"value":0.84}}
@@ -19,6 +20,7 @@ bfbea0f40d69297d	1792252958	{"confidence":0.43,"kind":"Classify","label":"merge"
 bfc6017447600bfd	1792252958	{"confidence":0.53,"kind":"Classify","label":"move","probabilities":{"merge":0.03,"move":0.69,"no_issue":0.28}}
 bfc870fd1fda5d24	1792252958	{"confidence":0.56,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.03,"merge":0.14,"move":0.18,"share_a_contract":0.65,"split":0}}
 bfc94cee98f0d1ec	1792252958	{"confidence":0.72,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.81,"not_a_derivation":0.08,"reimplements":0.11}}
+bfcf074e8fb6b513	1792691059	{"consistency":1,"kind":"Probability","probability":0.48333333333333334}
 bfd128d3d33906f2	1792617317	{"confidence":0.02,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.51,"member_1":0.49}}
 bfdc20e3eb46c167	1792535008	{"confidence":0.67,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.75,"component_or_feature":0.18,"not_applicable":0.06,"route_or_handler":0.01}}
 bfe0c416b74daa5e	1792617317	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"same_use_left":0,"same_use_right":0}}

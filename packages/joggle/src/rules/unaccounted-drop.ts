@@ -146,7 +146,14 @@ export const unaccountedDrop: PlannedRule = {
           const subject = unit.name + " (" + unit.file + ")"
           const verdict = verdictOf(verdicts[index]?.["verdict"], ["unaccounted"])
           if (verdict === undefined) {
-            diagnostics.push(findingFor(report, unit, undefined, "no judgement was available"))
+            diagnostics.push(
+              findingFor({
+                report,
+                unit,
+                confidence: undefined,
+                unverifiedReason: "no judgement was available",
+              }),
+            )
             return
           }
           if (verdict.label !== "unaccounted") {
@@ -171,7 +178,15 @@ export const unaccountedDrop: PlannedRule = {
             return
           }
           const review = quality.quality === "review"
-          diagnostics.push(findingFor(report, unit, verdict.confidence, undefined, review))
+          diagnostics.push(
+            findingFor({
+              report,
+              unit,
+              confidence: verdict.confidence,
+              unverifiedReason: undefined,
+              review,
+            }),
+          )
         })
         return outcome(
           diagnostics,
@@ -188,13 +203,19 @@ export const unaccountedDrop: PlannedRule = {
   }),
 }
 
-const findingFor = (
-  report: Report,
-  unit: Unit,
-  confidence: number | undefined,
-  unverifiedReason: string | undefined,
+const findingFor = ({
+  report,
+  unit,
+  confidence,
+  unverifiedReason,
   review = false,
-): Diagnostic =>
+}: {
+  readonly report: Report
+  readonly unit: Unit
+  readonly confidence: number | undefined
+  readonly unverifiedReason: string | undefined
+  readonly review?: boolean
+}): Diagnostic =>
   report({
     about: unit,
     messageId: "silent_drop",

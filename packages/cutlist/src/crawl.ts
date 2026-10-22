@@ -420,12 +420,20 @@ const TEST_PATH =
 /** Whether a repository-relative path names a test, story, or declaration file. */
 export const isTestPath: Predicate.Predicate<string> = (path) => TEST_PATH.test(path)
 
-/** Every source file under the configured roots, absolute and sorted. */
-export const listSources = (
-  root: string,
-  roots: ReadonlyArray<string>,
-  extensions: ReadonlyArray<string> = SOURCE_EXTENSIONS,
-): Effect.Effect<ReadonlyArray<string>, never, FileSystem.FileSystem | Path.Path> =>
+/**
+ * Every source file under the configured roots, absolute and sorted.
+ *
+ * @param payload - The root, the configured roots, and the extensions that count as source.
+ */
+export const listSources = ({
+  root,
+  roots,
+  extensions = SOURCE_EXTENSIONS,
+}: {
+  readonly root: string
+  readonly roots: ReadonlyArray<string>
+  readonly extensions?: ReadonlyArray<string>
+}): Effect.Effect<ReadonlyArray<string>, never, FileSystem.FileSystem | Path.Path> =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path

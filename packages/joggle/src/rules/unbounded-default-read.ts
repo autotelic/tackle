@@ -3,7 +3,7 @@ import { Decision } from "effect/ai"
 import { Atoms } from "../atoms.ts"
 import { policy } from "../policy.ts"
 import { verdictsOf, type Plan } from "../plans.ts"
-import { locator, messages, reporter, type Report } from "../reporting.ts"
+import { locator, messages, reporter, type FindingInput } from "../reporting.ts"
 import {
   budgetNote,
   inScope,
@@ -178,7 +178,14 @@ export const unboundedDefaultRead: PlannedRule = {
           const subject = candidate.unit.name + " -> " + candidate.callee.name
           const verdict = verdictOf(verdicts[index]?.["verdict"], ["unbounded"])
           if (verdict === undefined) {
-            diagnostics.push(findingFor(report, entry, undefined, "no judgement was available"))
+            diagnostics.push(
+              findingFor({
+                report,
+                entry,
+                confidence: undefined,
+                unverifiedReason: "no judgement was available",
+              }),
+            )
             return
           }
           if (verdict.label !== "unbounded") {
@@ -200,7 +207,15 @@ export const unboundedDefaultRead: PlannedRule = {
             drops.push({ ruleId: RULE_ID, subject, stage: "gated", reason: quality.reason })
             return
           }
-          diagnostics.push(findingFor(report, entry, verdict.confidence, undefined, quality.quality === "review"))
+          diagnostics.push(
+            findingFor({
+              report,
+              entry,
+              confidence: verdict.confidence,
+              unverifiedReason: undefined,
+              review: quality.quality === "review",
+            }),
+          )
         })
         return outcome(
           diagnostics,
@@ -217,9 +232,13 @@ export const unboundedDefaultRead: PlannedRule = {
   }),
 }
 
-const findingFor = (
-  report: Report,
-  entry: {
+const findingFor = ({
+  report,
+  entry,
+  confidence,
+  unverifiedReason,
+  review = false,
+}: FindingInput<{
     readonly candidate: {
       readonly unit: Unit
       readonly start: number
@@ -227,11 +246,7 @@ const findingFor = (
       readonly argumentKeys: ReadonlyArray<string>
       readonly argumentCount: number
     }
-  },
-  confidence: number | undefined,
-  unverifiedReason: string | undefined,
-  review = false,
-): Diagnostic => {
+}>): Diagnostic => {
   const passed =
     entry.candidate.argumentCount === 0
       ? "no arguments"

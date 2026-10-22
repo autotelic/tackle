@@ -4,7 +4,7 @@ import { Atoms } from "../atoms.ts"
 import { policy } from "../policy.ts"
 import { type PlannedCandidate } from "../plans.ts"
 import { verdictsOf, type Plan } from "../plans.ts"
-import { locator, messages, reporter, type Report } from "../reporting.ts"
+import { locator, messages, reporter, type CandidateFindingInput } from "../reporting.ts"
 import { verdictOf } from "../verdict.ts"
 import {
   budgetNote,
@@ -162,7 +162,14 @@ export const oneConceptOneType: PlannedRule = {
           const answer = verdicts[index]
           const verdict = verdictOf(answer?.["verdict"], VIOLATIONS.verdict)
           if (verdict === undefined) {
-            diagnostics.push(findingFor(report, candidate, undefined, "no judgement was available", false, false))
+            diagnostics.push(
+              findingFor({
+                report,
+                candidate,
+                confidence: undefined,
+                unverifiedReason: "no judgement was available",
+              }),
+            )
             return
           }
           if (verdict.label !== "one_concept" && verdict.label !== "two_concepts") {
@@ -190,7 +197,14 @@ export const oneConceptOneType: PlannedRule = {
           }
           const review = quality.quality === "review"
           diagnostics.push(
-            findingFor(report, candidate, verdict.confidence, undefined, verdict.label === "two_concepts", review),
+            findingFor({
+              report,
+              candidate,
+              confidence: verdict.confidence,
+              unverifiedReason: undefined,
+              renamed: verdict.label === "two_concepts",
+              review,
+            }),
           )
         })
         return outcome(
@@ -214,19 +228,19 @@ export const oneConceptOneType: PlannedRule = {
   }),
 }
 
-const findingFor = (
-  report: Report,
-  candidate: {
-    readonly name: string
-    readonly meanings: number
-    readonly files: number
-    readonly entries: ReadonlyArray<{ readonly unit: Unit; readonly fact: TypeFact }>
-  },
-  confidence: number | undefined,
-  unverifiedReason: string | undefined,
+const findingFor = ({
+  report,
+  candidate,
+  confidence,
+  unverifiedReason,
   renamed = false,
   review = false,
-): Diagnostic => {
+}: CandidateFindingInput<{
+  readonly name: string
+  readonly meanings: number
+  readonly files: number
+  readonly entries: ReadonlyArray<{ readonly unit: Unit; readonly fact: TypeFact }>
+}>): Diagnostic => {
   const first = candidate.entries[0]
   return report({
     about: first?.unit ?? { file: "", start: 0 },

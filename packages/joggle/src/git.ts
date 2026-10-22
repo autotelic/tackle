@@ -72,11 +72,15 @@ const lines = (text: string): ReadonlyArray<string> =>
  * the message -- "fatal: not a git repository" is more useful than anything this
  * could invent. The binary being absent is the same shape of failure.
  */
-const command = (
-  binary: string,
-  args: ReadonlyArray<string>,
-  cwd: string,
-): Effect.Effect<string, GitError, ChildProcessSpawner> =>
+const command = ({
+  binary,
+  args,
+  cwd,
+}: {
+  readonly binary: string
+  readonly args: ReadonlyArray<string>
+  readonly cwd: string
+}): Effect.Effect<string, GitError, ChildProcessSpawner> =>
   Effect.scoped(
     Effect.gen(function* () {
       const handle = yield* ChildProcess.make(binary, [...args], { cwd })
@@ -112,7 +116,11 @@ const resolves = (input: {
   readonly cwd: string
   readonly ref: string
 }): Effect.Effect<boolean, GitError, ChildProcessSpawner> =>
-  command("git", ["rev-parse", "--verify", "--quiet", input.ref], input.cwd).pipe(
+  command({
+    binary: "git",
+    args: ["rev-parse", "--verify", "--quiet", input.ref],
+    cwd: input.cwd,
+  }).pipe(
     Effect.map(() => true),
     Effect.orElseSucceed(() => false),
   )
@@ -133,7 +141,7 @@ const prRef = (
       pr === undefined
         ? ["pr", "view", "--json", "baseRefName", "--jq", ".baseRefName"]
         : ["pr", "view", pr, "--json", "baseRefName", "--jq", ".baseRefName"]
-    const base = (yield* command("gh", args, cwd)).trim()
+    const base = (yield* command({ binary: "gh", args, cwd })).trim()
     if (base === "") {
       return yield* GitError.make({
         operation: "gh pr view",
@@ -143,7 +151,7 @@ const prRef = (
     const origin = `origin/${base}`
     if (yield* resolves({ cwd, ref: origin })) return origin
     if (yield* resolves({ cwd, ref: base })) return base
-    yield* command("git", ["fetch", "origin", base], cwd)
+    yield* command({ binary: "git", args: ["fetch", "origin", base], cwd })
     return "FETCH_HEAD"
   })
 
@@ -161,7 +169,11 @@ const changedFiles = Effect.fn("Git.changedFiles")(function* (
   // is the PR's own work rather than every commit main has gained since. A ref
   // with no common history (a fresh shallow clone, a squashed import) falls back
   // to itself, which is the best answer git can give.
-  const mergeBase = yield* command("git", ["merge-base", base, "HEAD"], cwd).pipe(
+  const mergeBase = yield* command({
+    binary: "git",
+    args: ["merge-base", base, "HEAD"],
+    cwd,
+  }).pipe(
     Effect.map((output) => lines(output)[0] ?? base),
     Effect.orElseSucceed(() => base),
   )
@@ -169,11 +181,11 @@ const changedFiles = Effect.fn("Git.changedFiles")(function* (
   // `-M` turns rename detection on and `--name-status` reports it as `R<score>`.
   // `R100` is a rename git is certain kept every byte; anything below it changed
   // content on the way, so it is a normal change.
-  const status = yield* command(
-    "git",
-    ["diff", "--name-status", "-M", "--diff-filter=ACMR", "--relative", mergeBase],
+  const status = yield* command({
+    binary: "git",
+    args: ["diff", "--name-status", "-M", "--diff-filter=ACMR", "--relative", mergeBase],
     cwd,
-  )
+  })
   const changed = new Set<string>()
   const moved = new Set<string>()
   for (const line of status.split(/\r?\n/)) {
@@ -190,7 +202,11 @@ const changedFiles = Effect.fn("Git.changedFiles")(function* (
   }
   // A file the work just created is untracked, and a new duplicate most often
   // arrives in one. `--exclude-standard` keeps .gitignore's word.
-  const untracked = yield* command("git", ["ls-files", "--others", "--exclude-standard"], cwd)
+  const untracked = yield* command({
+    binary: "git",
+    args: ["ls-files", "--others", "--exclude-standard"],
+    cwd,
+  })
   for (const file of lines(untracked)) changed.add(file)
 
   const order = (left: string, right: string): number => left.localeCompare(right)

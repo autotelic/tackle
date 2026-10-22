@@ -189,7 +189,16 @@ export const composeTypes: PlannedRule = {
           const answer = verdicts[index]
           const verdict = verdictOf(answer?.["verdict"], VIOLATIONS.verdict)
           if (verdict === undefined) {
-            diagnostics.push(findingFor(report, value.candidate, undefined, "no judgement was available", undefined, false))
+            diagnostics.push(
+              findingFor({
+                report,
+                candidate: value.candidate,
+                confidence: undefined,
+                unverifiedReason: "no judgement was available",
+                label: undefined,
+                review: false,
+              }),
+            )
             return
           }
           // Two moves, one rule. `composes` is a COMBINE: the primitives exist
@@ -225,7 +234,14 @@ export const composeTypes: PlannedRule = {
           }
           const review = quality.quality === "review"
           diagnostics.push(
-            findingFor(report, value.candidate, verdict.confidence, undefined, verdict.label, review),
+            findingFor({
+              report,
+              candidate: value.candidate,
+              confidence: verdict.confidence,
+              unverifiedReason: undefined,
+              label: verdict.label,
+              review,
+            }),
           )
         })
         return outcome(diagnostics, [], drops)
@@ -234,14 +250,25 @@ export const composeTypes: PlannedRule = {
   }),
 }
 
-const findingFor = (
-  report: Report,
-  candidate: { readonly whole: Unit; readonly part: Unit; readonly added: ReadonlyArray<string> },
-  confidence: number | undefined,
-  unverifiedReason: string | undefined,
-  label: string | undefined,
-  review: boolean,
-): Diagnostic => {
+const findingFor = ({
+  report,
+  candidate,
+  confidence,
+  unverifiedReason,
+  label,
+  review,
+}: {
+  readonly report: Report
+  readonly candidate: {
+    readonly whole: Unit
+    readonly part: Unit
+    readonly added: ReadonlyArray<string>
+  }
+  readonly confidence: number | undefined
+  readonly unverifiedReason: string | undefined
+  readonly label: string | undefined
+  readonly review: boolean
+}): Diagnostic => {
   const { whole, part, added } = candidate
   const drifted = label === "same_name_drift" || (label === undefined && whole.name === part.name)
   return report({

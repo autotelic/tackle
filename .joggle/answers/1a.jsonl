@@ -21,5 +21,6 @@
 1aafd1a638d38318	1792684423	{"confidence":0.88,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.08,"names_a_caller":0,"shared_vocabulary":0.92}}
 1abc6effcec94ef6	1792542864	{"confidence":0.93,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0.02}}
 1ac2b7a7f30e6a7c	1792252958	{"confidence":0.86,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.91,"not_a_derivation":0.01,"reimplements":0.08}}
+1ada5f20f19c2a81	1792689876	{"confidence":0.37,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.36,"internal_only":0.58,"unaccounted":0.06}}
 1ae7fc44fafd1c49	1792684420	{"confidence":0.38,"kind":"Classify","label":"violates","probabilities":{"belongs":0.34,"framework_expected":0.07,"violates":0.59}}
 1af5d944daedc317	1792252958	{"confidence":0.74,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.13,"member_1":0.87}}

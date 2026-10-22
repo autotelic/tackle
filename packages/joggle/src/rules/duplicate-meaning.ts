@@ -17,7 +17,7 @@ const spec: ClusterRule = {
   onUnavailable: "propagate",
   questionnaire: collapseQuestionnaire,
   nameOf: (cluster) =>
-    `${cluster.members.length} declarations that may be one thing: ${nameList(cluster)}`,
+    `${cluster.members.length} declarations that may be one thing: ${nameList({ cluster })}`,
 }
 
 /**

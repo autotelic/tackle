@@ -108,11 +108,11 @@ export interface ClusterRule {
   readonly onUnavailable: "report" | "propagate"
   /** How to say what the cluster is, for the finding's first line. */
   readonly nameOf: (cluster: Cluster) => string
-  readonly questionnaire: (
-    cluster: Cluster,
-    described: ReadonlyArray<Unit>,
-    workspace: Workspace,
-  ) => Effect.Effect<Questionnaire<ClusterVerdict>, never, Atoms>
+  readonly questionnaire: (payload: {
+    readonly cluster: Cluster
+    readonly described: ReadonlyArray<Unit>
+    readonly workspace: Workspace
+  }) => Effect.Effect<Questionnaire<ClusterVerdict>, never, Atoms>
 }
 
 /**
@@ -199,7 +199,11 @@ const resolvedNote = (described: ReadonlyArray<Unit>): string =>
  * Both rules ask it because for them it is the same question -- the declarations
  * are the same shape or near enough that the only thing left is intent.
  */
-export const collapseQuestionnaire: ClusterRule["questionnaire"] = (cluster, described, workspace) =>
+export const collapseQuestionnaire: ClusterRule["questionnaire"] = ({
+  cluster,
+  described,
+  workspace,
+}) =>
   Effect.gen(function* () {
     const atoms = yield* Atoms
     // What the repository permits here. A fact, so the model cannot propose a
@@ -559,12 +563,25 @@ export const clusterReporter = (rule: ClusterRule, workspace: Workspace): Report
   )
 
 /** No judgement available: report the fact, say so, and never guess a canonical. */
-export const unverifiedFinding = (
-  report: Report,
-  rule: ClusterRule,
-  cluster: Cluster,
+export interface UnverifiedFindingInput {
+  readonly report: Report
+  readonly rule: ClusterRule
+  readonly cluster: Cluster
+  readonly reason?: string
+}
+
+/**
+ * Build the finding for a cluster whose judgement was unavailable.
+ *
+ * @param {UnverifiedFindingInput} payload - The report, rule, cluster, and reason.
+ * @returns {Diagnostic | undefined} The finding, or undefined when the cluster is not a pair.
+ */
+export const unverifiedFinding = ({
+  report,
+  rule,
+  cluster,
   reason = "no judgement was available",
-): Diagnostic | undefined => {
+}: UnverifiedFindingInput): Diagnostic | undefined => {
   const keep = cluster.members[0]
   const drops = cluster.members.slice(1)
   const first = drops[0]
@@ -635,7 +652,7 @@ export const planCluster = (
   Effect.gen(function* () {
     const described = describedMembers(cluster, scope)
     if (described.length === 0) return undefined
-    const questionnaire = yield* rule.questionnaire(cluster, described, workspace)
+    const questionnaire = yield* rule.questionnaire({ cluster, described, workspace })
     return {
       ruleId: rule.ruleId,
       subject: rule.nameOf(cluster),
@@ -669,17 +686,24 @@ export interface Result {
 }
 
 /** Turn a cluster's verdict into a finding, or into silence. */
-export const findingFor = (
-  rule: ClusterRule,
-  workspace: Workspace,
-  cluster: Cluster,
-  verdict: ClusterVerdict | undefined,
-  layers: ReadonlyArray<Layer>,
-): Result => {
+export const findingFor = ({
+  rule,
+  workspace,
+  cluster,
+  verdict,
+  layers,
+}: {
+  readonly rule: ClusterRule
+  readonly workspace: Workspace
+  readonly cluster: Cluster
+  readonly verdict: ClusterVerdict | undefined
+  readonly layers: ReadonlyArray<Layer>
+}): Result => {
   const imports = workspace.imports
   const report = clusterReporter(rule, workspace)
   if (verdict === undefined) {
-    const fallback = rule.onUnavailable === "report" ? unverifiedFinding(report, rule, cluster) : undefined
+    const fallback =
+      rule.onUnavailable === "report" ? unverifiedFinding({ report, rule, cluster }) : undefined
     return fallback === undefined
       ? { drop: dropOf(rule, cluster, "unreadable", "no judgement available") }
       : { diagnostic: fallback }
@@ -700,7 +724,9 @@ export const findingFor = (
   })
   if (quality.quality === "drop") {
     const fallback =
-      rule.onUnavailable === "report" ? unverifiedFinding(report, rule, cluster, quality.reason) : undefined
+      rule.onUnavailable === "report"
+        ? unverifiedFinding({ report, rule, cluster, reason: quality.reason })
+        : undefined
     return fallback === undefined
       ? { drop: dropOf(rule, cluster, "gated", quality.reason) }
       : { diagnostic: fallback }
@@ -843,7 +869,13 @@ export const readClusters = (
   const diagnostics: Array<Diagnostic> = []
   const drops: Array<Drop> = [...phase.unreadable]
   phase.planned.forEach((entry, index) => {
-    const outcome = findingFor(rule, workspace, entry.cluster, verdicts[index], layers)
+    const outcome = findingFor({
+      rule,
+      workspace,
+      cluster: entry.cluster,
+      verdict: verdicts[index],
+      layers,
+    })
     if (outcome.diagnostic !== undefined) diagnostics.push(outcome.diagnostic)
     if (outcome.drop !== undefined) drops.push(outcome.drop)
   })

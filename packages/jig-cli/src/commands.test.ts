@@ -87,14 +87,14 @@ describe("promotion", () => {
 
   it("says nothing to promote when the ledger is already tight", () => {
     const held = diag({ ruleId: "stays", identity: "stays-1" })
-    const text = renderPromotion(promotion(diffOf([held], [held])))
+    const text = renderPromotion({ plan: promotion(diffOf([held], [held])) })
     expect(text).toContain("nothing to promote")
   })
 
   it("prints the rung, and refuses to accept the new", () => {
     const gone = diag({ ruleId: "gone", identity: "gone-1" })
     const fresh = diag({ ruleId: "fresh", identity: "fresh-1" })
-    const text = renderPromotion(promotion(diffOf([gone], [fresh])))
+    const text = renderPromotion({ plan: promotion(diffOf([gone], [fresh])) })
     expect(text).toContain("gone-1")
     expect(text).toContain("1 new and not accepted")
     expect(text).toContain("`jig baseline` accepts new ones")

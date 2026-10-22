@@ -111,7 +111,13 @@ export const mergeConfigs = (configs: ReadonlyArray<JoggleConfig>): JoggleConfig
  * Per rule, so a preset that enables twenty opinions and sets their severities
  * lets the repository turn one of them off without restating the other nineteen.
  */
-export const withDefaults = (defaults: JoggleConfig, own: JoggleConfig): JoggleConfig => ({
+export const withDefaults = ({
+  defaults,
+  own,
+}: {
+  readonly defaults: JoggleConfig
+  readonly own: JoggleConfig
+}): JoggleConfig => ({
   ...defaults,
   ...own,
   rules: { ...defaults.rules, ...own.rules },

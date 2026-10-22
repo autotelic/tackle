@@ -56,7 +56,11 @@ describe.each(STRUCTURED)("oxlint --format %s", (_format, file) => {
   })
 
   it("is never mistaken for unparsed output", () => {
-    const diagnostics = engineDiagnostics("oxlint", { code: 0, stdout: output, stderr: "" }, ROOT)
+    const diagnostics = engineDiagnostics({
+      id: "oxlint",
+      output: { code: 0, stdout: output, stderr: "" },
+      root: ROOT,
+    })
     expect(diagnostics.some((diagnostic) => diagnostic.ruleId === "unparsed-output")).toBe(false)
   })
 })
@@ -69,7 +73,11 @@ describe.each(UNREAD)("oxlint --format %s", (_format, file) => {
   })
 
   it("is reported as unparsed, never silently clean", () => {
-    const diagnostics = engineDiagnostics("oxlint", { code: 0, stdout: output, stderr: "" }, ROOT)
+    const diagnostics = engineDiagnostics({
+      id: "oxlint",
+      output: { code: 0, stdout: output, stderr: "" },
+      root: ROOT,
+    })
     expect(diagnostics).toHaveLength(1)
     expect(diagnostics[0]?.ruleId).toBe("unparsed-output")
     expect(diagnostics[0]?.severity).toBe("info")

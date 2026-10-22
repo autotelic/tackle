@@ -1,4 +1,5 @@
 4b099d7e86e5832a	1792621702	{"confidence":0.47,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.52,"no_difference":0.05,"removes_a_hazard":0.15,"slightly_clearer":0.28},"rating":1.77}
+4b0b87516e62c03e	1792689876	{"confidence":0.86,"kind":"Classify","label":"move","probabilities":{"move":0.93,"no_issue":0.07}}
 4b0ff4af9579769c	1792252958	{"confidence":0.85,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.1,"same_module":0,"same_package":0.01,"sibling_packages":0.89}}
 4b248ace1780b67e	1792617317	{"confidence":0.4,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.11,"merge":0.03,"move":0.31,"share_a_contract":0.52,"split":0.03}}
 4b2b131ab5bc5a70	1792252958	{"confidence":0.76,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.13,"internal_only":0.84,"unaccounted":0.03}}

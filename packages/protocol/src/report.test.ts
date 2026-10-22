@@ -55,12 +55,12 @@ describe("exitCodeFor", () => {
       files: 1,
       generators: [],
     })
-    expect(exitCodeFor(errored)).toBe(1)
-    expect(exitCodeFor(report)).toBe(0)
+    expect(exitCodeFor({ report: errored })).toBe(1)
+    expect(exitCodeFor({ report })).toBe(0)
   })
   it("fails on warnings past the ceiling", () => {
-    expect(exitCodeFor(report, 0)).toBe(1)
-    expect(exitCodeFor(report, 5)).toBe(0)
+    expect(exitCodeFor({ report, maxWarnings: 0 })).toBe(1)
+    expect(exitCodeFor({ report, maxWarnings: 5 })).toBe(0)
   })
 })
 

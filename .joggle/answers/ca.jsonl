@@ -8,3 +8,4 @@ cabb8a5f25703865	1792617317	{"confidence":0.3,"kind":"Classify","label":"share_a
 cac1aee8840ae3e1	1792252958	{"confidence":0.69,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.21,"names_a_caller":0,"shared_vocabulary":0.79}}
 cac3d5ea305e1cd6	1792252958	{"consistency":1,"kind":"Probability","probability":0.10222222222222223}
 cae788387f8b1a9b	1792252958	{"confidence":0.98,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.01,"inferred":0,"not_applicable":0.99}}
+caff6bc71f11af2d	1792689876	{"confidence":0.28,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.08,"common_idiom":0.52,"shared_helper":0.4}}

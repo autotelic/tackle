@@ -72,6 +72,10 @@ function isExemptRouteHandler(payload) {
  * primitive-versus-structural: `(name: string, count: number)` is as safe as
  * `(left: Node, right: Node)` is unsafe, and only a repeated type transposes silently.
  *
+ * A default value wraps the identifier in an `AssignmentPattern`; the annotation lives on
+ * the left. Treating a defaulted parameter as unannotated made every function with a default
+ * look unsafe.
+ *
  * @param {SourceCode} sourceCode - The rule's source-code accessor.
  * @param {ReadonlyArray<ESTree.ParamPattern>} params - The parameter list to inspect.
  * @returns {boolean} True when transposing any pair fails the compiler.
@@ -79,9 +83,10 @@ function isExemptRouteHandler(payload) {
 function transpositionSafe(sourceCode, params) {
     const texts = [];
     for (const param of params) {
-        if (param.type !== "Identifier")
+        const identifier = param.type === "AssignmentPattern" ? param.left : param;
+        if (identifier.type !== "Identifier")
             return false;
-        const annotation = param.typeAnnotation;
+        const annotation = identifier.typeAnnotation;
         if (annotation === null || annotation === undefined)
             return false;
         const text = sourceCode.getText(annotation.typeAnnotation).replaceAll(" ", "");

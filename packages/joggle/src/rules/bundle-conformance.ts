@@ -127,7 +127,16 @@ const ruleFor = (spec: Spec): PlannedRule => ({
           const answer = verdicts[index]
           const verdict = verdictOf(answer?.["verdict"], VIOLATIONS.verdict)
           if (verdict === undefined) {
-            diagnostics.push(findingFor(report, spec, bundle, problems, undefined, "no judgement was available", false))
+            diagnostics.push(
+              findingFor({
+                report,
+                spec,
+                bundle,
+                problems,
+                confidence: undefined,
+                unverifiedReason: "no judgement was available",
+              }),
+            )
             return
           }
           if (verdict.label !== "violation") {
@@ -157,7 +166,17 @@ const ruleFor = (spec: Spec): PlannedRule => ({
             return
           }
           const review = quality.quality === "review"
-          diagnostics.push(findingFor(report, spec, bundle, problems, verdict.confidence, undefined, review))
+          diagnostics.push(
+            findingFor({
+              report,
+              spec,
+              bundle,
+              problems,
+              confidence: verdict.confidence,
+              unverifiedReason: undefined,
+              review,
+            }),
+          )
         })
         return outcome(diagnostics, bundleNote({ bundles: bundles.length, broken: diagnostics.length }), drops)
       },
@@ -165,15 +184,23 @@ const ruleFor = (spec: Spec): PlannedRule => ({
   }),
 })
 
-const findingFor = (
-  report: Report,
-  spec: Spec,
-  bundle: Bundle,
-  problems: ReadonlyArray<string>,
-  confidence: number | undefined,
-  unverifiedReason: string | undefined,
+const findingFor = ({
+  report,
+  spec,
+  bundle,
+  problems,
+  confidence,
+  unverifiedReason,
   review = false,
-): Diagnostic =>
+}: {
+  readonly report: Report
+  readonly spec: Spec
+  readonly bundle: Bundle
+  readonly problems: ReadonlyArray<string>
+  readonly confidence: number | undefined
+  readonly unverifiedReason: string | undefined
+  readonly review?: boolean
+}): Diagnostic =>
   report({
     about: bundle.indexFile ?? { file: bundle.dir, start: 0 },
     messageId: "pattern_problem",

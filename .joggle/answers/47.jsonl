@@ -12,6 +12,7 @@
 476593c2843bf848	1792617317	{"confidence":0.8,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.85,"different_order":0,"different_work":0.14,"same_operation":0.01}}
 476d7b71499ee29c	1792621702	{"confidence":0.06,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.32,"no_difference":0.26,"removes_a_hazard":0.15,"slightly_clearer":0.27},"rating":1.36}
 478446765d79f91d	1792252958	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
+47848396dc4c7bfc	1792689876	{"confidence":0.41,"kind":"Classify","label":"move","probabilities":{"merge":0.2,"move":0.61,"no_issue":0.19}}
 478ab563237b8f06	1792619451	{"confidence":0.31,"kind":"Classify","label":"not_a_derivation","probabilities":{"legitimate_local":0.42,"not_a_derivation":0.54,"reimplements":0.04}}
 479dcec10fa7b9a4	1792265611	{"confidence":0.13,"kind":"Classify","label":"agrees","probabilities":{"agrees":0.42,"excludes":0.17,"not_applicable":0.41}}
 47a2ba75648a9636	1792621702	{"confidence":0.27,"kind":"Classify","label":"move","probabilities":{"merge":0.2,"move":0.51,"no_issue":0.29}}

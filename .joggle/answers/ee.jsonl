@@ -1,3 +1,4 @@
+ee0215041a3285a4	1792689876	{"confidence":0.72,"kind":"Classify","label":"composes","probabilities":{"already_composed":0.01,"composes":0.79,"independent":0.2,"same_name_drift":0}}
 ee06691e34b461ab	1792542865	{"confidence":0.47,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.03,"framework_glue":0,"implementation_detail":0.6,"wire_contract":0.37}}
 ee1b3e78f5fa8165	1792543161	{"confidence":0.28,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.01,"common_idiom":0.52,"shared_helper":0.47}}
 ee66b40bc4f2aae0	1792621702	{"confidence":0.77,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.17,"framework_glue":0,"implementation_detail":0.83,"wire_contract":0}}

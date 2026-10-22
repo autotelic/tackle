@@ -65,7 +65,7 @@ const ruleSetFor = (cwd: string, configFile: string | undefined) =>
     // A preset's severities and scoping sit under the repository's own, per rule:
     // enabling twenty opinions and then turning one off should not mean
     // restating the other nineteen.
-    const effective = withDefaults(loaded.config, settings)
+    const effective = withDefaults({ defaults: loaded.config, own: settings })
     // The repository's rules join the built-in ones here, once, so the run
     // itself reads one rule set from the context and never sees a plugin.
     return {
@@ -796,7 +796,13 @@ const describeFailure = (cause: unknown): string | undefined => {
  * The teardown only has to say WHY, and to keep a success's own exit code -- the
  * lint gate writes one into `process.exitCode`.
  */
-const teardown: Runtime.Teardown = (exit, onExit) => {
+// The parameter annotations are load-bearing: `Runtime.Teardown` is a two-argument
+// call signature from Effect, so a payload object cannot satisfy it. Annotating
+// both parameters distinctly is what keeps a transposition from compiling.
+const teardown: Runtime.Teardown = <E, A>(
+  exit: Exit.Exit<E, A>,
+  onExit: (code: number) => void,
+): void => {
   if (Exit.isSuccess(exit)) {
     onExit(Predicate.isNumber(process.exitCode) ? process.exitCode : 0)
     return

@@ -56,7 +56,7 @@ const packageFiles = () => [
  * A peer range of `*` says "whatever the host provides", which is the point of an optional
  * peer; only a pinned literal is a version that escaped the catalog.
  */
-const problemsIn = (file, manifest) =>
+const problemsIn = ({ file, manifest }) =>
   SECTIONS.flatMap((section) => {
     const dependencies = manifest[section] ?? {}
     return WATCHED.flatMap((name) => {
@@ -82,7 +82,9 @@ const missingFromCatalog = (workspace) => {
 }
 
 const problems = [
-  ...packageFiles().flatMap((file) => problemsIn(file, JSON.parse(readFileSync(file, "utf8")))),
+  ...packageFiles().flatMap((file) =>
+    problemsIn({ file, manifest: JSON.parse(readFileSync(file, "utf8")) }),
+  ),
   ...missingFromCatalog(readFileSync("pnpm-workspace.yaml", "utf8")),
 ]
 

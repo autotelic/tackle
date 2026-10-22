@@ -262,7 +262,13 @@ export const signatureOf = (component: CatalogComponent): ReadonlySet<string> =>
  * Two empty signatures are NOT similar: an undocumented component with no recognisable
  * skeleton should match nothing, not everything.
  */
-export const similarityOf = (left: ReadonlySet<string>, right: ReadonlySet<string>): number => {
+export const similarityOf = ({
+  left,
+  right,
+}: {
+  readonly left: ReadonlySet<string>
+  readonly right: ReadonlySet<string>
+}): number => {
   if (left.size === 0 || right.size === 0) return 0
   const [small, large] = left.size <= right.size ? [left, right] : [right, left]
   let shared = 0
@@ -280,7 +286,7 @@ export const nearestDuplicate = (
   let best: DuplicateCandidate | null = null
   for (const candidate of catalog.components) {
     if (candidate.path === subject.path) continue
-    const score = similarityOf(left, signatureOf(candidate))
+    const score = similarityOf({ left, right: signatureOf(candidate) })
     if (score < threshold) continue
     if (best === null || score > best.score) {
       best = { left: subject.path, right: candidate.path, score, basis: "skeleton" }

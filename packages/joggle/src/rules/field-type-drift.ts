@@ -42,13 +42,19 @@ const VIOLATIONS = { verdict: ["drift", "two_concepts"] } as const
 // (`compatible`) and a non-decisive answer is flagged rather than printed. See
 // `docs/type-resolution.md`.
 
-const related = (
-  one: Declaration,
-  two: Declaration,
-  workspace: Workspace,
-  reachable: ReadonlySet<string>,
-  isTest: (file: string) => boolean,
-): boolean => {
+const related = ({
+  one,
+  two,
+  workspace,
+  reachable,
+  isTest,
+}: {
+  readonly one: Declaration
+  readonly two: Declaration
+  readonly workspace: Workspace
+  readonly reachable: ReadonlySet<string>
+  readonly isTest: (file: string) => boolean
+}): boolean => {
   if (one.file === two.file) return true
   if (isTest(one.file) !== isTest(two.file)) return false
   if (reachable.has(one.file + "\u0000" + two.file)) return true
@@ -153,7 +159,7 @@ export const fieldTypeDrift: PlannedRule = {
           const two = entries[right]
           if (one === undefined || two === undefined) continue
           if (one.file === two.file && one.unitName === two.unitName) continue
-          if (!related(one, two, workspace, reachable, isTest)) {
+          if (!related({ one, two, workspace, reachable, isTest })) {
             unrelated += 1
             continue
           }
@@ -250,7 +256,14 @@ export const fieldTypeDrift: PlannedRule = {
           const answer = verdicts[index]
           const verdict = verdictOf(answer?.["verdict"], VIOLATIONS.verdict)
           if (verdict === undefined) {
-            diagnostics.push(findingFor(report, group, undefined, "no judgement was available", false, false))
+            diagnostics.push(
+              findingFor({
+                report,
+                group,
+                confidence: undefined,
+                unverifiedReason: "no judgement was available",
+              }),
+            )
             return
           }
           if (verdict.label !== "drift" && verdict.label !== "two_concepts") {
@@ -278,7 +291,16 @@ export const fieldTypeDrift: PlannedRule = {
           }
           const review = quality.quality === "review"
           const renamed = verdict.label === "two_concepts"
-          diagnostics.push(findingFor(report, group, verdict.confidence, undefined, renamed, review))
+          diagnostics.push(
+            findingFor({
+              report,
+              group,
+              confidence: verdict.confidence,
+              unverifiedReason: undefined,
+              renamed,
+              review,
+            }),
+          )
         })
         return outcome(
           diagnostics,
@@ -306,14 +328,26 @@ export const fieldTypeDrift: PlannedRule = {
   }),
 }
 
-const findingFor = (
-  report: Report,
-  group: { readonly file: string; readonly line: number; readonly unitName: string; readonly drifts: ReadonlyArray<Drift> },
-  confidence: number | undefined,
-  unverifiedReason: string | undefined,
+const findingFor = ({
+  report,
+  group,
+  confidence,
+  unverifiedReason,
   renamed = false,
   review = false,
-): Diagnostic => {
+}: {
+  readonly report: Report
+  readonly group: {
+    readonly file: string
+    readonly line: number
+    readonly unitName: string
+    readonly drifts: ReadonlyArray<Drift>
+  }
+  readonly confidence: number | undefined
+  readonly unverifiedReason: string | undefined
+  readonly renamed?: boolean
+  readonly review?: boolean
+}): Diagnostic => {
   const first = group.drifts[0]
   if (first === undefined) {
     return report({

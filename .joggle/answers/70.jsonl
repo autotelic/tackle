@@ -1,3 +1,4 @@
+701176818c16d419	1792689876	{"confidence":0.72,"kind":"Classify","label":"composes","probabilities":{"already_composed":0.01,"composes":0.79,"independent":0.2,"same_name_drift":0}}
 7015e386210b2e52	1792621702	{"confidence":0.34,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.09,"merge":0.11,"move":0.33,"share_a_contract":0.47000000000000003,"split":0}}
 702852aeababdcb5	1792535008	{"confidence":0.83,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.87,"component_or_feature":0.07,"not_applicable":0.05,"route_or_handler":0.01}}
 70329499cae7ef72	1792593149	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0.01}}

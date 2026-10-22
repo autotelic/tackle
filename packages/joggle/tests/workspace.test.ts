@@ -34,7 +34,7 @@ it.effect("identical implementations share a shape hash", () =>
     expect(find).toBeDefined()
     expect(lookup).toBeDefined()
     expect(find?.shapeHash).toBe(lookup?.shapeHash)
-    expect(similarity(find?.tokens ?? [], lookup?.tokens ?? [])).toBe(1)
+    expect(similarity({ left: find?.tokens ?? [], right: lookup?.tokens ?? [] })).toBe(1)
   }).pipe(Effect.provide(NodeServices.layer)),
 )
 
@@ -48,7 +48,7 @@ it("normalisation keeps types and literals, drops names", () => {
 it("similarity falls off for different structures", () => {
   const a = tokenize("{ return _.filter((_) => _.name.length > 0) }")
   const b = tokenize("{ return _.map((_) => _.name) }")
-  const score = similarity(a, b)
+  const score = similarity({ left: a, right: b })
   expect(score).toBeGreaterThan(0)
   expect(score).toBeLessThan(1)
 })

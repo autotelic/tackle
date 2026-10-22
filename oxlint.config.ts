@@ -302,7 +302,7 @@ export default {
     {
       // `protocol` is the zero-dependency leaf: it cannot import Effect's `Predicate`, so the
       // rule's remedy is inexpressible here. Recorded as a vocabulary gap, not a suppression.
-      files: ["packages/protocol/src/fixture-support.ts"],
+      files: ["packages/protocol/src/fixture-support.ts", "packages/protocol/src/lexicon.ts"],
       rules: { "plumb-effect/prefer-effect-predicate-over-boolean-function": "off" },
     },
     {

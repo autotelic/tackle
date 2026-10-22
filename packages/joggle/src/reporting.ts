@@ -115,6 +115,29 @@ export interface ReportInput {
 
 export type Report = (input: ReportInput) => Diagnostic
 
+/**
+ * The common fields of a rule's finding helper: the report, the candidate, and its
+ * provenance. Each rule supplies its own `Entry`; the rest is the same everywhere, so the
+ * shape has one name instead of one copy per rule.
+ */
+export interface FindingInput<Entry> {
+  readonly report: Report
+  readonly entry: Entry
+  readonly confidence: number | undefined
+  readonly unverifiedReason: string | undefined
+  readonly review?: boolean
+}
+
+/** The same shape for a helper that names its candidate `candidate` rather than `entry`. */
+export interface CandidateFindingInput<Candidate> {
+  readonly report: Report
+  readonly candidate: Candidate
+  readonly confidence: number | undefined
+  readonly unverifiedReason: string | undefined
+  readonly renamed?: boolean
+  readonly review?: boolean
+}
+
 /** The rule fields a reporter needs. Both rule kinds have them. */
 export interface ReportedRule {
   readonly id: string

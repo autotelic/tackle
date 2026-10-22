@@ -106,7 +106,15 @@ export const readArtifact = (root: string): Artifact => {
   return { paths, menu, patterns, recipes }
 }
 
-const importLine = (path: string, exports: ReadonlyArray<string>, name: string): string => {
+const importLine = ({
+  path,
+  exports,
+  name,
+}: {
+  readonly path: string
+  readonly exports: ReadonlyArray<string>
+  readonly name: string
+}): string => {
   const from = path.replace(/\.(?:tsx?|jsx?)$/u, "")
   const binding = /^[A-Za-z_$][\w$]*$/u.test(name)
     ? name
@@ -129,7 +137,13 @@ const importLine = (path: string, exports: ReadonlyArray<string>, name: string):
   return `import * as ${binding} from "${from}"`
 }
 
-const mergeMatch = (left: MenuMatch, right: MenuMatch): MenuMatch => ({
+const mergeMatch = ({
+  left,
+  right,
+}: {
+  readonly left: MenuMatch
+  readonly right: MenuMatch
+}): MenuMatch => ({
   ...right,
   ...left,
   ...(left.summary === undefined && right.summary !== undefined ? { summary: right.summary } : {}),
@@ -192,7 +206,7 @@ const matchFromEntry = (entry: MenuEntry): MenuMatch => ({
   ...(entry.kind === undefined ? {} : { role: entry.kind }),
   ...(entry.summary === undefined ? {} : { summary: entry.summary }),
   ...(entry.usedBy === undefined ? {} : { usedBy: entry.usedBy }),
-  importLine: importLine(entry.path, entry.exports ?? [], entry.name),
+  importLine: importLine({ path: entry.path, exports: entry.exports ?? [], name: entry.name }),
   notes: [],
 })
 
@@ -202,7 +216,10 @@ export const candidatesOf = (artifact: Artifact): ReadonlyArray<MenuMatch> => {
   const add = (match: MenuMatch | undefined): void => {
     if (match === undefined) return
     const existing = byPath.get(match.path)
-    byPath.set(match.path, existing === undefined ? match : mergeMatch(existing, match))
+    byPath.set(
+      match.path,
+      existing === undefined ? match : mergeMatch({ left: existing, right: match }),
+    )
   }
   for (const recipe of artifact.recipes?.features ?? []) add(matchFromRecipe(recipe))
   for (const recipe of artifact.recipes?.parts ?? []) add(matchFromRecipe(recipe))

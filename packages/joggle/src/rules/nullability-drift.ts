@@ -4,7 +4,7 @@ import { Atoms } from "../atoms.ts"
 import { lineAt } from "../cascade.ts"
 import { type PlannedCandidate } from "../plans.ts"
 import { verdictsOf, type Plan } from "../plans.ts"
-import { locator, messages, reporter, type Report } from "../reporting.ts"
+import { locator, messages, reporter, type CandidateFindingInput } from "../reporting.ts"
 import { verdictOf } from "../verdict.ts"
 import {
   outcome,
@@ -171,7 +171,14 @@ export const nullabilityDrift: PlannedRule = {
           const answer = verdicts[index]
           const verdict = verdictOf(answer?.["verdict"], VIOLATIONS.verdict)
           if (verdict === undefined) {
-            diagnostics.push(findingFor(report, candidate, undefined, "no judgement was available", false))
+            diagnostics.push(
+              findingFor({
+                report,
+                candidate,
+                confidence: undefined,
+                unverifiedReason: "no judgement was available",
+              }),
+            )
             return
           }
           if (verdict.label !== "drift") {
@@ -201,7 +208,15 @@ export const nullabilityDrift: PlannedRule = {
             return
           }
           const review = quality.quality === "review"
-          diagnostics.push(findingFor(report, candidate, verdict.confidence, undefined, review))
+          diagnostics.push(
+            findingFor({
+              report,
+              candidate,
+              confidence: verdict.confidence,
+              unverifiedReason: undefined,
+              review,
+            }),
+          )
         })
         return outcome(diagnostics, [
           annotated +
@@ -216,19 +231,19 @@ export const nullabilityDrift: PlannedRule = {
   }),
 }
 
-const findingFor = (
-  report: Report,
-  candidate: {
-    readonly source: string
-    readonly field: string
-    readonly schemaNullable: boolean
-    readonly column: { readonly nullable: boolean; readonly file: string; readonly line: number }
-    readonly schema: { readonly file: string; readonly line: number }
-  },
-  confidence: number | undefined,
-  unverifiedReason: string | undefined,
+const findingFor = ({
+  report,
+  candidate,
+  confidence,
+  unverifiedReason,
   review = false,
-): Diagnostic =>
+}: CandidateFindingInput<{
+  readonly source: string
+  readonly field: string
+  readonly schemaNullable: boolean
+  readonly column: { readonly nullable: boolean; readonly file: string; readonly line: number }
+  readonly schema: { readonly file: string; readonly line: number }
+}>): Diagnostic =>
   report({
     about: { file: candidate.schema.file, line: candidate.schema.line, column: 1 },
     messageId: "nullable_mismatch",

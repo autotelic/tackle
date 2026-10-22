@@ -518,11 +518,15 @@ const unparsed = ({
  * `unparsed`. Findings an engine did print still win: a linter exits non-zero *because* it
  * found something.
  */
-export const engineDiagnostics = (
-  id: string,
-  output: ExecOutcome,
-  root: string,
-): ReadonlyArray<Diagnostic> => {
+export const engineDiagnostics = ({
+  id,
+  output,
+  root,
+}: {
+  readonly id: string
+  readonly output: ExecOutcome
+  readonly root: string
+}): ReadonlyArray<Diagnostic> => {
   const { code, stdout, stderr } = output
   if (id === "cutlist") return cutlistDiagnostics(output)
   const parsed = parseEngineOutput(stdout, { engine: id, root })
@@ -644,10 +648,13 @@ export const runEngine = (
 
     const binary = engine.command ?? id
     const command = resolveEngineCommand({ root, command: binary })
-    const outcome = yield* Effect.match(exec(command, argsFor(engine), root), {
-      onFailure: (message: string) => ({ ok: false as const, message }),
-      onSuccess: (value) => ({ ok: true as const, value }),
-    })
+    const outcome = yield* Effect.match(
+      exec({ binary: command, args: argsFor(engine), cwd: root }),
+      {
+        onFailure: (message: string) => ({ ok: false as const, message }),
+        onSuccess: (value) => ({ ok: true as const, value }),
+      },
+    )
     if (!outcome.ok) {
       return {
         id,
@@ -660,7 +667,7 @@ export const runEngine = (
     }
 
     const { stdout, stderr, code } = outcome.value
-    const diagnostics = engineDiagnostics(id, { code, stdout, stderr }, root)
+    const diagnostics = engineDiagnostics({ id, output: { code, stdout, stderr }, root })
     return {
       id,
       summary: summarize(id, diagnostics, Date.now() - started, {

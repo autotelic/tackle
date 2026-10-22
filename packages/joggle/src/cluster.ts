@@ -107,7 +107,13 @@ export const namesOf = (cluster: Cluster): ReadonlyArray<string> => [
  * note. A message is not a directory listing; the count carries the information
  * and the first few carry the gist.
  */
-export const nameList = (cluster: Cluster, max = 4): string => {
+export const nameList = ({
+  cluster,
+  max = 4,
+}: {
+  readonly cluster: Cluster
+  readonly max?: number
+}): string => {
   const names = namesOf(cluster)
   if (names.length <= max) return names.join(", ")
   return `${names.slice(0, max).join(", ")} and ${names.length - max} more`

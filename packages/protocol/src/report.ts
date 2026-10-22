@@ -172,7 +172,13 @@ export const countsOf = (diagnostics: ReadonlyArray<Diagnostic>): Counts => {
  * Stable and total, so two runs over the same findings print byte-identical output.
  * `ruleId` is the tie-break of last resort because two findings can share a location.
  */
-export const compareDiagnostics = (left: Diagnostic, right: Diagnostic): number =>
+export const compareDiagnostics = ({
+  left,
+  right,
+}: {
+  readonly left: Diagnostic
+  readonly right: Diagnostic
+}): number =>
   severityRank[left.severity] - severityRank[right.severity] ||
   left.location.file.localeCompare(right.location.file) ||
   left.location.line - right.location.line ||
@@ -182,7 +188,8 @@ export const compareDiagnostics = (left: Diagnostic, right: Diagnostic): number 
 /** A copy of the findings in report order. */
 export const sortDiagnostics = (
   diagnostics: ReadonlyArray<Diagnostic>,
-): ReadonlyArray<Diagnostic> => [...diagnostics].sort(compareDiagnostics)
+): ReadonlyArray<Diagnostic> =>
+  [...diagnostics].sort((left, right) => compareDiagnostics({ left, right }))
 
 /** Assemble a report: one shape, computed once, from the parts a runner collected. */
 export const makeReport = (input: {
@@ -206,7 +213,13 @@ export const makeReport = (input: {
  * repository adopt a rule as `warn` repo-wide and `error` on touched files without
  * two configurations: the ceiling is the second regime.
  */
-export const exitCodeFor = (report: Report, maxWarnings = -1): number => {
+export const exitCodeFor = ({
+  report,
+  maxWarnings = -1,
+}: {
+  readonly report: Report
+  readonly maxWarnings?: number
+}): number => {
   if (report.counts.error > 0) return 1
   if (maxWarnings >= 0 && report.counts.warn > maxWarnings) return 1
   return 0

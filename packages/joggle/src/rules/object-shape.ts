@@ -212,7 +212,15 @@ export const objectShape: PlannedRule = {
           const answer = verdicts[index]
           const verdict = verdictOf(answer?.["verdict"], VIOLATIONS.verdict)
           if (verdict === undefined) {
-            diagnostics.push(findingFor(report, entry, undefined, "no judgement was available", true))
+            diagnostics.push(
+              findingFor({
+                report,
+                entry,
+                confidence: undefined,
+                unverifiedReason: "no judgement was available",
+                notice: true,
+              }),
+            )
             return
           }
           if (verdict.label !== "one_concept") {
@@ -249,13 +257,13 @@ export const objectShape: PlannedRule = {
           // pair that may be coincidence, one in three or more is a pattern.
           const spread = new Set(entry.sites.map((site) => site.file)).size
           diagnostics.push(
-            findingFor(
+            findingFor({
               report,
               entry,
-              verdict.confidence,
-              undefined,
-              quality.quality === "review" || spread < warnFromFiles,
-            ),
+              confidence: verdict.confidence,
+              unverifiedReason: undefined,
+              notice: quality.quality === "review" || spread < warnFromFiles,
+            }),
           )
         })
         return outcome(
@@ -274,22 +282,28 @@ export const objectShape: PlannedRule = {
 }
 
 /** The finding for one shape: verified, or the fact with the reason it is not. */
-const findingFor = (
-  report: Report,
-  entry: {
+const findingFor = ({
+  report,
+  entry,
+  confidence,
+  unverifiedReason,
+  notice = true,
+}: {
+  readonly report: Report
+  readonly entry: {
     readonly keys: ReadonlyArray<string>
     readonly sites: ReadonlyArray<{ readonly file: string; readonly start: number }>
     readonly first: { readonly file: string; readonly start: number }
-  },
-  confidence: number | undefined,
-  unverifiedReason: string | undefined,
+  }
+  readonly confidence: number | undefined
+  readonly unverifiedReason: string | undefined
   /**
    * The answer was not decisive, or there was no judgement at all. Either way the
    * finding is a notice: the rule's own severity would be a claim the evidence
    * does not support.
    */
-  notice = true,
-): Diagnostic => {
+  readonly notice?: boolean
+}): Diagnostic => {
   const files = [...new Set(entry.sites.map((site) => site.file))]
   const paths =
     files.slice(0, policy.evidence.maxListedPaths).join(", ") +

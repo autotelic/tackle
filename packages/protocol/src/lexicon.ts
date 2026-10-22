@@ -219,5 +219,10 @@ export const names = (ref: LexiconRef, name: LexiconName): boolean => ref.name =
  * readable only because the evolution rule makes every change additive; a record from an
  * older version is always readable.
  */
-export const isReadable = (seen: LexiconRef, known: LexiconRef): boolean =>
-  seen.name === known.name && seen.version >= known.version
+export const isReadable = ({
+  seen,
+  known,
+}: {
+  readonly seen: LexiconRef
+  readonly known: LexiconRef
+}): boolean => seen.name === known.name && seen.version >= known.version

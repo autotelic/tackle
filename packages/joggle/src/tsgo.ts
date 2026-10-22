@@ -58,7 +58,15 @@ export class Service extends Context.Service<Service, Interface>()("@joggle/Tsgo
 
 const DIAGNOSTIC = /^(.+?)\((\d+),(\d+)\): (error|warning) (TS\d+): (.*)$/
 
-const run = (binary: string, args: ReadonlyArray<string>, cwd: string) =>
+const run = ({
+  binary,
+  args,
+  cwd,
+}: {
+  readonly binary: string
+  readonly args: ReadonlyArray<string>
+  readonly cwd: string
+}) =>
   Effect.scoped(
     Effect.gen(function* () {
       const handle = yield* ChildProcess.make(binary, [...args], { cwd })
@@ -135,7 +143,7 @@ const parseDiagnostics = (output: string): ReadonlyArray<TsgoDiagnostic> => {
 
 const make = (binary: string, path: Path.Path): Interface => {
   const listFiles = Effect.fn("Tsgo.listFiles")(function* (cwd: string) {
-    const result = yield* run(binary, ["--listFilesOnly"], cwd)
+    const result = yield* run({ binary, args: ["--listFilesOnly"], cwd })
     const files = new Set<string>()
     for (const raw of result.stdout.split(/\r?\n/)) {
       const file = raw.trim()
@@ -147,12 +155,12 @@ const make = (binary: string, path: Path.Path): Interface => {
   })
 
   const typecheck = Effect.fn("Tsgo.typecheck")(function* (cwd: string) {
-    const result = yield* run(binary, ["--noEmit", "--pretty", "false"], cwd)
+    const result = yield* run({ binary, args: ["--noEmit", "--pretty", "false"], cwd })
     return parseDiagnostics(`${result.stdout}\n${result.stderr}`)
   })
 
   const generateTrace = Effect.fn("Tsgo.generateTrace")(function* (cwd: string, outDir: string) {
-    yield* run(binary, ["--generateTrace", outDir, "--noEmit"], cwd)
+    yield* run({ binary, args: ["--generateTrace", outDir, "--noEmit"], cwd })
   })
 
   return Service.of({ listFiles, typecheck, generateTrace })

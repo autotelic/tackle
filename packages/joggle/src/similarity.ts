@@ -21,10 +21,13 @@ export const shinglesOf = (tokens: ReadonlyArray<string>): ReadonlySet<string> =
  * Iterates the smaller side: an intersection cannot be larger than it, and for
  * the size-skewed pairs a threshold admits, that is most of the work saved.
  */
-export const similarityOf = (
-  left: ReadonlySet<string>,
-  right: ReadonlySet<string>,
-): number => {
+export const similarityOf = ({
+  left,
+  right,
+}: {
+  readonly left: ReadonlySet<string>
+  readonly right: ReadonlySet<string>
+}): number => {
   const [small, large] = left.size <= right.size ? [left, right] : [right, left]
   if (small.size === 0) return left.size === right.size ? 1 : 0
   let intersection = 0
@@ -34,10 +37,13 @@ export const similarityOf = (
 }
 
 /** Convenience for callers holding tokens rather than shingle sets. */
-export const similarity = (
-  left: ReadonlyArray<string>,
-  right: ReadonlyArray<string>,
-): number => similarityOf(shinglesOf(left), shinglesOf(right))
+export const similarity = ({
+  left,
+  right,
+}: {
+  readonly left: ReadonlyArray<string>
+  readonly right: ReadonlyArray<string>
+}): number => similarityOf({ left: shinglesOf(left), right: shinglesOf(right) })
 
 export interface SizedShingles {
   /** Position in the caller's array, so results refer to the caller's data. */
@@ -121,7 +127,7 @@ export const allPairs = (
         // Exact size filter: Jaccard cannot exceed the ratio of the smaller side
         // to the larger, so a pair outside it cannot qualify.
         if (candidate.shingles.size < threshold * entry.shingles.size) continue
-        const score = similarityOf(candidate.shingles, entry.shingles)
+        const score = similarityOf({ left: candidate.shingles, right: entry.shingles })
         if (score < threshold) continue
         const left = candidate.position
         const right = entry.position

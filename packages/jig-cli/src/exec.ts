@@ -22,11 +22,15 @@ export interface ExecOutcome {
 }
 
 /** Run a binary and collect its streams and exit code. The error channel is a message. */
-export const exec = (
-  binary: string,
-  args: ReadonlyArray<string>,
-  cwd: string,
-): Effect.Effect<ExecOutcome, string, Spawner> =>
+export const exec = ({
+  binary,
+  args,
+  cwd,
+}: {
+  readonly binary: string
+  readonly args: ReadonlyArray<string>
+  readonly cwd: string
+}): Effect.Effect<ExecOutcome, string, Spawner> =>
   Effect.scoped(
     Effect.gen(function* () {
       const handle = yield* ChildProcess.make(binary, [...args], { cwd })

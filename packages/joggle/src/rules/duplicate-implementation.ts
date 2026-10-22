@@ -90,7 +90,7 @@ export const duplicateImplementation: PlannedRule = {
     const report = clusterReporter(spec, workspace)
     const overflow = clusters
       .slice(budget)
-      .map((cluster) => unverifiedFinding(report, spec, cluster))
+      .map((cluster) => unverifiedFinding({ report, rule: spec, cluster }))
       .filter((entry): entry is NonNullable<typeof entry> => entry !== undefined)
     const notes = [
       ...budgetNote({

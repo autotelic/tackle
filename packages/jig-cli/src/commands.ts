@@ -99,7 +99,13 @@ export const promotion = (diff: BaselineDiff): Promotion => ({
  * to accept new ones, because accepting is a human decision (`jig baseline`). The text says
  * both, so nobody mistakes a promote for a way to make findings go away.
  */
-export const renderPromotion = (plan: Promotion, applied = false): string => {
+export const renderPromotion = ({
+  plan,
+  applied = false,
+}: {
+  readonly plan: Promotion
+  readonly applied?: boolean
+}): string => {
   if (plan.stale.length === 0) {
     return `jig: nothing to promote — every accepted finding still fires (${plan.held.length} held)`
   }

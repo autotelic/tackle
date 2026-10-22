@@ -25,7 +25,7 @@ const git = (
   root: string,
   args: ReadonlyArray<string>,
 ): Effect.Effect<string | undefined, never, Spawner> =>
-  Effect.match(exec("git", args, root), {
+  Effect.match(exec({ binary: "git", args, cwd: root }), {
     onFailure: () => undefined,
     onSuccess: (outcome) => (outcome.code === 0 ? outcome.stdout : undefined),
   })

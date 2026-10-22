@@ -9,7 +9,7 @@ describe("schemaBreakingChanges", () => {
   it("allows adding an optional field", () => {
     const previous = { type: "object", properties: { a: { type: "string" } } }
     const next = { type: "object", properties: { a: { type: "string" }, b: { type: "string" } } }
-    expect(schemaBreakingChanges(previous, next)).toEqual([])
+    expect(schemaBreakingChanges({ previous, next })).toEqual([])
   })
 
   it("fails when a field is newly required", () => {
@@ -19,7 +19,7 @@ describe("schemaBreakingChanges", () => {
       required: ["a"],
       properties: { a: { type: "string" } },
     }
-    expect(schemaBreakingChanges(previous, next)).toHaveLength(1)
+    expect(schemaBreakingChanges({ previous, next })).toHaveLength(1)
   })
 
   it("fails when a named property is removed and extras are closed", () => {
@@ -33,7 +33,7 @@ describe("schemaBreakingChanges", () => {
       additionalProperties: false,
       properties: { a: { type: "string" } },
     }
-    expect(schemaBreakingChanges(previous, next)).toHaveLength(1)
+    expect(schemaBreakingChanges({ previous, next })).toHaveLength(1)
   })
 
   it("allows removing a property when extras are still open", () => {
@@ -46,18 +46,22 @@ describe("schemaBreakingChanges", () => {
       additionalProperties: true,
       properties: { a: { type: "string" } },
     }
-    expect(schemaBreakingChanges(previous, next)).toEqual([])
+    expect(schemaBreakingChanges({ previous, next })).toEqual([])
   })
 
   it("fails when an enum loses a value", () => {
     const previous = { enum: ["error", "warn", "info"] }
     const next = { enum: ["error", "warn"] }
-    expect(schemaBreakingChanges(previous, next)).toHaveLength(1)
+    expect(schemaBreakingChanges({ previous, next })).toHaveLength(1)
   })
 
   it("allows integer widening to number, fails the reverse", () => {
-    expect(schemaBreakingChanges({ type: "integer" }, { type: "number" })).toEqual([])
-    expect(schemaBreakingChanges({ type: "number" }, { type: "integer" })).toHaveLength(1)
+    expect(
+      schemaBreakingChanges({ previous: { type: "integer" }, next: { type: "number" } }),
+    ).toEqual([])
+    expect(
+      schemaBreakingChanges({ previous: { type: "number" }, next: { type: "integer" } }),
+    ).toHaveLength(1)
   })
 
   it("fails when additionalProperties closes from an implicit open", () => {
@@ -67,7 +71,7 @@ describe("schemaBreakingChanges", () => {
       additionalProperties: false,
       properties: { a: { type: "string" } },
     }
-    expect(schemaBreakingChanges(previous, next)).toHaveLength(1)
+    expect(schemaBreakingChanges({ previous, next })).toHaveLength(1)
   })
 })
 
@@ -99,7 +103,7 @@ describe("schemaBreakingChanges (property)", () => {
         fc.dictionary(fc.stringMatching(/^[a-z]{1,6}$/u), fc.jsonValue()),
         (properties) => {
           const schema = { type: "object", properties }
-          expect(schemaBreakingChanges(schema, schema)).toEqual([])
+          expect(schemaBreakingChanges({ previous: schema, next: schema })).toEqual([])
         },
       ),
     )

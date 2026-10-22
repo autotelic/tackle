@@ -55,7 +55,7 @@ const complete = (
     (item) => item.size,
     threshold,
     (a, b) => {
-      if (similarityOf(a.item, b.item) >= threshold) found.push(key(a.position, b.position))
+      if (similarityOf({ left: a.item, right: b.item }) >= threshold) found.push(key(a.position, b.position))
     },
   )
   return found.sort()
@@ -114,7 +114,7 @@ it("finds pairs a token-length window would drop", () => {
   const narrow = base
   const wide = grown
 
-  expect(similarityOf(narrow, wide)).toBeGreaterThan(0.7)
+  expect(similarityOf({ left: narrow, right: wide })).toBeGreaterThan(0.7)
 
   const sets = [narrow, wide]
   const tokenLengths = [100, 200]
@@ -132,7 +132,9 @@ it("finds pairs a token-length window would drop", () => {
       (item) => item.tokens,
       0.7,
       (a, b) => {
-        if (similarityOf(a.item.shingles, b.item.shingles) >= 0.7) found.push(key(a.position, b.position))
+        if (similarityOf({ left: a.item.shingles, right: b.item.shingles }) >= 0.7) {
+          found.push(key(a.position, b.position))
+        }
       },
     )
     return found
@@ -145,6 +147,6 @@ it("finds pairs a token-length window would drop", () => {
 it("token shingles behave like the sets the join expects", () => {
   const a = shinglesOf(["return", "_", ".", "_"].map(String))
   const b = shinglesOf(["return", "_", ".", "_"].map(String))
-  expect(similarityOf(a, b)).toBe(1)
-  expect(similarityOf(a, shinglesOf(["return", "_"]))).toBeGreaterThan(0)
+  expect(similarityOf({ left: a, right: b })).toBe(1)
+  expect(similarityOf({ left: a, right: shinglesOf(["return", "_"]) })).toBeGreaterThan(0)
 })

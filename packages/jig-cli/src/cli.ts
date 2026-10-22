@@ -30,7 +30,13 @@ const configFlag = Flag.String("config").pipe(
 )
 
 /** Resolve the root and its config the same way in every command. */
-const context = (cwd: Option.Option<string>, config: Option.Option<string>) =>
+const context = ({
+  cwd,
+  config,
+}: {
+  readonly cwd: Option.Option<string>
+  readonly config: Option.Option<string>
+}) =>
   Effect.gen(function* () {
     const path = yield* Path.Path
     const root = path.resolve(Option.getOrUndefined(cwd) ?? process.cwd())
@@ -58,7 +64,7 @@ const checkCommand = Command.make(
   },
   (options) =>
     Effect.gen(function* () {
-      const { path, root, settings } = yield* context(options.cwd, options.config)
+      const { path, root, settings } = yield* context({ cwd: options.cwd, config: options.config })
       const baseline = yield* readBaseline(path.resolve(root, settings.gate.baseline))
       const run = yield* harnessRun(root, settings, baseline)
       // The accepted identities, so a projection can say novel from known. An empty
@@ -120,7 +126,7 @@ const checkCommand = Command.make(
 
 const baselineCommand = Command.make("baseline", { cwd: cwdFlag, config: configFlag }, (options) =>
   Effect.gen(function* () {
-    const { path, root, settings } = yield* context(options.cwd, options.config)
+    const { path, root, settings } = yield* context({ cwd: options.cwd, config: options.config })
     const run = yield* harnessRun(root, settings, emptyBaseline)
     const baseline = accept(run.report.diagnostics)
     yield* writeBaseline(path.resolve(root, settings.gate.baseline), baseline)
@@ -135,7 +141,7 @@ const baselineCommand = Command.make("baseline", { cwd: cwdFlag, config: configF
 
 const enginesCommand = Command.make("engines", { cwd: cwdFlag, config: configFlag }, (options) =>
   Effect.gen(function* () {
-    const { root, settings } = yield* context(options.cwd, options.config)
+    const { root, settings } = yield* context({ cwd: options.cwd, config: options.config })
     const onPath = (name: string): boolean =>
       (process.env.PATH ?? "").split(":").some((dir) => dir !== "" && existsSync(join(dir, name)))
     const lines = ["engine              kind            command        source"]
@@ -241,7 +247,7 @@ const explainCommand = Command.make(
   { rule: Argument.String("rule"), cwd: cwdFlag, config: configFlag },
   (options) =>
     Effect.gen(function* () {
-      const { path, root, settings } = yield* context(options.cwd, options.config)
+      const { path, root, settings } = yield* context({ cwd: options.cwd, config: options.config })
       const baseline = yield* readBaseline(path.resolve(root, settings.gate.baseline))
       const run = yield* harnessRun(root, settings, baseline)
       const configured = settings.engines.map((engine) => engine.id)
@@ -263,7 +269,7 @@ const promoteCommand = Command.make(
   { cwd: cwdFlag, config: configFlag, write: writeFlag },
   (options) =>
     Effect.gen(function* () {
-      const { path, root, settings } = yield* context(options.cwd, options.config)
+      const { path, root, settings } = yield* context({ cwd: options.cwd, config: options.config })
       const baseline = yield* readBaseline(path.resolve(root, settings.gate.baseline))
       const run = yield* harnessRun(root, settings, baseline)
       const plan = promotion(run.diff)
@@ -271,9 +277,9 @@ const promoteCommand = Command.make(
       // is the ratchet moving down; accepting a new one is `jig baseline`, a human's call.
       if (options.write && plan.stale.length > 0) {
         yield* writeBaseline(path.resolve(root, settings.gate.baseline), accept(run.diff.known))
-        yield* write(renderPromotion(plan, true))
+        yield* write(renderPromotion({ plan, applied: true }))
       } else {
-        yield* write(renderPromotion(plan, false))
+        yield* write(renderPromotion({ plan, applied: false }))
       }
     }),
 ).pipe(
@@ -288,7 +294,7 @@ const learnCommand = Command.make(
   { cwd: cwdFlag, config: configFlag, write: writeFlag },
   (options) =>
     Effect.gen(function* () {
-      const { path, root, settings } = yield* context(options.cwd, options.config)
+      const { path, root, settings } = yield* context({ cwd: options.cwd, config: options.config })
       const baseline = yield* readBaseline(path.resolve(root, settings.gate.baseline))
       const run = yield* harnessRun(root, settings, baseline)
       const text = renderLesson(

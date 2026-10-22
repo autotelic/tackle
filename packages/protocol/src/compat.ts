@@ -39,7 +39,13 @@ const typeOf = (schema: Record<string, unknown>): string | undefined =>
   typeof schema.type === "string" ? schema.type : undefined
 
 /** `number` accepts every integer, so `integer → number` widens and the reverse narrows. */
-const widensType = (previous: string | undefined, next: string | undefined): boolean => {
+const widensType = ({
+  previous,
+  next,
+}: {
+  readonly previous: string | undefined
+  readonly next: string | undefined
+}): boolean => {
   if (previous === undefined || next === undefined) return true
   if (previous === next) return true
   return previous === "integer" && next === "number"
@@ -54,11 +60,15 @@ const numberAt = (schema: Record<string, unknown>, key: string): number | undefi
  * An empty list means the new schema is a superset over the structural subset checked here.
  * `path` is the dotted location of the lexicon in the JSON document, for a readable finding.
  */
-export const schemaBreakingChanges = (
-  previous: unknown,
-  next: unknown,
+export const schemaBreakingChanges = ({
+  previous,
+  next,
   path = "$",
-): ReadonlyArray<string> => {
+}: {
+  readonly previous: unknown
+  readonly next: unknown
+  readonly path?: string
+}): ReadonlyArray<string> => {
   if (!isRecord(previous) || !isRecord(next)) return []
   const findings: Array<string> = []
 
@@ -75,7 +85,13 @@ export const schemaBreakingChanges = (
       if (nextAdditional === false) findings.push(`${path}.${name}: property removed`)
       continue
     }
-    findings.push(...schemaBreakingChanges(previousProperty, nextProperty, `${path}.${name}`))
+    findings.push(
+      ...schemaBreakingChanges({
+        previous: previousProperty,
+        next: nextProperty,
+        path: `${path}.${name}`,
+      }),
+    )
   }
 
   for (const name of requiredOf(next)) {
@@ -89,7 +105,7 @@ export const schemaBreakingChanges = (
     findings.push(`${path}: additionalProperties was open, is now closed`)
   }
 
-  if (!widensType(typeOf(previous), typeOf(next))) {
+  if (!widensType({ previous: typeOf(previous), next: typeOf(next) })) {
     findings.push(`${path}: type narrowed (${typeOf(previous)} → ${typeOf(next)})`)
   }
 

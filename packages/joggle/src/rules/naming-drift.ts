@@ -28,7 +28,11 @@ import type { Unit, Workspace } from "../workspace.ts"
  * the model compares meanings rather than strings, and `same_words` reports the
  * case where only the spelling differs.
  */
-const nameQuestionnaire: ClusterRule["questionnaire"] = (cluster, described, workspace) =>
+const nameQuestionnaire: ClusterRule["questionnaire"] = ({
+  cluster,
+  described,
+  workspace,
+}) =>
   Effect.gen(function* () {
     const atoms = yield* Atoms
     const operations = permitted(workspace, cluster.members)
@@ -348,7 +352,7 @@ export const namingDrift: PlannedRule = {
       unitKind: "pairs",
       judged: budget,
       candidates: clusters.length,
-      sample: unjudged.slice(0, 3).map((cluster) => nameList(cluster)),
+      sample: unjudged.slice(0, 3).map((cluster) => nameList({ cluster })),
     })
     return {
       plans: phase.planned.map((entry) => entry.plan),

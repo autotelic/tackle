@@ -3,7 +3,7 @@ import { Decision } from "effect/ai"
 import { Atoms } from "../atoms.ts"
 import { policy } from "../policy.ts"
 import { verdictsOf, type Plan } from "../plans.ts"
-import { locator, messages, reporter, type Report } from "../reporting.ts"
+import { locator, messages, reporter, type FindingInput } from "../reporting.ts"
 import {
   budgetNote,
   inScope,
@@ -216,7 +216,14 @@ export const singlePath: PlannedRule = {
           const subject = candidate.unit.name + " (" + candidate.file + ")"
           const verdict = verdictOf(verdicts[index]?.["verdict"], ["reimplements"])
           if (verdict === undefined) {
-            diagnostics.push(findingFor(report, entry, undefined, "no judgement was available"))
+            diagnostics.push(
+              findingFor({
+                report,
+                entry,
+                confidence: undefined,
+                unverifiedReason: "no judgement was available",
+              }),
+            )
             return
           }
           if (verdict.label !== "reimplements") {
@@ -241,7 +248,15 @@ export const singlePath: PlannedRule = {
             return
           }
           const review = quality.quality === "review"
-          diagnostics.push(findingFor(report, entry, verdict.confidence, undefined, review))
+          diagnostics.push(
+            findingFor({
+              report,
+              entry,
+              confidence: verdict.confidence,
+              unverifiedReason: undefined,
+              review,
+            }),
+          )
         })
         return outcome(
           diagnostics,
@@ -258,13 +273,20 @@ export const singlePath: PlannedRule = {
   }),
 }
 
-const findingFor = (
-  report: Report,
-  entry: { readonly candidate: { readonly unit: Unit; readonly file: string; readonly site: StringSite; readonly helpers: ReadonlyArray<Helper> } },
-  confidence: number | undefined,
-  unverifiedReason: string | undefined,
+const findingFor = ({
+  report,
+  entry,
+  confidence,
+  unverifiedReason,
   review = false,
-): Diagnostic => {
+}: FindingInput<{
+    readonly candidate: {
+      readonly unit: Unit
+      readonly file: string
+      readonly site: StringSite
+      readonly helpers: ReadonlyArray<Helper>
+    }
+}>): Diagnostic => {
   const names = entry.candidate.helpers.slice(0, 4).map((helper) => helper.name)
   const listed = names.length <= 1 ? (names[0] ?? "a helper") : names.slice(0, -1).join(", ") + " or " + names.at(-1)
   return report({

@@ -117,10 +117,13 @@ export const renderShard = (entries: Iterable<Entry>): string => {
  * two answers should be identical, and the timestamp is the only signal that
  * says which the model produced last. Ties keep ours.
  */
-export const mergeEntries = (
-  ours: ReadonlyArray<Entry>,
-  theirs: ReadonlyArray<Entry>,
-): ReadonlyArray<Entry> => {
+export const mergeEntries = ({
+  ours,
+  theirs,
+}: {
+  readonly ours: ReadonlyArray<Entry>
+  readonly theirs: ReadonlyArray<Entry>
+}): ReadonlyArray<Entry> => {
   const merged = new Map<string, Entry>()
   for (const entry of ours) merged.set(entry.key, entry)
   for (const entry of theirs) {
@@ -162,7 +165,7 @@ export const mergeShardText = (text: {
     if (text.theirs.trim() !== "" && theirEntries.length === 0) {
       return yield* NotAShard.make({ side: "theirs" })
     }
-    return renderShard(mergeEntries(ourEntries, theirEntries))
+    return renderShard(mergeEntries({ ours: ourEntries, theirs: theirEntries }))
   })
 
 /* -------------------------------------------------------------------------- */

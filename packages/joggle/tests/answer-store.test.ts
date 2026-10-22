@@ -44,7 +44,10 @@ test("the shard is the first two characters of the key", () => {
 })
 
 test("a merge takes the union, and the newer answer wins a shared key", () => {
-  const merged = mergeEntries([entry("ab", 5, 0.1)], [entry("cd", 1, 0.2), entry("ab", 9, 0.9)])
+  const merged = mergeEntries({
+    ours: [entry("ab", 5, 0.1)],
+    theirs: [entry("cd", 1, 0.2), entry("ab", 9, 0.9)],
+  })
   expect(merged).toEqual([entry("ab", 9, 0.9), entry("cd", 1, 0.2)])
 })
 

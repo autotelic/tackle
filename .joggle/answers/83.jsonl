@@ -15,10 +15,12 @@
 8397480a94d7f43d	1792252958	{"confidence":0.89,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.93,"not_a_derivation":0.07,"reimplements":0}}
 83975c9677cb4a58	1792621503	{"confidence":0.8,"kind":"Classify","label":"value","probabilities":{"meaning":0.13,"unclear":0,"value":0.87}}
 83a6563daac26c4d	1792621702	{"confidence":0.42,"kind":"Classify","label":"move","probabilities":{"move":0.71,"no_issue":0.29}}
+83c0a88118ec2ba3	1792689876	{"confidence":0.49,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.12,"common_idiom":0.66,"shared_helper":0.22}}
 83c716ca9c5369dd	1792535007	{"confidence":0.89,"kind":"Classify","label":"infrastructure","probabilities":{"domain_logic":0,"infrastructure":0.9,"input_adaptation":0.02,"mechanical":0,"not_applicable":0,"orchestration":0.07,"rendering":0,"request_validation":0,"transport_concern":0.01}}
 83d78fc59a66ce75	1792252958	{"confidence":0.38,"kind":"Rate","label":"slightly_clearer","probabilities":{"meaningfully_better":0.26,"no_difference":0.16,"removes_a_hazard":0.1,"slightly_clearer":0.48},"rating":1.31}
 83d99837409810fc	1792621702	{"confidence":0.84,"kind":"Classify","label":"same_package","probabilities":{"different_deployables":0.01,"same_module":0.03,"same_package":0.88,"sibling_packages":0.08}}
 83e3571c0289a78a	1792621702	{"confidence":0.94,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.96,"not_a_derivation":0.02,"reimplements":0.02}}
 83e3fef5ccce2f0d	1792265611	{"confidence":0.97,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.01,"same_module":0,"same_package":0.01,"sibling_packages":0.98}}
 83f17e41999a06fd	1792621702	{"confidence":0.91,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.94,"not_a_derivation":0.01,"reimplements":0.05}}
+83faf5d913a8270c	1792689876	{"confidence":0.57,"kind":"Classify","label":"domain_concept","probabilities":{"domain_concept":0.68,"framework_glue":0,"implementation_detail":0.3,"wire_contract":0.02}}
 83fe9a29ad494300	1792542865	{"confidence":0.43,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.49,"no_difference":0.06,"removes_a_hazard":0.17,"slightly_clearer":0.28},"rating":1.77}

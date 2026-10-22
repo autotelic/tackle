@@ -3,7 +3,7 @@ import { Decision } from "effect/ai"
 import { Atoms } from "../atoms.ts"
 import { policy } from "../policy.ts"
 import { verdictsOf, type Plan } from "../plans.ts"
-import { locator, messages, reporter, type Report } from "../reporting.ts"
+import { locator, messages, reporter, type FindingInput } from "../reporting.ts"
 import {
   budgetNote,
   inScope,
@@ -177,7 +177,14 @@ export const inferredOverRecorded: PlannedRule = {
           const subject = candidate.unit.name + " (derives " + candidate.flag + "?)"
           const verdict = verdictOf(verdicts[index]?.["verdict"], ["inferred"])
           if (verdict === undefined) {
-            diagnostics.push(findingFor(report, entry, undefined, "no judgement was available"))
+            diagnostics.push(
+              findingFor({
+                report,
+                entry,
+                confidence: undefined,
+                unverifiedReason: "no judgement was available",
+              }),
+            )
             return
           }
           if (verdict.label !== "inferred") {
@@ -199,7 +206,15 @@ export const inferredOverRecorded: PlannedRule = {
             drops.push({ ruleId: RULE_ID, subject, stage: "gated", reason: quality.reason })
             return
           }
-          diagnostics.push(findingFor(report, entry, verdict.confidence, undefined, quality.quality === "review"))
+          diagnostics.push(
+            findingFor({
+              report,
+              entry,
+              confidence: verdict.confidence,
+              unverifiedReason: undefined,
+              review: quality.quality === "review",
+            }),
+          )
         })
         return outcome(
           diagnostics,
@@ -216,15 +231,20 @@ export const inferredOverRecorded: PlannedRule = {
   }),
 }
 
-const findingFor = (
-  report: Report,
-  entry: {
-    readonly candidate: { readonly unit: Unit; readonly type: string; readonly flag: string; readonly start: number }
-  },
-  confidence: number | undefined,
-  unverifiedReason: string | undefined,
+const findingFor = ({
+  report,
+  entry,
+  confidence,
+  unverifiedReason,
   review = false,
-): Diagnostic =>
+}: FindingInput<{
+    readonly candidate: {
+      readonly unit: Unit
+      readonly type: string
+      readonly flag: string
+      readonly start: number
+    }
+}>): Diagnostic =>
   report({
     about: entry.candidate.unit,
     messageId: "inferred",

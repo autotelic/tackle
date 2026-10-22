@@ -113,11 +113,11 @@ describe("normalize", () => {
 
 describe("engineDiagnostics", () => {
   it("does not read a silent, failed engine as clean", () => {
-    const diagnostics = engineDiagnostics(
-      "joggle",
-      { code: 1, stdout: "", stderr: "boom: no tsconfig in sight" },
-      "/repo",
-    )
+    const diagnostics = engineDiagnostics({
+      id: "joggle",
+      output: { code: 1, stdout: "", stderr: "boom: no tsconfig in sight" },
+      root: "/repo",
+    })
     expect(diagnostics).toHaveLength(1)
     expect(diagnostics[0]?.ruleId).toBe("unparsed-output")
     expect(diagnostics[0]?.severity).toBe("info")
@@ -125,13 +125,23 @@ describe("engineDiagnostics", () => {
   })
 
   it("names the exit code when a failed engine printed nothing at all", () => {
-    const diagnostics = engineDiagnostics("joggle", { code: 2, stdout: "", stderr: "" }, "/repo")
+    const diagnostics = engineDiagnostics({
+      id: "joggle",
+      output: { code: 2, stdout: "", stderr: "" },
+      root: "/repo",
+    })
     expect(diagnostics[0]?.message).toBe("joggle exited 2 without output")
     expect(diagnostics[0]?.help).toBeUndefined()
   })
 
   it("reads a silent, successful engine as clean", () => {
-    expect(engineDiagnostics("joggle", { code: 0, stdout: "", stderr: "" }, "/repo")).toEqual([])
+    expect(
+      engineDiagnostics({
+        id: "joggle",
+        output: { code: 0, stdout: "", stderr: "" },
+        root: "/repo",
+      }),
+    ).toEqual([])
   })
 
   it("keeps the findings an engine printed, whatever it exited with", () => {
@@ -146,26 +156,30 @@ describe("engineDiagnostics", () => {
       ],
     })
     expect(
-      engineDiagnostics("joggle", { code: 1, stdout: stdout, stderr: "" }, "/repo"),
+      engineDiagnostics({
+        id: "joggle",
+        output: { code: 1, stdout: stdout, stderr: "" },
+        root: "/repo",
+      }),
     ).toHaveLength(1)
   })
 
   it("reads an empty but understood report on a clean exit as clean", () => {
     expect(
-      engineDiagnostics(
-        "oxlint-engine",
-        { code: 0, stdout: JSON.stringify({ diagnostics: [] }), stderr: "" },
-        "/repo",
-      ),
+      engineDiagnostics({
+        id: "oxlint-engine",
+        output: { code: 0, stdout: JSON.stringify({ diagnostics: [] }), stderr: "" },
+        root: "/repo",
+      }),
     ).toEqual([])
   })
 
   it("turns a failed cutlist into one stale-catalog error, not a parse attempt", () => {
-    const diagnostics = engineDiagnostics(
-      "cutlist",
-      { code: 1, stdout: "the catalog is stale\n", stderr: "" },
-      "/repo",
-    )
+    const diagnostics = engineDiagnostics({
+      id: "cutlist",
+      output: { code: 1, stdout: "the catalog is stale\n", stderr: "" },
+      root: "/repo",
+    })
     expect(diagnostics).toHaveLength(1)
     expect(diagnostics[0]?.ruleId).toBe("stale-catalog")
     expect(diagnostics[0]?.severity).toBe("error")

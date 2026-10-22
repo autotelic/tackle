@@ -23,4 +23,5 @@ f2d8c13f89a3834b	1792535008	{"confidence":0.71,"kind":"Classify","label":"alread
 f2df956c488102e4	1792618754	{"confidence":0.95,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.97,"not_a_derivation":0.02,"reimplements":0.01}}
 f2eaf97e36264bd1	1792252958	{"confidence":0.46,"kind":"Classify","label":"move","probabilities":{"merge":0.05,"move":0.64,"no_issue":0.31}}
 f2f2ec1f6024a4f7	1792542865	{"confidence":0.89,"kind":"Classify","label":"domain_concept","probabilities":{"domain_concept":0.92,"framework_glue":0,"implementation_detail":0,"wire_contract":0.08}}
+f2f60d556913de54	1792689876	{"confidence":0.4,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.55,"different_order":0,"different_work":0.45,"same_operation":0}}
 f2f7e4bf8e70f223	1792265611	{"confidence":0.25,"kind":"Classify","label":"appropriate","probabilities":{"appropriate":0.5,"independent":0.48,"meaning_switched":0.02}}

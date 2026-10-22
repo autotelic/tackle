@@ -90,52 +90,52 @@ describe("duplicateCandidates", () => {
   })
 
   it("does not compare signatures that carry a single fact", () => {
-    const candidates = duplicateCandidates(
-      [
+    const candidates = duplicateCandidates({
+      components: [
         component("app/components/FirstDialog.tsx", ["tag:Dialog"]),
         component("app/components/SecondDialog.tsx", ["tag:Dialog"]),
         component("app/components/FirstContext.ts", ["hook:useContext"]),
         component("app/components/SecondContext.ts", ["hook:useContext"]),
       ],
-      ["app"],
-      "routes",
-      [],
-    )
+      roots: ["app"],
+      routeDir: "routes",
+      entries: [],
+    })
     expect(candidates).toEqual([])
   })
 
   it("does not compare components that share only React's frame", () => {
-    const candidates = duplicateCandidates(
-      [
+    const candidates = duplicateCandidates({
+      components: [
         component("app/components/First.tsx", ["hook:useState", "hook:useEffect"]),
         component("app/components/Second.tsx", ["hook:useState", "hook:useEffect"]),
       ],
-      ["app"],
-      "routes",
-      [],
-    )
+      roots: ["app"],
+      routeDir: "routes",
+      entries: [],
+    })
     expect(candidates).toEqual([])
   })
 
   it("keeps a rich pair that shares enough of its skeleton", () => {
     const signature = ["uses:@headlessui/react", "tag:Combobox", "tag:Combobox.Input"]
-    const candidates = duplicateCandidates(
-      [
+    const candidates = duplicateCandidates({
+      components: [
         component("app/components/Combobox.tsx", signature),
         component("app/components/ComboBoxV2.tsx", signature),
       ],
-      ["app"],
-      "routes",
-      [],
-    )
+      roots: ["app"],
+      routeDir: "routes",
+      entries: [],
+    })
     expect(candidates).toHaveLength(1)
     expect(candidates[0]?.score).toBe(1)
   })
 
   it("never compares a hook with a component, however alike their skeletons", () => {
     const signature = ["hook:useProjectFilters", "hook:useProjectSort"]
-    const candidates = duplicateCandidates(
-      [
+    const candidates = duplicateCandidates({
+      components: [
         component("app/hooks/useFirst.ts", signature, "hook"),
         component("app/hooks/useSecond.ts", signature, "hook"),
         component("app/components/FirstDialog.tsx", ["tag:Dialog", "tag:Dialog.Content"]),
@@ -145,10 +145,10 @@ describe("duplicateCandidates", () => {
           "hook:useState",
         ]),
       ],
-      ["app"],
-      "routes",
-      [],
-    )
+      roots: ["app"],
+      routeDir: "routes",
+      entries: [],
+    })
     expect(candidates.map((candidate) => [candidate.left, candidate.right])).toEqual([
       ["app/components/FirstDialog.tsx", "app/components/SecondDialog.tsx"],
       ["app/hooks/useFirst.ts", "app/hooks/useSecond.ts"],

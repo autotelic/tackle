@@ -113,12 +113,20 @@ const stabilityOf = ({
   }
 }
 
-/** The path or name a composed token names, when the catalog has that part. */
-const resolveComposed = (
-  token: string,
-  byExport: ReadonlyMap<string, CatalogComponent>,
-  byName: ReadonlyMap<string, CatalogComponent>,
-): CatalogComponent | undefined => {
+/**
+ * The path or name a composed token names, when the catalog has that part.
+ *
+ * @param payload - The token and the export/name indexes to resolve it against.
+ */
+const resolveComposed = ({
+  token,
+  byExport,
+  byName,
+}: {
+  readonly token: string
+  readonly byExport: ReadonlyMap<string, CatalogComponent>
+  readonly byName: ReadonlyMap<string, CatalogComponent>
+}): CatalogComponent | undefined => {
   const [kind, ...rest] = token.split(":")
   const name = rest.join(":")
   if (kind === "tag") return byExport.get(name) ?? byName.get(name.toLowerCase())
@@ -143,7 +151,7 @@ const relationsOf = ({
 }): ReadonlyArray<PatternRelation> => {
   const relations: Array<PatternRelation> = []
   for (const token of component.signature) {
-    const target = resolveComposed(token, byExport, byName)
+    const target = resolveComposed({ token, byExport, byName })
     if (target !== undefined && target.path !== component.path) {
       relations.push({ kind: "uses", target: target.path })
     }

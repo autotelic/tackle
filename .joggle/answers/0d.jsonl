@@ -1,6 +1,7 @@
 0d00148f44194325	1792253160	{"consistency":1,"kind":"Probability","probability":0.6755555555555556}
 0d019a4281ae8ba6	1792252958	{"confidence":0.61,"kind":"Classify","label":"same_module","probabilities":{"different_deployables":0,"same_module":0.71,"same_package":0.29,"sibling_packages":0}}
 0d1875354a6096c0	1792252958	{"confidence":0.76,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.82,"stale_reference":0.02,"wrong_behavior":0.12,"wrong_contract":0.04}}
+0d1c2822be10c7b7	1792689876	{"confidence":0.53,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.07,"common_idiom":0.69,"shared_helper":0.24}}
 0d29143824770ea6	1792619055	{"confidence":0.99,"kind":"Classify","label":"rendering","probabilities":{"domain_logic":0,"infrastructure":0,"input_adaptation":0,"mechanical":0,"not_applicable":0,"orchestration":0.01,"rendering":0.99,"request_validation":0,"transport_concern":0}}
 0d422d99ac908797	1792252958	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0.02}}
 0d42fec6269e5f64	1792619451	{"confidence":0.97,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.01,"same_module":0,"same_package":0.01,"sibling_packages":0.98}}
@@ -20,4 +21,5 @@
 0dbb811b34745460	1792252958	{"confidence":0.97,"kind":"Classify","label":"general","probabilities":{"general":0.98,"names_a_caller":0,"shared_vocabulary":0.02}}
 0dd7e9ddbf131cc5	1792252958	{"confidence":0.56,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.01,"name_meaning":0.05,"no_issue":0.27,"semantic_verdict":0.67}}
 0dea0476dfcfee89	1792684420	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
+0deb48cfe274c223	1792689876	{"consistency":1,"kind":"Probability","probability":0.35333333333333333}
 0df756014ebd449c	1792687043	{"confidence":0.33,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.11,"name_meaning":0.08,"no_issue":0.31,"semantic_verdict":0.5}}

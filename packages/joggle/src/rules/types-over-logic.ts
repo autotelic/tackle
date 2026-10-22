@@ -50,12 +50,17 @@ const carriesAnInvariant = (fact: TypeFact): boolean =>
   fact.members.some((member) => member === "null" || member === "undefined")
 
 /** The resolved type of a reference, by its full dotted name then its last segment. */
-const typeOf = (
-  workspace: Workspace,
-  file: string,
-  line: number,
-  ref: string,
-): Option.Option<TypeFact> => {
+const typeOf = ({
+  workspace,
+  file,
+  line,
+  ref,
+}: {
+  readonly workspace: Workspace
+  readonly file: string
+  readonly line: number
+  readonly ref: string
+}): Option.Option<TypeFact> => {
   const found =
     workspace.types.at(file, line, ref) ??
     workspace.types.at(file, line, ref.slice(ref.lastIndexOf(".") + 1))
@@ -103,7 +108,7 @@ export const typesOverLogic: PlannedRule = {
         const unit = file.units.find((entry) => guard.start >= entry.start && guard.end <= entry.end)
         if (unit === undefined) continue
         for (const ref of guard.refs) {
-          const fact = typeOf(workspace, file.path, unit.location.line, ref)
+          const fact = typeOf({ workspace, file: file.path, line: unit.location.line, ref })
           if (Option.isNone(fact) || !carriesAnInvariant(fact.value)) continue
           candidates.push({ unit, file: file.path, guard, ref, fact: fact.value })
           // One question per guard: the same `if` does not become two findings.

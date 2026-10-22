@@ -166,8 +166,13 @@ const relativeTo = (root: string) => (file: string): string | undefined => {
 }
 
 /** The most informative fact for one declaration: the longest printed type wins. */
-const better = (left: TypeFact, right: TypeFact): TypeFact =>
-  right.display.length > left.display.length ? right : left
+const better = ({
+  left,
+  right,
+}: {
+  readonly left: TypeFact
+  readonly right: TypeFact
+}): TypeFact => (right.display.length > left.display.length ? right : left)
 
 /**
  * Turn the parsed `types_N.json` documents into entries, one per declaration.
@@ -188,7 +193,7 @@ export const parseTrace = (
 
   const insert = (site: Map<string, TypeEntry>, key: string, entry: TypeEntry): void => {
     const existing = site.get(key)
-    site.set(key, existing === undefined ? entry : { ...entry, fact: better(existing.fact, entry.fact) })
+    site.set(key, existing === undefined ? entry : { ...entry, fact: better({ left: existing.fact, right: entry.fact }) })
   }
 
   for (const document of documents) {
@@ -230,11 +235,11 @@ export const indexOf = (entries: ReadonlyArray<TypeEntry>): TypeIndex => {
   for (const entry of entries) {
     const siteKey = entry.file.toLowerCase() + "\u0000" + entry.line
     const site = bySite.get(siteKey)
-    bySite.set(siteKey, site === undefined ? entry.fact : better(site, entry.fact))
+    bySite.set(siteKey, site === undefined ? entry.fact : better({ left: site, right: entry.fact }))
     if (entry.name === "") continue
     const nameKey = entry.file.toLowerCase() + "\u0000" + entry.name
     const named = byName.get(nameKey)
-    byName.set(nameKey, named === undefined ? entry.fact : better(named, entry.fact))
+    byName.set(nameKey, named === undefined ? entry.fact : better({ left: named, right: entry.fact }))
   }
   return {
     sites: bySite.size,

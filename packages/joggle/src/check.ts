@@ -201,12 +201,17 @@ const exportsOf = (workspace: {
  * is most of the analysis back again for a change that could not have affected
  * any of them.
  */
-const affectedBy = (
-  changed: ReadonlySet<string>,
-  imports: ImportGraph,
-  before: ReadonlyMap<string, ReadonlyArray<string>>,
-  after: ReadonlyMap<string, ReadonlyArray<string>>,
-): ReadonlySet<string> => {
+const affectedBy = ({
+  changed,
+  imports,
+  before,
+  after,
+}: {
+  readonly changed: ReadonlySet<string>
+  readonly imports: ImportGraph
+  readonly before: ReadonlyMap<string, ReadonlyArray<string>>
+  readonly after: ReadonlyMap<string, ReadonlyArray<string>>
+}): ReadonlySet<string> => {
   const out = new Set(changed)
   for (const file of changed) {
     const was = [...(before.get(file) ?? [])].sort(Order.String).join(",")
@@ -485,12 +490,12 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
       const beforeExports = new Map(
         (stored.sources ?? []).map((source) => [source.path, source.exports]),
       )
-      const affected = affectedBy(
-        new Set(since.changed),
-        workspace.imports,
-        beforeExports,
-        exportsOf(workspace),
-      )
+      const affected = affectedBy({
+        changed: new Set(since.changed),
+        imports: workspace.imports,
+        before: beforeExports,
+        after: exportsOf(workspace),
+      })
       scope = { changed: affected, moved: new Set(since.renamed) }
       notes.push({
         ruleId: "joggle",

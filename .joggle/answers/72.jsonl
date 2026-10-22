@@ -15,4 +15,5 @@
 72d0b03c35c048ee	1792542864	{"confidence":0.7,"kind":"Classify","label":"coincidental","probabilities":{"already_named":0.05,"coincidental":0.8,"one_concept":0.15}}
 72dd6e42c2bf1cac	1792252958	{"confidence":0.85,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.01,"no_issue":0.1,"semantic_verdict":0.89}}
 72e766e7423f082f	1792621702	{"confidence":0.25,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.36,"member_1":0.5,"member_2":0.14}}
+72ee68dcc59e6c16	1792691059	{"confidence":0.27,"kind":"Classify","label":"collapse","probabilities":{"collapse":0.51,"keep_variants":0.43,"no_issue":0.06}}
 72ffa0a5d8a1e936	1792621702	{"confidence":0.87,"kind":"Classify","label":"same_package","probabilities":{"different_deployables":0,"same_module":0.09,"same_package":0.9,"sibling_packages":0.01}}

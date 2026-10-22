@@ -201,13 +201,20 @@ const MIN_COMPARABLE_SIGNATURE = 2
  * perfectly their skeletons align, and letting them compete is what put `useEffect`-only
  * pairs above real component duplicates. Two parts of different kinds are not compared,
  * so the ranking never has to correct for a category error.
+ *
+ * @param payload - The components to join and the ownership facts the route check needs.
  */
-export const duplicateCandidates = (
-  components: ReadonlyArray<CatalogComponent>,
-  roots: ReadonlyArray<string>,
-  routeDir: string,
-  entries: ReadonlyArray<string>,
-): ReadonlyArray<DuplicateCandidate> => {
+export const duplicateCandidates = ({
+  components,
+  roots,
+  routeDir,
+  entries,
+}: {
+  readonly components: ReadonlyArray<CatalogComponent>
+  readonly roots: ReadonlyArray<string>
+  readonly routeDir: string
+  readonly entries: ReadonlyArray<string>
+}): ReadonlyArray<DuplicateCandidate> => {
   const candidates: Array<DuplicateCandidate> = []
   for (let leftIndex = 0; leftIndex < components.length; leftIndex += 1) {
     const left = components[leftIndex]
@@ -230,7 +237,7 @@ export const duplicateCandidates = (
       ) {
         continue
       }
-      const score = similarityOf(leftSignature, rightSignature)
+      const score = similarityOf({ left: leftSignature, right: rightSignature })
       if (score < DUPLICATE_THRESHOLD) continue
       candidates.push({ left: left.path, right: right.path, score, basis: "skeleton" })
     }
@@ -411,7 +418,7 @@ export const buildCatalog = (
   config: CutlistConfig,
 ): Effect.Effect<Catalog, never, FileSystem.FileSystem | Path.Path> =>
   Effect.gen(function* () {
-    const files = yield* listSources(root, config.roots)
+    const files = yield* listSources({ root, roots: config.roots })
     const modules = yield* readModules(root, files)
     const graph = importerGraph(modules, config.alias ?? {}, config.roots)
 
@@ -494,7 +501,12 @@ export const buildCatalog = (
       )
       .map((component) => component.path)
 
-    const duplicates = duplicateCandidates(components, config.roots, routeDir, entries)
+    const duplicates = duplicateCandidates({
+      components,
+      roots: config.roots,
+      routeDir,
+      entries,
+    })
     const clusters = duplicateClusters(components, duplicates)
     const health = {
       ...healthOf({

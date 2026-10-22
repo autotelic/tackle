@@ -141,11 +141,15 @@ const usageOfPart = (pattern: Pattern, component: CatalogComponent | undefined):
   return `<${binding}${attributes === "" ? "" : ` ${attributes}`}${children}`
 }
 
-const featureRecipe = (
-  pattern: Pattern,
-  byPath: ReadonlyMap<string, CatalogComponent>,
-  byExport: ReadonlyMap<string, CatalogComponent>,
-): Recipe | undefined => {
+const featureRecipe = ({
+  pattern,
+  byPath,
+  byExport,
+}: {
+  readonly pattern: Pattern
+  readonly byPath: ReadonlyMap<string, CatalogComponent>
+  readonly byExport: ReadonlyMap<string, CatalogComponent>
+}): Recipe | undefined => {
   const relation = (kind: string): string | undefined =>
     pattern.relations.find((candidate) => candidate.kind === kind)?.target
   const target = relation("barrel") ?? relation("provider") ?? relation("context")
@@ -278,7 +282,7 @@ export const recipesOf = ({
     }
   }
   const features = view.compositions
-    .map((pattern) => featureRecipe(pattern, byPath, byExport))
+    .map((pattern) => featureRecipe({ pattern, byPath, byExport }))
     .filter((recipe): recipe is Recipe => recipe !== undefined)
   const seen = new Set<string>()
   const parts: Array<Recipe> = []
@@ -295,11 +299,13 @@ export const recipesOf = ({
   }
 }
 
-const renderCode = (code: string, language = "text"): ReadonlyArray<string> => [
-  `\`\`\`${language}`,
+const renderCode = ({
   code,
-  "```",
-]
+  language = "text",
+}: {
+  readonly code: string
+  readonly language?: string
+}): ReadonlyArray<string> => [`\`\`\`${language}`, code, "```"]
 
 /** The human reading: imports and shapes a person can paste into a scratch file. */
 export const renderRecipes = (view: RecipeView): string => {
@@ -316,12 +322,12 @@ export const renderRecipes = (view: RecipeView): string => {
   for (const recipe of view.features) {
     lines.push(`### \`${recipe.name}\` — \`${recipe.path}\``, "")
     if (recipe.stability !== undefined) lines.push(`stability ${recipe.stability.toFixed(2)}`, "")
-    lines.push(...renderCode(importLine(recipe.import)), "")
+    lines.push(...renderCode({ code: importLine(recipe.import) }), "")
     for (const extra of recipe.extraImports ?? []) {
-      lines.push(...renderCode(importLine(extra)), "")
+      lines.push(...renderCode({ code: importLine(extra) }), "")
     }
     lines.push("Shape:", "")
-    lines.push(...renderCode(recipe.usage), "")
+    lines.push(...renderCode({ code: recipe.usage }), "")
     if (recipe.blocks !== undefined && recipe.blocks.length > 0) {
       lines.push(`Blocks: ${recipe.blocks.map((block) => `\`${block}\``).join(", ")}` + "\n")
     }
@@ -336,10 +342,10 @@ export const renderRecipes = (view: RecipeView): string => {
   for (const recipe of view.parts) {
     lines.push(`### \`${recipe.name}\` — \`${recipe.path}\``, "")
     if (recipe.stability !== undefined) lines.push(`stability ${recipe.stability.toFixed(2)}`, "")
-    lines.push(...renderCode(importLine(recipe.import)), "")
+    lines.push(...renderCode({ code: importLine(recipe.import) }), "")
     if (recipe.usage !== "") {
       lines.push("Use:", "")
-      lines.push(...renderCode(recipe.usage), "")
+      lines.push(...renderCode({ code: recipe.usage }), "")
     }
     if (recipe.props !== undefined && recipe.props.length > 0) {
       lines.push(`Props: ${recipe.props.map((prop) => `\`${prop}\``).join(", ")}` + "\n")
