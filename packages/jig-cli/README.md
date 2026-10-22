@@ -95,8 +95,32 @@ jig baseline                 # accept the current findings into the baseline
 jig engines                  # what is configured, and whether it is on PATH
 jig menu                     # the cutlist stable shape and artifact files
 jig menu dialog              # the parts, features, and recipes that answer a concept
-jig init                     # write jig.config.json, an empty baseline, and the cookbook
+jig init                     # inspect the repo, then write the harness it can run
 ```
+
+## `jig init` reads before it writes
+
+A scaffold that writes the same four files everywhere is a template, not an
+onboarding. `init` inspects the repository first:
+
+- the package manager, from `packageManager` or the lockfile;
+- the oxlint gate the repo already runs, preferring a script that names a config
+  and a strict name (`lint:errors` over a broad advisory `lint`);
+- whether that config actually loads `@autotelic/plumb`, so the `plumb` engine
+  is not a misnamed oxlint;
+- whether `joggle` and `cutlist` are installed, and whether the repo has a
+  tsconfig or a `cutlist.config.json`;
+- the agent docs already present, which are left untouched.
+
+It enables only engines that can run, writes a starter `joggle.config.json` with
+`unavailable: "count"` when joggle is enabled, and defaults the gate to
+`touched-files`: existing debt is reported, not enforced, until someone touches
+it. `--gate all` opts into the repo-wide ratchet. The generated `JIG.md` and
+`ONBOARD.md` are specific to the profile, and the summary names what was kept,
+what was written, and the next two commands.
+
+Re-running is safe. It keeps existing files; `--force` rewrites the config and
+the two docs, but never the accepted baseline.
 
 ## Where it sits
 

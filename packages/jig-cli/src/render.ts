@@ -81,13 +81,18 @@ export const renderText = (run: HarnessRun, options: TextOptions = {}): string =
   const total = report.diagnostics.length
   const shown = limit > 0 ? report.diagnostics.slice(0, limit) : report.diagnostics
   const lines: Array<string> = [
-    total === 0
-      ? `nothing new — 0 finding(s) in ${report.files} file(s)`
-      : `${report.counts.error} error(s), ${report.counts.warn} warning(s), ${report.counts.info} notice(s) in ${report.files} file(s)`,
+    report.generators.length === 0
+      ? "no engines ran — this is not a clean run"
+      : total === 0
+        ? `nothing new — 0 finding(s) in ${report.files} file(s)`
+        : `${report.counts.error} error(s), ${report.counts.warn} warning(s), ${report.counts.info} notice(s) in ${report.files} file(s)`,
     "",
     "engines",
   ]
   for (const generator of report.generators) lines.push(engineLine(generator))
+  if (report.generators.length === 0) {
+    lines.push("  none configured — add an engine to jig.config.json, then run `jig engines`")
+  }
 
   if (total > 0) {
     lines.push("", "findings")
@@ -108,6 +113,17 @@ export const renderText = (run: HarnessRun, options: TextOptions = {}): string =
     lines.push(
       "",
       `gate — engine(s) could not run: ${gate.infrastructure.join(", ")} (exit ${EXIT.infrastructure})`,
+    )
+  }
+  if (
+    gate !== undefined &&
+    gate.scope === "touched-files" &&
+    gate.failing.length === 0 &&
+    total > 0
+  ) {
+    lines.push(
+      "",
+      `gate — touched-files: no finding in this change; ${total} existing finding(s) are reported, not enforced`,
     )
   }
   if (gate !== undefined && gate.failing.length > 0) {

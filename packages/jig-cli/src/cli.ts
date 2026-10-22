@@ -6,7 +6,7 @@ import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { accept, REPORT_FORMATS } from "@autotelic/protocol"
 import { emptyBaseline, readBaseline, writeBaseline } from "./baseline.ts"
 import { explainRule, lesson, promotion, renderLesson, renderPromotion } from "./commands.ts"
-import { defaultConfig, loadConfig } from "./config.ts"
+import { loadConfig } from "./config.ts"
 import { resolveEngineCommand } from "./engines.ts"
 import { EXIT, gateVerdict } from "./gate.ts"
 import { touchedFiles } from "./git.ts"
@@ -14,6 +14,7 @@ import { findMatches, readArtifact, renderMatches, renderMenuJson, renderSummary
 import { renderCodeClimate, renderJsonl, renderLsp, renderSarif } from "./projections.ts"
 import { renderGithub, renderJson, renderText } from "./render.ts"
 import { harnessRun } from "./run.ts"
+import { initialise, summaryFor } from "./init.ts"
 
 /** One line through Effect's Console, newline-normalized. */
 const write = (text: string): Effect.Effect<void> =>
@@ -59,7 +60,7 @@ const checkCommand = Command.make(
     ),
     limit: Flag.Int("limit").pipe(
       Flag.withDescription("Maximum findings to print in the text report. 0 prints all."),
-      Flag.withDefault(0),
+      Flag.withDefault(20),
     ),
   },
   (options) =>
@@ -163,78 +164,36 @@ const enginesCommand = Command.make("engines", { cwd: cwdFlag, config: configFla
   Command.withShortDescription("List configured engines."),
 )
 
-const COOKBOOK = `# JIG.md
-
-The agents you run here get the same findings a human's terminal does — one report,
-one vocabulary. Reach for these instead of re-deriving them:
-
-- \`jig check\` — run every engine, one oxlint-shaped report, fail on what is new.
-- \`jig baseline\` — accept the current findings; the ledger only shrinks after that.
-- \`jig menu\` — read the cutlist artifact: the stable shape, then \`jig menu <query>\` for
-  the import and shape of the part that answers it.
-
-Grounded rules come from the vocabulary \`cutlist\` builds (the UI catalog and menu);
-prefer the components the menu already lists over new ones.
-`
-
-const ONBOARD = `# ONBOARD.md
-
-The agent door. \`jig init\` wrote this file; edit it to say what this repo is.
-
-## What this repo enforces
-
-One command answers it: \`jig check\` runs every configured engine, merges them into one
-report, and fails only on what is new. The vocabulary the rules are written in comes from
-this repo's own config, not from a tool's defaults.
-
-## In this order
-
-1. \`jig.config.json\` — which engines run, and how a run is gated.
-2. \`.jig-baseline.json\` — what this repo has already accepted.
-3. \`JIG.md\` — the cookbook for agents working here.
-
-## Then
-
-\`\`\`sh
-jig check
-\`\`\`
-
-An engine that could not run appears as a **note**, and a run that replayed a cache says so.
-Neither is "clean": they are the difference between "this repo is fine" and "nobody looked".
-`
-
-const initCommand = Command.make("init", { cwd: cwdFlag }, (options) =>
-  Effect.gen(function* () {
-    const path = yield* Path.Path
-    const fs = yield* FileSystem.FileSystem
-    const root = path.resolve(Option.getOrUndefined(options.cwd) ?? process.cwd())
-
-    const config = path.resolve(root, "jig.config.json")
-    if (!(yield* Effect.orElseSucceed(fs.exists(config), () => false))) {
-      yield* fs.writeFileString(
-        config,
-        `${JSON.stringify({ $schema: "https://autotelic.dev/tackle/protocol/jig.config.json", ...defaultConfig }, null, 2)}\n`,
-      )
-    }
-    const baseline = path.resolve(root, defaultConfig.gate.baseline)
-    if (!(yield* Effect.orElseSucceed(fs.exists(baseline), () => false))) {
-      yield* writeBaseline(baseline, emptyBaseline)
-    }
-    const cookbook = path.resolve(root, defaultConfig.agent?.cookbook ?? "JIG.md")
-    if (!(yield* Effect.orElseSucceed(fs.exists(cookbook), () => false))) {
-      yield* fs.writeFileString(cookbook, COOKBOOK)
-    }
-    const onboarding = path.resolve(root, defaultConfig.agent?.onboarding ?? "ONBOARD.md")
-    if (!(yield* Effect.orElseSucceed(fs.exists(onboarding), () => false))) {
-      yield* fs.writeFileString(onboarding, ONBOARD)
-    }
-    yield* write(`jig: initialised ${root}`)
-  }),
+const initCommand = Command.make(
+  "init",
+  {
+    cwd: cwdFlag,
+    gate: Flag.Literals("gate", ["touched-files", "all"]).pipe(
+      Flag.withDescription(
+        "What fails a run: only the change in front of you (default), or every finding in the repo.",
+      ),
+      Flag.optional,
+    ),
+    force: Flag.Boolean("force").pipe(
+      Flag.withDescription("Rewrite jig.config.json, JIG.md and ONBOARD.md; never the baseline."),
+      Flag.withDefault(false),
+    ),
+  },
+  (options) =>
+    Effect.gen(function* () {
+      const path = yield* Path.Path
+      const root = path.resolve(Option.getOrUndefined(options.cwd) ?? process.cwd())
+      const result = yield* initialise(root, {
+        force: options.force,
+        gateMode: Option.getOrUndefined(options.gate),
+      })
+      yield* write(summaryFor(result))
+    }),
 ).pipe(
   Command.withDescription(
-    "Write jig.config.json, an empty baseline, the agent cookbook, and the onboarding prompt.",
+    "Inspect the repository and write the harness it should have: the engines it can run, a touched-files gate, a baseline, the cookbook, and the agent prompt.",
   ),
-  Command.withShortDescription("Scaffold the harness."),
+  Command.withShortDescription("Scaffold the harness for this repo."),
 )
 
 const writeFlag = Flag.Boolean("write").pipe(
