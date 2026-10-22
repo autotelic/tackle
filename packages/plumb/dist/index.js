@@ -48,6 +48,10 @@ import { noOptionalFunctionParametersRule } from "./rules/no-optional-function-p
 import { noSingleUsePrivateFunctionsRule } from "./rules/no-single-use-private-functions.js";
 import { noMutableEnvironmentCaptureRule } from "./rules/no-mutable-environment-capture.js";
 import { noSqlStringInterpolationRule } from "./rules/no-sql-string-interpolation.js";
+import { noAdapterInValuesRule } from "./rules/no-adapter-in-values.js";
+import { noNullableValueFieldRule } from "./rules/no-nullable-value-field.js";
+import { noRowCoercionRule } from "./rules/no-row-coercion.js";
+import { noStringInstantRule } from "./rules/no-string-instant.js";
 /** Generic Oxlint rules that reject low-evidence and low-signal implementation patterns. */
 const plumbPlugin = eslintCompatPlugin({
     meta: { name: "plumb" },
@@ -101,6 +105,10 @@ const plumbPlugin = eslintCompatPlugin({
         "no-single-use-private-functions": noSingleUsePrivateFunctionsRule,
         "no-mutable-environment-capture": noMutableEnvironmentCaptureRule,
         "no-sql-string-interpolation": noSqlStringInterpolationRule,
+        "no-adapter-in-values": noAdapterInValuesRule,
+        "no-nullable-value-field": noNullableValueFieldRule,
+        "no-row-coercion": noRowCoercionRule,
+        "no-string-instant": noStringInstantRule,
     },
 });
 export default plumbPlugin;
