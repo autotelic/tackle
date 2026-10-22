@@ -3,6 +3,7 @@ import { join } from "node:path"
 import { Effect, FileSystem, Option, Path, PlatformError } from "effect"
 import type { EngineRef, HarnessConfig } from "@autotelic/protocol"
 import { emptyBaseline, readBaseline, writeBaseline } from "./baseline.ts"
+import { loadConfig } from "./config.ts"
 import { resolveEngineCommand } from "./engines.ts"
 import { packageJsonOf } from "./package-json.ts"
 
@@ -50,6 +51,10 @@ export interface RepoProfile {
   readonly engines: ReadonlyArray<EngineRef>
   readonly notes: ReadonlyArray<string>
   readonly gateMode: "all" | "touched-files"
+  /** The paths the existing config names, so a re-run does not write a second ledger. */
+  readonly baseline: string
+  readonly cookbook: string
+  readonly onboarding: string
 }
 
 /** What `init` wrote and what it left alone. */
@@ -103,6 +108,8 @@ const jigCommandOf = (manager: PackageManager, local: boolean): string => {
 interface OxlintInvocation {
   readonly script: string
   readonly config: string | undefined
+  /** The script's own scope and flags, without the config or the output format. */
+  readonly args: ReadonlyArray<string>
 }
 
 /** The strictest oxlint script, preferring one that names a config and a gate. */
@@ -113,10 +120,29 @@ const oxlintScriptOf = (
   for (const [name, command] of Object.entries(scripts)) {
     if (!command.includes("oxlint") || command.includes("--fix")) continue
     const tokens = command.split(/\s+/u)
-    const index = tokens.findIndex((token) => token === "-c" || token === "--config")
-    const config = index >= 0 ? tokens[index + 1] : undefined
+    const start = tokens.findIndex((token) => token === "oxlint" || token.endsWith("/oxlint"))
+    if (start < 0) continue
+    const rest = tokens.slice(start + 1)
+    const index = rest.findIndex((token) => token === "-c" || token === "--config")
+    const config = index >= 0 ? rest[index + 1] : undefined
+    // Keep the script's own scope (`src`, `--ignore-pattern …`), but drop the
+    // config (jig passes it) and the format (jig asks for JSON).
+    const args: Array<string> = []
+    for (let cursor = 0; cursor < rest.length; cursor += 1) {
+      const token = rest[cursor]
+      if (token === "-c" || token === "--config") {
+        cursor += 1
+        continue
+      }
+      if (token === "--format" || token === "-f") {
+        cursor += 1
+        continue
+      }
+      if (token === "--fix") continue
+      if (token !== undefined) args.push(token)
+    }
     const score = (config === undefined ? 0 : 2) + (/error|gate|strict/iu.test(name) ? 2 : 0)
-    candidates.push({ script: name, config, score })
+    candidates.push({ script: name, config, args, score })
   }
   return Option.fromUndefinedOr(candidates.sort((left, right) => right.score - left.score)[0])
 }
@@ -220,6 +246,9 @@ export const inspectRepo = (
       fs.readDirectory(root),
       () => [],
     )
+    const configFile = path.join(root, "jig.config.json")
+    const hasConfig = yield* Effect.orElseSucceed(fs.exists(configFile), () => false)
+    const existing = hasConfig ? yield* loadConfig(configFile) : undefined
     const packageJson = yield* packageJsonOf(root)
     const packageManager = packageManagerOf(packageJson.packageManager, files)
     const scripts = packageJson.scripts
@@ -301,12 +330,17 @@ export const inspectRepo = (
           "plumb not enabled: " + lint.config + " does not load @autotelic/plumb in jsPlugins",
         )
       } else {
-        engines.push({
-          id: "plumb",
-          kind: "oxlint-plugin",
-          command: "oxlint",
-          config: lint.config,
-        })
+        engines.push(
+          script?.args === undefined || script.args.length === 0
+            ? { id: "plumb", kind: "oxlint-plugin", command: "oxlint", config: lint.config }
+            : {
+                id: "plumb",
+                kind: "oxlint-plugin",
+                command: "oxlint",
+                config: lint.config,
+                args: script.args,
+              },
+        )
         if (
           resolveEngineCommand({ root, command: "oxlint" }) === "oxlint" &&
           dependencies["oxlint"] === undefined
@@ -399,7 +433,10 @@ export const inspectRepo = (
       lint,
       engines,
       notes,
-      gateMode: options.gateMode ?? "touched-files",
+      gateMode: options.gateMode ?? existing?.gate.mode ?? "touched-files",
+      baseline: existing?.gate.baseline ?? ".jig-baseline.json",
+      cookbook: existing?.agent?.cookbook ?? "JIG.md",
+      onboarding: existing?.agent?.onboarding ?? "ONBOARD.md",
     }
   })
 
@@ -407,9 +444,9 @@ export const inspectRepo = (
 export const configFor = (profile: RepoProfile): HarnessConfig => ({
   $schema: "https://autotelic.dev/tackle/protocol/jig.config.json",
   engines: profile.engines,
-  gate: { mode: profile.gateMode, baseline: ".jig-baseline.json", failOn: "any-new" },
+  gate: { mode: profile.gateMode, baseline: profile.baseline, failOn: "any-new" },
   report: { format: "text", maxWarnings: -1 },
-  agent: { cookbook: "JIG.md", onboarding: "ONBOARD.md" },
+  agent: { cookbook: profile.cookbook, onboarding: profile.onboarding },
 })
 
 /** One line per engine, for the summary and the generated docs. */
@@ -449,7 +486,7 @@ ${profile.commands.length === 0 ? "" : "\n## The repo's own commands\n\n" + prof
 
 - engines: ${engineSummary(profile)}
 - gate: \`${profile.gateMode}\`, failing on \`any-new\` identity
-- baseline: \`.jig-baseline.json\`
+- baseline: \`${profile.baseline}\`
 ${profile.notes.length === 0 ? "" : "\nNotes:\n" + profile.notes.map((note) => "- " + note).join("\n") + "\n"}
 
 ${
@@ -545,7 +582,7 @@ export const summaryFor = (result: InitResult): string => {
     `  agent docs       ${profile.agentDocs.length === 0 ? "none found" : profile.agentDocs.join(", ") + " (left untouched)"}`,
     `  engines          ${engineSummary(profile)}`,
     `  gate             ${profile.gateMode}`,
-    `  baseline         ${result.accepted} accepted finding(s)`,
+    `  baseline         ${profile.baseline} (${result.accepted} accepted finding(s))`,
     `  wrote            ${result.written.length === 0 ? "nothing" : result.written.join(", ")}`,
     ...(result.kept.length === 0 ? [] : [`  kept             ${result.kept.join(", ")}`]),
     ...profile.notes.map((note) => `  note             ${note}`),
@@ -556,7 +593,7 @@ export const summaryFor = (result: InitResult): string => {
       : [
           `  1. ${profile.jig} engines     confirm each command resolves`,
           `  2. ${profile.jig} check --limit 20     census, then the first 20 findings`,
-          "  3. point your agent at ONBOARD.md",
+          `  3. point your agent at ${profile.onboarding}`,
         ]),
   ]
   return lines.join("\n")
@@ -617,18 +654,18 @@ export const initialise = (
       kept,
     })
     // The baseline is a reviewed ledger. Even `--force` does not replace it.
-    const baseline = path.join(root, ".jig-baseline.json")
+    const baseline = path.join(root, profile.baseline)
     if (yield* Effect.orElseSucceed(fs.exists(baseline), () => false)) {
-      kept.push(".jig-baseline.json")
+      kept.push(profile.baseline)
     } else {
       yield* writeBaseline(baseline, emptyBaseline)
-      written.push(".jig-baseline.json")
+      written.push(profile.baseline)
     }
     yield* writeIfAbsent({
       fs,
       path,
       root,
-      file: "JIG.md",
+      file: profile.cookbook,
       body: cookbookFor(profile),
       force,
       written,
@@ -638,7 +675,7 @@ export const initialise = (
       fs,
       path,
       root,
-      file: "ONBOARD.md",
+      file: profile.onboarding,
       body: onboardingFor(profile),
       force,
       written,

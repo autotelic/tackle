@@ -76,6 +76,7 @@ describe("inspectRepo", () => {
       expect(profile.agentDocs).toEqual(["AGENTS.md"])
       expect(profile.engines.map((engine) => engine.id)).toEqual(["plumb", "joggle"])
       expect(profile.engines[0]?.config).toBe(".oxlint-errors.json")
+      expect(profile.engines[0]?.args).toEqual(["."])
       expect(profile.gateMode).toBe("touched-files")
     } finally {
       rmSync(root, { recursive: true, force: true })
@@ -230,6 +231,37 @@ describe("initialise", () => {
     }
   })
 
+  it("writes the paths an existing config already names", async () => {
+    const root = project(
+      {
+        json: [
+          ["package.json", { scripts: { lint: "oxlint ." } }],
+          ["tsconfig.json", {}],
+          [".oxlintrc.json", OXLINT],
+          [
+            "jig.config.json",
+            {
+              engines: [{ id: "joggle", kind: "process", command: "joggle" }],
+              gate: { mode: "all", baseline: "accepted/ledger.json", failOn: "any-new" },
+              agent: { cookbook: "AGENT_JIG.md", onboarding: "AGENT_ONBOARD.md" },
+            },
+          ],
+        ],
+      },
+      ["oxlint", "joggle"],
+    )
+    try {
+      const result = await initialiseIn(root)
+      expect(result.kept).toContain("jig.config.json")
+      expect(result.written).toContain("accepted/ledger.json")
+      expect(result.written).toContain("AGENT_JIG.md")
+      expect(result.written).toContain("AGENT_ONBOARD.md")
+      expect(readFileSync(join(root, "AGENT_JIG.md"), "utf8")).toContain("accepted/ledger.json")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
   it("is idempotent, and --force never replaces the accepted baseline", async () => {
     const root = project(
       {
@@ -278,6 +310,9 @@ const profileFor = (gateMode: "all" | "touched-files") => ({
   engines: [],
   notes: [],
   gateMode,
+  baseline: ".jig-baseline.json",
+  cookbook: "JIG.md",
+  onboarding: "ONBOARD.md",
 })
 
 describe("rendering", () => {
