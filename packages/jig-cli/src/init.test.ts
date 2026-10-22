@@ -37,8 +37,10 @@ const project = (
 
 const inspect = (root: string) => run(inspectRepo(root).pipe(Effect.provide(NodeServices.layer)))
 
-const initialiseIn = (root: string, options: { readonly force?: boolean } = {}) =>
-  run(initialise(root, options).pipe(Effect.provide(NodeServices.layer)))
+const initialiseIn = (
+  root: string,
+  options: { readonly force?: boolean; readonly cutlist?: boolean } = {},
+) => run(initialise(root, options).pipe(Effect.provide(NodeServices.layer)))
 
 const OXLINT = {
   jsPlugins: [{ name: "plumb", specifier: "@autotelic/plumb" }],
@@ -137,6 +139,37 @@ describe("inspectRepo", () => {
     try {
       const profile = await inspect(root)
       expect(profile.engines.map((engine) => engine.id)).toEqual(["joggle", "cutlist"])
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it("drafts a cutlist config from a UI layout, and says cutlist is not enabled yet", async () => {
+    const root = project(
+      {
+        json: [
+          ["package.json", {}],
+          ["tsconfig.json", {}],
+        ],
+        text: [
+          ["src/components/ui/.keep", ""],
+          ["src/components/.keep", ""],
+          ["src/routes/.keep", ""],
+          ["tailwind.config.ts", "export default {}\n"],
+        ],
+      },
+      ["joggle", "cutlist"],
+    )
+    try {
+      const profile = await inspect(root)
+      expect(profile.cutlistDraft?.roots).toEqual(["src"])
+      expect(profile.cutlistDraft?.tiers).toEqual({
+        primitive: ["components/ui"],
+        shared: ["components"],
+        local: ["routes"],
+      })
+      expect(profile.cutlistDraft?.tokens.from).toBe("tailwind.config.ts")
+      expect(profile.notes.join("\n")).toContain("jig init --cutlist")
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
@@ -262,6 +295,34 @@ describe("initialise", () => {
     }
   })
 
+  it("writes the cutlist draft only when asked, and does not enable it before review", async () => {
+    const root = project(
+      {
+        json: [
+          ["package.json", {}],
+          ["tsconfig.json", {}],
+        ],
+        text: [
+          ["src/components/ui/.keep", ""],
+          ["src/routes/.keep", ""],
+          ["tailwind.config.ts", "export default {}\n"],
+        ],
+      },
+      ["joggle", "cutlist"],
+    )
+    try {
+      const result = await initialiseIn(root, { cutlist: true })
+      expect(result.cutlistConfig).toBe("written")
+      expect(result.written).toContain("cutlist.config.json")
+      const config = JSON.parse(readFileSync(join(root, "cutlist.config.json"), "utf8"))
+      expect(config.roots).toEqual(["src"])
+      const jig = JSON.parse(readFileSync(join(root, "jig.config.json"), "utf8"))
+      expect(jig.engines.map((engine: { id: string }) => engine.id)).not.toContain("cutlist")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
   it("is idempotent, and --force never replaces the accepted baseline", async () => {
     const root = project(
       {
@@ -313,6 +374,7 @@ const profileFor = (gateMode: "all" | "touched-files") => ({
   baseline: ".jig-baseline.json",
   cookbook: "JIG.md",
   onboarding: "ONBOARD.md",
+  cutlistDraft: undefined,
 })
 
 describe("rendering", () => {

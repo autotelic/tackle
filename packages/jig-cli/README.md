@@ -119,6 +119,14 @@ it. `--gate all` opts into the repo-wide ratchet. The generated `JIG.md` and
 `ONBOARD.md` are specific to the profile, and the summary names what was kept,
 what was written, and the next two commands.
 
+Cutlist is opt-in because its config is the repository's vocabulary, not a
+generic default. When the tree looks like a UI, `init` says so and nothing more.
+`jig init --cutlist` drafts `cutlist.config.json` from the detected roots
+(components, routes, tailwind/theme source, tsconfig path aliases), then asks the
+operator to review it, run `cutlist build`, commit the catalog, and re-run
+`init --force` to enable the engine. A draft is never enabled before someone has
+looked at the vocabulary it inferred.
+
 Re-running is safe. It keeps existing files; `--force` rewrites the config and
 the two docs, but never the accepted baseline.
 

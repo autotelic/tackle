@@ -178,6 +178,12 @@ const initCommand = Command.make(
       Flag.withDescription("Rewrite jig.config.json, JIG.md and ONBOARD.md; never the baseline."),
       Flag.withDefault(false),
     ),
+    cutlist: Flag.Boolean("cutlist").pipe(
+      Flag.withDescription(
+        "Draft cutlist.config.json from detected UI roots. Review it, run `cutlist build`, then re-run init --force to enable the engine.",
+      ),
+      Flag.withDefault(false),
+    ),
   },
   (options) =>
     Effect.gen(function* () {
@@ -186,6 +192,7 @@ const initCommand = Command.make(
       const result = yield* initialise(root, {
         force: options.force,
         gateMode: Option.getOrUndefined(options.gate),
+        cutlist: options.cutlist,
       })
       yield* write(summaryFor(result))
     }),

@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs"
 import { join } from "node:path"
 import { Effect, FileSystem, Option, Path, PlatformError } from "effect"
-import type { EngineRef, HarnessConfig } from "@autotelic/protocol"
+import type { CutlistConfig, EngineRef, HarnessConfig } from "@autotelic/protocol"
 import { emptyBaseline, readBaseline, writeBaseline } from "./baseline.ts"
 import { loadConfig } from "./config.ts"
 import { resolveEngineCommand } from "./engines.ts"
@@ -55,6 +55,8 @@ export interface RepoProfile {
   readonly baseline: string
   readonly cookbook: string
   readonly onboarding: string
+  /** A cutlist config inferred from the tree, when this looks like a UI. */
+  readonly cutlistDraft: CutlistConfig | undefined
 }
 
 /** What `init` wrote and what it left alone. */
@@ -63,6 +65,7 @@ export interface InitResult {
   readonly written: ReadonlyArray<string>
   readonly kept: ReadonlyArray<string>
   readonly joggleConfig: "kept" | "written" | "absent"
+  readonly cutlistConfig: "kept" | "written" | "absent"
   /** Findings already accepted in the baseline, when one was kept. */
   readonly accepted: number
 }
@@ -228,6 +231,166 @@ const repositorySummaryOf = (input: {
     return input.fallback === undefined ? "" : input.fallback
   })
 
+/* -------------------------------------------------------------------------- */
+/* Cutlist                                                                     */
+/* -------------------------------------------------------------------------- */
+
+/** Directories a UI scan never descends into. */
+const NOT_UI = new Set([
+  ".git",
+  ".next",
+  ".turbo",
+  ".cache",
+  "build",
+  "coverage",
+  "dist",
+  "node_modules",
+  "out",
+  "repos",
+  "tools",
+])
+
+/** Whether a directory exists. */
+const existsAt = (input: {
+  readonly fs: FileSystem.FileSystem
+  readonly path: Path.Path
+  readonly root: string
+  readonly relative: string
+}): Effect.Effect<boolean> =>
+  Effect.orElseSucceed(input.fs.exists(input.path.join(input.root, input.relative)), () => false)
+
+/** The directories that look like UI roots: one holding `components` or `routes`. */
+const uiRootsOf = (
+  fs: FileSystem.FileSystem,
+  path: Path.Path,
+  root: string,
+): Effect.Effect<ReadonlyArray<string>> =>
+  Effect.gen(function* () {
+    const found: Array<string> = []
+    const walk = (relative: string, depth: number): Effect.Effect<void> =>
+      Effect.gen(function* () {
+        if (found.length >= 8 || depth > 4) return
+        const entries: ReadonlyArray<string> = yield* Effect.orElseSucceed(
+          fs.readDirectory(relative === "" ? root : path.join(root, relative)),
+          () => [],
+        )
+        // `routes` alone is an API: a server router has routes and no components.
+        // A UI root is the one that owns components.
+        if (entries.includes("components")) {
+          found.push(relative === "" ? "." : relative)
+          return
+        }
+        for (const entry of entries) {
+          if (NOT_UI.has(entry)) continue
+          const child = relative === "" ? entry : relative + "/" + entry
+          const directory = yield* Effect.orElseSucceed(
+            fs.stat(path.join(root, child)).pipe(Effect.map((info) => info.type === "Directory")),
+            () => false,
+          )
+          if (directory) yield* walk(child, depth + 1)
+        }
+      })
+    yield* walk("", 0)
+    return found
+  })
+
+/** The first file that exists among the candidates. */
+const firstOf = (
+  fs: FileSystem.FileSystem,
+  path: Path.Path,
+  root: string,
+  candidates: ReadonlyArray<string>,
+): Effect.Effect<string | undefined> =>
+  Effect.gen(function* () {
+    for (const candidate of candidates) {
+      if (yield* existsAt({ fs, path, root, relative: candidate })) return candidate
+    }
+    return undefined
+  })
+
+/** The alias targets a root's parent tsconfig declares, resolved to the repository. */
+const aliasesOf = (
+  fs: FileSystem.FileSystem,
+  path: Path.Path,
+  root: string,
+  roots: ReadonlyArray<string>,
+): Effect.Effect<Readonly<Record<string, ReadonlyArray<string>>>> =>
+  Effect.gen(function* () {
+    const normalise = (value: string): string => {
+      const parts: Array<string> = []
+      for (const part of value.split("/")) {
+        if (part === "" || part === ".") continue
+        if (part === "..") {
+          parts.pop()
+          continue
+        }
+        parts.push(part)
+      }
+      return parts.join("/")
+    }
+    const found = new Map<string, Array<string>>()
+    for (const entry of roots) {
+      const parent = entry.split("/").slice(0, -1).join("/")
+      const file = parent === "" ? "tsconfig.json" : parent + "/tsconfig.json"
+      const text = yield* Effect.orElseSucceed(fs.readFileString(path.join(root, file)), () => "")
+      for (const match of text.matchAll(/"([^"]+\/\*)"\s*:\s*\[\s*"([^"]+)"/gu)) {
+        const key = match[1]
+        const target = match[2]
+        if (key === undefined || target === undefined) continue
+        const resolved = normalise(parent === "" ? target : parent + "/" + target)
+        const list = found.get(key) ?? []
+        if (!list.includes(resolved)) list.push(resolved)
+        found.set(key, list)
+      }
+    }
+    return Object.fromEntries(found)
+  })
+
+/** A cutlist config inferred from common UI layouts, for a person to review. */
+const cutlistDraftOf = (
+  fs: FileSystem.FileSystem,
+  path: Path.Path,
+  root: string,
+): Effect.Effect<CutlistConfig | undefined> =>
+  Effect.gen(function* () {
+    const roots = yield* uiRootsOf(fs, path, root)
+    if (roots.length === 0) return undefined
+    const anyUnder = (suffix: string): Effect.Effect<boolean> =>
+      Effect.map(
+        Effect.forEach(roots, (entry) => existsAt({ fs, path, root, relative: entry + suffix })),
+        (values) => values.some(Boolean),
+      )
+    const primitive = (yield* anyUnder("/components/ui")) ? ["components/ui"] : []
+    const shared = (yield* anyUnder("/components")) ? ["components"] : []
+    const local = (yield* anyUnder("/routes")) ? ["routes"] : []
+    const under = (directory: string, file: string): string =>
+      directory === "" ? file : directory + "/" + file
+    const tokenCandidates: Array<string> = []
+    for (const entry of roots) {
+      const parent = entry.split("/").slice(0, -1).join("/")
+      for (const directory of [entry, parent]) {
+        for (const name of ["tailwind.config.ts", "tailwind.config.js", "tailwind.config.mjs"]) {
+          tokenCandidates.push(under(directory, name))
+        }
+      }
+      for (const name of ["tailwind.css", "app.css", "styles/app.css", "styles/tailwind.css"]) {
+        tokenCandidates.push(under(entry, name))
+      }
+    }
+    tokenCandidates.push("tailwind.config.ts", "tailwind.config.js")
+    const tokens = yield* firstOf(fs, path, root, tokenCandidates)
+    const from = tokens ?? "tailwind.config.ts"
+    const alias = yield* aliasesOf(fs, path, root, roots)
+    const draft: CutlistConfig = {
+      $schema: "https://autotelic.dev/tackle/protocol/cutlist.config.json",
+      roots,
+      tiers: { primitive, shared, local },
+      tokens: from.endsWith(".css") ? { from, vars: from } : { from },
+      ownership: { routeOwner: "first-segment", transitive: false },
+    }
+    return Object.keys(alias).length === 0 ? draft : { ...draft, alias }
+  })
+
 /**
  * Read the repository, then decide what is worth enabling.
  *
@@ -275,6 +438,7 @@ export const inspectRepo = (
       fs.exists(path.join(root, ".github", "workflows")),
       () => false,
     )
+    const cutlistDraft = yield* cutlistDraftOf(fs, path, root)
     const summary = yield* repositorySummaryOf({
       fs,
       path,
@@ -414,6 +578,12 @@ export const inspectRepo = (
           )
         }
       }
+    } else if (cutlistDraft !== undefined) {
+      notes.push(
+        "cutlist not enabled: no cutlist.config.json, though this looks like a UI (" +
+          cutlistDraft.roots.join(", ") +
+          "); run `jig init --cutlist` to draft one",
+      )
     }
 
     return {
@@ -440,6 +610,7 @@ export const inspectRepo = (
       baseline: existing?.gate.baseline ?? ".jig-baseline.json",
       cookbook: existing?.agent?.cookbook ?? "JIG.md",
       onboarding: existing?.agent?.onboarding ?? "ONBOARD.md",
+      cutlistDraft,
     }
   })
 
@@ -586,6 +757,7 @@ export const summaryFor = (result: InitResult): string => {
     `  engines          ${engineSummary(profile)}`,
     `  gate             ${profile.gateMode}`,
     `  baseline         ${profile.baseline} (${result.accepted} accepted finding(s))`,
+    `  cutlist          ${result.cutlistConfig === "written" ? "draft written — review, build, then re-run init --force" : result.cutlistConfig}`,
     `  wrote            ${result.written.length === 0 ? "nothing" : result.written.join(", ")}`,
     ...(result.kept.length === 0 ? [] : [`  kept             ${result.kept.join(", ")}`]),
     ...profile.notes.map((note) => `  note             ${note}`),
@@ -596,7 +768,12 @@ export const summaryFor = (result: InitResult): string => {
       : [
           `  1. ${profile.jig} engines     confirm each command resolves`,
           `  2. ${profile.jig} check --limit 20     census, then the first 20 findings`,
-          `  3. point your agent at ${profile.onboarding}`,
+          ...(result.cutlistConfig === "written"
+            ? [
+                "  3. cutlist build     review the catalog, commit it, then re-run jig init --force",
+                `  4. point your agent at ${profile.onboarding}`,
+              ]
+            : [`  3. point your agent at ${profile.onboarding}`]),
         ]),
   ]
   return lines.join("\n")
@@ -636,12 +813,13 @@ export const initialise = (
   options: {
     readonly force?: boolean | undefined
     readonly gateMode?: "all" | "touched-files" | undefined
+    readonly cutlist?: boolean | undefined
   } = {},
 ): Effect.Effect<InitResult, PlatformError.PlatformError, FileSystem.FileSystem | Path.Path> =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
-    const profile = yield* inspectRepo(root, { gateMode: options.gateMode })
+    let profile = yield* inspectRepo(root, { gateMode: options.gateMode })
     const written: Array<string> = []
     const kept: Array<string> = []
     const force = options.force === true
@@ -656,6 +834,26 @@ export const initialise = (
       written,
       kept,
     })
+    let cutlistConfig: InitResult["cutlistConfig"] = "absent"
+    if (profile.cutlistDraft !== undefined) {
+      const target = path.join(root, "cutlist.config.json")
+      if (yield* Effect.orElseSucceed(fs.exists(target), () => false)) {
+        cutlistConfig = "kept"
+        kept.push("cutlist.config.json")
+      } else if (options.cutlist === true) {
+        yield* fs.writeFileString(target, `${JSON.stringify(profile.cutlistDraft, null, 2)}\n`)
+        cutlistConfig = "written"
+        written.push("cutlist.config.json")
+        profile = {
+          ...profile,
+          notes: [
+            ...profile.notes.filter((note) => !note.startsWith("cutlist not enabled")),
+            "cutlist draft written: review cutlist.config.json, run `cutlist build`, then re-run `jig init --force` to enable it",
+          ],
+        }
+      }
+    }
+
     // The baseline is a reviewed ledger. Even `--force` does not replace it.
     const baseline = path.join(root, profile.baseline)
     if (yield* Effect.orElseSucceed(fs.exists(baseline), () => false)) {
@@ -711,5 +909,5 @@ export const initialise = (
       }
     }
 
-    return { profile, written, kept, joggleConfig, accepted }
+    return { profile, written, kept, joggleConfig, cutlistConfig, accepted }
   })
