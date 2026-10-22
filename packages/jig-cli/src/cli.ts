@@ -14,7 +14,7 @@ import { findMatches, readArtifact, renderMatches, renderMenuJson, renderSummary
 import { renderCodeClimate, renderJsonl, renderLsp, renderSarif } from "./projections.ts"
 import { renderGithub, renderJson, renderText } from "./render.ts"
 import { harnessRun } from "./run.ts"
-import { initialise, summaryFor } from "./init.ts"
+import { initialise, onboardingFor, summaryFor } from "./init.ts"
 
 /** One line through Effect's Console, newline-normalized. */
 const write = (text: string): Effect.Effect<void> =>
@@ -184,6 +184,10 @@ const initCommand = Command.make(
       ),
       Flag.withDefault(false),
     ),
+    print: Flag.Boolean("print").pipe(
+      Flag.withDescription("Print the plan and the agent prompt without writing anything."),
+      Flag.withDefault(false),
+    ),
   },
   (options) =>
     Effect.gen(function* () {
@@ -193,14 +197,31 @@ const initCommand = Command.make(
         force: options.force,
         gateMode: Option.getOrUndefined(options.gate),
         cutlist: options.cutlist,
+        dryRun: options.print,
       })
       yield* write(summaryFor(result))
+      if (options.print) yield* write(`\n${onboardingFor(result.profile)}`)
     }),
 ).pipe(
   Command.withDescription(
     "Inspect the repository and write the harness it should have: the engines it can run, a touched-files gate, a baseline, the cookbook, and the agent prompt.",
   ),
   Command.withShortDescription("Scaffold the harness for this repo."),
+)
+
+const onboardCommand = Command.make("onboard", { cwd: cwdFlag }, (options) =>
+  Effect.gen(function* () {
+    const path = yield* Path.Path
+    const root = path.resolve(Option.getOrUndefined(options.cwd) ?? process.cwd())
+    const result = yield* initialise(root, { dryRun: true })
+    yield* write(summaryFor(result))
+    yield* write(`\n${onboardingFor(result.profile)}`)
+  }),
+).pipe(
+  Command.withDescription(
+    "Print the agent prompt that sets jig up here, without writing anything. The prompt names the first command and where to stop and ask.",
+  ),
+  Command.withShortDescription("Print the setup prompt for an agent."),
 )
 
 const writeFlag = Flag.Boolean("write").pipe(
@@ -357,6 +378,7 @@ const cli = Command.make("jig").pipe(
     enginesCommand,
     menuCommand,
     initCommand,
+    onboardCommand,
     explainCommand,
     promoteCommand,
     learnCommand,

@@ -167,6 +167,33 @@ export default Plugin.define({
       })
 
       editor.add({
+        name: "onboard",
+        description:
+          "Read the setup plan and agent prompt for jig in this repository without writing anything. It names the package manager, the engines that can run, the paths init would write, and where to stop and ask.",
+        input: {
+          type: "object",
+          properties: {
+            cwd: {
+              type: "string",
+              description:
+                "Repository to inspect, relative to this location. Default: this location's directory.",
+            },
+          },
+          additionalProperties: false,
+        },
+        options: { namespace: "jig", codemode: true },
+        execute: async (input, context) => {
+          const options = (input ?? {}) as { readonly cwd?: unknown }
+          const directory = directoryFor(options.cwd, root)
+          const outcome = await runJig(directory, ["onboard", "--cwd", directory], context.signal)
+          return {
+            content: outcome.output === "" ? `jig onboard exited ${outcome.code}` : outcome.output,
+            metadata: { exitCode: outcome.code, cwd: directory },
+          }
+        },
+      })
+
+      editor.add({
         name: "menu",
         description:
           "Read the cutlist artifact for this repository: the stable shape, or the parts/features/recipes that answer a query. Use this before building UI; it reads the generated menu, patterns, and recipes.",

@@ -59,7 +59,8 @@ rides out through every projection below.
 `jig check` enforces the tree; `jig menu` reads the cutlist artifact without importing
 cutlist. No query prints the stable shape and the files; `jig menu dialog` ranks the parts,
 features, and recipes that answer a concept and returns the import and next shape. The pi
-extension exposes the same command as `jig_menu`, the OpenCode plugin as `jig.menu`. This is
+extension exposes the same command as `jig_menu`, the OpenCode plugin as `jig.menu`, and both
+expose the setup prompt as `jig_onboard` / `jig.onboard`. This is
 how the menu reaches an agent without turning the agent into a second renderer: cutlist writes
 the artifact, jig reads it at the seam.
 
@@ -96,6 +97,8 @@ jig engines                  # what is configured, and whether it is on PATH
 jig menu                     # the cutlist stable shape and artifact files
 jig menu dialog              # the parts, features, and recipes that answer a concept
 jig init                     # inspect the repo, then write the harness it can run
+jig init --print             # the same plan and agent prompt, writing nothing
+jig onboard                  # just the setup prompt for an agent
 ```
 
 ## `jig init` reads before it writes
@@ -118,6 +121,12 @@ It enables only engines that can run, writes a starter `joggle.config.json` with
 it. `--gate all` opts into the repo-wide ratchet. The generated `JIG.md` and
 `ONBOARD.md` are specific to the profile, and the summary names what was kept,
 what was written, and the next two commands.
+
+`jig init --print` and `jig onboard` are the agent door: they run the same
+inspection but write nothing, and print the prompt with the plan's engines,
+notes, and stop-and-ask points. The pi tool `jig_onboard` and the OpenCode tool
+`jig.onboard` are the same command, so an agent can read the plan before anyone
+approves a write.
 
 Cutlist is opt-in because its config is the repository's vocabulary, not a
 generic default. When the tree looks like a UI, `init` says so and nothing more.

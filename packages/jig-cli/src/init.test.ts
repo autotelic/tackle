@@ -1,5 +1,5 @@
 import fc from "fast-check"
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
@@ -39,7 +39,7 @@ const inspect = (root: string) => run(inspectRepo(root).pipe(Effect.provide(Node
 
 const initialiseIn = (
   root: string,
-  options: { readonly force?: boolean; readonly cutlist?: boolean } = {},
+  options: { readonly force?: boolean; readonly cutlist?: boolean; readonly dryRun?: boolean } = {},
 ) => run(initialise(root, options).pipe(Effect.provide(NodeServices.layer)))
 
 const OXLINT = {
@@ -323,6 +323,36 @@ describe("initialise", () => {
     }
   })
 
+  it("prints a plan without writing when dryRun is set", async () => {
+    const root = project(
+      {
+        json: [
+          ["package.json", {}],
+          ["tsconfig.json", {}],
+        ],
+        text: [
+          ["src/components/ui/.keep", ""],
+          ["tailwind.config.ts", "export default {}\n"],
+        ],
+      },
+      ["joggle", "cutlist"],
+    )
+    try {
+      const result = await initialiseIn(root, { cutlist: true, dryRun: true })
+      expect(result.dryRun).toBe(true)
+      expect(result.written).toContain("jig.config.json")
+      expect(result.written).toContain("cutlist.config.json")
+      expect(readdirSync(root).sort((left, right) => left.localeCompare(right))).not.toContain(
+        "jig.config.json",
+      )
+      expect(readdirSync(root).sort((left, right) => left.localeCompare(right))).not.toContain(
+        "cutlist.config.json",
+      )
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
   it("is idempotent, and --force never replaces the accepted baseline", async () => {
     const root = project(
       {
@@ -385,6 +415,10 @@ describe("rendering", () => {
         expect(configFor(profileFor(gateMode)).gate.mode).toBe(gateMode)
       }),
     )
+  })
+
+  it("tells an agent to run init when the repo is not configured yet", () => {
+    expect(onboardingFor(profileFor("touched-files"))).toContain("not initialised yet")
   })
 
   it("names the engines, the gate, and the first command in the docs", async () => {

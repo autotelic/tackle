@@ -37,7 +37,7 @@ export interface RepoProfile {
   /** The command that runs jig: `pnpm jig` when it is a local dependency, else `jig`. */
   readonly jig: string
   /** Facts about the repo that change what the docs say. A set, not flags that can disagree. */
-  readonly facts: ReadonlySet<"ci" | "live-judgement" | "typescript" | "workspaces">
+  readonly facts: ReadonlySet<"ci" | "configured" | "live-judgement" | "typescript" | "workspaces">
   readonly agentDocs: ReadonlyArray<string>
   /** A short, factual sentence about the repository, from AGENTS.md, README or package.json. */
   readonly summary: string
@@ -66,6 +66,8 @@ export interface InitResult {
   readonly kept: ReadonlyArray<string>
   readonly joggleConfig: "kept" | "written" | "absent"
   readonly cutlistConfig: "kept" | "written" | "absent"
+  /** True when nothing was written: this is the plan an operator or agent reviews. */
+  readonly dryRun: boolean
   /** Findings already accepted in the baseline, when one was kept. */
   readonly accepted: number
 }
@@ -599,6 +601,7 @@ export const inspectRepo = (
         ...(typescript ? (["typescript"] as const) : []),
         ...(liveJudgement ? (["live-judgement"] as const) : []),
         ...(ci ? (["ci"] as const) : []),
+        ...(hasConfig ? (["configured"] as const) : []),
       ]),
       agentDocs,
       summary,
@@ -698,6 +701,7 @@ export const onboardingFor = (profile: RepoProfile): string => {
 You are working in ${profile.name}. This repository uses \`jig\` as its conformance
 harness. Read this file, then \`JIG.md\`, then start.
 ${profile.summary === "" ? "" : "\n" + profile.summary + "\n"}
+${profile.facts.has("configured") ? "" : "\nThis repository is not initialised yet. Run `" + profile.jig + " init` (or `" + profile.jig + " init --cutlist`) to apply the plan before continuing.\n"}
 
 ## Do this first
 
@@ -746,8 +750,10 @@ ${profile.summary === "" ? "" : "\n" + profile.summary + "\n"}
 /** The human summary `init` prints, before the next steps. */
 export const summaryFor = (result: InitResult): string => {
   const { profile } = result
+  const action = result.dryRun ? "would write" : "wrote"
+  const keptAction = result.dryRun ? "would keep" : "kept"
   const lines = [
-    `jig: initialised ${profile.root}`,
+    `${result.dryRun ? "jig: plan for" : "jig: initialised"} ${profile.root}`,
     "",
     `  package manager  ${profile.packageManager}`,
     `  workspaces       ${profile.facts.has("workspaces") ? "yes" : "no"}`,
@@ -758,23 +764,30 @@ export const summaryFor = (result: InitResult): string => {
     `  gate             ${profile.gateMode}`,
     `  baseline         ${profile.baseline} (${result.accepted} accepted finding(s))`,
     `  cutlist          ${result.cutlistConfig === "written" ? "draft written — review, build, then re-run init --force" : result.cutlistConfig}`,
-    `  wrote            ${result.written.length === 0 ? "nothing" : result.written.join(", ")}`,
-    ...(result.kept.length === 0 ? [] : [`  kept             ${result.kept.join(", ")}`]),
+    `  ${action.padEnd(16)} ${result.written.length === 0 ? "nothing" : result.written.join(", ")}`,
+    ...(result.kept.length === 0 ? [] : [`  ${keptAction.padEnd(16)} ${result.kept.join(", ")}`]),
     ...profile.notes.map((note) => `  note             ${note}`),
     "",
     "Next:",
-    ...(profile.engines.length === 0
-      ? ["  1. install at least one engine (see the notes above)", "  2. re-run jig init --force"]
-      : [
-          `  1. ${profile.jig} engines     confirm each command resolves`,
-          `  2. ${profile.jig} check --limit 20     census, then the first 20 findings`,
-          ...(result.cutlistConfig === "written"
-            ? [
-                "  3. cutlist build     review the catalog, commit it, then re-run jig init --force",
-                `  4. point your agent at ${profile.onboarding}`,
-              ]
-            : [`  3. point your agent at ${profile.onboarding}`]),
-        ]),
+    ...(result.dryRun
+      ? [
+          `  1. ${profile.jig} init${result.cutlistConfig === "written" ? " --cutlist" : ""}     write this plan`,
+          `  2. ${profile.jig} engines     confirm each command resolves`,
+          `  3. ${profile.jig} check --limit 20     census, then the first 20 findings`,
+          `  4. point your agent at ${profile.onboarding}`,
+        ]
+      : profile.engines.length === 0
+        ? ["  1. install at least one engine (see the notes above)", "  2. re-run jig init --force"]
+        : [
+            `  1. ${profile.jig} engines     confirm each command resolves`,
+            `  2. ${profile.jig} check --limit 20     census, then the first 20 findings`,
+            ...(result.cutlistConfig === "written"
+              ? [
+                  "  3. cutlist build     review the catalog, commit it, then re-run jig init --force",
+                  `  4. point your agent at ${profile.onboarding}`,
+                ]
+              : [`  3. point your agent at ${profile.onboarding}`]),
+          ]),
   ]
   return lines.join("\n")
 }
@@ -787,6 +800,7 @@ const writeIfAbsent = (input: {
   readonly file: string
   readonly body: string
   readonly force: boolean
+  readonly write: boolean
   readonly written: Array<string>
   readonly kept: Array<string>
 }) =>
@@ -797,7 +811,7 @@ const writeIfAbsent = (input: {
       input.kept.push(input.file)
       return
     }
-    yield* input.fs.writeFileString(target, input.body)
+    if (input.write) yield* input.fs.writeFileString(target, input.body)
     input.written.push(input.file)
   })
 
@@ -814,6 +828,7 @@ export const initialise = (
     readonly force?: boolean | undefined
     readonly gateMode?: "all" | "touched-files" | undefined
     readonly cutlist?: boolean | undefined
+    readonly dryRun?: boolean | undefined
   } = {},
 ): Effect.Effect<InitResult, PlatformError.PlatformError, FileSystem.FileSystem | Path.Path> =>
   Effect.gen(function* () {
@@ -823,6 +838,7 @@ export const initialise = (
     const written: Array<string> = []
     const kept: Array<string> = []
     const force = options.force === true
+    const dryRun = options.dryRun === true
 
     yield* writeIfAbsent({
       fs,
@@ -831,6 +847,7 @@ export const initialise = (
       file: "jig.config.json",
       body: `${JSON.stringify(configFor(profile), null, 2)}\n`,
       force,
+      write: !dryRun,
       written,
       kept,
     })
@@ -841,7 +858,9 @@ export const initialise = (
         cutlistConfig = "kept"
         kept.push("cutlist.config.json")
       } else if (options.cutlist === true) {
-        yield* fs.writeFileString(target, `${JSON.stringify(profile.cutlistDraft, null, 2)}\n`)
+        if (!dryRun) {
+          yield* fs.writeFileString(target, `${JSON.stringify(profile.cutlistDraft, null, 2)}\n`)
+        }
         cutlistConfig = "written"
         written.push("cutlist.config.json")
         profile = {
@@ -859,7 +878,7 @@ export const initialise = (
     if (yield* Effect.orElseSucceed(fs.exists(baseline), () => false)) {
       kept.push(profile.baseline)
     } else {
-      yield* writeBaseline(baseline, emptyBaseline)
+      if (!dryRun) yield* writeBaseline(baseline, emptyBaseline)
       written.push(profile.baseline)
     }
     yield* writeIfAbsent({
@@ -869,6 +888,7 @@ export const initialise = (
       file: profile.cookbook,
       body: cookbookFor(profile),
       force,
+      write: !dryRun,
       written,
       kept,
     })
@@ -879,6 +899,7 @@ export const initialise = (
       file: profile.onboarding,
       body: onboardingFor(profile),
       force,
+      write: !dryRun,
       written,
       kept,
     })
@@ -903,11 +924,13 @@ export const initialise = (
           unavailable: "count" as const,
           evidence: profile.summary === "" ? undefined : { repository: profile.summary },
         }
-        yield* fs.writeFileString(target, `${JSON.stringify(starter, null, 2)}\n`)
+        if (!dryRun) {
+          yield* fs.writeFileString(target, `${JSON.stringify(starter, null, 2)}\n`)
+        }
         joggleConfig = "written"
         written.push("joggle.config.json")
       }
     }
 
-    return { profile, written, kept, joggleConfig, cutlistConfig, accepted }
+    return { profile, written, kept, joggleConfig, cutlistConfig, dryRun, accepted }
   })

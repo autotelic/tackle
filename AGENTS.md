@@ -106,10 +106,11 @@ Two, and neither re-implements anything:
   `@opencode/plugin` is an optional peer.
 
 Both shell out to the `jig` binary and hand back what a human's terminal shows. Both expose
-`check`, `engines`, and `menu`: `jig_menu` / `jig.menu` returns the cutlist artifact's stable
-shape or the parts and recipes that answer a query, so an agent can find the right component
-without opening the generated menu. If you find yourself rendering a report a second time in
-either one, the report belongs in `jig`'s renderers instead.
+`check`, `engines`, `menu`, and `onboard`: `jig_menu` / `jig.menu` returns the cutlist artifact's
+stable shape or the parts and recipes that answer a query, so an agent can find the right
+component without opening the generated menu, and `jig_onboard` / `jig.onboard` returns the setup
+plan and prompt without writing anything. If you find yourself rendering a report a second time
+in either one, the report belongs in `jig`'s renderers instead.
 
 ## The exemplar is a client, not a fixture
 

@@ -7,6 +7,7 @@
  *
  *   jig_check     run every engine and return the findings
  *   jig_engines   list what is configured, and whether it is on PATH
+ *   jig_onboard   read the setup plan and prompt without writing anything
  *   /jig          run a check from the prompt line
  *
  * Like `joggle`'s extension this file is NOT typechecked by the package (tsconfig
@@ -192,6 +193,41 @@ export default function (pi: ExtensionAPI): void {
         return ok(text === "" ? "no engines configured" : text, { cwd: target })
       } catch (error) {
         return failed(`jig could not run: ${reason(error)}`, { command: "jig engines" })
+      }
+    },
+  })
+
+  pi.registerTool({
+    name: "jig_onboard",
+    label: "jig Onboard",
+    description:
+      "Read the setup plan and agent prompt for jig in this repository without writing anything. It names the package manager, the engines that can run, the paths init would write, and where to stop and ask. Run `jig init` (add `--cutlist` for a UI repo) only after a human approves the plan.",
+    promptSnippet: "Read the jig setup prompt before initialising",
+    promptGuidelines: [
+      "Use jig_onboard before changing jig.config.json: it writes nothing and shows the engines and paths the scan found.",
+      "After approval, run `jig init` (or `jig init --cutlist`) to apply the plan, then `jig_check`.",
+    ],
+    parameters: Type.Object({
+      cwd: Type.Optional(
+        Type.String({ description: "Repository to inspect. Default: pi's working directory." }),
+      ),
+    }),
+    async execute(
+      _toolCallId: string,
+      params: { readonly cwd?: string },
+      signal: AbortSignal | undefined,
+      _onUpdate: unknown,
+      ctx: ExtensionContext,
+    ): Promise<ToolResult> {
+      try {
+        const target = targetFor(params.cwd, ctx)
+        const result = await run(pi, target, ["onboard", "--cwd", target], signal)
+        const text = (result.stdout.trim() === "" ? result.stderr : result.stdout).trim()
+        if (result.code !== 0)
+          return failed(`jig onboard failed (exit ${result.code}): ${text}`, {})
+        return ok(text === "" ? "jig onboard printed nothing" : text, { cwd: target })
+      } catch (error) {
+        return failed(`jig could not run: ${reason(error)}`, { command: "jig onboard" })
       }
     },
   })
