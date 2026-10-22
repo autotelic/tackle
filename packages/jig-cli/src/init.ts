@@ -259,10 +259,14 @@ export const inspectRepo = (
         fs.exists(path.join(root, "node_modules", ".bin", "jig")),
         () => false,
       ))
-    const jig = jigCommandOf(
-      packageManager,
-      localJig || dependencies["@autotelic/jig-cli"] !== undefined,
-    )
+    const notes: Array<string> = []
+    const jigPinned = localJig || dependencies["@autotelic/jig-cli"] !== undefined
+    const jig = jigCommandOf(packageManager, jigPinned)
+    if (!jigPinned) {
+      notes.push(
+        "jig resolves from PATH; pin @autotelic/jig-cli as a devDependency so CI runs the same version",
+      )
+    }
     const agentDocs = ["AGENTS.md", "CLAUDE.md", ".cursorrules"].filter((file) =>
       files.includes(file),
     )
@@ -320,7 +324,6 @@ export const inspectRepo = (
     }))
 
     const engines: Array<EngineRef> = []
-    const notes: Array<string> = []
 
     if (lint.tool === "oxlint" && lint.config !== undefined) {
       if (!available({ root, command: "oxlint" })) {
@@ -480,7 +483,7 @@ ${profile.summary === "" ? "" : "\n" + profile.summary + "\n"}
 | \`${profile.jig} engines\` | what is configured, and whether each command resolves |
 | \`${profile.jig} baseline\` | accept the current findings; the ledger only shrinks after that |
 | \`${profile.jig} explain <rule>\` | everything jig knows about one rule, here, now |
-${profile.commands.length === 0 ? "" : "\n## The repo's own commands\n\n" + profile.commands.map((command) => "- `" + command.command + "` — the repo's " + command.name + " script").join("\n") + "\n"}
+${profile.engines.some((engine) => engine.id === "cutlist") ? "| `" + profile.jig + " menu` | the component catalog cutlist built |\n" : ""}${profile.commands.length === 0 ? "" : "\n## The repo's own commands\n\n" + profile.commands.map((command) => "- `" + command.command + "` — the repo's " + command.name + " script").join("\n") + "\n"}
 
 ## What runs
 
