@@ -308,6 +308,12 @@ export const layerOrder: ReadonlyArray<string> = [
 export const dutyVocabulary = {
   domain_logic:
     "A rule, invariant or calculation about the business: something that would be true of the company even if this software were rewritten.",
+  recording:
+    "Freezing a decision with its instant, its authority and the inputs it was made from. `orchestration` is the nearest label and it is wrong: recording owns the rule that the record may not be rewritten. `infrastructure` is wrong for the same reason it is right for a query: the database is where it lands, not what it is.",
+  derivation:
+    "Materialising a view of records for cheap reads, joins and aggregates. `mechanical` is the nearest label and it says no business meaning, which is the opposite of the problem: a stale projection is a business claim made from stored data.",
+  reconciliation:
+    "Restoring an invariant that spans rows and time. `domain_logic` is nearly right and is exactly what makes it dangerous: it invites the repair to be read as a pure function, when the thing being repaired is stored data.",
   request_validation:
     "A rule about what the endpoint will ACCEPT: which fields are required, which values are in range, which options are mutually exclusive, and what earns a 400. It constrains the transport contract, not the business, and the same endpoint's UI may hold a different set of rules.",
   input_adaptation:

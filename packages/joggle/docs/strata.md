@@ -122,9 +122,16 @@ Do not add these again. Read them first, then extend or compose.
 | `plumb/no-nondeterministic-core` | rules | a rule that would not be true of the company on Tuesday |
 
 The gaps below are therefore *five* judged rules and *four* deterministic ones —
-not a suite. Each
-one is written to the anatomy in `rule-anatomy`, keeps its threshold in `policy.ts`,
-and has an ignore it should expect.
+not a suite. Each one is written to the anatomy in `rule-anatomy`, keeps its
+threshold in `policy.ts`, and has an ignore it should expect.
+
+They are implemented. The deterministic halves below are structural on purpose:
+a query-builder call, an exported read, a field that admits absence. Which table
+is a record, which value is a projection and which check is an invariant are
+questions for the classifier, so none of these rules carries a hand-maintained
+list of words like `ledger` or `snapshot` — that list would decide the question
+in the one place least able to keep it current. The names travel in the evidence
+panel and the classifier reads them.
 
 ## Backlog: plumb
 
@@ -187,11 +194,12 @@ Judged, cross-file, one question per rule, each with a deterministic candidate h
 
 ### `joggle/fact-or-derivation`
 
-**Candidate.** A unit that writes a column computed from other columns — a refresh,
-a snapshot, a batch job — and a reader of that same column.
+**Candidate.** A query-builder call on a named table, and a unit that reads the
+same table.
 
-**Deterministic half.** The write, its target column, and the reader, from the
-import graph and the units' bodies.
+**Deterministic half.** The call, its method, its table and the reader. There is
+no list of "refresh" names: a job called `rebuildTotals` and a handler called
+`save` are the same shape, and the question decides which one recomputes.
 
 **Question.** Is this column a decision frozen at an instant, or a cheap
 recomputation of current data?
@@ -205,17 +213,19 @@ which is exactly the `declared-staleness` case below and should not be counted t
 
 ### `joggle/declared-staleness`
 
-**Candidate.** An exported read of a denormalised structure — a name matching
-`snapshot`, `summary`, `materialized`, `cache`, `totals` — or a structure whose
-columns repeat another table's.
+**Candidate.** An exported read of a named table, or a type whose fields repeat a
+table's columns.
 
-**Deterministic half.** Whether a staleness declaration exists near it (a policy
-constant, a refresh call, a TTL, a doc comment) and what it says.
+**Deterministic half.** The read and the field overlap. Whether a staleness
+declaration exists near it is a second question, asked with the same evidence —
+recognising a declaration by token would be the same hand-maintained vocabulary
+in another form.
 
-**Question.** May this data be stale?
+**Question.** May this data be stale, and does anything here say so?
 
-**Labels.** `allowed` · `must_be_current` · `not_a_projection`. An `allowed` with no
-declaration found is the finding: the answer lives in someone's head.
+**Labels.** `allowed` · `must_be_current` · `not_a_projection`, plus a Noul for
+whether the bound is declared. An `allowed` with no declaration is the finding:
+the answer lives in someone's head.
 
 **Expected ignore.** A projection whose staleness is declared in a scheduler the
 reader never imports. The ignore should name where it is declared, and that naming is
@@ -223,25 +233,27 @@ the documentation.
 
 ### `joggle/append-only-honoured`
 
-**Candidate.** A write to a structure whose name or role marks it as a record —
-`audit`, `run`, `snapshot`, `ledger`, `invoice`, `payment`, `history` — using
-`update`, `upsert`, or `delete`.
+**Candidate.** A query-builder call on a named table.
 
-**Deterministic half.** The write verb and the target, from the query builder call.
+**Deterministic half.** The table, the method and the caller, from the call site.
+The method is not classified into a write union first: whether `insert` extends a
+record and `update` rewrites it is part of the question, not a fact the rule
+pre-decides.
 
 **Question.** May this record be rewritten?
 
 **Labels.** `supersede_only` · `mutable` · `not_a_record`. A `supersede_only`
-reached by an `update` is the finding, and the move is **expand**: the record needs a
-supersession, not a correction.
+that changes an existing row is the finding, and the move is **expand**: the
+record needs a supersession, not a correction.
 
 **Expected ignore.** A status transition on a mutable work item that happens to be
 named like a record; the name was never a promise.
 
 ### `joggle/deviation-has-a-shape`
 
-**Candidate.** A type or table with a boolean flag that gates nullable siblings, or
-an override cluster — `*_override`, `*_original`, `*_reason`, `*_by`.
+**Candidate.** A type with a boolean field beside fields that admit absence, or a
+cluster of fields that can each be absent. The names travel in the panel; a suffix
+list does not decide that `_override` is a deviation and `ended_at` is not.
 
 **Question.** Is this a decision that contradicts a rule, or a state of the world?
 
@@ -252,9 +264,10 @@ deviation that decided not to be one.
 
 ### `joggle/invariant-has-a-reconciler`
 
-**Candidate.** An exported predicate or assertion over a set — `every`, `sum`,
-`balance`, `reconcile`, `assert`, `check` — that reads two or more tables or spans
-rows, in the values or rules stratum.
+**Candidate.** An exported function that reads stored rows and has enough body to
+be a check rather than a getter. A name like `sum`, `balance` or `reconcile` is a
+hint, not the filter: the check whose name nobody made memorable is the one this
+rule exists to find.
 
 **Question.** If stored data violates this, what restores it?
 
@@ -268,9 +281,8 @@ satisfied rather than suppressed — a deviation with an authority, again.
 
 ## Vocabulary debt
 
-Rules 5–9 need three duties, and `dutyVocabulary` has none of them today. Each
-addition should say why the nearest existing label is wrong, the way
-`moduleRoles.library_core` does:
+Rules 5–9 need three duties. `dutyVocabulary` now carries them; each says why the
+nearest existing label is wrong, the way `moduleRoles.library_core` does:
 
 - **`recording`** — freezes a decision with its instant and authority.
   `orchestration` is the nearest label and it is wrong: recording owns the *rule*

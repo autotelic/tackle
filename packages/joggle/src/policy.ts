@@ -26,7 +26,7 @@ export const policy = {
    * or evidence change, so verdicts produced by older questions are not replayed
    * against newer ones.
    */
-  decisionVersion: "2026-09-25",
+  decisionVersion: "2026-10-22",
 
   /**
    * The declared analysis version: a FALLBACK and an OVERRIDE, not the gate.
@@ -627,6 +627,25 @@ export const policy = {
    */
   unaccountedDrop: {
     nonDataReturns: ["void", "undefined", "null", "boolean", "bigint", "symbol", "never"],
+  },
+
+  /**
+   * The strata a domain migration moves through.
+   *
+   * Everything here is a SEARCH BOUND, never a word list. Which table is a
+   * record, which value is a projection and which function is an invariant are
+   * questions for the classifier; a hand-maintained vocabulary of `ledger`,
+   * `snapshot` and `reconcile` would decide those questions in code, in the
+   * place least able to keep them current. What is left is how many candidates
+   * one run may judge, and how much evidence one candidate may carry.
+   */
+  strata: {
+    /** Candidates one strata rule may judge in a run. */
+    maxCandidates: 200,
+    /** Fields two structures must share before their overlap is worth a question. */
+    minSharedFields: 3,
+    /** Tokens a function needs before a table read can be a check rather than a getter. */
+    minInvariantTokens: 20,
   },
 
   /** Files and directories the workspace scan never enters. */

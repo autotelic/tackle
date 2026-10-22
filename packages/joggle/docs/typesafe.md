@@ -180,10 +180,14 @@ second signal.
 - **`ask.ts` shows `resolved` without naming it.** The query is the user's, so
   the instructions cannot point at a field in advance. The field is in the state;
   a follow-up could add a fixed sentence naming it.
-- **`instructions` are strings.** The docs allow JSON structure in
+- **`instructions` are strings in most rules.** The docs allow JSON structure in
   `instructions` to separate the question from the data it refers to
-  (`primitives/advanced.md`). joggle joins strings and relies on backticked paths
-  inside them, which is the simpler form the docs also allow.
+  (`primitives/advanced.md`), and the five strata rules now use it: their
+  questions name `question`, `compare` and `focus`, and their criteria carry
+  `means` / `excludes` rather than a bare sentence. The older rules still join
+  strings and rely on backticked paths inside them, which is the simpler form
+  the docs also allow; converting one is a rule-local change, and it bumps
+  `decisionVersion` because the wording is part of the cache key.
 
 ## Sources
 

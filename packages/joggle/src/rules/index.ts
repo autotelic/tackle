@@ -29,6 +29,11 @@ import { schemaExcludesDomainValue } from "./schema-excludes-domain-value.ts"
 import { meaningSwitchedByFlag } from "./meaning-switched-by-flag.ts"
 import { unboundedDefaultRead } from "./unbounded-default-read.ts"
 import { inferredOverRecorded } from "./inferred-over-recorded.ts"
+import { appendOnlyHonoured } from "./append-only-honoured.ts"
+import { declaredStaleness } from "./declared-staleness.ts"
+import { deviationHasAConcept } from "./deviation-has-a-shape.ts"
+import { factOrDerivation } from "./fact-or-derivation.ts"
+import { invariantHasAReconciler } from "./invariant-has-a-reconciler.ts"
 import { intentDrift } from "./intent-drift.ts"
 import { Context, Layer } from "effect"
 import type { PlannedRule, Rule } from "../rule.ts"
@@ -78,6 +83,11 @@ export const allRules: ReadonlyArray<Rule | PlannedRule> = [
   meaningSwitchedByFlag,
   unboundedDefaultRead,
   inferredOverRecorded,
+  factOrDerivation,
+  declaredStaleness,
+  appendOnlyHonoured,
+  deviationHasAConcept,
+  invariantHasAReconciler,
   intentDrift,
 ]
 
