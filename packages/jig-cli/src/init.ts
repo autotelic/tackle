@@ -2,7 +2,7 @@ import { existsSync } from "node:fs"
 import { join } from "node:path"
 import { Effect, FileSystem, Option, Path, PlatformError } from "effect"
 import type { EngineRef, HarnessConfig } from "@autotelic/protocol"
-import { emptyBaseline, writeBaseline } from "./baseline.ts"
+import { emptyBaseline, readBaseline, writeBaseline } from "./baseline.ts"
 import { resolveEngineCommand } from "./engines.ts"
 import { packageJsonOf } from "./package-json.ts"
 
@@ -35,17 +35,15 @@ export interface RepoProfile {
   readonly run: string
   /** The command that runs jig: `pnpm jig` when it is a local dependency, else `jig`. */
   readonly jig: string
-  readonly workspaces: boolean
+  /** Facts about the repo that change what the docs say. A set, not flags that can disagree. */
+  readonly facts: ReadonlySet<"ci" | "live-judgement" | "typescript" | "workspaces">
   readonly agentDocs: ReadonlyArray<string>
-  readonly typescript: boolean
   /** A short, factual sentence about the repository, from AGENTS.md, README or package.json. */
   readonly summary: string
-  /** Whether the judgement model has a key in this environment. Never the key itself. */
-  readonly liveJudgement: boolean
   /** The repo's own scripts, for the cookbook. */
   readonly commands: ReadonlyArray<{ readonly name: string; readonly command: string }>
   readonly lint: {
-    readonly tool: "eslint" | "none" | "oxlint"
+    readonly tool: "biome" | "eslint" | "none" | "oxlint"
     readonly config?: string | undefined
     readonly script?: string | undefined
   }
@@ -60,6 +58,8 @@ export interface InitResult {
   readonly written: ReadonlyArray<string>
   readonly kept: ReadonlyArray<string>
   readonly joggleConfig: "kept" | "written" | "absent"
+  /** Findings already accepted in the baseline, when one was kept. */
+  readonly accepted: number
 }
 
 /** Whether a command resolves from the project or the ambient PATH. */
@@ -124,7 +124,9 @@ const oxlintScriptOf = (
 /** The oxlint config a repo keeps, preferring one whose name says "gate". */
 const oxlintConfigOf = (files: ReadonlyArray<string>): Option.Option<string> => {
   const configs = files.filter(
-    (name) => name.includes("oxlint") && /\.(?:json|ts|js|mjs|cjs)$/u.test(name),
+    (name) =>
+      (name.includes("oxlint") || name === ".oxlintrc") &&
+      /\.(?:json|ts|js|mjs|cjs|mts|cts)$/u.test(name),
   )
   return Option.fromUndefinedOr(
     configs.sort((left, right) => {
@@ -197,7 +199,7 @@ const repositorySummaryOf = (input: {
         return paragraph.replace(/\s+/gu, " ").slice(0, 600)
       }
     }
-    return input.fallback ?? ""
+    return input.fallback === undefined ? "" : input.fallback
   })
 
 /**
@@ -236,6 +238,10 @@ export const inspectRepo = (
       files.includes(file),
     )
     const typescript = yield* hasTypeScript(fs, path, root, files)
+    const ci = yield* Effect.orElseSucceed(
+      fs.exists(path.join(root, ".github", "workflows")),
+      () => false,
+    )
     const summary = yield* repositorySummaryOf({
       fs,
       path,
@@ -258,12 +264,15 @@ export const inspectRepo = (
             files.includes("eslint.config.js") ||
             files.includes("eslint.config.cjs") ||
             files.includes("eslint.config.ts") ||
+            files.includes("eslint.config.mts") ||
             files.includes(".eslintrc.json") ||
+            files.includes(".eslintrc.yml") ||
+            files.includes(".eslintrc.yaml") ||
             files.includes(".eslintrc.cjs") ||
             files.includes(".eslintrc")
           ? { tool: "eslint" as const, config: undefined, script: undefined }
           : files.includes("biome.json") || files.includes("biome.jsonc")
-            ? { tool: "none" as const, config: "biome.json", script: undefined }
+            ? { tool: "biome" as const, config: "biome.json", script: undefined }
             : { tool: "none" as const, config: undefined, script: undefined }
 
     const commandNames = ["lint", "typecheck", "test", "format", "check"].filter(
@@ -298,9 +307,19 @@ export const inspectRepo = (
           command: "oxlint",
           config: lint.config,
         })
+        if (
+          resolveEngineCommand({ root, command: "oxlint" }) === "oxlint" &&
+          dependencies["oxlint"] === undefined
+        ) {
+          notes.push(
+            "oxlint resolves from PATH; pin it as a devDependency so CI uses the same version",
+          )
+        }
       }
-    } else if (lint.tool === "eslint") {
-      notes.push("plumb not enabled: this repo lints with eslint, and plumb is an oxlint plugin")
+    } else if (lint.tool === "eslint" || lint.tool === "biome") {
+      notes.push(
+        "plumb not enabled: this repo lints with " + lint.tool + ", and plumb is an oxlint plugin",
+      )
     } else {
       notes.push("plumb not enabled: no oxlint config found")
     }
@@ -312,6 +331,14 @@ export const inspectRepo = (
         )
       } else {
         engines.push({ id: "joggle", kind: "process", command: "joggle" })
+        if (
+          resolveEngineCommand({ root, command: "joggle" }) === "joggle" &&
+          dependencies["@autotelic/joggle"] === undefined
+        ) {
+          notes.push(
+            "joggle resolves from PATH; pin @autotelic/joggle as a devDependency so CI uses the same version",
+          )
+        }
       }
     } else {
       notes.push("joggle not enabled: no tsconfig found")
@@ -341,6 +368,14 @@ export const inspectRepo = (
         )
       } else {
         engines.push({ id: "cutlist", kind: "process", command: "cutlist" })
+        if (
+          resolveEngineCommand({ root, command: "cutlist" }) === "cutlist" &&
+          dependencies["@autotelic/cutlist"] === undefined
+        ) {
+          notes.push(
+            "cutlist resolves from PATH; pin @autotelic/cutlist as a devDependency so CI uses the same version",
+          )
+        }
       }
     }
 
@@ -350,11 +385,16 @@ export const inspectRepo = (
       packageManager,
       run: packageManager,
       jig,
-      workspaces: files.includes("pnpm-workspace.yaml") || files.includes("lerna.json"),
+      facts: new Set([
+        ...(files.includes("pnpm-workspace.yaml") || files.includes("lerna.json")
+          ? (["workspaces"] as const)
+          : []),
+        ...(typescript ? (["typescript"] as const) : []),
+        ...(liveJudgement ? (["live-judgement"] as const) : []),
+        ...(ci ? (["ci"] as const) : []),
+      ]),
       agentDocs,
-      typescript,
       summary,
-      liveJudgement,
       commands,
       lint,
       engines,
@@ -403,7 +443,7 @@ ${profile.summary === "" ? "" : "\n" + profile.summary + "\n"}
 | \`${profile.jig} engines\` | what is configured, and whether each command resolves |
 | \`${profile.jig} baseline\` | accept the current findings; the ledger only shrinks after that |
 | \`${profile.jig} explain <rule>\` | everything jig knows about one rule, here, now |
-${profile.commands.length === 0 ? "" : "\n## The repo's own commands\n\n" + profile.commands.map((command) => "- \`" + command.command + "\` — the repo's " + command.name + " script").join("\n") + "\n"}
+${profile.commands.length === 0 ? "" : "\n## The repo's own commands\n\n" + profile.commands.map((command) => "- `" + command.command + "` — the repo's " + command.name + " script").join("\n") + "\n"}
 
 ## What runs
 
@@ -420,9 +460,9 @@ ${
       " baseline`, or switch the gate to `touched-files`."
 }
 
-## Judgement
+${profile.facts.has("ci") ? "## CI\n\nRun `" + profile.jig + " check --format github` in the pull-request workflow. The gate holds new identities only, so the first run explains the debt instead of failing on it.\n\n" : ""}## Judgement
 
-joggle judges candidates with the TypeSafe model. ${profile.liveJudgement ? "A TYPESAFE_API_KEY is present in this environment, so a run can judge." : "No TYPESAFE_API_KEY is present in this environment, so unjudged candidates are counted, not printed. Set the key to judge, or keep the count in CI."}
+joggle judges candidates with the TypeSafe model. ${profile.facts.has("live-judgement") ? "A TYPESAFE_API_KEY is present in this environment, so a run can judge." : "No TYPESAFE_API_KEY is present in this environment, so unjudged candidates are counted, not printed. Set the key to judge, or keep the count in CI."}
 
 ## Reading a finding
 
@@ -474,7 +514,7 @@ ${profile.summary === "" ? "" : "\n" + profile.summary + "\n"}
 
 - engines: ${engineSummary(profile)}
 - plumb: ${profile.lint.config === undefined ? "not configured" : profile.lint.config}${profile.lint.script === undefined ? "" : " via `" + profile.run + " " + profile.lint.script + "`"}
-- typescript: ${profile.typescript ? "yes" : "no"}${notes}
+- typescript: ${profile.facts.has("typescript") ? "yes" : "no"}${notes}
 
 ## When you need more
 
@@ -499,12 +539,13 @@ export const summaryFor = (result: InitResult): string => {
     `jig: initialised ${profile.root}`,
     "",
     `  package manager  ${profile.packageManager}`,
-    `  workspaces       ${profile.workspaces ? "yes" : "no"}`,
-    `  typescript       ${profile.typescript ? "yes" : "no"}`,
+    `  workspaces       ${profile.facts.has("workspaces") ? "yes" : "no"}`,
+    `  typescript       ${profile.facts.has("typescript") ? "yes" : "no"}`,
     `  lint             ${profile.lint.config ?? profile.lint.tool}${profile.lint.script === undefined ? "" : " via `" + profile.run + " " + profile.lint.script + "`"}`,
     `  agent docs       ${profile.agentDocs.length === 0 ? "none found" : profile.agentDocs.join(", ") + " (left untouched)"}`,
     `  engines          ${engineSummary(profile)}`,
     `  gate             ${profile.gateMode}`,
+    `  baseline         ${result.accepted} accepted finding(s)`,
     `  wrote            ${result.written.length === 0 ? "nothing" : result.written.join(", ")}`,
     ...(result.kept.length === 0 ? [] : [`  kept             ${result.kept.join(", ")}`]),
     ...profile.notes.map((note) => `  note             ${note}`),
@@ -604,11 +645,16 @@ export const initialise = (
       kept,
     })
 
+    const accepted = yield* readBaseline(baseline).pipe(
+      Effect.map((value) => value.identities.length),
+      Effect.orElseSucceed(() => 0),
+    )
     let joggleConfig: InitResult["joggleConfig"] = "absent"
     if (profile.engines.some((engine) => engine.id === "joggle")) {
       const target = path.join(root, "joggle.config.json")
       if (yield* Effect.orElseSucceed(fs.exists(target), () => false)) {
         joggleConfig = "kept"
+        kept.push("joggle.config.json")
       } else {
         // A repository without a model key should not print every unjudged candidate
         // as a warning. `count` keeps the census honest and the output usable; a repo
@@ -616,8 +662,8 @@ export const initialise = (
         // The repository summary is the one piece of prose a judged rule can use, and
         // it is already written down in the repo's own agent docs or README.
         const starter = {
-          unavailable: "count",
-          ...(profile.summary === "" ? {} : { evidence: { repository: profile.summary } }),
+          unavailable: "count" as const,
+          evidence: profile.summary === "" ? undefined : { repository: profile.summary },
         }
         yield* fs.writeFileString(target, `${JSON.stringify(starter, null, 2)}\n`)
         joggleConfig = "written"
@@ -625,5 +671,5 @@ export const initialise = (
       }
     }
 
-    return { profile, written, kept, joggleConfig }
+    return { profile, written, kept, joggleConfig, accepted }
   })

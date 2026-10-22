@@ -70,7 +70,7 @@ describe("inspectRepo", () => {
     try {
       const profile = await inspect(root)
       expect(profile.packageManager).toBe("pnpm")
-      expect(profile.workspaces).toBe(true)
+      expect(profile.facts.has("workspaces")).toBe(true)
       expect(profile.lint.config).toBe(".oxlint-errors.json")
       expect(profile.lint.script).toBe("lint:errors")
       expect(profile.agentDocs).toEqual(["AGENTS.md"])
@@ -270,11 +270,9 @@ const profileFor = (gateMode: "all" | "touched-files") => ({
   packageManager: "pnpm" as const,
   run: "pnpm",
   jig: "jig",
-  workspaces: false,
+  facts: new Set<"ci" | "live-judgement" | "typescript" | "workspaces">(["typescript"]),
   agentDocs: [],
-  typescript: true,
   summary: "",
-  liveJudgement: false,
   commands: [],
   lint: { tool: "none" as const, config: undefined, script: undefined },
   engines: [],
