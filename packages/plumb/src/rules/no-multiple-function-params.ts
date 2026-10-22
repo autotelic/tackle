@@ -34,19 +34,30 @@ interface FunctionLike {
 }
 
 function parentOf(sourceCode: SourceCode, node: ESTree.Node): ESTree.Node | null {
-	return ancestorsOf(sourceCode, node)[0] ?? null;
+	return ancestorsOf(sourceCode, node).at(-1) ?? null;
 }
 
 /**
  * Functions the module owns: declarations and named bindings, not callbacks.
+ *
+ * A function nested inside another function is a closure — its arity is local, not part of
+ * the module's surface, so the rule does not apply. (`ancestorsOf` is outermost-first.)
  *
  * @param {SourceCode} sourceCode - The rule's source-code accessor.
  * @param {ESTree.Node} node - The visited function-like node.
  * @returns {boolean} True when the module owns the function's arity.
  */
 function isOwnedFunction(sourceCode: SourceCode, node: ESTree.Node): boolean {
+	const chain = ancestorsOf(sourceCode, node);
+	const nested = chain.some(
+		(ancestor) =>
+			ancestor.type === "FunctionDeclaration" ||
+			ancestor.type === "FunctionExpression" ||
+			ancestor.type === "ArrowFunctionExpression",
+	);
+	if (nested) return false;
 	if (node.type === "FunctionDeclaration") return true;
-	const parent = parentOf(sourceCode, node);
+	const parent = chain.at(-1) ?? null;
 	if (parent === null) return false;
 	const parentType = parent.type;
 	if (
@@ -88,12 +99,11 @@ function isExemptRouteHandler(payload: {
 	return parent !== null && parent.type === "ExportNamedDeclaration";
 }
 
-/** Primitive annotations transpose silently; structural ones fail the compiler. */
-const PRIMITIVE_TYPE_TEXT = /^(?:string|number|bigint|boolean|unknown|any|null|undefined|void)$/u;
-
 /**
- * Whether every positional parameter carries a distinct non-primitive type:
- * transposing such arguments is a compile error, so ordering needs no guard.
+ * Whether every positional parameter carries a distinct annotated type: transposing such
+ * arguments is a compile error, so ordering needs no guard. Distinctness is the test, not
+ * primitive-versus-structural: `(name: string, count: number)` is as safe as
+ * `(left: Node, right: Node)` is unsafe, and only a repeated type transposes silently.
  *
  * @param {SourceCode} sourceCode - The rule's source-code accessor.
  * @param {ReadonlyArray<ESTree.ParamPattern>} params - The parameter list to inspect.
@@ -109,7 +119,7 @@ function transpositionSafe(
 		const annotation = param.typeAnnotation;
 		if (annotation === null || annotation === undefined) return false;
 		const text = sourceCode.getText(annotation.typeAnnotation).replaceAll(" ", "");
-		if (text === "" || PRIMITIVE_TYPE_TEXT.test(text)) return false;
+		if (text === "") return false;
 		texts.push(text);
 	}
 	return new Set(texts).size === texts.length;
@@ -121,11 +131,11 @@ export const noMultipleFunctionParamsRule = defineRule({
 		type: "problem",
 		docs: {
 			description:
-				"Disallow owned functions with more than one positional parameter; collapse multiple inputs into a single named payload object so transposed arguments fail the compiler.",
+				"Disallow owned functions with more than one positional parameter unless every parameter has a distinct annotated type; collapse multiple inputs into a single named payload object so a transposed argument fails the compiler.",
 		},
 		messages: {
 			multipleParams:
-				"`{{name}}` takes {{count}} positional parameters. Accept a single named payload object instead; transposed primitive arguments compile silently.",
+				"`{{name}}` takes {{count}} positional parameters without distinct types. Accept a single named payload object instead; two parameters of the same type transpose silently.",
 		},
 	},
 	createOnce(context) {

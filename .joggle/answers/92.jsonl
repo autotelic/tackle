@@ -24,4 +24,5 @@
 92df069d3664c63a	1792535008	{"confidence":0.9,"kind":"Classify","label":"infrastructure","probabilities":{"domain_logic":0.05,"infrastructure":0.91,"input_adaptation":0,"mechanical":0.02,"not_applicable":0,"orchestration":0.02,"rendering":0,"request_validation":0,"transport_concern":0}}
 92e1e90c26b5d5ab	1792252958	{"confidence":0.95,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.96,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0.01}}
 92e499702563aa2c	1792684420	{"confidence":0.77,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.83,"stale_reference":0.14,"wrong_behavior":0.02,"wrong_contract":0.01}}
+92f1636918ace821	1792689164	{"confidence":0.25,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.11,"name_meaning":0.12,"no_issue":0.33,"semantic_verdict":0.44}}
 92fa5d85737b8d85	1792252958	{"confidence":0.82,"kind":"Classify","label":"library_core","probabilities":{"domain_core":0.07,"infrastructure":0,"library_core":0.85,"not_applicable":0.02,"rendering_edge":0,"transport_edge":0,"utilities":0.06}}
