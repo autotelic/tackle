@@ -1,13 +1,14 @@
 import { Effect, FileSystem, Path, Result, Schema, SchemaParser, type Predicate } from "effect"
 import { tsconfigEntry } from "./glob.ts"
+import { stripJsonc } from "./jsonc.ts"
 
 /*
  * The root tsconfig's `include` and `exclude`, for files the compiler cannot list.
  *
  * tsgo applies them to every file it lists; an `.astro` file found by walking
  * has to be held to the same scope, or a run reads what the project excluded.
- * Only the root file is read: `extends` is not followed, and a tsconfig that is
- * not plain JSON scopes nothing out rather than guessing.
+ * Only the root file is read: `extends` is not followed. JSONC is accepted, so a
+ * commented tsconfig is read rather than treated as "nothing declared".
  */
 
 const TsconfigScope = Schema.Struct({
@@ -28,7 +29,7 @@ export const tsconfigScope = (
     const path = yield* Path.Path
     const body = yield* Effect.orElseSucceed(fs.readFileString(path.join(root, "tsconfig.json")), () => undefined)
     if (body === undefined) return everything
-    const decoded = Result.getOrUndefined(decodeTsconfig(body))
+    const decoded = Result.getOrUndefined(decodeTsconfig(stripJsonc(body)))
     if (decoded === undefined) return everything
     const include = (decoded.include ?? []).map(tsconfigEntry)
     const exclude = (decoded.exclude ?? []).map(tsconfigEntry)

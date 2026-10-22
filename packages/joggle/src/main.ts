@@ -118,6 +118,12 @@ const checkCommand = Command.make(
       Flag.withDescription("Never invoke tsgo; walk the paths on disk instead."),
       Flag.withDefault(false),
     ),
+    runExternalCode: Flag.Boolean("run-external-code").pipe(
+      Flag.withDescription(
+        "Allow tsc to execute content-mapper packages declared in tsconfig (TypeScript 7.1+). Off by default: a mapper is arbitrary code.",
+      ),
+      Flag.withDefault(false),
+    ),
     noReplay: Flag.Boolean("no-replay").pipe(
       Flag.withDescription("Do not reuse the stored run when nothing changed."),
       Flag.withDefault(false),
@@ -223,6 +229,7 @@ const checkCommand = Command.make(
         types: config.types ? "trace" : "off",
         maxInputTokens: config.maxTokens,
         useTsgo: !config.noTsgo,
+        runExternalCode: config.runExternalCode || effective.runExternalCode === true,
         cacheDirExplicit: Option.isSome(config.cacheDir),
         cacheDir,
         // The run cache is machine-local on purpose: it is a performance
@@ -243,7 +250,9 @@ const checkCommand = Command.make(
           Layer.mergeAll(
             rulesLayer,
             decisionLayer({ cacheDir, wireCacheDir: machineCache, offline: config.offline, apiKey }),
-            tsgoLayer(cwd),
+            tsgoLayer(cwd, {
+              runExternalCode: config.runExternalCode || effective.runExternalCode === true,
+            }),
           ),
         ),
       )
@@ -430,6 +439,12 @@ const calibrateCommand = Command.make(
       ),
       Flag.withDefault(false),
     ),
+    runExternalCode: Flag.Boolean("run-external-code").pipe(
+      Flag.withDescription(
+        "Allow tsc to execute content-mapper packages declared in tsconfig (TypeScript 7.1+). Off by default.",
+      ),
+      Flag.withDefault(false),
+    ),
   },
   (config) =>
     Effect.gen(function* () {
@@ -569,7 +584,9 @@ const calibrateCommand = Command.make(
             decisionLayer({ cacheDir, wireCacheDir: yield* runCacheDirFor(cwd), offline: false, apiKey }),
             // The trace and the node types both run tsgo; the calibrate command
             // provides it only because `--types` may have asked for them.
-            tsgoLayer(cwd),
+            tsgoLayer(cwd, {
+              runExternalCode: config.runExternalCode || ruleSet.effective.runExternalCode === true,
+            }),
           ),
         ),
       )

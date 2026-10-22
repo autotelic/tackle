@@ -11,6 +11,7 @@ design notes it rests on.
 | [rule-coupling.md](./rule-coupling.md) | meaning decided in code: the audit of every rule, and the fix |
 | [two-regimes.md](./two-regimes.md) | where a check is a fact and where it is a question |
 | [type-resolution.md](./type-resolution.md) | what the type layers can and cannot answer, and why |
+| [content-mappers.md](./content-mappers.md) | what joggle does with TypeScript 7.1 content mappers, what it does not index, and why the trust switch is explicit |
 | [types-over-logic.md](./types-over-logic.md) | the rule that pushes toward refining types instead of adding logic |
 | [typesafe.md](./typesafe.md) | how joggle uses TypeSafe, held against the vendor's own guidance |
 | [calibration.md](./calibration.md) | what the questions are worth, and the measurements behind the tuning |

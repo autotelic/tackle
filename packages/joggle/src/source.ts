@@ -17,8 +17,14 @@ import type { Predicate } from "effect"
  * Declarations stay out: a `.d.ts` describes a build's output rather than a
  * source file, and analysing one reports on code nobody wrote. `.astro` files
  * count: their frontmatter and scripts are TypeScript, read through `astro.ts`.
+ *
+ * A content mapper's declaration output has a second shape: `App.d.svelte.ts`
+ * for `App.svelte`, `Page.d.vue.ts` for `Page.vue`. It ends in `.ts`, so the
+ * `.d.ts` check above misses it, and analysing it reports the mapper's
+ * scaffolding as if an author had written it.
  */
 export const looksLikeSource: Predicate.Predicate<string> = (file) => {
   if (file.endsWith(".d.ts") || file.endsWith(".d.mts") || file.endsWith(".d.cts")) return false
+  if (/\.d\.[a-z0-9]+\.ts$/iu.test(file)) return false
   return /\.(?:[cm]?[jt]sx?|astro)$/.test(file)
 }

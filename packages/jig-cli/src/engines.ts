@@ -586,7 +586,17 @@ export const engineProvenance = (stdout: string): Provenance => {
     .filter((drop) => UNJUDGED_STAGES.has(drop.stage))
     .reduce((total, drop) => total + drop.count, 0)
   const skipped = Array.isArray(summary.skipped) ? summary.skipped.length : 0
-  const note = skipped === 0 ? undefined : `${skipped} rule${skipped === 1 ? "" : "s"} skipped`
+  // joggle reports a coverage gap as a note, not a finding: a tsconfig can declare
+  // content mappers for formats its parser cannot index. The note is the engine's
+  // census, so it travels with the engine rather than being re-derived here.
+  const coverage = (Array.isArray(summary.notes) ? summary.notes : [])
+    .map((raw) => stringOf(recordAt(raw)?.reason))
+    .find((reason) => reason !== undefined && reason.includes("content mappers"))
+  const annotations = [
+    ...(skipped === 0 ? [] : [`${skipped} rule${skipped === 1 ? "" : "s"} skipped`]),
+    ...(coverage === undefined ? [] : [coverage]),
+  ]
+  const note = annotations.length === 0 ? undefined : annotations.join("; ")
 
   return {
     status: summary.replayed === true ? "replayed" : "ran",

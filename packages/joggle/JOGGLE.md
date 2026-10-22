@@ -199,6 +199,7 @@ those two want different things.
 | `--max-warnings <n>` | fail when warnings exceed `n` (`-1` disables) |
 | `--typecheck` | include tsgo diagnostics as `joggle/typecheck` |
 | `--no-tsgo` | never invoke tsgo |
+| `--run-external-code` | let `tsc` execute content-mapper packages declared in tsconfig (TypeScript 7.1+); off by default |
 | `--offline` | answer only from the judgement cache |
 | `--changed` | scope to what changed since the stored run |
 | `--since <rev>` | scope to what changed since a git revision, working tree included |
@@ -206,6 +207,14 @@ those two want different things.
 | `--pr-number <n\|url>` | scope to a specific pull request |
 | `--cache-dir <path>` | where the answer cache lives: `<cwd>/.joggle` when it exists, else the machine cache |
 | `--cwd <path>` | project root |
+
+Content mappers are TypeScript 7.1's plugin point for `.vue`, `.svelte`, `.mdx`
+and similar files. joggle does not run them unless `--run-external-code` (or
+`"runExternalCode": true` in `joggle.config.json`) says so: a mapper is arbitrary
+code named by the repository. Even with it on, joggle's own parser indexes only
+TypeScript and Astro, so `check` reports a note naming every declared extension
+it did not index. [docs/content-mappers.md](./docs/content-mappers.md) has the
+full contract.
 
 ## CI and replay
 

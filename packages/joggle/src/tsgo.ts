@@ -141,9 +141,21 @@ const parseDiagnostics = (output: string): ReadonlyArray<TsgoDiagnostic> => {
   return found
 }
 
-const make = (binary: string, path: Path.Path): Interface => {
+/**
+ * The compiler's arguments, with the content-mapper opt-in in front.
+ *
+ * `--runExternalCode` is not a performance switch: it lets `tsc` execute the
+ * mapper packages a tsconfig names. It is off unless the run asked for it, so a
+ * cloned repository cannot make an agent execute code by declaring a mapper.
+ */
+export const compilerArgs = (
+  args: ReadonlyArray<string>,
+  runExternalCode: boolean,
+): ReadonlyArray<string> => (runExternalCode ? ["--runExternalCode", ...args] : args)
+
+const make = (binary: string, path: Path.Path, runExternalCode: boolean): Interface => {
   const listFiles = Effect.fn("Tsgo.listFiles")(function* (cwd: string) {
-    const result = yield* run({ binary, args: ["--listFilesOnly"], cwd })
+    const result = yield* run({ binary, args: compilerArgs(["--listFilesOnly"], runExternalCode), cwd })
     const files = new Set<string>()
     for (const raw of result.stdout.split(/\r?\n/)) {
       const file = raw.trim()
@@ -155,12 +167,20 @@ const make = (binary: string, path: Path.Path): Interface => {
   })
 
   const typecheck = Effect.fn("Tsgo.typecheck")(function* (cwd: string) {
-    const result = yield* run({ binary, args: ["--noEmit", "--pretty", "false"], cwd })
+    const result = yield* run({
+      binary,
+      args: compilerArgs(["--noEmit", "--pretty", "false"], runExternalCode),
+      cwd,
+    })
     return parseDiagnostics(`${result.stdout}\n${result.stderr}`)
   })
 
   const generateTrace = Effect.fn("Tsgo.generateTrace")(function* (cwd: string, outDir: string) {
-    yield* run({ binary, args: ["--generateTrace", outDir, "--noEmit"], cwd })
+    yield* run({
+      binary,
+      args: compilerArgs(["--generateTrace", outDir, "--noEmit"], runExternalCode),
+      cwd,
+    })
   })
 
   return Service.of({ listFiles, typecheck, generateTrace })
@@ -173,12 +193,17 @@ const make = (binary: string, path: Path.Path): Interface => {
  */
 export const layer = (
   binary: string,
+  options: { readonly runExternalCode?: boolean | undefined } = {},
 ): Layer.Layer<Service, never, Path.Path> =>
-  Layer.effect(Service, Effect.map(Path.Path, (path) => make(binary, path)))
+  Layer.effect(
+    Service,
+    Effect.map(Path.Path, (path) => make(binary, path, options.runExternalCode ?? false)),
+  )
 
 /** Resolve the project's own compiler, falling back to PATH. */
 export const layerFromConfig = (
   root: string,
+  options: { readonly runExternalCode?: boolean | undefined } = {},
 ): Layer.Layer<Service, never, ChildProcessSpawner | FileSystem.FileSystem | Path.Path> =>
   Layer.effect(
     Service,
@@ -187,6 +212,6 @@ export const layerFromConfig = (
       const path = yield* Path.Path
       const local = path.join(root, "node_modules", ".bin", "tsc")
       const resolved = (yield* Effect.orElseSucceed(fs.exists(local), () => false)) ? local : "tsc"
-      return make(resolved, path)
+      return make(resolved, path, options.runExternalCode ?? false)
     }),
   )

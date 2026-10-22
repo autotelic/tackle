@@ -44,6 +44,8 @@ import {
 } from "./schema.ts"
 import { Service as Tsgo } from "./tsgo.ts"
 import { discoverFiles, loadWorkspace, type Unit } from "./workspace.ts"
+import { contentMappersOf } from "./content-mappers.ts"
+import { looksLikeSource } from "./source.ts"
 import type { ImportGraph } from "./imports.ts"
 
 export interface Options {
@@ -70,6 +72,14 @@ export interface Options {
   readonly maxInputTokens?: number | undefined
   /** Use tsgo for project discovery instead of walking directories. */
   readonly useTsgo: boolean
+  /**
+   * Allow `tsc` to execute content-mapper packages declared in tsconfig.
+   *
+   * Off unless the run asked for it: a mapper is arbitrary code named by the
+   * repository. The coverage note is emitted either way, because enabling the
+   * compiler does not teach joggle's own parser a new file format.
+   */
+  readonly runExternalCode?: boolean | undefined
   /**
    * True when the caller chose where judgements are stored. If they did not,
    * joggle refuses to persist evidence for files that live outside the analysis
@@ -302,6 +312,7 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
       types: options.types,
       typecheck: options.typecheck,
       useTsgo: options.useTsgo,
+      runExternalCode: options.runExternalCode ?? false,
       maxInputTokens: options.maxInputTokens ?? null,
     }),
   )
@@ -430,6 +441,25 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
   const skipped: Array<Skipped> = []
   const notes: Array<Skipped> = []
   for (const issue of typeIssues) notes.push({ ruleId: "joggle", reason: issue })
+  // A project can declare content mappers for formats joggle cannot parse. The
+  // compiler may check them (when the run opted in), but the rule report does
+  // not index them, and a file count that silently omits a third of the tree is
+  // the failure `source.ts` exists to prevent.
+  const mappers = yield* contentMappersOf(options.cwd)
+  const declared = mappers.flatMap((mapper) => mapper.extensions)
+  const unindexed = declared.filter((extension) => !looksLikeSource("file" + extension))
+  if (unindexed.length > 0) {
+    notes.push({
+      ruleId: "joggle",
+      reason:
+        "tsconfig declares content mappers for " +
+        unindexed.join(", ") +
+        "; joggle indexes TypeScript and Astro only, so those files are not in the rule report" +
+        (options.runExternalCode === true
+          ? " (tsc ran the mappers, so typecheck diagnostics may still cover them)"
+          : " (tsc did not run them either: pass --run-external-code to enable the mapper)"),
+    })
+  }
 
   // A file outside the root produces a "../" relative path. Its evidence has no
   // business in a cache whose location nobody chose.

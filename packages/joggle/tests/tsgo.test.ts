@@ -4,7 +4,7 @@ import { NodeServices } from "@effect/platform-node"
 import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
-import { Service as Tsgo, layer as tsgoLayer } from "../src/tsgo.ts"
+import { Service as Tsgo, compilerArgs, layer as tsgoLayer } from "../src/tsgo.ts"
 
 const binary = resolve("node_modules/.bin/tsc")
 
@@ -34,4 +34,9 @@ test("the compiler's view keeps every source file it lists, JavaScript included"
   // Before, only `.ts` and `.tsx` survived, so a run with no paths analysed none
   // of a project's JavaScript and said nothing about it.
   expect(files).toEqual(sources.map((file) => join(dir, "src", file)))
+})
+
+test("the content-mapper opt-in is a flag in front, and nothing without it", () => {
+  expect(compilerArgs(["--noEmit"], false)).toEqual(["--noEmit"])
+  expect(compilerArgs(["--noEmit"], true)).toEqual(["--runExternalCode", "--noEmit"])
 })

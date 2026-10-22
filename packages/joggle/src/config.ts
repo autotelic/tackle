@@ -128,6 +128,15 @@ export const JoggleConfig = Schema.Struct({
       ),
     }),
   ),
+  /**
+   * Allow the compiler to execute content-mapper packages declared in tsconfig.
+   *
+   * Off by default. A mapper is an arbitrary process that the repository's
+   * tsconfig names, so enabling it is a trust decision, like VS Code's workspace
+   * trust. With it on, `tsc` runs the mappers; joggle still indexes only the
+   * extensions it can parse, and says which declared ones it did not.
+   */
+  runExternalCode: Schema.optionalKey(Schema.Boolean),
   evidence: Schema.optionalKey(
     Schema.Struct({
       /**

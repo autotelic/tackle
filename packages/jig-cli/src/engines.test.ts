@@ -7,6 +7,7 @@ import { accept, diffBaseline, ratchetViolations } from "@autotelic/protocol"
 import {
   argsFor,
   engineDiagnostics,
+  engineProvenance,
   normalize,
   parseEngineOutput,
   resolveEngineCommand,
@@ -269,5 +270,32 @@ describe("parseEngineOutput (property)", () => {
         expect(result === undefined || Array.isArray(result)).toBe(true)
       }),
     )
+  })
+})
+
+describe("engineProvenance", () => {
+  it("surfaces a content-mapper coverage note from the engine's own census", () => {
+    const provenance = engineProvenance(
+      JSON.stringify({
+        diagnostics: [],
+        summary: {
+          notes: [
+            {
+              ruleId: "joggle",
+              reason:
+                "tsconfig declares content mappers for .vue; joggle indexes TypeScript and Astro only",
+            },
+          ],
+        },
+      }),
+    )
+    expect(provenance.note).toContain("content mappers")
+  })
+
+  it("keeps the skipped-rule note when there is no coverage note", () => {
+    const provenance = engineProvenance(
+      JSON.stringify({ diagnostics: [], summary: { skipped: [{ ruleId: "a" }, { ruleId: "b" }] } }),
+    )
+    expect(provenance.note).toBe("2 rules skipped")
   })
 })
