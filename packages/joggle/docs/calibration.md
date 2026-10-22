@@ -246,3 +246,46 @@ volume claim is made about the current set.
   right end of the list.
 - **`hoist-to-domain` has never been calibrated per decision**; its `duty`/`home`
   split is the obvious probe.
+
+## Round: `tackle`, 2026-10-22
+
+`joggle calibrate --types` over this repository, on the committed answers. **Fixtures are in the
+set** (`tests/fixtures/**` are deliberately broken), so read those rows as controls, not as
+findings; see [TUNING.md](../../../TUNING.md) for the caveats.
+
+| Rule | Verdict | States | Fired | median |
+| --- | --- | --: | --: | --: |
+| `doc-matches-code` | decisive | 359 | 0 | 0.03 |
+| `single-path` | decisive | 138 | 0 | 0.02 |
+| `generic-carries-a-caller` | decisive | 53 | 0 | 0.00 |
+| `meaning-switched-by-flag` | decisive | 32 | 0 | 0.00 |
+| `inferred-over-recorded` | decisive | 32 | 0 | 0.01 |
+| `duplicate-call-run` | decisive | 28 | 0 | 0.22 |
+| `reimplemented-primitive` | decisive | 25 | 0 | 0.00 |
+| `unaccounted-drop` | decisive | 25 | 0 | 0.10 |
+| `hoist-to-domain` | decisive | 17 | 0 | 0.03 |
+| `object-shape` | decisive | 12 | 1 | 0.51 |
+| `field-type-drift` | decisive | 9 | 2 | 0.57 |
+| `rule-judgment` | noisy | 91 | 83 | 0.80 |
+| `compose-types` | noisy | 12 | 10 | 0.90 |
+| `duplicate-implementation` | noisy | 5 | 5 | 0.69 |
+| `data-error-as-outage` | skipped | 4 | 4 | 0.83 |
+| `call-pattern` | skipped | 3 | 1 | 0.44 |
+| `shallow-module` | skipped | 3 | 0 | 0.20 |
+| `import-cycle` | skipped | 2 | 1 | 0.83 |
+| `schema-excludes-domain-value` | skipped | 2 | 0 | 0.42 |
+| `intent-drift` | skipped | 2 | 2 | 0.94 |
+| `name-the-primitive` | skipped | 1 | 1 | 0.97 |
+| `nullability-drift` | skipped | 1 | 1 | 0.98 |
+| `unbounded-default-read` | skipped | 1 | 1 | 1.00 |
+| `layer-direction` | skipped | 0 | 0 | 0.00 |
+| `layer-purity` | skipped | 0 | 0 | 0.00 |
+| `module-direction` | skipped | 0 | 0 | 0.00 |
+| `name-as-address` | skipped | 0 | 0 | 0.00 |
+| `temporal-coupling` | skipped | 0 | 0 | 0.00 |
+| `naming-drift` | skipped | 0 | 0 | 0.00 |
+| `one-concept-one-type` | skipped | 0 | 0 | 0.00 |
+| `types-over-logic` | skipped | 0 | 0 | 0.00 |
+| `duplicate-meaning` | weak | 33 | 5 | 0.34 |
+| `language-drift` | weak | 8 | 0 | 0.42 |
+| `dependency-fit` | weak | 5 | 0 | 0.50 |

@@ -44,6 +44,11 @@ now in this workspace:
   neither is portable and both diverge from the host. CI and fresh checkouts replay the
   committed verdicts instead. [SECRETS.md](./SECRETS.md) has the contract, the launchers, and
   the two hosts' differences.
+- **A quiet rule is only clean if it looked.** Read the census (`joggle check --format json`)
+  and classify the questions (`joggle calibrate`) before trusting a zero; tune in layers
+  (policy → question → candidate → ignore → code) and commit the re-judged answers with the
+  change. [TUNING.md](./TUNING.md) is the process; `packages/joggle/docs/calibration.md` is the
+  record.
 - **Format with `oxfmt`** and lint with `oxlint` (type-aware, via `oxlint-tsgolint`).
   `.oxfmtrc.json` is the house style: no semicolons, double quotes, 100 columns. The two
   imported trees sit in its `ignorePatterns` until their conversion lands (MIGRATION.md
