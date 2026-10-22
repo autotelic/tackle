@@ -1,9 +1,12 @@
+a51aacfc8d175d9d	1792684421	{"confidence":0.2,"kind":"Classify","label":"harvest","probabilities":{"harvest":0.6,"no_concept":0.4}}
 a522689830809df2	1792535008	{"confidence":0.97,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.98,"component_or_feature":0.01,"not_applicable":0.01,"route_or_handler":0}}
 a54a3c9e2b7f7421	1792621702	{"confidence":0.25,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.36,"member_1":0.5,"member_2":0.14}}
+a561368ae885a51e	1792684422	{"confidence":0.95,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.04,"same_module":0,"same_package":0,"sibling_packages":0.96}}
 a56bd0e2c6e64c36	1792269251	{"consistency":1,"kind":"Probability","probability":0.5233333333333333}
 a57231603ecef304	1792621702	{"confidence":0.33,"kind":"Classify","label":"not_a_derivation","probabilities":{"legitimate_local":0.45,"not_a_derivation":0.55,"reimplements":0}}
 a582b7fbffaa0ea7	1792252958	{"confidence":0.76,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.84,"not_a_derivation":0,"reimplements":0.16}}
 a5838b82a6f41b6f	1792535008	{"confidence":0.97,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.98,"component_or_feature":0.01,"not_applicable":0.01,"route_or_handler":0}}
+a585bbb2cf2245e6	1792684422	{"confidence":0.76,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.13,"keep_variants":0.84,"no_issue":0.03}}
 a59084da21109029	1792535008	{"confidence":0.24,"kind":"Classify","label":"orchestration","probabilities":{"domain_logic":0.22,"infrastructure":0.05,"input_adaptation":0.02,"mechanical":0.2,"not_applicable":0.03,"orchestration":0.32,"rendering":0,"request_validation":0.01,"transport_concern":0.15}}
 a5a1536a0fb60a51	1792619451	{"confidence":0.91,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.94,"not_a_derivation":0.05,"reimplements":0.01}}
 a5cb90c888530d13	1792535008	{"confidence":0.47,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.6,"component_or_feature":0.13,"not_applicable":0.17,"route_or_handler":0.1}}

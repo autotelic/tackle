@@ -38,16 +38,17 @@ function localNameOf(specifier) {
 }
 /** Whether the call site sits inside a `static` class property initializer.
  *
+ * Walks from the node outward, since `ancestorsOf` is outermost-first and `Program` would
+ * otherwise be the first node seen.
+ *
  * @param {SourceCode} sourceCode - The rule's source-code accessor.
  * @param {ESTree.Node} node - The call expression being visited.
  * @returns {boolean} True when enclosed by a static property definition.
  */
 function inStaticClassField(sourceCode, node) {
-    for (const current of ancestorsOf(sourceCode, node)) {
+    for (const current of [...ancestorsOf(sourceCode, node)].reverse()) {
         if (current.type === "PropertyDefinition")
             return current.static === true;
-        if (current.type === "Program")
-            return false;
     }
     return false;
 }

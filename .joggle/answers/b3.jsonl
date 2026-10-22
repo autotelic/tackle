@@ -15,4 +15,5 @@ b39a3fac609b2bfb	1792617316	{"confidence":0.96,"kind":"Classify","label":"no_iss
 b3adc478e15da856	1792535008	{"confidence":0.37,"kind":"Classify","label":"input_adaptation","probabilities":{"domain_logic":0.23,"infrastructure":0,"input_adaptation":0.44,"mechanical":0.26,"not_applicable":0.05,"orchestration":0,"rendering":0.01,"request_validation":0,"transport_concern":0.01}}
 b3b48b16b516cec4	1792252958	{"confidence":0.65,"kind":"Classify","label":"library_core","probabilities":{"domain_core":0.06,"infrastructure":0.01,"library_core":0.7,"not_applicable":0.08,"rendering_edge":0,"transport_edge":0,"utilities":0.15}}
 b3b59928d47a5df0	1792252958	{"consistency":1,"kind":"Probability","probability":0.5211111111111112}
+b3bddeb55b8ac0ee	1792684422	{"confidence":0.62,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.66,"no_difference":0.04,"removes_a_hazard":0.09,"slightly_clearer":0.21},"rating":1.79}
 b3f9a4c84667fa16	1792252958	{"consistency":1,"kind":"Probability","probability":0.25888888888888895}

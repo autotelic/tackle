@@ -55,7 +55,7 @@ export const preferEffectMatchRule = defineRule({
 				if (TEST_FILE.test(context.filename.replaceAll("\\", "/"))) return false;
 			},
 			ConditionalExpression(node) {
-				const parent = ancestorsOf(context.sourceCode, node)[0];
+				const parent = ancestorsOf(context.sourceCode, node).at(-1);
 				if (parent?.type === "ConditionalExpression") {
 					return;
 				}

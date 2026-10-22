@@ -49,7 +49,7 @@ export const preferEffectMatchRule = defineRule({
                     return false;
             },
             ConditionalExpression(node) {
-                const parent = ancestorsOf(context.sourceCode, node)[0];
+                const parent = ancestorsOf(context.sourceCode, node).at(-1);
                 if (parent?.type === "ConditionalExpression") {
                     return;
                 }

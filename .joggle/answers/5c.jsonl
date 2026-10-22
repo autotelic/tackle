@@ -21,4 +21,5 @@
 5cd16aad2cd35787	1792542865	{"consistency":1,"kind":"Probability","probability":0.1844444444444445}
 5cdbbb340cf9aacf	1792619054	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
 5cdf8ddba4a029a6	1792252958	{"confidence":0.49,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.01,"name_meaning":0.25,"no_issue":0.12,"semantic_verdict":0.62}}
+5ce55a49f75b9e5a	1792687043	{"consistency":1,"kind":"Probability","probability":0.9022222222222221}
 5ce6ac1737f43f4b	1792252958	{"consistency":1,"kind":"Probability","probability":0.8688888888888889}

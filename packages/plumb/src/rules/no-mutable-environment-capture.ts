@@ -37,7 +37,7 @@ function isTypePosition(sourceCode: SourceCode, identifier: ESTree.Node): boolea
  */
 function functionName(node: ESTree.Node, sourceCode: SourceCode): string {
 	if (node.type === "FunctionDeclaration" && node.id !== null) return node.id.name;
-	const parent = ancestorsOf(sourceCode, node)[0];
+	const parent = ancestorsOf(sourceCode, node).at(-1);
 	if (parent !== undefined) {
 		if (parent.type === "VariableDeclarator" && parent.id.type === "Identifier") return parent.id.name;
 		if (parent.type === "AssignmentExpression" && parent.left.type === "Identifier") return parent.left.name;

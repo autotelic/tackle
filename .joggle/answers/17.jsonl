@@ -25,4 +25,5 @@
 17e13efa7b10daf8	1792542865	{"consistency":1,"kind":"Probability","probability":0.58}
 17e6940c059677c7	1792252958	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
 17e6e9690fe87511	1792252958	{"confidence":0.91,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.93,"stale_reference":0,"wrong_behavior":0.06,"wrong_contract":0.01}}
+17ef88ef57390a34	1792684422	{"confidence":0.45,"kind":"Classify","label":"collapse","probabilities":{"collapse":0.63,"keep_variants":0.29,"no_issue":0.08}}
 17fda641a79484b3	1792621702	{"confidence":0.61,"kind":"Classify","label":"same_package","probabilities":{"different_deployables":0,"same_module":0.29,"same_package":0.71,"sibling_packages":0}}

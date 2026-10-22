@@ -2,6 +2,7 @@ bd18002dee9379ab	1792535008	{"confidence":0.88,"kind":"Classify","label":"alread
 bd46a9a768e8fadb	1792252958	{"confidence":0.5,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.05,"merge":0.6,"move":0.23,"share_a_contract":0.08,"split":0.04}}
 bd4bc46db6e1ab45	1792252958	{"confidence":0.88,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.92,"not_a_derivation":0.06,"reimplements":0.02}}
 bd600639f2cb38e1	1792535008	{"confidence":0.35,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.51,"component_or_feature":0.2,"not_applicable":0.22,"route_or_handler":0.07}}
+bd62caddbb647c18	1792684422	{"confidence":0.73,"kind":"Classify","label":"collapse","probabilities":{"collapse":0.82,"keep_variants":0.17,"no_issue":0.01}}
 bd6f152fe4c31fc1	1792617317	{"consistency":1,"kind":"Probability","probability":0.6466666666666666}
 bd701e0cd9dec85e	1792617317	{"confidence":0.55,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.3,"independent":0.7,"meaning_switched":0}}
 bd7befa108ac543b	1792543161	{"confidence":0.4,"kind":"Classify","label":"different_work","probabilities":{"different_inputs":0.45,"different_order":0,"different_work":0.55,"same_operation":0}}

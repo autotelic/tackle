@@ -20,3 +20,4 @@ b7d9d801882e8c3c	1792618754	{"confidence":0.85,"kind":"Classify","label":"legiti
 b7e42080a802cffb	1792617317	{"consistency":1,"kind":"Probability","probability":0.13}
 b7e66072edbed46f	1792535009	{"confidence":0.73,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.76,"infrastructure":0,"input_adaptation":0,"mechanical":0.01,"not_applicable":0.15,"orchestration":0.05,"rendering":0,"request_validation":0.03,"transport_concern":0}}
 b7eb5a5e2eaab2dd	1792252958	{"confidence":0.83,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.89,"not_a_derivation":0.04,"reimplements":0.07}}
+b7f366b8a3b9e8ae	1792684421	{"confidence":0.31,"kind":"Classify","label":"drift","probabilities":{"compatible":0.43,"drift":0.54,"two_concepts":0.03}}

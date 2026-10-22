@@ -4,6 +4,8 @@
 0b51f517ac53311d	1792252958	{"confidence":0.92,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.94,"stale_reference":0,"wrong_behavior":0.04,"wrong_contract":0.02}}
 0b714eed560cf923	1792252958	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
 0b8137c0a6dc725f	1792535007	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0.01}}
+0b86942203eaafc8	1792684421	{"confidence":0.31,"kind":"Classify","label":"drift","probabilities":{"compatible":0.43,"drift":0.54,"two_concepts":0.03}}
+0b88f6d10da76d1d	1792684421	{"confidence":0.38,"kind":"Classify","label":"compatible","probabilities":{"compatible":0.59,"drift":0.39,"two_concepts":0.02}}
 0b8e3aa3bea872e8	1792621702	{"confidence":0.39,"kind":"Classify","label":"same_package","probabilities":{"different_deployables":0,"same_module":0.46,"same_package":0.54,"sibling_packages":0}}
 0b93a3872fd5f9e1	1792252958	{"confidence":0.61,"kind":"Classify","label":"same_module","probabilities":{"different_deployables":0,"same_module":0.71,"same_package":0.29,"sibling_packages":0}}
 0b96de9c4e5ecc78	1792619055	{"confidence":0.69,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.79,"not_a_derivation":0.21,"reimplements":0}}
@@ -13,5 +15,6 @@
 0bcf2cd7b9756733	1792252958	{"confidence":0.89,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.92,"stale_reference":0.06,"wrong_behavior":0.02,"wrong_contract":0}}
 0bdb609a2aa0bcba	1792617317	{"consistency":1,"kind":"Probability","probability":0.6666666666666666}
 0bddb7c9b11c70e0	1792617316	{"confidence":0.73,"kind":"Classify","label":"utilities","probabilities":{"domain_core":0.01,"infrastructure":0,"library_core":0.21000000000000002,"not_applicable":0.01,"rendering_edge":0,"transport_edge":0,"utilities":0.77}}
+0be6d298ce62cc01	1792684423	{"confidence":0.86,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.09,"names_a_caller":0,"shared_vocabulary":0.91}}
 0bf001b0d508946a	1792617317	{"confidence":0.51,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.33,"independent":0.67,"meaning_switched":0}}
 0bf315b468e116c3	1792535008	{"confidence":0.77,"kind":"Classify","label":"accounted_elsewhere","probabilities":{"accounted_elsewhere":0.85,"internal_only":0.05,"unaccounted":0.1}}

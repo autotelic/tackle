@@ -4,6 +4,7 @@
 996266837fc2dff1	1792619412	{"confidence":0.48,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.65,"not_a_derivation":0.35,"reimplements":0}}
 9965d04c7a8223f5	1792535008	{"confidence":0.88,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.03,"internal_only":0.92,"unaccounted":0.05}}
 99712cf083cf82a6	1792617316	{"confidence":0.46,"kind":"Classify","label":"library_core","probabilities":{"domain_core":0.46,"infrastructure":0,"library_core":0.54,"not_applicable":0,"rendering_edge":0,"transport_edge":0,"utilities":0}}
+99750dea4f2ed6e4	1792684419	{"confidence":0.85,"kind":"Classify","label":"same_name_drift","probabilities":{"already_composed":0,"composes":0.04,"independent":0.07,"same_name_drift":0.89}}
 9976ea74dbcece3f	1792535008	{"confidence":0.83,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.87,"component_or_feature":0.04,"not_applicable":0.06,"route_or_handler":0.03}}
 9991eb6cc5b8ea28	1792543161	{"confidence":0.4,"kind":"Classify","label":"same_module","probabilities":{"different_deployables":0,"same_module":0.55,"same_package":0.45,"sibling_packages":0}}
 99b217a379e16523	1792252958	{"consistency":1,"kind":"Probability","probability":0.7044444444444444}

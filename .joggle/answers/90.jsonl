@@ -2,6 +2,7 @@
 9002a25f11d3b34d	1792621702	{"confidence":0.44,"kind":"Classify","label":"same_package","probabilities":{"different_deployables":0,"same_module":0.42,"same_package":0.58,"sibling_packages":0}}
 900d3087321452f9	1792252958	{"confidence":0.43,"kind":"Classify","label":"name_meaning","probabilities":{"magic_threshold":0,"name_meaning":0.57,"no_issue":0.15,"semantic_verdict":0.28}}
 900e67954b3ba7ff	1792252958	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0}}
+9011c21529a5b30d	1792684421	{"confidence":0.7,"kind":"Classify","label":"drift","probabilities":{"compatible":0.12,"drift":0.8,"two_concepts":0.08}}
 9027e77365e01c0c	1792617317	{"confidence":0.38,"kind":"Classify","label":"collapse","probabilities":{"collapse":0.59,"keep_variants":0.35,"no_issue":0.06}}
 903234b1857ad684	1792617317	{"confidence":0.98,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.01,"inferred":0,"not_applicable":0.99}}
 903f9ddaa6c53013	1792617317	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"same_use_left":0,"same_use_right":0}}
@@ -14,6 +15,7 @@
 90987986e9775e49	1792621702	{"confidence":0.72,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.86,"member_1":0.14}}
 90a649ae814f34e1	1792252958	{"confidence":0.37,"kind":"Rate","label":"slightly_clearer","probabilities":{"meaningfully_better":0.36,"no_difference":0.07,"removes_a_hazard":0.1,"slightly_clearer":0.47},"rating":1.5}
 90a66e389e1bd816	1792252958	{"consistency":1,"kind":"Probability","probability":0.6066666666666666}
+90ba799db13831b6	1792684423	{"confidence":0.56,"kind":"Classify","label":"row_absence_is_normal","probabilities":{"not_applicable":0.17,"row_absence_is_an_error":0.12,"row_absence_is_normal":0.71}}
 90bf63a3b996ea86	1792535008	{"confidence":1,"kind":"Classify","label":"mechanical","probabilities":{"domain_logic":0,"infrastructure":0,"input_adaptation":0,"mechanical":1,"not_applicable":0,"orchestration":0,"rendering":0,"request_validation":0,"transport_concern":0}}
 90c1ef9165e23ecb	1792621702	{"confidence":0.06,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.53,"member_1":0.47}}
 90c38d9e965063fe	1792252958	{"confidence":0.77,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.83,"stale_reference":0,"wrong_behavior":0.12,"wrong_contract":0.05}}

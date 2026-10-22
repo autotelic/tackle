@@ -10,6 +10,7 @@
 53578ec0d1546700	1792535008	{"confidence":0.56,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.61,"infrastructure":0.33,"input_adaptation":0.01,"mechanical":0.01,"not_applicable":0.01,"orchestration":0.01,"rendering":0,"request_validation":0.01,"transport_concern":0.01}}
 53713d5c908eb1d5	1792543161	{"consistency":1,"kind":"Probability","probability":0.6233333333333334}
 5375c62f88183327	1792619412	{"confidence":0.72,"kind":"Classify","label":"not_a_derivation","probabilities":{"legitimate_local":0.16,"not_a_derivation":0.81,"reimplements":0.03}}
+537ece5c87ab91ca	1792684422	{"confidence":0.95,"kind":"Classify","label":"different_work","probabilities":{"different_inputs":0.01,"different_order":0.02,"different_work":0.96,"same_operation":0.01}}
 538103d071a5a5ab	1792269251	{"confidence":0.45,"kind":"Classify","label":"move","probabilities":{"merge":0.05,"move":0.63,"no_issue":0.32}}
 5395936da78c93c2	1792252958	{"confidence":0.57,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.24,"no_issue":0.08,"semantic_verdict":0.68}}
 539f79bb8f63c24c	1792542865	{"confidence":0.8,"kind":"Classify","label":"move","probabilities":{"move":0.9,"no_issue":0.1}}

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import fc from "fast-check"
 import { emptyCatalog, type Catalog, type CatalogComponent } from "./catalog.ts"
 import { decodeIntent, projectMenu } from "./doc.ts"
 
@@ -148,5 +149,26 @@ describe("decodeIntent", () => {
   it("rejects a badly typed field rather than half-reading it", () => {
     expect(decodeIntent({ summary: 1 })).toBeUndefined()
     expect(decodeIntent({ useInstead: "other" })).toBeUndefined()
+  })
+})
+
+// The projection is one entry per component, carrying that component's own path and name:
+// the menu is an index of the catalog, so a projection that dropped or renamed an entry
+// would be a lie about the tree rather than a rendering choice.
+describe("projectMenu property", () => {
+  it("yields one entry per component, with its path", () => {
+    fc.assert(
+      fc.property(
+        fc.uniqueArray(fc.stringMatching(/^[a-z][a-z0-9]*$/u), { maxLength: 6 }),
+        (names) => {
+          const components = names.map((name) => component({ path: `src/${name}.ts`, name }))
+          const menu = projectMenu({ catalog: catalog(components) })
+          expect(menu.entries.length).toBe(components.length)
+          expect(menu.entries.map((entry) => entry.path)).toEqual(
+            components.map((entry) => entry.path),
+          )
+        },
+      ),
+    )
   })
 })

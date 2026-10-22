@@ -25,7 +25,7 @@ function isTypePosition(sourceCode, identifier) {
 function functionName(node, sourceCode) {
     if (node.type === "FunctionDeclaration" && node.id !== null)
         return node.id.name;
-    const parent = ancestorsOf(sourceCode, node)[0];
+    const parent = ancestorsOf(sourceCode, node).at(-1);
     if (parent !== undefined) {
         if (parent.type === "VariableDeclarator" && parent.id.type === "Identifier")
             return parent.id.name;

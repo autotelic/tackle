@@ -12,7 +12,7 @@
  *
  * @param {SourceCode} sourceCode - The rule's source-code accessor.
  * @param {ESTree.Node} node - The node whose ancestor chain is requested.
- * @returns {ReadonlyArray<ESTree.Node>} Nearest-first ancestor chain.
+ * @returns {ReadonlyArray<ESTree.Node>} Outermost-first ancestor chain (Program at index 0, the immediate parent last; use `.at(-1)` for the parent).
  */
 export function ancestorsOf(sourceCode, node) {
     return sourceCode.getAncestors(node);

@@ -1,5 +1,6 @@
 c416fd262a41f903	1792543728	{"confidence":0.26,"kind":"Classify","label":"move","probabilities":{"leave_it":0.05,"merge":0.16,"move":0.41,"share_a_contract":0.37,"split":0.01}}
 c41dcb86a767be20	1792252958	{"confidence":0.31,"kind":"Classify","label":"not_a_derivation","probabilities":{"legitimate_local":0.28,"not_a_derivation":0.54,"reimplements":0.18}}
+c42fac7101e3965c	1792687043	{"consistency":1,"kind":"Probability","probability":0.9}
 c441be333542ae61	1792543161	{"confidence":0.4,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.55,"different_order":0,"different_work":0.45,"same_operation":0}}
 c44f5651eff6e736	1792253092	{"confidence":0.43,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.62,"not_a_derivation":0.01,"reimplements":0.37}}
 c454171dc4861d2a	1792535008	{"confidence":0.77,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.83,"component_or_feature":0.11,"not_applicable":0.05,"route_or_handler":0.01}}
@@ -7,6 +8,7 @@ c454f0fd9563e4a1	1792252958	{"confidence":0.59,"kind":"Classify","label":"no_iss
 c455be5b2372fed3	1792621702	{"confidence":0.7,"kind":"Classify","label":"move","probabilities":{"merge":0.09,"move":0.8,"no_issue":0.11}}
 c4577f655d929fbe	1792617317	{"confidence":0.64,"kind":"Classify","label":"move","probabilities":{"merge":0.17,"move":0.76,"no_issue":0.07}}
 c4614194ca061829	1792252958	{"confidence":0.37,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.35,"no_issue":0.12,"semantic_verdict":0.53}}
+c46d7e27c33142d0	1792684422	{"confidence":0.18,"kind":"Rate","label":"removes_a_hazard","probabilities":{"meaningfully_better":0.32,"no_difference":0.06,"removes_a_hazard":0.46,"slightly_clearer":0.16},"rating":2.17}
 c47c2abf433212d4	1792542865	{"confidence":0.4,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.55,"different_order":0,"different_work":0.45,"same_operation":0}}
 c4931d7e01a1e85a	1792535007	{"confidence":0.61,"kind":"Classify","label":"orchestration","probabilities":{"domain_logic":0.3,"infrastructure":0,"input_adaptation":0.02,"mechanical":0,"not_applicable":0.02,"orchestration":0.65,"rendering":0,"request_validation":0,"transport_concern":0.01}}
 c494b7d07647b19f	1792535008	{"confidence":0.93,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0,"wrong_behavior":0.04,"wrong_contract":0.01}}

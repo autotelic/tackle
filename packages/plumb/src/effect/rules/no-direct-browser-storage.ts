@@ -46,8 +46,8 @@ export const noDirectBrowserStorageRule = defineRule({
 				const name = storageName(node);
 				if (name === null) return;
 				const chain = ancestorsOf(context.sourceCode, node);
-				const parent = chain[0];
-				const grandparent = chain[1];
+				const parent = chain.at(-1);
+				const grandparent = chain.at(-2);
 				if (parent === undefined) return;
 				if (parent.type === "MemberExpression") {
 					return;

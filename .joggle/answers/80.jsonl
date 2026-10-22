@@ -19,5 +19,6 @@
 80cc3f54e5405dc9	1792269251	{"confidence":0.45,"kind":"Classify","label":"move","probabilities":{"merge":0.05,"move":0.63,"no_issue":0.32}}
 80d4a8f441989ffd	1792252958	{"confidence":0.84,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.12,"framework_glue":0,"implementation_detail":0.88,"wire_contract":0}}
 80d7bf2a0320bd2f	1792252958	{"confidence":0.4,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.01,"common_idiom":0.6,"shared_helper":0.39}}
+80e29e84d020b03d	1792684422	{"confidence":0.4,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.28,"keep_variants":0.6,"no_issue":0.12}}
 80e98c1e0689d997	1792621702	{"confidence":0.92,"kind":"Classify","label":"value","probabilities":{"meaning":0.05,"unclear":0,"value":0.95}}
 80fcb52180ef84db	1792535008	{"confidence":0.64,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.03,"common_idiom":0.76,"shared_helper":0.21}}

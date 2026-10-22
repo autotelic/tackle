@@ -1,6 +1,7 @@
 import { RuleTester } from "oxlint/plugins-dev";
 
 import { describe, it } from "vitest";
+import fc from "fast-check";
 
 import { testableRule, wireRuleTester } from "../../testing/testable-rule.ts";
 import { noDeprecatedPartsRule } from "./no-deprecated-parts.ts";

@@ -2,6 +2,7 @@
 1414486d9b12ad0e	1792593149	{"confidence":0.84,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.92,"member_1":0.08}}
 14251f5948d16c5c	1792253093	{"confidence":0.41,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.21,"keep_variants":0.61,"no_issue":0.18}}
 142a1e7e3607c3e9	1792621702	{"confidence":0.77,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.13,"keep_variants":0.85,"no_issue":0.02}}
+142e98a827b482c9	1792684423	{"confidence":0.52,"kind":"Classify","label":"general","probabilities":{"general":0.68,"names_a_caller":0.31,"shared_vocabulary":0.01}}
 143d5a20b11c93d0	1792252958	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
 1447c2b07ba1dfc7	1792542865	{"consistency":1,"kind":"Probability","probability":0.47000000000000003}
 144f8e8e17666bfd	1792543728	{"confidence":0.84,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.07,"framework_glue":0,"implementation_detail":0.88,"wire_contract":0.05}}
@@ -17,5 +18,6 @@
 14c0906741cccb03	1792535008	{"confidence":1,"kind":"Classify","label":"already_there","probabilities":{"already_there":1,"component_or_feature":0,"not_applicable":0,"route_or_handler":0}}
 14c4259924ef1c32	1792252958	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
 14d416a455962cb1	1792252958	{"confidence":0.55,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.25,"no_issue":0.09,"semantic_verdict":0.66}}
+14db029ce64c7be2	1792684423	{"confidence":0.31,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.45,"names_a_caller":0.01,"shared_vocabulary":0.54}}
 14e10827a241a12e	1792542865	{"confidence":0.73,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.2,"framework_glue":0,"implementation_detail":0.8,"wire_contract":0}}
 14f12a4dd92cb93b	1792535008	{"confidence":0.88,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.89,"infrastructure":0,"input_adaptation":0.01,"mechanical":0.02,"not_applicable":0.02,"orchestration":0.06,"rendering":0,"request_validation":0,"transport_concern":0}}

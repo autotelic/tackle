@@ -9,6 +9,7 @@ e14c2cf8fd65f7df	1792252958	{"confidence":0.34,"kind":"Classify","label":"one_co
 e14c87884edb5f10	1792252958	{"confidence":0.61,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.74,"unclear":0.01,"value":0.25}}
 e16e6b4ffa48f890	1792592675	{"confidence":0.33,"kind":"Classify","label":"value","probabilities":{"meaning":0.45,"unclear":0,"value":0.55}}
 e175d993cc380765	1792252958	{"consistency":1,"kind":"Probability","probability":0.3244444444444444}
+e177c14cf54fdbb3	1792684420	{"confidence":0.68,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.76,"stale_reference":0.01,"wrong_behavior":0.17,"wrong_contract":0.06}}
 e17f1063de7cac08	1792617317	{"confidence":0.37,"kind":"Rate","label":"slightly_clearer","probabilities":{"meaningfully_better":0.42,"no_difference":0.07,"removes_a_hazard":0.07,"slightly_clearer":0.44},"rating":1.48}
 e1a2b456d3200ad5	1792617317	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
 e1a498ed475ec1ab	1792252958	{"confidence":0.8,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.07,"no_issue":0.08,"semantic_verdict":0.85}}

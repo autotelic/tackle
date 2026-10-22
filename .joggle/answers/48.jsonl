@@ -14,6 +14,7 @@
 486f1523a0dda75f	1792252958	{"confidence":0.79,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.84,"stale_reference":0.1,"wrong_behavior":0.05,"wrong_contract":0.01}}
 4877b02a87cabc41	1792252958	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
 4889124abbd1fe06	1792543161	{"confidence":0.39,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.03,"merge":0.1,"move":0.36,"share_a_contract":0.51,"split":0}}
+4892312981601965	1792684422	{"confidence":0.37,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.32,"keep_variants":0.58,"no_issue":0.1}}
 489910397fe92ee9	1792542865	{"confidence":0.8,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.09,"keep_variants":0.87,"no_issue":0.04}}
 48a17e6b55c86e67	1792253160	{"consistency":1,"kind":"Probability","probability":0.3433333333333333}
 48a781891a99260d	1792252958	{"confidence":0.6,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.02,"no_issue":0.28,"semantic_verdict":0.7}}
@@ -28,5 +29,6 @@
 48d73ff63f2b7996	1792535007	{"confidence":0.47,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.6,"component_or_feature":0.12,"not_applicable":0.25,"route_or_handler":0.03}}
 48ebed31d265a96a	1792252958	{"consistency":1,"kind":"Probability","probability":0.6966666666666667}
 48ef02ad86bf2670	1792542865	{"confidence":0.3,"kind":"Classify","label":"move","probabilities":{"leave_it":0.03,"merge":0.11,"move":0.44,"share_a_contract":0.42,"split":0}}
+48f3e771c1cb45d6	1792684423	{"confidence":0.89,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.07,"names_a_caller":0,"shared_vocabulary":0.93}}
 48f76fbdb9fb6c2e	1792252958	{"confidence":0.76,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.8200000000000001,"stale_reference":0,"wrong_behavior":0.06,"wrong_contract":0.12}}
 48fe80f0e32048b6	1792618754	{"confidence":0.33,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.43,"no_difference":0.1,"removes_a_hazard":0.14,"slightly_clearer":0.33},"rating":1.61}

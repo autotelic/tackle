@@ -246,6 +246,15 @@ export default {
       },
     },
     {
+      // `asProviderAnswer` validates a decoded cache entry against a decision: its
+      // `Option.none()` guards are structural discriminants (`decision._tag`, `"label" in
+      // answer`), not predicates over a value. `prefer-option-pipeline` assumes a value
+      // being filtered; composing these into `Option.filter` would obscure the shape
+      // checks the function exists to perform.
+      files: ["src/plans.ts"],
+      rules: { "plumb-effect/prefer-option-pipeline": "off" },
+    },
+    {
       // `verdictOf` returns undefined when an answer carries no label and no
       // probability -- an unreadable answer, a real third outcome every caller
       // already branches on by reporting the candidate unverified. Wrapping it in

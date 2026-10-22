@@ -4,6 +4,7 @@
 8e2b17aa9972d360	1792619055	{"confidence":0.98,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.99,"not_a_derivation":0.01,"reimplements":0}}
 8e343af2dc91c355	1792542864	{"confidence":0.71,"kind":"Classify","label":"library_core","probabilities":{"domain_core":0.23,"infrastructure":0,"library_core":0.75,"not_applicable":0,"rendering_edge":0,"transport_edge":0.01,"utilities":0.01}}
 8e3b0a44c06c9f02	1792621702	{"confidence":0.77,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.16,"framework_glue":0,"implementation_detail":0.83,"wire_contract":0.01}}
+8e4c36011c386e6f	1792684419	{"confidence":0.9,"kind":"Classify","label":"cycle","probabilities":{"cycle":0.95,"false_positive":0.05}}
 8e4d4bbda173b54d	1792617317	{"confidence":0.64,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.06,"common_idiom":0.76,"shared_helper":0.18}}
 8e675d1a09608f9e	1792535008	{"confidence":0.19,"kind":"Classify","label":"route_or_handler","probabilities":{"already_there":0.34,"component_or_feature":0.2,"not_applicable":0.07,"route_or_handler":0.39}}
 8e732829a958dd3e	1792269251	{"confidence":0.44,"kind":"Classify","label":"member_2","probabilities":{"member_0":0.25,"member_1":0.08,"member_2":0.58,"member_3":0.09}}
@@ -21,4 +22,5 @@
 8ecd8a3060483aea	1792535008	{"confidence":0.44,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.58,"component_or_feature":0.14,"not_applicable":0.22,"route_or_handler":0.06}}
 8ece0229568eac0d	1792535008	{"confidence":0.69,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.77,"component_or_feature":0.08,"not_applicable":0.13,"route_or_handler":0.02}}
 8ed3249670005de5	1792542865	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0.01,"wrong_behavior":0,"wrong_contract":0}}
+8ee059a6aab99fe4	1792684422	{"confidence":0.39,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.13,"merge":0.07,"move":0.29,"share_a_contract":0.51,"split":0}}
 8ee2eb6e1062f965	1792535007	{"confidence":0.9,"kind":"Classify","label":"orchestration","probabilities":{"domain_logic":0.06,"infrastructure":0,"input_adaptation":0.03,"mechanical":0,"not_applicable":0,"orchestration":0.91,"rendering":0,"request_validation":0,"transport_concern":0}}

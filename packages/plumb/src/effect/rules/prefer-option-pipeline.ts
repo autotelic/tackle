@@ -10,7 +10,8 @@ type FunctionLike = ESTree.ArrowFunctionExpression | ESTree.Function;
 
 /**
  * Count Option.none() returns in this function's own body. Nested scopes belong to
- * themselves, and loop bodies hold algorithmic exits rather than guard scatters.
+ * themselves, and loop bodies hold algorithmic exits rather than guard scatters. Every
+ * other node is descended into: returning early on a block body counted zero.
  *
  * @param {ESTree.Node} body - The function body to walk.
  * @returns {number} Number of direct `Option.none()` return exits.
@@ -33,17 +34,18 @@ function countDirectNoneReturns(body: ESTree.Node): number {
 		) {
 			return;
 		}
-		if (node.type !== "ReturnStatement") return void 0;
-		const argument = node.argument;
-		if (
-			argument?.type === "CallExpression" &&
-			argument.callee.type === "MemberExpression" &&
-			argument.callee.object.type === "Identifier" &&
-			argument.callee.object.name === "Option" &&
-			argument.callee.property.type === "Identifier" &&
-			argument.callee.property.name === "none"
-		)
-			count += 1;
+		if (node.type === "ReturnStatement") {
+			const argument = node.argument;
+			if (
+				argument?.type === "CallExpression" &&
+				argument.callee.type === "MemberExpression" &&
+				argument.callee.object.type === "Identifier" &&
+				argument.callee.object.name === "Option" &&
+				argument.callee.property.type === "Identifier" &&
+				argument.callee.property.name === "none"
+			)
+				count += 1;
+		}
 		for (const child of childNodes(node)) visit(child);
 	};
 	visit(body);

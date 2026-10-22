@@ -7,6 +7,11 @@ const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$/u;
 /**
  * We default to property-based testing: a test suite without fast-check only
  * pins examples. Escape hatch is an explicit inline disable with a reason.
+ *
+ * The visitor resets its state in `before()`: `createOnce` state spans the whole
+ * run, so without the reset a file that imports fast-check marks every later file
+ * as having one, and the same tree reports a suite or does not depending on the
+ * order files are visited.
  */
 export const preferPropertyTestsRule = defineRule({
 	meta: {
@@ -25,6 +30,8 @@ export const preferPropertyTestsRule = defineRule({
 		let sawFastCheck = false;
 		return {
 			before() {
+				program = null;
+				sawFastCheck = false;
 				if (!TEST_FILE.test(context.filename.replaceAll("\\", "/"))) return false;
 			},
 			Program(node) {

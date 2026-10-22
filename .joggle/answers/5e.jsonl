@@ -2,6 +2,7 @@
 5e0a4ef67422d2c9	1792252958	{"confidence":0.93,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0,"wrong_behavior":0.04,"wrong_contract":0.01}}
 5e0e68a686c1882b	1792535008	{"confidence":0.74,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.77,"infrastructure":0,"input_adaptation":0,"mechanical":0.1,"not_applicable":0.11,"orchestration":0.02,"rendering":0,"request_validation":0,"transport_concern":0}}
 5e1c06bbd815c906	1792252958	{"confidence":0.86,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.09,"independent":0.91,"meaning_switched":0}}
+5e1dd113ce47e795	1792684420	{"confidence":0.93,"kind":"Classify","label":"type_surface","probabilities":{"facade":0,"no_issue":0.04,"related_helpers":0.01,"type_surface":0.95}}
 5e1f88e8fd7d97d3	1792542865	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
 5e22dd471e5586e1	1792617317	{"confidence":0.49,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.04,"common_idiom":0.66,"shared_helper":0.3}}
 5e3e9e53854a41de	1792535008	{"confidence":0.47,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.6,"component_or_feature":0.29,"not_applicable":0.07,"route_or_handler":0.04}}
@@ -18,3 +19,4 @@
 5eb670f57201de07	1792542864	{"confidence":0.33,"kind":"Classify","label":"different_work","probabilities":{"different_inputs":0.5,"different_order":0,"different_work":0.5,"same_operation":0}}
 5ecb15b5ef35cf94	1792617317	{"confidence":0.73,"kind":"Classify","label":"different_work","probabilities":{"different_inputs":0.11,"different_order":0.02,"different_work":0.8,"same_operation":0.07}}
 5efeacaf881b97c0	1792253160	{"confidence":0.97,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.02,"same_module":0,"same_package":0,"sibling_packages":0.98}}
+5effcd98a501d26c	1792684422	{"confidence":0.61,"kind":"Classify","label":"collapse","probabilities":{"collapse":0.74,"keep_variants":0.24,"no_issue":0.02}}

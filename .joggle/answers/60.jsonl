@@ -1,3 +1,5 @@
+60162118e3b7769e	1792684422	{"confidence":0.41,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.14,"merge":0.08,"move":0.24,"share_a_contract":0.53,"split":0.01}}
+602aa5e5e455afb7	1792684424	{"confidence":0.82,"kind":"Classify","label":"migrate","probabilities":{"fix_tag":0.05,"keep":0.07,"migrate":0.88}}
 6038b1b3206c87eb	1792252958	{"consistency":1,"kind":"Probability","probability":0.10333333333333335}
 6039ce581dace70e	1792252958	{"confidence":0.85,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.11,"same_module":0,"same_package":0,"sibling_packages":0.89}}
 603bd74f8dd53d1c	1792542864	{"consistency":1,"kind":"Probability","probability":0.3133333333333333}

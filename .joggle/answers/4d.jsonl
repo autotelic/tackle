@@ -22,3 +22,4 @@
 4dd51f649ee321c6	1792252958	{"consistency":1,"kind":"Probability","probability":0.54}
 4dd5223fda19c749	1792252958	{"consistency":1,"kind":"Probability","probability":0.7422222222222222}
 4de1426019723c60	1792252958	{"confidence":0.87,"kind":"Classify","label":"no_issue","probabilities":{"magic_threshold":0.01,"name_meaning":0.01,"no_issue":0.9,"semantic_verdict":0.08}}
+4de4f38d01ef861b	1792684422	{"confidence":0.35,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.02,"merge":0.28,"move":0.2,"share_a_contract":0.48,"split":0.02}}
