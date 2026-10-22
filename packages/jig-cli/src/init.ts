@@ -731,9 +731,12 @@ ${profile.facts.has("configured") ? "" : "\nThis repository is not initialised y
 
 ## What this repo configured
 
+- package manager: ${profile.packageManager}
 - engines: ${engineSummary(profile)}
 - plumb: ${profile.lint.config === undefined ? "not configured" : profile.lint.config}${profile.lint.script === undefined ? "" : " via `" + profile.run + " " + profile.lint.script + "`"}
-- typescript: ${profile.facts.has("typescript") ? "yes" : "no"}${notes}
+- typescript: ${profile.facts.has("typescript") ? "yes" : "no"}
+- gate: ${profile.gateMode}
+- baseline: ${profile.baseline}${profile.cutlistDraft === undefined ? "" : "\n- cutlist: a draft is available (run `" + profile.jig + " init --cutlist`)"}${notes}
 
 ## When you need more
 
@@ -800,6 +803,24 @@ export const summaryFor = (result: InitResult): string => {
           ]),
   ]
   return lines.join("\n")
+}
+
+/** The plan as data, for a host that wants to reason about it rather than read prose. */
+export const initJson = (result: InitResult, prompt?: string): string => {
+  const profile = { ...result.profile, facts: [...result.profile.facts] }
+  const plan = {
+    dryRun: result.dryRun,
+    written: result.written,
+    kept: result.kept,
+    joggleConfig: result.joggleConfig,
+    cutlistConfig: result.cutlistConfig,
+    accepted: result.accepted,
+  }
+  return JSON.stringify(
+    prompt === undefined ? { profile, plan } : { profile, plan, prompt },
+    null,
+    2,
+  )
 }
 
 /** Write one generated file unless it already exists, and record which happened. */

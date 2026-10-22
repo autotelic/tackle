@@ -5,7 +5,7 @@ import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 import { Effect } from "effect"
 import { NodeServices } from "@effect/platform-node"
-import { configFor, cookbookFor, initialise, inspectRepo, onboardingFor } from "./init.ts"
+import { configFor, cookbookFor, initialise, initJson, inspectRepo, onboardingFor } from "./init.ts"
 
 const run = <A, E>(effect: Effect.Effect<A, E, never>): Promise<A> => Effect.runPromise(effect)
 
@@ -415,6 +415,20 @@ describe("rendering", () => {
         expect(configFor(profileFor(gateMode)).gate.mode).toBe(gateMode)
       }),
     )
+  })
+
+  it("serializes the plan for a host that reads it", async () => {
+    const root = project({ json: [["package.json", {}]] }, [])
+    try {
+      const result = await initialiseIn(root, { dryRun: true })
+      const plan = JSON.parse(initJson(result, "prompt"))
+      expect(plan.plan.dryRun).toBe(true)
+      expect(plan.plan.written).toContain("jig.config.json")
+      expect(plan.profile.facts).toEqual([])
+      expect(plan.prompt).toBe("prompt")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
   })
 
   it("tells an agent to run init when the repo is not configured yet", () => {

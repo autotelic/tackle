@@ -8,6 +8,7 @@
  *   jig_check     run every engine and return the findings
  *   jig_engines   list what is configured, and whether it is on PATH
  *   jig_onboard   read the setup plan and prompt without writing anything
+ *   jig_init      apply that plan after a human approves it
  *   /jig          run a check from the prompt line
  *
  * Like `joggle`'s extension this file is NOT typechecked by the package (tsconfig
@@ -211,23 +212,78 @@ export default function (pi: ExtensionAPI): void {
       cwd: Type.Optional(
         Type.String({ description: "Repository to inspect. Default: pi's working directory." }),
       ),
+      format: Type.Optional(
+        Type.Union([Type.Literal("text"), Type.Literal("json")], {
+          description: "The prompt alone, or the prompt with the plan as JSON. Default text.",
+        }),
+      ),
     }),
     async execute(
       _toolCallId: string,
-      params: { readonly cwd?: string },
+      params: { readonly cwd?: string; readonly format?: "text" | "json" },
       signal: AbortSignal | undefined,
       _onUpdate: unknown,
       ctx: ExtensionContext,
     ): Promise<ToolResult> {
       try {
         const target = targetFor(params.cwd, ctx)
-        const result = await run(pi, target, ["onboard", "--cwd", target], signal)
+        const format = params.format === undefined ? "text" : params.format
+        const result = await run(
+          pi,
+          target,
+          ["onboard", "--cwd", target, "--format", format],
+          signal,
+        )
         const text = (result.stdout.trim() === "" ? result.stderr : result.stdout).trim()
         if (result.code !== 0)
           return failed(`jig onboard failed (exit ${result.code}): ${text}`, {})
         return ok(text === "" ? "jig onboard printed nothing" : text, { cwd: target })
       } catch (error) {
         return failed(`jig could not run: ${reason(error)}`, { command: "jig onboard" })
+      }
+    },
+  })
+
+  pi.registerTool({
+    name: "jig_init",
+    label: "jig Init",
+    description:
+      "Apply the jig setup plan: write jig.config.json, the baseline, JIG.md, ONBOARD.md, a starter joggle.config.json, and optionally a cutlist draft. Use only after a human has approved the plan from jig_onboard; this writes files.",
+    promptSnippet: "Apply the jig setup plan after approval",
+    promptGuidelines: [
+      "Run jig_onboard first and show the plan to the human. Do not call jig_init until they approve it.",
+      "After init, run jig_engines and jig_check; do not run jig baseline without asking.",
+    ],
+    parameters: Type.Object({
+      cwd: Type.Optional(
+        Type.String({ description: "Repository to set up. Default: pi's working directory." }),
+      ),
+      cutlist: Type.Optional(
+        Type.Boolean({
+          description: "Also draft cutlist.config.json from detected UI roots. Default false.",
+        }),
+      ),
+    }),
+    async execute(
+      _toolCallId: string,
+      params: { readonly cwd?: string; readonly cutlist?: boolean },
+      signal: AbortSignal | undefined,
+      _onUpdate: unknown,
+      ctx: ExtensionContext,
+    ): Promise<ToolResult> {
+      try {
+        const target = targetFor(params.cwd, ctx)
+        const result = await run(
+          pi,
+          target,
+          ["init", "--cwd", target, ...(params.cutlist === true ? ["--cutlist"] : [])],
+          signal,
+        )
+        const text = (result.stdout.trim() === "" ? result.stderr : result.stdout).trim()
+        if (result.code !== 0) return failed(`jig init failed (exit ${result.code}): ${text}`, {})
+        return ok(text === "" ? "jig init wrote nothing" : text, { cwd: target })
+      } catch (error) {
+        return failed(`jig could not run: ${reason(error)}`, { command: "jig init" })
       }
     },
   })

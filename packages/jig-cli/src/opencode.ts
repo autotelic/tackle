@@ -178,16 +178,61 @@ export default Plugin.define({
               description:
                 "Repository to inspect, relative to this location. Default: this location's directory.",
             },
+            format: {
+              type: "string",
+              enum: ["text", "json"],
+              description: "The prompt alone, or the prompt with the plan as JSON. Default: text.",
+            },
           },
           additionalProperties: false,
         },
         options: { namespace: "jig", codemode: true },
         execute: async (input, context) => {
-          const options = (input ?? {}) as { readonly cwd?: unknown }
+          const options = (input ?? {}) as { readonly cwd?: unknown; readonly format?: unknown }
           const directory = directoryFor(options.cwd, root)
-          const outcome = await runJig(directory, ["onboard", "--cwd", directory], context.signal)
+          const format = options.format === "json" ? "json" : "text"
+          const outcome = await runJig(
+            directory,
+            ["onboard", "--cwd", directory, "--format", format],
+            context.signal,
+          )
           return {
             content: outcome.output === "" ? `jig onboard exited ${outcome.code}` : outcome.output,
+            metadata: { exitCode: outcome.code, cwd: directory },
+          }
+        },
+      })
+
+      editor.add({
+        name: "init",
+        description:
+          "Apply the jig setup plan: write jig.config.json, the baseline, JIG.md, ONBOARD.md, a starter joggle.config.json, and optionally a cutlist draft. Use only after a human has approved the plan from `jig.onboard`; this writes files.",
+        input: {
+          type: "object",
+          properties: {
+            cwd: {
+              type: "string",
+              description:
+                "Repository to set up, relative to this location. Default: this location.",
+            },
+            cutlist: {
+              type: "boolean",
+              description: "Also draft cutlist.config.json from detected UI roots. Default false.",
+            },
+          },
+          additionalProperties: false,
+        },
+        options: { namespace: "jig", codemode: true },
+        execute: async (input, context) => {
+          const options = (input ?? {}) as { readonly cwd?: unknown; readonly cutlist?: unknown }
+          const directory = directoryFor(options.cwd, root)
+          const outcome = await runJig(
+            directory,
+            ["init", "--cwd", directory, ...(options.cutlist === true ? ["--cutlist"] : [])],
+            context.signal,
+          )
+          return {
+            content: outcome.output === "" ? `jig init exited ${outcome.code}` : outcome.output,
             metadata: { exitCode: outcome.code, cwd: directory },
           }
         },

@@ -14,7 +14,7 @@ import { findMatches, readArtifact, renderMatches, renderMenuJson, renderSummary
 import { renderCodeClimate, renderJsonl, renderLsp, renderSarif } from "./projections.ts"
 import { renderGithub, renderJson, renderText } from "./render.ts"
 import { harnessRun } from "./run.ts"
-import { initialise, onboardingFor, summaryFor } from "./init.ts"
+import { initialise, initJson, onboardingFor, summaryFor } from "./init.ts"
 
 /** One line through Effect's Console, newline-normalized. */
 const write = (text: string): Effect.Effect<void> =>
@@ -188,6 +188,10 @@ const initCommand = Command.make(
       Flag.withDescription("Print the plan and the agent prompt without writing anything."),
       Flag.withDefault(false),
     ),
+    format: Flag.Literals("format", ["text", "json"]).pipe(
+      Flag.withDescription("How to render the plan. JSON is for a host that reads it."),
+      Flag.withDefault("text"),
+    ),
   },
   (options) =>
     Effect.gen(function* () {
@@ -199,8 +203,15 @@ const initCommand = Command.make(
         cutlist: options.cutlist,
         dryRun: options.print,
       })
+      const prompt = options.print ? onboardingFor(result.profile) : undefined
+      if (options.format === "json") {
+        yield* write(initJson(result, prompt))
+        return
+      }
       yield* write(summaryFor(result))
-      if (options.print) yield* write(`\n${onboardingFor(result.profile)}`)
+      if (prompt !== undefined) {
+        yield* write(`\n--- agent prompt begins ---\n${prompt}\n--- agent prompt ends ---`)
+      }
     }),
 ).pipe(
   Command.withDescription(
@@ -209,14 +220,23 @@ const initCommand = Command.make(
   Command.withShortDescription("Scaffold the harness for this repo."),
 )
 
-const onboardCommand = Command.make("onboard", { cwd: cwdFlag }, (options) =>
-  Effect.gen(function* () {
-    const path = yield* Path.Path
-    const root = path.resolve(Option.getOrUndefined(options.cwd) ?? process.cwd())
-    const result = yield* initialise(root, { dryRun: true })
-    yield* write(summaryFor(result))
-    yield* write(`\n${onboardingFor(result.profile)}`)
-  }),
+const onboardCommand = Command.make(
+  "onboard",
+  {
+    cwd: cwdFlag,
+    format: Flag.Literals("format", ["text", "json"]).pipe(
+      Flag.withDescription("The prompt alone, or the prompt with the plan as JSON."),
+      Flag.withDefault("text"),
+    ),
+  },
+  (options) =>
+    Effect.gen(function* () {
+      const path = yield* Path.Path
+      const root = path.resolve(Option.getOrUndefined(options.cwd) ?? process.cwd())
+      const result = yield* initialise(root, { dryRun: true })
+      const prompt = onboardingFor(result.profile)
+      yield* write(options.format === "json" ? initJson(result, prompt) : prompt)
+    }),
 ).pipe(
   Command.withDescription(
     "Print the agent prompt that sets jig up here, without writing anything. The prompt names the first command and where to stop and ask.",
