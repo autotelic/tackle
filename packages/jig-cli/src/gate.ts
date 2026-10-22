@@ -75,9 +75,14 @@ const heldByFailOn = (
  * report a person reads can never disagree.
  */
 export const gateVerdict = (run: HarnessRun, options: GateOptions): GateVerdict => {
-  const infrastructure = run.report.generators
-    .filter((generator) => generator.status === "errored")
-    .map((generator) => generator.id)
+  const infrastructure = [
+    ...run.report.generators
+      .filter((generator) => generator.status === "errored")
+      .map((generator) => generator.id),
+    // No engines is not a clean run: nothing was looked at. It is a setup fault,
+    // which is the infrastructure band, not a finding.
+    ...(run.report.generators.length === 0 ? ["jig"] : []),
+  ]
   const scope = inScope(run, options)
   const held = heldByFailOn(run, scope, options.failOn)
   // The ceiling is a second, severity-blind regime: enough warnings fail whatever `failOn`

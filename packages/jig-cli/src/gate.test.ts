@@ -134,6 +134,12 @@ describe("gateVerdict", () => {
     expect(verdict.infrastructure).toEqual(["joggle"])
   })
 
+  it("treats no engines as infrastructure, not a clean run", () => {
+    const verdict = gateVerdict(runOf([], []), options())
+    expect(verdict.exitCode).toBe(EXIT.infrastructure)
+    expect(verdict.infrastructure).toEqual(["jig"])
+  })
+
   it("does not hold a replayed engine against the run on its own", () => {
     const verdict = gateVerdict(runOf([], [summary("joggle", "replayed", 0)]), options())
     expect(verdict.exitCode).toBe(EXIT.clean)

@@ -169,7 +169,7 @@ export default Plugin.define({
       editor.add({
         name: "onboard",
         description:
-          "Read the setup plan and agent prompt for jig in this repository without writing anything. It names the package manager, the engines that can run, the paths init would write, and where to stop and ask.",
+          "Read the setup plan and agent prompt for jig in this repository without writing anything. It names the package manager, the engines that can run, the paths init would write, and where to stop and ask. Run `jig init` only after a human approves the plan.",
         input: {
           type: "object",
           properties: {

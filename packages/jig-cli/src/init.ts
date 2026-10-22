@@ -763,7 +763,13 @@ export const summaryFor = (result: InitResult): string => {
     `  engines          ${engineSummary(profile)}`,
     `  gate             ${profile.gateMode}`,
     `  baseline         ${profile.baseline} (${result.accepted} accepted finding(s))`,
-    `  cutlist          ${result.cutlistConfig === "written" ? "draft written — review, build, then re-run init --force" : result.cutlistConfig}`,
+    `  cutlist          ${
+      result.cutlistConfig !== "written"
+        ? result.cutlistConfig
+        : result.dryRun
+          ? "draft would be written — review it after applying"
+          : "draft written — review, build, then re-run init --force"
+    }`,
     `  ${action.padEnd(16)} ${result.written.length === 0 ? "nothing" : result.written.join(", ")}`,
     ...(result.kept.length === 0 ? [] : [`  ${keptAction.padEnd(16)} ${result.kept.join(", ")}`]),
     ...profile.notes.map((note) => `  note             ${note}`),
@@ -771,7 +777,7 @@ export const summaryFor = (result: InitResult): string => {
     "Next:",
     ...(result.dryRun
       ? [
-          `  1. ${profile.jig} init${result.cutlistConfig === "written" ? " --cutlist" : ""}     write this plan`,
+          `  1. ${profile.jig} init${result.cutlistConfig === "written" ? " --cutlist" : ""}     write this plan after approval`,
           `  2. ${profile.jig} engines     confirm each command resolves`,
           `  3. ${profile.jig} check --limit 20     census, then the first 20 findings`,
           `  4. point your agent at ${profile.onboarding}`,

@@ -112,7 +112,9 @@ export const renderText = (run: HarnessRun, options: TextOptions = {}): string =
   if (gate !== undefined && gate.infrastructure.length > 0) {
     lines.push(
       "",
-      `gate — engine(s) could not run: ${gate.infrastructure.join(", ")} (exit ${EXIT.infrastructure})`,
+      report.generators.length === 0
+        ? `gate — no engines configured; nothing was looked at (exit ${EXIT.infrastructure})`
+        : `gate — engine(s) could not run: ${gate.infrastructure.join(", ")} (exit ${EXIT.infrastructure})`,
     )
   }
   if (
