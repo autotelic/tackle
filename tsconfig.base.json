@@ -20,7 +20,8 @@
     "types": ["node"],
     "noEmit": true,
     "paths": {
-      "@autotelic/protocol": ["./packages/protocol/src/index.ts"]
+      "@autotelic/protocol": ["./packages/protocol/src/index.ts"],
+      "@autotelic/board": ["./packages/board/src/index.ts"]
     }
   }
 }

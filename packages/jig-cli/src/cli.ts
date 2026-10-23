@@ -14,6 +14,7 @@ import { findMatches, readArtifact, renderMatches, renderMenuJson, renderSummary
 import { renderCodeClimate, renderJsonl, renderLsp, renderSarif } from "./projections.ts"
 import { renderGithub, renderJson, renderText } from "./render.ts"
 import { harnessRun } from "./run.ts"
+import { isRoomInvocation, runRoom } from "./room.ts"
 import { initialise, initJson, onboardingFor, summaryFor } from "./init.ts"
 
 /** One line through Effect's Console, newline-normalized. */
@@ -388,9 +389,15 @@ const menuCommand = Command.make(
   ]),
 )
 
+// `jig room` is a passthrough, not a subcommand: the room owns its flags and its help, and
+// jig must not learn them. The seam stays a command line, like the engines.
+if (isRoomInvocation(process.argv)) {
+  process.exit(runRoom(process.argv))
+}
+
 const cli = Command.make("jig").pipe(
   Command.withDescription(
-    "The harness: run every conformance engine in one pass, merge them into one report, and hold the ratchet.",
+    "The harness: run every conformance engine in one pass, merge them into one report, and hold the ratchet. `jig room` opens the project room.",
   ),
   Command.withSubcommands([
     checkCommand,

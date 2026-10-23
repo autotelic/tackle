@@ -1,0 +1,51 @@
+{
+  "name": "@autotelic/room",
+  "version": "0.0.0",
+  "description": "The project room: one durable ledger per Linear project, its local daemon, and the review job that runs jig, a Pi, and a fenced post. `jig room` is the door.",
+  "license": "MIT",
+  "bin": {
+    "room": "./bin/room.js"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "skills"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "development": "./src/index.ts",
+      "default": "./dist/index.js"
+    },
+    "./cli": {
+      "development": "./src/cli.ts",
+      "default": "./dist/cli.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "room": "node --conditions=development src/cli.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.worker.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@autotelic/board": "workspace:*",
+    "@effect/platform-node": "catalog:",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "catalog:",
+    "@effect/tsgo": "catalog:",
+    "@types/node": "catalog:",
+    "@typescript/native": "catalog:",
+    "esbuild": "catalog:",
+    "fast-check": "catalog:",
+    "vitest": "catalog:"
+  },
+  "engines": {
+    "node": ">=24.18.0"
+  }
+}

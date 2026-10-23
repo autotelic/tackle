@@ -32,3 +32,6 @@ tools/foreman/*.sqlite-journal
 
 # OpenCode may install local plugin dependencies under here; none are committed.
 .opencode/node_modules/
+
+# celld dev state for the room bundle
+packages/room/.celld/

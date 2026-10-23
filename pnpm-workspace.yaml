@@ -20,6 +20,9 @@ catalog:
   effect: "4.0.5" # stable v4
   # The OpenCode plugin API, used only by jig's optional `./opencode` surface.
   "@opencode/plugin": "2.1.2"
+  # The Worker/DO types for the room bundle, and the bundler celld dev shells out to.
+  "@cloudflare/workers-types": "5.20261023.1"
+  esbuild: "0.28.2"
   "@effect/platform-node": "4.0.5"
   "@effect/vitest": "4.0.5"
   # joggle's judgement model: Effect's AI surface plus the TypeSafe provider. On the
@@ -82,3 +85,7 @@ minimumReleaseAgeExclude:
   - "@opencode/schema@2.1.2"
   - "@opencode/util@2.1.2"
   - pele@1.7.0
+  - "@cloudflare/workers-types@5.20261023.1"
+
+allowBuilds:
+  esbuild: true

@@ -1,0 +1,31 @@
+{
+  "name": "@autotelic/board",
+  "version": "0.0.0",
+  "description": "The room's records, identities, and invariants: a chit, a claim with a fencing epoch, a job, a receipt, a presence. No dependencies and no runtime — the bytes the room and the hosts agree on.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "development": "./src/index.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "devDependencies": {
+    "@effect/tsgo": "catalog:",
+    "@types/node": "catalog:",
+    "@typescript/native": "catalog:",
+    "fast-check": "catalog:",
+    "vitest": "catalog:"
+  },
+  "engines": {
+    "node": ">=24.18.0"
+  }
+}
