@@ -21,8 +21,12 @@ Something the loop observes: a session lifecycle change (started, produced outpu
 _Avoid_: message, trigger
 
 **Rule**:
-A user-defined mapping from an event (with optional conditions) to the transition and action the loop takes in response.
+A user-defined triple of event, machine state, and optional guard, mapping to the transition and action the loop takes in response. When several rules match the same (state, event), declaration order wins.
 _Avoid_: handler, hook, policy
+
+**Action**:
+What a rule triggers: either a session action (spawn a new Session with a prompt) or an effect action (a side effect the runner performs directly, e.g. marking a PR ready).
+_Avoid_: handler, callback
 
 **Checks**:
 The verification commands (tests, lint) the loop runs against the repository after a session completes. Their results decide whether work is good; the agent never grades itself.
