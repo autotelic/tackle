@@ -1,0 +1,874 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>The room and its sessions</title>
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --mid: #6b6b6b;
+    --rule: #d8d8d8;
+    --bg: #fff;
+    --blue: #3b6ea5;
+    --green: #2f6f4f;
+    --orange: #a05a2c;
+    --red: #c0392b;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    padding: 56px 60px 96px;
+    background: var(--bg);
+    color: var(--ink);
+    font:
+      15px/1.55 -apple-system,
+      "Helvetica Neue",
+      Helvetica,
+      Arial,
+      sans-serif;
+    max-width: 1240px;
+  }
+  h1 {
+    font:
+      400 34px/1.15 "Iowan Old Style",
+      Georgia,
+      serif;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  h2 {
+    font:
+      400 21px/1.25 "Iowan Old Style",
+      Georgia,
+      serif;
+    margin: 56px 0 4px;
+    letter-spacing: -0.01em;
+    padding-top: 18px;
+    border-top: 1px solid var(--rule);
+  }
+  h3 {
+    font:
+      600 13px/1.3 -apple-system,
+      sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 26px 0 6px;
+    color: var(--mid);
+  }
+  p {
+    max-width: 78ch;
+    margin: 10px 0;
+  }
+  .sub {
+    color: var(--mid);
+    font-size: 14px;
+    margin: 0;
+  }
+  .lede {
+    font-size: 16.5px;
+    color: #2b2b2b;
+  }
+  .note {
+    color: #444;
+    font-size: 13.5px;
+    max-width: 84ch;
+  }
+  .callout {
+    border-left: 3px solid var(--ink);
+    padding: 2px 0 2px 16px;
+    margin: 18px 0;
+    max-width: 80ch;
+  }
+  code {
+    font:
+      12.5px ui-monospace,
+      SFMono-Regular,
+      Menlo,
+      monospace;
+    background: #f5f5f5;
+    padding: 1px 4px;
+  }
+  figure {
+    margin: 22px 0 8px;
+  }
+  figcaption {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font:
+      600 12px/1.3 -apple-system,
+      sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+  }
+  figcaption .u {
+    font-weight: 400;
+    letter-spacing: 0;
+    color: var(--mid);
+    text-transform: none;
+    font-size: 11.5px;
+  }
+  svg {
+    width: 100%;
+    display: block;
+  }
+  table {
+    border-collapse: collapse;
+    font-size: 13.5px;
+    margin: 14px 0 4px;
+    width: 100%;
+  }
+  th {
+    text-align: left;
+    font:
+      600 11.5px/1.3 -apple-system,
+      sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--mid);
+    border-bottom: 1px solid var(--ink);
+    padding: 6px 14px 6px 0;
+    white-space: nowrap;
+  }
+  td {
+    padding: 6px 14px 6px 0;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  td:first-child {
+    white-space: nowrap;
+  }
+  .lane {
+    font:
+      600 11px -apple-system,
+      sans-serif;
+    letter-spacing: 0.06em;
+    fill: var(--mid);
+  }
+  .state {
+    font:
+      600 12px ui-monospace,
+      Menlo,
+      monospace;
+    fill: var(--ink);
+  }
+  .tick {
+    font:
+      11px -apple-system,
+      sans-serif;
+    fill: var(--mid);
+  }
+  .big {
+    font:
+      12px -apple-system,
+      sans-serif;
+    fill: var(--ink);
+  }
+</style>
+<svg width="0" height="0" style="position: absolute">
+  <defs>
+    <marker
+      id="a"
+      viewBox="0 0 10 10"
+      refX="9"
+      refY="5"
+      markerWidth="7"
+      markerHeight="7"
+      orient="auto-start-reverse"
+    >
+      <path d="M0,0 L10,5 L0,10 z" fill="#1a1a1a" />
+    </marker>
+    <marker
+      id="ab"
+      viewBox="0 0 10 10"
+      refX="9"
+      refY="5"
+      markerWidth="7"
+      markerHeight="7"
+      orient="auto-start-reverse"
+    >
+      <path d="M0,0 L10,5 L0,10 z" fill="#3b6ea5" />
+    </marker>
+    <marker
+      id="ag"
+      viewBox="0 0 10 10"
+      refX="9"
+      refY="5"
+      markerWidth="7"
+      markerHeight="7"
+      orient="auto-start-reverse"
+    >
+      <path d="M0,0 L10,5 L0,10 z" fill="#2f6f4f" />
+    </marker>
+    <marker
+      id="ao"
+      viewBox="0 0 10 10"
+      refX="9"
+      refY="5"
+      markerWidth="7"
+      markerHeight="7"
+      orient="auto-start-reverse"
+    >
+      <path d="M0,0 L10,5 L0,10 z" fill="#a05a2c" />
+    </marker>
+  </defs>
+</svg>
+
+<h1>The room and its sessions</h1>
+<p class="sub">tackle · one project · one long-lived room · many isolated workers · Oct 2026</p>
+
+<p class="lede">
+  A labeled PR is enough. The room watches the project, not your mentions; a PR by Ed carrying the
+  project's label wakes it, the room queues a worker, the worker gets a worktree, a port, and a
+  database, runs the branch, and posts one review. You can close the laptop; the room stays warm.
+  What follows is the flow, the session topology, and what is actually built.
+</p>
+
+<h2>1 · The ambient loop</h2>
+
+<figure>
+  <figcaption>
+    <span>fig 1 · label → room → worker → review</span
+    ><span class="u">the label is the address; the reviewer is not</span>
+  </figcaption>
+  <svg
+    viewBox="0 0 1120 340"
+    role="img"
+    aria-label="Ambient loop: a labeled PR wakes the room, the room queues a worker, the worker runs the app and posts one review."
+  >
+    <rect x="40" y="40" width="300" height="120" fill="#eef3ee" stroke="#2f6f4f" />
+    <text class="lane" x="52" y="62">YOUR MACHINE</text>
+    <text class="big" x="52" y="79">repo checkout</text>
+    <text class="big" x="52" y="95">pi session (project)</text>
+    <text class="big" x="52" y="111">roomd · worktrees</text>
+    <rect x="430" y="30" width="270" height="110" fill="#f7f7f7" stroke="#1a1a1a" />
+    <text class="lane" x="442" y="52">ROOM</text>
+    <text class="big" x="442" y="69">one DO per project</text>
+    <text class="big" x="442" y="85">ledger · claims · jobs</text>
+    <text class="big" x="442" y="101">board projection</text>
+    <rect x="790" y="40" width="290" height="120" fill="#fff" stroke="#1a1a1a" />
+    <text class="lane" x="802" y="62">GITHUB</text>
+    <text class="big" x="802" y="79">Ed's PR #1709</text>
+    <text class="big" x="802" y="95">label: multi-season</text>
+    <text class="big" x="802" y="111">author ≠ you</text>
+    <rect x="430" y="210" width="270" height="100" fill="#fff" stroke="#3b6ea5" />
+    <text class="lane" x="442" y="232">WORKER SESSION</text>
+    <text class="big" x="442" y="249">worktree @ head sha</text>
+    <text class="big" x="442" y="265">own port · own db</text>
+    <text class="big" x="442" y="281">review / fix / repro</text>
+    <rect x="790" y="210" width="290" height="100" fill="#faf9f6" stroke="#1a1a1a" />
+    <text class="lane" x="802" y="232">APP INSTANCE</text>
+    <text class="big" x="802" y="249">127.0.0.1:4102</text>
+    <text class="big" x="802" y="265">schema room_&lt;id&gt;</text>
+    <text class="big" x="802" y="281">the PR's branch, running</text>
+    <line
+      x1="790"
+      y1="95"
+      x2="704"
+      y2="80"
+      stroke="#1a1a1a"
+      stroke-width="1.4"
+      marker-end="url(#a)"
+    />
+    <text class="tick" x="742" y="88" text-anchor="middle">webhook: opened/labeled</text>
+    <line
+      x1="570"
+      y1="140"
+      x2="570"
+      y2="204"
+      stroke="#1a1a1a"
+      stroke-width="1.4"
+      marker-end="url(#a)"
+    />
+    <text class="tick" x="578" y="176" text-anchor="start">queue job(pr, sha)</text>
+    <line
+      x1="430"
+      y1="260"
+      x2="344"
+      y2="200"
+      stroke="#3b6ea5"
+      stroke-width="1.4"
+      marker-end="url(#ab)"
+    />
+    <text class="tick" x="360" y="244" text-anchor="start" fill="#3b6ea5">claim · spawn</text>
+    <line
+      x1="700"
+      y1="250"
+      x2="788"
+      y2="250"
+      stroke="#3b6ea5"
+      stroke-width="1.4"
+      marker-end="url(#ab)"
+    />
+    <text class="tick" x="744" y="242" text-anchor="middle" fill="#3b6ea5">app up</text>
+    <path
+      d="M930 210 C930 170 930 150 930 166"
+      stroke="#3b6ea5"
+      stroke-width="1.4"
+      fill="none"
+      marker-end="url(#ab)"
+    />
+    <line
+      x1="790"
+      y1="120"
+      x2="704"
+      y2="120"
+      stroke="#3b6ea5"
+      stroke-width="1.4"
+      marker-end="url(#ab)"
+    />
+    <text class="tick" x="800" y="138" text-anchor="start" fill="#3b6ea5">
+      review · label · marker
+    </text>
+    <path
+      d="M340 100 C390 100 400 80 426 80"
+      stroke="#2f6f4f"
+      stroke-width="1.4"
+      fill="none"
+      marker-end="url(#ag)"
+    />
+    <text class="tick" x="350" y="64" text-anchor="start" fill="#2f6f4f">card · /board</text>
+    <text class="note" x="40" y="180" text-anchor="start">
+      the label is the address; the reviewer is not
+    </text>
+  </svg>
+</figure>
+
+<p>
+  The trigger changes from “someone requested my review” to “a PR in this project exists and I did
+  not write it.” That is the ambient version: <code>pull_request.opened</code> or
+  <code>labeled</code>, the label matches the room's project, the author is not the room's actor.
+  Dedupe is still <code>pr:&lt;n&gt;:&lt;sha&gt;</code>, and the review marker is still checked
+  before posting. No mention is required.
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Event</th>
+      <th>Acts when</th>
+      <th>Why</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>pull_request.opened</code></td>
+      <td>the label is already on it, author ≠ actor</td>
+      <td>Ed opens a PR ready for a first pass</td>
+    </tr>
+    <tr>
+      <td><code>pull_request.labeled</code></td>
+      <td>the added label is the project's</td>
+      <td>a draft becomes work, or the label arrives later</td>
+    </tr>
+    <tr>
+      <td><code>pull_request.ready_for_review</code></td>
+      <td>the label is present</td>
+      <td>the draft gate lifts</td>
+    </tr>
+    <tr>
+      <td><code>synchronize</code></td>
+      <td>never on its own</td>
+      <td>a push is not a request; a person or a thread asks</td>
+    </tr>
+    <tr>
+      <td><code>issue_comment</code> / review thread</td>
+      <td>a blocker on your PR</td>
+      <td>a changeset, not a new review</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>2 · Sessions on the machine</h2>
+
+<figure>
+  <figcaption>
+    <span>fig 2 · one project session, one room, many workers</span
+    ><span class="u">intercom locally; Rat King when Ed's machine joins</span>
+  </figcaption>
+  <svg
+    viewBox="0 0 1120 480"
+    role="img"
+    aria-label="Topology: a project session, the long-lived room, the board, the supervisor, and isolated worker sessions; intercom locally, Rat King later."
+  >
+    <rect x="40" y="50" width="250" height="100" fill="#eef3ee" stroke="#2f6f4f" />
+    <text class="lane" x="52" y="72">PROJECT SESSION</text>
+    <text class="big" x="52" y="89">the one you talk to</text>
+    <text class="big" x="52" y="105">can spawn · attach</text>
+    <text class="big" x="52" y="121">survives the room</text>
+    <rect x="430" y="40" width="260" height="120" fill="#f7f7f7" stroke="#1a1a1a" />
+    <text class="lane" x="442" y="62">ROOM (celld DO)</text>
+    <text class="big" x="442" y="79">long-lived ledger</text>
+    <text class="big" x="442" y="95">jobs · claims · receipts</text>
+    <text class="big" x="442" y="111">no model</text>
+    <rect x="820" y="50" width="260" height="100" fill="#fff" stroke="#1a1a1a" />
+    <text class="lane" x="832" y="72">BOARD</text>
+    <text class="big" x="832" y="89">projection</text>
+    <text class="big" x="832" y="105">widget · /board</text>
+    <text class="big" x="832" y="121">room board --json</text>
+    <rect x="40" y="220" width="250" height="80" fill="#faf9f6" stroke="#a05a2c" />
+    <text class="lane" x="52" y="242">INTERCOM BROKER</text>
+    <text class="big" x="52" y="259">local 1:1 messages</text>
+    <text class="big" x="52" y="275">send · ask · reply</text>
+    <text class="big" x="52" y="291">same machine</text>
+    <rect x="430" y="220" width="260" height="80" fill="#faf9f6" stroke="#3b6ea5" />
+    <text class="lane" x="442" y="242">roomd (launchd)</text>
+    <text class="big" x="442" y="259">claims jobs</text>
+    <text class="big" x="442" y="275">slots · ports · GC</text>
+    <text class="big" x="442" y="291">never a second writer</text>
+    <rect x="820" y="220" width="260" height="80" fill="#fff" stroke="#d8d8d8" />
+    <text class="lane" x="832" y="242">RAT KING (later)</text>
+    <text class="big" x="832" y="259">signed mail · leases</text>
+    <text class="big" x="832" y="275">receipts · Ed's machine</text>
+    <text class="big" x="832" y="291">not v0</text>
+    <rect x="180" y="360" width="220" height="90" fill="#fff" stroke="#3b6ea5" />
+    <text class="lane" x="192" y="382">WORKER A</text>
+    <text class="big" x="192" y="399">review #1709</text>
+    <text class="big" x="192" y="415">wt · :4101 · db A</text>
+    <rect x="450" y="360" width="220" height="90" fill="#fff" stroke="#3b6ea5" />
+    <text class="lane" x="462" y="382">WORKER B</text>
+    <text class="big" x="462" y="399">fix thread</text>
+    <text class="big" x="462" y="415">wt · :4102 · db B</text>
+    <rect x="720" y="360" width="220" height="90" fill="#fff" stroke="#3b6ea5" />
+    <text class="lane" x="732" y="382">WORKER C</text>
+    <text class="big" x="732" y="399">repro</text>
+    <text class="big" x="732" y="415">wt · :4103 · db C</text>
+    <line
+      x1="290"
+      y1="100"
+      x2="426"
+      y2="100"
+      stroke="#1a1a1a"
+      stroke-width="1.4"
+      marker-start="url(#a)"
+      marker-end="url(#a)"
+    />
+    <text class="tick" x="300" y="88" text-anchor="start">cards · claims</text>
+    <line
+      x1="690"
+      y1="100"
+      x2="816"
+      y2="100"
+      stroke="#1a1a1a"
+      stroke-width="1.4"
+      marker-end="url(#a)"
+    />
+    <text class="tick" x="700" y="88" text-anchor="start">read</text>
+    <line
+      x1="165"
+      y1="150"
+      x2="165"
+      y2="216"
+      stroke="#a05a2c"
+      stroke-width="1.4"
+      stroke-dasharray="5 4"
+      marker-end="url(#ao)"
+    />
+    <text class="tick" x="172" y="190" text-anchor="start" fill="#a05a2c">1:1</text>
+    <line
+      x1="560"
+      y1="160"
+      x2="560"
+      y2="216"
+      stroke="#3b6ea5"
+      stroke-width="1.4"
+      marker-end="url(#ab)"
+    />
+    <text class="tick" x="568" y="192" text-anchor="start" fill="#3b6ea5">enqueue</text>
+    <line
+      x1="430"
+      y1="260"
+      x2="402"
+      y2="356"
+      stroke="#3b6ea5"
+      stroke-width="1.4"
+      marker-end="url(#ab)"
+    />
+    <text class="tick" x="300" y="330" text-anchor="start" fill="#3b6ea5">spawn</text>
+    <line
+      x1="560"
+      y1="300"
+      x2="560"
+      y2="356"
+      stroke="#3b6ea5"
+      stroke-width="1.4"
+      marker-end="url(#ab)"
+    />
+    <line
+      x1="690"
+      y1="260"
+      x2="720"
+      y2="356"
+      stroke="#3b6ea5"
+      stroke-width="1.4"
+      marker-end="url(#ab)"
+    />
+    <line
+      x1="690"
+      y1="80"
+      x2="818"
+      y2="80"
+      stroke="#1a1a1a"
+      stroke-width="1.4"
+      marker-end="url(#a)"
+    />
+    <path
+      d="M950 150 C950 190 950 200 950 216"
+      stroke="#d8d8d8"
+      stroke-width="1.4"
+      fill="none"
+      stroke-dasharray="5 4"
+      marker-end="url(#a)"
+    />
+  </svg>
+</figure>
+
+<p>
+  The <strong>project session</strong> is the one you talk to. It does not own the room and it does
+  not have to be open. It can spawn a worker, attach to one, or ask one a question. The
+  <strong>room</strong> owns the ledger and the board. <strong>roomd</strong> is the supervisor: it
+  claims jobs, allocates a worktree and a port, spawns the worker, watches it, and writes the
+  receipts. A <strong>worker</strong> is a Pi session with a repo checkout, an isolated app
+  instance, and one job.
+</p>
+
+<p>
+  Pi Intercom is the right local transport between these sessions: a broker, named sessions,
+  <code>send</code> and <code>ask</code>, messages that can trigger a turn or wait for one. It is
+  not the ledger — a message is not a receipt. Rat King is the same idea across machines, with
+  signed mail, leases, and durable receipts; it is what Ed's laptop uses when it joins.
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Piece</th>
+      <th>Owns</th>
+      <th>Not its job</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>project session</td>
+      <td>the conversation, spawning, attaching</td>
+      <td>claims, dedupe, the board</td>
+    </tr>
+    <tr>
+      <td>room (DO)</td>
+      <td>jobs, claims, receipts, presence</td>
+      <td>running code, holding keys</td>
+    </tr>
+    <tr>
+      <td>roomd</td>
+      <td>slots, worktrees, ports, child lifecycle</td>
+      <td>deciding what work exists</td>
+    </tr>
+    <tr>
+      <td>worker</td>
+      <td>one checkout, one app, one transcript</td>
+      <td>talking to GitHub without the room's fence</td>
+    </tr>
+    <tr>
+      <td>Pi Intercom</td>
+      <td>1:1 messages between live sessions</td>
+      <td>durability, receipts, cross-machine</td>
+    </tr>
+    <tr>
+      <td>Rat King</td>
+      <td>the same, signed and durable, across hosts</td>
+      <td>v0</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>3 · One worker, one environment</h2>
+
+<figure>
+  <figcaption>
+    <span>fig 3 · the worker lifecycle</span
+    ><span class="u">a crash quarantines the worktree; it is never reused silently</span>
+  </figcaption>
+  <svg
+    viewBox="0 0 1120 310"
+    role="img"
+    aria-label="Worker lifecycle: queued, claimed, worktree, install, app up, run, receipts, post, down; a crash quarantines the worktree and keeps the transcript."
+  >
+    <rect x="50" y="70" width="102" height="42" fill="#fff" stroke="#1a1a1a" />
+    <text class="state" x="62" y="96">queued</text>
+    <line
+      x1="152"
+      y1="91"
+      x2="166"
+      y2="91"
+      stroke="#1a1a1a"
+      stroke-width="1.4"
+      marker-end="url(#a)"
+    />
+    <rect x="168" y="70" width="102" height="42" fill="#fff" stroke="#1a1a1a" />
+    <text class="state" x="180" y="96">claimed</text>
+    <line
+      x1="270"
+      y1="91"
+      x2="284"
+      y2="91"
+      stroke="#1a1a1a"
+      stroke-width="1.4"
+      marker-end="url(#a)"
+    />
+    <rect x="286" y="70" width="102" height="42" fill="#fff" stroke="#1a1a1a" />
+    <text class="state" x="298" y="96">worktree</text>
+    <line
+      x1="388"
+      y1="91"
+      x2="402"
+      y2="91"
+      stroke="#1a1a1a"
+      stroke-width="1.4"
+      marker-end="url(#a)"
+    />
+    <rect x="404" y="70" width="102" height="42" fill="#fff" stroke="#1a1a1a" />
+    <text class="state" x="416" y="96">install</text>
+    <line
+      x1="506"
+      y1="91"
+      x2="520"
+      y2="91"
+      stroke="#1a1a1a"
+      stroke-width="1.4"
+      marker-end="url(#a)"
+    />
+    <rect x="522" y="70" width="102" height="42" fill="#fff" stroke="#1a1a1a" />
+    <text class="state" x="534" y="96">app up</text>
+    <line
+      x1="624"
+      y1="91"
+      x2="638"
+      y2="91"
+      stroke="#1a1a1a"
+      stroke-width="1.4"
+      marker-end="url(#a)"
+    />
+    <rect x="640" y="70" width="102" height="42" fill="#fff" stroke="#1a1a1a" />
+    <text class="state" x="652" y="96">run</text>
+    <line
+      x1="742"
+      y1="91"
+      x2="756"
+      y2="91"
+      stroke="#1a1a1a"
+      stroke-width="1.4"
+      marker-end="url(#a)"
+    />
+    <rect x="758" y="70" width="102" height="42" fill="#fff" stroke="#1a1a1a" />
+    <text class="state" x="770" y="96">receipts</text>
+    <line
+      x1="860"
+      y1="91"
+      x2="874"
+      y2="91"
+      stroke="#1a1a1a"
+      stroke-width="1.4"
+      marker-end="url(#a)"
+    />
+    <rect x="876" y="70" width="102" height="42" fill="#fff" stroke="#1a1a1a" />
+    <text class="state" x="888" y="96">post</text>
+    <line
+      x1="978"
+      y1="91"
+      x2="992"
+      y2="91"
+      stroke="#1a1a1a"
+      stroke-width="1.4"
+      marker-end="url(#a)"
+    />
+    <rect x="994" y="70" width="102" height="42" fill="#fff" stroke="#1a1a1a" />
+    <text class="state" x="1006" y="96">down</text>
+    <rect x="50" y="190" width="190" height="42" fill="#fff" stroke="#a05a2c" />
+    <text class="state" x="62" y="216">orphaned</text>
+    <rect x="280" y="190" width="190" height="42" fill="#fff" stroke="#a05a2c" />
+    <text class="state" x="292" y="216">app down</text>
+    <rect x="510" y="190" width="210" height="42" fill="#fff" stroke="#d8d8d8" />
+    <text class="state" x="522" y="216">kept transcript</text>
+    <line
+      x1="400"
+      y1="112"
+      x2="145"
+      y2="186"
+      stroke="#a05a2c"
+      stroke-width="1.4"
+      stroke-dasharray="5 4"
+      marker-end="url(#ao)"
+    />
+    <text class="tick" x="210" y="178" text-anchor="start" fill="#a05a2c">
+      child dies / lease lost
+    </text>
+    <line
+      x1="700"
+      y1="112"
+      x2="760"
+      y2="186"
+      stroke="#a05a2c"
+      stroke-width="1.4"
+      stroke-dasharray="5 4"
+      marker-end="url(#ao)"
+    />
+    <text class="tick" x="700" y="178" text-anchor="start" fill="#a05a2c">on any exit</text>
+    <text class="note" x="50" y="280" text-anchor="start">
+      one worktree · one port · one database · one transcript per worker; nothing is reused after a
+      crash.
+    </text>
+  </svg>
+</figure>
+
+<p>
+  Every worker gets its own <code>git worktree</code> at the PR head SHA, its own port from a
+  reserved range, its own database (a schema or a SQLite file), and its own env namespace. The main
+  checkout is never touched. The app comes up from the PR's own tree, so a review can open the page
+  it is reviewing; the environment is torn down on exit, and a crashed worker leaves a quarantined
+  worktree and a kept transcript rather than a half-live server.
+</p>
+
+<p>
+  This is the local, boring version of an Orb or a Rivet actor: an Orb is a prepared snapshot plus
+  setup/resume; an actor is a stateful isolate with an identity. Here the identity is the room's
+  job, the snapshot is the worktree, the isolate is the port/database pair, and the supervisor is
+  <code>roomd</code>.
+</p>
+
+<h2>4 · The room outlives the session</h2>
+
+<figure>
+  <figcaption>
+    <span>fig 4 · walk away, come back</span
+    ><span class="u">the room is celld; the TUI is optional</span>
+  </figcaption>
+  <svg
+    viewBox="0 0 1120 360"
+    role="img"
+    aria-label="Long-lived room: close the TUI, the room stays warm, work arrives, and the session rejoins with the board intact."
+  >
+    <line x1="90" y1="50" x2="90" y2="330" stroke="#e6e6e6" stroke-dasharray="3 5" />
+    <text class="lane" x="90" y="40" text-anchor="middle">YOU</text>
+    <line x1="420" y1="50" x2="420" y2="330" stroke="#e6e6e6" stroke-dasharray="3 5" />
+    <text class="lane" x="420" y="40" text-anchor="middle">ROOM (celld)</text>
+    <line x1="700" y1="50" x2="700" y2="330" stroke="#e6e6e6" stroke-dasharray="3 5" />
+    <text class="lane" x="700" y="40" text-anchor="middle">roomd</text>
+    <line x1="960" y1="50" x2="960" y2="330" stroke="#e6e6e6" stroke-dasharray="3 5" />
+    <text class="lane" x="960" y="40" text-anchor="middle">Ed</text>
+    <text class="big" x="100" y="80" text-anchor="start">open pi · /room</text>
+    <line
+      x1="90"
+      y1="88"
+      x2="416"
+      y2="88"
+      stroke="#1a1a1a"
+      stroke-width="1.4"
+      marker-end="url(#a)"
+    />
+    <text class="big" x="100" y="116" text-anchor="start">walk away · close the TUI</text>
+    <text class="tick" x="430" y="116" text-anchor="start">room stays warm in celld</text>
+    <text class="tick" x="430" y="146" text-anchor="start">job arrives · daemon claims</text>
+    <line
+      x1="420"
+      y1="154"
+      x2="696"
+      y2="154"
+      stroke="#3b6ea5"
+      stroke-width="1.4"
+      marker-end="url(#ab)"
+    />
+    <text class="tick" x="710" y="146" text-anchor="start" fill="#3b6ea5">runs worker</text>
+    <text class="tick" x="710" y="180" text-anchor="start" fill="#3b6ea5">posts · receipts</text>
+    <line
+      x1="700"
+      y1="188"
+      x2="424"
+      y2="188"
+      stroke="#2f6f4f"
+      stroke-width="1.4"
+      marker-end="url(#ag)"
+    />
+    <text class="big" x="100" y="236" text-anchor="start">come back · pi in the repo</text>
+    <line
+      x1="90"
+      y1="244"
+      x2="416"
+      y2="244"
+      stroke="#1a1a1a"
+      stroke-width="1.4"
+      marker-end="url(#a)"
+    />
+    <text class="tick" x="430" y="244" text-anchor="start">widget + board replay</text>
+    <text class="tick" x="100" y="296" text-anchor="start" fill="#a05a2c">
+      Ed's machine: same room later
+    </text>
+    <path
+      d="M960 300 C820 300 700 300 640 300"
+      stroke="#a05a2c"
+      stroke-width="1.4"
+      fill="none"
+      stroke-dasharray="5 4"
+      marker-end="url(#ao)"
+    />
+  </svg>
+</figure>
+
+<p>
+  This is already true in the built version: celld keeps the Durable Object across a Pi exit, a
+  queued job survives, and reopening the session replays the board. What is not built yet is the
+  worker-session supervisor and the per-session app environment; the review path exists, the
+  spawn/attach/monitor path is the next layer.
+</p>
+
+<div class="callout">
+  <p>
+    <strong>The sentence to keep:</strong> the label is the address, the room is the memory, the
+    worker is the hands, and the project session is where a person steers.
+  </p>
+</div>
+
+<h2>5 · Build order for this layer</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Move</th>
+      <th>Done when</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td>label trigger + author ≠ actor + dedupe by sha</td>
+      <td>Ed's labeled PR queues without a review request</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>worker record: worktree, port, db, session id, transcript</td>
+      <td><code>room board</code> shows the worker and its URL</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>supervisor: allocate, spawn, heartbeat, quarantine</td>
+      <td>kill the worker → orphaned, transcript kept, port freed</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td><code>room attach</code> + Pi Intercom</td>
+      <td>ask a running worker a question from the project session</td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>Rat King transport</td>
+      <td>Ed's worker joins the same room from another machine</td>
+    </tr>
+  </tbody>
+</table>
+
+<p class="note">
+  The current build proves the room, the board, the webhook dedupe, the claim, and the Pi widget. It
+  does not yet spawn a worker per job; that is the next slice, and the label trigger is the first
+  line of it.
+</p>
