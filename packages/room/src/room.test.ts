@@ -1,8 +1,35 @@
 import { DatabaseSync } from "node:sqlite"
+import { Option } from "effect"
+import type { Sql, SqlValue } from "./sql.ts"
+
+/** `node:sqlite` for the tests; the package source only knows the `Sql` port. */
+class NodeSql implements Sql {
+  readonly #db: DatabaseSync
+  constructor(db: DatabaseSync) {
+    this.#db = db
+  }
+  exec(sql: string, ...params: ReadonlyArray<SqlValue>): void {
+    this.#db.prepare(sql).run(...params)
+  }
+  all<T>(sql: string, ...params: ReadonlyArray<SqlValue>): ReadonlyArray<T> {
+    // SAFETY: the caller names the row type and the driver returns named columns.
+    const rows = this.#db.prepare(sql).all(...params)
+    return rows.map((row) => row as unknown as T)
+  }
+  get<T>(sql: string, ...params: ReadonlyArray<SqlValue>): T | undefined {
+    // SAFETY: the caller names the row type and the driver returns named columns.
+    return this.#db.prepare(sql).get(...params) as unknown as T | undefined
+  }
+  transaction<T>(run: () => T): T {
+    this.#db.exec("BEGIN IMMEDIATE")
+    const value = run()
+    this.#db.exec("COMMIT")
+    return value
+  }
+}
 import { describe, expect, it } from "vitest"
 import { fromGithub, fromLinear } from "./ingest.ts"
 import { Ledger } from "./ledger.ts"
-import { NodeSql } from "./node-sql.ts"
 import type { Job } from "@autotelic/board"
 
 const ledger = (): Ledger =>
@@ -97,7 +124,7 @@ describe("ledger", () => {
   it("claims a queued job and reports an interrupted one as claimed, not done", () => {
     const store = ledger()
     store.enqueue(job("pr:1:abc"))
-    const claimed = store.claimJob("a@x", 10)
+    const claimed = Option.getOrUndefined(store.claimJob("a@x", 10))
     expect(claimed?.state).toBe("claimed")
     expect(store.jobs()[0]?.state).toBe("claimed")
   })

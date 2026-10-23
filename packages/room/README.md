@@ -4,9 +4,10 @@ One ledger per Linear project, a daemon on each machine, and a review job that r
 Pi, and one fenced post.
 
 ```
-jig room plan        read the repo, the token, and the projects; print the init it would run
+jig room plan        read the repo, the token, and the rooms; print the init it would run
 jig room init        write .room/config.json, register the room
 jig room dev         run the room locally with `celld dev`
+jig room board       jobs, chits, and presence (the same JSON the Pi widget reads)
 jig room doctor      prove the loop: config, identity, celld, forward, room
 jig room webhook     print the `gh webhook forward` command for this room
 jig room daemon      claim jobs and run reviews
@@ -46,6 +47,24 @@ is the stage until the room is shared.
 The review is triggered by a **review request**, not a push. The daemon checks the PR's
 reviews for its marker before posting, so a re-delivered webhook cannot post twice, and a
 re-request after a push runs again.
+
+## Pi
+
+`extensions/pi.ts` is the terminal surface: a widget above the editor, a `/room` picker, and a
+`room_board` tool. It shells out to the CLI, so it renders the same bytes a person sees. Load
+it with `pi -e packages/room/extensions/pi.ts`, or install this package as a Pi package.
+
+## End to end, locally
+
+```sh
+CELLD_ESBUILD="$(pwd)/packages/room/node_modules/.bin/esbuild" celld dev
+jig room init --room e2e --linear-project <id> --linear-name "E2E"
+jig room webhook | sh
+jig room board
+```
+
+A `review_requested` webhook is deduped by delivery id, queued as `pr:<n>:<sha>`, claimed
+exactly once, and shown in the board. The Pi widget refreshes every 15 seconds.
 
 ## Alchemy and celld
 

@@ -1,4 +1,4 @@
-import { Console, Effect, Option, Path, Runtime } from "effect"
+import { Console, Effect, Option, Path, Result, Runtime } from "effect"
 import { CliError, Command, Flag } from "effect/cli"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { jobOf } from "@autotelic/board"
@@ -8,13 +8,15 @@ import {
   doctor,
   init,
   plan,
+  renderBoard,
   renderChecks,
   renderPlan,
   webhookCommand as webhookLine,
 } from "./commands.ts"
-import { readConfig } from "./config.ts"
+import { readConfig, type RoomConfig } from "./config.ts"
 import { daemon, roomUrl } from "./daemon.ts"
-import { configPathOf, roomsByActivity } from "./paths.ts"
+import { configPathOf, readIndex, roomsByActivity } from "./paths.ts"
+import { RoomClient, type Board } from "./client.ts"
 import { runReview } from "./review.ts"
 
 /*
@@ -50,18 +52,14 @@ const exit = (code: number): Effect.Effect<void> =>
     process.exitCode = code
   })
 
-const report = (error: unknown): string => (error instanceof Error ? error.message : String(error))
-
 const planCommand = Command.make("plan", { cwd: cwdFlag, json: jsonFlag }, (options) =>
   Effect.gen(function* () {
     const root = yield* rootOf(options.cwd)
-    const value = yield* Effect.sync(() => plan(root))
+    const value = yield* plan(root)
     yield* write(options.json ? JSON.stringify(value, null, 2) : renderPlan(value))
   }),
 ).pipe(
-  Command.withDescription(
-    "Read the repo, the token, and the Linear projects; print the init it would run.",
-  ),
+  Command.withDescription("Read the repo, the token, and the rooms; print the init it would run."),
   Command.withShortDescription("Plan a room."),
 )
 
@@ -92,28 +90,24 @@ const initCommand = Command.make(
   (options) =>
     Effect.gen(function* () {
       const root = yield* rootOf(options.cwd)
-      const result = yield* Effect.tryPromise({
-        try: () =>
-          init({
-            cwd: root,
-            name: options.room,
-            projectId: options.project,
-            projectName: options.projectName,
-            workspace: Option.getOrUndefined(options.workspace),
-            stage: Option.getOrUndefined(options.stage),
-            force: options.force,
-          }),
-        catch: (error) => new Error(report(error)),
-      }).pipe(
-        Effect.catch((error) =>
-          Effect.gen(function* () {
-            yield* write(error.message)
-            yield* exit(1)
-            return undefined
-          }),
-        ),
+      const outcome = yield* Effect.result(
+        init({
+          cwd: root,
+          name: options.room,
+          projectId: options.project,
+          projectName: options.projectName,
+          workspace: Option.getOrUndefined(options.workspace),
+          stage: Option.getOrUndefined(options.stage),
+          force: options.force,
+          now: Date.now(),
+        }),
       )
-      if (result === undefined) return
+      if (Result.isFailure(outcome)) {
+        yield* write(outcome.failure)
+        yield* exit(1)
+        return
+      }
+      const result = outcome.success
       yield* write(
         [
           `room: ${result.config.room}`,
@@ -137,13 +131,65 @@ const initCommand = Command.make(
   Command.withShortDescription("Create a room here."),
 )
 
+const boardCommand = Command.make(
+  "board",
+  {
+    cwd: cwdFlag,
+    room: Flag.String("room").pipe(
+      Flag.withDescription("A room name from the index (default: the room in this repository)."),
+      Flag.optional,
+    ),
+    json: jsonFlag,
+  },
+  (options) =>
+    Effect.gen(function* () {
+      const root = yield* rootOf(options.cwd)
+      const named = Option.getOrUndefined(options.room)
+      let config: RoomConfig | undefined
+      if (named === undefined) {
+        config = Result.getOrUndefined(yield* readConfig(configPathOf(root)))
+      } else {
+        const index = yield* readIndex()
+        const entry = index.rooms.find((room) => room.name === named || room.room === named)
+        config =
+          entry === undefined
+            ? undefined
+            : Result.getOrUndefined(yield* readConfig(entry.configPath))
+      }
+      if (config === undefined) {
+        yield* write("room board: no room here; run `jig room plan`")
+        yield* exit(1)
+        return
+      }
+      const board = Option.getOrUndefined(
+        yield* Effect.tryPromise({
+          try: () => new RoomClient(roomUrl(), config.room).board(),
+          catch: () => Option.none<Board>(),
+        }).pipe(Effect.orElseSucceed(() => Option.none<Board>())),
+      )
+      if (options.json) {
+        yield* write(
+          JSON.stringify(
+            board === undefined
+              ? { room: config.room, name: config.name, stage: config.stage, reachable: false }
+              : { ...board, name: config.name, stage: config.stage },
+            null,
+            2,
+          ),
+        )
+        return
+      }
+      yield* write(renderBoard({ config, board }))
+    }),
+).pipe(
+  Command.withDescription("Render the room's board: jobs, chits, and who is present."),
+  Command.withShortDescription("Show the board."),
+)
+
 const doctorCommand = Command.make("doctor", { cwd: cwdFlag }, (options) =>
   Effect.gen(function* () {
     const root = yield* rootOf(options.cwd)
-    const checks = yield* Effect.tryPromise({
-      try: () => doctor(root),
-      catch: (error) => new Error(report(error)),
-    }).pipe(Effect.orElseSucceed(() => []))
+    const checks = yield* doctor(root)
     yield* write(renderChecks(checks))
     yield* exit(checks.length > 0 && checks.every((check) => check.ok) ? 0 : 1)
   }),
@@ -156,7 +202,7 @@ const doctorCommand = Command.make("doctor", { cwd: cwdFlag }, (options) =>
 
 const listCommand = Command.make("list", { json: jsonFlag }, (options) =>
   Effect.gen(function* () {
-    const rooms = yield* Effect.sync(() => roomsByActivity())
+    const rooms = yield* roomsByActivity
     if (options.json) {
       yield* write(JSON.stringify(rooms, null, 2))
       return
@@ -217,7 +263,7 @@ const daemonCommand = Command.make(
   (options) =>
     Effect.gen(function* () {
       const root = yield* rootOf(options.cwd)
-      const config = yield* Effect.sync(() => readConfig(configPathOf(root)))
+      const config = Result.getOrUndefined(yield* readConfig(configPathOf(root)))
       if (config === undefined) {
         yield* write("room daemon: no .room/config.json")
         yield* exit(1)
@@ -229,12 +275,9 @@ const daemonCommand = Command.make(
         once: options.once,
         log: (line) => process.stdout.write(`${line}\n`),
       }).pipe(
-        Effect.catch((error) =>
-          Effect.gen(function* () {
-            yield* write(error.message)
-            yield* exit(1)
-          }),
-        ),
+        Effect.orElseSucceed(() => {
+          process.exitCode = 1
+        }),
       )
     }),
 ).pipe(
@@ -255,7 +298,7 @@ const reviewCommand = Command.make(
   (options) =>
     Effect.gen(function* () {
       const root = yield* rootOf(options.cwd)
-      const config = yield* Effect.sync(() => readConfig(configPathOf(root)))
+      const config = Result.getOrUndefined(yield* readConfig(configPathOf(root)))
       if (config === undefined) {
         yield* write("room review: no .room/config.json")
         yield* exit(1)
@@ -267,7 +310,7 @@ const reviewCommand = Command.make(
           runReview({
             config,
             job: {
-              id: jobOf(options.pr, "manual"),
+              id: jobOf({ pr: options.pr, sha: "manual" }),
               room: config.room,
               kind: "review",
               pr: options.pr,
@@ -280,11 +323,13 @@ const reviewCommand = Command.make(
             dryRun: options.dryRun,
             log: (line) => process.stdout.write(`${line}\n`),
           }),
-        catch: (error) => new Error(report(error)),
+        catch: () => "review failed" as const,
       }).pipe(
-        Effect.catch((error) =>
-          Effect.succeed({ ok: false, state: "failed" as const, note: error.message }),
-        ),
+        Effect.orElseSucceed(() => ({
+          ok: false,
+          state: "failed" as const,
+          note: "review failed",
+        })),
       )
       yield* write(`${result.state}: ${result.note}`)
       yield* exit(result.ok ? 0 : 1)
@@ -297,7 +342,7 @@ const reviewCommand = Command.make(
 const webhookCommand = Command.make("webhook", { cwd: cwdFlag }, (options) =>
   Effect.gen(function* () {
     const root = yield* rootOf(options.cwd)
-    const config = yield* Effect.sync(() => readConfig(configPathOf(root)))
+    const config = Result.getOrUndefined(yield* readConfig(configPathOf(root)))
     if (config === undefined) {
       yield* write("room webhook: no .room/config.json")
       yield* exit(1)
@@ -317,6 +362,7 @@ const cli = Command.make("room").pipe(
   Command.withSubcommands([
     planCommand,
     initCommand,
+    boardCommand,
     doctorCommand,
     listCommand,
     devCommand,

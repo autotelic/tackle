@@ -1,7 +1,7 @@
 {
   "name": "@autotelic/board",
   "version": "0.0.0",
-  "description": "The room's records, identities, and invariants: a chit, a claim with a fencing epoch, a job, a receipt, a presence. No dependencies and no runtime — the bytes the room and the hosts agree on.",
+  "description": "The room's records and invariants, as Effect schemas: a chit, a claim with a fencing epoch, a job, a receipt, a presence.",
   "license": "MIT",
   "type": "module",
   "exports": {
@@ -17,6 +17,9 @@
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "effect": "catalog:"
   },
   "devDependencies": {
     "@effect/tsgo": "catalog:",

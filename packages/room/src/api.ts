@@ -1,4 +1,5 @@
-import { JOB_STATES, actorOf, oneOf } from "@autotelic/board"
+import { JOB_STATES, actorOf } from "@autotelic/board"
+import { Option, Result, Schema } from "effect"
 import type { Ledger } from "./ledger.ts"
 import { fromGithub, fromLinear } from "./ingest.ts"
 import { reviewJob, shouldReview } from "./policy.ts"
@@ -14,27 +15,53 @@ import { reviewJob, shouldReview } from "./policy.ts"
  * them. That is why `roomd` no longer needs an HTTP server of its own.
  */
 
+/** What the API needs from its host. */
 export interface ApiOptions {
   readonly now: () => number
 }
 
-const json = (value: unknown, status = 200): Response =>
-  new Response(`${JSON.stringify(value)}\n`, {
-    status,
-    headers: { "content-type": "application/json" },
-  })
+const ConfigBody = Schema.Struct({
+  actor: Schema.String,
+  name: Schema.optionalKey(Schema.String),
+})
 
-const readJson = async (request: Request): Promise<Record<string, unknown>> => {
-  try {
-    const value: unknown = await request.json()
-    return typeof value === "object" && value !== null && !Array.isArray(value)
-      ? (value as Record<string, unknown>)
-      : {}
-  } catch {
-    return {}
-  }
+const PresenceBody = Schema.Struct({
+  host: Schema.String,
+  actor: Schema.String,
+  ttl: Schema.optionalKey(Schema.Finite),
+})
+
+const ClaimBody = Schema.Struct({ host: Schema.String })
+
+const IdBody = Schema.Struct({ id: Schema.String })
+
+const FinishBody = Schema.Struct({
+  id: Schema.String,
+  state: Schema.Literals(JOB_STATES),
+  note: Schema.optionalKey(Schema.String),
+})
+
+const json = (input: { readonly body: object; readonly status?: number }): Response => {
+  const text = `${JSON.stringify(input.body)}\n`
+  return new Response(text, {
+    status: input.status ?? 200,
+    headers: {
+      "content-type": "application/json",
+      "content-length": String(Buffer.byteLength(text)),
+    },
+  })
 }
 
+const rawBody = async (request: Request): Promise<unknown> => request.json().catch(() => undefined)
+
+/**
+ * Handle one room request.
+ *
+ * @param request - The forwarded request, with the room already selected.
+ * @param ledger - The room's ledger.
+ * @param options - The room's clock.
+ * @returns The response.
+ */
 export const handle = async (
   request: Request,
   ledger: Ledger,
@@ -46,98 +73,120 @@ export const handle = async (
 
   if (request.method === "GET" && path === "/health") {
     return json({
-      room: ledger.room,
-      counts: ledger.counts(),
-      presences: ledger.presences(now).length,
-      jobs: ledger.jobs().slice(0, 10),
+      body: {
+        room: ledger.room,
+        counts: ledger.counts(),
+        presences: ledger.presences(now).length,
+        jobs: ledger.jobs().slice(0, 10),
+      },
+    })
+  }
+
+  if (request.method === "GET" && path === "/board") {
+    return json({
+      body: {
+        room: ledger.room,
+        counts: ledger.counts(),
+        chits: ledger.chitStates(),
+        jobs: ledger.jobs().slice(0, 20),
+        claims: ledger.claims(now),
+        presence: ledger.presences(now).map((presence) => ({
+          host: presence.host,
+          actor: presence.actor,
+          at: presence.at,
+        })),
+      },
     })
   }
 
   if (request.method === "PUT" && path === "/config") {
-    const body = await readJson(request)
-    const actor = typeof body.actor === "string" ? body.actor : ""
-    const name = typeof body.name === "string" ? body.name : ""
-    if (actor === "") return json({ error: "actor is required" }, 400)
-    ledger.set("actor", actor)
-    ledger.set("name", name)
-    return json({ ok: true, actor })
+    const body = Result.getOrUndefined(
+      Schema.decodeUnknownResult(ConfigBody)(await rawBody(request)),
+    )
+    if (body === undefined) return json({ body: { error: "actor is required" }, status: 400 })
+    ledger.set("actor", body.actor)
+    ledger.set("name", body.name ?? "")
+    return json({ body: { ok: true, actor: body.actor } })
   }
 
   if (request.method === "POST" && path === "/ingest") {
-    const body: unknown = await request.json().catch(() => undefined)
+    const raw = await rawBody(request)
     const github = request.headers.get("x-github-event")
     const linear =
       request.headers.get("x-linear-delivery") ?? request.headers.get("linear-delivery")
     const delivery = request.headers.get("x-github-delivery") ?? linear ?? `local:${now}`
     const event =
       github !== null
-        ? fromGithub({ event: github, delivery, body, now })
-        : fromLinear({ delivery, body, now })
+        ? fromGithub({ event: github, delivery, body: raw, now })
+        : fromLinear({ delivery, body: raw, now })
     const fresh = ledger.append({
       id: event.id,
       room: ledger.room,
       at: now,
       kind: event.kind,
-      payload: { event },
+      payload: { event: event.kind },
     })
-    if (!fresh) return json({ event: event.kind, accepted: false, queued: false })
-    const actor = ledger.get("actor") ?? actorOf("")
+    if (!fresh) {
+      return json({ body: { event: event.kind, accepted: false, queued: false } })
+    }
+    const actor = Option.getOrUndefined(ledger.get("actor")) ?? actorOf("")
     const queued =
       shouldReview({ event, actor }) && event.kind === "review.requested"
         ? ledger.enqueue(reviewJob({ event, room: ledger.room, now }))
         : false
-    return json({ event: event.kind, accepted: true, queued })
+    return json({ body: { event: event.kind, accepted: true, queued } })
   }
 
   if (request.method === "POST" && path === "/presence") {
-    const body = await readJson(request)
-    const host = typeof body.host === "string" ? body.host : ""
-    const actor = typeof body.actor === "string" ? body.actor : ""
-    if (host === "" || actor === "") return json({ error: "host and actor are required" }, 400)
+    const body = Result.getOrUndefined(
+      Schema.decodeUnknownResult(PresenceBody)(await rawBody(request)),
+    )
+    if (body === undefined)
+      return json({ body: { error: "host and actor are required" }, status: 400 })
     ledger.beat({
-      host,
+      host: body.host,
       room: ledger.room,
-      actor,
+      actor: body.actor,
       at: now,
-      ttl: typeof body.ttl === "number" ? body.ttl : 60_000,
+      ttl: body.ttl ?? 60_000,
     })
-    return json({ ok: true })
+    return json({ body: { ok: true } })
   }
 
   if (request.method === "POST" && path === "/jobs/claim") {
-    const body = await readJson(request)
-    const host = typeof body.host === "string" ? body.host : ""
-    if (host === "") return json({ error: "host is required" }, 400)
-    const job = ledger.claimJob(host, now)
-    return json({ job: job ?? null })
+    const body = Result.getOrUndefined(
+      Schema.decodeUnknownResult(ClaimBody)(await rawBody(request)),
+    )
+    if (body === undefined) return json({ body: { error: "host is required" }, status: 400 })
+    const job = Option.getOrUndefined(ledger.claimJob(body.host, now))
+    return json({ body: { job: job ?? null } })
   }
 
   if (request.method === "POST" && path === "/jobs/start") {
-    const body = await readJson(request)
-    const id = typeof body.id === "string" ? body.id : ""
-    if (id === "") return json({ error: "id is required" }, 400)
-    ledger.startJob(id, now)
-    return json({ ok: true })
+    const body = Result.getOrUndefined(Schema.decodeUnknownResult(IdBody)(await rawBody(request)))
+    if (body === undefined) return json({ body: { error: "id is required" }, status: 400 })
+    ledger.startJob(body.id, now)
+    return json({ body: { ok: true } })
   }
 
   if (request.method === "POST" && path === "/jobs/finish") {
-    const body = await readJson(request)
-    const id = typeof body.id === "string" ? body.id : ""
-    const state = oneOf(body.state, JOB_STATES)
-    const note = typeof body.note === "string" ? body.note : undefined
-    if (id === "" || state === undefined)
-      return json({ error: "id and a valid state are required" }, 400)
-    ledger.finishJob(id, state, note, now)
-    return json({ ok: true })
+    const body = Result.getOrUndefined(
+      Schema.decodeUnknownResult(FinishBody)(await rawBody(request)),
+    )
+    if (body === undefined) {
+      return json({ body: { error: "id and a valid state are required" }, status: 400 })
+    }
+    ledger.finishJob(body.id, body.state, body.note, now)
+    return json({ body: { ok: true } })
   }
 
   if (request.method === "GET" && path === "/jobs") {
-    return json({ jobs: ledger.jobs() })
+    return json({ body: { jobs: ledger.jobs() } })
   }
 
   if (request.method === "GET" && path === "/receipts") {
-    return json({ receipts: ledger.receipts(100) })
+    return json({ body: { receipts: ledger.receipts(100) } })
   }
 
-  return json({ error: "not found", path }, 404)
+  return json({ body: { error: "not found", path }, status: 404 })
 }

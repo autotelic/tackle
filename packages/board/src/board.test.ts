@@ -1,3 +1,4 @@
+import { Option, Result } from "effect"
 import { describe, expect, it } from "vitest"
 import { actorOf, chitOf, hostOf, jobOf, markerOf, roomOf, stageOf } from "./ids.ts"
 import { decodeChit, decodeClaim } from "./decode.ts"
@@ -17,42 +18,46 @@ const claimOf = (overrides: Partial<Claim> = {}): Claim => ({
 
 describe("identities", () => {
   it("derives the same room from the same project and stage", () => {
-    expect(roomOf("p", stageOf("Togmund"))).toBe("linear:p@local/togmund")
+    expect(roomOf({ projectId: "p", stage: stageOf("Togmund") })).toBe("linear:p@local/togmund")
   })
 
   it("makes a thread address out of ticket, pr, path, and line", () => {
-    expect(chitOf("DEV-1506", 1709, "services/a.ts", 224)).toBe("dev-1506@1709#services/a.ts:224")
+    expect(chitOf({ ticket: "DEV-1506", pr: 1709, path: "services/a.ts", line: 224 })).toBe(
+      "dev-1506@1709#services/a.ts:224",
+    )
   })
 
   it("keeps a job id stable for one head sha", () => {
-    expect(jobOf(1709, "abcdef1234567890")).toBe(jobOf(1709, "abcdef1234567890"))
-    expect(jobOf(1709, "1111111111111111")).not.toBe(jobOf(1709, "2222222222222222"))
+    expect(jobOf({ pr: 1709, sha: "abcdef1234567890" })).toBe(
+      jobOf({ pr: 1709, sha: "abcdef1234567890" }),
+    )
+    expect(jobOf({ pr: 1709, sha: "1111111111111111" })).not.toBe(
+      jobOf({ pr: 1709, sha: "2222222222222222" }),
+    )
   })
 
   it("puts the room and the sha in the review marker", () => {
-    expect(markerOf("linear:p@local/t", "abcdef1234567890")).toBe(
+    expect(markerOf({ room: "linear:p@local/t", sha: "abcdef1234567890" })).toBe(
       "<!-- room:linear:p@local/t sha:abcdef123456 -->",
     )
   })
 
   it("lowercases the login but not the project id", () => {
-    expect(hostOf("Togmund", "Laptop.local")).toBe("togmund@laptop.local")
+    expect(hostOf({ login: "Togmund", hostname: "Laptop.local" })).toBe("togmund@laptop.local")
     expect(actorOf("Togmund")).toBe("github:togmund")
-    expect(roomOf("AbC", "local/t")).toBe("linear:AbC@local/t")
+    expect(roomOf({ projectId: "AbC", stage: "local/t" })).toBe("linear:AbC@local/t")
   })
 })
 
 describe("claims", () => {
   it("refuses a second live holder", () => {
     const first = claimOf({ host: "a@x", expiresAt: 2_000 })
-    const result = acquire({ claims: [first], now: 1_000, host: "b@x" })
-    expect(result.ok).toBe(false)
+    expect(acquire({ claims: [first], now: 1_000, host: "b@x" }).ok).toBe(false)
   })
 
   it("lets the same host re-acquire and advances the epoch", () => {
     const first = claimOf({ host: "a@x", epoch: 4, expiresAt: 2_000 })
-    const result = acquire({ claims: [first], now: 1_000, host: "a@x" })
-    expect(result).toEqual({ ok: true, epoch: 5 })
+    expect(acquire({ claims: [first], now: 1_000, host: "a@x" })).toEqual({ ok: true, epoch: 5 })
   })
 
   it("treats an expired claim as free but still fences the epoch", () => {
@@ -70,20 +75,20 @@ describe("claims", () => {
   })
 
   it("property: nextEpoch is greater than every epoch seen", () => {
-    const claims = fc.array(fc.integer({ min: 0, max: 10_000 }), { maxLength: 20 })
+    const epochs = fc.array(fc.integer({ min: 0, max: 10_000 }), { maxLength: 20 })
     fc.assert(
-      fc.property(claims, (epochs) => {
-        const list = epochs.map((epoch) => claimOf({ epoch }))
-        return nextEpoch(list) > Math.max(0, ...epochs)
+      fc.property(epochs, (values) => {
+        const list = values.map((epoch) => claimOf({ epoch }))
+        return nextEpoch(list) > Math.max(0, ...values)
       }),
     )
   })
 
   it("property: one live claim per chit is never a conflict", () => {
-    const owners = fc.array(fc.string({ minLength: 1, maxLength: 8 }), { maxLength: 20 })
+    const hosts = fc.array(fc.string({ minLength: 1, maxLength: 8 }), { maxLength: 20 })
     fc.assert(
-      fc.property(owners, (hosts) => {
-        const claims = hosts.map((host, index) =>
+      fc.property(hosts, (values) => {
+        const claims = values.map((host, index) =>
           claimOf({ chit: `chit-${index}`, host: `${host}@x` }),
         )
         return conflicts(claims, 1_000).length === 0
@@ -93,27 +98,32 @@ describe("claims", () => {
 })
 
 describe("readers", () => {
-  it("returns undefined for a record that says nothing usable", () => {
-    expect(decodeChit({})).toBeUndefined()
-    expect(decodeChit({ id: "x", room: "r", ticket: "t" })).toBeUndefined()
+  it("returns None for a record that says nothing usable", () => {
+    expect(Result.isFailure(decodeChit({}))).toBe(true)
+    expect(Result.isFailure(decodeChit({ id: "x", room: "r", ticket: "t" }))).toBe(true)
   })
 
-  it("degrades a malformed optional field, not the record", () => {
+  it("rejects a record with a malformed field instead of inventing a value", () => {
     const chit = decodeChit({
       id: "x",
       room: "r",
       ticket: "t",
       kind: "thread",
       state: "open",
+      updatedAt: 1,
       anchor: { pr: 1, sha: "abc", line: "not a number" },
     })
-    expect(chit?.anchor).toEqual({ pr: 1, sha: "abc" })
+    expect(Result.isFailure(chit)).toBe(true)
   })
 
   it("decodes a claim only with every required field", () => {
-    expect(decodeClaim({ chit: "c", room: "r", host: "h", actor: "a", epoch: 1 })).toBeUndefined()
     expect(
-      decodeClaim({ chit: "c", room: "r", host: "h", actor: "a", epoch: 1, expiresAt: 2 }),
-    ).toBeDefined()
+      Result.isFailure(decodeClaim({ chit: "c", room: "r", host: "h", actor: "a", epoch: 1 })),
+    ).toBe(true)
+    expect(
+      Result.isSuccess(
+        decodeClaim({ chit: "c", room: "r", host: "h", actor: "a", epoch: 1, expiresAt: 2 }),
+      ),
+    ).toBe(true)
   })
 })

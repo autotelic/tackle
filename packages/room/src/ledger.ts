@@ -3,13 +3,15 @@ import {
   decodeJob,
   decodePresence,
   decodeReceipt,
+  type Anchor,
   type Chit,
   type Claim,
   type Job,
   type Presence,
   type Receipt,
 } from "@autotelic/board"
-import type { Sql } from "./sql.ts"
+import { Option, Result } from "effect"
+import type { Sql, SqlRow } from "./sql.ts"
 
 /*
  * The ledger.
@@ -21,13 +23,6 @@ import type { Sql } from "./sql.ts"
  * claim still carries its epoch, which is the fence that stops a paused process from
  * writing after someone else has taken over.
  */
-
-interface Row {
-  readonly [key: string]: unknown
-}
-
-const rows = (value: unknown): ReadonlyArray<Row> =>
-  Array.isArray(value) ? (value as ReadonlyArray<Row>) : []
 
 const SCHEMA: ReadonlyArray<string> = [
   "CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)",
@@ -59,12 +54,93 @@ const SCHEMA: ReadonlyArray<string> = [
   "CREATE INDEX IF NOT EXISTS receipts_at ON receipts (at DESC)",
 ]
 
+/** What an acquisition decided. */
 export interface ClaimOutcome {
   readonly ok: boolean
   readonly epoch: number
   readonly reason?: "held"
 }
 
+const nullable = (value: unknown): string | undefined =>
+  value === null || value === undefined ? undefined : String(value)
+
+const numberOrNull = (value: unknown): number | undefined =>
+  value === null || value === undefined ? undefined : Number(value)
+
+/** Build the anchor a chit row carries, or nothing when the row has no PR. */
+const anchorOf = (row: SqlRow): Anchor | undefined => {
+  const pr = numberOrNull(row.pr)
+  if (pr === undefined) return undefined
+  const anchor: { pr: number; sha: string; path?: string; line?: number; commentId?: number } = {
+    pr,
+    sha: String(row.sha ?? ""),
+  }
+  const path = nullable(row.path)
+  if (path !== undefined) anchor.path = path
+  const line = numberOrNull(row.line)
+  if (line !== undefined) anchor.line = line
+  const commentId = numberOrNull(row.comment_id)
+  if (commentId !== undefined) anchor.commentId = commentId
+  return anchor
+}
+
+const toChit = (row: SqlRow): Option.Option<Chit> => {
+  const base: {
+    id: string
+    room: string
+    ticket: string
+    kind: string
+    state: string
+    updatedAt: number
+    anchor?: Anchor
+    layer?: number
+  } = {
+    id: String(row.id),
+    room: String(row.room),
+    ticket: String(row.ticket),
+    kind: String(row.kind),
+    state: String(row.state),
+    updatedAt: Number(row.updated_at),
+  }
+  const anchor = anchorOf(row)
+  if (anchor !== undefined) base.anchor = anchor
+  const layer = numberOrNull(row.layer)
+  if (layer !== undefined) base.layer = layer
+  return Option.fromUndefinedOr(Result.getOrUndefined(decodeChit(base)))
+}
+
+const toJob = (row: SqlRow): Option.Option<Job> => {
+  const base: {
+    id: string
+    room: string
+    kind: string
+    pr: number
+    sha: string
+    state: string
+    attempts: number
+    createdAt: number
+    updatedAt: number
+    host?: string
+    note?: string
+  } = {
+    id: String(row.id),
+    room: String(row.room),
+    kind: String(row.kind),
+    pr: Number(row.pr),
+    sha: String(row.sha),
+    state: String(row.state),
+    attempts: Number(row.attempts),
+    createdAt: Number(row.created_at),
+    updatedAt: Number(row.updated_at),
+  }
+  const host = nullable(row.host)
+  if (host !== undefined) base.host = host
+  const note = nullable(row.note)
+  if (note !== undefined) base.note = note
+  return Option.fromUndefinedOr(Result.getOrUndefined(decodeJob(base)))
+}
+
+/** The room's durable state. */
 export class Ledger {
   readonly #sql: Sql
   readonly #room: string
@@ -83,8 +159,6 @@ export class Ledger {
   get room(): string {
     return this.#room
   }
-
-  /* ---------------------------------------------------------------- chits */
 
   putChit(chit: Chit): void {
     this.#sql.exec(
@@ -109,23 +183,24 @@ export class Ledger {
     )
   }
 
-  chit(id: string): Chit | undefined {
-    const row = this.#sql.get<Row>("SELECT * FROM chits WHERE id = ?", id)
-    return row === undefined ? undefined : toChit(row)
+  /** One chit, or absence. */
+  chit(id: string): Option.Option<Chit> {
+    const row = this.#sql.get<SqlRow>("SELECT * FROM chits WHERE id = ?", id)
+    return row === undefined ? Option.none() : toChit(row)
   }
 
   chits(): ReadonlyArray<Chit> {
-    return this.#sql.all<Row>("SELECT * FROM chits ORDER BY updated_at DESC").flatMap((row) => {
-      const chit = toChit(row)
-      return chit === undefined ? [] : [chit]
-    })
+    return this.#sql.all<SqlRow>("SELECT * FROM chits ORDER BY updated_at DESC").flatMap((row) =>
+      Option.match(toChit(row), {
+        onNone: () => [],
+        onSome: (chit) => [chit],
+      }),
+    )
   }
-
-  /* ---------------------------------------------------------------- claims */
 
   claim(chit: string, host: string, actor: string, ttlMs: number, now: number): ClaimOutcome {
     return this.#sql.transaction(() => {
-      const current = this.#sql.get<Row>("SELECT * FROM claims WHERE chit = ?", chit)
+      const current = this.#sql.get<SqlRow>("SELECT * FROM claims WHERE chit = ?", chit)
       if (current !== undefined) {
         const holder = String(current.host)
         const expiresAt = Number(current.expires_at)
@@ -157,23 +232,21 @@ export class Ledger {
 
   claims(now: number): ReadonlyArray<Claim> {
     return this.#sql
-      .all<Row>("SELECT * FROM claims WHERE expires_at > ? ORDER BY expires_at", now)
+      .all<SqlRow>("SELECT * FROM claims WHERE expires_at > ? ORDER BY expires_at", now)
       .map((row) => ({
         chit: String(row.chit),
         room: String(row.room),
         host: String(row.host),
-        actor: String(row.actor) as Claim["actor"],
+        actor: String(row.actor),
         epoch: Number(row.epoch),
         expiresAt: Number(row.expires_at),
       }))
   }
 
-  /* ------------------------------------------------------------------ jobs */
-
   /** Enqueue is idempotent by job id — the same PR head is never reviewed twice by accident. */
   enqueue(job: Job): boolean {
     return this.#sql.transaction(() => {
-      const existing = this.#sql.get<Row>("SELECT id FROM jobs WHERE id = ?", job.id)
+      const existing = this.#sql.get<SqlRow>("SELECT id FROM jobs WHERE id = ?", job.id)
       if (existing !== undefined) return false
       this.#sql.exec(
         `INSERT INTO jobs (id, room, kind, pr, sha, state, host, attempts, created_at, updated_at, note)
@@ -190,21 +263,22 @@ export class Ledger {
     })
   }
 
-  claimJob(host: string, now: number): Job | undefined {
+  /** The next queued job, claimed by this host. */
+  claimJob(host: string, now: number): Option.Option<Job> {
     return this.#sql.transaction(() => {
-      const row = this.#sql.get<Row>(
+      const row = this.#sql.get<SqlRow>(
         "SELECT * FROM jobs WHERE state = 'queued' ORDER BY created_at LIMIT 1",
       )
-      if (row === undefined) return undefined
+      if (row === undefined) return Option.none<Job>()
       const job = toJob(row)
-      if (job === undefined) return undefined
+      if (Option.isNone(job)) return Option.none<Job>()
       this.#sql.exec(
         "UPDATE jobs SET state = 'claimed', host = ?, updated_at = ? WHERE id = ?",
         host,
         now,
-        job.id,
+        job.value.id,
       )
-      return { ...job, state: "claimed", host, updatedAt: now }
+      return Option.some({ ...job.value, state: "claimed" as const, host, updatedAt: now })
     })
   }
 
@@ -227,18 +301,15 @@ export class Ledger {
   }
 
   jobs(): ReadonlyArray<Job> {
-    return this.#sql.all<Row>("SELECT * FROM jobs ORDER BY created_at DESC").flatMap((row) => {
-      const job = toJob(row)
-      return job === undefined ? [] : [job]
-    })
+    return this.#sql
+      .all<SqlRow>("SELECT * FROM jobs ORDER BY created_at DESC")
+      .flatMap((row) => Option.match(toJob(row), { onNone: () => [], onSome: (job) => [job] }))
   }
-
-  /* -------------------------------------------------------------- receipts */
 
   /** A delivery id is the receipt id, so a re-delivered webhook appends nothing. */
   append(receipt: Receipt): boolean {
     return this.#sql.transaction(() => {
-      const existing = this.#sql.get<Row>("SELECT id FROM receipts WHERE id = ?", receipt.id)
+      const existing = this.#sql.get<SqlRow>("SELECT id FROM receipts WHERE id = ?", receipt.id)
       if (existing !== undefined) return false
       this.#sql.exec(
         `INSERT INTO receipts (id, room, at, kind, chit, job, actor, host, payload)
@@ -259,25 +330,37 @@ export class Ledger {
 
   receipts(limit = 50): ReadonlyArray<Receipt> {
     return this.#sql
-      .all<Row>("SELECT * FROM receipts ORDER BY at DESC LIMIT ?", limit)
+      .all<SqlRow>("SELECT * FROM receipts ORDER BY at DESC LIMIT ?", limit)
       .flatMap((row) => {
-        const payload = typeof row.payload === "string" ? safeJson(row.payload) : undefined
-        const receipt = decodeReceipt({
-          id: row.id,
-          room: row.room,
-          at: row.at,
-          kind: row.kind,
-          chit: row.chit ?? undefined,
-          job: row.job ?? undefined,
-          actor: row.actor ?? undefined,
-          host: row.host ?? undefined,
-          payload,
+        const base: {
+          id: string
+          room: string
+          at: number
+          kind: string
+          chit?: string
+          job?: string
+          actor?: string
+          host?: string
+        } = {
+          id: String(row.id),
+          room: String(row.room),
+          at: Number(row.at),
+          kind: String(row.kind),
+        }
+        const chit = nullable(row.chit)
+        if (chit !== undefined) base.chit = chit
+        const job = nullable(row.job)
+        if (job !== undefined) base.job = job
+        const actor = nullable(row.actor)
+        if (actor !== undefined) base.actor = actor
+        const host = nullable(row.host)
+        if (host !== undefined) base.host = host
+        return Option.match(Option.fromUndefinedOr(Result.getOrUndefined(decodeReceipt(base))), {
+          onNone: () => [],
+          onSome: (receipt) => [receipt],
         })
-        return receipt === undefined ? [] : [receipt]
       })
   }
-
-  /* -------------------------------------------------------------- presence */
 
   beat(presence: Presence): void {
     this.#sql.exec(
@@ -297,25 +380,35 @@ export class Ledger {
 
   presences(now: number): ReadonlyArray<Presence> {
     return this.#sql
-      .all<Row>("SELECT * FROM presence WHERE at + ttl > ? ORDER BY at DESC", now)
+      .all<SqlRow>("SELECT * FROM presence WHERE at + ttl > ? ORDER BY at DESC", now)
       .flatMap((row) => {
-        const presence = decodePresence({
-          host: row.host,
-          room: row.room,
-          actor: row.actor,
-          at: row.at,
-          ttl: row.ttl,
-          session: row.session ?? undefined,
+        const base: {
+          host: string
+          room: string
+          actor: string
+          at: number
+          ttl: number
+          session?: string
+        } = {
+          host: String(row.host),
+          room: String(row.room),
+          actor: String(row.actor),
+          at: Number(row.at),
+          ttl: Number(row.ttl),
+        }
+        const session = nullable(row.session)
+        if (session !== undefined) base.session = session
+        return Option.match(Option.fromUndefinedOr(Result.getOrUndefined(decodePresence(base))), {
+          onNone: () => [],
+          onSome: (presence) => [presence],
         })
-        return presence === undefined ? [] : [presence]
       })
   }
 
-  /* ------------------------------------------------------------------ meta */
-
-  get(key: string): string | undefined {
-    const row = this.#sql.get<Row>("SELECT value FROM meta WHERE key = ?", key)
-    return row === undefined ? undefined : String(row.value)
+  /** A meta value, or absence. */
+  get(key: string): Option.Option<string> {
+    const row = this.#sql.get<SqlRow>("SELECT value FROM meta WHERE key = ?", key)
+    return Option.fromUndefinedOr(row === undefined ? undefined : String(row.value))
   }
 
   set(key: string, value: string): void {
@@ -326,63 +419,17 @@ export class Ledger {
     )
   }
 
-  counts(): { readonly chits: number; readonly jobs: number; readonly receipts: number } {
-    const count = (table: string): number => {
-      const row = this.#sql.get<Row>(`SELECT COUNT(*) AS n FROM ${table}`)
-      return row === undefined ? 0 : Number(row.n)
-    }
-    return { chits: count("chits"), jobs: count("jobs"), receipts: count("receipts") }
+  chitStates() {
+    return this.#sql
+      .all<SqlRow>("SELECT state, COUNT(*) AS n FROM chits GROUP BY state ORDER BY state")
+      .map((row) => ({ state: String(row.state), count: Number(row.n) }))
+  }
+
+  counts() {
+    const count = (row: SqlRow | undefined): number => (row === undefined ? 0 : Number(row.n))
+    const chits = this.#sql.get<SqlRow>("SELECT COUNT(*) AS n FROM chits")
+    const jobs = this.#sql.get<SqlRow>("SELECT COUNT(*) AS n FROM jobs")
+    const receipts = this.#sql.get<SqlRow>("SELECT COUNT(*) AS n FROM receipts")
+    return { chits: count(chits), jobs: count(jobs), receipts: count(receipts) }
   }
 }
-
-const safeJson = (value: string): Record<string, unknown> | undefined => {
-  try {
-    const parsed: unknown = JSON.parse(value)
-    return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)
-      ? (parsed as Record<string, unknown>)
-      : undefined
-  } catch {
-    return undefined
-  }
-}
-
-const toChit = (row: Row): Chit | undefined =>
-  decodeChit({
-    id: row.id,
-    room: row.room,
-    ticket: row.ticket,
-    kind: row.kind,
-    state: row.state,
-    updatedAt: row.updated_at,
-    ...(row.pr === null || row.pr === undefined
-      ? {}
-      : {
-          anchor: {
-            pr: row.pr,
-            sha: row.sha,
-            ...(row.path === null || row.path === undefined ? {} : { path: row.path }),
-            ...(row.line === null || row.line === undefined ? {} : { line: row.line }),
-            ...(row.comment_id === null || row.comment_id === undefined
-              ? {}
-              : { commentId: row.comment_id }),
-          },
-        }),
-    ...(row.layer === null || row.layer === undefined ? {} : { layer: row.layer }),
-  })
-
-const toJob = (row: Row): Job | undefined =>
-  decodeJob({
-    id: row.id,
-    room: row.room,
-    kind: row.kind,
-    pr: row.pr,
-    sha: row.sha,
-    state: row.state,
-    attempts: row.attempts,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    ...(row.host === null || row.host === undefined ? {} : { host: row.host }),
-    ...(row.note === null || row.note === undefined ? {} : { note: row.note }),
-  })
-
-export { decodePresence, decodeReceipt }

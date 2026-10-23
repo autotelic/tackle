@@ -1,7 +1,6 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import { Effect, FileSystem, Result, Schema } from "effect"
 import { homedir } from "node:os"
 import { join } from "node:path"
-import { isRecord, str } from "@autotelic/board"
 import type { RoomConfig } from "./config.ts"
 
 /*
@@ -13,91 +12,137 @@ import type { RoomConfig } from "./config.ts"
  * rest is local state, worktrees, and job transcripts.
  */
 
+/** The root of all local room state. */
 export const roomHome = (): string => process.env.ROOM_HOME ?? join(homedir(), ".room")
 
+/**
+ * The state directory for one room.
+ *
+ * @param config - The room's committed config.
+ * @returns `~/.room/<login>/<projectId>`.
+ */
 export const stateDir = (config: RoomConfig): string =>
   join(roomHome(), config.stage.replace(/^local\//, ""), config.project.id)
 
+/**
+ * The room's SQLite file.
+ *
+ * @param config - The room's committed config.
+ * @returns The absolute database path.
+ */
 export const databasePath = (config: RoomConfig): string => join(stateDir(config), "room.sqlite")
+
+/**
+ * Where review worktrees are created.
+ *
+ * @param config - The room's committed config.
+ * @returns The absolute worktree root.
+ */
 export const worktreeRoot = (config: RoomConfig): string => join(stateDir(config), "wt")
+
+/**
+ * Where a review job's Pi session is stored.
+ *
+ * @param config - The room's committed config.
+ * @returns The absolute jobs root.
+ */
 export const jobsRoot = (config: RoomConfig): string => join(stateDir(config), "jobs")
 
+/** The index of rooms on this machine. */
 export const indexOfRooms = (): string => join(roomHome(), "index.json")
 
-export interface RoomIndexEntry {
-  readonly room: string
-  readonly name: string
-  readonly projectId: string
-  readonly stage: string
-  readonly configPath: string
-  readonly lastSeen: number
-}
+/** One room, as the picker reads it. */
+export const RoomIndexEntry = Schema.Struct({
+  room: Schema.String,
+  name: Schema.String,
+  projectId: Schema.String,
+  stage: Schema.String,
+  configPath: Schema.String,
+  lastSeen: Schema.Finite,
+})
 
-interface RoomIndex {
-  readonly version: 1
-  readonly rooms: ReadonlyArray<RoomIndexEntry>
-}
+/** One room, as the picker reads it. */
+export type RoomIndexEntry = typeof RoomIndexEntry.Type
 
-const decodeEntry = (value: unknown): RoomIndexEntry | undefined => {
-  if (!isRecord(value)) return undefined
-  const room = str(value.room)
-  const name = str(value.name)
-  const projectId = str(value.projectId)
-  const stage = str(value.stage)
-  const configPath = str(value.configPath)
-  if (
-    room === undefined ||
-    name === undefined ||
-    projectId === undefined ||
-    stage === undefined ||
-    configPath === undefined
-  ) {
-    return undefined
-  }
-  return {
-    room,
-    name,
-    projectId,
-    stage,
-    configPath,
-    lastSeen: typeof value.lastSeen === "number" ? value.lastSeen : 0,
-  }
-}
+const RoomIndex = Schema.Struct({
+  version: Schema.Literal(1),
+  rooms: Schema.Array(RoomIndexEntry),
+})
 
-/** Read the index; a malformed file is an empty index, never a failed command. */
-export const readIndex = (): RoomIndex => {
-  try {
-    const value: unknown = JSON.parse(readFileSync(indexOfRooms(), "utf8"))
-    if (!isRecord(value) || !Array.isArray(value.rooms)) return { version: 1, rooms: [] }
-    const rooms = value.rooms.flatMap((entry) => {
-      const decoded = decodeEntry(entry)
-      return decoded === undefined ? [] : [decoded]
-    })
-    return { version: 1, rooms }
-  } catch {
-    return { version: 1, rooms: [] }
-  }
-}
+type RoomIndex = typeof RoomIndex.Type
 
-/** Record or refresh one room. Sorted by activity when read, so the picker is honest. */
-export const recordRoom = (entry: RoomIndexEntry): void => {
-  mkdirSync(roomHome(), { recursive: true })
-  const current = readIndex()
-  const rooms = current.rooms.filter((room) => room.room !== entry.room)
-  rooms.push(entry)
-  const next: RoomIndex = { version: 1, rooms }
-  writeFileSync(indexOfRooms(), `${JSON.stringify(next, null, 2)}\n`)
-}
+const EMPTY: RoomIndex = { version: 1, rooms: [] }
 
-/** Active rooms first. A room is "active" when something touched it recently. */
-export const roomsByActivity = (now = Date.now()): ReadonlyArray<RoomIndexEntry> =>
-  [...readIndex().rooms].sort((left, right) => right.lastSeen - left.lastSeen).map((room) => room)
+/**
+ * Read the index; a malformed file is an empty index, never a failed command.
+ *
+ * @returns The rooms recorded on this machine.
+ */
+export const readIndex = (): Effect.Effect<RoomIndex, never, FileSystem.FileSystem> =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const file = indexOfRooms()
+    const exists = yield* Effect.orElseSucceed(fs.exists(file), () => false)
+    if (!exists) return EMPTY
+    const text = yield* Effect.orElseSucceed(fs.readFileString(file), () => "")
+    const result = Schema.decodeUnknownResult(Schema.fromJsonString(RoomIndex))(text)
+    return Result.isSuccess(result) ? result.success : EMPTY
+  })
 
-export const ensureState = (config: RoomConfig): void => {
-  mkdirSync(stateDir(config), { recursive: true })
-  mkdirSync(worktreeRoot(config), { recursive: true })
-  mkdirSync(jobsRoot(config), { recursive: true })
-}
+/**
+ * Record or refresh one room. Sorted by activity when read, so the picker is honest.
+ *
+ * @param entry - The room to record.
+ * @returns Nothing; the write is the effect.
+ */
+export const recordRoom = (
+  entry: RoomIndexEntry,
+): Effect.Effect<void, never, FileSystem.FileSystem> =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const current = yield* readIndex()
+    const rooms = current.rooms.filter((room) => room.room !== entry.room)
+    const next: RoomIndex = { version: 1, rooms: [...rooms, entry] }
+    yield* Effect.orElseSucceed(fs.makeDirectory(roomHome(), { recursive: true }), () => undefined)
+    yield* Effect.orElseSucceed(
+      fs.writeFileString(indexOfRooms(), `${JSON.stringify(next, null, 2)}\n`),
+      () => undefined,
+    )
+  })
 
+/**
+ * Active rooms first. A room is "active" when something touched it recently.
+ *
+ * @returns The index, newest first.
+ */
+export const roomsByActivity: Effect.Effect<
+  ReadonlyArray<RoomIndexEntry>,
+  never,
+  FileSystem.FileSystem
+> = readIndex().pipe(
+  Effect.map((index) => [...index.rooms].sort((left, right) => right.lastSeen - left.lastSeen)),
+)
+
+/**
+ * The committed config path for a repository root.
+ *
+ * @param root - The repository root.
+ * @returns `<root>/.room/config.json`.
+ */
 export const configPathOf = (root: string): string => join(root, ".room", "config.json")
-export const configExists = (root: string): boolean => existsSync(configPathOf(root))
+
+/**
+ * The state directory, created if absent.
+ *
+ * @param config - The room's committed config.
+ * @returns Nothing; the directories are the effect.
+ */
+export const ensureState = (
+  config: RoomConfig,
+): Effect.Effect<void, never, FileSystem.FileSystem> =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem
+    for (const dir of [stateDir(config), worktreeRoot(config), jobsRoot(config)]) {
+      yield* Effect.orElseSucceed(fs.makeDirectory(dir, { recursive: true }), () => undefined)
+    }
+  })

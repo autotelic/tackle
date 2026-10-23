@@ -1,5 +1,5 @@
 import { actorOf, hostOf } from "@autotelic/board"
-import { Effect } from "effect"
+import { Data, Effect, Result } from "effect"
 import { hostname } from "node:os"
 import type { RoomConfig } from "./config.ts"
 import { authLogin } from "./gh.ts"
@@ -18,6 +18,12 @@ import { runReview } from "./review.ts"
  * sequential by construction, and the whole thing stops when the scope does.
  */
 
+/** What the daemon can fail with. */
+export class DaemonError extends Data.TaggedError("DaemonError")<{
+  readonly message: string
+}> {}
+
+/** What a daemon needs to start. */
 export interface DaemonOptions {
   readonly config: RoomConfig
   readonly url: string
@@ -27,52 +33,53 @@ export interface DaemonOptions {
 
 const DEFAULT_URL = "http://127.0.0.1:9876"
 
+/** The room URL this machine talks to. */
 export const roomUrl = (): string => process.env.ROOM_URL ?? DEFAULT_URL
 
-export const daemon = (options: DaemonOptions): Effect.Effect<void, Error> =>
+const failure = (error: unknown): DaemonError =>
+  new DaemonError({ message: error instanceof Error ? error.message : String(error) })
+
+/**
+ * Run the room's daemon.
+ *
+ * @param options - The room, the URL, whether to run one job, and a logger.
+ * @returns An effect that runs until interrupted.
+ */
+export const daemon = (options: DaemonOptions): Effect.Effect<void, DaemonError> =>
   Effect.gen(function* () {
     const login = yield* Effect.sync(authLogin)
-    if (login === undefined) {
-      return yield* Effect.fail(new Error("gh is not authenticated; run `gh auth login`"))
+    if (Result.isFailure(login)) {
+      return yield* Effect.fail(new DaemonError({ message: login.failure }))
     }
-    const host = hostOf(login, hostname())
-    const actor = actorOf(login)
+    const host = hostOf({ login: login.success, hostname: hostname() })
+    const actor = actorOf(login.success)
     const client = new RoomClient(options.url, options.config.room)
     const log = options.log
 
     const beat = Effect.tryPromise({
       try: () => client.beat(host, actor, 60_000),
-      catch: (error) => new Error(String(error)),
+      catch: failure,
     }).pipe(Effect.catch(() => Effect.void))
 
     const work = Effect.gen(function* () {
       const job = yield* Effect.tryPromise({
         try: () => client.claim(host),
-        catch: (error) => new Error(String(error)),
+        catch: failure,
       })
       if (job === null) return
-      yield* Effect.tryPromise({
-        try: () => client.start(job.id),
-        catch: (error) => new Error(String(error)),
-      })
+      yield* Effect.tryPromise({ try: () => client.start(job.id), catch: failure })
       log(`review ${job.id}`)
       const result = yield* Effect.tryPromise({
         try: () => runReview({ config: options.config, job, dryRun: false, log }),
-        catch: (error) => new Error(String(error)),
+        catch: failure,
       })
       yield* Effect.tryPromise({
         try: () =>
           client.finish(job.id, result.state === "posted" ? "done" : result.state, result.note),
-        catch: (error) => new Error(String(error)),
+        catch: failure,
       })
       log(`  ${result.state}: ${result.note}`)
-    }).pipe(
-      Effect.catch((error) =>
-        Effect.sync(() =>
-          log(`  failed: ${error instanceof Error ? error.message : String(error)}`),
-        ),
-      ),
-    )
+    }).pipe(Effect.catch((error) => Effect.sync(() => log(`  failed: ${error.message}`))))
 
     yield* Effect.forkChild(Effect.forever(Effect.flatMap(beat, () => Effect.sleep("20 seconds"))))
 

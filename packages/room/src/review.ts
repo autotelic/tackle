@@ -2,11 +2,12 @@ import { spawn } from "node:child_process"
 import { existsSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { markerOf, type Job } from "@autotelic/board"
+import { Result, Schema } from "effect"
 import type { RoomConfig } from "./config.ts"
-import { hasReviewMarker, postReview, pullRequest } from "./gh.ts"
+import { hasReviewMarker, postReview, pullRequest, type PullRequest } from "./gh.ts"
 import { addWorktree, fetchCommit, removeWorktree } from "./git.ts"
 import { jobsRoot, worktreeRoot } from "./paths.ts"
-import { onPath, parseJson, run } from "./shell.ts"
+import { onPath, run } from "./shell.ts"
 
 /*
  * One review job.
@@ -20,20 +21,22 @@ import { onPath, parseJson, run } from "./shell.ts"
  * real checkout to run jig and to read the tree the PR would produce.
  */
 
+/** What a review job decided. */
 export interface ReviewResult {
   readonly ok: boolean
   readonly state: "posted" | "skipped" | "failed"
   readonly note: string
 }
 
+const DEFAULT_SKILL = "Review the diff for correctness, data-model mismatches, and missing cases."
+
+/** The standing instructions, read from the package when present. */
 const skill = (): string => {
-  try {
-    return readFileSync(new URL("../skills/review.md", import.meta.url), "utf8")
-  } catch {
-    return "Review the diff for correctness, data-model mismatches, and missing cases."
-  }
+  const file = new URL("../skills/review.md", import.meta.url)
+  return existsSync(file) ? readFileSync(file, "utf8") : DEFAULT_SKILL
 }
 
+/** One finding a reviewer can act on. */
 interface Diagnostic {
   readonly file: string
   readonly line: number
@@ -42,49 +45,68 @@ interface Diagnostic {
   readonly message: string
 }
 
-const jigCommand = (): { readonly command: string; readonly args: ReadonlyArray<string> } => {
+const JigDiagnostic = Schema.Struct({
+  engine: Schema.optionalKey(Schema.String),
+  ruleId: Schema.optionalKey(Schema.String),
+  severity: Schema.optionalKey(Schema.String),
+  message: Schema.optionalKey(Schema.String),
+  location: Schema.optionalKey(
+    Schema.Struct({
+      file: Schema.String,
+      line: Schema.optionalKey(Schema.Finite),
+    }),
+  ),
+})
+
+const JigReport = Schema.Struct({ diagnostics: Schema.Array(JigDiagnostic) })
+
+const PiPart = Schema.Struct({
+  type: Schema.optionalKey(Schema.String),
+  text: Schema.optionalKey(Schema.String),
+})
+
+const PiEvent = Schema.Struct({
+  type: Schema.String,
+  message: Schema.optionalKey(
+    Schema.Struct({
+      role: Schema.optionalKey(Schema.String),
+      content: Schema.optionalKey(Schema.Array(PiPart)),
+    }),
+  ),
+})
+
+const jigCommand = () => {
   const override = process.env.ROOM_JIG_BIN
   if (override !== undefined && override !== "") return { command: override, args: [] }
-  const global = onPath("jig")
+  const global = Result.getOrUndefined(onPath("jig"))
   if (global !== undefined) return { command: global, args: [] }
   const source = new URL("../../jig-cli/src/cli.ts", import.meta.url)
   return { command: process.execPath, args: ["--conditions=development", source.pathname] }
 }
 
-const jigFindings = (
-  root: string,
-): { readonly findings: ReadonlyArray<Diagnostic>; readonly note: string } => {
+const jigFindings = (root: string) => {
   const { command, args } = jigCommand()
   const result = run({
     command,
     args: [...args, "check", "--cwd", root, "--format", "json"],
     cwd: root,
   })
-  const report = parseJson(result.stdout)
-  if (typeof report !== "object" || report === null) {
+  const decoded = Schema.decodeUnknownResult(Schema.fromJsonString(JigReport))(result.stdout)
+  if (Result.isFailure(decoded)) {
     return {
-      findings: [],
+      findings: [] as ReadonlyArray<Diagnostic>,
       note: `jig did not produce a report (exit ${result.code}): ${result.stderr.trim()}`,
     }
   }
-  const diagnostics = (report as { diagnostics?: unknown }).diagnostics
-  if (!Array.isArray(diagnostics)) {
-    return { findings: [], note: "jig produced a report with no diagnostics array" }
-  }
-  const findings = diagnostics.flatMap((value): ReadonlyArray<Diagnostic> => {
-    if (typeof value !== "object" || value === null) return []
-    const entry = value as Record<string, unknown>
-    const location = entry.location
-    if (typeof location !== "object" || location === null) return []
-    const at = location as Record<string, unknown>
-    if (typeof at.file !== "string") return []
+  const findings = decoded.success.diagnostics.flatMap((entry): ReadonlyArray<Diagnostic> => {
+    if (entry.location === undefined) return []
     return [
       {
-        file: at.file,
-        line: typeof at.line === "number" ? at.line : 0,
-        severity: typeof entry.severity === "string" ? entry.severity : "info",
-        rule: `${typeof entry.engine === "string" ? entry.engine : "jig"}/${typeof entry.ruleId === "string" ? entry.ruleId : "unknown"}`,
-        message: typeof entry.message === "string" ? entry.message : "",
+        file: entry.location.file,
+        line: entry.location.line ?? 0,
+        severity: entry.severity ?? "info",
+        rule: `${entry.engine ?? "jig"}/${entry.ruleId ?? "unknown"}`,
+        message: entry.message ?? "",
       },
     ]
   })
@@ -92,10 +114,7 @@ const jigFindings = (
 }
 
 /** Keep the findings a reviewer can act on here: the files this PR changed. */
-const onChanged = (
-  findings: ReadonlyArray<Diagnostic>,
-  files: ReadonlyArray<string>,
-): ReadonlyArray<Diagnostic> => {
+const onChanged = (findings: ReadonlyArray<Diagnostic>, files: ReadonlyArray<string>) => {
   const scope = new Set(files)
   return findings.filter((finding) => scope.has(finding.file))
 }
@@ -106,7 +125,7 @@ const promptOf = ({
   findings,
   jigNote,
 }: {
-  readonly pr: NonNullable<ReturnType<typeof pullRequest>>
+  readonly pr: PullRequest
   readonly files: ReadonlyArray<string>
   readonly findings: ReadonlyArray<Diagnostic>
   readonly jigNote: string
@@ -140,8 +159,8 @@ const promptOf = ({
   ].join("\n")
 }
 
-const runPi = (args: ReadonlyArray<string>, cwd: string): Promise<{ text: string; code: number }> =>
-  new Promise((resolve) => {
+const runPi = (args: ReadonlyArray<string>, cwd: string) =>
+  new Promise<{ text: string; code: number }>((resolve) => {
     const child = spawn("pi", args, { cwd, stdio: ["ignore", "pipe", "pipe"] })
     let stdout = ""
     let stderr = ""
@@ -162,24 +181,15 @@ const runPi = (args: ReadonlyArray<string>, cwd: string): Promise<{ text: string
       clearTimeout(timer)
       const texts: Array<string> = []
       for (const line of stdout.split("\n")) {
-        const event = parseJson(line)
-        if (typeof event !== "object" || event === null) continue
-        const record = event as Record<string, unknown>
-        if (record.type !== "message") continue
-        const message = record.message
-        if (typeof message !== "object" || message === null) continue
-        const value = message as Record<string, unknown>
-        if (value.role !== "assistant" || !Array.isArray(value.content)) continue
-        const text = value.content.flatMap((part) =>
-          typeof part === "object" &&
-          part !== null &&
-          (part as Record<string, unknown>).type === "text"
-            ? [
-                typeof (part as Record<string, unknown>).text === "string"
-                  ? ((part as Record<string, unknown>).text as string)
-                  : "",
-              ]
-            : [],
+        const decoded = Schema.decodeUnknownResult(Schema.fromJsonString(PiEvent))(line)
+        if (Result.isFailure(decoded)) continue
+        const event = decoded.success
+        const message = event.message
+        if (event.type !== "message" || message === undefined || message.role !== "assistant") {
+          continue
+        }
+        const text = (message.content ?? []).flatMap((part) =>
+          part.type === "text" && part.text !== undefined ? [part.text] : [],
         )
         if (text.join("").trim() !== "") texts.push(text.join(""))
       }
@@ -212,7 +222,7 @@ const bodyOf = ({
           )
           .join("\n")
   return [
-    markerOf(room, sha),
+    markerOf({ room, sha }),
     "> **Agent review** — posted by a bot, not a human. Treat it as a first pass; a person still owns the merge.",
     "",
     "### Machine checks",
@@ -223,6 +233,12 @@ const bodyOf = ({
   ].join("\n")
 }
 
+/**
+ * Run one review job: read the PR, prepare a worktree, run jig, ask Pi, post once.
+ *
+ * @param input - The room config, the job, whether to stop before Pi, and a logger.
+ * @returns What the job decided and the one line a person should read.
+ */
 export const runReview = async ({
   config,
   job,
@@ -234,11 +250,11 @@ export const runReview = async ({
   readonly dryRun: boolean
   readonly log: (line: string) => void
 }): Promise<ReviewResult> => {
-  const pr = pullRequest(job.pr, config.repo.root)
+  const pr = Result.getOrUndefined(pullRequest({ number: job.pr, cwd: config.repo.root }))
   if (pr === undefined) return { ok: false, state: "failed", note: `cannot read PR #${job.pr}` }
   if (pr.isDraft) return { ok: true, state: "skipped", note: "draft" }
   const sha = pr.headRefOid === "" ? job.sha : pr.headRefOid
-  const marker = markerOf(config.room, sha)
+  const marker = markerOf({ room: config.room, sha })
   if (
     hasReviewMarker({
       number: pr.number,
@@ -253,11 +269,13 @@ export const runReview = async ({
 
   const dir = join(worktreeRoot(config), `pr-${pr.number}-${sha.slice(0, 8)}`)
   if (existsSync(dir)) removeWorktree({ root: config.repo.root, dir })
-  fetchCommit(config.repo.root, sha)
-  if (!addWorktree(config.repo.root, sha, dir)) {
+  fetchCommit({ root: config.repo.root, sha })
+  if (Result.isFailure(addWorktree({ root: config.repo.root, sha, dir }))) {
     return { ok: false, state: "failed", note: `cannot create worktree at ${sha.slice(0, 8)}` }
   }
 
+  // SAFETY: the worktree must be removed even when a step throws. This is cleanup, not
+  // control flow; the failure itself still travels to the caller as a ReviewResult.
   try {
     if (!existsSync(join(dir, "node_modules")) && existsSync(join(dir, "pnpm-lock.yaml"))) {
       log(`install ${dir}`)
@@ -318,7 +336,7 @@ export const runReview = async ({
       review: answer.text,
     })
     log(`posting review on #${pr.number} (${model})`)
-    const posted = postReview(pr.number, body, config.repo.root)
+    const posted = postReview({ number: pr.number, body, cwd: config.repo.root })
     return posted.ok
       ? { ok: true, state: "posted", note: `${pr.number} @ ${sha.slice(0, 8)}` }
       : { ok: false, state: "failed", note: posted.message }

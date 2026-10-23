@@ -1,8 +1,8 @@
 import { existsSync } from "node:fs"
 import { homedir } from "node:os"
 import { join } from "node:path"
-import { isRecord } from "@autotelic/board"
-import { parseJson, run } from "./shell.ts"
+import { Predicate, Result, Schema } from "effect"
+import { run } from "./shell.ts"
 
 /*
  * GitHub, through the person's own `gh`.
@@ -12,14 +12,29 @@ import { parseJson, run } from "./shell.ts"
  * the token's login to the room's stage and refuses to start the daemon when they differ.
  */
 
-export const authLogin = (): string | undefined => {
+/** The token's login. */
+export const authLogin = (): Result.Result<string, string> => {
   const result = run({ command: "gh", args: ["api", "user", "--jq", ".login"] })
   const login = result.stdout.trim()
-  return result.code === 0 && login !== "" ? login : undefined
+  return result.code === 0 && login !== ""
+    ? Result.succeed(login)
+    : Result.fail("gh is not authenticated")
 }
 
-export const authOk = (): boolean => run({ command: "gh", args: ["auth", "status"] }).code === 0
+const PullRequestJson = Schema.Struct({
+  number: Schema.Finite,
+  title: Schema.String,
+  body: Schema.String,
+  author: Schema.Struct({ login: Schema.String }),
+  headRefOid: Schema.String,
+  baseRefOid: Schema.String,
+  additions: Schema.Finite,
+  deletions: Schema.Finite,
+  files: Schema.Array(Schema.Struct({ path: Schema.String })),
+  isDraft: Schema.Boolean,
+})
 
+/** A pull request, as the room needs it. */
 export interface PullRequest {
   readonly number: number
   readonly title: string
@@ -33,50 +48,66 @@ export interface PullRequest {
   readonly isDraft: boolean
 }
 
-export const pullRequest = (number: number, cwd: string): PullRequest | undefined => {
+/**
+ * Read one pull request.
+ *
+ * @param input - The PR number and the repository root.
+ * @returns Some(pr) when `gh` and the schema agree, None otherwise.
+ */
+export const pullRequest = (input: {
+  readonly number: number
+  readonly cwd: string
+}): Result.Result<PullRequest, string> => {
   const result = run({
     command: "gh",
     args: [
       "pr",
       "view",
-      String(number),
+      String(input.number),
       "--json",
       "number,title,body,author,headRefOid,baseRefOid,additions,deletions,files,isDraft",
     ],
-    cwd,
+    cwd: input.cwd,
   })
-  if (result.code !== 0) return undefined
-  const value = parseJson(result.stdout)
-  if (!isRecord(value)) return undefined
-  const author = isRecord(value.author) ? value.author.login : undefined
-  const files = Array.isArray(value.files)
-    ? value.files.flatMap((file) =>
-        isRecord(file) && typeof file.path === "string" ? [file.path] : [],
-      )
-    : []
-  return {
-    number: typeof value.number === "number" ? value.number : number,
-    title: typeof value.title === "string" ? value.title : "",
-    body: typeof value.body === "string" ? value.body : "",
-    author: typeof author === "string" ? author : "",
-    headRefOid: typeof value.headRefOid === "string" ? value.headRefOid : "",
-    baseRefOid: typeof value.baseRefOid === "string" ? value.baseRefOid : "",
-    additions: typeof value.additions === "number" ? value.additions : 0,
-    deletions: typeof value.deletions === "number" ? value.deletions : 0,
-    files,
-    isDraft: value.isDraft === true,
-  }
+  if (result.code !== 0) return Result.fail(result.stderr.trim())
+  const decoded = Schema.decodeResult(Schema.fromJsonString(PullRequestJson))(result.stdout)
+  if (Result.isFailure(decoded)) return Result.fail("gh returned an unexpected PR shape")
+  const value = decoded.success
+  return Result.succeed({
+    number: value.number,
+    title: value.title,
+    body: value.body,
+    author: value.author.login,
+    headRefOid: value.headRefOid,
+    baseRefOid: value.baseRefOid,
+    additions: value.additions,
+    deletions: value.deletions,
+    files: value.files.map((file) => file.path),
+    isDraft: value.isDraft,
+  })
 }
 
-export const postReview = (
-  number: number,
-  body: string,
-  cwd: string,
-): { readonly ok: boolean; readonly message: string } => {
+/** The result of posting a review. */
+export interface PostResult {
+  readonly ok: boolean
+  readonly message: string
+}
+
+/**
+ * Post one review comment.
+ *
+ * @param input - The PR number, the body, and the repository root.
+ * @returns Whether `gh` accepted it, and the message when it did not.
+ */
+export const postReview = (input: {
+  readonly number: number
+  readonly body: string
+  readonly cwd: string
+}): PostResult => {
   const result = run({
     command: "gh",
-    args: ["pr", "review", String(number), "--comment", "--body", body],
-    cwd,
+    args: ["pr", "review", String(input.number), "--comment", "--body", input.body],
+    cwd: input.cwd,
   })
   return result.code === 0
     ? { ok: true, message: "posted" }
@@ -88,35 +119,32 @@ export const postReview = (
  *
  * The marker is the only durable answer: a re-request after a push must run again, and a
  * re-delivered webhook for the same SHA must not.
+ *
+ * @param input - The PR, the repository, the marker, and the root.
+ * @returns True when a review body already contains the marker.
  */
-export const hasReviewMarker = ({
-  number,
-  owner,
-  name,
-  marker,
-  cwd,
-}: {
+export const hasReviewMarker: Predicate.Predicate<{
   readonly number: number
   readonly owner: string
   readonly name: string
   readonly marker: string
   readonly cwd: string
-}): boolean => {
+}> = (input) => {
   const result = run({
     command: "gh",
     args: [
       "api",
-      `repos/${owner}/${name}/pulls/${number}/reviews`,
+      `repos/${input.owner}/${input.name}/pulls/${input.number}/reviews`,
       "--paginate",
       "--jq",
       ".[].body",
     ],
-    cwd,
+    cwd: input.cwd,
   })
-  return result.code === 0 && result.stdout.includes(marker)
+  return result.code === 0 && result.stdout.includes(input.marker)
 }
 
-/** The Linear token is read by `linearis`, not by the room; presence is all we check. */
+/** Whether the Linear token is present; the room never reads it. */
 export const linearTokenPresent = (): boolean =>
   existsSync(join(homedir(), ".linearis", "token")) ||
   existsSync(join(homedir(), ".linear_api_token"))

@@ -11,6 +11,9 @@
 
 export type SqlValue = string | number | null | Uint8Array
 
+/** One row, as the drivers return it: named columns, SQL values only. */
+export type SqlRow = Readonly<Record<string, SqlValue>>
+
 export interface Sql {
   exec(sql: string, ...params: ReadonlyArray<SqlValue>): void
   all<T>(sql: string, ...params: ReadonlyArray<SqlValue>): ReadonlyArray<T>

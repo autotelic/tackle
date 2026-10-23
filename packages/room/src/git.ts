@@ -1,3 +1,4 @@
+import { Result } from "effect"
 import { run } from "./shell.ts"
 
 /*
@@ -9,39 +10,95 @@ import { run } from "./shell.ts"
  * reported, never silently reused.
  */
 
+/** The origin remote, split. */
 export interface RepoRef {
   readonly owner: string
   readonly name: string
 }
 
-/** Parse the origin remote into owner/name, tolerating both SSH and HTTPS forms. */
-export const repoOf = (root: string): RepoRef | undefined => {
+/**
+ * Parse the origin remote into owner/name, tolerating both SSH and HTTPS forms.
+ *
+ * @param root - The repository root.
+ * @returns The owner and name, or why the remote could not be read.
+ */
+export const repoOf = (root: string): Result.Result<RepoRef, string> => {
   const remote = run({ command: "git", args: ["remote", "get-url", "origin"], cwd: root })
-  if (remote.code !== 0) return undefined
+  if (remote.code !== 0) return Result.fail("no origin remote")
   const match =
     /github\.com[:/]([^/]+)\/([^/.]+?)(?:\.git)?\/?$/.exec(remote.stdout.trim()) ??
     /[:/]([^/]+)\/([^/]+?)(?:\.git)?$/.exec(remote.stdout.trim())
   const owner = match?.[1]
   const name = match?.[2]
-  return owner === undefined || name === undefined ? undefined : { owner, name }
+  return owner === undefined || name === undefined
+    ? Result.fail("origin is not a GitHub repository")
+    : Result.succeed({ owner, name })
 }
 
-export const topLevel = (root: string): string | undefined => {
+/**
+ * The repository root git reports.
+ *
+ * @param root - A directory inside the repository.
+ * @returns The top level, or why git could not name it.
+ */
+export const topLevel = (root: string): Result.Result<string, string> => {
   const result = run({ command: "git", args: ["rev-parse", "--show-toplevel"], cwd: root })
-  return result.code === 0 ? result.stdout.trim() : undefined
+  return result.code === 0
+    ? Result.succeed(result.stdout.trim())
+    : Result.fail("not a git work tree")
 }
 
-export const fetchCommit = (root: string, sha: string): boolean =>
-  run({ command: "git", args: ["fetch", "origin", sha, "--depth=1"], cwd: root }).code === 0
+/**
+ * Fetch one commit from origin.
+ *
+ * @param input - The repository root and the commit.
+ * @returns Success, or git's message.
+ */
+export const fetchCommit = (input: {
+  readonly root: string
+  readonly sha: string
+}): Result.Result<true, string> => {
+  const result = run({
+    command: "git",
+    args: ["fetch", "origin", input.sha, "--depth=1"],
+    cwd: input.root,
+  })
+  return result.code === 0 ? Result.succeed(true) : Result.fail(result.stderr.trim())
+}
 
-export const addWorktree = (root: string, sha: string, dir: string): boolean =>
-  run({ command: "git", args: ["worktree", "add", "--detach", dir, sha], cwd: root }).code === 0
+/**
+ * Create a detached worktree at a commit.
+ *
+ * @param input - The repository root, the commit, and the destination.
+ * @returns Success, or git's message.
+ */
+export const addWorktree = (input: {
+  readonly root: string
+  readonly sha: string
+  readonly dir: string
+}): Result.Result<true, string> => {
+  const result = run({
+    command: "git",
+    args: ["worktree", "add", "--detach", input.dir, input.sha],
+    cwd: input.root,
+  })
+  return result.code === 0 ? Result.succeed(true) : Result.fail(result.stderr.trim())
+}
 
-export const removeWorktree = ({
-  root,
-  dir,
-}: {
+/**
+ * Remove a worktree, discarding its changes.
+ *
+ * @param input - The repository root and the worktree.
+ * @returns Success, or git's message.
+ */
+export const removeWorktree = (input: {
   readonly root: string
   readonly dir: string
-}): boolean =>
-  run({ command: "git", args: ["worktree", "remove", "--force", dir], cwd: root }).code === 0
+}): Result.Result<true, string> => {
+  const result = run({
+    command: "git",
+    args: ["worktree", "remove", "--force", input.dir],
+    cwd: input.root,
+  })
+  return result.code === 0 ? Result.succeed(true) : Result.fail(result.stderr.trim())
+}

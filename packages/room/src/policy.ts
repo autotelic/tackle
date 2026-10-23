@@ -33,7 +33,7 @@ export const reviewJob = ({
   readonly room: RoomId
   readonly now: number
 }): Job => ({
-  id: jobOf(event.pr, event.sha),
+  id: jobOf({ pr: event.pr, sha: event.sha }),
   room,
   kind: "review",
   pr: event.pr,

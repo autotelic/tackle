@@ -20,7 +20,9 @@
         "--ignore-pattern",
         "packages/joggle/**",
         "--ignore-pattern",
-        "tools/**"
+        "tools/**",
+        "--ignore-pattern",
+        "packages/room/extensions/**"
       ]
     },
     {
@@ -45,7 +47,16 @@
       "args": ["--typecheck", "--types", "--no-replay"]
     }
   ],
-  "gate": { "mode": "all", "baseline": ".jig-baseline.json", "failOn": "any-new" },
-  "report": { "format": "text", "maxWarnings": -1 },
-  "agent": { "cookbook": "JIG.md" }
+  "gate": {
+    "mode": "all",
+    "baseline": ".jig-baseline.json",
+    "failOn": "any-new"
+  },
+  "report": {
+    "format": "text",
+    "maxWarnings": -1
+  },
+  "agent": {
+    "cookbook": "JIG.md"
+  }
 }

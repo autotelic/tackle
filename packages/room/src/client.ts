@@ -1,4 +1,5 @@
-import { decodeJob, type Job } from "@autotelic/board"
+import { Claim as ClaimSchema, Job as JobSchema, decodeJob, type Job } from "@autotelic/board"
+import { Option, Result, Schema } from "effect"
 
 /*
  * The room client.
@@ -7,6 +8,21 @@ import { decodeJob, type Job } from "@autotelic/board"
  * comes from this small HTTP surface, which means the same daemon works against a local
  * celld object and a deployed one.
  */
+
+/** The board projection the CLI and the Pi widget render. */
+export const Board = Schema.Struct({
+  room: Schema.String,
+  counts: Schema.Struct({ chits: Schema.Finite, jobs: Schema.Finite, receipts: Schema.Finite }),
+  chits: Schema.Array(Schema.Struct({ state: Schema.String, count: Schema.Finite })),
+  jobs: Schema.Array(JobSchema),
+  claims: Schema.Array(ClaimSchema),
+  presence: Schema.Array(
+    Schema.Struct({ host: Schema.String, actor: Schema.String, at: Schema.Finite }),
+  ),
+})
+
+/** The board projection. */
+export type Board = typeof Board.Type
 
 export class RoomClient {
   readonly #base: string
@@ -34,6 +50,19 @@ export class RoomClient {
     return this.#json("/health")
   }
 
+  /**
+   * Read the board projection.
+   *
+   * @returns Some(board) when the room answers and the shape decodes, None otherwise.
+   */
+  async board(): Promise<Option.Option<Board>> {
+    const response = await fetch(this.#url("/board"))
+    if (!response.ok) return Option.none()
+    const text = await response.text()
+    const decoded = Schema.decodeUnknownResult(Schema.fromJsonString(Board))(text)
+    return Result.isSuccess(decoded) ? Option.some(decoded.success) : Option.none()
+  }
+
   configure(actor: string, name: string): Promise<{ ok: boolean }> {
     return this.#json("/config", { method: "PUT", body: JSON.stringify({ actor, name }) })
   }
@@ -50,7 +79,7 @@ export class RoomClient {
       method: "POST",
       body: JSON.stringify({ host }),
     })
-    return value.job === null ? null : (decodeJob(value.job) ?? null)
+    return Result.getOrUndefined(Schema.decodeUnknownResult(JobSchema)(value.job)) ?? null
   }
 
   start(id: string): Promise<{ ok: boolean }> {

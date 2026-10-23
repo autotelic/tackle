@@ -14,37 +14,81 @@
  * tomorrow; nothing in the wire format needs to know which.
  */
 
+/** A room's identity: the Linear project and the stage it runs at. */
 export type RoomId = string
+/** The person a token belongs to. */
 export type ActorId = string
+/** One daemon on one machine. */
 export type HostId = string
+/** One dispatch of a machine. */
 export type JobId = string
+/** One unit of work. */
 export type ChitId = string
 
-/** Lowercase and trim; ids are compared, never displayed as-is. */
 const bare = (value: string): string => value.trim().toLowerCase()
 
-/** A stage is where a room runs: `local/<login>` now, `prod` when it is shared. */
+/**
+ * The stage a local room runs at.
+ *
+ * @param login - The GitHub login the token belongs to.
+ * @returns `local/<login>`.
+ */
 export const stageOf = (login: string): string => `local/${bare(login)}`
 
-/** The identity of the person a token belongs to. */
+/**
+ * The identity of the person a token belongs to.
+ *
+ * @param login - The GitHub login.
+ * @returns `github:<login>`.
+ */
 export const actorOf = (login: string): ActorId => `github:${bare(login)}`
 
-/** One daemon on one machine, acting as one person. */
-export const hostOf = (login: string, hostname: string): HostId =>
-  `${bare(login)}@${bare(hostname)}`
+/**
+ * One daemon on one machine, acting as one person.
+ *
+ * @param input - The login and the hostname.
+ * @returns `<login>@<hostname>`.
+ */
+export const hostOf = (input: { readonly login: string; readonly hostname: string }): HostId =>
+  `${bare(input.login)}@${bare(input.hostname)}`
 
-/** A room is one Linear project at one stage. The project id is Linear's, not a slug. */
-export const roomOf = (projectId: string, stage: string): RoomId =>
-  `linear:${projectId.trim()}@${stage}`
+/**
+ * A room is one Linear project at one stage. The project id is Linear's, not a slug.
+ *
+ * @param input - The project id and the stage.
+ * @returns `linear:<projectId>@<stage>`.
+ */
+export const roomOf = (input: { readonly projectId: string; readonly stage: string }): RoomId =>
+  `linear:${input.projectId.trim()}@${input.stage}`
 
-/** The stable key a review job is deduplicated by. */
-export const jobOf = (pr: number, sha: string): JobId => `pr:${pr}:${sha.slice(0, 12)}`
+/**
+ * The stable key a review job is deduplicated by.
+ *
+ * @param input - The pull request number and the head SHA.
+ * @returns `pr:<number>:<sha prefix>`.
+ */
+export const jobOf = (input: { readonly pr: number; readonly sha: string }): JobId =>
+  `pr:${input.pr}:${input.sha.slice(0, 12)}`
 
-/** A thread is the work; its anchor is the address a follow-up session can start from. */
-export const chitOf = (ticket: string, pr: number, path: string, line: number): ChitId =>
-  `${bare(ticket)}@${pr}#${path}:${line}`
+/**
+ * A thread is the work; its anchor is the address a follow-up session can start from.
+ *
+ * @param input - The ticket, PR, path, and line.
+ * @returns `<ticket>@<pr>#<path>:<line>`.
+ */
+export const chitOf = (input: {
+  readonly ticket: string
+  readonly pr: number
+  readonly path: string
+  readonly line: number
+}): ChitId => `${bare(input.ticket)}@${input.pr}#${input.path}:${input.line}`
 
-/** Before a thread exists, the ticket itself is the chit. */
+/**
+ * Before a thread exists, the ticket itself is the chit.
+ *
+ * @param ticket - The Linear identifier.
+ * @returns `<ticket>@build`.
+ */
 export const buildChitOf = (ticket: string): ChitId => `${bare(ticket)}@build`
 
 /**
@@ -53,15 +97,9 @@ export const buildChitOf = (ticket: string): ChitId => `${bare(ticket)}@build`
  * Two rooms watching the same repository must be able to tell whose review this was, and a
  * re-request must be able to tell whether the head SHA was already reviewed. The marker is
  * an HTML comment so it is invisible in the rendered review and exact in the API.
+ *
+ * @param input - The room and the head SHA.
+ * @returns The HTML comment the daemon posts and reads.
  */
-export const markerOf = (room: RoomId, sha: string): string =>
-  `<!-- room:${room} sha:${sha.slice(0, 12)} -->`
-
-/** A short, stable fingerprint for a directory name. Not security; just a namespace. */
-export const fingerprintOf = (value: string): string => {
-  let hash = 0
-  for (let index = 0; index < value.length; index += 1) {
-    hash = (hash * 31 + value.charCodeAt(index)) | 0
-  }
-  return (hash >>> 0).toString(36)
-}
+export const markerOf = (input: { readonly room: RoomId; readonly sha: string }): string =>
+  `<!-- room:${input.room} sha:${input.sha.slice(0, 12)} -->`
