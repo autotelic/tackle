@@ -1,0 +1,777 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>The room — project sessions that outlive a laptop</title>
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --mid: #6b6b6b;
+    --rule: #d8d8d8;
+    --bg: #fff;
+    --blue: #3b6ea5;
+    --green: #2f6f4f;
+    --orange: #a05a2c;
+    --red: #c0392b;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    padding: 56px 60px 96px;
+    background: var(--bg);
+    color: var(--ink);
+    font:
+      15px/1.55 -apple-system,
+      "Helvetica Neue",
+      Helvetica,
+      Arial,
+      sans-serif;
+    max-width: 1240px;
+  }
+  h1 {
+    font:
+      400 34px/1.15 "Iowan Old Style",
+      Georgia,
+      serif;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  h2 {
+    font:
+      400 21px/1.25 "Iowan Old Style",
+      Georgia,
+      serif;
+    margin: 56px 0 4px;
+    letter-spacing: -0.01em;
+    padding-top: 18px;
+    border-top: 1px solid var(--rule);
+  }
+  h3 {
+    font:
+      600 13px/1.3 -apple-system,
+      sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 26px 0 6px;
+    color: var(--mid);
+  }
+  p {
+    max-width: 78ch;
+    margin: 10px 0;
+  }
+  .sub {
+    color: var(--mid);
+    font-size: 14px;
+    margin: 0;
+  }
+  .lede {
+    font-size: 16.5px;
+    color: #2b2b2b;
+  }
+  .note {
+    color: #444;
+    font-size: 13.5px;
+    max-width: 84ch;
+  }
+  .callout {
+    border-left: 3px solid var(--ink);
+    padding: 2px 0 2px 16px;
+    margin: 18px 0;
+    max-width: 80ch;
+  }
+  .callout p {
+    margin: 4px 0;
+  }
+  code {
+    font:
+      12.5px ui-monospace,
+      SFMono-Regular,
+      Menlo,
+      monospace;
+    background: #f5f5f5;
+    padding: 1px 4px;
+  }
+  figure {
+    margin: 22px 0 8px;
+  }
+  figcaption {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font:
+      600 12px/1.3 -apple-system,
+      sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+  }
+  figcaption .u {
+    font-weight: 400;
+    letter-spacing: 0;
+    color: var(--mid);
+    text-transform: none;
+    font-size: 11.5px;
+  }
+  svg {
+    width: 100%;
+    display: block;
+  }
+  table {
+    border-collapse: collapse;
+    font-size: 13.5px;
+    margin: 14px 0 4px;
+    width: 100%;
+  }
+  th {
+    text-align: left;
+    font:
+      600 11.5px/1.3 -apple-system,
+      sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--mid);
+    border-bottom: 1px solid var(--ink);
+    padding: 6px 14px 6px 0;
+    white-space: nowrap;
+  }
+  td {
+    padding: 6px 14px 6px 0;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  td:first-child {
+    white-space: nowrap;
+  }
+  .yes {
+    color: var(--green);
+    font-weight: 600;
+  }
+  .no {
+    color: var(--red);
+    font-weight: 600;
+  }
+  .part {
+    color: var(--orange);
+    font-weight: 600;
+  }
+  .lane {
+    font:
+      600 11px -apple-system,
+      sans-serif;
+    letter-spacing: 0.06em;
+    fill: var(--mid);
+  }
+  .tick {
+    font:
+      11px -apple-system,
+      sans-serif;
+    fill: var(--mid);
+  }
+  .big {
+    font:
+      13px -apple-system,
+      sans-serif;
+    fill: var(--ink);
+  }
+  .arrow {
+    stroke: var(--ink);
+    stroke-width: 1.4;
+    fill: none;
+  }
+  .arrow.blue {
+    stroke: var(--blue);
+  }
+  .arrow.red {
+    stroke: var(--red);
+  }
+  .arrow.grey {
+    stroke: #bbb;
+  }
+  .dash {
+    stroke-dasharray: 5 4;
+  }
+</style>
+
+<h1>The room — project sessions that outlive a laptop</h1>
+<p class="sub">
+  tackle · one Linear project · one GitHub label · two humans, two Pi sessions · Oct 2026
+</p>
+
+<p class="lede">
+  A room is not a longer conversation. It is a small authoritative record of
+  <em>who is on what</em>, sitting beside two conversations that stay one-to-one. The transcript
+  stays on the laptop; the room holds claims, receipts and presence. Everything below follows from
+  three corrections to the original sketch: the room must never own Linear's state, the room must
+  never be in the path of a push, and the model must never be asked to broadcast.
+</p>
+
+<h2>1 · Who writes what</h2>
+
+<p>
+  Linear and GitHub already talk to each other. With Linear's GitHub integration configured to move
+  an issue to Done when its pull request merges, the issue transition is a
+  <em>third party's</em> write. Any room that also writes that state is now racing an integration it
+  cannot see, and the loser is whichever webhook arrives second.
+</p>
+
+<div class="callout">
+  <p>
+    <strong>The rule:</strong> the room writes claims and receipts. It reads code state from GitHub
+    and issue state from Linear. It never writes issue state.
+  </p>
+</div>
+
+<p>
+  That leaves one join key, and it is already the one Linear's integration uses: the human
+  identifier, <code>AUT-118</code>. The branch is <code>aut-118/&lt;slug&gt;</code>; the PR title
+  starts with <code>AUT-118 </code>. The link exists before the PR does, so both systems derive it
+  themselves and nobody stores it as a foreign key.
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Fact</th>
+      <th>Authoritative writer</th>
+      <th>The room's job</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>code, branch, PR</td>
+      <td>GitHub</td>
+      <td>mirror, and gate the claim before a push</td>
+    </tr>
+    <tr>
+      <td>issue state</td>
+      <td>Linear — via its GitHub integration</td>
+      <td>observe, and treat a close as an interrupt</td>
+    </tr>
+    <tr>
+      <td>who is on what</td>
+      <td>the room</td>
+      <td>sole writer; lease with a fencing epoch</td>
+    </tr>
+    <tr>
+      <td>what was tried</td>
+      <td>each laptop</td>
+      <td>a pointer, never a copy</td>
+    </tr>
+    <tr>
+      <td>review decision</td>
+      <td>a human, in GitHub or Slack</td>
+      <td>record the receipt</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>2 · The interrupt you have to model</h2>
+
+<p>
+  The close can beat the merge. A hotfix PR titles itself with the same identifier, or a human
+  closes the ticket while an agent is still editing. Linear fires <code>issue.closed</code>; the
+  agent's own PR has not merged. A room that only reconciles on merge will keep an agent working on
+  a dead chit, open a second PR, and then discover the ticket was closed twenty minutes ago.
+</p>
+
+<figure>
+  <figcaption>
+    <span>fig 1 · a close that arrives before the merge</span
+    ><span class="u">time down · the agent is interrupted, not reconciled later</span>
+  </figcaption>
+  <svg
+    viewBox="0 0 1040 460"
+    role="img"
+    aria-label="Sequence: a Linear close arrives before the agent's own PR merges, and the room interrupts the running turn."
+  >
+    <defs>
+      <marker
+        id="a"
+        viewBox="0 0 10 10"
+        refX="9"
+        refY="5"
+        markerWidth="7"
+        markerHeight="7"
+        orient="auto-start-reverse"
+      >
+        <path d="M0,0 L10,5 L0,10 z" fill="#1a1a1a" />
+      </marker>
+      <marker
+        id="ar"
+        viewBox="0 0 10 10"
+        refX="9"
+        refY="5"
+        markerWidth="7"
+        markerHeight="7"
+        orient="auto-start-reverse"
+      >
+        <path d="M0,0 L10,5 L0,10 z" fill="#c0392b" />
+      </marker>
+    </defs>
+    <rect x="440" y="196" width="600" height="86" fill="#faf6f4" />
+    <line x1="110" y1="52" x2="110" y2="440" stroke="#ddd" stroke-dasharray="3 5" />
+    <line x1="320" y1="52" x2="320" y2="440" stroke="#ddd" stroke-dasharray="3 5" />
+    <line x1="560" y1="52" x2="560" y2="440" stroke="#ddd" stroke-dasharray="3 5" />
+    <line x1="800" y1="52" x2="800" y2="440" stroke="#ddd" stroke-dasharray="3 5" />
+    <line x1="980" y1="52" x2="980" y2="440" stroke="#ddd" stroke-dasharray="3 5" />
+    <text class="lane" x="110" y="40" text-anchor="middle">YOU</text>
+    <text class="lane" x="320" y="40" text-anchor="middle">ED</text>
+    <text class="lane" x="560" y="40" text-anchor="middle">ROOM</text>
+    <text class="lane" x="800" y="40" text-anchor="middle">GITHUB</text>
+    <text class="lane" x="980" y="40" text-anchor="middle">LINEAR</text>
+
+    <text class="big" x="120" y="82">claim AUT-118 · epoch e1</text>
+    <line class="arrow" x1="110" y1="90" x2="552" y2="90" marker-end="url(#a)" />
+    <text class="tick" x="566" y="94">granted, ttl 90s</text>
+
+    <line class="arrow blue" x1="110" y1="122" x2="792" y2="122" marker-end="url(#a)" />
+    <text class="big" x="120" y="116">push aut-118/oauth-retry · open PR #88</text>
+
+    <line class="arrow" x1="800" y1="154" x2="568" y2="154" marker-end="url(#a)" />
+    <text class="tick" x="578" y="149">pr.opened</text>
+
+    <text class="big" x="330" y="202">merge hotfix · title says “AUT-118”</text>
+    <line class="arrow red" x1="320" y1="210" x2="792" y2="210" marker-end="url(#ar)" />
+
+    <line class="arrow red" x1="800" y1="238" x2="972" y2="238" marker-end="url(#ar)" />
+    <text class="tick" x="806" y="233">integration → Done</text>
+
+    <line class="arrow red" x1="980" y1="272" x2="568" y2="272" marker-end="url(#ar)" />
+    <text class="big" x="586" y="267">issue.closed — before #88 merges</text>
+
+    <text class="big" x="120" y="306">interrupt: closed externally · stop</text>
+    <line class="arrow red" x1="560" y1="314" x2="118" y2="314" marker-end="url(#ar)" />
+
+    <rect x="60" y="336" width="250" height="46" fill="none" stroke="#c0392b" stroke-width="1" />
+    <text class="big" x="72" y="356">turn aborted · worktree</text>
+    <text class="big" x="72" y="373">marked abandoned</text>
+
+    <line class="arrow grey" x1="800" y1="410" x2="568" y2="410" marker-end="url(#a)" />
+    <text class="tick" x="578" y="405">pr.merged (#88) — too late; no reopen, no second PR</text>
+    <text class="tick" x="60" y="440">The close is a decision, not a lagging fact.</text>
+  </svg>
+</figure>
+
+<p>
+  Two consequences. The chit has a terminal state that the room did not cause:
+  <code>closed.external</code>, distinct from <code>merged</code>. And the host needs an inbound
+  interrupt that can abort a turn mid-flight — which is exactly what a durable harness gives you and
+  a chat loop does not.
+</p>
+
+<h2>3 · Three channels into a one-to-one session</h2>
+
+<p>
+  The pair-programming feel survives only if the room is a sideband. So the room gets three ways in,
+  and only two of them cross into the model's context. Pi 1.3.0 already distinguishes them:
+  <code>appendEntry</code> writes a transcript entry that is rendered but not sent to the model,
+  while <code>sendMessage</code> with <code>deliverAs</code> becomes a turn. A third path is a
+  deliberate pull.
+</p>
+
+<figure>
+  <figcaption>
+    <span>fig 2 · a session with a room beside it</span
+    ><span class="u"
+      >the card never costs a token; the turn is only for things addressed to you</span
+    >
+  </figcaption>
+  <svg
+    viewBox="0 0 1040 400"
+    role="img"
+    aria-label="Three channels from the room into a Pi session: an ambient transcript card that does not enter model context, an addressed message that becomes a turn, and a manual pull."
+  >
+    <defs>
+      <marker
+        id="b"
+        viewBox="0 0 10 10"
+        refX="9"
+        refY="5"
+        markerWidth="7"
+        markerHeight="7"
+        orient="auto-start-reverse"
+      >
+        <path d="M0,0 L10,5 L0,10 z" fill="#1a1a1a" />
+      </marker>
+      <marker
+        id="bb"
+        viewBox="0 0 10 10"
+        refX="9"
+        refY="5"
+        markerWidth="7"
+        markerHeight="7"
+        orient="auto-start-reverse"
+      >
+        <path d="M0,0 L10,5 L0,10 z" fill="#3b6ea5" />
+      </marker>
+    </defs>
+    <rect x="40" y="70" width="210" height="270" fill="none" stroke="#1a1a1a" />
+    <text class="lane" x="56" y="94">ROOM</text>
+    <text class="tick" x="56" y="116">claims · receipts</text>
+    <text class="tick" x="56" y="132">presence · decisions</text>
+
+    <rect x="400" y="50" width="600" height="330" fill="none" stroke="#1a1a1a" />
+    <text class="lane" x="418" y="74">PI SESSION — YOURS</text>
+    <rect
+      x="640"
+      y="92"
+      width="330"
+      height="250"
+      fill="#f7f7f7"
+      stroke="#bbb"
+      stroke-dasharray="4 4"
+    />
+    <text class="lane" x="656" y="114">MODEL CONTEXT</text>
+
+    <line class="arrow grey" x1="250" y1="140" x2="620" y2="140" marker-end="url(#b)" />
+    <text class="big" x="262" y="132">appendEntry · room card</text>
+    <text class="tick" x="262" y="158">“Ed claimed AUT-121 · 12m” · 0 tokens</text>
+
+    <line class="arrow blue" x1="250" y1="222" x2="700" y2="222" marker-end="url(#bb)" />
+    <text class="big" x="262" y="214">sendMessage · deliverAs followUp</text>
+    <text class="tick" x="262" y="240">only when addressed, or your chit needs a decision</text>
+
+    <line class="arrow" x1="620" y1="300" x2="260" y2="300" marker-end="url(#b)" />
+    <text class="big" x="272" y="292">/room pull</text>
+    <text class="tick" x="272" y="318">
+      “what is mine · who is on AUT-118 · what is reviewable”
+    </text>
+
+    <text class="tick" x="418" y="366">
+      Nothing else crosses. No ambient transcript is merged into this conversation.
+    </text>
+  </svg>
+</figure>
+
+<h3>What earns a wake</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Event</th>
+      <th>Surface</th>
+      <th>Context cost</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>another host claims or releases any chit</td>
+      <td>room card</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <td>someone edits a path you hold</td>
+      <td>room card</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <td>your PR becomes reviewable</td>
+      <td>card + Slack digest</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <td>a review lands on your PR</td>
+      <td>next turn, summarised</td>
+      <td>one turn</td>
+    </tr>
+    <tr>
+      <td>a chit you own is closed externally</td>
+      <td>interrupt + turn</td>
+      <td>one turn, aborts work</td>
+    </tr>
+    <tr>
+      <td>someone @-mentions you in the room</td>
+      <td>next turn</td>
+      <td>one turn</td>
+    </tr>
+    <tr>
+      <td>anything else</td>
+      <td>room log</td>
+      <td>0, until pulled</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>4 · Broadcast without trusting the model</h2>
+
+<p>
+  The model does not decide what the room hears. The harness does. Pi's extension API exposes the
+  events; a hook derives a fact, writes it to a local outbox, and a drainer sends it. If the network
+  or the object is down, the outbox is the queue and the turn is unaffected.
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Pi event</th>
+      <th>Fact derived</th>
+      <th>Why it is trustworthy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>tool_call</code> (pre)</td>
+      <td>a fence decision</td>
+      <td>it can refuse the call; enforcement, not etiquette</td>
+    </tr>
+    <tr>
+      <td><code>tool_execution_end</code></td>
+      <td>paths read/written, command run, error</td>
+      <td>it happened, whatever the model says</td>
+    </tr>
+    <tr>
+      <td><code>turn_end</code></td>
+      <td>outcome + one-line intent</td>
+      <td>turn boundary, idempotent key</td>
+    </tr>
+    <tr>
+      <td><code>user_bash</code></td>
+      <td>what <em>you</em> ran</td>
+      <td>the human's actions belong in the record too</td>
+    </tr>
+    <tr>
+      <td><code>message_end</code></td>
+      <td>a truncated summary line</td>
+      <td>commentary, never the transcript</td>
+    </tr>
+    <tr>
+      <td><code>session_start</code> / <code>_shutdown</code></td>
+      <td>presence, heartbeat</td>
+      <td>the one thing that expires</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>
+  Each fact is keyed by <code>(sessionId, turnIndex, toolCallId)</code>, so a retry is a no-op. The
+  room stores facts, not prose: a chit, a host, a kind, a set of paths, an intent line. That is
+  small enough to send over a socket and cheap enough to keep for a year.
+</p>
+
+<h2>5 · Two hosts, one chit</h2>
+
+<p>
+  A lease is not a lock on a file; it is the right to act. It carries an epoch, every write carries
+  the epoch, and the room refuses writes from a stale one. This is the only thing that survives the
+  worst failure: a process that is paused, not dead, and therefore never learns it lost.
+</p>
+
+<figure>
+  <figcaption>
+    <span>fig 3 · a paused host is worse than a dead one</span
+    ><span class="u">epoch fencing · the stale writer is rejected, not reconciled</span>
+  </figcaption>
+  <svg
+    viewBox="0 0 1040 400"
+    role="img"
+    aria-label="Sequence: host A is paused, its lease expires, host B claims with a new epoch, then host A wakes and its write is rejected as stale."
+  >
+    <defs>
+      <marker
+        id="c"
+        viewBox="0 0 10 10"
+        refX="9"
+        refY="5"
+        markerWidth="7"
+        markerHeight="7"
+        orient="auto-start-reverse"
+      >
+        <path d="M0,0 L10,5 L0,10 z" fill="#1a1a1a" />
+      </marker>
+      <marker
+        id="cr"
+        viewBox="0 0 10 10"
+        refX="9"
+        refY="5"
+        markerWidth="7"
+        markerHeight="7"
+        orient="auto-start-reverse"
+      >
+        <path d="M0,0 L10,5 L0,10 z" fill="#c0392b" />
+      </marker>
+    </defs>
+    <line x1="140" y1="52" x2="140" y2="380" stroke="#ddd" stroke-dasharray="3 5" />
+    <line x1="520" y1="52" x2="520" y2="380" stroke="#ddd" stroke-dasharray="3 5" />
+    <line x1="900" y1="52" x2="900" y2="380" stroke="#ddd" stroke-dasharray="3 5" />
+    <text class="lane" x="140" y="40" text-anchor="middle">HOST A — YOU</text>
+    <text class="lane" x="520" y="40" text-anchor="middle">ROOM</text>
+    <text class="lane" x="900" y="40" text-anchor="middle">HOST B — ED</text>
+
+    <text class="big" x="152" y="80">claim AUT-118 · e1</text>
+    <line class="arrow" x1="140" y1="88" x2="512" y2="88" marker-end="url(#c)" />
+    <line class="arrow" x1="520" y1="118" x2="148" y2="118" marker-end="url(#c)" />
+    <text class="tick" x="532" y="122">granted · heartbeat 20s · ttl 90s</text>
+
+    <rect x="40" y="140" width="220" height="44" fill="#faf6f4" stroke="#c0392b" />
+    <text class="big" x="52" y="158">SIGSTOP / laptop sleeps</text>
+    <text class="tick" x="52" y="174">still running, not listening</text>
+
+    <text class="tick" x="532" y="170">three heartbeats missed</text>
+    <line class="arrow grey" x1="520" y1="180" x2="520" y2="180" marker-end="url(#c)" />
+
+    <text class="big" x="532" y="206">lease e1 expires</text>
+    <text class="big" x="912" y="230">claim AUT-118 · e2</text>
+    <line class="arrow" x1="900" y1="238" x2="528" y2="238" marker-end="url(#c)" />
+    <text class="tick" x="532" y="260">granted — same chit, new epoch</text>
+
+    <text class="big" x="152" y="300">wakes · writes e1</text>
+    <line class="arrow red" x1="140" y1="308" x2="512" y2="308" marker-end="url(#cr)" />
+    <text class="big" x="532" y="328">409 stale fence</text>
+    <text class="tick" x="532" y="344">reject, then reload — never merge</text>
+    <line class="arrow grey" x1="520" y1="360" x2="148" y2="360" marker-end="url(#c)" />
+    <text class="tick" x="70" y="390">
+      A paused process cannot be trusted to know. Only the room can.
+    </text>
+  </svg>
+</figure>
+
+<p>
+  Three layers, in order of hardness. The <strong>claim</strong> is the lease. The
+  <strong>path claim</strong> is a glob the room knows about, enforced by the
+  <code>tool_call</code> pre-hook (refuse an edit to a path another live host holds). The
+  <strong>branch</strong> is per chit, so a second push to <code>aut-118/...</code> fails in git,
+  which is another free mutex. The ergonomic layer — “Ed is in <code>packages/foo</code>” — is a
+  card, not a safety mechanism.
+</p>
+
+<h2>6 · What rat-king already answers</h2>
+
+<p>The sibling repo is further along than its VISION suggests. Read per package, not per repo:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Package</th>
+      <th>What is actually there</th>
+      <th>Verdict</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>pi-ratking</code> 0.1.0</td>
+      <td>
+        Pi 1.3.0 extension: named identities, reader with cursors and locks, automatic turn records,
+        <code>wake · quiet · digest · hide</code> filters, cc digests on an interval, receipts,
+        refuse/mute/DND
+      </td>
+      <td class="yes">use directly — this is the sideband, already built</td>
+    </tr>
+    <tr>
+      <td><code>mailbox-client</code> 1.0.0</td>
+      <td>
+        lease fences with generation, <code>same envelope + messageId → original receipt</code>,
+        differing ciphertext → 409, ack means durably taken in, <code>Uncertain</code> means retry
+        the same envelope
+      </td>
+      <td class="part">steal the semantics now; adopt the runtime later</td>
+    </tr>
+    <tr>
+      <td><code>envelope</code></td>
+      <td>HPKE sign-then-encrypt, ES256, canonical DAG-CBOR — labelled “unreviewed proof code”</td>
+      <td class="no">not yet — do not put project traffic on unreviewed crypto</td>
+    </tr>
+    <tr>
+      <td><code>agent-runtime</code></td>
+      <td>
+        pi-durable harness inside a Durable Object on DO SQLite, with a pi-durable port; the celld
+        crash-recovery suite is retired
+      </td>
+      <td class="part">reference, not dependency</td>
+    </tr>
+    <tr>
+      <td><code>lexicon</code> · <code>capability</code></td>
+      <td>DID documents, AT-proto records, trust tiers, invitation scopes</td>
+      <td class="no">skip until an agent outside your tailnet must join</td>
+    </tr>
+    <tr>
+      <td><code>docs/edge.md</code></td>
+      <td>
+        one DO per desk, one per contact session, MCP ingress, relay risks, OAuth still missing
+      </td>
+      <td class="yes">borrow the shape</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>
+  What is missing is small and specific: a <strong>board</strong> schema — chit, claim, receipt,
+  presence — plus the routing policy that decides which human's mailbox gets a chit. That is four
+  record types and one rule, on top of a mailbox that already has leases, receipts and an attention
+  model.
+</p>
+
+<p>
+  And <code>tools/foreman</code> is the wrong base. It is a batch harness: one driver, one repo, a
+  task chain, spend until the budget yields. It has no peers, no inbox, no receipts, and no human.
+  Keep two things from it — the budget gate and the <code>requestId</code> discipline — and let the
+  rest go.
+</p>
+
+<h2>7 · Slack, without the noise</h2>
+
+<p>
+  Slack is the human-to-human channel, and the room only borrows it for one thing: the review
+  request. One thread per reviewable unit, opened when the unit becomes reviewable, edited as it
+  changes — never a message per event.
+</p>
+
+<p>
+  The bot posts five lines: what changed, why, what is risky, where to look, what decision is
+  needed. Replies in the thread are ingested as <em>decisions addressed to the chit</em>, and only a
+  decision or a direct question wakes an owner. Everything else is a card. The ceiling is a rate,
+  not a hope: at most one new thread per reviewable, at most a handful a day, and a digest interval
+  instead of a stream — the same discipline <code>ccDigestMinutes</code> already encodes.
+</p>
+
+<h2>8 · Build order</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Move</th>
+      <th>Done when</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>0</td>
+      <td>
+        Instrument the current flow for one week: raw webhooks, <code>gh</code> events, session
+        JSONL
+      </td>
+      <td>a replayable trace to diff against</td>
+    </tr>
+    <tr>
+      <td>1</td>
+      <td>
+        Room as a sideband with no Cloudflare: local SQLite, one project, two hosts,
+        pi-ratking-style cards
+      </td>
+      <td>kill either host 100× → zero duplicate PRs, one live claimant, no lost chit</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>GitHub/Linear projection + <code>closed.external</code> interrupt</td>
+      <td>close before merge aborts the turn; no reopen; the ledger explains why</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>Durable Object + Slack review digest</td>
+      <td>
+        delete the object, rebuild from webhooks and both APIs, same board; Slack stays under the
+        thread ceiling
+      </td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>Swap in rat-king's mailbox when its crypto review lands</td>
+      <td>a third host joins from the format doc alone</td>
+    </tr>
+  </tbody>
+</table>
+
+<p class="note">
+  The order is the argument: prove the record and the interrupt on one machine before buying a
+  distributed runtime. A room that cannot survive <code>kill -9</code> on a laptop will not survive
+  Cloudflare.
+</p>

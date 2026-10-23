@@ -1,0 +1,1104 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>The room — how it works</title>
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --mid: #6b6b6b;
+    --rule: #d8d8d8;
+    --bg: #fff;
+    --blue: #3b6ea5;
+    --green: #2f6f4f;
+    --orange: #a05a2c;
+    --red: #c0392b;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    padding: 56px 60px 96px;
+    background: var(--bg);
+    color: var(--ink);
+    font:
+      15px/1.55 -apple-system,
+      "Helvetica Neue",
+      Helvetica,
+      Arial,
+      sans-serif;
+    max-width: 1240px;
+  }
+  h1 {
+    font:
+      400 34px/1.15 "Iowan Old Style",
+      Georgia,
+      serif;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  h2 {
+    font:
+      400 21px/1.25 "Iowan Old Style",
+      Georgia,
+      serif;
+    margin: 56px 0 4px;
+    letter-spacing: -0.01em;
+    padding-top: 18px;
+    border-top: 1px solid var(--rule);
+  }
+  h3 {
+    font:
+      600 13px/1.3 -apple-system,
+      sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 26px 0 6px;
+    color: var(--mid);
+  }
+  p {
+    max-width: 78ch;
+    margin: 10px 0;
+  }
+  .sub {
+    color: var(--mid);
+    font-size: 14px;
+    margin: 0;
+  }
+  .lede {
+    font-size: 16.5px;
+    color: #2b2b2b;
+  }
+  .note {
+    color: #444;
+    font-size: 13.5px;
+    max-width: 84ch;
+  }
+  .callout {
+    border-left: 3px solid var(--ink);
+    padding: 2px 0 2px 16px;
+    margin: 18px 0;
+    max-width: 80ch;
+  }
+  .callout p {
+    margin: 4px 0;
+  }
+  code {
+    font:
+      12.5px ui-monospace,
+      SFMono-Regular,
+      Menlo,
+      monospace;
+    background: #f5f5f5;
+    padding: 1px 4px;
+  }
+  figure {
+    margin: 22px 0 8px;
+  }
+  figcaption {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font:
+      600 12px/1.3 -apple-system,
+      sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+  }
+  figcaption .u {
+    font-weight: 400;
+    letter-spacing: 0;
+    color: var(--mid);
+    text-transform: none;
+    font-size: 11.5px;
+  }
+  svg {
+    width: 100%;
+    display: block;
+  }
+  table {
+    border-collapse: collapse;
+    font-size: 13.5px;
+    margin: 14px 0 4px;
+    width: 100%;
+  }
+  th {
+    text-align: left;
+    font:
+      600 11.5px/1.3 -apple-system,
+      sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--mid);
+    border-bottom: 1px solid var(--ink);
+    padding: 6px 14px 6px 0;
+    white-space: nowrap;
+  }
+  td {
+    padding: 6px 14px 6px 0;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  td:first-child {
+    white-space: nowrap;
+  }
+  .lane {
+    font:
+      600 11px -apple-system,
+      sans-serif;
+    letter-spacing: 0.06em;
+    fill: var(--mid);
+  }
+  .state {
+    font:
+      600 12px ui-monospace,
+      Menlo,
+      monospace;
+    fill: var(--ink);
+  }
+  .tick {
+    font:
+      11px -apple-system,
+      sans-serif;
+    fill: var(--mid);
+  }
+  .big {
+    font:
+      12px -apple-system,
+      sans-serif;
+    fill: var(--ink);
+  }
+  .note {
+    font:
+      12px -apple-system,
+      sans-serif;
+    fill: #444;
+  }
+</style>
+<svg width="0" height="0" style="position: absolute">
+  <defs>
+    <marker
+      id="a"
+      viewBox="0 0 10 10"
+      refX="9"
+      refY="5"
+      markerWidth="7"
+      markerHeight="7"
+      orient="auto-start-reverse"
+    >
+      <path d="M0,0 L10,5 L0,10 z" fill="#1a1a1a" />
+    </marker>
+    <marker
+      id="ar"
+      viewBox="0 0 10 10"
+      refX="9"
+      refY="5"
+      markerWidth="7"
+      markerHeight="7"
+      orient="auto-start-reverse"
+    >
+      <path d="M0,0 L10,5 L0,10 z" fill="#c0392b" />
+    </marker>
+    <marker
+      id="ag"
+      viewBox="0 0 10 10"
+      refX="9"
+      refY="5"
+      markerWidth="7"
+      markerHeight="7"
+      orient="auto-start-reverse"
+    >
+      <path d="M0,0 L10,5 L0,10 z" fill="#2f6f4f" />
+    </marker>
+    <marker
+      id="ab"
+      viewBox="0 0 10 10"
+      refX="9"
+      refY="5"
+      markerWidth="7"
+      markerHeight="7"
+      orient="auto-start-reverse"
+    >
+      <path d="M0,0 L10,5 L0,10 z" fill="#3b6ea5" />
+    </marker>
+    <marker
+      id="ao"
+      viewBox="0 0 10 10"
+      refX="9"
+      refY="5"
+      markerWidth="7"
+      markerHeight="7"
+      orient="auto-start-reverse"
+    >
+      <path d="M0,0 L10,5 L0,10 z" fill="#a05a2c" />
+    </marker>
+  </defs>
+</svg>
+
+<h1>The room — how it works</h1>
+<p class="sub">
+  tackle · one project · two machines · five units · one rule: the model acts, the ledger decides
+</p>
+
+<p class="lede">
+  The room is not an agent and not a transcript. It is a small deterministic ledger that answers
+  three questions — <em>what is the work, who may touch it, and what happened</em> — and a set of
+  taps that answer them from facts. No model runs in the control plane. That is what makes it
+  testable, cheap, and boring in the right way.
+</p>
+
+<h2>1 · Who writes what</h2>
+
+<figure>
+  <figcaption>
+    <span>fig 1 · authority</span
+    ><span class="u">arrows are writes; the crossed arrow is the rule</span>
+  </figcaption>
+  <svg
+    viewBox="0 0 1120 400"
+    role="img"
+    aria-label="Who writes what: the room owns claims, GitHub owns code, Linear owns issue state, hosts own credentials."
+  >
+    <rect x="430" y="26" width="260" height="104" fill="#f7f7f7" stroke="#1a1a1a" />
+    <text class="lane" x="442" y="48">ROOM</text>
+    <text class="big" x="442" y="66">chits · claims · layers</text>
+    <text class="big" x="442" y="82">receipts · sweeps · presence</text>
+    <rect x="830" y="26" width="230" height="104" fill="#fff" stroke="#1a1a1a" />
+    <text class="lane" x="842" y="48">LINEAR</text>
+    <text class="big" x="842" y="66">issue state</text>
+    <text class="big" x="842" y="82">written by its GitHub integration</text>
+    <rect x="60" y="250" width="250" height="112" fill="#eef3ee" stroke="#2f6f4f" />
+    <text class="lane" x="72" y="272">HOST A — YOU</text>
+    <text class="big" x="72" y="290">repo · cli · model keys</text>
+    <text class="big" x="72" y="306">tap · outbox · fence</text>
+    <rect x="810" y="250" width="250" height="112" fill="#eef3ee" stroke="#2f6f4f" />
+    <text class="lane" x="822" y="272">HOST B — ED</text>
+    <text class="big" x="822" y="290">repo · cli · model keys</text>
+    <text class="big" x="822" y="306">tap · outbox · fence</text>
+    <rect x="430" y="250" width="260" height="112" fill="#fff" stroke="#1a1a1a" />
+    <text class="lane" x="442" y="272">GITHUB</text>
+    <text class="big" x="442" y="290">code · branches · PRs</text>
+    <text class="big" x="442" y="306">review threads</text>
+    <line
+      x1="250"
+      y1="250"
+      x2="460"
+      y2="132"
+      stroke="#1a1a1a"
+      stroke-width="1.4"
+      fill="none"
+      marker-start="url(#a)"
+      marker-end="url(#a)"
+    />
+    <text class="tick" x="262" y="186" text-anchor="start">claims ⇄ offers</text>
+    <line
+      x1="870"
+      y1="250"
+      x2="660"
+      y2="132"
+      stroke="#1a1a1a"
+      stroke-width="1.4"
+      fill="none"
+      marker-start="url(#a)"
+      marker-end="url(#a)"
+    />
+    <text class="tick" x="690" y="186" text-anchor="start">claims ⇄ offers</text>
+    <line
+      x1="312"
+      y1="306"
+      x2="424"
+      y2="306"
+      stroke="#1a1a1a"
+      stroke-width="1.4"
+      fill="none"
+      marker-end="url(#a)"
+    />
+    <text class="tick" x="368" y="300" text-anchor="middle">push · PR · reply</text>
+    <line
+      x1="808"
+      y1="306"
+      x2="696"
+      y2="306"
+      stroke="#1a1a1a"
+      stroke-width="1.4"
+      fill="none"
+      marker-end="url(#a)"
+    />
+    <text class="tick" x="752" y="300" text-anchor="middle">push · PR · reply</text>
+    <line
+      x1="560"
+      y1="250"
+      x2="560"
+      y2="134"
+      stroke="#1a1a1a"
+      stroke-width="1.4"
+      fill="none"
+      marker-end="url(#a)"
+    />
+    <text class="tick" x="566" y="206" text-anchor="start">webhooks · read</text>
+    <line
+      x1="830"
+      y1="78"
+      x2="696"
+      y2="78"
+      stroke="#c0392b"
+      stroke-width="1.4"
+      fill="none"
+      stroke-dasharray="5 4"
+      marker-end="url(#ar)"
+    />
+    <path d="M704 70 L720 86 M720 70 L704 86" stroke="#c0392b" stroke-width="2" />
+    <text class="tick" x="736" y="66" text-anchor="#c0392b">never writes state</text>
+    <path
+      d="M690 300 L1090 300 L1090 136 L1064 136"
+      stroke="#a05a2c"
+      stroke-width="1.4"
+      fill="none"
+      marker-end="url(#ao)"
+    />
+    <text class="tick" x="1096" y="230" text-anchor="end" fill="#a05a2c">
+      merge → Ready to deploy
+    </text>
+    <text class="tick" x="444" y="150" text-anchor="start" fill="#c0392b">
+      no repo key · no model key · no write token
+    </text>
+  </svg>
+</figure>
+
+<p>
+  Four writers, four kinds of truth. GitHub owns code and review threads. Linear owns issue state,
+  and its GitHub integration is the writer — the room only watches. Each host owns its repo, its
+  CLI, and its model keys. The room owns the one thing none of them owns:
+  <strong>who is on what</strong>.
+</p>
+
+<p>
+  The room's only credential is a Slack bot scoped to one channel. It holds no repository token, no
+  model key, and no write token for Linear. Every effect on the world leaves from a host, because a
+  host is the only thing that can prove it has the repository.
+</p>
+
+<h2>2 · The five units</h2>
+
+<figure>
+  <figcaption>
+    <span>fig 2 · nesting and identity</span
+    ><span class="u">the ticket is the spec · the thread is the work</span>
+  </figcaption>
+  <svg
+    viewBox="0 0 1120 410"
+    role="img"
+    aria-label="Nested units: project, ticket, layer, pull request, thread, and their identities."
+  >
+    <rect x="30" y="30" width="700" height="356" fill="#fff" stroke="#1a1a1a" />
+    <text class="lane" x="46" y="52" text-anchor="start">PROJECT · Multi-Season Projects</text>
+    <text class="tick" x="46" y="70" text-anchor="start">one durable boundary</text>
+    <rect x="56" y="84" width="652" height="286" fill="#fff" stroke="#d8d8d8" />
+    <text class="lane" x="72" y="106" text-anchor="start">
+      TICKET · DEV-1506 Overview: progress by season
+    </text>
+    <text class="tick" x="72" y="124" text-anchor="start">
+      the spec · file:line anchors · drift checks · decisions
+    </text>
+    <rect x="82" y="138" width="600" height="216" fill="#faf9f6" stroke="#d8d8d8" />
+    <text class="lane" x="98" y="160" text-anchor="start">LAYER 3 · season-scoped reads</text>
+    <text class="tick" x="98" y="178" text-anchor="start">
+      a position in the base chain = the review queue
+    </text>
+    <rect x="108" y="192" width="548" height="146" fill="#fff" stroke="#d8d8d8" />
+    <text class="lane" x="124" y="214" text-anchor="start">
+      PR #1709 · dev-1506-overview-progress-by-season
+    </text>
+    <text class="tick" x="124" y="232" text-anchor="start">
+      a bag of threads · one commit series · one review transcript
+    </text>
+    <rect x="134" y="246" width="496" height="76" fill="#f4f7f4" stroke="#2f6f4f" />
+    <text class="lane" x="150" y="268" text-anchor="start">
+      THREAD · services/rest/…/projects/queries.ts:224
+    </text>
+    <text class="big" x="150" y="288" text-anchor="start">blocker → fix → verdict</text>
+    <text class="tick" x="150" y="306" text-anchor="start">
+      the chit · the unit that actually moves
+    </text>
+    <text class="lane" x="770" y="60" text-anchor="start">IDENTITY</text>
+    <text class="lane" x="770" y="86" text-anchor="start">chit</text>
+    <text class="big" x="830" y="86" text-anchor="start">DEV-1506 @ 1709 : queries.ts:224</text>
+    <text class="lane" x="770" y="120" text-anchor="start">layer</text>
+    <text class="big" x="830" y="120" text-anchor="start">rank of the PR in the base chain</text>
+    <text class="lane" x="770" y="154" text-anchor="start">sweep</text>
+    <text class="big" x="830" y="154" text-anchor="start">chits at one layer, unanswered</text>
+    <text class="lane" x="770" y="188" text-anchor="start">train</text>
+    <text class="big" x="830" y="188" text-anchor="start">layers in topological order</text>
+    <text class="lane" x="770" y="222" text-anchor="start">claim</text>
+    <text class="big" x="830" y="222" text-anchor="start">chit · host · epoch · expiry</text>
+    <text class="tick" x="770" y="300" text-anchor="start">
+      A ticket is a chapter. A PR is a bag.
+    </text>
+    <text class="tick" x="770" y="318" text-anchor="start">A thread is the work.</text>
+  </svg>
+</figure>
+
+<p>
+  Identity is derived, never entered by hand. A chit is <code>ticket @ pr : path:line</code> for a
+  review thread, or <code>ticket @ build</code> before a thread exists. The layer is the topological
+  rank of the PR in its base chain, which is why “reviewable” can be computed instead of announced.
+  A sweep is the set of unanswered chits at one layer; a train is the layers, in order.
+</p>
+
+<div class="callout">
+  <p>
+    <strong>Why the thread and not the ticket:</strong> in the multi-season work, 59 blocker threads
+    were opened and 59 were answered, median 43 h later, each at a path and a line. Almost every
+    session started from one of those permalinks. The ticket id appeared in 5 of 40 sessions. The
+    address people actually use is the thread.
+  </p>
+</div>
+
+<h2>3 · The life of a chit</h2>
+
+<figure>
+  <figcaption>
+    <span>fig 3 · states and the paths that are not happy</span
+    ><span class="u">each transition has a guard; the guards are code, not judgement</span>
+  </figcaption>
+  <svg
+    viewBox="0 0 1120 510"
+    role="img"
+    aria-label="Chit lifecycle with exceptions: orphaned, blocked, changes, abandoned, closed externally."
+  >
+    <rect x="70" y="58" width="190" height="38" fill="#fff" stroke="#1a1a1a" />
+    <text class="state" x="82" y="82">open</text>
+    <text class="tick" x="276" y="82" text-anchor="start">a planned node, or a new thread</text>
+    <rect x="70" y="108" width="190" height="38" fill="#fff" stroke="#1a1a1a" />
+    <text class="state" x="82" y="132">claimed</text>
+    <text class="tick" x="276" y="132" text-anchor="start">lease e · heartbeat 20s · ttl 90s</text>
+    <rect x="70" y="158" width="190" height="38" fill="#fff" stroke="#1a1a1a" />
+    <text class="state" x="82" y="182">working</text>
+    <text class="tick" x="276" y="182" text-anchor="start">an agent is changing symbols</text>
+    <rect x="70" y="208" width="190" height="38" fill="#fff" stroke="#1a1a1a" />
+    <text class="state" x="82" y="232">proposed</text>
+    <text class="tick" x="276" y="232" text-anchor="start">PR open · checks running</text>
+    <rect x="70" y="258" width="190" height="38" fill="#fff" stroke="#1a1a1a" />
+    <text class="state" x="82" y="282">in_review</text>
+    <text class="tick" x="276" y="282" text-anchor="start">a sweep is out</text>
+    <rect x="70" y="308" width="190" height="38" fill="#fff" stroke="#1a1a1a" />
+    <text class="state" x="82" y="332">approved</text>
+    <text class="tick" x="276" y="332" text-anchor="start">all threads resolved</text>
+    <rect x="70" y="358" width="190" height="38" fill="#fff" stroke="#1a1a1a" />
+    <text class="state" x="82" y="382">merged</text>
+    <text class="tick" x="276" y="382" text-anchor="start">the layer has landed</text>
+    <rect x="70" y="408" width="190" height="38" fill="#fff" stroke="#1a1a1a" />
+    <text class="state" x="82" y="432">deployed</text>
+    <text class="tick" x="276" y="432" text-anchor="start">the deploy is verified</text>
+    <rect x="70" y="458" width="190" height="38" fill="#fff" stroke="#1a1a1a" />
+    <text class="state" x="82" y="482">closed</text>
+    <text class="tick" x="276" y="482" text-anchor="start">a human says done</text>
+    <line
+      x1="165"
+      y1="96"
+      x2="165"
+      y2="108"
+      stroke="#1a1a1a"
+      stroke-width="1.4"
+      fill="none"
+      marker-end="url(#a)"
+    />
+    <line
+      x1="165"
+      y1="146"
+      x2="165"
+      y2="158"
+      stroke="#1a1a1a"
+      stroke-width="1.4"
+      fill="none"
+      marker-end="url(#a)"
+    />
+    <line
+      x1="165"
+      y1="196"
+      x2="165"
+      y2="208"
+      stroke="#1a1a1a"
+      stroke-width="1.4"
+      fill="none"
+      marker-end="url(#a)"
+    />
+    <line
+      x1="165"
+      y1="246"
+      x2="165"
+      y2="258"
+      stroke="#1a1a1a"
+      stroke-width="1.4"
+      fill="none"
+      marker-end="url(#a)"
+    />
+    <line
+      x1="165"
+      y1="296"
+      x2="165"
+      y2="308"
+      stroke="#1a1a1a"
+      stroke-width="1.4"
+      fill="none"
+      marker-end="url(#a)"
+    />
+    <line
+      x1="165"
+      y1="346"
+      x2="165"
+      y2="358"
+      stroke="#1a1a1a"
+      stroke-width="1.4"
+      fill="none"
+      marker-end="url(#a)"
+    />
+    <line
+      x1="165"
+      y1="396"
+      x2="165"
+      y2="408"
+      stroke="#1a1a1a"
+      stroke-width="1.4"
+      fill="none"
+      marker-end="url(#a)"
+    />
+    <line
+      x1="165"
+      y1="446"
+      x2="165"
+      y2="458"
+      stroke="#1a1a1a"
+      stroke-width="1.4"
+      fill="none"
+      marker-end="url(#a)"
+    />
+    <text class="lane" x="640" y="60" text-anchor="start">EXCEPTIONS</text>
+    <rect x="620" y="96" width="170" height="36" fill="#fff" stroke="#a05a2c" />
+    <text class="state" x="632" y="119">orphaned</text>
+    <text class="tick" x="800" y="118" text-anchor="start">lease lost mid-work</text>
+    <path
+      d="M260 128 C420 128 500 114 618 114"
+      stroke="#a05a2c"
+      stroke-width="1.4"
+      fill="none"
+      stroke-dasharray="5 4"
+      marker-end="url(#ao)"
+    />
+    <path
+      d="M620 114 C470 114 380 128 262 128"
+      stroke="#a05a2c"
+      stroke-width="1.4"
+      fill="none"
+      stroke-dasharray="5 4"
+      marker-end="url(#ao)"
+    />
+    <rect x="620" y="176" width="170" height="36" fill="#fff" stroke="#a05a2c" />
+    <text class="state" x="632" y="199">blocked</text>
+    <text class="tick" x="800" y="198" text-anchor="start">a human decision is needed</text>
+    <line
+      x1="260"
+      y1="177"
+      x2="618"
+      y2="194"
+      stroke="#a05a2c"
+      stroke-width="1.4"
+      fill="none"
+      stroke-dasharray="5 4"
+      marker-end="url(#ao)"
+    />
+    <rect x="620" y="256" width="170" height="36" fill="#fff" stroke="#a05a2c" />
+    <text class="state" x="632" y="279">changes</text>
+    <text class="tick" x="800" y="278" text-anchor="start">a set of blocker chits</text>
+    <line
+      x1="260"
+      y1="277"
+      x2="618"
+      y2="274"
+      stroke="#a05a2c"
+      stroke-width="1.4"
+      fill="none"
+      stroke-dasharray="5 4"
+      marker-end="url(#ao)"
+    />
+    <path
+      d="M620 274 C470 274 400 227 262 227"
+      stroke="#a05a2c"
+      stroke-width="1.4"
+      fill="none"
+      stroke-dasharray="5 4"
+      marker-end="url(#ao)"
+    />
+    <rect x="620" y="356" width="170" height="36" fill="#fff" stroke="#c0392b" />
+    <text class="state" x="632" y="379">abandoned</text>
+    <text class="tick" x="800" y="378" text-anchor="start">superseded, like #1712 → #1740</text>
+    <line
+      x1="260"
+      y1="227"
+      x2="618"
+      y2="374"
+      stroke="#c0392b"
+      stroke-width="1.4"
+      fill="none"
+      stroke-dasharray="5 4"
+      marker-end="url(#ar)"
+    />
+    <rect x="620" y="436" width="170" height="36" fill="#fff" stroke="#c0392b" />
+    <text class="state" x="632" y="459">closed.external</text>
+    <text class="tick" x="800" y="458" text-anchor="start">Linear closes it; abort the turn</text>
+    <line
+      x1="262"
+      y1="452"
+      x2="616"
+      y2="452"
+      stroke="#c0392b"
+      stroke-width="1.4"
+      fill="none"
+      stroke-dasharray="5 4"
+      marker-end="url(#ar)"
+    />
+    <text class="tick" x="820" y="482" text-anchor="start" fill="#c0392b">from any state</text>
+  </svg>
+</figure>
+
+<p>
+  The happy path is nine states and every one is observable from outside: a claim from the room, a
+  commit from GitHub, a review from GitHub, a deploy from the pipeline. The exceptions are the
+  reason the ledger exists. A lease can expire while the process is only paused — so the claim
+  carries an epoch and a stale write is refused. Linear can close a ticket while an agent is still
+  editing — so <code>closed.external</code> interrupts the turn. A PR can be superseded by a lower
+  one in the stack — so <code>abandoned</code> is a state, not a deletion.
+</p>
+
+<h2>4 · One day, two humans</h2>
+
+<figure>
+  <figcaption>
+    <span>fig 4 · the loop</span
+    ><span class="u">a receipt makes a layer reviewable; one sweep; one fix turn; one train</span>
+  </figcaption>
+  <svg
+    viewBox="0 0 1120 580"
+    role="img"
+    aria-label="One day: a receipt makes a layer reviewable, one sweep produces blockers, one turn fixes them, the train lands."
+  >
+    <line x1="90" y1="56" x2="90" y2="560" stroke="#e6e6e6" stroke-dasharray="3 5" />
+    <text class="lane" x="90" y="44" text-anchor="middle">YOU · host A</text>
+    <line x1="360" y1="56" x2="360" y2="560" stroke="#e6e6e6" stroke-dasharray="3 5" />
+    <text class="lane" x="360" y="44" text-anchor="middle">ROOM</text>
+    <line x1="610" y1="56" x2="610" y2="560" stroke="#e6e6e6" stroke-dasharray="3 5" />
+    <text class="lane" x="610" y="44" text-anchor="middle">ED · host B</text>
+    <line x1="830" y1="56" x2="830" y2="560" stroke="#e6e6e6" stroke-dasharray="3 5" />
+    <text class="lane" x="830" y="44" text-anchor="middle">GITHUB</text>
+    <line x1="1010" y1="56" x2="1010" y2="560" stroke="#e6e6e6" stroke-dasharray="3 5" />
+    <text class="lane" x="1010" y="44" text-anchor="middle">LINEAR</text>
+    <line
+      x1="90"
+      y1="86"
+      x2="360"
+      y2="86"
+      stroke="#1a1a1a"
+      stroke-width="1.4"
+      fill="none"
+      marker-end="url(#a)"
+    />
+    <text class="tick" x="225.0" y="80" text-anchor="middle">receipt: pr.opened #1709</text>
+    <rect x="352" y="106" width="16" height="10" fill="#6b6b6b" />
+    <text class="tick" x="380" y="116" text-anchor="start">
+      layer ready · checks green · 0 threads
+    </text>
+    <line
+      x1="360"
+      y1="146"
+      x2="610"
+      y2="146"
+      stroke="#2f6f4f"
+      stroke-width="1.4"
+      fill="none"
+      marker-end="url(#ag)"
+    />
+    <text class="tick" x="485.0" y="140" text-anchor="middle">one card: “3 reviewable”</text>
+    <rect x="352" y="166" width="16" height="10" fill="#6b6b6b" />
+    <text class="tick" x="380" y="176" text-anchor="start">one Slack digest, not three</text>
+    <line
+      x1="610"
+      y1="206"
+      x2="830"
+      y2="206"
+      stroke="#c0392b"
+      stroke-width="1.4"
+      fill="none"
+      marker-end="url(#ar)"
+    />
+    <text class="tick" x="720.0" y="200" text-anchor="middle">4 inline blockers, one sweep</text>
+    <line
+      x1="830"
+      y1="236"
+      x2="360"
+      y2="236"
+      stroke="#1a1a1a"
+      stroke-width="1.4"
+      fill="none"
+      marker-end="url(#a)"
+    />
+    <text class="tick" x="595.0" y="230" text-anchor="middle">webhook: review.submitted</text>
+    <rect x="352" y="256" width="16" height="10" fill="#6b6b6b" />
+    <text class="tick" x="380" y="266" text-anchor="start">4 blocker chits · changeset e2</text>
+    <line
+      x1="360"
+      y1="296"
+      x2="90"
+      y2="296"
+      stroke="#2f6f4f"
+      stroke-width="1.4"
+      fill="none"
+      marker-end="url(#ag)"
+    />
+    <text class="tick" x="225.0" y="290" text-anchor="middle">changeset offered (claim e2)</text>
+    <rect x="82" y="316" width="16" height="10" fill="#6b6b6b" />
+    <text class="tick" x="104" y="326" text-anchor="start">one turn · four fixes</text>
+    <line
+      x1="90"
+      y1="356"
+      x2="830"
+      y2="356"
+      stroke="#1a1a1a"
+      stroke-width="1.4"
+      fill="none"
+      marker-end="url(#a)"
+    />
+    <text class="tick" x="460.0" y="350" text-anchor="middle">push · 4 “Fixed:” replies</text>
+    <line
+      x1="830"
+      y1="386"
+      x2="360"
+      y2="386"
+      stroke="#1a1a1a"
+      stroke-width="1.4"
+      fill="none"
+      marker-end="url(#a)"
+    />
+    <text class="tick" x="595.0" y="380" text-anchor="middle">receipts · chits resolved</text>
+    <line
+      x1="360"
+      y1="416"
+      x2="610"
+      y2="416"
+      stroke="#2f6f4f"
+      stroke-width="1.4"
+      fill="none"
+      marker-end="url(#ag)"
+    />
+    <text class="tick" x="485.0" y="410" text-anchor="middle">sweep 2: approved?</text>
+    <line
+      x1="610"
+      y1="446"
+      x2="830"
+      y2="446"
+      stroke="#2f6f4f"
+      stroke-width="1.4"
+      fill="none"
+      marker-end="url(#ag)"
+    />
+    <text class="tick" x="720.0" y="440" text-anchor="middle">approve</text>
+    <line
+      x1="360"
+      y1="476"
+      x2="90"
+      y2="476"
+      stroke="#2f6f4f"
+      stroke-width="1.4"
+      fill="none"
+      marker-end="url(#ag)"
+    />
+    <text class="tick" x="225.0" y="470" text-anchor="middle">
+      train approved · 3 merges in order
+    </text>
+    <line
+      x1="830"
+      y1="506"
+      x2="1010"
+      y2="506"
+      stroke="#a05a2c"
+      stroke-width="1.4"
+      fill="none"
+      marker-end="url(#ao)"
+    />
+    <text class="tick" x="920.0" y="500" text-anchor="middle">merge → Ready to deploy</text>
+    <line
+      x1="1010"
+      y1="536"
+      x2="360"
+      y2="536"
+      stroke="#a05a2c"
+      stroke-width="1.4"
+      fill="none"
+      marker-end="url(#ao)"
+    />
+    <text class="tick" x="685.0" y="530" text-anchor="middle">
+      observed · parent rollup · merged
+    </text>
+    <text class="tick" x="90" y="552" text-anchor="start" fill="#c0392b">
+      no model runs in the room
+    </text>
+  </svg>
+</figure>
+
+<p>
+  Nothing here is a notification per event. The room computes that a layer is reviewable, sends
+  <em>one</em> digest to Slack and <em>one</em> card to the other human, and when the blockers
+  arrive it mints them as a set. The owner gets the set, fixes it in a single turn, replies per
+  thread, and the next sweep is scheduled. The merge is a single human approval for an ordered
+  train, executed by the host that holds the claim.
+</p>
+
+<p>
+  If host A is asleep at step 8, the room offers the changeset to host B with a new epoch. If host A
+  wakes and tries to push, it gets a 409 and reloads. That is the whole multiplayer story: not
+  shared context, a fenced claim.
+</p>
+
+<h2>5 · Out by facts, in by address</h2>
+
+<figure>
+  <figcaption>
+    <span>fig 5 · the tap and the three channels</span
+    ><span class="u">what leaves is derived; what enters is chosen</span>
+  </figcaption>
+  <svg
+    viewBox="0 0 1120 470"
+    role="img"
+    aria-label="The tap derives facts from program effects into an outbox; the room reaches the session as a card, an addressed turn, or a pull."
+  >
+    <rect x="40" y="54" width="520" height="350" fill="#fff" stroke="#1a1a1a" />
+    <text class="lane" x="56" y="76" text-anchor="start">PI SESSION — ONE HUMAN, ONE AGENT</text>
+    <rect x="58" y="90" width="484" height="52" fill="#f7f7f7" stroke="#d8d8d8" />
+    <text class="lane" x="72" y="112" text-anchor="start">fabric program</text>
+    <text class="tick" x="72" y="130" text-anchor="start">
+      44,433 of 44,498 calls — effects, not tool names
+    </text>
+    <rect x="58" y="158" width="484" height="52" fill="#f7f7f7" stroke="#d8d8d8" />
+    <text class="lane" x="72" y="180" text-anchor="start">effects</text>
+    <text class="tick" x="72" y="198" text-anchor="start">
+      paths written · commands run · commits · PR opened
+    </text>
+    <rect x="58" y="226" width="484" height="52" fill="#eef3ee" stroke="#2f6f4f" />
+    <text class="lane" x="72" y="248" text-anchor="start">tap · pre-exec fence</text>
+    <text class="tick" x="72" y="266" text-anchor="start">claim cache → allow / 409 / deny</text>
+    <rect x="58" y="294" width="484" height="52" fill="#f7f7f7" stroke="#d8d8d8" />
+    <text class="lane" x="72" y="316" text-anchor="start">outbox · sqlite</text>
+    <text class="tick" x="72" y="334" text-anchor="start">
+      idempotent (session, turn, call) · drains when online
+    </text>
+    <line
+      x1="300"
+      y1="294"
+      x2="300"
+      y2="280"
+      stroke="#2f6f4f"
+      stroke-width="1.4"
+      fill="none"
+      marker-end="url(#ag)"
+    />
+    <line
+      x1="300"
+      y1="226"
+      x2="300"
+      y2="212"
+      stroke="#2f6f4f"
+      stroke-width="1.4"
+      fill="none"
+      marker-end="url(#ag)"
+    />
+    <line
+      x1="300"
+      y1="158"
+      x2="300"
+      y2="144"
+      stroke="#2f6f4f"
+      stroke-width="1.4"
+      fill="none"
+      marker-end="url(#ag)"
+    />
+    <rect x="840" y="54" width="220" height="350" fill="#f7f7f7" stroke="#1a1a1a" />
+    <text class="lane" x="856" y="76" text-anchor="start">ROOM</text>
+    <text class="big" x="856" y="96" text-anchor="start">claims · layers</text>
+    <text class="big" x="856" y="114" text-anchor="start">chits · receipts</text>
+    <text class="tick" x="856" y="160" text-anchor="start" fill="#c0392b">only credential:</text>
+    <text class="tick" x="856" y="178" text-anchor="start" fill="#c0392b">
+      Slack bot, one channel
+    </text>
+    <path
+      d="M542 320 C700 320 760 320 836 320"
+      stroke="#2f6f4f"
+      stroke-width="1.4"
+      fill="none"
+      marker-end="url(#ag)"
+    />
+    <text class="tick" x="690" y="312" text-anchor="middle" fill="#2f6f4f">facts</text>
+    <path
+      d="M836 110 C740 110 700 110 546 110"
+      stroke="#3b6ea5"
+      stroke-width="1.4"
+      fill="none"
+      marker-end="url(#ab)"
+    />
+    <text class="tick" x="690" y="102" text-anchor="middle" fill="#3b6ea5">card · 0 tokens</text>
+    <path
+      d="M836 140 C740 150 700 180 546 180"
+      stroke="#3b6ea5"
+      stroke-width="1.4"
+      fill="none"
+      marker-end="url(#ab)"
+    />
+    <text class="tick" x="690" y="162" text-anchor="middle" fill="#3b6ea5">addressed turn</text>
+    <path
+      d="M546 250 C700 250 760 200 836 200"
+      stroke="#3b6ea5"
+      stroke-width="1.4"
+      fill="none"
+      stroke-dasharray="5 4"
+      marker-end="url(#ab)"
+    />
+    <text class="tick" x="690" y="246" text-anchor="middle" fill="#3b6ea5">/room pull</text>
+    <text class="note" x="56" y="440" text-anchor="start">
+      The model decides what to do. The harness decides what the room hears.
+    </text>
+  </svg>
+</figure>
+
+<p>
+  Outbound runs on effects, not narration: 44,433 of 44,498 tool calls in the Shakti logs were
+  <code>fabric_exec</code>, so a hook that watches individual tools sees almost nothing. The tap
+  reads what the program changed — paths, commands, commits, the PR — and writes an idempotent fact
+  to a local outbox. The outbox is the offline story: the session never waits for the room.
+</p>
+
+<p>
+  Inbound has three channels and only two cost tokens. A card is a transcript entry that is rendered
+  but never sent to the model. An addressed message becomes a turn. A pull is you asking. Everything
+  else waits in the room.
+</p>
+
+<h2>6 · The invariants</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Invariant</th>
+      <th>Checked by</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td>No effect without an older intent.</td>
+      <td>outbox pair, replayed</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>No claim without a live epoch; stale writes are refused, never merged.</td>
+      <td>fencing test, 100 kills</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>A chit has exactly one owner at a time, or none.</td>
+      <td>property test over the state graph</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>The room never writes Linear state.</td>
+      <td>no write token exists</td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>The room holds no repo or model credentials.</td>
+      <td>secret list is one Slack bot</td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td>Merge is not done; deployed is not closed.</td>
+      <td>state graph, no shortcut edge</td>
+    </tr>
+    <tr>
+      <td>7</td>
+      <td>A fact is derived, never narrated.</td>
+      <td>the tap has no model</td>
+    </tr>
+    <tr>
+      <td>8</td>
+      <td>A card costs zero tokens; a turn is addressed.</td>
+      <td>Pi API: <code>appendEntry</code> vs <code>sendMessage</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>7 · What runs where</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Piece</th>
+      <th>Runs</th>
+      <th>Holds</th>
+      <th>May write</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>board</code></td>
+      <td>nowhere — a format</td>
+      <td>chit, claim, layer, sweep, receipt, presence</td>
+      <td>nothing</td>
+    </tr>
+    <tr>
+      <td><code>room</code></td>
+      <td>SQLite first, Durable Object later</td>
+      <td>the ledger; read caches of GH and Linear</td>
+      <td>its own state · Slack</td>
+    </tr>
+    <tr>
+      <td><code>tap</code></td>
+      <td>each laptop, as a Pi extension</td>
+      <td>outbox, claim cache, pre-exec fence</td>
+      <td>GitHub via the host's CLI</td>
+    </tr>
+    <tr>
+      <td><code>drift</code></td>
+      <td>CI or a laptop</td>
+      <td>ticket anchors → code anchors</td>
+      <td>nothing</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>Build order</h3>
+<ol>
+  <li>
+    <strong>board</strong> — the six records and the invariants, as a zero-dependency format with
+    property tests.
+  </li>
+  <li>
+    <strong>tap</strong> on one host, <strong>room</strong> on SQLite: capture one real week of
+    threads. No DO.
+  </li>
+  <li>
+    <strong>sweep + changeset</strong> routing, with Slack as a single digest. Prove the 43 h
+    becomes minutes.
+  </li>
+  <li>
+    <strong>train</strong> execution and Linear observation, including
+    <code>closed.external</code> and parent rollup.
+  </li>
+  <li>
+    <strong>DO adapter</strong> and the second host; then <strong>drift</strong> as a jig engine
+    over the ticket anchors.
+  </li>
+</ol>
+
+<p class="note">
+  The order is the argument: the ledger and the interrupt are proved on one laptop before the
+  distributed runtime is bought. A room that cannot survive <code>kill -9</code> locally will not
+  survive an eviction.
+</p>

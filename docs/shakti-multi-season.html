@@ -1,0 +1,1010 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Multi-Season Projects — how the work actually moved</title>
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --mid: #6b6b6b;
+    --rule: #d8d8d8;
+    --bg: #fff;
+    --blue: #3b6ea5;
+    --green: #2f6f4f;
+    --orange: #a05a2c;
+    --red: #c0392b;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    padding: 56px 60px 96px;
+    background: var(--bg);
+    color: var(--ink);
+    font:
+      15px/1.55 -apple-system,
+      "Helvetica Neue",
+      Helvetica,
+      Arial,
+      sans-serif;
+    max-width: 1240px;
+  }
+  h1 {
+    font:
+      400 34px/1.15 "Iowan Old Style",
+      Georgia,
+      serif;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  h2 {
+    font:
+      400 21px/1.25 "Iowan Old Style",
+      Georgia,
+      serif;
+    margin: 56px 0 4px;
+    letter-spacing: -0.01em;
+    padding-top: 18px;
+    border-top: 1px solid var(--rule);
+  }
+  h3 {
+    font:
+      600 13px/1.3 -apple-system,
+      sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 26px 0 6px;
+    color: var(--mid);
+  }
+  p {
+    max-width: 78ch;
+    margin: 10px 0;
+  }
+  .sub {
+    color: var(--mid);
+    font-size: 14px;
+    margin: 0;
+  }
+  .lede {
+    font-size: 16.5px;
+    color: #2b2b2b;
+  }
+  .note {
+    color: #444;
+    font-size: 13.5px;
+    max-width: 84ch;
+  }
+  .callout {
+    border-left: 3px solid var(--ink);
+    padding: 2px 0 2px 16px;
+    margin: 18px 0;
+    max-width: 80ch;
+  }
+  .callout p {
+    margin: 4px 0;
+  }
+  code {
+    font:
+      12.5px ui-monospace,
+      SFMono-Regular,
+      Menlo,
+      monospace;
+    background: #f5f5f5;
+    padding: 1px 4px;
+  }
+  figure {
+    margin: 22px 0 8px;
+  }
+  figcaption {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font:
+      600 12px/1.3 -apple-system,
+      sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+  }
+  figcaption .u {
+    font-weight: 400;
+    letter-spacing: 0;
+    color: var(--mid);
+    text-transform: none;
+    font-size: 11.5px;
+  }
+  svg {
+    width: 100%;
+    display: block;
+  }
+  table {
+    border-collapse: collapse;
+    font-size: 13.5px;
+    margin: 14px 0 4px;
+    width: 100%;
+  }
+  th {
+    text-align: left;
+    font:
+      600 11.5px/1.3 -apple-system,
+      sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--mid);
+    border-bottom: 1px solid var(--ink);
+    padding: 6px 14px 6px 0;
+    white-space: nowrap;
+  }
+  td {
+    padding: 6px 14px 6px 0;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  td.n,
+  th.n {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    padding-right: 24px;
+  }
+  td:first-child {
+    white-space: nowrap;
+  }
+  .lane {
+    font:
+      600 11px -apple-system,
+      sans-serif;
+    letter-spacing: 0.06em;
+    fill: var(--mid);
+  }
+  .tick {
+    font:
+      11px -apple-system,
+      sans-serif;
+    fill: var(--mid);
+  }
+  .n {
+    font:
+      11px ui-monospace,
+      Menlo,
+      monospace;
+    fill: var(--ink);
+  }
+  .big {
+    font:
+      13px -apple-system,
+      sans-serif;
+    fill: var(--ink);
+  }
+  .lat {
+    font:
+      11px ui-monospace,
+      Menlo,
+      monospace;
+    fill: var(--red);
+  }
+  .chip {
+    font:
+      10px ui-monospace,
+      Menlo,
+      monospace;
+    fill: var(--ink);
+  }
+</style>
+
+<h1>Multi-Season Projects — how the work actually moved</h1>
+<p class="sub">
+  Shakti · forestbuilder · 27 Linear tickets · 24 PRs · 129 reviews · 223 Pi sessions · 2026-09-28 →
+  2026-10-22
+</p>
+
+<p class="lede">
+  The plan was written in one sitting. The code was built in four days. Review was two sweeps, two
+  days apart. Twenty of the twenty-three merges happened in a hundred and eight minutes. Authoring
+  was never the constraint, and the sessions almost never name the ticket they are working on. That
+  gap — between a graph of tickets and a stream of PR-anchored conversations — is the space a room
+  has to occupy.
+</p>
+
+<h2>1 · The shape</h2>
+
+<figure>
+  <figcaption>
+    <span>fig 1 · every multi-season PR</span
+    ><span class="u">open → merge · red first review · orange first blocker</span>
+  </figcaption>
+  <svg
+    viewBox="0 0 1120 708"
+    role="img"
+    aria-label="24 pull requests: created, first review, first blocker, merged. Twenty of twenty-three merged in a 108 minute window."
+  >
+    <line x1="150.0" y1="82" x2="150.0" y2="668" stroke="#f0f0f0" />
+    <text class="tick" x="150.0" y="684" text-anchor="middle">10/04</text>
+    <line x1="247.9" y1="82" x2="247.9" y2="668" stroke="#f0f0f0" />
+    <text class="tick" x="247.9" y="684" text-anchor="middle">10/06</text>
+    <line x1="345.8" y1="82" x2="345.8" y2="668" stroke="#f0f0f0" />
+    <text class="tick" x="345.8" y="684" text-anchor="middle">10/08</text>
+    <line x1="443.7" y1="82" x2="443.7" y2="668" stroke="#f0f0f0" />
+    <text class="tick" x="443.7" y="684" text-anchor="middle">10/10</text>
+    <line x1="541.6" y1="82" x2="541.6" y2="668" stroke="#f0f0f0" />
+    <text class="tick" x="541.6" y="684" text-anchor="middle">10/12</text>
+    <line x1="639.5" y1="82" x2="639.5" y2="668" stroke="#f0f0f0" />
+    <text class="tick" x="639.5" y="684" text-anchor="middle">10/14</text>
+    <line x1="737.4" y1="82" x2="737.4" y2="668" stroke="#f0f0f0" />
+    <text class="tick" x="737.4" y="684" text-anchor="middle">10/16</text>
+    <line x1="835.3" y1="82" x2="835.3" y2="668" stroke="#f0f0f0" />
+    <text class="tick" x="835.3" y="684" text-anchor="middle">10/18</text>
+    <line x1="933.2" y1="82" x2="933.2" y2="668" stroke="#f0f0f0" />
+    <text class="tick" x="933.2" y="684" text-anchor="middle">10/20</text>
+    <line x1="1031.1" y1="82" x2="1031.1" y2="668" stroke="#f0f0f0" />
+    <text class="tick" x="1031.1" y="684" text-anchor="middle">10/22</text>
+    <line
+      x1="632.2"
+      y1="76"
+      x2="632.2"
+      y2="668"
+      stroke="#2f6f4f"
+      stroke-width="1"
+      stroke-dasharray="4 3"
+    />
+    <line
+      x1="972.8"
+      y1="76"
+      x2="972.8"
+      y2="668"
+      stroke="#2f6f4f"
+      stroke-width="1"
+      stroke-dasharray="4 3"
+    />
+    <line
+      x1="975.1"
+      y1="76"
+      x2="975.1"
+      y2="668"
+      stroke="#2f6f4f"
+      stroke-width="1"
+      stroke-dasharray="4 3"
+    />
+    <line
+      x1="1064.0"
+      y1="76"
+      x2="1064.0"
+      y2="668"
+      stroke="#2f6f4f"
+      stroke-width="1"
+      stroke-dasharray="4 3"
+    />
+    <line
+      x1="1067.5"
+      y1="76"
+      x2="1067.5"
+      y2="668"
+      stroke="#2f6f4f"
+      stroke-width="1"
+      stroke-dasharray="4 3"
+    />
+    <line x1="632.2" y1="68" x2="1067.5" y2="68" stroke="#2f6f4f" />
+    <text class="tick" x="849.9" y="62" text-anchor="middle" fill="#2f6f4f">
+      20 of 23 merged in 108 min
+    </text>
+    <line x1="590.5" y1="46" x2="786.3" y2="46" stroke="#3b6ea5" />
+    <text class="tick" x="688.4" y="40" text-anchor="middle" fill="#3b6ea5">
+      22 PRs opened in 4 days
+    </text>
+    <rect x="199.7" y="92" width="432.6" height="10" fill="#2f6f4f" fill-opacity="0.85" />
+    <rect x="635.4" y="116" width="428.6" height="10" fill="#2f6f4f" fill-opacity="0.85" />
+    <rect x="637.3" y="140" width="426.7" height="10" fill="#2f6f4f" fill-opacity="0.85" />
+    <rect x="676.8" y="164" width="298.3" height="10" fill="#2f6f4f" fill-opacity="0.85" />
+    <rect x="679.0" y="188" width="385.0" height="10" fill="#2f6f4f" fill-opacity="0.85" />
+    <rect x="682.2" y="212" width="381.8" height="10" fill="#2f6f4f" fill-opacity="0.85" />
+    <rect x="685.0" y="236" width="379.0" height="10" fill="#2f6f4f" fill-opacity="0.85" />
+    <rect x="685.6" y="260" width="378.4" height="10" fill="#2f6f4f" fill-opacity="0.85" />
+    <rect x="686.2" y="284" width="377.8" height="10" fill="#2f6f4f" fill-opacity="0.85" />
+    <rect x="686.4" y="308" width="381.4" height="10" fill="#c0392b" fill-opacity="0.85" />
+    <rect x="723.8" y="332" width="340.2" height="10" fill="#2f6f4f" fill-opacity="0.85" />
+    <rect x="724.6" y="356" width="342.9" height="10" fill="#2f6f4f" fill-opacity="0.85" />
+    <rect x="725.4" y="380" width="342.2" height="10" fill="#2f6f4f" fill-opacity="0.85" />
+    <rect x="726.0" y="404" width="341.5" height="10" fill="#2f6f4f" fill-opacity="0.85" />
+    <rect x="728.7" y="428" width="338.9" height="10" fill="#2f6f4f" fill-opacity="0.85" />
+    <rect x="729.6" y="452" width="338.0" height="10" fill="#2f6f4f" fill-opacity="0.85" />
+    <rect x="730.6" y="476" width="336.9" height="10" fill="#2f6f4f" fill-opacity="0.85" />
+    <rect x="730.8" y="500" width="336.8" height="10" fill="#2f6f4f" fill-opacity="0.85" />
+    <rect x="730.9" y="524" width="336.6" height="10" fill="#2f6f4f" fill-opacity="0.85" />
+    <rect x="733.2" y="548" width="239.5" height="10" fill="#2f6f4f" fill-opacity="0.85" />
+    <rect x="775.2" y="572" width="292.3" height="10" fill="#2f6f4f" fill-opacity="0.85" />
+    <rect x="775.4" y="596" width="292.2" height="10" fill="#2f6f4f" fill-opacity="0.85" />
+    <rect x="776.1" y="620" width="291.5" height="10" fill="#2f6f4f" fill-opacity="0.85" />
+    <rect x="969.8" y="644" width="94.1" height="10" fill="#2f6f4f" fill-opacity="0.85" />
+    <circle cx="234.0" cy="97.0" r="2.6" fill="#c0392b" />
+    <circle cx="774.6" cy="121.0" r="2.6" fill="#c0392b" />
+    <circle cx="774.6" cy="121.0" r="2.6" fill="#a05a2c" fill-opacity="0.9" />
+    <circle cx="776.5" cy="145.0" r="2.6" fill="#c0392b" />
+    <circle cx="776.5" cy="145.0" r="2.6" fill="#a05a2c" fill-opacity="0.9" />
+    <circle cx="834.5" cy="169.0" r="2.6" fill="#c0392b" />
+    <circle cx="834.5" cy="169.0" r="2.6" fill="#a05a2c" fill-opacity="0.9" />
+    <circle cx="776.8" cy="193.0" r="2.6" fill="#c0392b" />
+    <circle cx="776.8" cy="193.0" r="2.6" fill="#a05a2c" fill-opacity="0.9" />
+    <circle cx="782.9" cy="217.0" r="2.6" fill="#c0392b" />
+    <circle cx="782.9" cy="217.0" r="2.6" fill="#a05a2c" fill-opacity="0.9" />
+    <circle cx="783.4" cy="241.0" r="2.6" fill="#c0392b" />
+    <circle cx="783.4" cy="241.0" r="2.6" fill="#a05a2c" fill-opacity="0.9" />
+    <circle cx="784.0" cy="265.0" r="2.6" fill="#c0392b" />
+    <circle cx="784.0" cy="265.0" r="2.6" fill="#a05a2c" fill-opacity="0.9" />
+    <circle cx="784.2" cy="289.0" r="2.6" fill="#c0392b" />
+    <circle cx="784.2" cy="289.0" r="2.6" fill="#a05a2c" fill-opacity="0.9" />
+    <circle cx="784.7" cy="313.0" r="2.6" fill="#c0392b" />
+    <circle cx="784.7" cy="313.0" r="2.6" fill="#a05a2c" fill-opacity="0.9" />
+    <circle cx="785.0" cy="337.0" r="2.6" fill="#c0392b" />
+    <circle cx="926.0" cy="337.0" r="2.6" fill="#a05a2c" fill-opacity="0.9" />
+    <circle cx="785.2" cy="361.0" r="2.6" fill="#c0392b" />
+    <circle cx="785.5" cy="385.0" r="2.6" fill="#c0392b" />
+    <circle cx="785.5" cy="385.0" r="2.6" fill="#a05a2c" fill-opacity="0.9" />
+    <circle cx="785.7" cy="409.0" r="2.6" fill="#c0392b" />
+    <circle cx="785.7" cy="409.0" r="2.6" fill="#a05a2c" fill-opacity="0.9" />
+    <circle cx="785.9" cy="433.0" r="2.6" fill="#c0392b" />
+    <circle cx="785.9" cy="433.0" r="2.6" fill="#a05a2c" fill-opacity="0.9" />
+    <circle cx="821.5" cy="457.0" r="2.6" fill="#c0392b" />
+    <circle cx="821.5" cy="457.0" r="2.6" fill="#a05a2c" fill-opacity="0.9" />
+    <circle cx="821.8" cy="481.0" r="2.6" fill="#c0392b" />
+    <circle cx="821.8" cy="481.0" r="2.6" fill="#a05a2c" fill-opacity="0.9" />
+    <circle cx="833.3" cy="505.0" r="2.6" fill="#c0392b" />
+    <circle cx="833.3" cy="505.0" r="2.6" fill="#a05a2c" fill-opacity="0.9" />
+    <circle cx="833.9" cy="529.0" r="2.6" fill="#c0392b" />
+    <circle cx="833.9" cy="529.0" r="2.6" fill="#a05a2c" fill-opacity="0.9" />
+    <circle cx="834.3" cy="553.0" r="2.6" fill="#c0392b" />
+    <circle cx="834.3" cy="553.0" r="2.6" fill="#a05a2c" fill-opacity="0.9" />
+    <circle cx="834.0" cy="577.0" r="2.6" fill="#c0392b" />
+    <circle cx="929.3" cy="577.0" r="2.6" fill="#a05a2c" fill-opacity="0.9" />
+    <circle cx="834.0" cy="601.0" r="2.6" fill="#c0392b" />
+    <circle cx="834.0" cy="601.0" r="2.6" fill="#a05a2c" fill-opacity="0.9" />
+    <circle cx="834.2" cy="625.0" r="2.6" fill="#c0392b" />
+    <circle cx="834.2" cy="625.0" r="2.6" fill="#a05a2c" fill-opacity="0.9" />
+    <circle cx="975.3" cy="649.0" r="2.6" fill="#c0392b" />
+    <text class="n" x="12" y="101">1663</text>
+    <text class="n" x="12" y="125">1697</text>
+    <text class="tick" x="58" y="125">DEV-1500</text>
+    <text class="n" x="12" y="149">1698</text>
+    <text class="tick" x="58" y="149">DEV-1501</text>
+    <text class="n" x="12" y="173">1704</text>
+    <text class="tick" x="58" y="173">DEV-1503</text>
+    <text class="n" x="12" y="197">1706</text>
+    <text class="tick" x="58" y="197">DEV-1504</text>
+    <text class="n" x="12" y="221">1708</text>
+    <text class="tick" x="58" y="221">DEV-1505</text>
+    <text class="n" x="12" y="245">1709</text>
+    <text class="tick" x="58" y="245">DEV-1506</text>
+    <text class="n" x="12" y="269">1710</text>
+    <text class="tick" x="58" y="269">DEV-1507</text>
+    <text class="n" x="12" y="293">1711</text>
+    <text class="tick" x="58" y="293">DEV-1508</text>
+    <text class="n" x="12" y="317">1712</text>
+    <text class="tick" x="58" y="317">DEV-1522</text>
+    <text class="n" x="12" y="341">1715</text>
+    <text class="tick" x="58" y="341">DEV-1523</text>
+    <text class="n" x="12" y="365">1716</text>
+    <text class="tick" x="58" y="365">DEV-1510</text>
+    <text class="n" x="12" y="389">1717</text>
+    <text class="tick" x="58" y="389">DEV-1524</text>
+    <text class="n" x="12" y="413">1718</text>
+    <text class="tick" x="58" y="413">DEV-1525</text>
+    <text class="n" x="12" y="437">1719</text>
+    <text class="tick" x="58" y="437">DEV-1512</text>
+    <text class="n" x="12" y="461">1720</text>
+    <text class="tick" x="58" y="461">DEV-1526</text>
+    <text class="n" x="12" y="485">1721</text>
+    <text class="tick" x="58" y="485">DEV-1513</text>
+    <text class="n" x="12" y="509">1722</text>
+    <text class="tick" x="58" y="509">DEV-1528</text>
+    <text class="n" x="12" y="533">1723</text>
+    <text class="tick" x="58" y="533">DEV-1527</text>
+    <text class="n" x="12" y="557">1725</text>
+    <text class="tick" x="58" y="557">DEV-1529</text>
+    <text class="n" x="12" y="581">1726</text>
+    <text class="tick" x="58" y="581">DEV-1533</text>
+    <text class="n" x="12" y="605">1727</text>
+    <text class="tick" x="58" y="605">DEV-1534</text>
+    <text class="n" x="12" y="629">1728</text>
+    <text class="tick" x="58" y="629">DEV-1535</text>
+    <text class="n" x="12" y="653">1740</text>
+    <text class="tick" x="58" y="653">DEV-1522</text>
+    <text class="tick" x="12" y="36">plan · 09-28</text>
+  </svg>
+</figure>
+
+<p>
+  Two bursts and two trains. Twenty-two PRs opened between 10-13 and 10-16; the first review landed
+  about two days later; the merges ran as one train of nine at 16:08 and one of eleven at 17:53 on
+  10-22. PR #1712 (the seed-id fix) was closed unmerged and redone as #1740, which is why one branch
+  appears twice. Nothing else was reverted.
+</p>
+
+<h3>The numbers a plan needs</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Measure</th>
+      <th class="n">Value</th>
+      <th>Read as</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Tickets in the project</td>
+      <td class="n">27</td>
+      <td>16 written on 09-28 (plan, phases, 13 nodes) · 11 discovered 10-14→10-16</td>
+    </tr>
+    <tr>
+      <td>Pull requests</td>
+      <td class="n">24</td>
+      <td>23 merged · 1 superseded before merge</td>
+    </tr>
+    <tr>
+      <td>Merged in two trains</td>
+      <td class="n">20 of 23</td>
+      <td>16:08 (9) and 17:53 (11) on 10-22 · 108 minutes apart</td>
+    </tr>
+    <tr>
+      <td>Median PR open → first review</td>
+      <td class="n">1.9 d</td>
+      <td>46.5 h; the first sweep came 2 days after the burst</td>
+    </tr>
+    <tr>
+      <td>Median PR open → merge</td>
+      <td class="n">6.9 d</td>
+      <td>the stack waited on review, not on authoring</td>
+    </tr>
+    <tr>
+      <td>Median last review → merge</td>
+      <td class="n">2.7 d</td>
+      <td>approval did not mean merge; the train ran later</td>
+    </tr>
+    <tr>
+      <td>Reviews</td>
+      <td class="n">129</td>
+      <td>65 by Ed · 64 by you (63 of them are “Fixed:” replies)</td>
+    </tr>
+    <tr>
+      <td>Root inline blockers</td>
+      <td class="n">59</td>
+      <td>3–4 per review sweep, each anchored at path:line</td>
+    </tr>
+    <tr>
+      <td>Blocker → fix reply</td>
+      <td class="n">43.1 h</td>
+      <td>p90 70.4 h · every blocker answered</td>
+    </tr>
+    <tr>
+      <td>Inline comments</td>
+      <td class="n">124</td>
+      <td>61 by Ed · 63 by you · median 4 per PR, max 14</td>
+    </tr>
+    <tr>
+      <td>Tickets marked Done</td>
+      <td class="n">0</td>
+      <td>
+        21 leaves are Ready to deploy; 4 parents sit In Progress after their children merged;
+        completedAt is null everywhere
+      </td>
+    </tr>
+    <tr>
+      <td>Ticket bodies with a drift check</td>
+      <td class="n">14 of 25</td>
+      <td>each names a commit and file:line, dated 10-13</td>
+    </tr>
+    <tr>
+      <td>Pi sessions (whole workspace)</td>
+      <td class="n">223</td>
+      <td>76 days, 50 active days, 2,947 user turns</td>
+    </tr>
+    <tr>
+      <td>Sessions in the project window</td>
+      <td class="n">40</td>
+      <td>only 5 name a DEV id; they open from a PR URL or a review permalink</td>
+    </tr>
+    <tr>
+      <td>Active vs wall time in the window</td>
+      <td class="n">47 h / 339 h</td>
+      <td>session open ≠ available; 86% of wall time is idle</td>
+    </tr>
+    <tr>
+      <td>Tool calls</td>
+      <td class="n">44,498</td>
+      <td>44,433 are fabric_exec (99.85%) — programs, not individual tools</td>
+    </tr>
+    <tr>
+      <td>Cost in the window</td>
+      <td class="n">$12.66</td>
+      <td>$89.07 across the whole workspace</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>2 · The unit is the thread</h2>
+
+<p>
+  Ed reviewed in blockers, not summaries: “Three merge blockers.”, “One merge blocker, inline.”,
+  “Two merge blockers, inline.” Each blocker is anchored at a path and a line, and each got a reply
+  that begins with <code>Fixed:</code> and names the symbol that changed. Fifty-nine root threads,
+  fifty-nine replies. The PR is a bag of threads; the ticket is a chapter heading.
+</p>
+
+<figure>
+  <figcaption>
+    <span>fig 2 · one thread, two rounds</span
+    ><span class="u">the anchor, the fix, the second defect on the same line</span>
+  </figcaption>
+  <svg
+    viewBox="0 0 1120 330"
+    role="img"
+    aria-label="One review thread: an Ed blocker, a Fixed reply, a second blocker on the same line, a second reply."
+  >
+    <text class="lane" x="10" y="18">
+      ONE THREAD · PR #1706 · services/rest/src/routes/openapi/handlers/projects/index.ts:614
+    </text>
+    <rect x="10" y="30" width="900" height="58" fill="#faf6f4" stroke="#e6d5cc" />
+    <text class="chip" x="24" y="50">eadmundo · 10-16 19:19 · CHANGES_REQUESTED</text>
+    <text class="big" x="24" y="70">
+      Resolve seasons with the project's own tenant id. This GET is the
+    </text>
+    <text class="big" x="24" y="86">
+      cross-tenant project read — the contractor and client checks are next to it.
+    </text>
+
+    <rect x="10" y="98" width="900" height="58" fill="#f4f7f4" stroke="#cfe0d5" />
+    <text class="chip" x="24" y="118">togmund · 10-19 17:46</text>
+    <text class="big" x="24" y="138">
+      Fixed: getProject now calls projectSeasonViews(… tenantId: project.tenant_id),
+    </text>
+    <text class="big" x="24" y="154">
+      so a contractor reading a project derives seasons inside its own tenant.
+    </text>
+
+    <rect x="10" y="166" width="900" height="58" fill="#faf6f4" stroke="#e6d5cc" />
+    <text class="chip" x="24" y="186">eadmundo · 10-19 19:57 · CHANGES_REQUESTED</text>
+    <text class="big" x="24" y="206">
+      Wiring the derivation into GET /api/projects/:id makes the project page 500
+    </text>
+    <text class="big" x="24" y="222">
+      whenever any project_tree or planting_season id fails to resolve.
+    </text>
+
+    <rect x="10" y="234" width="900" height="58" fill="#f4f7f4" stroke="#cfe0d5" />
+    <text class="chip" x="24" y="254">togmund · 10-19 23:14</text>
+    <text class="big" x="24" y="274">
+      DEV-1522 is #1712, lower in this stack, so it lands before this PR and the
+    </text>
+    <text class="big" x="24" y="290">
+      seed ids are corrected there. Production count is the remaining check.
+    </text>
+
+    <text class="lat" x="930" y="60">t+0</text>
+    <text class="lat" x="930" y="128">+70 h</text>
+    <text class="lat" x="930" y="196">+2 h</text>
+    <text class="lat" x="930" y="264">+3 h</text>
+  </svg>
+</figure>
+
+<p>
+  This is why a room that routes <em>PRs</em> will feel wrong. The thing you pick up is a line, with
+  its history and its commit; the thing the agent changes is a symbol; the thing Ed checks next is
+  the same line again. A ticket-level notification loses the anchor, and the anchor is the only
+  reason the follow-up session can start without re-reading the PR.
+</p>
+
+<h2>3 · The plan is a living graph</h2>
+
+<p>
+  DEV-1496 is a plan ticket whose body holds the dependency tree, the decisions, and an explicit
+  “not doing” list. Fourteen of the twenty-five bodies read carry a
+  <strong>Drift check, 2026-10-13</strong> — a paragraph naming a commit and the
+  <code>file:line</code> places the plan has moved under. That is a human running a conformance
+  check against the tree, by hand, in prose.
+</p>
+
+<figure>
+  <figcaption>
+    <span>fig 3 · the tree as planned, and what the work added</span
+    ><span class="u">green chips merged · grey unstarted · orange discovered</span>
+  </figcaption>
+  <svg
+    viewBox="0 0 1120 300"
+    role="img"
+    aria-label="Sixteen tickets planned on 09-28; ten more discovered during execution on 10-14 to 10-16."
+  >
+    <text class="lane" x="10" y="16">PLANNED · 09-28 · ONE SITTING</text>
+    <text class="lane" x="700" y="16">DISCOVERED WHILE BUILDING · 10-14 → 10-16</text>
+    <line x1="690" y1="24" x2="690" y2="286" stroke="#e0e0e0" stroke-dasharray="4 4" />
+
+    <text class="tick" x="10" y="44">foundation</text>
+    <rect x="110" y="32" width="118" height="20" fill="#eef3ee" stroke="#cfe0d5" />
+    <text class="chip" x="118" y="46">DEV-1500 · #1697</text>
+    <rect x="234" y="32" width="118" height="20" fill="#eef3ee" stroke="#cfe0d5" />
+    <text class="chip" x="242" y="46">DEV-1501 · #1698</text>
+    <rect x="358" y="32" width="118" height="20" fill="#eef3ee" stroke="#cfe0d5" />
+    <text class="chip" x="366" y="46">DEV-1502 · #1663</text>
+    <rect x="482" y="32" width="118" height="20" fill="#eef3ee" stroke="#cfe0d5" />
+    <text class="chip" x="490" y="46">DEV-1503 · #1704</text>
+
+    <text class="tick" x="10" y="76">surfaces</text>
+    <rect x="110" y="64" width="118" height="20" fill="#eef3ee" stroke="#cfe0d5" />
+    <text class="chip" x="118" y="78">DEV-1504 · #1706</text>
+    <rect x="234" y="64" width="118" height="20" fill="#eef3ee" stroke="#cfe0d5" />
+    <text class="chip" x="242" y="78">DEV-1505 · #1708</text>
+    <rect x="358" y="64" width="118" height="20" fill="#eef3ee" stroke="#cfe0d5" />
+    <text class="chip" x="366" y="78">DEV-1506 · #1709</text>
+    <rect x="482" y="64" width="118" height="20" fill="#eef3ee" stroke="#cfe0d5" />
+    <text class="chip" x="490" y="78">DEV-1507 · #1710</text>
+    <rect x="606" y="64" width="118" height="20" fill="#eef3ee" stroke="#cfe0d5" />
+    <text class="chip" x="614" y="78">DEV-1508 · #1711</text>
+
+    <text class="tick" x="10" y="108">status</text>
+    <rect x="110" y="96" width="118" height="20" fill="#eef3ee" stroke="#cfe0d5" />
+    <text class="chip" x="118" y="110">DEV-1510 · #1716</text>
+    <rect x="234" y="96" width="118" height="20" fill="#eef3ee" stroke="#cfe0d5" />
+    <text class="chip" x="242" y="110">DEV-1511 · #1717</text>
+    <rect x="358" y="96" width="118" height="20" fill="#eef3ee" stroke="#cfe0d5" />
+    <text class="chip" x="366" y="110">DEV-1512 · #1719</text>
+    <rect x="482" y="96" width="118" height="20" fill="#eef3ee" stroke="#cfe0d5" />
+    <text class="chip" x="490" y="110">DEV-1513 · #1721</text>
+
+    <text class="tick" x="10" y="140">phase parent · Backlog</text>
+    <rect x="110" y="128" width="118" height="20" fill="#fff" stroke="#ddd" />
+    <text class="chip" x="118" y="142">DEV-1497</text>
+    <rect x="234" y="128" width="118" height="20" fill="#fff" stroke="#ddd" />
+    <text class="chip" x="242" y="142">DEV-1499</text>
+    <rect x="358" y="128" width="118" height="20" fill="#fff" stroke="#ddd" />
+    <text class="chip" x="366" y="142">DEV-1496 · plan</text>
+
+    <text class="tick" x="700" y="44">from a review thread</text>
+    <rect x="700" y="52" width="118" height="20" fill="#fdf1ea" stroke="#e6d5cc" />
+    <text class="chip" x="708" y="66">DEV-1522 · #1712</text>
+    <rect x="824" y="52" width="118" height="20" fill="#fdf1ea" stroke="#e6d5cc" />
+    <text class="chip" x="832" y="66">DEV-1523 · #1715</text>
+    <rect x="948" y="52" width="118" height="20" fill="#fdf1ea" stroke="#e6d5cc" />
+    <text class="chip" x="956" y="66">DEV-1524 · #1717</text>
+
+    <text class="tick" x="700" y="92">from a drift check</text>
+    <rect x="700" y="100" width="118" height="20" fill="#fdf1ea" stroke="#e6d5cc" />
+    <text class="chip" x="708" y="114">DEV-1525 · #1718</text>
+    <rect x="824" y="100" width="118" height="20" fill="#fdf1ea" stroke="#e6d5cc" />
+    <text class="chip" x="832" y="114">DEV-1526 · #1720</text>
+    <rect x="948" y="100" width="118" height="20" fill="#fdf1ea" stroke="#e6d5cc" />
+    <text class="chip" x="956" y="114">DEV-1527 · #1723</text>
+
+    <text class="tick" x="700" y="140">from the first pass of work</text>
+    <rect x="700" y="148" width="118" height="20" fill="#fdf1ea" stroke="#e6d5cc" />
+    <text class="chip" x="708" y="162">DEV-1528 · #1722</text>
+    <rect x="824" y="148" width="118" height="20" fill="#fdf1ea" stroke="#e6d5cc" />
+    <text class="chip" x="832" y="162">DEV-1529 · #1725</text>
+    <rect x="948" y="148" width="118" height="20" fill="#fdf1ea" stroke="#e6d5cc" />
+    <text class="chip" x="956" y="162">DEV-1531 · #1725</text>
+    <rect x="700" y="176" width="118" height="20" fill="#fdf1ea" stroke="#e6d5cc" />
+    <text class="chip" x="708" y="190">DEV-1533 · #1726</text>
+    <rect x="824" y="176" width="118" height="20" fill="#fdf1ea" stroke="#e6d5cc" />
+    <text class="chip" x="832" y="190">DEV-1534 · #1727</text>
+    <rect x="948" y="176" width="118" height="20" fill="#fdf1ea" stroke="#e6d5cc" />
+    <text class="chip" x="956" y="190">DEV-1535 · #1728</text>
+
+    <text class="tick" x="10" y="250">16 tickets · 15 PRs at plan time</text>
+    <text class="tick" x="700" y="250">11 tickets · 10 PRs added mid-flight — 41% of the tree</text>
+    <line x1="630" y1="238" x2="690" y2="238" stroke="#a05a2c" marker-end="url(#arr)" />
+    <defs>
+      <marker
+        id="arr"
+        viewBox="0 0 10 10"
+        refX="9"
+        refY="5"
+        markerWidth="7"
+        markerHeight="7"
+        orient="auto-start-reverse"
+      >
+        <path d="M0,0 L10,5 L0,10 z" fill="#a05a2c" />
+      </marker>
+    </defs>
+  </svg>
+</figure>
+
+<p>
+  Eleven of the twenty-seven tickets were created after the first PR. Two came straight out of
+  review threads (1522, 1523), the rest out of the first pass of work. A room that treats the plan
+  as fixed will either refuse the new work or file it somewhere the stack cannot see; a room that
+  treats the plan as a graph can attach a new node to the layer it belongs to and re-derive what is
+  reviewable.
+</p>
+
+<h2>4 · The sessions</h2>
+
+<figure>
+  <figcaption>
+    <span>fig 4 · the rhythm of the workspace</span
+    ><span class="u">sessions started per day · active hours per day · project window shaded</span>
+  </figcaption>
+  <svg
+    viewBox="0 0 1120 214"
+    role="img"
+    aria-label="Pi sessions per day and active hours per day over 76 days."
+  >
+    <rect x="862.6" y="18" width="217.4" height="170" fill="#faf6f4" />
+    <line x1="150" y1="78" x2="1080" y2="78" stroke="#ddd" />
+    <line x1="150" y1="172" x2="1080" y2="172" stroke="#ddd" />
+    <rect x="150.0" y="62.6" width="9.1" height="15.4" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="162.1" y="78.0" width="9.1" height="0.0" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="174.2" y="71.8" width="9.1" height="6.2" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="186.2" y="65.7" width="9.1" height="12.3" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="198.3" y="62.6" width="9.1" height="15.4" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="210.4" y="68.8" width="9.1" height="9.2" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="222.5" y="78.0" width="9.1" height="0.0" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="234.5" y="68.8" width="9.1" height="9.2" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="246.6" y="68.8" width="9.1" height="9.2" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="258.7" y="78.0" width="9.1" height="0.0" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="270.8" y="65.7" width="9.1" height="12.3" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="282.9" y="71.8" width="9.1" height="6.2" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="294.9" y="68.8" width="9.1" height="9.2" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="307.0" y="78.0" width="9.1" height="0.0" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="319.1" y="74.9" width="9.1" height="3.1" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="331.2" y="78.0" width="9.1" height="0.0" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="343.2" y="78.0" width="9.1" height="0.0" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="355.3" y="65.7" width="9.1" height="12.3" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="367.4" y="74.9" width="9.1" height="3.1" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="379.5" y="38.0" width="9.1" height="40.0" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="391.6" y="74.9" width="9.1" height="3.1" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="403.6" y="62.6" width="9.1" height="15.4" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="415.7" y="68.8" width="9.1" height="9.2" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="427.8" y="78.0" width="9.1" height="0.0" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="439.9" y="56.5" width="9.1" height="21.5" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="451.9" y="53.4" width="9.1" height="24.6" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="464.0" y="53.4" width="9.1" height="24.6" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="476.1" y="53.4" width="9.1" height="24.6" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="488.2" y="59.5" width="9.1" height="18.5" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="500.3" y="78.0" width="9.1" height="0.0" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="512.3" y="78.0" width="9.1" height="0.0" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="524.4" y="78.0" width="9.1" height="0.0" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="536.5" y="71.8" width="9.1" height="6.2" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="548.6" y="50.3" width="9.1" height="27.7" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="560.6" y="62.6" width="9.1" height="15.4" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="572.7" y="65.7" width="9.1" height="12.3" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="584.8" y="78.0" width="9.1" height="0.0" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="596.9" y="78.0" width="9.1" height="0.0" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="609.0" y="56.5" width="9.1" height="21.5" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="621.0" y="62.6" width="9.1" height="15.4" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="633.1" y="59.5" width="9.1" height="18.5" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="645.2" y="65.7" width="9.1" height="12.3" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="657.3" y="59.5" width="9.1" height="18.5" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="669.4" y="78.0" width="9.1" height="0.0" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="681.4" y="78.0" width="9.1" height="0.0" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="693.5" y="59.5" width="9.1" height="18.5" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="705.6" y="78.0" width="9.1" height="0.0" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="717.7" y="74.9" width="9.1" height="3.1" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="729.7" y="62.6" width="9.1" height="15.4" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="741.8" y="59.5" width="9.1" height="18.5" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="753.9" y="78.0" width="9.1" height="0.0" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="766.0" y="78.0" width="9.1" height="0.0" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="778.1" y="62.6" width="9.1" height="15.4" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="790.1" y="65.7" width="9.1" height="12.3" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="802.2" y="78.0" width="9.1" height="0.0" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="814.3" y="62.6" width="9.1" height="15.4" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="826.4" y="65.7" width="9.1" height="12.3" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="838.4" y="78.0" width="9.1" height="0.0" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="850.5" y="78.0" width="9.1" height="0.0" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="862.6" y="59.5" width="9.1" height="18.5" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="874.7" y="56.5" width="9.1" height="21.5" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="886.8" y="71.8" width="9.1" height="6.2" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="898.8" y="59.5" width="9.1" height="18.5" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="910.9" y="71.8" width="9.1" height="6.2" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="923.0" y="78.0" width="9.1" height="0.0" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="935.1" y="78.0" width="9.1" height="0.0" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="947.1" y="78.0" width="9.1" height="0.0" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="959.2" y="59.5" width="9.1" height="18.5" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="971.3" y="71.8" width="9.1" height="6.2" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="983.4" y="71.8" width="9.1" height="6.2" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="995.5" y="78.0" width="9.1" height="0.0" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="1007.5" y="78.0" width="9.1" height="0.0" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="1019.6" y="78.0" width="9.1" height="0.0" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="1031.7" y="65.7" width="9.1" height="12.3" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="1043.8" y="78.0" width="9.1" height="0.0" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="1055.8" y="78.0" width="9.1" height="0.0" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="1067.9" y="68.8" width="9.1" height="9.2" fill="#3b6ea5" fill-opacity="0.85" />
+    <rect x="150.0" y="148.8" width="9.1" height="23.2" fill="#1a1a1a" />
+    <rect x="162.1" y="172.0" width="9.1" height="0.0" fill="#1a1a1a" />
+    <rect x="174.2" y="159.9" width="9.1" height="12.1" fill="#1a1a1a" />
+    <rect x="186.2" y="150.0" width="9.1" height="22.0" fill="#1a1a1a" />
+    <rect x="198.3" y="158.1" width="9.1" height="13.9" fill="#1a1a1a" />
+    <rect x="210.4" y="164.6" width="9.1" height="7.4" fill="#1a1a1a" />
+    <rect x="222.5" y="172.0" width="9.1" height="0.0" fill="#1a1a1a" />
+    <rect x="234.5" y="150.9" width="9.1" height="21.1" fill="#1a1a1a" />
+    <rect x="246.6" y="163.9" width="9.1" height="8.1" fill="#1a1a1a" />
+    <rect x="258.7" y="172.0" width="9.1" height="0.0" fill="#1a1a1a" />
+    <rect x="270.8" y="166.3" width="9.1" height="5.7" fill="#1a1a1a" />
+    <rect x="282.9" y="156.1" width="9.1" height="15.9" fill="#1a1a1a" />
+    <rect x="294.9" y="165.7" width="9.1" height="6.3" fill="#1a1a1a" />
+    <rect x="307.0" y="172.0" width="9.1" height="0.0" fill="#1a1a1a" />
+    <rect x="319.1" y="168.2" width="9.1" height="3.8" fill="#1a1a1a" />
+    <rect x="331.2" y="172.0" width="9.1" height="0.0" fill="#1a1a1a" />
+    <rect x="343.2" y="172.0" width="9.1" height="0.0" fill="#1a1a1a" />
+    <rect x="355.3" y="160.9" width="9.1" height="11.1" fill="#1a1a1a" />
+    <rect x="367.4" y="138.3" width="9.1" height="33.7" fill="#1a1a1a" />
+    <rect x="379.5" y="147.7" width="9.1" height="24.3" fill="#1a1a1a" />
+    <rect x="391.6" y="141.0" width="9.1" height="31.0" fill="#1a1a1a" />
+    <rect x="403.6" y="133.5" width="9.1" height="38.5" fill="#1a1a1a" />
+    <rect x="415.7" y="166.2" width="9.1" height="5.8" fill="#1a1a1a" />
+    <rect x="427.8" y="172.0" width="9.1" height="0.0" fill="#1a1a1a" />
+    <rect x="439.9" y="145.2" width="9.1" height="26.8" fill="#1a1a1a" />
+    <rect x="451.9" y="141.0" width="9.1" height="31.0" fill="#1a1a1a" />
+    <rect x="464.0" y="141.5" width="9.1" height="30.5" fill="#1a1a1a" />
+    <rect x="476.1" y="154.6" width="9.1" height="17.4" fill="#1a1a1a" />
+    <rect x="488.2" y="155.5" width="9.1" height="16.5" fill="#1a1a1a" />
+    <rect x="500.3" y="172.0" width="9.1" height="0.0" fill="#1a1a1a" />
+    <rect x="512.3" y="172.0" width="9.1" height="0.0" fill="#1a1a1a" />
+    <rect x="524.4" y="172.0" width="9.1" height="0.0" fill="#1a1a1a" />
+    <rect x="536.5" y="149.5" width="9.1" height="22.5" fill="#1a1a1a" />
+    <rect x="548.6" y="137.8" width="9.1" height="34.2" fill="#1a1a1a" />
+    <rect x="560.6" y="162.3" width="9.1" height="9.7" fill="#1a1a1a" />
+    <rect x="572.7" y="152.4" width="9.1" height="19.6" fill="#1a1a1a" />
+    <rect x="584.8" y="172.0" width="9.1" height="0.0" fill="#1a1a1a" />
+    <rect x="596.9" y="172.0" width="9.1" height="0.0" fill="#1a1a1a" />
+    <rect x="609.0" y="143.3" width="9.1" height="28.7" fill="#1a1a1a" />
+    <rect x="621.0" y="157.6" width="9.1" height="14.4" fill="#1a1a1a" />
+    <rect x="633.1" y="152.3" width="9.1" height="19.7" fill="#1a1a1a" />
+    <rect x="645.2" y="132.4" width="9.1" height="39.6" fill="#1a1a1a" />
+    <rect x="657.3" y="168.9" width="9.1" height="3.1" fill="#1a1a1a" />
+    <rect x="669.4" y="172.0" width="9.1" height="0.0" fill="#1a1a1a" />
+    <rect x="681.4" y="172.0" width="9.1" height="0.0" fill="#1a1a1a" />
+    <rect x="693.5" y="128.0" width="9.1" height="44.0" fill="#1a1a1a" />
+    <rect x="705.6" y="172.0" width="9.1" height="0.0" fill="#1a1a1a" />
+    <rect x="717.7" y="154.0" width="9.1" height="18.0" fill="#1a1a1a" />
+    <rect x="729.7" y="143.0" width="9.1" height="29.0" fill="#1a1a1a" />
+    <rect x="741.8" y="139.4" width="9.1" height="32.6" fill="#1a1a1a" />
+    <rect x="753.9" y="172.0" width="9.1" height="0.0" fill="#1a1a1a" />
+    <rect x="766.0" y="172.0" width="9.1" height="0.0" fill="#1a1a1a" />
+    <rect x="778.1" y="145.2" width="9.1" height="26.8" fill="#1a1a1a" />
+    <rect x="790.1" y="155.5" width="9.1" height="16.5" fill="#1a1a1a" />
+    <rect x="802.2" y="172.0" width="9.1" height="0.0" fill="#1a1a1a" />
+    <rect x="814.3" y="142.5" width="9.1" height="29.5" fill="#1a1a1a" />
+    <rect x="826.4" y="137.9" width="9.1" height="34.1" fill="#1a1a1a" />
+    <rect x="838.4" y="172.0" width="9.1" height="0.0" fill="#1a1a1a" />
+    <rect x="850.5" y="172.0" width="9.1" height="0.0" fill="#1a1a1a" />
+    <rect x="862.6" y="141.7" width="9.1" height="30.3" fill="#1a1a1a" />
+    <rect x="874.7" y="158.9" width="9.1" height="13.1" fill="#1a1a1a" />
+    <rect x="886.8" y="156.6" width="9.1" height="15.4" fill="#1a1a1a" />
+    <rect x="898.8" y="144.4" width="9.1" height="27.6" fill="#1a1a1a" />
+    <rect x="910.9" y="156.4" width="9.1" height="15.6" fill="#1a1a1a" />
+    <rect x="923.0" y="172.0" width="9.1" height="0.0" fill="#1a1a1a" />
+    <rect x="935.1" y="172.0" width="9.1" height="0.0" fill="#1a1a1a" />
+    <rect x="947.1" y="172.0" width="9.1" height="0.0" fill="#1a1a1a" />
+    <rect x="959.2" y="154.8" width="9.1" height="17.2" fill="#1a1a1a" />
+    <rect x="971.3" y="143.9" width="9.1" height="28.1" fill="#1a1a1a" />
+    <rect x="983.4" y="141.7" width="9.1" height="30.3" fill="#1a1a1a" />
+    <rect x="995.5" y="172.0" width="9.1" height="0.0" fill="#1a1a1a" />
+    <rect x="1007.5" y="172.0" width="9.1" height="0.0" fill="#1a1a1a" />
+    <rect x="1019.6" y="172.0" width="9.1" height="0.0" fill="#1a1a1a" />
+    <rect x="1031.7" y="142.1" width="9.1" height="29.9" fill="#1a1a1a" />
+    <rect x="1043.8" y="172.0" width="9.1" height="0.0" fill="#1a1a1a" />
+    <rect x="1055.8" y="172.0" width="9.1" height="0.0" fill="#1a1a1a" />
+    <rect x="1067.9" y="162.6" width="9.1" height="9.4" fill="#1a1a1a" />
+    <text class="lane" x="12" y="34">SESSIONS</text>
+    <text class="tick" x="12" y="50">per day</text>
+    <text class="lane" x="12" y="128">ACTIVE</text>
+    <text class="tick" x="12" y="144">hours/day</text>
+    <text class="tick" x="868.6" y="28" fill="#a05a2c">project window →</text>
+    <text class="tick" x="1080" y="208" text-anchor="end">peak 12 sessions · 9.5 active hours</text>
+  </svg>
+</figure>
+
+<p>
+  Across seventy-six days: 223 sessions, 2,947 user turns, 44,498 tool calls, $89. In the three
+  weeks of this project: 40 sessions, 528 user turns, 9,012 programs, 47 active hours inside 339
+  hours of open session. Almost all of the wall time is a session left open while a human is
+  elsewhere.
+</p>
+
+<p>
+  Two facts change the design. First,
+  <strong>44,433 of 44,498 tool calls are <code>fabric_exec</code></strong> — the agent writes a
+  program that calls many tools, so a per-tool hook sees almost nothing of what happened; the fact
+  stream has to come from the program's effects or from the fabric runtime. Second,
+  <strong>five of forty sessions name a DEV id</strong>, and the sessions begin with a PR URL, a
+  review permalink (<code>#discussion_r…</code>), or a pasted Slack thread. The human does not enter
+  through the ticket. The room has to derive the chit from the anchor and never ask.
+</p>
+
+<h2>5 · “Ready to deploy” is not “done”</h2>
+
+<p>
+  Every merged <em>leaf</em> sits in <strong>Ready to deploy</strong>; not one ticket has a
+  completion date. Twenty-one of twenty-seven are in that state. The four parents — the plan, a
+  phase, the site-status chapter, the list chapter — are still In Progress even though their
+  children merged, and one phase parent is still Backlog. The GitHub integration moved the ticket
+  when the PR merged; the deployment gate is a later, separate act. A room that equates merge with
+  done will report a project complete while it is waiting on a deploy — and the whole point of the
+  state is that a human still owns it.
+</p>
+
+<h2>6 · What the room takes from this</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Evidence</th>
+      <th>Primitive</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>5 of 40 sessions name a ticket; they open from a PR or a review permalink</td>
+      <td>
+        <strong>Address the thread.</strong> A chit is born from
+        <code>(PR, path, line, commit)</code>; the ticket is a parent, never the entry point.
+      </td>
+    </tr>
+    <tr>
+      <td>59 blockers, 59 replies; 3–4 arrive in one sweep; median reply 43 h</td>
+      <td>
+        <strong>Route a blocker set.</strong> One turn carries the whole sweep; the room shows
+        unanswered threads, not unread PRs.
+      </td>
+    </tr>
+    <tr>
+      <td>20 of 23 merged in 108 minutes, 7 days after opening</td>
+      <td>
+        <strong>Hold the stack.</strong> “Reviewable” is a property of a layer — the one below
+        merged — not of a PR.
+      </td>
+    </tr>
+    <tr>
+      <td>10 tickets discovered after the first PR</td>
+      <td>
+        <strong>Let the graph grow.</strong> A session can mint a chit and attach it to a layer; the
+        plan is re-derived, not edited by hand.
+      </td>
+    </tr>
+    <tr>
+      <td>14 of 25 bodies carry a manual drift check with <code>file:line</code></td>
+      <td>
+        <strong>Automate the drift.</strong> Ticket anchors against the tree is a jig engine:
+        re-check on every merge, not on a hunch.
+      </td>
+    </tr>
+    <tr>
+      <td>44,433 of 44,498 calls are <code>fabric_exec</code></td>
+      <td>
+        <strong>Tap the program, not the tool loop.</strong> Facts come from the effects (paths,
+        commands, commits) or from fabric itself.
+      </td>
+    </tr>
+    <tr>
+      <td>21 tickets in Ready to deploy, 0 Done</td>
+      <td>
+        <strong>Merge ≠ done.</strong> The room’s terminal state is deployed, and a human closes it.
+      </td>
+    </tr>
+    <tr>
+      <td>47 active hours inside 339 open hours</td>
+      <td>
+        <strong>Presence is a heartbeat.</strong> Session open is not availability; only a lease
+        says who may act.
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="callout">
+  <p>
+    <strong>The one-sentence model:</strong> a human plans a graph in one sitting, an agent turns
+    each node into a stacked PR, a reviewer turns each PR into a handful of line-anchored blockers,
+    and a merge train closes the layer — so the room should track <em>threads and layers</em>, and
+    let tickets, PRs and sessions be projections of them.
+  </p>
+</div>
+
+<h2>7 · Sources</h2>
+
+<p class="note">
+  Every figure above is derived from the repository, the tracker, and the session logs; nothing is
+  estimated. Pull requests:
+  <code>gh pr list -R Shakti-Reforestation/forestbuilder --label multi-season --state all</code>,
+  then <code>gh pr view N --json reviews,comments,commits</code> and
+  <code>gh api repos/…/pulls/N/comments</code>. Tickets: <code>linearis issues read DEV-15xx</code>,
+  project “Multi-Season Projects”. Sessions:
+  <code>~/.pi/agent/sessions/--Users-togmund-autotelic-shakti-v2--/*.jsonl</code>, 223 files, 830
+  MB, read line by line (type, timestamp, message role, usage, <code>toolCall</code> names). The
+  extract lives outside the repo; the queries above reproduce it.
+</p>
