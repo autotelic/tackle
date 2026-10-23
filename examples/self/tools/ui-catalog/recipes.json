@@ -25,7 +25,9 @@
         }
       ],
       "usage": "  <ThemeProvider>…</ThemeProvider>",
-      "hooks": ["useTheme"],
+      "hooks": [
+        "useTheme"
+      ],
       "notes": [
         "const value = useTheme()",
         "Imports for the blocks and hook are listed above; the feature has no barrel."
@@ -46,7 +48,9 @@
         "mode": "named"
       },
       "usage": "<Badge>Example</Badge>",
-      "props": ["children"],
+      "props": [
+        "children"
+      ],
       "notes": []
     },
     {
@@ -62,8 +66,15 @@
         "mode": "named"
       },
       "usage": "<Button onClick={handler} size=\"…\" variant=\"…\">Example</Button>",
-      "props": ["children", "onClick", "size", "variant"],
-      "notes": ["1 importer(s)"]
+      "props": [
+        "children",
+        "onClick",
+        "size",
+        "variant"
+      ],
+      "notes": [
+        "1 importer(s)"
+      ]
     },
     {
       "id": "src--components--ui--card",
@@ -78,8 +89,13 @@
         "mode": "named"
       },
       "usage": "<Card title=\"…\">Example</Card>",
-      "props": ["children", "title"],
-      "notes": ["4 importer(s)"]
+      "props": [
+        "children",
+        "title"
+      ],
+      "notes": [
+        "4 importer(s)"
+      ]
     },
     {
       "id": "src--components--project-toolbar",
@@ -94,8 +110,13 @@
         "mode": "named"
       },
       "usage": "<ProjectToolbar title=\"…\" />",
-      "props": ["title"],
-      "notes": ["part of `src/components`", "3 importer(s)"]
+      "props": [
+        "title"
+      ],
+      "notes": [
+        "part of `src/components`",
+        "3 importer(s)"
+      ]
     },
     {
       "id": "src--components--theme-provider",
@@ -110,8 +131,13 @@
         "mode": "named"
       },
       "usage": "<ThemeProvider>Example</ThemeProvider>",
-      "props": ["children"],
-      "notes": ["part of `src/components`", "2 importer(s)"]
+      "props": [
+        "children"
+      ],
+      "notes": [
+        "part of `src/components`",
+        "2 importer(s)"
+      ]
     },
     {
       "id": "src--components--theme-context",
@@ -126,7 +152,10 @@
         "mode": "named"
       },
       "usage": "const value = useContext(ThemeContext)",
-      "notes": ["part of `src/components`", "2 importer(s)"]
+      "notes": [
+        "part of `src/components`",
+        "2 importer(s)"
+      ]
     },
     {
       "id": "src--components--use-theme",
@@ -141,7 +170,10 @@
         "mode": "named"
       },
       "usage": "const value = useTheme()",
-      "notes": ["part of `src/components`", "1 importer(s)"]
+      "notes": [
+        "part of `src/components`",
+        "1 importer(s)"
+      ]
     }
   ]
 }

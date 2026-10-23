@@ -39,16 +39,17 @@ Two are sources, one is a join, one is a projection. Only the sources are author
 hash are **derived**; `summary` and `useInstead` are **authored**, and are the only reason
 the menu is not merely a rendering. The menu is now real, not a plan: `cutlist build`
 serializes `menu.json`, renders `MENU.md` from it and never lets a renderer reach past it,
-and `intent/<name>.json` holds the authored half so a rebuild cannot overwrite it. The
-catalog now carries a stable `id` derived from the path, and `projectMenu` joins on it with
-`name` as the fallback for intent written before ids landed; two parts named `Comments` no
-longer share one sentence.
+and `tools/ui-intent/<name>.json` holds the authored half so a rebuild cannot overwrite it.
+The catalog now carries a stable `id` derived from the path, and `projectMenu` joins on it
+with `name` as the fallback for intent written before ids landed; two parts named `Comments`
+no longer share one sentence.
 
-The intent needs a home of its own. If authored fields live only inside the generated
-menu, every rebuild has to merge by hand and a deleted part takes its prose with it. Put
-intent in `intent/<id>.json`, keyed by the stable id; `menu.json` is the generated join.
-The menu can then be deleted and rebuilt at any time — which is the test of whether
-something is derived.
+The intent needs a home of its own, and it must sit **outside** the generated root. If
+authored fields live only inside the generated menu, every rebuild has to merge by hand and
+a deleted part takes its prose with it. The default is `tools/ui-intent/<id>.json`, keyed by
+the stable id; `menu.json` is the generated join. That placement is what lets the artifact
+directory be deleted and rebuilt at any time — which is the test of whether something is
+derived.
 
 ### Snapshots and the diff
 
@@ -65,6 +66,73 @@ rebuilt" is indistinguishable from "this part was renamed" and from "this part w
 and another added" — and the compression loop's whole input is the first of those. A pure
 rename must also stay distinguishable from a content change, which the change set already
 does by keeping `renamed` apart.
+
+## Storage and cost
+
+**The artifact is committed, and that is measured rather than assumed.** A generated file
+earns its place in git when something reads it without running the generator: here,
+`plumb-ui` reads the manifest at lint time and an agent reads `MENU.md` through `jig menu`.
+Ignoring the artifact like `dist` would mean attaching a build to every reader — and the
+reader that matters (`plumb-ui`) fails **open** when the manifest is missing, so a forgotten
+build would report a clean lint that looked at nothing.
+
+The pieces are not one kind of thing, and the decision is per piece:
+
+| Class       | Example                                         | Committed                 | Reviewed                         |
+| ----------- | ----------------------------------------------- | ------------------------- | -------------------------------- |
+| Authored    | `tools/ui-intent/*.json`                        | yes                       | yes — the only hand-written half |
+| Build input | `plumb-ui.config.json`                          | yes                       | no — collapsed; `--check` guards |
+| Read model  | `menu.json`, `MENU.md`, `patterns*`, `recipes*` | yes                       | no — collapsed                   |
+| Projection  | `catalog.json`                                  | yes                       | no — collapsed                   |
+| Projection  | `diagrams/` (opt-in)                            | only if a repo enables it | collapsed; SVG undiffed          |
+
+`jig init` writes the `.gitattributes` block that collapses the generated half
+(`linguist-generated`) and stops an SVG from being rendered as a text diff (`-diff`). It
+merges one marked block and leaves the rest of the file alone. Intent is deliberately
+outside both the block and the generated directory, because its diff is the one a reviewer
+should read.
+
+**Measured** (2026-10, `cutlist build`, diagrams off):
+
+| Tree                                                  | files in roots | build | artifact | parts |
+| ----------------------------------------------------- | -------------- | ----- | -------- | ----- |
+| `shakti-v2` `596168ca4`                               | 1,443          | 1.8 s | 4.7 MB   | 1,300 |
+| a 7k-file monorepo, full draft                        | ~7,050         | 5.9 s | 30 MB    | 5,642 |
+| the same tree, UI surface only (`app` + `components`) | ~4,048         | 4.9 s | 13 MB    | 3,148 |
+
+Two builds of the same tree are byte-identical in every case. With diagrams on, shakti
+was 2.1 s and 13 MB. Diagrams are therefore **opt-in** (`output.diagrams`): the code and
+its tests stay, and a repo that wants the projection names a directory; a repo that does
+not ask does not run the SVG pass or commit the bytes.
+
+The largest tree measured is ~7k source files at 5.9 s, so the "past ten seconds" line
+below still holds. What changes at that size is not the _build_ but the _artifact_: 30 MB,
+of which 16 MB is `catalog.json` and 8.8 MB is `menu.json`. Three levers, none free:
+
+- **Scope.** The draft crawls all of `apps/web`; `app` + `components` alone halves the
+  artifact (30 → 13 MB) and collapses duplicate candidates (27,291 → 512), but it also
+  drops the modules that connect parts, so orphans go 1,316 → 3,062. Scoping buys size
+  with graph fidelity.
+- **Per-part records.** `entries/<id>.json` makes a change one file in the diff instead
+  of one 16 MB file; it does not reduce total bytes.
+- **Drop the raw model.** `menu.json` and the manifest are the read surface; `catalog.json`
+  is the machine model. Since the menu carries the same `hash`, the gate could compare that
+  and the raw catalog could stop being committed. That is the next lever if weight ever
+  decides it, and it is a storage decision, not a model one.
+
+That is why there is no daemon and no content-addressed cache. At 1.8–5.9 s for 1,400–7,000
+files, the hash needed to skip the work still costs a meaningful fraction of the work, and
+the gate runs once per CI job. The Bazel-shaped move is not a watcher; it is **per-part
+records** (`entries/<id>.json`), which make invalidation per part instead of per bundle and
+make a part's change one file in the diff. Revisit caching only after that lands, and only
+if a full pass grows past roughly ten seconds. If it does, the cache key is the declared
+input set — sources, token source, intent, the config, `cutlist`'s version, and
+`oxc-parser`'s — because a key that omits the toolchain serves stale output after an
+upgrade.
+
+The generator owns its bytes: the renderers are deterministic, `build` is idempotent, and
+the artifact is in `oxfmt`'s `ignorePatterns` so a formatter cannot make a fresh artifact
+look stale. `--check` compares models regardless, so formatting could never fail it.
 
 ## Two readers, one record set
 
@@ -124,8 +192,11 @@ part that renders nothing and is rendered by nothing is a line in `MENU.md`, not
 
 This is a **rendering**, not a new model, and `pele` is a rendering dependency rather than
 a seam: the diagrams carry no authored intent and nothing parses them back, so they earn
-no lexicon of their own. The Mermaid source is committed beside the picture because a diff
-of the source is readable and a diff of the SVG is not, and `--check` compares both bytes.
+no lexicon of their own. It is **opt-in**: `cutlist build` draws them only when
+`output.diagrams` names a directory, because on a real app the projection was 8 MB of a
+13 MB artifact for 429 panels (see [Storage and cost](#storage-and-cost)). The Mermaid
+source is committed beside the picture when it is on, because a diff of the source is
+readable and a diff of the SVG is not, and `--check` compares both bytes.
 `diagrams/README.md` is the generated index — one row per panel, then the atlas — so the
 macro reading does not require opening a picture. The proposed `graph/*.json` is the data
 half of the same edges, for an agent that would rather traverse them than look.
@@ -137,7 +208,7 @@ matrix on the `workspace` dimension — so the diagrams never get ahead of the m
 ## The artifact on disk
 
 ```
-tools/ui-catalog/              (configurable; committed)
+tools/ui-catalog/              (configurable; generated)
 ├─ plan.json                   the manifest: what this is, what it can answer, where to look
 ├─ catalog.json                the model (now)
 ├─ menu.json                   the menu: one row per part (now)
@@ -145,11 +216,11 @@ tools/ui-catalog/              (configurable; committed)
 ├─ hooks.md                    the hook barrel (now)
 ├─ tokens.md                   the token vocabulary (now)
 ├─ plumb-ui.config.json        the lint projection (now)
-├─ diagrams/                   the graph projection (now)
-│  ├─ README.md                the generated table and atlas (now)
+├─ diagrams/                   the graph projection (opt-in via output.diagrams)
+│  ├─ README.md                the generated table and atlas
 │  ├─ composition*.mmd/.svg    part → what it renders and calls
 │  ├─ hooks*.mmd/.svg          hook → the components that call it
-│  └─ owners*.mmd/.svg         owner → the components it owns
+│  └─ owners*.mmd/.svg         owner → the components they own
 ├─ entries/
 │  └─ <id>.json                one part, fully described
 ├─ index/
@@ -164,10 +235,15 @@ tools/ui-catalog/              (configurable; committed)
 │  └─ duplicates.json          candidate pairs, with scope
 ├─ trees/
 │  └─ <owner>.json             the composition tree of one page
-├─ intent/
-│  └─ <name>.json               authored: summary, useInstead (now; <id> when ids land)
 └─ atlas/                      the human rendering (built, deployable)
+
+tools/ui-intent/               (configurable; authored)
+└─ <id>.json                   summary, useInstead (now; <name> before ids landed)
 ```
+
+The whole of `tools/ui-catalog/` is generated: deleting it and rebuilding reproduces it
+byte for byte. The authored half sits outside it in `tools/ui-intent/`, which is why that
+test is safe to run.
 
 The files are the API. An agent already knows how to `ls`, `grep`, and `cat`; the artifact
 does not need a query language, a server, or an MCP tool to be navigable. One part per
@@ -340,10 +416,10 @@ The concrete format work, in order:
 
 1. **Emit `menu.json`.** _Shipped._ `cutlist` serializes `protocol/projectMenu`'s output
    and renders `MENU.md` from it.
-2. **Add `intent/<name>.json`.** _Shipped._ Authored, never overwritten; the menu joins it
-   in `projectMenu`. _Shipped:_ the catalog carries a path-derived `id` and the join prefers
-   it, falling back to `<name>` for existing files. The intent file naming follows in the
-   same change that gives `id` a shorter spelling.
+2. **Add `tools/ui-intent/<name>.json`.** _Shipped._ Authored, never overwritten; the menu
+   joins it in `projectMenu`. _Shipped:_ the catalog carries a path-derived `id` and the
+   join prefers it, falling back to `<name>` for existing files. The intent file naming
+   follows in the same change that gives `id` a shorter spelling.
 3. **The part record.** Add `id`, `kind`, `owners`, `app`, `package`, `imports`, `exports`,
    `standalone`, `usedBy`, and resolve `composedOf` to ids. Bump the `menu` lexicon to 2;
    keep the version-1 fixtures; every new field optional. _Shipped in part:_ `id`, `kind`,
@@ -386,15 +462,15 @@ The concrete format work, in order:
 
 ## Now, next, later
 
-| When      | What                                                                                                                                        | Where                                |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
-| **Now**   | catalog, manifest, `MENU.md`/`menu.json`, `PATTERNS.md`/`patterns.json`, `RECIPES.md`/`recipes.json`, `intent/`, `diagrams/`, hooks, tokens | `cutlist/src`                        |
-| **Next**  | determinism: relative `root`, one hash for one tree                                                                                         | `cutlist/src`                        |
-| **Next**  | `plan.json`                                                                                                                                 | `cutlist/src/render`, `protocol/src` |
-| **Next**  | the part record + `workspace`; entries, index, graph, trees                                                                                 | `protocol/schema`, `cutlist/src`     |
-| **Next**  | the snapshot diff; candidate evidence (the signature delta)                                                                                 | `cutlist/src/render`                 |
-| **Later** | atlas build; registry export; showroom scenes                                                                                               | new package / `cutlist` subcommands  |
-| **Later** | `jig build` as the one command that produces the artifact                                                                                   | `jig-cli/src/engines.ts`             |
+| When      | What                                                                                                                                                        | Where                                |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| **Now**   | catalog, manifest, `MENU.md`/`menu.json`, `PATTERNS.md`/`patterns.json`, `RECIPES.md`/`recipes.json`, `tools/ui-intent/`, hooks, tokens; `diagrams/` opt-in | `cutlist/src`                        |
+| **Next**  | determinism: relative `root`, one hash for one tree                                                                                                         | `cutlist/src`                        |
+| **Next**  | `plan.json`                                                                                                                                                 | `cutlist/src/render`, `protocol/src` |
+| **Next**  | the part record + `workspace`; entries, index, graph, trees                                                                                                 | `protocol/schema`, `cutlist/src`     |
+| **Next**  | the snapshot diff; candidate evidence (the signature delta)                                                                                                 | `cutlist/src/render`                 |
+| **Later** | atlas build; registry export; showroom scenes                                                                                                               | new package / `cutlist` subcommands  |
+| **Later** | `jig build` as the one command that produces the artifact                                                                                                   | `jig-cli/src/engines.ts`             |
 
 A note on the command surface: `cutlist build` **produces** the artifact; `jig check`
 **verifies** it by running `cutlist build --check`, which writes nothing. If "by way of

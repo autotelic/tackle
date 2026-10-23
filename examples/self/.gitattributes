@@ -1,0 +1,15 @@
+# The cutlist artifact is generated. Collapse it in review rather than letting a
+# 2 MB catalog dominate the page; `cutlist build --check` is what keeps it honest.
+# Authored intent lives beside it in `tools/ui-intent/`, outside this block.
+# jig: generated artifacts — collapse in review; do not edit
+tools/ui-catalog/catalog.json linguist-generated=true
+tools/ui-catalog/plumb-ui.config.json linguist-generated=true
+tools/ui-catalog/menu.json linguist-generated=true
+tools/ui-catalog/MENU.md linguist-generated=true
+tools/ui-catalog/PATTERNS.md linguist-generated=true
+tools/ui-catalog/patterns.json linguist-generated=true
+tools/ui-catalog/RECIPES.md linguist-generated=true
+tools/ui-catalog/recipes.json linguist-generated=true
+tools/ui-catalog/hooks.md linguist-generated=true
+tools/ui-catalog/tokens.md linguist-generated=true
+# jig: end

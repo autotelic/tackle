@@ -1,5 +1,9 @@
 import { Effect, FileSystem, Result, Schema, SchemaParser } from "effect"
-import type { CutlistConfig, CutlistOutput } from "@autotelic/protocol"
+import {
+  cutlistDefaultOutput,
+  type CutlistConfig,
+  type ResolvedCutlistOutput,
+} from "@autotelic/protocol"
 
 /*
  * `cutlist.config.json` — the repo's vocabulary, not shakti's.
@@ -74,21 +78,13 @@ export const CutlistConfigSchema = Schema.Struct({
   output: Schema.optionalKey(OutputSchema),
 })
 
-/** Where the renderings go, each resolved. */
-export const defaultOutput: Required<CutlistOutput> = {
-  catalog: "tools/ui-catalog/catalog.json",
-  manifest: "tools/ui-catalog/plumb-ui.config.json",
-  menuJson: "tools/ui-catalog/menu.json",
-  menu: "tools/ui-catalog/MENU.md",
-  intent: "tools/ui-catalog/intent",
-  patterns: "tools/ui-catalog/PATTERNS.md",
-  patternsJson: "tools/ui-catalog/patterns.json",
-  recipes: "tools/ui-catalog/RECIPES.md",
-  recipesJson: "tools/ui-catalog/recipes.json",
-  diagrams: "tools/ui-catalog/diagrams",
-  hooks: "tools/ui-catalog/hooks.md",
-  tokens: "tools/ui-catalog/tokens.md",
-}
+/**
+ * Where the renderings go, each resolved.
+ *
+ * The map is `protocol`'s: `jig init` reads it to mark the artifact generated, so a copy
+ * here would let the two disagree about what cutlist owns.
+ */
+export const defaultOutput: ResolvedCutlistOutput = cutlistDefaultOutput
 
 /**
  * The config a repo gets when it declares none.
@@ -120,8 +116,8 @@ export const loadConfig = (
     return decoded ?? defaultConfig
   })
 
-/** The config's outputs with every default filled in. */
-export const outputOf = (config: CutlistConfig): Required<CutlistOutput> => ({
+/** The config's outputs with every default filled in; `diagrams` stays opt-in. */
+export const outputOf = (config: CutlistConfig): ResolvedCutlistOutput => ({
   catalog: config.output?.catalog ?? defaultOutput.catalog,
   manifest: config.output?.manifest ?? defaultOutput.manifest,
   menuJson: config.output?.menuJson ?? defaultOutput.menuJson,
@@ -131,7 +127,7 @@ export const outputOf = (config: CutlistConfig): Required<CutlistOutput> => ({
   patternsJson: config.output?.patternsJson ?? defaultOutput.patternsJson,
   recipes: config.output?.recipes ?? defaultOutput.recipes,
   recipesJson: config.output?.recipesJson ?? defaultOutput.recipesJson,
-  diagrams: config.output?.diagrams ?? defaultOutput.diagrams,
+  diagrams: config.output?.diagrams,
   hooks: config.output?.hooks ?? defaultOutput.hooks,
   tokens: config.output?.tokens ?? defaultOutput.tokens,
 })

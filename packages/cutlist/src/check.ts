@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto"
 import { isDeepStrictEqual } from "node:util"
 import { Effect, FileSystem, Path } from "effect"
-import { decodeMenu, isRecord, parseJson, str, type Catalog, type Menu } from "@autotelic/protocol"
+import { decodeMenu, isRecord, parseJson, str, type Menu } from "@autotelic/protocol"
 
 /*
  * `cutlist build --check`, the staleness gate — `oxfmt --check` / `prettier --check` for
@@ -26,20 +26,20 @@ export interface StalenessResult {
 /** Compare the committed catalog's hash against a freshly computed one. */
 export const compareCatalog = ({
   file,
-  fresh,
+  hash,
 }: {
   readonly file: string
-  readonly fresh: Catalog
+  readonly hash: string
 }): Effect.Effect<StalenessResult, never, FileSystem.FileSystem | Path.Path> =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const text = yield* Effect.orElseSucceed(fs.readFileString(file), () => undefined)
-    if (text === undefined) return { stale: true, committed: undefined, fresh: fresh.hash }
+    if (text === undefined) return { stale: true, committed: undefined, fresh: hash }
     // `parseJson` is the protocol's boundary reader: it answers `undefined` on malformed
     // input, so the decode is not a `try/catch` inside the Effect generator.
     const decoded = parseJson(text)
     const committed = isRecord(decoded) ? str(decoded.hash) : undefined
-    return { stale: committed !== fresh.hash, committed, fresh: fresh.hash }
+    return { stale: committed !== hash, committed, fresh: hash }
   })
 
 const digestOf = (text: string): string => createHash("sha256").update(text).digest("hex")

@@ -175,6 +175,44 @@ describe("inspectRepo", () => {
     }
   })
 
+  it("reads each app's own tsconfig, so a flat UI root can resolve its imports", async () => {
+    const paths = { compilerOptions: { paths: { "@/*": ["./*"] } } }
+    const root = project(
+      {
+        json: [
+          ["package.json", {}],
+          ["tsconfig.json", {}],
+          ["apps/web/tsconfig.json", paths],
+          ["apps/admin/tsconfig.json", paths],
+          ["libs/ui/tsconfig.json", { compilerOptions: { paths: { "~/*": ["./src/*"] } } }],
+        ],
+        text: [
+          ["apps/web/components/ui/.keep", ""],
+          ["apps/admin/components/.keep", ""],
+          ["libs/ui/src/components/.keep", ""],
+          ["tailwind.config.ts", "export default {}\n"],
+        ],
+      },
+      ["joggle", "cutlist"],
+    )
+    try {
+      const profile = await inspect(root)
+      const alias = profile.cutlistDraft?.alias ?? {}
+      expect([...(profile.cutlistDraft?.roots ?? [])].sort()).toEqual([
+        "apps/admin",
+        "apps/web",
+        "libs/ui/src",
+      ])
+      // `apps/web` and `apps/admin` are roots that *are* the app directory, so their
+      // tsconfig is inside them rather than in the parent. Both targets must survive.
+      expect([...(alias["@/*"] ?? [])].sort()).toEqual(["apps/admin/*", "apps/web/*"])
+      // `libs/ui/src` keeps its tsconfig one level up, which must still be read.
+      expect(alias["~/*"]).toEqual(["libs/ui/src/*"])
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
   it("notes content mappers it will not index", async () => {
     const root = project(
       {
@@ -318,6 +356,95 @@ describe("initialise", () => {
       expect(config.roots).toEqual(["src"])
       const jig = JSON.parse(readFileSync(join(root, "jig.config.json"), "utf8"))
       expect(jig.engines.map((engine: { id: string }) => engine.id)).not.toContain("cutlist")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it("merges the generated-artifact block and leaves the repo's own gitattributes alone", async () => {
+    const root = project(
+      {
+        json: [
+          ["package.json", {}],
+          ["tsconfig.json", {}],
+        ],
+        text: [
+          ["src/components/ui/.keep", ""],
+          ["tailwind.config.ts", "export default {}\n"],
+          [".gitattributes", "*.png binary\n"],
+        ],
+      },
+      ["joggle", "cutlist"],
+    )
+    try {
+      const result = await initialiseIn(root, { cutlist: true })
+      expect(result.gitattributes).toBe("appended")
+      const text = readFileSync(join(root, ".gitattributes"), "utf8")
+      expect(text).toContain("*.png binary")
+      expect(text).toContain("tools/ui-catalog/catalog.json linguist-generated=true")
+      expect(text).not.toContain("tools/ui-catalog/intent")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it("writes one block however many times init runs", async () => {
+    const root = project(
+      {
+        json: [
+          ["package.json", {}],
+          ["tsconfig.json", {}],
+        ],
+        text: [
+          ["src/components/ui/.keep", ""],
+          ["tailwind.config.ts", "export default {}\n"],
+        ],
+      },
+      ["joggle", "cutlist"],
+    )
+    try {
+      await initialiseIn(root, { cutlist: true })
+      const second = await initialiseIn(root, { cutlist: true })
+      expect(second.gitattributes).toBe("unchanged")
+      const text = readFileSync(join(root, ".gitattributes"), "utf8")
+      expect(text.split("# jig: generated artifacts")).toHaveLength(2)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it("describes the paths a repo configured, not cutlist's defaults", async () => {
+    const root = project(
+      {
+        json: [
+          ["package.json", {}],
+          ["tsconfig.json", {}],
+          [
+            "cutlist.config.json",
+            {
+              roots: ["src"],
+              tiers: { primitive: [], shared: [], local: [] },
+              tokens: { from: "tailwind.css" },
+              ownership: { routeOwner: "first-segment", transitive: false },
+              output: { catalog: "docs/vocabulary/catalog.json" },
+            },
+          ],
+        ],
+        text: [
+          ["src/routes/.keep", ""],
+          ["tailwind.css", ""],
+        ],
+      },
+      ["joggle", "cutlist"],
+    )
+    try {
+      const result = await initialiseIn(root)
+      expect(result.gitattributes).toBe("created")
+      const text = readFileSync(join(root, ".gitattributes"), "utf8")
+      expect(text).toContain("docs/vocabulary/catalog.json linguist-generated=true")
+      expect(text).not.toContain("tools/ui-catalog/catalog.json")
+      // A path the config did not move keeps its default.
+      expect(text).toContain("tools/ui-catalog/menu.json linguist-generated=true")
     } finally {
       rmSync(root, { recursive: true, force: true })
     }

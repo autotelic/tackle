@@ -1,10 +1,26 @@
 import { existsSync } from "node:fs"
 import { join } from "node:path"
 import { Effect, FileSystem, Option, Path, PlatformError } from "effect"
-import type { CutlistConfig, EngineRef, HarnessConfig } from "@autotelic/protocol"
+import {
+  cutlistDefaultOutput,
+  decodeCutlistConfig,
+  parseJson,
+  type CutlistConfig,
+  type CutlistOutput,
+  type EngineRef,
+  type HarnessConfig,
+  type ResolvedCutlistOutput,
+} from "@autotelic/protocol"
 import { emptyBaseline, readBaseline, writeBaseline } from "./baseline.ts"
 import { loadConfig } from "./config.ts"
 import { resolveEngineCommand } from "./engines.ts"
+import {
+  GENERATED_BEGIN,
+  GENERATED_END,
+  generatedRules,
+  mergeGitattributes,
+  type GitattributesAction,
+} from "./gitattributes.ts"
 import { packageJsonOf } from "./package-json.ts"
 
 /*
@@ -57,6 +73,8 @@ export interface RepoProfile {
   readonly onboarding: string
   /** A cutlist config inferred from the tree, when this looks like a UI. */
   readonly cutlistDraft: CutlistConfig | undefined
+  /** Where cutlist writes, with its defaults filled in. Absent when this repo has no cutlist. */
+  readonly cutlistOutput?: ResolvedCutlistOutput | undefined
 }
 
 /** What `init` wrote and what it left alone. */
@@ -66,6 +84,8 @@ export interface InitResult {
   readonly kept: ReadonlyArray<string>
   readonly joggleConfig: "kept" | "written" | "absent"
   readonly cutlistConfig: "kept" | "written" | "absent"
+  /** What happened to `.gitattributes`: the generated-artifact block, never the whole file. */
+  readonly gitattributes: GitattributesAction | "absent"
   /** True when nothing was written: this is the plan an operator or agent reviews. */
   readonly dryRun: boolean
   /** Findings already accepted in the baseline, when one was kept. */
@@ -337,16 +357,31 @@ const aliasesOf = (
     const found = new Map<string, Array<string>>()
     for (const entry of roots) {
       const parent = entry.split("/").slice(0, -1).join("/")
-      const file = parent === "" ? "tsconfig.json" : parent + "/tsconfig.json"
-      const text = yield* Effect.orElseSucceed(fs.readFileString(path.join(root, file)), () => "")
-      for (const match of text.matchAll(/"([^"]+\/\*)"\s*:\s*\[\s*"([^"]+)"/gu)) {
-        const key = match[1]
-        const target = match[2]
-        if (key === undefined || target === undefined) continue
-        const resolved = normalise(parent === "" ? target : parent + "/" + target)
-        const list = found.get(key) ?? []
-        if (!list.includes(resolved)) list.push(resolved)
-        found.set(key, list)
+      // A root that *is* the app directory keeps its tsconfig inside it (`apps/web`),
+      // while a root one level down (`libs/ui/src`) keeps it in the parent. Reading only
+      // the parent made every `@/…` import in a flat app unresolved: on a 7k-file
+      // monorepo that was 3,484 orphans and a use-graph with almost no edges.
+      const candidates = [
+        entry === "." ? "tsconfig.json" : entry + "/tsconfig.json",
+        parent === "" ? "tsconfig.json" : parent + "/tsconfig.json",
+      ]
+      for (const file of candidates) {
+        const text = yield* Effect.orElseSucceed(fs.readFileString(path.join(root, file)), () => "")
+        const directory = file.includes("/") ? file.slice(0, file.lastIndexOf("/")) : ""
+        let matched = false
+        for (const match of text.matchAll(/"([^"]+\/\*)"\s*:\s*\[\s*"([^"]+)"/gu)) {
+          const key = match[1]
+          const target = match[2]
+          if (key === undefined || target === undefined) continue
+          const resolved = normalise(directory === "" ? target : directory + "/" + target)
+          const list = found.get(key) ?? []
+          if (!list.includes(resolved)) list.push(resolved)
+          found.set(key, list)
+          matched = true
+        }
+        // The nearest config that declares paths wins; a config that only `extends`
+        // another contributes nothing here, so the parent is still read.
+        if (matched) break
       }
     }
     return Object.fromEntries(found)
@@ -393,9 +428,25 @@ const cutlistDraftOf = (
       tiers: { primitive, shared, local },
       tokens: from.endsWith(".css") ? { from, vars: from } : { from },
       ownership: { routeOwner: "first-segment", transitive: false },
+      // Spell the paths out: a reviewer should see what `build` will write, and
+      // `jig init` uses the same map for `.gitattributes`.
+      output: cutlistDefaultOutput,
     }
     return Object.keys(alias).length === 0 ? draft : { ...draft, alias }
   })
+
+/** A repo's declared output paths with `cutlist`'s defaults filled in under them. */
+const resolvedOutput = (declared: CutlistOutput | undefined): ResolvedCutlistOutput => {
+  const values = Object.entries(cutlistDefaultOutput).map(([key, fallback]) => [
+    key,
+    (declared as Readonly<Record<string, string | undefined>> | undefined)?.[key] ?? fallback,
+  ])
+  // `diagrams` is opt-in, so it is copied rather than defaulted: no path, no rendering.
+  return {
+    ...(Object.fromEntries(values) as Required<Omit<CutlistOutput, "diagrams">>),
+    diagrams: declared?.diagrams,
+  }
+}
 
 /**
  * Read the repository, then decide what is worth enabling.
@@ -568,6 +619,24 @@ export const inspectRepo = (
       }
     }
 
+    // The configured paths, not the defaults, are what `.gitattributes` must describe: a
+    // repo that moved the artifact still gets its own files collapsed.
+    const installedCutlist =
+      files.includes("cutlist.config.json") === true
+        ? decodeCutlistConfig(
+            parseJson(
+              yield* Effect.orElseSucceed(
+                fs.readFileString(path.join(root, "cutlist.config.json")),
+                () => "",
+              ),
+            ),
+          )
+        : undefined
+    const cutlistOutput =
+      installedCutlist === undefined && cutlistDraft === undefined
+        ? undefined
+        : resolvedOutput(installedCutlist?.output ?? cutlistDraft?.output)
+
     if (files.includes("cutlist.config.json")) {
       if (!available({ root, command: "cutlist" })) {
         notes.push(
@@ -618,6 +687,7 @@ export const inspectRepo = (
       cookbook: existing?.agent?.cookbook ?? "JIG.md",
       onboarding: existing?.agent?.onboarding ?? "ONBOARD.md",
       cutlistDraft,
+      cutlistOutput,
     }
   })
 
@@ -777,6 +847,9 @@ export const summaryFor = (result: InitResult): string => {
           ? "draft would be written — review it after applying"
           : "draft written — review, build, then re-run init --force"
     }`,
+    ...(result.gitattributes === "absent"
+      ? []
+      : [`  gitattributes    ${result.gitattributes} (generated block only)`]),
     `  ${action.padEnd(16)} ${result.written.length === 0 ? "nothing" : result.written.join(", ")}`,
     ...(result.kept.length === 0 ? [] : [`  ${keptAction.padEnd(16)} ${result.kept.join(", ")}`]),
     ...profile.notes.map((note) => `  note             ${note}`),
@@ -814,6 +887,7 @@ export const initJson = (result: InitResult, prompt?: string): string => {
     kept: result.kept,
     joggleConfig: result.joggleConfig,
     cutlistConfig: result.cutlistConfig,
+    gitattributes: result.gitattributes,
     accepted: result.accepted,
   }
   return JSON.stringify(
@@ -904,6 +978,32 @@ export const initialise = (
       }
     }
 
+    // `.gitattributes` is shared with the repo, so this merges one marked block and
+    // never replaces the file. The fact that it does not need the artifact to exist is
+    // what lets it run before the first build.
+    let gitattributes: InitResult["gitattributes"] = "absent"
+    if (profile.cutlistOutput !== undefined) {
+      const target = path.join(root, ".gitattributes")
+      const existing = yield* Effect.orElseSucceed(fs.readFileString(target), () => undefined)
+      const merged = mergeGitattributes(existing, generatedRules(profile.cutlistOutput))
+      gitattributes = merged.action
+      if (merged.action === "malformed") {
+        kept.push(".gitattributes")
+        profile = {
+          ...profile,
+          notes: [
+            ...profile.notes,
+            `.gitattributes has a "${GENERATED_BEGIN}" block with no "${GENERATED_END}"; add it and re-run init`,
+          ],
+        }
+      } else if (merged.action === "unchanged") {
+        kept.push(".gitattributes")
+      } else {
+        if (!dryRun) yield* fs.writeFileString(target, merged.body)
+        written.push(".gitattributes")
+      }
+    }
+
     // The baseline is a reviewed ledger. Even `--force` does not replace it.
     const baseline = path.join(root, profile.baseline)
     if (yield* Effect.orElseSucceed(fs.exists(baseline), () => false)) {
@@ -963,5 +1063,5 @@ export const initialise = (
       }
     }
 
-    return { profile, written, kept, joggleConfig, cutlistConfig, dryRun, accepted }
+    return { profile, written, kept, joggleConfig, cutlistConfig, gitattributes, dryRun, accepted }
   })

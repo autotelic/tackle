@@ -1,7 +1,7 @@
 {
   "name": "@autotelic/cutlist",
   "version": "0.0.0",
-  "description": "The vocabulary: crawl a UI codebase into tokens, tiers, owners, and duplicate candidates; render the catalog, the lint manifest, the menu, and the graph diagrams.",
+  "description": "The vocabulary: crawl a UI codebase into tokens, tiers, owners, and duplicate candidates; render the catalog, the lint manifest, and the menu (diagrams when asked).",
   "license": "MIT",
   "bin": {
     "cutlist": "./bin/cutlist.js"

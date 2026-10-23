@@ -23,27 +23,53 @@
     "spacing": []
   },
   "tiers": {
-    "primitive": ["components/ui"],
-    "shared": ["components"],
-    "local": ["routes"]
+    "primitive": [
+      "components/ui"
+    ],
+    "shared": [
+      "components"
+    ],
+    "local": [
+      "routes"
+    ]
   },
-  "sharedRoots": ["components"],
-  "localRoots": ["routes"],
+  "sharedRoots": [
+    "components"
+  ],
+  "localRoots": [
+    "routes"
+  ],
   "components": [
     {
       "id": "src--components--project-toolbar",
       "path": "src/components/project-toolbar.tsx",
       "name": "project-toolbar",
       "tier": "shared",
-      "owners": ["dashboard", "settings"],
-      "props": ["title"],
-      "tags": ["Button", "Card"],
-      "signature": ["hook:useTheme", "tag:Button", "tag:Card"],
+      "owners": [
+        "dashboard",
+        "settings"
+      ],
+      "props": [
+        "title"
+      ],
+      "tags": [
+        "Button",
+        "Card"
+      ],
+      "signature": [
+        "hook:useTheme",
+        "tag:Button",
+        "tag:Card"
+      ],
       "documented": true,
       "kind": "component",
-      "roles": ["component"],
+      "roles": [
+        "component"
+      ],
       "feature": "src/components",
-      "exports": ["ProjectToolbar"],
+      "exports": [
+        "ProjectToolbar"
+      ],
       "usedBy": 3,
       "declarations": [
         {
@@ -58,7 +84,10 @@
           "kind": "function",
           "exported": true,
           "renders": true,
-          "calls": ["setTheme", "useTheme"]
+          "calls": [
+            "setTheme",
+            "useTheme"
+          ]
         }
       ]
     },
@@ -67,15 +96,21 @@
       "path": "src/components/theme-context.ts",
       "name": "theme-context",
       "tier": "shared",
-      "owners": ["shared"],
+      "owners": [
+        "shared"
+      ],
       "props": [],
       "tags": [],
       "signature": [],
       "documented": true,
       "kind": "context",
-      "roles": ["context"],
+      "roles": [
+        "context"
+      ],
       "feature": "src/components",
-      "exports": ["ThemeContext"],
+      "exports": [
+        "ThemeContext"
+      ],
       "usedBy": 2,
       "declarations": [
         {
@@ -97,7 +132,9 @@
           "kind": "variable",
           "exported": true,
           "renders": false,
-          "calls": ["createContext"]
+          "calls": [
+            "createContext"
+          ]
         }
       ]
     },
@@ -106,15 +143,31 @@
       "path": "src/components/theme-provider.tsx",
       "name": "theme-provider",
       "tier": "shared",
-      "owners": ["dashboard", "settings"],
-      "props": ["children"],
-      "tags": ["ThemeContext.Provider"],
-      "signature": ["hook:useMemo", "hook:useState", "tag:ThemeContext.Provider"],
+      "owners": [
+        "dashboard",
+        "settings"
+      ],
+      "props": [
+        "children"
+      ],
+      "tags": [
+        "ThemeContext.Provider"
+      ],
+      "signature": [
+        "hook:useMemo",
+        "hook:useState",
+        "tag:ThemeContext.Provider"
+      ],
       "documented": true,
       "kind": "component",
-      "roles": ["component", "provider"],
+      "roles": [
+        "component",
+        "provider"
+      ],
       "feature": "src/components",
-      "exports": ["ThemeProvider"],
+      "exports": [
+        "ThemeProvider"
+      ],
       "usedBy": 2,
       "declarations": [
         {
@@ -129,7 +182,10 @@
           "kind": "function",
           "exported": true,
           "renders": true,
-          "calls": ["useMemo", "useState"]
+          "calls": [
+            "useMemo",
+            "useState"
+          ]
         }
       ]
     },
@@ -139,13 +195,21 @@
       "name": "badge",
       "tier": "primitive",
       "owners": [],
-      "props": ["children"],
-      "tags": ["span"],
+      "props": [
+        "children"
+      ],
+      "tags": [
+        "span"
+      ],
       "signature": [],
       "documented": true,
       "kind": "component",
-      "roles": ["component"],
-      "exports": ["Badge"],
+      "roles": [
+        "component"
+      ],
+      "exports": [
+        "Badge"
+      ],
       "declarations": [
         {
           "name": "BadgeProps",
@@ -168,14 +232,27 @@
       "path": "src/components/ui/button.tsx",
       "name": "button",
       "tier": "primitive",
-      "owners": ["shared"],
-      "props": ["children", "onClick", "size", "variant"],
-      "tags": ["button"],
+      "owners": [
+        "shared"
+      ],
+      "props": [
+        "children",
+        "onClick",
+        "size",
+        "variant"
+      ],
+      "tags": [
+        "button"
+      ],
       "signature": [],
       "documented": true,
       "kind": "component",
-      "roles": ["component"],
-      "exports": ["Button"],
+      "roles": [
+        "component"
+      ],
+      "exports": [
+        "Button"
+      ],
       "usedBy": 1,
       "declarations": [
         {
@@ -191,7 +268,11 @@
           "exported": false,
           "renders": false,
           "calls": [],
-          "objectKeys": ["default", "outline", "ghost"]
+          "objectKeys": [
+            "default",
+            "outline",
+            "ghost"
+          ]
         },
         {
           "name": "Button",
@@ -207,14 +288,28 @@
       "path": "src/components/ui/card.tsx",
       "name": "card",
       "tier": "primitive",
-      "owners": ["dashboard", "settings", "shared"],
-      "props": ["children", "title"],
-      "tags": ["h2", "section"],
+      "owners": [
+        "dashboard",
+        "settings",
+        "shared"
+      ],
+      "props": [
+        "children",
+        "title"
+      ],
+      "tags": [
+        "h2",
+        "section"
+      ],
       "signature": [],
       "documented": true,
       "kind": "component",
-      "roles": ["component"],
-      "exports": ["Card"],
+      "roles": [
+        "component"
+      ],
+      "exports": [
+        "Card"
+      ],
       "usedBy": 4,
       "declarations": [
         {
@@ -238,15 +333,23 @@
       "path": "src/components/use-theme.ts",
       "name": "use-theme",
       "tier": "shared",
-      "owners": ["shared"],
+      "owners": [
+        "shared"
+      ],
       "props": [],
       "tags": [],
-      "signature": ["hook:useContext"],
+      "signature": [
+        "hook:useContext"
+      ],
       "documented": true,
       "kind": "hook",
-      "roles": ["hook"],
+      "roles": [
+        "hook"
+      ],
       "feature": "src/components",
-      "exports": ["useTheme"],
+      "exports": [
+        "useTheme"
+      ],
       "usedBy": 1,
       "declarations": [
         {
@@ -254,7 +357,9 @@
           "kind": "function",
           "exported": true,
           "renders": false,
-          "calls": ["useContext"]
+          "calls": [
+            "useContext"
+          ]
         }
       ]
     },
@@ -265,12 +370,23 @@
       "tier": "local",
       "owners": [],
       "props": [],
-      "tags": ["Card", "ProjectToolbar"],
-      "signature": ["tag:Card", "tag:ProjectToolbar"],
+      "tags": [
+        "Card",
+        "ProjectToolbar"
+      ],
+      "signature": [
+        "tag:Card",
+        "tag:ProjectToolbar"
+      ],
       "documented": true,
       "kind": "route",
-      "roles": ["component", "route"],
-      "exports": ["DashboardProjectSponsors"],
+      "roles": [
+        "component",
+        "route"
+      ],
+      "exports": [
+        "DashboardProjectSponsors"
+      ],
       "declarations": [
         {
           "name": "DashboardProjectSponsors",
@@ -288,19 +404,35 @@
       "tier": "local",
       "owners": [],
       "props": [],
-      "tags": ["Card", "ProjectToolbar", "ThemeProvider"],
-      "signature": ["hook:useParams", "tag:Card", "tag:ProjectToolbar", "tag:ThemeProvider"],
+      "tags": [
+        "Card",
+        "ProjectToolbar",
+        "ThemeProvider"
+      ],
+      "signature": [
+        "hook:useParams",
+        "tag:Card",
+        "tag:ProjectToolbar",
+        "tag:ThemeProvider"
+      ],
       "documented": true,
       "kind": "route",
-      "roles": ["component", "route"],
-      "exports": ["DashboardProject"],
+      "roles": [
+        "component",
+        "route"
+      ],
+      "exports": [
+        "DashboardProject"
+      ],
       "declarations": [
         {
           "name": "DashboardProject",
           "kind": "function",
           "exported": true,
           "renders": true,
-          "calls": ["useParams"]
+          "calls": [
+            "useParams"
+          ]
         }
       ]
     },
@@ -311,12 +443,25 @@
       "tier": "local",
       "owners": [],
       "props": [],
-      "tags": ["Card", "ProjectToolbar", "ThemeProvider"],
-      "signature": ["tag:Card", "tag:ProjectToolbar", "tag:ThemeProvider"],
+      "tags": [
+        "Card",
+        "ProjectToolbar",
+        "ThemeProvider"
+      ],
+      "signature": [
+        "tag:Card",
+        "tag:ProjectToolbar",
+        "tag:ThemeProvider"
+      ],
       "documented": true,
       "kind": "route",
-      "roles": ["component", "route"],
-      "exports": ["SettingsPage"],
+      "roles": [
+        "component",
+        "route"
+      ],
+      "exports": [
+        "SettingsPage"
+      ],
       "declarations": [
         {
           "name": "SettingsPage",
@@ -335,7 +480,9 @@
       "context": "src/components/theme-context.ts",
       "provider": "src/components/theme-provider.tsx",
       "blocks": [],
-      "hooks": ["useTheme"],
+      "hooks": [
+        "useTheme"
+      ],
       "valueKeys": []
     }
   ],
@@ -346,6 +493,8 @@
     "duplicateClusters": 0
   },
   "clusters": [],
-  "orphans": ["src/components/ui/badge.tsx"],
+  "orphans": [
+    "src/components/ui/badge.tsx"
+  ],
   "duplicates": []
 }

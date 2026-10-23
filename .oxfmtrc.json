@@ -6,5 +6,10 @@
   "trailingComma": "all",
   "arrowParens": "always",
   "endOfLine": "lf",
-  "ignorePatterns": ["packages/plumb/**", "packages/joggle/**", "packages/joggle/tests/fixtures/**"]
+  "ignorePatterns": [
+    "packages/plumb/**",
+    "packages/joggle/**",
+    "packages/joggle/tests/fixtures/**",
+    "examples/*/tools/ui-catalog/**"
+  ]
 }

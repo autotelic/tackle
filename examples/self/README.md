@@ -44,13 +44,13 @@ current":
 
 ```sh
 pnpm cutlist build --cwd examples/self          # from the workspace root
-pnpm format                                     # the generator writes plain JSON/markdown
-pnpm cutlist build --check --cwd examples/self  # the staleness gate (hash-based)
+pnpm cutlist build --check --cwd examples/self  # the staleness gate (model-based)
 pnpm jig engines --cwd examples/self            # the census: what is configured, what is installed
 ```
 
-(Regenerate, then format: the catalog is committed `oxfmt`-canonical, and the staleness gate
-compares content hashes, so formatting it never disturbs the check.)
+(The generator owns its bytes and the artifact is in `oxfmt`'s `ignorePatterns`, so `build`
+is idempotent and there is no separate format step. Authored intent lives in
+`tools/ui-intent/`.)
 
 `jig check` here lists the whole family, including engines this workspace has not moved in
 yet. Nothing about that is silent, and the two shapes mean different things:

@@ -15,34 +15,60 @@
     "muted",
     "primary"
   ],
-  "sharedRoots": ["components"],
-  "localRoots": ["routes"],
+  "sharedRoots": [
+    "components"
+  ],
+  "localRoots": [
+    "routes"
+  ],
   "components": [
     {
       "path": "src/components/project-toolbar.tsx",
       "name": "project-toolbar",
       "tier": "shared",
-      "owners": ["dashboard", "settings"],
-      "props": ["title"],
-      "tags": ["Button", "Card"],
+      "owners": [
+        "dashboard",
+        "settings"
+      ],
+      "props": [
+        "title"
+      ],
+      "tags": [
+        "Button",
+        "Card"
+      ],
       "kind": "component",
-      "roles": ["component"],
+      "roles": [
+        "component"
+      ],
       "feature": "src/components",
-      "exports": ["ProjectToolbar"],
+      "exports": [
+        "ProjectToolbar"
+      ],
       "usedBy": 3,
-      "signature": ["hook:useTheme", "tag:Button", "tag:Card"]
+      "signature": [
+        "hook:useTheme",
+        "tag:Button",
+        "tag:Card"
+      ]
     },
     {
       "path": "src/components/theme-context.ts",
       "name": "theme-context",
       "tier": "shared",
-      "owners": ["shared"],
+      "owners": [
+        "shared"
+      ],
       "props": [],
       "tags": [],
       "kind": "context",
-      "roles": ["context"],
+      "roles": [
+        "context"
+      ],
       "feature": "src/components",
-      "exports": ["ThemeContext"],
+      "exports": [
+        "ThemeContext"
+      ],
       "usedBy": 2,
       "signature": []
     },
@@ -50,38 +76,75 @@
       "path": "src/components/theme-provider.tsx",
       "name": "theme-provider",
       "tier": "shared",
-      "owners": ["dashboard", "settings"],
-      "props": ["children"],
-      "tags": ["ThemeContext.Provider"],
+      "owners": [
+        "dashboard",
+        "settings"
+      ],
+      "props": [
+        "children"
+      ],
+      "tags": [
+        "ThemeContext.Provider"
+      ],
       "kind": "component",
-      "roles": ["component", "provider"],
+      "roles": [
+        "component",
+        "provider"
+      ],
       "feature": "src/components",
-      "exports": ["ThemeProvider"],
+      "exports": [
+        "ThemeProvider"
+      ],
       "usedBy": 2,
-      "signature": ["hook:useMemo", "hook:useState", "tag:ThemeContext.Provider"]
+      "signature": [
+        "hook:useMemo",
+        "hook:useState",
+        "tag:ThemeContext.Provider"
+      ]
     },
     {
       "path": "src/components/ui/badge.tsx",
       "name": "badge",
       "tier": "primitive",
       "owners": [],
-      "props": ["children"],
-      "tags": ["span"],
+      "props": [
+        "children"
+      ],
+      "tags": [
+        "span"
+      ],
       "kind": "component",
-      "roles": ["component"],
-      "exports": ["Badge"],
+      "roles": [
+        "component"
+      ],
+      "exports": [
+        "Badge"
+      ],
       "signature": []
     },
     {
       "path": "src/components/ui/button.tsx",
       "name": "button",
       "tier": "primitive",
-      "owners": ["shared"],
-      "props": ["children", "onClick", "size", "variant"],
-      "tags": ["button"],
+      "owners": [
+        "shared"
+      ],
+      "props": [
+        "children",
+        "onClick",
+        "size",
+        "variant"
+      ],
+      "tags": [
+        "button"
+      ],
       "kind": "component",
-      "roles": ["component"],
-      "exports": ["Button"],
+      "roles": [
+        "component"
+      ],
+      "exports": [
+        "Button"
+      ],
       "usedBy": 1,
       "signature": []
     },
@@ -89,12 +152,26 @@
       "path": "src/components/ui/card.tsx",
       "name": "card",
       "tier": "primitive",
-      "owners": ["dashboard", "settings", "shared"],
-      "props": ["children", "title"],
-      "tags": ["h2", "section"],
+      "owners": [
+        "dashboard",
+        "settings",
+        "shared"
+      ],
+      "props": [
+        "children",
+        "title"
+      ],
+      "tags": [
+        "h2",
+        "section"
+      ],
       "kind": "component",
-      "roles": ["component"],
-      "exports": ["Card"],
+      "roles": [
+        "component"
+      ],
+      "exports": [
+        "Card"
+      ],
       "usedBy": 4,
       "signature": []
     },
@@ -102,15 +179,23 @@
       "path": "src/components/use-theme.ts",
       "name": "use-theme",
       "tier": "shared",
-      "owners": ["shared"],
+      "owners": [
+        "shared"
+      ],
       "props": [],
       "tags": [],
       "kind": "hook",
-      "roles": ["hook"],
+      "roles": [
+        "hook"
+      ],
       "feature": "src/components",
-      "exports": ["useTheme"],
+      "exports": [
+        "useTheme"
+      ],
       "usedBy": 1,
-      "signature": ["hook:useContext"]
+      "signature": [
+        "hook:useContext"
+      ]
     },
     {
       "path": "src/routes/dashboard_.$id.sponsors.tsx",
@@ -118,11 +203,22 @@
       "tier": "local",
       "owners": [],
       "props": [],
-      "tags": ["Card", "ProjectToolbar"],
+      "tags": [
+        "Card",
+        "ProjectToolbar"
+      ],
       "kind": "route",
-      "roles": ["component", "route"],
-      "exports": ["DashboardProjectSponsors"],
-      "signature": ["tag:Card", "tag:ProjectToolbar"]
+      "roles": [
+        "component",
+        "route"
+      ],
+      "exports": [
+        "DashboardProjectSponsors"
+      ],
+      "signature": [
+        "tag:Card",
+        "tag:ProjectToolbar"
+      ]
     },
     {
       "path": "src/routes/dashboard_.$id.tsx",
@@ -130,11 +226,25 @@
       "tier": "local",
       "owners": [],
       "props": [],
-      "tags": ["Card", "ProjectToolbar", "ThemeProvider"],
+      "tags": [
+        "Card",
+        "ProjectToolbar",
+        "ThemeProvider"
+      ],
       "kind": "route",
-      "roles": ["component", "route"],
-      "exports": ["DashboardProject"],
-      "signature": ["hook:useParams", "tag:Card", "tag:ProjectToolbar", "tag:ThemeProvider"]
+      "roles": [
+        "component",
+        "route"
+      ],
+      "exports": [
+        "DashboardProject"
+      ],
+      "signature": [
+        "hook:useParams",
+        "tag:Card",
+        "tag:ProjectToolbar",
+        "tag:ThemeProvider"
+      ]
     },
     {
       "path": "src/routes/settings_.tsx",
@@ -142,11 +252,24 @@
       "tier": "local",
       "owners": [],
       "props": [],
-      "tags": ["Card", "ProjectToolbar", "ThemeProvider"],
+      "tags": [
+        "Card",
+        "ProjectToolbar",
+        "ThemeProvider"
+      ],
       "kind": "route",
-      "roles": ["component", "route"],
-      "exports": ["SettingsPage"],
-      "signature": ["tag:Card", "tag:ProjectToolbar", "tag:ThemeProvider"]
+      "roles": [
+        "component",
+        "route"
+      ],
+      "exports": [
+        "SettingsPage"
+      ],
+      "signature": [
+        "tag:Card",
+        "tag:ProjectToolbar",
+        "tag:ThemeProvider"
+      ]
     }
   ]
 }

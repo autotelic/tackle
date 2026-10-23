@@ -14,8 +14,14 @@
       "tier": "primitive",
       "summary": "The surface everything else sits on.",
       "usedBy": 4,
-      "owners": ["dashboard", "settings", "shared"],
-      "exports": ["Card"],
+      "owners": [
+        "dashboard",
+        "settings",
+        "shared"
+      ],
+      "exports": [
+        "Card"
+      ],
       "composedOf": [],
       "relations": [],
       "stability": 0.93,
@@ -37,9 +43,18 @@
       "feature": "src/components",
       "summary": "The controls above a project's or the app's content.",
       "usedBy": 3,
-      "owners": ["dashboard", "settings"],
-      "exports": ["ProjectToolbar"],
-      "composedOf": ["hook:useTheme", "tag:Button", "tag:Card"],
+      "owners": [
+        "dashboard",
+        "settings"
+      ],
+      "exports": [
+        "ProjectToolbar"
+      ],
+      "composedOf": [
+        "hook:useTheme",
+        "tag:Button",
+        "tag:Card"
+      ],
       "relations": [
         {
           "kind": "uses",
@@ -77,11 +92,18 @@
       "feature": "src/components",
       "summary": "Supplies the current theme to everything below it.",
       "usedBy": 2,
-      "owners": ["dashboard", "settings"],
-      "exports": ["ThemeProvider"],
+      "owners": [
+        "dashboard",
+        "settings"
+      ],
+      "exports": [
+        "ThemeProvider"
+      ],
       "composedOf": [],
       "blocks": [],
-      "hooks": ["useTheme"],
+      "hooks": [
+        "useTheme"
+      ],
       "valueKeys": [],
       "relations": [
         {
@@ -116,9 +138,18 @@
       "feature": "src/components",
       "summary": "Supplies the current theme to everything below it.",
       "usedBy": 2,
-      "owners": ["dashboard", "settings"],
-      "exports": ["ThemeProvider"],
-      "composedOf": ["hook:useMemo", "hook:useState", "tag:ThemeContext.Provider"],
+      "owners": [
+        "dashboard",
+        "settings"
+      ],
+      "exports": [
+        "ThemeProvider"
+      ],
+      "composedOf": [
+        "hook:useMemo",
+        "hook:useState",
+        "tag:ThemeContext.Provider"
+      ],
       "relations": [
         {
           "kind": "part-of",
@@ -144,8 +175,12 @@
       "feature": "src/components",
       "summary": "The context the provider fills and the hook reads.",
       "usedBy": 2,
-      "owners": ["shared"],
-      "exports": ["ThemeContext"],
+      "owners": [
+        "shared"
+      ],
+      "exports": [
+        "ThemeContext"
+      ],
       "composedOf": [],
       "relations": [
         {
@@ -171,8 +206,12 @@
       "tier": "primitive",
       "summary": "The one button in the app. Everything interactive composes this.",
       "usedBy": 1,
-      "owners": ["shared"],
-      "exports": ["Button"],
+      "owners": [
+        "shared"
+      ],
+      "exports": [
+        "Button"
+      ],
       "composedOf": [],
       "relations": [],
       "stability": 0.659,
@@ -194,9 +233,15 @@
       "feature": "src/components",
       "summary": "Reads the theme the nearest ThemeProvider supplies.",
       "usedBy": 1,
-      "owners": ["shared"],
-      "exports": ["useTheme"],
-      "composedOf": ["hook:useContext"],
+      "owners": [
+        "shared"
+      ],
+      "exports": [
+        "useTheme"
+      ],
+      "composedOf": [
+        "hook:useContext"
+      ],
       "relations": [
         {
           "kind": "part-of",
@@ -222,7 +267,9 @@
       "summary": "A status pill. Not used yet.",
       "usedBy": 0,
       "owners": [],
-      "exports": ["Badge"],
+      "exports": [
+        "Badge"
+      ],
       "composedOf": [],
       "relations": [],
       "stability": 0.53,
@@ -246,11 +293,18 @@
       "feature": "src/components",
       "summary": "Supplies the current theme to everything below it.",
       "usedBy": 2,
-      "owners": ["dashboard", "settings"],
-      "exports": ["ThemeProvider"],
+      "owners": [
+        "dashboard",
+        "settings"
+      ],
+      "exports": [
+        "ThemeProvider"
+      ],
       "composedOf": [],
       "blocks": [],
-      "hooks": ["useTheme"],
+      "hooks": [
+        "useTheme"
+      ],
       "valueKeys": [],
       "relations": [
         {
@@ -287,7 +341,9 @@
       "summary": "A status pill. Not used yet.",
       "usedBy": 0,
       "owners": [],
-      "exports": ["Badge"],
+      "exports": [
+        "Badge"
+      ],
       "composedOf": [],
       "relations": [],
       "stability": 0.53,
@@ -308,8 +364,12 @@
       "tier": "primitive",
       "summary": "The one button in the app. Everything interactive composes this.",
       "usedBy": 1,
-      "owners": ["shared"],
-      "exports": ["Button"],
+      "owners": [
+        "shared"
+      ],
+      "exports": [
+        "Button"
+      ],
       "composedOf": [],
       "relations": [],
       "stability": 0.659,
@@ -330,8 +390,14 @@
       "tier": "primitive",
       "summary": "The surface everything else sits on.",
       "usedBy": 4,
-      "owners": ["dashboard", "settings", "shared"],
-      "exports": ["Card"],
+      "owners": [
+        "dashboard",
+        "settings",
+        "shared"
+      ],
+      "exports": [
+        "Card"
+      ],
       "composedOf": [],
       "relations": [],
       "stability": 0.93,
@@ -355,9 +421,18 @@
       "feature": "src/components",
       "summary": "The controls above a project's or the app's content.",
       "usedBy": 3,
-      "owners": ["dashboard", "settings"],
-      "exports": ["ProjectToolbar"],
-      "composedOf": ["hook:useTheme", "tag:Button", "tag:Card"],
+      "owners": [
+        "dashboard",
+        "settings"
+      ],
+      "exports": [
+        "ProjectToolbar"
+      ],
+      "composedOf": [
+        "hook:useTheme",
+        "tag:Button",
+        "tag:Card"
+      ],
       "relations": [
         {
           "kind": "uses",
@@ -395,9 +470,18 @@
       "feature": "src/components",
       "summary": "Supplies the current theme to everything below it.",
       "usedBy": 2,
-      "owners": ["dashboard", "settings"],
-      "exports": ["ThemeProvider"],
-      "composedOf": ["hook:useMemo", "hook:useState", "tag:ThemeContext.Provider"],
+      "owners": [
+        "dashboard",
+        "settings"
+      ],
+      "exports": [
+        "ThemeProvider"
+      ],
+      "composedOf": [
+        "hook:useMemo",
+        "hook:useState",
+        "tag:ThemeContext.Provider"
+      ],
       "relations": [
         {
           "kind": "part-of",
@@ -423,8 +507,12 @@
       "feature": "src/components",
       "summary": "The context the provider fills and the hook reads.",
       "usedBy": 2,
-      "owners": ["shared"],
-      "exports": ["ThemeContext"],
+      "owners": [
+        "shared"
+      ],
+      "exports": [
+        "ThemeContext"
+      ],
       "composedOf": [],
       "relations": [
         {
@@ -451,9 +539,15 @@
       "feature": "src/components",
       "summary": "Reads the theme the nearest ThemeProvider supplies.",
       "usedBy": 1,
-      "owners": ["shared"],
-      "exports": ["useTheme"],
-      "composedOf": ["hook:useContext"],
+      "owners": [
+        "shared"
+      ],
+      "exports": [
+        "useTheme"
+      ],
+      "composedOf": [
+        "hook:useContext"
+      ],
       "relations": [
         {
           "kind": "part-of",
@@ -472,7 +566,9 @@
   ],
   "families": [],
   "signals": {
-    "orphans": ["src/components/ui/badge.tsx"],
+    "orphans": [
+      "src/components/ui/badge.tsx"
+    ],
     "variants": [],
     "deprecated": []
   }

@@ -40,14 +40,16 @@ than a second analysis. `plumb-ui` fails open on a malformed manifest (all rules
 silent), which is why `cutlist build --check` exists: a stale catalog must be loud.
 
 The menu is the one **mixed** record: `menu.json` joins the derived composition with
-authored intent from `intent/<name>.json`, so regenerating the menu can never overwrite a
-sentence a person wrote; `MENU.md` is its cheap text view. Each catalog part also carries a
-path-derived `id`, and the join prefers it over the colliding `name`. `diagrams/` renders the same
-model as a graph — the composition of each part, the inverse hook view, and ownership —
-as Mermaid source beside the SVG `pele` drew from it, drawn at the largest scope that reads
-and indexed by a generated table, so the shape a list flattens is visible. `pele` is a
-rendering dependency, not a seam: nothing else in the workspace reads it, and it never
-touches the model.
+authoritative intent from `tools/ui-intent/<name>.json` (configurable; outside the generated
+tree), so regenerating the menu can never overwrite a sentence a person wrote; `MENU.md` is
+its cheap text view. Each catalog part also carries a path-derived `id`, and the join prefers
+it over the colliding `name`. `diagrams/` renders the same model as a graph — the composition
+of each part, the inverse hook view, and ownership — as Mermaid source beside the SVG `pele`
+drew from it, drawn at the largest scope that reads and indexed by a generated table, so the
+shape a list flattens is visible. It is **opt-in** (`output.diagrams`): on a real app the
+projection was 8 MB of a 13 MB artifact for 429 panels, so a repo asks for it rather than
+receiving it. `pele` is a rendering dependency, not a seam: nothing else in the workspace
+reads it, and it never touches the model.
 
 ## What a part carries
 
@@ -111,7 +113,14 @@ shape for a concept. The pi extension exposes it as `jig_menu`, and the OpenCode
 ```sh
 cutlist build            # crawl, render every output, write them
 cutlist build --check    # fail if any committed rendering is stale (like prettier --check)
+cutlist build --timing   # print the crawl, render, and write (or compare) durations
 ```
+
+`build` and `--check` iterate one table (`src/outputs.ts`), so a file cannot be written and
+left unchecked. That matters most for `plumb-ui.config.json`: `plumb-ui` fails **open** on a
+stale manifest, so a gate that skipped it would disable the tier rules while still printing
+"up to date". The artifact is committed and collapsed in review — [docs/artifact.md](docs/artifact.md#storage-and-cost)
+records why, and the cost measured on a real app.
 
 ## The artifact (design note)
 

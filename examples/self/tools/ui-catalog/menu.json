@@ -12,7 +12,9 @@
       "context": "src/components/theme-context.ts",
       "provider": "src/components/theme-provider.tsx",
       "blocks": [],
-      "hooks": ["useTheme"],
+      "hooks": [
+        "useTheme"
+      ],
       "valueKeys": []
     }
   ],
@@ -32,12 +34,20 @@
       "path": "src/components/project-toolbar.tsx",
       "tier": "shared",
       "kind": "component",
-      "roles": ["component"],
+      "roles": [
+        "component"
+      ],
       "feature": "src/components",
-      "exports": ["ProjectToolbar"],
+      "exports": [
+        "ProjectToolbar"
+      ],
       "usedBy": 3,
       "summary": "The controls above a project's or the app's content.",
-      "composedOf": ["useTheme", "Button", "Card"]
+      "composedOf": [
+        "useTheme",
+        "Button",
+        "Card"
+      ]
     },
     {
       "id": "src--components--theme-context",
@@ -45,9 +55,13 @@
       "path": "src/components/theme-context.ts",
       "tier": "shared",
       "kind": "context",
-      "roles": ["context"],
+      "roles": [
+        "context"
+      ],
       "feature": "src/components",
-      "exports": ["ThemeContext"],
+      "exports": [
+        "ThemeContext"
+      ],
       "usedBy": 2,
       "summary": "The context the provider fills and the hook reads.",
       "composedOf": []
@@ -58,12 +72,21 @@
       "path": "src/components/theme-provider.tsx",
       "tier": "shared",
       "kind": "component",
-      "roles": ["component", "provider"],
+      "roles": [
+        "component",
+        "provider"
+      ],
       "feature": "src/components",
-      "exports": ["ThemeProvider"],
+      "exports": [
+        "ThemeProvider"
+      ],
       "usedBy": 2,
       "summary": "Supplies the current theme to everything below it.",
-      "composedOf": ["useMemo", "useState", "ThemeContext.Provider"]
+      "composedOf": [
+        "useMemo",
+        "useState",
+        "ThemeContext.Provider"
+      ]
     },
     {
       "id": "src--components--ui--badge",
@@ -71,8 +94,12 @@
       "path": "src/components/ui/badge.tsx",
       "tier": "primitive",
       "kind": "component",
-      "roles": ["component"],
-      "exports": ["Badge"],
+      "roles": [
+        "component"
+      ],
+      "exports": [
+        "Badge"
+      ],
       "summary": "A status pill. Not used yet.",
       "composedOf": []
     },
@@ -82,8 +109,12 @@
       "path": "src/components/ui/button.tsx",
       "tier": "primitive",
       "kind": "component",
-      "roles": ["component"],
-      "exports": ["Button"],
+      "roles": [
+        "component"
+      ],
+      "exports": [
+        "Button"
+      ],
       "usedBy": 1,
       "summary": "The one button in the app. Everything interactive composes this.",
       "composedOf": []
@@ -94,8 +125,12 @@
       "path": "src/components/ui/card.tsx",
       "tier": "primitive",
       "kind": "component",
-      "roles": ["component"],
-      "exports": ["Card"],
+      "roles": [
+        "component"
+      ],
+      "exports": [
+        "Card"
+      ],
       "usedBy": 4,
       "summary": "The surface everything else sits on.",
       "composedOf": []
@@ -106,12 +141,18 @@
       "path": "src/components/use-theme.ts",
       "tier": "shared",
       "kind": "hook",
-      "roles": ["hook"],
+      "roles": [
+        "hook"
+      ],
       "feature": "src/components",
-      "exports": ["useTheme"],
+      "exports": [
+        "useTheme"
+      ],
       "usedBy": 1,
       "summary": "Reads the theme the nearest ThemeProvider supplies.",
-      "composedOf": ["useContext"]
+      "composedOf": [
+        "useContext"
+      ]
     },
     {
       "id": "src--routes--dashboard_.$id.sponsors",
@@ -119,10 +160,18 @@
       "path": "src/routes/dashboard_.$id.sponsors.tsx",
       "tier": "local",
       "kind": "route",
-      "roles": ["component", "route"],
-      "exports": ["DashboardProjectSponsors"],
+      "roles": [
+        "component",
+        "route"
+      ],
+      "exports": [
+        "DashboardProjectSponsors"
+      ],
       "summary": "The sponsors tab of a project.",
-      "composedOf": ["Card", "ProjectToolbar"]
+      "composedOf": [
+        "Card",
+        "ProjectToolbar"
+      ]
     },
     {
       "id": "src--routes--dashboard_.$id",
@@ -130,10 +179,20 @@
       "path": "src/routes/dashboard_.$id.tsx",
       "tier": "local",
       "kind": "route",
-      "roles": ["component", "route"],
-      "exports": ["DashboardProject"],
+      "roles": [
+        "component",
+        "route"
+      ],
+      "exports": [
+        "DashboardProject"
+      ],
       "summary": "One project, by id.",
-      "composedOf": ["useParams", "Card", "ProjectToolbar", "ThemeProvider"]
+      "composedOf": [
+        "useParams",
+        "Card",
+        "ProjectToolbar",
+        "ThemeProvider"
+      ]
     },
     {
       "id": "src--routes--settings_",
@@ -141,12 +200,23 @@
       "path": "src/routes/settings_.tsx",
       "tier": "local",
       "kind": "route",
-      "roles": ["component", "route"],
-      "exports": ["SettingsPage"],
+      "roles": [
+        "component",
+        "route"
+      ],
+      "exports": [
+        "SettingsPage"
+      ],
       "summary": "Settings.",
-      "composedOf": ["Card", "ProjectToolbar", "ThemeProvider"]
+      "composedOf": [
+        "Card",
+        "ProjectToolbar",
+        "ThemeProvider"
+      ]
     }
   ],
-  "orphans": ["src/components/ui/badge.tsx"],
+  "orphans": [
+    "src/components/ui/badge.tsx"
+  ],
   "duplicates": []
 }

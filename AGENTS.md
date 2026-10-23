@@ -137,6 +137,7 @@ Two consequences worth knowing before you touch it:
   `oxlint.config.ts` rule, it will not reach any of the three.
 - **A stale exemplar catalog is a real failure**, not a formatting nit: regenerate it with
   `pnpm cutlist build --cwd examples/self` in the same change that moves its `src/`. The
-  generator writes plain pretty-JSON and markdown, so follow it with `pnpm format` — the
-  committed catalog is `oxfmt`-canonical, and `pnpm check` enforces that. The staleness gate
-  itself is hash-based, so formatting never disturbs it.
+  generator owns its bytes: the artifact is in `oxfmt`'s `ignorePatterns`, so `build` is
+  idempotent and `pnpm format` must not touch it. Authored intent lives outside the
+  generated tree in `examples/self/tools/ui-intent/`, so it stays formatted. The staleness
+  gate compares models, so formatting could never disturb it either.

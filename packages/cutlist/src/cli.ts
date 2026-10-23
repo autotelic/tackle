@@ -3,15 +3,10 @@ import { Command, Flag } from "effect/cli"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { projectMenu } from "@autotelic/protocol"
 import { buildCatalog } from "./catalog.ts"
-import {
-  compareCatalog,
-  compareJson,
-  compareMenu,
-  compareText,
-  type StalenessResult,
-} from "./check.ts"
+import type { StalenessResult } from "./check.ts"
 import { loadConfig, outputOf } from "./config.ts"
 import { readIntent, validateIntent } from "./intent.ts"
+import { compareOutput, outputsOf, type Renderings } from "./outputs.ts"
 import { patternsOf } from "./patterns.ts"
 import { renderCatalog } from "./render/catalog.ts"
 import { renderDiagramIndex, renderDiagrams } from "./render/diagram.ts"
@@ -51,8 +46,12 @@ const buildCommand = Command.make(
     ),
     check: Flag.Boolean("check").pipe(
       Flag.withDescription(
-        "Fail when a committed rendering (catalog, menu, diagram) is stale, instead of writing.",
+        "Fail when a committed rendering (catalog, menu, manifest, …) is stale, instead of writing.",
       ),
+      Flag.withDefault(false),
+    ),
+    timing: Flag.Boolean("timing").pipe(
+      Flag.withDescription("Print how long the crawl, the renderings, and the gate took."),
       Flag.withDefault(false),
     ),
     format: Flag.Literals("format", ["text", "json"]).pipe(
@@ -68,7 +67,9 @@ const buildCommand = Command.make(
       const settings = yield* loadConfig(
         path.resolve(cwd, Option.getOrUndefined(config.config) ?? "cutlist.config.json"),
       )
+      const startedAt = yield* Effect.sync(() => performance.now())
       const catalog = yield* buildCatalog(cwd, settings)
+      const crawledAt = yield* Effect.sync(() => performance.now())
       const output = outputOf(settings)
       const intent = yield* readIntent({ root: cwd, directory: output.intent })
 
@@ -93,74 +94,61 @@ const buildCommand = Command.make(
         return
       }
 
-      const diagrams = yield* Effect.try({
-        try: () => renderDiagrams(catalog),
-        catch: (cause) =>
-          new DiagramError({
-            detail: cause instanceof Error ? cause.message : String(cause),
-          }),
-      })
-      const diagramFiles: ReadonlyArray<readonly [string, string]> = [
-        ...diagrams.flatMap((diagram) => [
-          [`${output.diagrams}/${diagram.name}.mmd`, diagram.mermaid] as const,
-          [`${output.diagrams}/${diagram.name}.svg`, diagram.svg] as const,
-        ]),
-        // The index is the macro reading, and part of the artifact: a `--check` that did not
-        // compare it would let the table drift from the panels it describes.
-        [`${output.diagrams}/README.md`, renderDiagramIndex(diagrams)] as const,
-      ]
+      // Diagrams are opt-in: an absent path means the projection is not rendered at all,
+      // so a repo that does not ask does not pay for the SVG pass or commit the bytes.
+      const diagramsDirectory = output.diagrams
+      const diagrams =
+        diagramsDirectory === undefined
+          ? []
+          : yield* Effect.try({
+              try: () => renderDiagrams(catalog),
+              catch: (cause) =>
+                new DiagramError({
+                  detail: cause instanceof Error ? cause.message : String(cause),
+                }),
+            })
+      const diagramFiles: ReadonlyArray<readonly [string, string]> =
+        diagramsDirectory === undefined
+          ? []
+          : [
+              ...diagrams.flatMap((diagram) => [
+                [`${diagramsDirectory}/${diagram.name}.mmd`, diagram.mermaid] as const,
+                [`${diagramsDirectory}/${diagram.name}.svg`, diagram.svg] as const,
+              ]),
+              // The index is the macro reading, and part of the artifact: a `--check` that
+              // did not compare it would let the table drift from the panels it describes.
+              [`${diagramsDirectory}/README.md`, renderDiagramIndex(diagrams)] as const,
+            ]
+
+      const renderings: Renderings = {
+        catalog: renderCatalog(catalog),
+        manifest: renderManifest(catalog, intent.byName),
+        menuJson: renderMenuJson(menu),
+        menu: renderMenu(menu),
+        patterns: renderPatterns(patterns),
+        patternsJson: renderPatternsJson(patterns),
+        recipes: renderRecipes(recipes),
+        recipesJson: renderRecipesJson(recipes),
+        hooks: renderHooks(catalog),
+        tokens: renderTokens(catalog),
+        diagrams: diagramFiles,
+      }
+      const outputs = outputsOf({ output, renderings, catalogHash: catalog.hash, menu })
+      const renderedAt = yield* Effect.sync(() => performance.now())
 
       if (config.check) {
-        const results: Array<readonly [string, StalenessResult]> = [
-          [
-            output.catalog,
-            yield* compareCatalog({ file: path.resolve(cwd, output.catalog), fresh: catalog }),
-          ],
-          [
-            output.menuJson,
-            yield* compareMenu({ file: path.resolve(cwd, output.menuJson), fresh: menu }),
-          ],
-          [
-            output.menu,
-            yield* compareText({
-              file: path.resolve(cwd, output.menu),
-              fresh: renderMenu(menu),
-            }),
-          ],
-          [
-            output.patterns,
-            yield* compareText({
-              file: path.resolve(cwd, output.patterns),
-              fresh: renderPatterns(patterns),
-            }),
-          ],
-          [
-            output.patternsJson,
-            yield* compareJson({
-              file: path.resolve(cwd, output.patternsJson),
-              fresh: patterns,
-            }),
-          ],
-          [
-            output.recipes,
-            yield* compareText({
-              file: path.resolve(cwd, output.recipes),
-              fresh: renderRecipes(recipes),
-            }),
-          ],
-          [
-            output.recipesJson,
-            yield* compareJson({
-              file: path.resolve(cwd, output.recipesJson),
-              fresh: recipes,
-            }),
-          ],
-        ]
-        for (const [relative, text] of diagramFiles) {
+        const results: Array<readonly [string, StalenessResult]> = []
+        for (const file of outputs) {
           results.push([
-            relative,
-            yield* compareText({ file: path.resolve(cwd, relative), fresh: text }),
+            file.file,
+            yield* compareOutput({ ...file, file: path.resolve(cwd, file.file) }),
           ])
+        }
+        const comparedAt = yield* Effect.sync(() => performance.now())
+        if (config.timing) {
+          yield* write(
+            `cutlist: timing crawl ${Math.round(crawledAt - startedAt)}ms, render ${Math.round(renderedAt - crawledAt)}ms, compare ${Math.round(comparedAt - renderedAt)}ms`,
+          )
         }
         const stale = results.filter(([, result]) => result.stale)
         if (stale.length > 0 || issueCount > 0) {
@@ -195,26 +183,19 @@ const buildCommand = Command.make(
         return
       }
 
-      const rendered: ReadonlyArray<readonly [string, string]> = [
-        [output.catalog, renderCatalog(catalog)],
-        [output.manifest, renderManifest(catalog, intent.byName)],
-        [output.menuJson, renderMenuJson(menu)],
-        [output.menu, renderMenu(menu)],
-        [output.patterns, renderPatterns(patterns)],
-        [output.patternsJson, renderPatternsJson(patterns)],
-        [output.recipes, renderRecipes(recipes)],
-        [output.recipesJson, renderRecipesJson(recipes)],
-        [output.hooks, renderHooks(catalog)],
-        [output.tokens, renderTokens(catalog)],
-        ...diagramFiles,
-      ]
-      for (const [relative, text] of rendered) {
-        const absolute = path.resolve(cwd, relative)
+      for (const file of outputs) {
+        const absolute = path.resolve(cwd, file.file)
         yield* Effect.orElseSucceed(
           fs.makeDirectory(path.dirname(absolute), { recursive: true }),
           () => undefined,
         )
-        yield* fs.writeFileString(absolute, text)
+        yield* fs.writeFileString(absolute, file.text)
+      }
+      const writtenAt = yield* Effect.sync(() => performance.now())
+      if (config.timing) {
+        yield* write(
+          `cutlist: timing crawl ${Math.round(crawledAt - startedAt)}ms, render ${Math.round(renderedAt - crawledAt)}ms, write ${Math.round(writtenAt - renderedAt)}ms`,
+        )
       }
       if (issues.stale.length > 0) {
         yield* write(
@@ -232,7 +213,7 @@ const buildCommand = Command.make(
         )
       }
       yield* write(
-        `cutlist: wrote ${rendered.length} files; ${catalog.components.length} components, ${catalog.duplicates.length} duplicate candidates, ${catalog.clusters?.length ?? 0} clusters, ${catalog.orphans.length} orphans`,
+        `cutlist: wrote ${outputs.length} files; ${catalog.components.length} components, ${catalog.duplicates.length} duplicate candidates, ${catalog.clusters?.length ?? 0} clusters, ${catalog.orphans.length} orphans`,
       )
     }).pipe(
       Effect.catchTag("DiagramError", (error) =>
@@ -246,7 +227,7 @@ const buildCommand = Command.make(
     ),
 ).pipe(
   Command.withDescription(
-    "Crawl the repo and render the catalog, the menu, the pattern language, the recipes, the lint manifest, the graph diagrams, and the token vocabulary.",
+    "Crawl the repo and render the catalog, the menu, the pattern language, the recipes, the lint manifest, and the token vocabulary (diagrams when `output.diagrams` is set).",
   ),
   Command.withShortDescription("Crawl the repo and render the vocabulary."),
   Command.withExamples([

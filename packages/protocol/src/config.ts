@@ -107,10 +107,49 @@ export interface CutlistOutput {
   /**
    * The directory of graph renderings — Mermaid source beside the SVG `pele` drew from it.
    * A directory, not a file, because one viewpoint is one diagram and a repo grows more.
+   *
+   * Opt-in: absent means `cutlist` does not render diagrams at all. On a real app the
+   * projection was 8 MB of a 13 MB artifact for 429 panels, so it is a rendering a repo
+   * asks for rather than one it gets.
    */
-  readonly diagrams?: string
+  readonly diagrams?: string | undefined
   readonly hooks?: string
   readonly tokens?: string
+}
+
+/**
+ * The paths `cutlist` needs in order to write, with every required rendering resolved.
+ *
+ * `diagrams` is absent unless a repository names a directory for it: the graph projection
+ * is opt-in because on a real app it was 8 MB of a 13 MB artifact for 429 panels, and the
+ * menu already answers the questions the pictures were drawing.
+ */
+export interface ResolvedCutlistOutput extends Required<Omit<CutlistOutput, "diagrams">> {
+  readonly diagrams?: string | undefined
+}
+
+/**
+ * Where a `cutlist.config.json` that declares no `output` writes each rendering.
+ *
+ * This lives in `protocol` rather than in `cutlist` because two tools must agree on it:
+ * `cutlist` builds these paths and `jig init` marks them generated in `.gitattributes`.
+ * A copy in either package is how the two plans drift.
+ */
+export const cutlistDefaultOutput: ResolvedCutlistOutput = {
+  catalog: "tools/ui-catalog/catalog.json",
+  manifest: "tools/ui-catalog/plumb-ui.config.json",
+  menuJson: "tools/ui-catalog/menu.json",
+  menu: "tools/ui-catalog/MENU.md",
+  // Authored, and deliberately outside the generated root: `rm -rf tools/ui-catalog`
+  // followed by a build must reproduce the artifact, and it cannot do that if a human's
+  // sentences live inside it.
+  intent: "tools/ui-intent",
+  patterns: "tools/ui-catalog/PATTERNS.md",
+  patternsJson: "tools/ui-catalog/patterns.json",
+  recipes: "tools/ui-catalog/RECIPES.md",
+  recipesJson: "tools/ui-catalog/recipes.json",
+  hooks: "tools/ui-catalog/hooks.md",
+  tokens: "tools/ui-catalog/tokens.md",
 }
 
 /** `cutlist.config.json`: the vocabulary plus where its renderings go. */
