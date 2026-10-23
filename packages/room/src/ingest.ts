@@ -1,4 +1,4 @@
-import { Result, Schema } from "effect"
+import { Effect, Result, Schema } from "effect"
 
 /*
  * Webhooks into events.
@@ -39,7 +39,7 @@ const Comment = Schema.Struct({
 })
 
 const GithubPayload = Schema.Struct({
-  action: Schema.optionalKey(Schema.String),
+  action: Schema.String.pipe(Schema.withDecodingDefaultKey(Effect.succeed(""))),
   pull_request: Schema.optionalKey(PullRequest),
   requested_reviewer: Schema.optionalKey(User),
   review: Schema.optionalKey(Review),
@@ -54,7 +54,7 @@ const LinearIssue = Schema.Struct({
 })
 
 const LinearPayload = Schema.Struct({
-  action: Schema.optionalKey(Schema.String),
+  action: Schema.String.pipe(Schema.withDecodingDefaultKey(Effect.succeed(""))),
   data: Schema.optionalKey(LinearIssue),
 })
 
@@ -107,6 +107,7 @@ export type RoomEvent =
     }
   | { readonly kind: "unknown"; readonly id: string; readonly at: number; readonly name: string }
 
+/** Turn a GitHub webhook into the event the room acts on. */
 export const fromGithub = ({
   event,
   delivery,
@@ -120,9 +121,9 @@ export const fromGithub = ({
 }): RoomEvent => {
   const payload = Result.getOrElse(
     Schema.decodeUnknownResult(GithubPayload)(body),
-    (): typeof GithubPayload.Type => ({}),
+    (): typeof GithubPayload.Type => ({ action: "" }),
   )
-  const action = payload.action ?? ""
+  const action = payload.action
   const pr = payload.pull_request
   const number = pr?.number ?? 0
   const sha = pr?.head?.sha ?? ""
@@ -178,7 +179,7 @@ export const fromGithub = ({
   return { kind: "unknown", id: delivery, at: now, name: `github.${event}.${action}` }
 }
 
-/** Linear's webhook shape: one Issue record, with the workflow state as an object. */
+/** Turn a Linear webhook into the event the room acts on. */
 export const fromLinear = ({
   delivery,
   body,
@@ -190,11 +191,11 @@ export const fromLinear = ({
 }): RoomEvent => {
   const payload = Result.getOrElse(
     Schema.decodeUnknownResult(LinearPayload)(body),
-    (): typeof LinearPayload.Type => ({}),
+    (): typeof LinearPayload.Type => ({ action: "" }),
   )
   const identifier = payload.data?.identifier ?? ""
   if (identifier === "") {
-    return { kind: "unknown", id: delivery, at: now, name: `linear.${payload.action ?? ""}` }
+    return { kind: "unknown", id: delivery, at: now, name: `linear.${payload.action}` }
   }
   return {
     kind: "issue.changed",

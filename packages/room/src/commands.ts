@@ -18,8 +18,8 @@ import { onPath, run } from "./shell.ts"
  */
 
 /** The value of a successful result, or nothing. */
-const valueOf = <A>(result: Result.Result<A, string>): A | undefined =>
-  Result.isSuccess(result) ? result.success : undefined
+const valueOf = <A>(result: Result.Result<A, string>): Option.Option<A> =>
+  Result.isSuccess(result) ? Option.some(result.success) : Option.none()
 
 /** What the room would be, before anything is written. */
 export interface Plan {
@@ -40,11 +40,11 @@ export interface Plan {
  */
 export const plan = (cwd: string): Effect.Effect<Plan, never, FileSystem.FileSystem> =>
   Effect.gen(function* () {
-    const root = valueOf(topLevel(cwd)) ?? cwd
-    const repo = valueOf(repoOf(root))
-    const login = valueOf(authLogin())
+    const root = Option.getOrUndefined(valueOf(topLevel(cwd))) ?? cwd
+    const repo = Option.getOrUndefined(valueOf(repoOf(root)))
+    const login = Option.getOrUndefined(valueOf(authLogin()))
     const config = Result.getOrUndefined(yield* readConfig(configPathOf(root)))
-    const index = yield* readIndex()
+    const index = yield* readIndex
     return {
       root,
       repo: repo === undefined ? undefined : `${repo.owner}/${repo.name}`,
@@ -61,9 +61,9 @@ export const plan = (cwd: string): Effect.Effect<Plan, never, FileSystem.FileSys
     }
   })
 
-const ago = (at: number): string => {
+const ago = ({ at, now }: { readonly at: number; readonly now: number }): string => {
   if (at === 0) return "never"
-  const minutes = Math.round((Date.now() - at) / 60_000)
+  const minutes = Math.round((now - at) / 60_000)
   if (minutes < 60) return `${minutes}m ago`
   const hours = Math.round(minutes / 60)
   if (hours < 48) return `${hours}h ago`
@@ -76,7 +76,7 @@ const ago = (at: number): string => {
  * @param value - The plan.
  * @returns The report.
  */
-export const renderPlan = (value: Plan): string => {
+export const renderPlan = (value: Plan, now: number): string => {
   const lines: Array<string> = ["room · plan", ""]
   lines.push(`  repo      ${value.repo ?? "(no origin remote)"}`)
   lines.push(`  root      ${value.root}`)
@@ -93,7 +93,9 @@ export const renderPlan = (value: Plan): string => {
     lines.push("")
     lines.push("  rooms")
     for (const room of value.rooms.slice(0, 8)) {
-      lines.push(`    ${room.name.padEnd(22)} ${room.stage.padEnd(18)} ${ago(room.lastSeen)}`)
+      lines.push(
+        `    ${room.name.padEnd(22)} ${room.stage.padEnd(18)} ${ago({ at: room.lastSeen, now })}`,
+      )
     }
   }
   lines.push("")
@@ -142,11 +144,11 @@ export const init = (
 ): Effect.Effect<InitResult, string, FileSystem.FileSystem> =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
-    const root = valueOf(topLevel(options.cwd)) ?? options.cwd
-    const login = valueOf(authLogin())
+    const root = Option.getOrUndefined(valueOf(topLevel(options.cwd))) ?? options.cwd
+    const login = Option.getOrUndefined(valueOf(authLogin()))
     if (login === undefined)
       return yield* Effect.fail("gh is not authenticated; run `gh auth login`")
-    const repo = valueOf(repoOf(root))
+    const repo = Option.getOrUndefined(valueOf(repoOf(root)))
     if (repo === undefined) return yield* Effect.fail("no GitHub origin remote")
     const path = configPathOf(root)
     const exists = yield* Effect.orElseSucceed(fs.exists(path), () => false)
@@ -159,12 +161,10 @@ export const init = (
       room: roomOf({ projectId: options.projectId, stage }),
       name: options.name,
       stage,
-      project: {
-        kind: "linear",
-        id: options.projectId,
-        name: options.projectName,
-        ...(options.workspace === undefined ? {} : { workspace: options.workspace }),
-      },
+      project: Object.assign(
+        { kind: "linear" as const, id: options.projectId, name: options.projectName },
+        options.workspace === undefined ? {} : { workspace: options.workspace },
+      ),
       repo: { owner: repo.owner, name: repo.name, root },
       ingress: { github: "forward", linear: "poll" },
       review: {
@@ -190,7 +190,7 @@ export const init = (
     })
     const configured = yield* Effect.tryPromise({
       try: () => new RoomClient(roomUrl(), config.room).configure(actorOf(login), config.name),
-      catch: () => "room not reachable" as const,
+      catch: () => "room not reachable",
     }).pipe(
       Effect.map(() => true),
       Effect.orElseSucceed(() => false),
@@ -218,7 +218,7 @@ export const doctor = (
   cwd: string,
 ): Effect.Effect<ReadonlyArray<Check>, never, FileSystem.FileSystem> =>
   Effect.gen(function* () {
-    const root = valueOf(topLevel(cwd)) ?? cwd
+    const root = Option.getOrUndefined(valueOf(topLevel(cwd))) ?? cwd
     const config = Result.getOrUndefined(yield* readConfig(configPathOf(root)))
     const checks: Array<Check> = []
     checks.push({
@@ -227,7 +227,7 @@ export const doctor = (
       detail: config === undefined ? `${CONFIG_PATH} missing or unreadable` : config.room,
     })
     if (config === undefined) return checks
-    const login = valueOf(authLogin())
+    const login = Option.getOrUndefined(valueOf(authLogin()))
     checks.push({
       name: "github",
       ok: login !== undefined,
@@ -239,7 +239,7 @@ export const doctor = (
       detail:
         login === undefined ? "no login to compare" : `stage ${config.stage} vs token ${login}`,
     })
-    const celld = valueOf(onPath("celld"))
+    const celld = Option.getOrUndefined(valueOf(onPath("celld")))
     checks.push({
       name: "celld",
       ok: celld !== undefined,
@@ -260,7 +260,7 @@ export const doctor = (
     })
     const health = yield* Effect.tryPromise({
       try: () => new RoomClient(roomUrl(), config.room).health(),
-      catch: () => "unreachable" as const,
+      catch: () => "unreachable",
     }).pipe(Effect.option)
     checks.push({
       name: "room",

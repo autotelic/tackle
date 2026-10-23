@@ -1,3 +1,4 @@
+import { Predicate } from "effect"
 import { actorOf, jobOf, type Job, type RoomId } from "@autotelic/board"
 import type { RoomEvent } from "./ingest.ts"
 
@@ -12,18 +13,17 @@ import type { RoomEvent } from "./ingest.ts"
  * person decides when the next pass happens.
  */
 
-export const shouldReview = ({
-  event,
-  actor,
-}: {
+/** Whether this event asks this room for a review. */
+export const shouldReview: Predicate.Predicate<{
   readonly event: RoomEvent
   readonly actor: string
-}): boolean =>
+}> = ({ event, actor }: { readonly event: RoomEvent; readonly actor: string }) =>
   event.kind === "review.requested" &&
   !event.draft &&
   event.reviewer !== "" &&
   actorOf(event.reviewer) === actor
 
+/** The job a review request creates. */
 export const reviewJob = ({
   event,
   room,

@@ -51,9 +51,13 @@ export class DoSql implements Sql {
   }
 
   all<T>(sql: string, ...params: ReadonlyArray<SqlValue>): ReadonlyArray<T> {
+    // SAFETY: the caller names the row type; the Durable Object returns named columns.
+    // oxlint-disable-next-line plumb/no-reinterpret-cast plumb/require-safety-comment-for-type-assertion
     return this.#sql.exec(sql, ...params).toArray() as ReadonlyArray<T>
   }
 
+  // The SQL port returns absence, not a reason; the ledger turns it into a typed failure.
+  // oxlint-disable-next-line plumb-effect/guarded-op-must-return-option
   get<T>(sql: string, ...params: ReadonlyArray<SqlValue>): T | undefined {
     return this.all<T>(sql, ...params)[0]
   }

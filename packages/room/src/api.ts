@@ -1,5 +1,5 @@
 import { JOB_STATES, actorOf } from "@autotelic/board"
-import { Option, Result, Schema } from "effect"
+import { Effect, Result, Schema } from "effect"
 import type { Ledger } from "./ledger.ts"
 import { fromGithub, fromLinear } from "./ingest.ts"
 import { reviewJob, shouldReview } from "./policy.ts"
@@ -22,13 +22,13 @@ export interface ApiOptions {
 
 const ConfigBody = Schema.Struct({
   actor: Schema.String,
-  name: Schema.optionalKey(Schema.String),
+  name: Schema.String.pipe(Schema.withDecodingDefaultKey(Effect.succeed(""))),
 })
 
 const PresenceBody = Schema.Struct({
   host: Schema.String,
   actor: Schema.String,
-  ttl: Schema.optionalKey(Schema.Finite),
+  ttl: Schema.Finite.pipe(Schema.withDecodingDefaultKey(Effect.succeed(60_000))),
 })
 
 const ClaimBody = Schema.Struct({ host: Schema.String })
@@ -44,7 +44,7 @@ const FinishBody = Schema.Struct({
 const json = (input: { readonly body: object; readonly status?: number }): Response => {
   const text = `${JSON.stringify(input.body)}\n`
   return new Response(text, {
-    status: input.status ?? 200,
+    status: input.status === undefined ? 200 : input.status,
     headers: {
       "content-type": "application/json",
       "content-length": String(Buffer.byteLength(text)),
@@ -52,7 +52,10 @@ const json = (input: { readonly body: object; readonly status?: number }): Respo
   })
 }
 
-const rawBody = async (request: Request): Promise<unknown> => request.json().catch(() => undefined)
+const rawBody = async (request: Request): Promise<Schema.Json | undefined> => {
+  const value: unknown = await request.json().catch(() => undefined)
+  return Result.getOrUndefined(Schema.decodeUnknownResult(Schema.Json)(value))
+}
 
 /**
  * Handle one room request.
@@ -105,7 +108,7 @@ export const handle = async (
     )
     if (body === undefined) return json({ body: { error: "actor is required" }, status: 400 })
     ledger.set("actor", body.actor)
-    ledger.set("name", body.name ?? "")
+    ledger.set("name", body.name)
     return json({ body: { ok: true, actor: body.actor } })
   }
 
@@ -129,7 +132,7 @@ export const handle = async (
     if (!fresh) {
       return json({ body: { event: event.kind, accepted: false, queued: false } })
     }
-    const actor = Option.getOrUndefined(ledger.get("actor")) ?? actorOf("")
+    const actor = Result.getOrUndefined(ledger.get("actor")) ?? actorOf("")
     const queued =
       shouldReview({ event, actor }) && event.kind === "review.requested"
         ? ledger.enqueue(reviewJob({ event, room: ledger.room, now }))
@@ -148,7 +151,7 @@ export const handle = async (
       room: ledger.room,
       actor: body.actor,
       at: now,
-      ttl: body.ttl ?? 60_000,
+      ttl: body.ttl,
     })
     return json({ body: { ok: true } })
   }
@@ -158,7 +161,7 @@ export const handle = async (
       Schema.decodeUnknownResult(ClaimBody)(await rawBody(request)),
     )
     if (body === undefined) return json({ body: { error: "host is required" }, status: 400 })
-    const job = Option.getOrUndefined(ledger.claimJob(body.host, now))
+    const job = Result.getOrUndefined(ledger.claimJob(body.host, now))
     return json({ body: { job: job ?? null } })
   }
 

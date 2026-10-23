@@ -29,15 +29,12 @@ export const run = (input: {
   readonly env?: NodeJS.ProcessEnv
   readonly timeoutMs?: number
 }): Outcome => {
-  const options: {
-    encoding: "utf8"
-    cwd?: string
-    env?: NodeJS.ProcessEnv
-    timeout?: number
-  } = { encoding: "utf8" }
-  if (input.cwd !== undefined) options.cwd = input.cwd
-  if (input.env !== undefined) options.env = { ...process.env, ...input.env }
-  if (input.timeoutMs !== undefined) options.timeout = input.timeoutMs
+  const options = Object.assign(
+    { encoding: "utf8" as const },
+    input.cwd === undefined ? {} : { cwd: input.cwd },
+    input.env === undefined ? {} : { env: { ...process.env, ...input.env } },
+    input.timeoutMs === undefined ? {} : { timeout: input.timeoutMs },
+  )
   const result = spawnSync(input.command, [...input.args], options)
   return {
     code: result.status ?? (result.error === undefined ? 1 : 127),

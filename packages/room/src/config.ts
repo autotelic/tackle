@@ -53,9 +53,7 @@ export type RoomConfig = typeof RoomConfig.Type
  * @param value - The parsed JSON, from a file or a boundary.
  * @returns Some(config) when the shape is complete, None otherwise.
  */
-export const decodeConfig = (
-  value: typeof Schema.JsonObject.Type,
-): Result.Result<RoomConfig, string> => {
+export const decodeConfig = (value: Schema.JsonObject): Result.Result<RoomConfig, string> => {
   const result = Schema.decodeUnknownResult(RoomConfig)(value)
   return Result.isSuccess(result)
     ? Result.succeed(result.success)

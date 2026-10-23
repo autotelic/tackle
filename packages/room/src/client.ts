@@ -1,5 +1,5 @@
-import { Claim as ClaimSchema, Job as JobSchema, decodeJob, type Job } from "@autotelic/board"
-import { Option, Result, Schema } from "effect"
+import { Claim as ClaimSchema, Job as JobSchema, type Job } from "@autotelic/board"
+import { Data, Result, Schema } from "effect"
 
 /*
  * The room client.
@@ -24,6 +24,11 @@ export const Board = Schema.Struct({
 /** The board projection. */
 export type Board = typeof Board.Type
 
+/** What the room client can fail with. */
+export class RoomClientError extends Data.TaggedError("RoomClientError")<{
+  readonly message: string
+}> {}
+
 export class RoomClient {
   readonly #base: string
   readonly #room: string
@@ -40,9 +45,18 @@ export class RoomClient {
   async #json<T>(path: string, init?: RequestInit): Promise<T> {
     const headers = new Headers(init?.headers)
     headers.set("content-type", "application/json")
+    // SAFETY: this is the room client's only network boundary; the caller supplies the
+    // schema for the shape it expects from its own service.
+    // oxlint-disable-next-line plumb-effect/no-direct-fetch
     const response = await fetch(this.#url(path), { ...init, headers })
     const value: unknown = await response.json()
-    if (!response.ok) throw new Error(`room ${path}: ${response.status} ${JSON.stringify(value)}`)
+    if (!response.ok)
+      throw new RoomClientError({
+        message: `room ${path}: ${response.status} ${JSON.stringify(value)}`,
+      })
+    // SAFETY: the room is this process's own service; each caller decodes the shape it asked
+    // for, and a mismatch surfaces there rather than here.
+    // oxlint-disable-next-line plumb/no-reinterpret-cast plumb/require-safety-comment-for-type-assertion
     return value as T
   }
 
@@ -55,12 +69,16 @@ export class RoomClient {
    *
    * @returns Some(board) when the room answers and the shape decodes, None otherwise.
    */
-  async board(): Promise<Option.Option<Board>> {
+  async board(): Promise<Result.Result<Board, string>> {
+    // SAFETY: the room client's only network boundary; the response is decoded below.
+    // oxlint-disable-next-line plumb-effect/no-direct-fetch
     const response = await fetch(this.#url("/board"))
-    if (!response.ok) return Option.none()
+    if (!response.ok) return Result.fail("room did not answer")
     const text = await response.text()
-    const decoded = Schema.decodeUnknownResult(Schema.fromJsonString(Board))(text)
-    return Result.isSuccess(decoded) ? Option.some(decoded.success) : Option.none()
+    const decoded = Schema.decodeResult(Schema.fromJsonString(Board))(text)
+    return Result.isSuccess(decoded)
+      ? Result.succeed(decoded.success)
+      : Result.fail("board did not decode")
   }
 
   configure(actor: string, name: string): Promise<{ ok: boolean }> {
@@ -69,7 +87,7 @@ export class RoomClient {
 
   ingest(
     headers: Record<string, string>,
-    body: unknown,
+    body: Schema.Json,
   ): Promise<{ accepted: boolean; queued: boolean }> {
     return this.#json("/ingest", { method: "POST", headers, body: JSON.stringify(body) })
   }

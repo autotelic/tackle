@@ -1,4 +1,4 @@
-import { Console, Effect, Option, Path, Result, Runtime } from "effect"
+import { Clock, Console, Effect, Option, Path, Result, Runtime } from "effect"
 import { CliError, Command, Flag } from "effect/cli"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { jobOf } from "@autotelic/board"
@@ -16,7 +16,7 @@ import {
 import { readConfig, type RoomConfig } from "./config.ts"
 import { daemon, roomUrl } from "./daemon.ts"
 import { configPathOf, readIndex, roomsByActivity } from "./paths.ts"
-import { RoomClient, type Board } from "./client.ts"
+import { RoomClient } from "./client.ts"
 import { runReview } from "./review.ts"
 
 /*
@@ -56,7 +56,11 @@ const planCommand = Command.make("plan", { cwd: cwdFlag, json: jsonFlag }, (opti
   Effect.gen(function* () {
     const root = yield* rootOf(options.cwd)
     const value = yield* plan(root)
-    yield* write(options.json ? JSON.stringify(value, null, 2) : renderPlan(value))
+    yield* write(
+      options.json
+        ? JSON.stringify(value, null, 2)
+        : renderPlan(value, yield* Clock.currentTimeMillis),
+    )
   }),
 ).pipe(
   Command.withDescription("Read the repo, the token, and the rooms; print the init it would run."),
@@ -99,7 +103,7 @@ const initCommand = Command.make(
           workspace: Option.getOrUndefined(options.workspace),
           stage: Option.getOrUndefined(options.stage),
           force: options.force,
-          now: Date.now(),
+          now: yield* Clock.currentTimeMillis,
         }),
       )
       if (Result.isFailure(outcome)) {
@@ -149,7 +153,7 @@ const boardCommand = Command.make(
       if (named === undefined) {
         config = Result.getOrUndefined(yield* readConfig(configPathOf(root)))
       } else {
-        const index = yield* readIndex()
+        const index = yield* readIndex
         const entry = index.rooms.find((room) => room.name === named || room.room === named)
         config =
           entry === undefined
@@ -161,11 +165,11 @@ const boardCommand = Command.make(
         yield* exit(1)
         return
       }
-      const board = Option.getOrUndefined(
+      const board = Result.getOrUndefined(
         yield* Effect.tryPromise({
           try: () => new RoomClient(roomUrl(), config.room).board(),
-          catch: () => Option.none<Board>(),
-        }).pipe(Effect.orElseSucceed(() => Option.none<Board>())),
+          catch: () => Result.fail("room did not answer"),
+        }).pipe(Effect.orElseSucceed(() => Result.fail("room did not answer"))),
       )
       if (options.json) {
         yield* write(
@@ -191,7 +195,7 @@ const doctorCommand = Command.make("doctor", { cwd: cwdFlag }, (options) =>
     const root = yield* rootOf(options.cwd)
     const checks = yield* doctor(root)
     yield* write(renderChecks(checks))
-    yield* exit(checks.length > 0 && checks.every((check) => check.ok) ? 0 : 1)
+    yield* exit(checks.every((check) => check.ok) ? 0 : 1)
   }),
 ).pipe(
   Command.withDescription(
@@ -304,7 +308,7 @@ const reviewCommand = Command.make(
         yield* exit(1)
         return
       }
-      const now = Date.now()
+      const now = yield* Clock.currentTimeMillis
       const result = yield* Effect.tryPromise({
         try: () =>
           runReview({
@@ -323,7 +327,7 @@ const reviewCommand = Command.make(
             dryRun: options.dryRun,
             log: (line) => process.stdout.write(`${line}\n`),
           }),
-        catch: () => "review failed" as const,
+        catch: () => "review failed",
       }).pipe(
         Effect.orElseSucceed(() => ({
           ok: false,

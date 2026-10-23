@@ -78,16 +78,17 @@ const EMPTY: RoomIndex = { version: 1, rooms: [] }
  *
  * @returns The rooms recorded on this machine.
  */
-export const readIndex = (): Effect.Effect<RoomIndex, never, FileSystem.FileSystem> =>
-  Effect.gen(function* () {
+export const readIndex: Effect.Effect<RoomIndex, never, FileSystem.FileSystem> = Effect.gen(
+  function* () {
     const fs = yield* FileSystem.FileSystem
     const file = indexOfRooms()
     const exists = yield* Effect.orElseSucceed(fs.exists(file), () => false)
     if (!exists) return EMPTY
     const text = yield* Effect.orElseSucceed(fs.readFileString(file), () => "")
-    const result = Schema.decodeUnknownResult(Schema.fromJsonString(RoomIndex))(text)
+    const result = Schema.decodeResult(Schema.fromJsonString(RoomIndex))(text)
     return Result.isSuccess(result) ? result.success : EMPTY
-  })
+  },
+)
 
 /**
  * Record or refresh one room. Sorted by activity when read, so the picker is honest.
@@ -100,7 +101,7 @@ export const recordRoom = (
 ): Effect.Effect<void, never, FileSystem.FileSystem> =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
-    const current = yield* readIndex()
+    const current = yield* readIndex
     const rooms = current.rooms.filter((room) => room.room !== entry.room)
     const next: RoomIndex = { version: 1, rooms: [...rooms, entry] }
     yield* Effect.orElseSucceed(fs.makeDirectory(roomHome(), { recursive: true }), () => undefined)
@@ -119,7 +120,7 @@ export const roomsByActivity: Effect.Effect<
   ReadonlyArray<RoomIndexEntry>,
   never,
   FileSystem.FileSystem
-> = readIndex().pipe(
+> = readIndex.pipe(
   Effect.map((index) => [...index.rooms].sort((left, right) => right.lastSeen - left.lastSeen)),
 )
 

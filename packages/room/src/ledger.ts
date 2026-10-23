@@ -11,7 +11,7 @@ import {
   type Receipt,
 } from "@autotelic/board"
 import { Option, Result } from "effect"
-import type { Sql, SqlRow } from "./sql.ts"
+import type { Sql, SqlRow, SqlValue } from "./sql.ts"
 
 /*
  * The ledger.
@@ -61,84 +61,83 @@ export interface ClaimOutcome {
   readonly reason?: "held"
 }
 
-const nullable = (value: unknown): string | undefined =>
-  value === null || value === undefined ? undefined : String(value)
+const nullable = (value: SqlValue | undefined): Option.Option<string> =>
+  value === null || value === undefined ? Option.none() : Option.some(String(value))
 
-const numberOrNull = (value: unknown): number | undefined =>
-  value === null || value === undefined ? undefined : Number(value)
+const numberOrNull = (value: SqlValue | undefined): Option.Option<number> =>
+  value === null || value === undefined ? Option.none() : Option.some(Number(value))
 
 /** Build the anchor a chit row carries, or nothing when the row has no PR. */
-const anchorOf = (row: SqlRow): Anchor | undefined => {
+const anchorOf = (row: SqlRow): Option.Option<Anchor> => {
   const pr = numberOrNull(row.pr)
-  if (pr === undefined) return undefined
-  const anchor: { pr: number; sha: string; path?: string; line?: number; commentId?: number } = {
-    pr,
-    sha: String(row.sha ?? ""),
-  }
-  const path = nullable(row.path)
-  if (path !== undefined) anchor.path = path
-  const line = numberOrNull(row.line)
-  if (line !== undefined) anchor.line = line
-  const commentId = numberOrNull(row.comment_id)
-  if (commentId !== undefined) anchor.commentId = commentId
-  return anchor
+  if (Option.isNone(pr)) return Option.none()
+  return Option.some(
+    Object.assign(
+      { pr: pr.value, sha: row.sha === undefined || row.sha === null ? "" : String(row.sha) },
+      Option.match(nullable(row.path), { onNone: () => ({}), onSome: (path) => ({ path }) }),
+      Option.match(numberOrNull(row.line), { onNone: () => ({}), onSome: (line) => ({ line }) }),
+      Option.match(numberOrNull(row.comment_id), {
+        onNone: () => ({}),
+        onSome: (commentId) => ({ commentId }),
+      }),
+    ),
+  )
 }
 
-const toChit = (row: SqlRow): Option.Option<Chit> => {
-  const base: {
-    id: string
-    room: string
-    ticket: string
-    kind: string
-    state: string
-    updatedAt: number
-    anchor?: Anchor
-    layer?: number
-  } = {
-    id: String(row.id),
-    room: String(row.room),
-    ticket: String(row.ticket),
-    kind: String(row.kind),
-    state: String(row.state),
-    updatedAt: Number(row.updated_at),
-  }
-  const anchor = anchorOf(row)
-  if (anchor !== undefined) base.anchor = anchor
-  const layer = numberOrNull(row.layer)
-  if (layer !== undefined) base.layer = layer
-  return Option.fromUndefinedOr(Result.getOrUndefined(decodeChit(base)))
-}
+const toChit = (row: SqlRow): Option.Option<Chit> =>
+  Option.fromUndefinedOr(
+    Result.getOrUndefined(
+      decodeChit(
+        Object.assign(
+          {
+            id: String(row.id),
+            room: String(row.room),
+            ticket: String(row.ticket),
+            kind: String(row.kind),
+            state: String(row.state),
+            updatedAt: Number(row.updated_at),
+          },
+          Option.match(anchorOf(row), {
+            onNone: () => ({}),
+            onSome: (anchor) => ({ anchor }),
+          }),
+          Option.match(numberOrNull(row.layer), {
+            onNone: () => ({}),
+            onSome: (layer) => ({ layer }),
+          }),
+        ),
+      ),
+    ),
+  )
 
-const toJob = (row: SqlRow): Option.Option<Job> => {
-  const base: {
-    id: string
-    room: string
-    kind: string
-    pr: number
-    sha: string
-    state: string
-    attempts: number
-    createdAt: number
-    updatedAt: number
-    host?: string
-    note?: string
-  } = {
-    id: String(row.id),
-    room: String(row.room),
-    kind: String(row.kind),
-    pr: Number(row.pr),
-    sha: String(row.sha),
-    state: String(row.state),
-    attempts: Number(row.attempts),
-    createdAt: Number(row.created_at),
-    updatedAt: Number(row.updated_at),
-  }
-  const host = nullable(row.host)
-  if (host !== undefined) base.host = host
-  const note = nullable(row.note)
-  if (note !== undefined) base.note = note
-  return Option.fromUndefinedOr(Result.getOrUndefined(decodeJob(base)))
-}
+const toJob = (row: SqlRow): Option.Option<Job> =>
+  Option.fromUndefinedOr(
+    Result.getOrUndefined(
+      decodeJob(
+        Object.assign(
+          {
+            id: String(row.id),
+            room: String(row.room),
+            kind: String(row.kind),
+            pr: Number(row.pr),
+            sha: String(row.sha),
+            state: String(row.state),
+            attempts: Number(row.attempts),
+            createdAt: Number(row.created_at),
+            updatedAt: Number(row.updated_at),
+          },
+          Option.match(nullable(row.host), {
+            onNone: () => ({}),
+            onSome: (host) => ({ host }),
+          }),
+          Option.match(nullable(row.note), {
+            onNone: () => ({}),
+            onSome: (note) => ({ note }),
+          }),
+        ),
+      ),
+    ),
+  )
 
 /** The room's durable state. */
 export class Ledger {
@@ -183,10 +182,14 @@ export class Ledger {
     )
   }
 
-  /** One chit, or absence. */
-  chit(id: string): Option.Option<Chit> {
+  /** One chit, or the reason it is absent. */
+  chit(id: string): Result.Result<Chit, string> {
     const row = this.#sql.get<SqlRow>("SELECT * FROM chits WHERE id = ?", id)
-    return row === undefined ? Option.none() : toChit(row)
+    if (row === undefined) return Result.fail("no such chit")
+    const chit = toChit(row)
+    return Option.isNone(chit)
+      ? Result.fail("the chit row does not decode")
+      : Result.succeed(chit.value)
   }
 
   chits(): ReadonlyArray<Chit> {
@@ -264,21 +267,21 @@ export class Ledger {
   }
 
   /** The next queued job, claimed by this host. */
-  claimJob(host: string, now: number): Option.Option<Job> {
+  claimJob(host: string, now: number): Result.Result<Job, string> {
     return this.#sql.transaction(() => {
       const row = this.#sql.get<SqlRow>(
         "SELECT * FROM jobs WHERE state = 'queued' ORDER BY created_at LIMIT 1",
       )
-      if (row === undefined) return Option.none<Job>()
+      if (row === undefined) return Result.fail("no queued job")
       const job = toJob(row)
-      if (Option.isNone(job)) return Option.none<Job>()
+      if (Option.isNone(job)) return Result.fail("the job row does not decode")
       this.#sql.exec(
         "UPDATE jobs SET state = 'claimed', host = ?, updated_at = ? WHERE id = ?",
         host,
         now,
         job.value.id,
       )
-      return Option.some({ ...job.value, state: "claimed" as const, host, updatedAt: now })
+      return Result.succeed({ ...job.value, state: "claimed" as const, host, updatedAt: now })
     })
   }
 
@@ -332,29 +335,18 @@ export class Ledger {
     return this.#sql
       .all<SqlRow>("SELECT * FROM receipts ORDER BY at DESC LIMIT ?", limit)
       .flatMap((row) => {
-        const base: {
-          id: string
-          room: string
-          at: number
-          kind: string
-          chit?: string
-          job?: string
-          actor?: string
-          host?: string
-        } = {
-          id: String(row.id),
-          room: String(row.room),
-          at: Number(row.at),
-          kind: String(row.kind),
-        }
-        const chit = nullable(row.chit)
-        if (chit !== undefined) base.chit = chit
-        const job = nullable(row.job)
-        if (job !== undefined) base.job = job
-        const actor = nullable(row.actor)
-        if (actor !== undefined) base.actor = actor
-        const host = nullable(row.host)
-        if (host !== undefined) base.host = host
+        const base = Object.assign(
+          {
+            id: String(row.id),
+            room: String(row.room),
+            at: Number(row.at),
+            kind: String(row.kind),
+          },
+          Option.match(nullable(row.chit), { onNone: () => ({}), onSome: (chit) => ({ chit }) }),
+          Option.match(nullable(row.job), { onNone: () => ({}), onSome: (job) => ({ job }) }),
+          Option.match(nullable(row.actor), { onNone: () => ({}), onSome: (actor) => ({ actor }) }),
+          Option.match(nullable(row.host), { onNone: () => ({}), onSome: (host) => ({ host }) }),
+        )
         return Option.match(Option.fromUndefinedOr(Result.getOrUndefined(decodeReceipt(base))), {
           onNone: () => [],
           onSome: (receipt) => [receipt],
@@ -382,22 +374,19 @@ export class Ledger {
     return this.#sql
       .all<SqlRow>("SELECT * FROM presence WHERE at + ttl > ? ORDER BY at DESC", now)
       .flatMap((row) => {
-        const base: {
-          host: string
-          room: string
-          actor: string
-          at: number
-          ttl: number
-          session?: string
-        } = {
-          host: String(row.host),
-          room: String(row.room),
-          actor: String(row.actor),
-          at: Number(row.at),
-          ttl: Number(row.ttl),
-        }
-        const session = nullable(row.session)
-        if (session !== undefined) base.session = session
+        const base = Object.assign(
+          {
+            host: String(row.host),
+            room: String(row.room),
+            actor: String(row.actor),
+            at: Number(row.at),
+            ttl: Number(row.ttl),
+          },
+          Option.match(nullable(row.session), {
+            onNone: () => ({}),
+            onSome: (session) => ({ session }),
+          }),
+        )
         return Option.match(Option.fromUndefinedOr(Result.getOrUndefined(decodePresence(base))), {
           onNone: () => [],
           onSome: (presence) => [presence],
@@ -406,9 +395,9 @@ export class Ledger {
   }
 
   /** A meta value, or absence. */
-  get(key: string): Option.Option<string> {
+  get(key: string): Result.Result<string, string> {
     const row = this.#sql.get<SqlRow>("SELECT value FROM meta WHERE key = ?", key)
-    return Option.fromUndefinedOr(row === undefined ? undefined : String(row.value))
+    return row === undefined ? Result.fail("unset") : Result.succeed(String(row.value))
   }
 
   set(key: string, value: string): void {

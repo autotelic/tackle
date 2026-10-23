@@ -11,8 +11,6 @@ import { Room, type RoomEnv } from "./room.ts"
 
 export { Room }
 
-const ENV = (env: unknown): RoomEnv => env as RoomEnv
-
 export default {
   async fetch(request: Request, env: RoomEnv): Promise<Response> {
     const url = new URL(request.url)
@@ -23,7 +21,7 @@ export default {
       return new Response("room: expected /r/<room>/<path>\n", { status: 404 })
     }
     const room = decodeURIComponent(encoded)
-    const stub = ENV(env).ROOMS.get(ENV(env).ROOMS.idFromName(room))
+    const stub = env.ROOMS.get(env.ROOMS.idFromName(room))
     const forwarded = new URL(rest, url.origin)
     return stub.fetch(new Request(forwarded, request))
   },

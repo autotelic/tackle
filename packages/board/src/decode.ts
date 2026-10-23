@@ -16,9 +16,8 @@ import { Chit, Claim, Job, Presence, Receipt } from "./records.ts"
  * @param value - A row, a file object, or a boundary value that claims to be a chit.
  * @returns The chit, or the schema issue that refused it.
  */
-export const decodeChit = (
-  value: typeof Schema.JsonObject.Type,
-): Result.Result<Chit, Schema.SchemaError> => Schema.decodeUnknownResult(Chit)(value)
+export const decodeChit = (value: Schema.JsonObject): Result.Result<Chit, Schema.SchemaError> =>
+  Schema.decodeUnknownResult(Chit)(value)
 
 /**
  * Decode a claim.
@@ -26,9 +25,8 @@ export const decodeChit = (
  * @param value - A row, a file object, or a boundary value that claims to be a claim.
  * @returns The claim, or the schema issue that refused it.
  */
-export const decodeClaim = (
-  value: typeof Schema.JsonObject.Type,
-): Result.Result<Claim, Schema.SchemaError> => Schema.decodeUnknownResult(Claim)(value)
+export const decodeClaim = (value: Schema.JsonObject): Result.Result<Claim, Schema.SchemaError> =>
+  Schema.decodeUnknownResult(Claim)(value)
 
 /**
  * Decode a job.
@@ -36,9 +34,8 @@ export const decodeClaim = (
  * @param value - A row, a file object, or a boundary value that claims to be a job.
  * @returns The job, or the schema issue that refused it.
  */
-export const decodeJob = (
-  value: typeof Schema.JsonObject.Type,
-): Result.Result<Job, Schema.SchemaError> => Schema.decodeUnknownResult(Job)(value)
+export const decodeJob = (value: Schema.JsonObject): Result.Result<Job, Schema.SchemaError> =>
+  Schema.decodeUnknownResult(Job)(value)
 
 /**
  * Decode a receipt.
@@ -47,7 +44,7 @@ export const decodeJob = (
  * @returns The receipt, or the schema issue that refused it.
  */
 export const decodeReceipt = (
-  value: typeof Schema.JsonObject.Type,
+  value: Schema.JsonObject,
 ): Result.Result<Receipt, Schema.SchemaError> => Schema.decodeUnknownResult(Receipt)(value)
 
 /**
@@ -57,5 +54,5 @@ export const decodeReceipt = (
  * @returns The presence, or the schema issue that refused it.
  */
 export const decodePresence = (
-  value: typeof Schema.JsonObject.Type,
+  value: Schema.JsonObject,
 ): Result.Result<Presence, Schema.SchemaError> => Schema.decodeUnknownResult(Presence)(value)

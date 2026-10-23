@@ -1,4 +1,4 @@
-import { Option, Result } from "effect"
+import { Result } from "effect"
 import { describe, expect, it } from "vitest"
 import { actorOf, chitOf, hostOf, jobOf, markerOf, roomOf, stageOf } from "./ids.ts"
 import { decodeChit, decodeClaim } from "./decode.ts"

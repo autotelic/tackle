@@ -91,10 +91,10 @@ const jigFindings = (root: string) => {
     args: [...args, "check", "--cwd", root, "--format", "json"],
     cwd: root,
   })
-  const decoded = Schema.decodeUnknownResult(Schema.fromJsonString(JigReport))(result.stdout)
+  const decoded = Schema.decodeResult(Schema.fromJsonString(JigReport))(result.stdout)
   if (Result.isFailure(decoded)) {
     return {
-      findings: [] as ReadonlyArray<Diagnostic>,
+      findings: [],
       note: `jig did not produce a report (exit ${result.code}): ${result.stderr.trim()}`,
     }
   }
@@ -181,7 +181,7 @@ const runPi = (args: ReadonlyArray<string>, cwd: string) =>
       clearTimeout(timer)
       const texts: Array<string> = []
       for (const line of stdout.split("\n")) {
-        const decoded = Schema.decodeUnknownResult(Schema.fromJsonString(PiEvent))(line)
+        const decoded = Schema.decodeResult(Schema.fromJsonString(PiEvent))(line)
         if (Result.isFailure(decoded)) continue
         const event = decoded.success
         const message = event.message

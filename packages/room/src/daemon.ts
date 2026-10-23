@@ -36,9 +36,6 @@ const DEFAULT_URL = "http://127.0.0.1:9876"
 /** The room URL this machine talks to. */
 export const roomUrl = (): string => process.env.ROOM_URL ?? DEFAULT_URL
 
-const failure = (error: unknown): DaemonError =>
-  new DaemonError({ message: error instanceof Error ? error.message : String(error) })
-
 /**
  * Run the room's daemon.
  *
@@ -49,7 +46,7 @@ export const daemon = (options: DaemonOptions): Effect.Effect<void, DaemonError>
   Effect.gen(function* () {
     const login = yield* Effect.sync(authLogin)
     if (Result.isFailure(login)) {
-      return yield* Effect.fail(new DaemonError({ message: login.failure }))
+      return yield* new DaemonError({ message: login.failure })
     }
     const host = hostOf({ login: login.success, hostname: hostname() })
     const actor = actorOf(login.success)
@@ -58,28 +55,37 @@ export const daemon = (options: DaemonOptions): Effect.Effect<void, DaemonError>
 
     const beat = Effect.tryPromise({
       try: () => client.beat(host, actor, 60_000),
-      catch: failure,
-    }).pipe(Effect.catch(() => Effect.void))
+      catch: (error) => new DaemonError({ message: String(error) }),
+    }).pipe(Effect.catch((error) => Effect.sync(() => log(`presence: ${error.message}`))))
 
     const work = Effect.gen(function* () {
       const job = yield* Effect.tryPromise({
         try: () => client.claim(host),
-        catch: failure,
+        catch: (error) => new DaemonError({ message: String(error) }),
       })
-      if (job === null) return
-      yield* Effect.tryPromise({ try: () => client.start(job.id), catch: failure })
+      if (job === null || job === undefined) return
+      yield* Effect.tryPromise({
+        try: () => client.start(job.id),
+        catch: (error) => new DaemonError({ message: String(error) }),
+      })
       log(`review ${job.id}`)
       const result = yield* Effect.tryPromise({
         try: () => runReview({ config: options.config, job, dryRun: false, log }),
-        catch: failure,
+        catch: (error) => new DaemonError({ message: String(error) }),
       })
       yield* Effect.tryPromise({
         try: () =>
           client.finish(job.id, result.state === "posted" ? "done" : result.state, result.note),
-        catch: failure,
+        catch: (error) => new DaemonError({ message: String(error) }),
       })
       log(`  ${result.state}: ${result.note}`)
-    }).pipe(Effect.catch((error) => Effect.sync(() => log(`  failed: ${error.message}`))))
+    }).pipe(
+      Effect.catch((error) =>
+        Effect.sync(() =>
+          log(`  failed: ${error instanceof Error ? error.message : String(error)}`),
+        ),
+      ),
+    )
 
     yield* Effect.forkChild(Effect.forever(Effect.flatMap(beat, () => Effect.sleep("20 seconds"))))
 

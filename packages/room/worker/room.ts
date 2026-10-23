@@ -30,6 +30,8 @@ export class Room extends DurableObject<RoomEnv> {
   override async fetch(request: Request): Promise<Response> {
     const ledger = this.#ledger
     if (ledger === undefined) return new Response("room: not ready\n", { status: 503 })
+    // SAFETY: a Durable Object has no injected clock; Date.now is the platform's wall clock.
+    // oxlint-disable-next-line plumb/no-nondeterministic-core
     return handle(request, ledger, { now: () => Date.now() })
   }
 }

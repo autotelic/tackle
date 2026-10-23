@@ -1,5 +1,6 @@
 import { DatabaseSync } from "node:sqlite"
-import { Option } from "effect"
+import { Result } from "effect"
+import * as fc from "fast-check"
 import type { Sql, SqlValue } from "./sql.ts"
 
 /** `node:sqlite` for the tests; the package source only knows the `Sql` port. */
@@ -14,10 +15,13 @@ class NodeSql implements Sql {
   all<T>(sql: string, ...params: ReadonlyArray<SqlValue>): ReadonlyArray<T> {
     // SAFETY: the caller names the row type and the driver returns named columns.
     const rows = this.#db.prepare(sql).all(...params)
+    // SAFETY: node:sqlite returns named columns; the caller names the row shape.
+    // oxlint-disable-next-line plumb/no-reinterpret-cast plumb/no-chained-type-assertions plumb/require-safety-comment-for-type-assertion
     return rows.map((row) => row as unknown as T)
   }
   get<T>(sql: string, ...params: ReadonlyArray<SqlValue>): T | undefined {
-    // SAFETY: the caller names the row type and the driver returns named columns.
+    // SAFETY: node:sqlite returns named columns; the caller names the row shape.
+    // oxlint-disable-next-line plumb/no-reinterpret-cast plumb/no-chained-type-assertions plumb/require-safety-comment-for-type-assertion
     return this.#db.prepare(sql).get(...params) as unknown as T | undefined
   }
   transaction<T>(run: () => T): T {
@@ -92,6 +96,20 @@ describe("webhooks", () => {
 })
 
 describe("ledger", () => {
+  it("property: every successful claim advances the epoch", () => {
+    fc.assert(
+      fc.property(fc.integer({ min: 1, max: 20 }), (times) => {
+        const store = ledger()
+        let epoch = 0
+        for (let index = 0; index < times; index += 1) {
+          const outcome = store.claim("c", "a@x", "github:a", 60_000, 1_000 + index * 1_000)
+          if (outcome.ok) epoch = outcome.epoch
+        }
+        return epoch === times
+      }),
+    )
+  })
+
   it("fences a claim by host and epoch", () => {
     const store = ledger()
     expect(store.claim("c", "a@x", "github:a", 60_000, 1_000)).toEqual({ ok: true, epoch: 1 })
@@ -124,7 +142,7 @@ describe("ledger", () => {
   it("claims a queued job and reports an interrupted one as claimed, not done", () => {
     const store = ledger()
     store.enqueue(job("pr:1:abc"))
-    const claimed = Option.getOrUndefined(store.claimJob("a@x", 10))
+    const claimed = Result.getOrUndefined(store.claimJob("a@x", 10))
     expect(claimed?.state).toBe("claimed")
     expect(store.jobs()[0]?.state).toBe("claimed")
   })
