@@ -1,17 +1,26 @@
 import { existsSync, readFileSync } from "node:fs"
 import { join, relative, resolve } from "node:path"
 import {
+  decodeCatalog,
   decodeMenu,
   decodePatternView,
   decodeRecipeView,
+  findParts,
   isRecord,
+  pagesOfPart,
+  partsOfPage,
+  similarParts,
+  similarToSignature,
   str,
+  type Catalog,
+  type CatalogComponent,
   type Menu,
   type MenuEntry,
   type Pattern,
   type PatternView,
   type Recipe,
   type RecipeView,
+  type SimilarPart,
 } from "@autotelic/protocol"
 
 /*
@@ -25,6 +34,7 @@ import {
 
 export interface ArtifactPaths {
   readonly dir: string
+  readonly catalog: string
   readonly menu: string
   readonly menuJson: string
   readonly patterns: string
@@ -39,6 +49,8 @@ export interface Artifact {
   readonly menu: Menu | undefined
   readonly patterns: PatternView | undefined
   readonly recipes: RecipeView | undefined
+  /** The model the three graph questions need: pages, mount points, and similarity. */
+  readonly catalog: Catalog | undefined
 }
 
 export interface MenuMatch {
@@ -56,6 +68,7 @@ export interface MenuMatch {
 }
 
 const OUTPUT_DEFAULTS = {
+  catalog: "tools/ui-catalog/catalog.json",
   menu: "tools/ui-catalog/MENU.md",
   menuJson: "tools/ui-catalog/menu.json",
   patterns: "tools/ui-catalog/PATTERNS.md",
@@ -88,6 +101,7 @@ export const artifactPaths = (root: string): ArtifactPaths => {
   const menu = outputPath(root, output, "menu")
   return {
     dir: resolve(menu, ".."),
+    catalog: outputPath(root, output, "catalog"),
     menu,
     menuJson: outputPath(root, output, "menuJson"),
     patterns: outputPath(root, output, "patterns"),
@@ -103,7 +117,8 @@ export const readArtifact = (root: string): Artifact => {
   const menu = decodeMenu(readJson(paths.menuJson))
   const patterns = decodePatternView(readJson(paths.patternsJson))
   const recipes = decodeRecipeView(readJson(paths.recipesJson))
-  return { paths, menu, patterns, recipes }
+  const catalog = decodeCatalog(readJson(paths.catalog))
+  return { paths, menu, patterns, recipes, catalog }
 }
 
 const importLine = ({
@@ -368,3 +383,156 @@ export const renderMenuJson = (
     null,
     2,
   )}\n`
+
+/*
+ * The three graph questions, at the agent's door.
+ *
+ * They read `catalog.json` rather than re-deriving a render graph from `menu.json`: the
+ * edges live on the model, and `composedOf` is a bag of names that cannot say which module
+ * a tag meant. Sharing `protocol`'s queries is what keeps this door's answer identical to
+ * `cutlist ask`'s.
+ */
+
+export type GraphQuestion =
+  | { readonly kind: "page"; readonly ref: string }
+  | { readonly kind: "part"; readonly ref: string }
+  | { readonly kind: "similar"; readonly ref: string }
+
+export type GraphAnswer =
+  | { readonly ok: false; readonly problem: string }
+  | { readonly ok: true; readonly question: GraphQuestion; readonly answer: unknown }
+
+const resolveOne = (
+  catalog: Catalog,
+  ref: string,
+): { readonly component: CatalogComponent } | { readonly problem: string } => {
+  const matches = findParts(catalog, ref)
+  const [only] = matches
+  if (only === undefined) return { problem: `no part matches "${ref}"` }
+  if (matches.length > 1) {
+    return {
+      problem: `"${ref}" is ${matches.length} parts; pass a path: ${matches
+        .slice(0, 6)
+        .map((component) => component.path)
+        .join(", ")}`,
+    }
+  }
+  return { component: only }
+}
+
+/** Answer a graph question, or say why the catalog cannot. */
+export const answerGraph = (artifact: Artifact, question: GraphQuestion): GraphAnswer => {
+  const { catalog } = artifact
+  if (catalog === undefined) {
+    return {
+      ok: false,
+      problem: `no readable catalog at ${artifact.paths.catalog}; run \`cutlist build\``,
+    }
+  }
+  if (question.kind === "page") {
+    const resolved = resolveOne(catalog, question.ref)
+    if ("problem" in resolved) return { ok: false, problem: resolved.problem }
+    const view = partsOfPage({ catalog, page: resolved.component.path })
+    if (view === undefined) return { ok: false, problem: `no part matches "${question.ref}"` }
+    return { ok: true, question, answer: view }
+  }
+  if (question.kind === "part") {
+    const resolved = resolveOne(catalog, question.ref)
+    if ("problem" in resolved) return { ok: false, problem: resolved.problem }
+    const view = pagesOfPart({ catalog, part: resolved.component.path })
+    if (view === undefined) return { ok: false, problem: `no part matches "${question.ref}"` }
+    return { ok: true, question, answer: view }
+  }
+  const resolved = resolveOne(catalog, question.ref)
+  const candidates: ReadonlyArray<SimilarPart> =
+    "component" in resolved
+      ? similarParts({ catalog, part: resolved.component.path })
+      : similarToSignature({ catalog, signature: [], name: question.ref })
+  return { ok: true, question, answer: { subject: question.ref, similar: candidates } }
+}
+
+/** The evidence line: which signal spoke, and how strongly. */
+const evidenceOf = (candidate: SimilarPart): string => {
+  if (candidate.basis === "name+skeleton") {
+    return `name ${candidate.nameScore.toFixed(2)}, skeleton ${candidate.skeletonScore.toFixed(2)}`
+  }
+  if (candidate.basis === "skeleton") return `skeleton ${candidate.skeletonScore.toFixed(2)}`
+  return `name ${candidate.nameScore.toFixed(2)}`
+}
+
+/** A terse reading of an answer: the agent has the JSON for detail. */
+export const renderGraphAnswer = (answer: GraphAnswer): string => {
+  if (!answer.ok) return `jig menu: ${answer.problem}`
+  const { question, answer: value } = answer
+  if (question.kind === "similar") {
+    const { subject, similar } = value as { subject: string; similar: ReadonlyArray<SimilarPart> }
+    if (similar.length === 0) return `jig menu: nothing resembles "${subject}"`
+    const lines = [`jig menu: ${similar.length} part(s) resemble "${subject}"`]
+    for (const candidate of similar) {
+      const evidence = evidenceOf(candidate)
+      lines.push(`- \`${candidate.name}\` — \`${candidate.path}\` — ${evidence}`)
+      if (candidate.shared.length > 0) lines.push(`  shares: ${candidate.shared.join(", ")}`)
+    }
+    return lines.join("\n")
+  }
+  const view = value as {
+    readonly page?: { readonly path: string; readonly name: string }
+    readonly part?: { readonly path: string; readonly name: string }
+    readonly edges?: boolean
+    readonly direct: ReadonlyArray<{
+      readonly path: string
+      readonly name: string
+      readonly via?: string
+    }>
+    readonly transitive?: ReadonlyArray<{
+      readonly path: string
+      readonly name: string
+      readonly via?: string
+    }>
+    readonly routes?: ReadonlyArray<{
+      readonly path: string
+      readonly name: string
+      readonly via: ReadonlyArray<string>
+    }>
+  }
+  if (question.kind === "page" && view.page !== undefined) {
+    const lines = [`jig menu: page \`${view.page.name}\` — ${view.page.path}`]
+    if (view.edges === false) {
+      lines.push(
+        "this catalog carries no render edges; rebuild it with the current cutlist to answer this question.",
+      )
+    }
+    lines.push(`direct: ${view.direct.map((edge) => `\`${edge.name}\``).join(", ") || "none"}`)
+    if ((view.transitive ?? []).length > 0) {
+      lines.push(
+        `reached: ${(view.transitive ?? [])
+          .map((edge) =>
+            edge.via === undefined ? `\`${edge.name}\`` : `\`${edge.name}\` via \`${edge.via}\``,
+          )
+          .join(", ")}`,
+      )
+    }
+    return lines.join("\n")
+  }
+  if (question.kind === "part" && view.part !== undefined) {
+    const lines = [`jig menu: part \`${view.part.name}\` — ${view.part.path}`]
+    if (view.edges === false) {
+      lines.push(
+        "this catalog carries no render edges; rebuild it with the current cutlist to answer this question.",
+      )
+    }
+    lines.push(`direct: ${view.direct.map((edge) => `\`${edge.name}\``).join(", ") || "none"}`)
+    lines.push(
+      `routes: ${
+        (view.routes ?? [])
+          .map(
+            (route) =>
+              `\`${route.name}\`${route.via.length === 0 ? "" : ` via ${route.via.map((step) => `\`${step}\``).join(" › ")}`}`,
+          )
+          .join(", ") || "none"
+      }`,
+    )
+    return lines.join("\n")
+  }
+  return JSON.stringify(value, null, 2)
+}

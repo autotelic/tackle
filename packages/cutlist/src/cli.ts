@@ -1,10 +1,20 @@
 import { Console, Data, Effect, FileSystem, Option, Path } from "effect"
 import { Command, Flag } from "effect/cli"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
-import { projectMenu } from "@autotelic/protocol"
+import {
+  decodeCatalog,
+  findParts,
+  pagesOfPart,
+  partsOfPage,
+  projectMenu,
+  similarParts,
+  similarToSignature,
+  type Catalog,
+} from "@autotelic/protocol"
 import { buildCatalog } from "./catalog.ts"
 import type { StalenessResult } from "./check.ts"
 import { loadConfig, outputOf } from "./config.ts"
+import { parseModule } from "./crawl.ts"
 import { readIntent, validateIntent } from "./intent.ts"
 import { compareOutput, outputsOf, type Renderings } from "./outputs.ts"
 import { patternsOf } from "./patterns.ts"
@@ -16,6 +26,8 @@ import { renderMenu, renderMenuJson } from "./render/menu.ts"
 import { renderPatterns, renderPatternsJson } from "./render/patterns.ts"
 import { recipesOf, renderRecipes, renderRecipesJson } from "./render/recipes.ts"
 import { renderTokens } from "./render/tokens.ts"
+import { renderFileSimilar, renderPageView, renderPartView, renderSimilar } from "./render/ask.ts"
+import { declarationSkeletonsOf } from "./signature.ts"
 
 /** One report through Effect's Console, newline-normalized so a test can capture it. */
 const write = (text: string): Effect.Effect<void> =>
@@ -239,11 +251,254 @@ const buildCommand = Command.make(
   ]),
 )
 
+/**
+ * Resolve a query to one part, or say why it is not one.
+ *
+ * Ambiguity is reported rather than resolved silently: `Button` in two apps is a real
+ * question, and picking the alphabetically first path would make the tool's answer depend
+ * on a directory name instead of on the tree.
+ */
+const resolveOne = (
+  catalog: Catalog,
+  query: string,
+): { readonly component: Catalog["components"][number] } | { readonly problem: string } => {
+  const matches = findParts(catalog, query)
+  const [only] = matches
+  if (only === undefined) return { problem: `no part matches "${query}"` }
+  if (matches.length > 1) {
+    const listed = matches
+      .slice(0, 8)
+      .map((component) => `  ${component.path}`)
+      .join("\n")
+    const more = matches.length > 8 ? `\n  … ${matches.length - 8} more` : ""
+    return {
+      problem: `"${query}" is ${matches.length} parts; pass a path:\n${listed}${more}`,
+    }
+  }
+  return { component: only }
+}
+
+/**
+ * `ask` — the catalog as questions rather than reports.
+ *
+ * It reads the artifact, not the tree: the answer a reviewer gets is the answer every
+ * consumer of the artifact sees, and `build --check` is what keeps that artifact honest.
+ * The queries themselves are `protocol`'s, so `jig menu` answers identically.
+ */
+const askCommand = Command.make(
+  "ask",
+  {
+    cwd: Flag.String("cwd").pipe(
+      Flag.withDescription("Project root (default: the current directory)."),
+      Flag.optional,
+    ),
+    config: Flag.String("config").pipe(
+      Flag.withDescription("Config file, relative to the root (default cutlist.config.json)."),
+      Flag.optional,
+    ),
+    page: Flag.String("page").pipe(
+      Flag.withDescription("What does this page render? A route name, id, or path."),
+      Flag.optional,
+    ),
+    part: Flag.String("part").pipe(
+      Flag.withDescription("Which pages mount this part? A component name, id, or path."),
+      Flag.optional,
+    ),
+    similar: Flag.String("similar").pipe(
+      Flag.withDescription("What already exists like this part? A component name, id, or path."),
+      Flag.optional,
+    ),
+    file: Flag.String("file").pipe(
+      Flag.withDescription(
+        "Compare a sketch that is not in the catalog yet, per component declaration.",
+      ),
+      Flag.optional,
+    ),
+    limit: Flag.Int("limit").pipe(
+      Flag.withDescription("Maximum similar parts per question. Default 8."),
+      Flag.withDefault(8),
+    ),
+    threshold: Flag.Finite("threshold").pipe(
+      Flag.withDescription("Minimum similarity to report, 0–1. Default 0.2."),
+      Flag.withDefault(0.2),
+    ),
+    format: Flag.Literals("format", ["text", "json"]).pipe(
+      Flag.withDescription("How to render the answer."),
+      Flag.withDefault("text"),
+    ),
+  },
+  (options) =>
+    Effect.gen(function* () {
+      const path = yield* Path.Path
+      const fs = yield* FileSystem.FileSystem
+      const cwd = path.resolve(Option.getOrUndefined(options.cwd) ?? process.cwd())
+      const settings = yield* loadConfig(
+        path.resolve(cwd, Option.getOrUndefined(options.config) ?? "cutlist.config.json"),
+      )
+      const artifact = path.resolve(cwd, outputOf(settings).catalog)
+      const text = yield* Effect.orElseSucceed(fs.readFileString(artifact), () => "")
+      const parsed =
+        text === ""
+          ? undefined
+          : yield* Effect.orElseSucceed(
+              Effect.sync(() => JSON.parse(text)),
+              () => undefined,
+            )
+      const catalog = parsed === undefined ? undefined : decodeCatalog(parsed)
+      if (catalog === undefined) {
+        yield* write(`cutlist: no readable catalog at ${artifact}; run \`cutlist build\``)
+        yield* Effect.sync(() => {
+          process.exitCode = 1
+        })
+        return
+      }
+
+      const fail = (message: string): Effect.Effect<void> =>
+        Effect.gen(function* () {
+          yield* write(`cutlist ask: ${message}`)
+          yield* Effect.sync(() => {
+            process.exitCode = 1
+          })
+        })
+
+      const pageQuery = Option.getOrUndefined(options.page)
+      const partQuery = Option.getOrUndefined(options.part)
+      const similarQuery = Option.getOrUndefined(options.similar)
+      const fileQuery = Option.getOrUndefined(options.file)
+      const asked = [pageQuery, partQuery, similarQuery, fileQuery].filter(
+        (value): value is string => value !== undefined,
+      )
+      if (asked.length === 0) {
+        yield* fail(
+          "ask one question: --page <route>, --part <component>, --similar <component>, or --file <sketch>",
+        )
+        return
+      }
+      if (asked.length > 1) {
+        yield* fail("ask one question at a time")
+        return
+      }
+
+      if (pageQuery !== undefined) {
+        const resolved = resolveOne(catalog, pageQuery)
+        if ("problem" in resolved) return yield* fail(resolved.problem)
+        const view = partsOfPage({ catalog, page: resolved.component.path })
+        if (view === undefined) return yield* fail(`no part matches "${pageQuery}"`)
+        if (options.format === "json") {
+          yield* write(JSON.stringify({ artifact, hash: catalog.hash, page: view }, null, 2))
+          return
+        }
+        yield* write(renderPageView({ catalog, view }))
+        return
+      }
+
+      if (partQuery !== undefined) {
+        const resolved = resolveOne(catalog, partQuery)
+        if ("problem" in resolved) return yield* fail(resolved.problem)
+        const view = pagesOfPart({ catalog, part: resolved.component.path })
+        if (view === undefined) return yield* fail(`no part matches "${partQuery}"`)
+        if (options.format === "json") {
+          yield* write(JSON.stringify({ artifact, hash: catalog.hash, part: view }, null, 2))
+          return
+        }
+        yield* write(renderPartView({ catalog, view }))
+        return
+      }
+
+      if (similarQuery !== undefined) {
+        const resolved = resolveOne(catalog, similarQuery)
+        // A question about something that does not exist yet is the point of this verb:
+        // a name still has tokens, and the answer says the evidence is a name.
+        const candidates =
+          "component" in resolved
+            ? similarParts({
+                catalog,
+                part: resolved.component.path,
+                limit: options.limit,
+                threshold: options.threshold,
+              })
+            : similarToSignature({
+                catalog,
+                signature: [],
+                name: similarQuery,
+                limit: options.limit,
+                threshold: options.threshold,
+              })
+        if (options.format === "json") {
+          yield* write(
+            JSON.stringify(
+              {
+                artifact,
+                hash: catalog.hash,
+                subject: {
+                  query: similarQuery,
+                  part: "component" in resolved ? resolved.component.path : null,
+                },
+                similar: candidates,
+              },
+              null,
+              2,
+            ),
+          )
+          return
+        }
+        yield* write(renderSimilar({ catalog, subject: similarQuery, candidates }))
+        return
+      }
+
+      if (fileQuery === undefined) return
+      const file = path.resolve(cwd, fileQuery)
+      const source = yield* Effect.orElseSucceed(fs.readFileString(file), () => "")
+      if (source === "") return yield* fail(`could not read ${fileQuery}`)
+      const module = parseModule({ filename: path.relative(cwd, file), text: source })
+      const groups = declarationSkeletonsOf(module).map((skeleton) => ({
+        name: skeleton.name,
+        candidates: similarToSignature({
+          catalog,
+          signature: skeleton.signature,
+          name: skeleton.name,
+          limit: options.limit,
+          threshold: options.threshold,
+        }),
+      }))
+      if (options.format === "json") {
+        yield* write(
+          JSON.stringify({ artifact, hash: catalog.hash, file: fileQuery, groups }, null, 2),
+        )
+        return
+      }
+      yield* write(renderFileSimilar({ catalog, file: fileQuery, groups }))
+    }),
+).pipe(
+  Command.withDescription(
+    "Ask the catalog a question: what a page renders, where a part appears, or what a sketch resembles. Reads the committed artifact.",
+  ),
+  Command.withShortDescription("Ask the catalog a question."),
+  Command.withExamples([
+    {
+      command: "cutlist ask --page projects_.$id._index",
+      description: "The parts a route renders, direct and through its children.",
+    },
+    {
+      command: "cutlist ask --part ProjectProgress",
+      description: "The routes that mount a part.",
+    },
+    {
+      command: "cutlist ask --similar ProjectProgress",
+      description: "Parts that compose the same way, ranked.",
+    },
+    {
+      command: "cutlist ask --file mockups/_shared/proposals.tsx",
+      description: "Compare proposed components against the app's catalog, per declaration.",
+    },
+  ]),
+)
+
 const cli = Command.make("cutlist").pipe(
   Command.withDescription(
     "The vocabulary: crawl a UI codebase into a deterministic catalog, a lint manifest, and a menu.",
   ),
-  Command.withSubcommands([buildCommand]),
+  Command.withSubcommands([buildCommand, askCommand]),
 )
 
 const program = Command.run(cli, { version: "0.0.0" }).pipe(Effect.provide(NodeServices.layer))

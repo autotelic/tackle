@@ -3,7 +3,7 @@
     "name": "recipes",
     "version": 1
   },
-  "hash": "767f577e6ee8cd40506267ea9460458787ad699566f88f970a4f0fd2087c520a",
+  "hash": "f0cae14570a7b2c5ce51ca6f2ff9c495cc6199ae01adf9ec6db7754935da95f0",
   "features": [
     {
       "id": "feature:src/components",

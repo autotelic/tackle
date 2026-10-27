@@ -23,8 +23,8 @@ Only what `cutlist.config.json` declares — never shakti's paths hardcoded:
 
 | Pass          | What it does                                                                                                                                                                 |
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1 · Parse     | every module → exports, imports, rendered tags, called hooks, declared props                                                                                                 |
-| 2 · Use-graph | for each module, the modules that import it                                                                                                                                  |
+| 1 · Parse     | every module → exports, imports (with bindings), rendered tags (with lines), called hooks, declared props                                                                    |
+| 2 · Use-graph | for each module, the modules that import it; the same resolver turns its tags into render edges                                                                              |
 | 3 · Owners    | an importer's owner is the **first route segment** (`projects_.$id.sponsors` → `projects`), or `shared` under a shared root; `transitive` follows the importers of importers |
 | 4 · Tier      | primitive root → primitive; ≥2 route owners → shared; 1 → local; no route owners under a shared root → shared; otherwise local. Zero owners is an orphan, counted separately |
 | 5 · Signature | the **behavioral skeleton**, not props ∪ tags                                                                                                                                |
@@ -108,12 +108,39 @@ Both are agents' first stop. `jig menu` reads the same artifact without importin
 shape for a concept. The pi extension exposes it as `jig_menu`, and the OpenCode plugin as
 `jig.menu`.
 
+## The render graph
+
+Each part carries `renders`: the parts its own JSX names, resolved through its own import
+bindings, with the line of first use. That is the fact `tags` could not carry — a bag of
+names cannot say whether `<Card>` means `./ui/card.tsx` or a different app's `Card` — and it
+turns "what does this screen render?" from a grep into a query.
+
+One direction is stored. The page view and the mount view are both projections of the same
+edges, so neither can drift:
+
+```sh
+cutlist ask --page 'projects_.$id._index'   # direct parts, then what is reached through them
+cutlist ask --part Button                   # direct renderers, then the routes that mount it
+cutlist ask --similar TablePanel            # name and skeleton evidence, ranked
+cutlist ask --file mockups/_shared/proposals.tsx   # a sketch that is not in the catalog
+```
+
+`ask` reads the committed artifact, not the tree: the answer is the answer every consumer
+sees, and `build --check` is what keeps that artifact honest. The queries are pure functions
+in `protocol`, so `jig menu --page …` answers identically without importing cutlist.
+[`docs/render-graph.md`](docs/render-graph.md) records the shape, the measurements, and
+what was deliberately left out.
+
 ## Commands
 
 ```sh
 cutlist build            # crawl, render every output, write them
 cutlist build --check    # fail if any committed rendering is stale (like prettier --check)
 cutlist build --timing   # print the crawl, render, and write (or compare) durations
+cutlist ask --page …     # what a page renders, direct and through its children
+cutlist ask --part …     # where a part appears on screen
+cutlist ask --similar …  # what already exists like this, by name and skeleton
+cutlist ask --file …     # compare a sketch per declaration, before it is committed
 ```
 
 `build` and `--check` iterate one table (`src/outputs.ts`), so a file cannot be written and

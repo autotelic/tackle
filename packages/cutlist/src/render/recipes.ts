@@ -56,7 +56,13 @@ const importOf = ({
   mode,
 })
 
-const importLine = (recipeImport: RecipeImport): string => {
+/**
+ * The import line for a recipe's binding.
+ *
+ * @param recipeImport - The binding, mode, and source.
+ * @returns A statement a caller can paste.
+ */
+export const importLine = (recipeImport: RecipeImport): string => {
   if (recipeImport.mode === "namespace") {
     return `import * as ${recipeImport.binding} from "${recipeImport.from}"`
   }
@@ -66,7 +72,15 @@ const importLine = (recipeImport: RecipeImport): string => {
   return `import { ${recipeImport.binding} } from "${recipeImport.from}"`
 }
 
-const bindingOf = ({
+/**
+ * Compose an import statement from a part's exports, path, and name.
+ *
+ * @param exports - The public names the module exposes, types already removed.
+ * @param path - The part's repository-relative path.
+ * @param name - The part's display name; a fallback binding when nothing else fits.
+ * @returns The binding, mode, and source a recipe imports from.
+ */
+export const bindingOf = ({
   exports,
   path,
   name,
@@ -94,7 +108,13 @@ const bindingOf = ({
 const bindingOfPart = (pattern: Pattern): RecipeImport =>
   bindingOf({ exports: pattern.exports, path: pattern.path, name: pattern.name })
 
-const bindingOfComponent = (component: CatalogComponent): RecipeImport =>
+/**
+ * The import a catalog component's own call sites would use.
+ *
+ * @param component - A catalog part; its exports and path decide the binding.
+ * @returns The binding, mode, and source for that part.
+ */
+export const bindingOfComponent = (component: CatalogComponent): RecipeImport =>
   bindingOf({
     exports: component.exports ?? [],
     path: component.path,

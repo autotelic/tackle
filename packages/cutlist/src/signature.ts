@@ -50,36 +50,41 @@ export const skeletonOf = (module: SourceModule): ReadonlyArray<string> => {
   return [...parts].sort(Order.String)
 }
 
-/**
- * React's own mechanics, not the part's domain.
- *
- * `useState`/`useEffect`/`useRef` are the frame every interactive component is built in,
- * exactly like a host `<div>`. Two components that share only those are not thereby the same
- * concept, and keeping them made a page of generic hook matches score 1.0 and swamp the real
- * duplicates. They stay in the catalog signature — an agent may want them — but not in the
- * signature the duplicate join compares.
- */
-export const INCIDENTAL_HOOKS: ReadonlySet<string> = new Set([
-  "hook:use",
-  "hook:useActionState",
-  "hook:useCallback",
-  "hook:useContext",
-  "hook:useDebugValue",
-  "hook:useDeferredValue",
-  "hook:useEffect",
-  "hook:useId",
-  "hook:useImperativeHandle",
-  "hook:useInsertionEffect",
-  "hook:useLayoutEffect",
-  "hook:useMemo",
-  "hook:useOptimistic",
-  "hook:useReducer",
-  "hook:useRef",
-  "hook:useState",
-  "hook:useSyncExternalStore",
-  "hook:useTransition",
-])
+export {
+  /**
+   * The metric lives in `protocol` so the duplicate join and the `similar` query cannot
+   * answer by different rules. Imported here for the crawler's own callers.
+   */
+  comparableSignatureOf,
+  INCIDENTAL_HOOKS,
+} from "@autotelic/protocol"
 
-/** The signature the duplicate join compares: the part's composition, not React's frame. */
-export const comparableSignatureOf = (signature: ReadonlyArray<string>): ReadonlySet<string> =>
-  new Set(signature.filter((token) => !INCIDENTAL_HOOKS.has(token)))
+/**
+ * One declaration's skeleton, for asking about a sketch that is not in the catalog yet.
+ *
+ * A file is not one part (see `declarationsOf`), and the mockup this was built for puts
+ * nine proposed components in one `_shared/proposals.tsx`. Comparing the file's union
+ * would blend all nine; comparing each declaration is the question the author is actually
+ * asking: "does something like THIS already exist?"
+ */
+export interface NamedSkeleton {
+  readonly name: string
+  readonly signature: ReadonlyArray<string>
+}
+
+/** Each declaring skeleton in a module, in source order. */
+export const declarationSkeletonsOf = (module: SourceModule): ReadonlyArray<NamedSkeleton> => {
+  const uses = module.imports
+    .filter((specifier) =>
+      HEADLESS_PACKAGES.some((pkg) => specifier === pkg || specifier.startsWith(pkg)),
+    )
+    .map((specifier) => `uses:${specifier}`)
+  return module.declarations.map((declaration) => {
+    const parts = new Set<string>(uses)
+    for (const tag of declaration.tags) if (isCompositionTag(tag)) parts.add(`tag:${tag}`)
+    for (const call of declaration.calls) {
+      if (call.startsWith("use")) parts.add(`hook:${call}`)
+    }
+    return { name: declaration.name, signature: [...parts].sort(Order.String) }
+  })
+}

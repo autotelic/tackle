@@ -31,8 +31,30 @@ export interface Declaration {
   readonly renders: boolean
   /** Callee names inside the declaration; `useState`, `createContext`, `memo`. */
   readonly calls: ReadonlyArray<string>
+  /** JSX tags inside the declaration, so one file's declarations can be asked separately. */
+  readonly tags: ReadonlyArray<string>
   /** Keys, when a variable is bound to an object literal. */
   readonly objectKeys?: ReadonlyArray<string>
+}
+
+/** A JSX element as written, with where it was written. */
+export interface RenderSite {
+  readonly tag: string
+  /** One-based line in the module. */
+  readonly line: number
+}
+
+/**
+ * One import statement's specifier and the local names it binds.
+ *
+ * The specifier alone is enough for the use-graph, which only asks "who imported whom".
+ * Resolving a rendered tag is a different question — `<Card>` means `./ui/card.tsx` only
+ * if this file bound `Card` to it — so the binding is read once, here, and the render edges
+ * are a lookup over it rather than a second walk of the imports.
+ */
+export interface ImportEdge {
+  readonly specifier: string
+  readonly bindings: ReadonlyArray<string>
 }
 
 /** One parsed module, reduced to what the catalog needs. */
@@ -40,8 +62,13 @@ export interface SourceModule {
   /** Repository-relative, forward-slashed. */
   readonly path: string
   readonly exports: ReadonlyArray<string>
+  /** Every imported specifier, deduplicated: the use-graph and the signature read this. */
   readonly imports: ReadonlyArray<string>
+  /** Each import with the local names it introduces; `imports` is derived from these. */
+  readonly importEdges: ReadonlyArray<ImportEdge>
   readonly tags: ReadonlyArray<string>
+  /** Every JSX element with its line; `tags` is derived from these. */
+  readonly renders: ReadonlyArray<RenderSite>
   readonly hooks: ReadonlyArray<string>
   readonly props: ReadonlyArray<string>
   /** Object literals in the module. The composition pattern lives in their keys. */
@@ -211,6 +238,41 @@ const rendersIn = (node: Ast): boolean => {
   return renders
 }
 
+/** The JSX tag names inside a node, deduplicated. */
+const tagsIn = (node: Ast): ReadonlyArray<string> => {
+  const tags = new Set<string>()
+  walk(node, (child) => {
+    if (child.type !== "JSXOpeningElement") return
+    const name = jsxNameOf(child.name)
+    if (name !== undefined) tags.add(name)
+  })
+  return [...tags].sort(Order.String)
+}
+
+/**
+ * A line for an offset, from the newline positions.
+ *
+ * oxc reports byte offsets, and a report a person cannot open is not a report: a render
+ * edge without a line makes the caller grep. Walking the newlines once per file keeps this
+ * linear in the source rather than quadratic in the number of JSX elements.
+ */
+const lineIndex = (text: string): ((offset: number) => number) => {
+  const starts: Array<number> = [0]
+  for (let index = 0; index < text.length; index += 1) {
+    if (text[index] === "\n") starts.push(index + 1)
+  }
+  return (offset) => {
+    let low = 0
+    let high = starts.length - 1
+    while (low < high) {
+      const middle = (low + high + 1) >> 1
+      if ((starts[middle] ?? 0) <= offset) low = middle
+      else high = middle - 1
+    }
+    return low + 1
+  }
+}
+
 /**
  * The module's top-level declarations.
  *
@@ -319,9 +381,42 @@ const declarationsOf = (program: Ast): ReadonlyArray<Declaration> => {
     exported: exported || exportedNames.has(name),
     renders: rendersIn(node),
     calls: calleeNamesIn(node),
+    tags: tagsIn(node),
     ...(objectKeys === undefined ? {} : { objectKeys }),
   }))
 }
+
+/**
+ * The local names each import statement binds, with its specifier.
+ *
+ * A namespace binding is deliberately dropped: `import * as UI from "./ui"` then `<UI.Button>`
+ * names an export of a barrel, not the barrel part, and guessing that a member expression
+ * means its module is the one resolution this pass must not fake. Those tags stay in `tags`
+ * unresolved rather than becoming a wrong edge.
+ */
+const importEdgesOf = (
+  statements: ReadonlyArray<{
+    readonly moduleRequest: { readonly value: string }
+    readonly entries: ReadonlyArray<{
+      readonly importName: { readonly kind: string; readonly name: string | null }
+      readonly localName: { readonly value: string }
+      readonly isType: boolean
+    }>
+  }>,
+): ReadonlyArray<ImportEdge> =>
+  statements
+    .map((statement) => ({
+      specifier: statement.moduleRequest.value,
+      bindings: statement.entries
+        .filter(
+          (entry) =>
+            !entry.isType &&
+            entry.importName.kind !== "NamespaceObject" &&
+            entry.localName.value !== "",
+        )
+        .map((entry) => entry.localName.value),
+    }))
+    .filter((edge) => edge.bindings.length > 0)
 
 /**
  * The parser dialect for a file, by extension.
@@ -343,15 +438,21 @@ export const parseModule = ({
 }): SourceModule => {
   const parsed = parseSync(filename, text, { sourceType: "module", lang: langOf(filename) })
   const program = asRecord(parsed.program) ?? {}
+  const lineAt = lineIndex(text)
   const tags = new Set<string>()
   const hooks = new Set<string>()
+  const renderSites: Array<RenderSite> = []
   const objectKeys = new Map<object, ReadonlyArray<string>>()
   const objectNames = new Map<object, string>()
   let createsContext = false
   walk(program, (node) => {
     if (node.type === "JSXOpeningElement") {
       const name = jsxNameOf(node.name)
-      if (name !== undefined) tags.add(name)
+      if (name !== undefined) {
+        tags.add(name)
+        const start = node.start
+        if (typeof start === "number") renderSites.push({ tag: name, line: lineAt(start) })
+      }
     } else if (node.type === "CallExpression") {
       const name = calleeNameOf(node.callee)
       if (name !== undefined && name.startsWith("use")) hooks.add(name)
@@ -390,7 +491,9 @@ export const parseModule = ({
         ),
       ]),
     ].sort(Order.String),
+    importEdges: importEdgesOf(parsed.module.staticImports),
     tags: [...tags].sort(Order.String),
+    renders: renderSites,
     hooks: [...hooks].sort(Order.String),
     props: propsOf(program),
     objects,

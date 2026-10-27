@@ -3,10 +3,13 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterAll, describe, expect, it } from "vitest"
+import { emptyCatalog } from "@autotelic/protocol"
 import {
+  answerGraph,
   artifactPaths,
   findMatches,
   readArtifact,
+  renderGraphAnswer,
   renderMatches,
   renderMenuJson,
   renderSummary,
@@ -159,5 +162,104 @@ describe("the jig menu artifact reader", () => {
         expect(findMatches(artifact, "dialog", limit).length).toBeLessThanOrEqual(limit)
       }),
     )
+  })
+})
+
+describe("graph questions", () => {
+  write("catalog.json", {
+    ...emptyCatalog(root),
+    hash: "abc123",
+    sharedRoots: ["src/components"],
+    localRoots: ["src/routes"],
+    components: [
+      {
+        id: "src--routes--dashboard",
+        path: "src/routes/dashboard.tsx",
+        name: "dashboard",
+        kind: "route",
+        roles: ["component", "route"],
+        tier: "local",
+        owners: [],
+        props: [],
+        tags: ["Wrapper"],
+        signature: ["tag:Wrapper"],
+        documented: false,
+        renders: [{ part: "src/components/wrapper.tsx", tag: "Wrapper", line: 3, count: 1 }],
+      },
+      {
+        id: "src--components--wrapper",
+        path: "src/components/wrapper.tsx",
+        name: "Wrapper",
+        kind: "component",
+        roles: ["component"],
+        tier: "shared",
+        owners: ["dashboard"],
+        props: [],
+        tags: ["Leaf"],
+        signature: ["tag:Leaf"],
+        documented: false,
+        renders: [{ part: "src/components/leaf.tsx", tag: "Leaf", line: 4, count: 1 }],
+      },
+      {
+        id: "src--components--leaf",
+        path: "src/components/leaf.tsx",
+        name: "Leaf",
+        kind: "component",
+        roles: ["component"],
+        tier: "shared",
+        owners: ["dashboard"],
+        props: [],
+        tags: [],
+        signature: ["tag:Leaf"],
+        documented: false,
+      },
+      {
+        id: "src--components--table",
+        path: "src/components/table.tsx",
+        name: "Table",
+        kind: "component",
+        roles: ["component"],
+        tier: "shared",
+        owners: ["dashboard"],
+        props: [],
+        tags: [],
+        signature: [],
+        documented: false,
+      },
+    ],
+  })
+  const withCatalog = readArtifact(root)
+
+  it("reads the catalog without touching the tree", () => {
+    expect(withCatalog.catalog?.components).toHaveLength(4)
+  })
+
+  it("answers what a page renders, direct and through a child", () => {
+    const answer = answerGraph(withCatalog, { kind: "page", ref: "dashboard" })
+    expect(answer.ok).toBe(true)
+    const text = renderGraphAnswer(answer)
+    expect(text).toContain("page `dashboard`")
+    expect(text).toContain("direct: `Wrapper`")
+    expect(text).toContain("`Leaf` via `src/components/wrapper.tsx`")
+  })
+
+  it("answers which routes mount a part", () => {
+    const answer = answerGraph(withCatalog, { kind: "part", ref: "leaf" })
+    expect(renderGraphAnswer(answer)).toContain("routes: `dashboard`")
+  })
+
+  it("answers a name that is not in the catalog yet", () => {
+    const answer = answerGraph(withCatalog, { kind: "similar", ref: "TablePanel" })
+    expect(answer.ok).toBe(true)
+    expect(renderGraphAnswer(answer)).toContain("`Table`")
+  })
+
+  it("says why it cannot answer when the catalog is missing", () => {
+    const answer = answerGraph(
+      { ...withCatalog, catalog: undefined },
+      { kind: "page", ref: "dashboard" },
+    )
+    expect(answer.ok).toBe(false)
+    expect(renderGraphAnswer(answer)).toContain("run `cutlist build`")
   })
 })

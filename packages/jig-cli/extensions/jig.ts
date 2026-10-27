@@ -362,11 +362,36 @@ export default function (pi: ExtensionAPI): void {
           description: "A part, feature, or concept to find. Omit for the stable shape.",
         }),
       ),
+      page: Type.Optional(
+        Type.String({
+          description:
+            "What does this page render? A route name, id, or path. Answers with the direct parts and what is reached through them.",
+        }),
+      ),
+      part: Type.Optional(
+        Type.String({
+          description:
+            "Which pages mount this part? A component name, id, or path. Answers with the renderers and the routes above them.",
+        }),
+      ),
+      similar: Type.Optional(
+        Type.String({
+          description:
+            "What already exists like this name? Use before proposing a new part; answers with name and skeleton evidence.",
+        }),
+      ),
       limit: Type.Optional(Type.Number({ description: "Maximum matches. Default 12." })),
     }),
     async execute(
       _toolCallId: string,
-      params: { readonly cwd?: string; readonly query?: string; readonly limit?: number },
+      params: {
+        readonly cwd?: string
+        readonly query?: string
+        readonly page?: string
+        readonly part?: string
+        readonly similar?: string
+        readonly limit?: number
+      },
       signal: AbortSignal | undefined,
       _onUpdate: unknown,
       ctx: ExtensionContext,
@@ -374,12 +399,17 @@ export default function (pi: ExtensionAPI): void {
       try {
         const target = targetFor(params.cwd, ctx)
         const limit = params.limit === undefined ? 12 : params.limit
+        const flag = (name: string, value: string | undefined): ReadonlyArray<string> =>
+          value === undefined || value === "" ? [] : [`--${name}`, value]
         const args = [
           "menu",
           "--cwd",
           target,
           "--limit",
           String(limit),
+          ...flag("page", params.page),
+          ...flag("part", params.part),
+          ...flag("similar", params.similar),
           ...(params.query === undefined || params.query === "" ? [] : [params.query]),
         ]
         const result = await run(pi, target, args, signal)

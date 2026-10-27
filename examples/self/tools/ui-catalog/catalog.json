@@ -1,5 +1,5 @@
 {
-  "hash": "767f577e6ee8cd40506267ea9460458787ad699566f88f970a4f0fd2087c520a",
+  "hash": "f0cae14570a7b2c5ce51ca6f2ff9c495cc6199ae01adf9ec6db7754935da95f0",
   "lexicon": {
     "name": "catalog",
     "version": 1
@@ -77,7 +77,8 @@
           "kind": "type",
           "exported": true,
           "renders": false,
-          "calls": []
+          "calls": [],
+          "tags": []
         },
         {
           "name": "ProjectToolbar",
@@ -87,7 +88,25 @@
           "calls": [
             "setTheme",
             "useTheme"
+          ],
+          "tags": [
+            "Button",
+            "Card"
           ]
+        }
+      ],
+      "renders": [
+        {
+          "part": "src/components/ui/card.tsx",
+          "tag": "Card",
+          "line": 20,
+          "count": 1
+        },
+        {
+          "part": "src/components/ui/button.tsx",
+          "tag": "Button",
+          "line": 22,
+          "count": 1
         }
       ]
     },
@@ -118,14 +137,16 @@
           "kind": "type",
           "exported": true,
           "renders": false,
-          "calls": []
+          "calls": [],
+          "tags": []
         },
         {
           "name": "ThemeContextValue",
           "kind": "type",
           "exported": true,
           "renders": false,
-          "calls": []
+          "calls": [],
+          "tags": []
         },
         {
           "name": "ThemeContext",
@@ -134,7 +155,8 @@
           "renders": false,
           "calls": [
             "createContext"
-          ]
+          ],
+          "tags": []
         }
       ]
     },
@@ -175,7 +197,8 @@
           "kind": "type",
           "exported": true,
           "renders": false,
-          "calls": []
+          "calls": [],
+          "tags": []
         },
         {
           "name": "ThemeProvider",
@@ -185,7 +208,18 @@
           "calls": [
             "useMemo",
             "useState"
+          ],
+          "tags": [
+            "ThemeContext.Provider"
           ]
+        }
+      ],
+      "renders": [
+        {
+          "part": "src/components/theme-context.ts",
+          "tag": "ThemeContext.Provider",
+          "line": 19,
+          "count": 1
         }
       ]
     },
@@ -216,14 +250,18 @@
           "kind": "type",
           "exported": true,
           "renders": false,
-          "calls": []
+          "calls": [],
+          "tags": []
         },
         {
           "name": "Badge",
           "kind": "function",
           "exported": true,
           "renders": true,
-          "calls": []
+          "calls": [],
+          "tags": [
+            "span"
+          ]
         }
       ]
     },
@@ -260,7 +298,8 @@
           "kind": "type",
           "exported": true,
           "renders": false,
-          "calls": []
+          "calls": [],
+          "tags": []
         },
         {
           "name": "classes",
@@ -268,6 +307,7 @@
           "exported": false,
           "renders": false,
           "calls": [],
+          "tags": [],
           "objectKeys": [
             "default",
             "outline",
@@ -279,7 +319,10 @@
           "kind": "function",
           "exported": true,
           "renders": true,
-          "calls": []
+          "calls": [],
+          "tags": [
+            "button"
+          ]
         }
       ]
     },
@@ -317,14 +360,19 @@
           "kind": "type",
           "exported": true,
           "renders": false,
-          "calls": []
+          "calls": [],
+          "tags": []
         },
         {
           "name": "Card",
           "kind": "function",
           "exported": true,
           "renders": true,
-          "calls": []
+          "calls": [],
+          "tags": [
+            "h2",
+            "section"
+          ]
         }
       ]
     },
@@ -359,7 +407,8 @@
           "renders": false,
           "calls": [
             "useContext"
-          ]
+          ],
+          "tags": []
         }
       ]
     },
@@ -393,7 +442,25 @@
           "kind": "function",
           "exported": true,
           "renders": true,
-          "calls": []
+          "calls": [],
+          "tags": [
+            "Card",
+            "ProjectToolbar"
+          ]
+        }
+      ],
+      "renders": [
+        {
+          "part": "src/components/ui/card.tsx",
+          "tag": "Card",
+          "line": 13,
+          "count": 1
+        },
+        {
+          "part": "src/components/project-toolbar.tsx",
+          "tag": "ProjectToolbar",
+          "line": 14,
+          "count": 1
         }
       ]
     },
@@ -432,7 +499,32 @@
           "renders": true,
           "calls": [
             "useParams"
+          ],
+          "tags": [
+            "Card",
+            "ProjectToolbar",
+            "ThemeProvider"
           ]
+        }
+      ],
+      "renders": [
+        {
+          "part": "src/components/theme-provider.tsx",
+          "tag": "ThemeProvider",
+          "line": 16,
+          "count": 1
+        },
+        {
+          "part": "src/components/project-toolbar.tsx",
+          "tag": "ProjectToolbar",
+          "line": 17,
+          "count": 1
+        },
+        {
+          "part": "src/components/ui/card.tsx",
+          "tag": "Card",
+          "line": 18,
+          "count": 1
         }
       ]
     },
@@ -468,7 +560,32 @@
           "kind": "function",
           "exported": true,
           "renders": true,
-          "calls": []
+          "calls": [],
+          "tags": [
+            "Card",
+            "ProjectToolbar",
+            "ThemeProvider"
+          ]
+        }
+      ],
+      "renders": [
+        {
+          "part": "src/components/theme-provider.tsx",
+          "tag": "ThemeProvider",
+          "line": 14,
+          "count": 1
+        },
+        {
+          "part": "src/components/ui/card.tsx",
+          "tag": "Card",
+          "line": 15,
+          "count": 1
+        },
+        {
+          "part": "src/components/project-toolbar.tsx",
+          "tag": "ProjectToolbar",
+          "line": 16,
+          "count": 1
         }
       ]
     }

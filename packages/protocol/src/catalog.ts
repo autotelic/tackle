@@ -92,6 +92,14 @@ export interface CatalogComponent extends ComponentFields {
   /** Top-level declarations. The raw material a rule reads instead of re-parsing source. */
   readonly declarations?: ReadonlyArray<CatalogDeclaration>
   /**
+   * The parts this one renders, resolved through its own imports and in source order.
+   *
+   * Optional: a catalog written before edges landed has none, and a part that renders no
+   * catalog part (a wrapper around a host element, a leaf primitive) carries none either.
+   * Absent means "no edge", never "unknown" — `tags` still records every name.
+   */
+  readonly renders?: ReadonlyArray<RenderEdge>
+  /**
    * The behavioral skeleton: the headless primitive it wraps, the headless
    * sub-components it renders, the hooks it calls, and its token-class categories.
    *
@@ -102,6 +110,28 @@ export interface CatalogComponent extends ComponentFields {
   readonly signature: ReadonlyArray<string>
   /** Whether the source carries a documentation block the catalog could read. */
   readonly documented: boolean
+}
+
+/**
+ * One JSX element the part renders, resolved to a catalog part.
+ *
+ * `tags` is a bag of names: `<Link>` (the router's), `<Button>` (the primitive), and
+ * `<StatusStepper>` (a local part) are the same kind of string there. Which part a tag
+ * means is a fact about the file's imports, and the crawler already resolved those for the
+ * use-graph — so the render edge costs one lookup, not a second analysis.
+ *
+ * The edge points at the part, not at the export: a cutlist part is a module, so a binding
+ * that resolves to `./button.tsx` names that part however the call site spells it.
+ */
+export interface RenderEdge {
+  /** The path of the part rendered. */
+  readonly part: string
+  /** The tag as written, including a member expression: `Combobox.Input`. */
+  readonly tag: string
+  /** One-based line in the rendering module. The first site, when a part renders twice. */
+  readonly line: number
+  /** How many sites in the module render it. */
+  readonly count: number
 }
 
 /** Two components the crawler proposes as near-duplicates, for a judge to confirm. */
@@ -255,6 +285,43 @@ export const projectManifest = (
 /** The signature a component is compared by. */
 export const signatureOf = (component: CatalogComponent): ReadonlySet<string> =>
   new Set(component.signature)
+
+/**
+ * React's own mechanics, not the part's domain.
+ *
+ * `useState`/`useEffect`/`useRef` are the frame every interactive component is built in,
+ * exactly like a host `<div>`. Two components that share only those are not thereby the same
+ * concept, and keeping them made a page of generic hook matches score 1.0 and swamp the real
+ * duplicates. They stay in the catalog signature — an agent may want them — but not in the
+ * signature a similarity question compares.
+ *
+ * The set lives in the format rather than in `cutlist` because the duplicate join and the
+ * `similar` query must answer by the same metric; a second copy is a second opinion.
+ */
+export const INCIDENTAL_HOOKS: ReadonlySet<string> = new Set([
+  "hook:use",
+  "hook:useActionState",
+  "hook:useCallback",
+  "hook:useContext",
+  "hook:useDebugValue",
+  "hook:useDeferredValue",
+  "hook:useEffect",
+  "hook:useId",
+  "hook:useImperativeHandle",
+  "hook:useInsertionEffect",
+  "hook:useLayoutEffect",
+  "hook:useMemo",
+  "hook:useOptimistic",
+  "hook:useReducer",
+  "hook:useRef",
+  "hook:useState",
+  "hook:useSyncExternalStore",
+  "hook:useTransition",
+])
+
+/** The signature a similarity question compares: the part's composition, not React's frame. */
+export const comparableSignatureOf = (signature: ReadonlyArray<string>): ReadonlySet<string> =>
+  new Set(signature.filter((token) => !INCIDENTAL_HOOKS.has(token)))
 
 /**
  * Jaccard overlap of two signatures.
@@ -435,6 +502,19 @@ export const decodeCluster = (value: unknown): DuplicateCluster | undefined => {
   return { canonical, name, members, score, usedBy }
 }
 
+/** Read one render edge, or `undefined` when malformed. */
+export const decodeRenderEdge = (value: unknown): RenderEdge | undefined => {
+  if (!isRecord(value)) return undefined
+  const part = str(value.part)
+  const tag = str(value.tag)
+  const line = num(value.line)
+  const count = num(value.count)
+  if (part === undefined || tag === undefined || line === undefined || count === undefined) {
+    return undefined
+  }
+  return { part, tag, line, count }
+}
+
 /** Read one component, or `undefined` when malformed. */
 export const decodeCatalogComponent = (value: unknown): CatalogComponent | undefined => {
   if (!isRecord(value)) return undefined
@@ -445,6 +525,7 @@ export const decodeCatalogComponent = (value: unknown): CatalogComponent | undef
   const exports = strings(value.exports)
   const usedBy = num(value.usedBy)
   const declarations = arrayOf(value.declarations, decodeDeclaration)
+  const renders = arrayOf(value.renders, decodeRenderEdge)
   const path = str(value.path)
   const name = str(value.name)
   const tier = oneOf(value.tier, TIERS_NAMES)
@@ -473,6 +554,7 @@ export const decodeCatalogComponent = (value: unknown): CatalogComponent | undef
     ...(exports === undefined ? {} : { exports }),
     ...(usedBy === undefined ? {} : { usedBy }),
     ...(declarations === undefined ? {} : { declarations }),
+    ...(renders === undefined ? {} : { renders }),
     path,
     name,
     tier,

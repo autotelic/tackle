@@ -10,7 +10,15 @@ import { loadConfig } from "./config.ts"
 import { resolveEngineCommand } from "./engines.ts"
 import { EXIT, gateVerdict } from "./gate.ts"
 import { touchedFiles } from "./git.ts"
-import { findMatches, readArtifact, renderMatches, renderMenuJson, renderSummary } from "./menu.ts"
+import {
+  answerGraph,
+  findMatches,
+  readArtifact,
+  renderGraphAnswer,
+  renderMatches,
+  renderMenuJson,
+  renderSummary,
+} from "./menu.ts"
 import { renderCodeClimate, renderJsonl, renderLsp, renderSarif } from "./projections.ts"
 import { renderGithub, renderJson, renderText } from "./render.ts"
 import { harnessRun } from "./run.ts"
@@ -225,6 +233,18 @@ const onboardCommand = Command.make(
   "onboard",
   {
     cwd: cwdFlag,
+    gate: Flag.Literals("gate", ["touched-files", "all"]).pipe(
+      Flag.withDescription(
+        "What the plan should gate on: only the change in front of you (default), or every finding in the repo.",
+      ),
+      Flag.optional,
+    ),
+    force: Flag.Boolean("force").pipe(
+      Flag.withDescription(
+        "Plan a rewrite of jig.config.json, JIG.md and ONBOARD.md; never the baseline.",
+      ),
+      Flag.withDefault(false),
+    ),
     format: Flag.Literals("format", ["text", "json"]).pipe(
       Flag.withDescription("The prompt alone, or the prompt with the plan as JSON."),
       Flag.withDefault("text"),
@@ -234,7 +254,11 @@ const onboardCommand = Command.make(
     Effect.gen(function* () {
       const path = yield* Path.Path
       const root = path.resolve(Option.getOrUndefined(options.cwd) ?? process.cwd())
-      const result = yield* initialise(root, { dryRun: true })
+      const result = yield* initialise(root, {
+        dryRun: true,
+        force: options.force,
+        gateMode: Option.getOrUndefined(options.gate),
+      })
       const prompt = onboardingFor(result.profile)
       yield* write(options.format === "json" ? initJson(result, prompt) : prompt)
     }),
@@ -345,6 +369,20 @@ const menuCommand = Command.make(
       Flag.withDescription("Maximum matches to print. Default 12."),
       Flag.withDefault(12),
     ),
+    page: Flag.String("page").pipe(
+      Flag.withDescription("What does this page render? A route name, id, or path."),
+      Flag.optional,
+    ),
+    part: Flag.String("part").pipe(
+      Flag.withDescription("Which pages mount this part? A component name, id, or path."),
+      Flag.optional,
+    ),
+    similar: Flag.String("similar").pipe(
+      Flag.withDescription(
+        "What already exists like this? A name, whether the part exists or not.",
+      ),
+      Flag.optional,
+    ),
   },
   (options) =>
     Effect.gen(function* () {
@@ -352,6 +390,40 @@ const menuCommand = Command.make(
       const root = path.resolve(Option.getOrUndefined(options.cwd) ?? process.cwd())
       const artifact = readArtifact(root)
       const query = Option.getOrUndefined(options.query)
+
+      const page = Option.getOrUndefined(options.page)
+      const part = Option.getOrUndefined(options.part)
+      const similar = Option.getOrUndefined(options.similar)
+      const graph = [
+        page === undefined ? undefined : ({ kind: "page", ref: page } as const),
+        part === undefined ? undefined : ({ kind: "part", ref: part } as const),
+        similar === undefined ? undefined : ({ kind: "similar", ref: similar } as const),
+      ].filter((question): question is NonNullable<typeof question> => question !== undefined)
+      if (graph.length > 1) {
+        yield* write("jig menu: ask one of --page, --part, --similar")
+        yield* Effect.sync(() => {
+          process.exitCode = 1
+        })
+        return
+      }
+      const question = graph[0]
+      if (question !== undefined) {
+        const answer = answerGraph(artifact, question)
+        if (options.format === "json") {
+          yield* write(
+            `${JSON.stringify({ artifact: artifact.paths, question, ...answer }, null, 2)}\n`,
+          )
+        } else {
+          yield* write(renderGraphAnswer(answer))
+        }
+        if (!answer.ok) {
+          yield* Effect.sync(() => {
+            process.exitCode = 1
+          })
+        }
+        return
+      }
+
       const missing =
         artifact.menu === undefined &&
         artifact.patterns === undefined &&
@@ -376,7 +448,7 @@ const menuCommand = Command.make(
     }),
 ).pipe(
   Command.withDescription(
-    "Read the cutlist artifact: the stable shape, or the parts and recipes that answer a query. This is the agent door to the menu; it does not re-analyse the tree.",
+    "Read the cutlist artifact: the stable shape, the parts and recipes that answer a query, or the graph questions — what a page renders, where a part appears, what a name resembles. This is the agent door to the menu; it does not re-analyse the tree.",
   ),
   Command.withShortDescription("Find a part in the cutlist menu."),
   Command.withExamples([
@@ -384,6 +456,14 @@ const menuCommand = Command.make(
     {
       command: "jig menu dialog",
       description: "Find parts, features, and recipes matching a word.",
+    },
+    {
+      command: "jig menu --page dashboard_.$id",
+      description: "What a route renders today, direct and through its children.",
+    },
+    {
+      command: "jig menu --similar TablePanel",
+      description: "What already exists before a new part is invented.",
     },
     { command: "jig menu wizard --format json", description: "Return the same view for a tool." },
   ]),

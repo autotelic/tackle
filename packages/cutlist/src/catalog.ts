@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto"
-import { Effect, FileSystem, Order, Path } from "effect"
+import { Effect, FileSystem, Option, Order, Path } from "effect"
 import {
+  comparableSignatureOf,
   lexiconRef,
   similarityOf,
   type Catalog,
@@ -10,6 +11,7 @@ import {
   type DuplicateCandidate,
   type DuplicateCluster,
   type PartRole,
+  type RenderEdge,
 } from "@autotelic/protocol"
 import { listSources, readModules, type SourceModule } from "./crawl.ts"
 import { dirOf, featuresOf } from "./features.ts"
@@ -23,7 +25,7 @@ import {
 } from "./paths.ts"
 import { ownersOf } from "./owners.ts"
 import { kindOf, rolesOf } from "./roles.ts"
-import { comparableSignatureOf, skeletonOf } from "./signature.ts"
+import { skeletonOf } from "./signature.ts"
 import { tierOf } from "./tier.ts"
 import { extractTokens } from "./tokens.ts"
 
@@ -122,50 +124,147 @@ const resolveSpecifier = ({
   return []
 }
 
-/** Pass 2 — for each module, the modules that import it. Exported for the graph's own test. */
-export const importerGraph = (
-  modules: ReadonlyArray<SourceModule>,
-  alias: Readonly<Record<string, ReadonlyArray<string>>>,
-  roots: ReadonlyArray<string> = [],
-): ReadonlyMap<string, ReadonlyArray<string>> => {
+/** A module's base path to the module that defines it; `index` is also reachable as its directory. */
+const moduleIndex = (modules: ReadonlyArray<SourceModule>): ReadonlyMap<string, string> => {
   const byBase = new Map<string, string>()
   for (const module of modules) {
     const base = stripSourceExtension(module.path)
     byBase.set(base, module.path)
     if (base.endsWith("/index")) byBase.set(base.slice(0, -"/index".length), module.path)
   }
+  return byBase
+}
+
+/** What resolution needs beyond the specifier: where it was written, and where it may land. */
+interface TargetQuery {
+  readonly specifier: string
+  readonly importerDir: string
+  readonly importerRoot: string | undefined
+  readonly rules: ReadonlyArray<AliasRule>
+  readonly byBase: ReadonlyMap<string, string>
+}
+
+/**
+ * Resolve one specifier to a module in the crawl, or `undefined` when nothing local matches.
+ *
+ * One implementation for both readers: the use-graph asks who imported whom, and the render
+ * edges ask which part a tag names. Two copies would eventually disagree about a monorepo
+ * alias, and the disagreement would look like a component with no importers and a page that
+ * renders nothing.
+ */
+const targetOf = ({
+  specifier,
+  importerDir,
+  importerRoot,
+  rules,
+  byBase,
+}: TargetQuery): Option.Option<string> => {
+  const resolved = resolveSpecifier({ specifier, importerDir, rules })
+  // An alias target is global, but a monorepo has one `components/Button` per app. Read
+  // the aliased import from the importer's own root first; a target under another root is
+  // still a candidate, which is what lets a shared package alias out of the app.
+  const ordered =
+    importerRoot === undefined || resolved.length < 2
+      ? resolved
+      : [...resolved].sort((left, right) => {
+          const leftSame = left === importerRoot || left.startsWith(`${importerRoot}/`) ? 1 : 0
+          const rightSame = right === importerRoot || right.startsWith(`${importerRoot}/`) ? 1 : 0
+          return rightSame - leftSame
+        })
+  return Option.fromUndefinedOr(
+    ordered.map((candidate) => byBase.get(candidate)).find((target) => target !== undefined),
+  )
+}
+
+/** The configured root a module sits in, longest first — the one an alias should prefer. */
+const rootOf = (modulePath: string, roots: ReadonlyArray<string>): Option.Option<string> =>
+  Option.fromUndefinedOr(
+    roots
+      .filter((root) => modulePath === root || modulePath.startsWith(`${root}/`))
+      .sort((left, right) => right.length - left.length)[0],
+  )
+
+/** Pass 2 — for each module, the modules that import it. Exported for the graph's own test. */
+export const importerGraph = (
+  modules: ReadonlyArray<SourceModule>,
+  alias: Readonly<Record<string, ReadonlyArray<string>>>,
+  roots: ReadonlyArray<string> = [],
+): ReadonlyMap<string, ReadonlyArray<string>> => {
+  const byBase = moduleIndex(modules)
   const rules = aliasRules(alias)
   const importers = new Map<string, Set<string>>()
   for (const module of modules) {
     const dir = dirnamePosix(module.path)
-    // An alias target is global, but a monorepo has one `components/Button` per app. Read
-    // the aliased import from the importer's own root first; a target under another root is
-    // still a candidate, which is what lets a shared package alias out of the app.
-    const importerRoot = roots
-      .filter((root) => module.path === root || module.path.startsWith(`${root}/`))
-      .sort((left, right) => right.length - left.length)[0]
+    const importerRoot = Option.getOrUndefined(rootOf(module.path, roots))
     for (const specifier of module.imports) {
-      const resolved = resolveSpecifier({ specifier, importerDir: dir, rules })
-      const ordered =
-        importerRoot === undefined || resolved.length < 2
-          ? resolved
-          : [...resolved].sort((left, right) => {
-              const leftSame = left === importerRoot || left.startsWith(`${importerRoot}/`) ? 1 : 0
-              const rightSame =
-                right === importerRoot || right.startsWith(`${importerRoot}/`) ? 1 : 0
-              return rightSame - leftSame
-            })
-      for (const candidate of ordered) {
-        const target = byBase.get(candidate)
-        if (target === undefined || target === module.path) continue
-        const set = importers.get(target) ?? new Set<string>()
-        set.add(module.path)
-        importers.set(target, set)
-        break
-      }
+      const target = Option.getOrUndefined(
+        targetOf({
+          specifier,
+          importerDir: dir,
+          importerRoot,
+          rules,
+          byBase,
+        }),
+      )
+      if (target === undefined || target === module.path) continue
+      const set = importers.get(target) ?? new Set<string>()
+      set.add(module.path)
+      importers.set(target, set)
     }
   }
   return new Map([...importers].map(([key, value]) => [key, [...value].sort(Order.String)]))
+}
+
+/**
+ * The parts a module's JSX names, resolved through its own import bindings.
+ *
+ * This is the fact the catalog used to throw away. `tags` keeps the names — a bag where
+ * `<Link>`, `<Card>`, and `<StatusStepper>` are indistinguishable — so a page question
+ * could only be answered by guessing. The binding is authoritative: if this file imports
+ * `Card` from `./ui/card.tsx`, then `<Card>` renders that part, whatever else is called
+ * `Card` elsewhere in a multi-app tree.
+ *
+ * A namespace or unresolved binding produces no edge on purpose. A wrong edge is worse than
+ * a missing one: the whole value of the answer is that a mock author can stop looking.
+ */
+export const renderEdgesOf = ({
+  module,
+  byBase,
+  alias,
+  roots,
+}: {
+  readonly module: SourceModule
+  readonly byBase: ReadonlyMap<string, string>
+  readonly alias: Readonly<Record<string, ReadonlyArray<string>>>
+  readonly roots: ReadonlyArray<string>
+}): ReadonlyArray<RenderEdge> => {
+  const rules = aliasRules(alias)
+  const importerDir = dirnamePosix(module.path)
+  const importerRoot = Option.getOrUndefined(rootOf(module.path, roots))
+  const specifierOf = new Map<string, string>()
+  for (const edge of module.importEdges) {
+    // First binding wins: a later `import { Card } from "./other"` would be a duplicate
+    // declaration, which the parser would have rejected as a syntax error anyway.
+    for (const binding of edge.bindings) {
+      if (!specifierOf.has(binding)) specifierOf.set(binding, edge.specifier)
+    }
+  }
+  const byPart = new Map<string, { tag: string; line: number; count: number }>()
+  for (const site of module.renders) {
+    const root = site.tag.split(".")[0] ?? site.tag
+    const specifier = specifierOf.get(root)
+    if (specifier === undefined) continue
+    const target = Option.getOrUndefined(
+      targetOf({ specifier, importerDir, importerRoot, rules, byBase }),
+    )
+    if (target === undefined || target === module.path) continue
+    const existing = byPart.get(target)
+    if (existing === undefined) byPart.set(target, { tag: site.tag, line: site.line, count: 1 })
+    else existing.count += 1
+  }
+  return [...byPart]
+    .map(([part, edge]) => ({ part, tag: edge.tag, line: edge.line, count: edge.count }))
+    .sort((left, right) => left.line - right.line || left.part.localeCompare(right.part))
 }
 
 /** A route or entry module — an entry point, not a component. */
@@ -452,6 +551,20 @@ export const buildCatalog = (
     // part can carry its feature directory rather than a reader re-querying the graph.
     const features = featuresOf(modules, roleOptions, graph)
     const featureDirs = new Set(features.map((feature) => feature.dir))
+    // One index, one alias table: the render edges resolve through the same target lookup
+    // as the use-graph, so a part can never be "rendered" by a module that does not import it.
+    const byBase = moduleIndex(modules)
+    const rendersByPath = new Map(
+      modules.map((module) => [
+        module.path,
+        renderEdgesOf({
+          module,
+          byBase,
+          alias: config.alias ?? {},
+          roots: config.roots,
+        }),
+      ]),
+    )
 
     const components: ReadonlyArray<CatalogComponent> = modules
       .map((module) => {
@@ -467,6 +580,7 @@ export const buildCatalog = (
         )
         const exports = module.exports.filter((name) => !typeNames.has(name))
         const usedBy = graph.get(module.path)?.length ?? 0
+        const renders = rendersByPath.get(module.path) ?? []
         return {
           id: idOfModule(module.path),
           path: module.path,
@@ -485,6 +599,7 @@ export const buildCatalog = (
           // The declarations are raw material: a rule can read them instead of parsing
           // the file again, and the artifact stays the one place the model lives.
           declarations: module.declarations,
+          ...(renders.length === 0 ? {} : { renders }),
         }
       })
       .sort((left, right) => left.path.localeCompare(right.path))

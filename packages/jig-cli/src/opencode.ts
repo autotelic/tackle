@@ -304,6 +304,21 @@ export default Plugin.define({
               type: "string",
               description: "A part, feature, or concept to find. Omit for the stable shape.",
             },
+            page: {
+              type: "string",
+              description:
+                "What does this page render? A route name, id, or path. Answers with the direct parts and what is reached through them.",
+            },
+            part: {
+              type: "string",
+              description:
+                "Which pages mount this part? A component name, id, or path. Answers with the renderers and the routes above them.",
+            },
+            similar: {
+              type: "string",
+              description:
+                "What already exists like this name? Use before proposing a new part; answers with name and skeleton evidence.",
+            },
             limit: {
               type: "number",
               description: "Maximum matches. Default 12.",
@@ -316,11 +331,16 @@ export default Plugin.define({
           const options = (input ?? {}) as {
             readonly cwd?: unknown
             readonly query?: unknown
+            readonly page?: unknown
+            readonly part?: unknown
+            readonly similar?: unknown
             readonly limit?: unknown
           }
           const directory = directoryFor(options.cwd, root)
           const query = typeof options.query === "string" ? options.query : undefined
           const limit = typeof options.limit === "number" ? options.limit : 12
+          const flag = (name: string, value: unknown): ReadonlyArray<string> =>
+            typeof value === "string" && value !== "" ? [`--${name}`, value] : []
           const outcome = await runJig(
             directory,
             [
@@ -329,6 +349,9 @@ export default Plugin.define({
               directory,
               "--limit",
               String(limit),
+              ...flag("page", options.page),
+              ...flag("part", options.part),
+              ...flag("similar", options.similar),
               ...(query === undefined || query === "" ? [] : [query]),
             ],
             context.signal,
