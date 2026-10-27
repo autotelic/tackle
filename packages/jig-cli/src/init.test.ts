@@ -5,7 +5,15 @@ import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 import { Effect } from "effect"
 import { NodeServices } from "@effect/platform-node"
-import { configFor, cookbookFor, initialise, initJson, inspectRepo, onboardingFor } from "./init.ts"
+import {
+  configFor,
+  cookbookFor,
+  initialise,
+  initJson,
+  inspectRepo,
+  onboardingFor,
+  summaryFor,
+} from "./init.ts"
 
 const run = <A, E>(effect: Effect.Effect<A, E, never>): Promise<A> => Effect.runPromise(effect)
 
@@ -39,7 +47,12 @@ const inspect = (root: string) => run(inspectRepo(root).pipe(Effect.provide(Node
 
 const initialiseIn = (
   root: string,
-  options: { readonly force?: boolean; readonly cutlist?: boolean; readonly dryRun?: boolean } = {},
+  options: {
+    readonly force?: boolean
+    readonly cutlist?: boolean
+    readonly dryRun?: boolean
+    readonly gateMode?: "all" | "touched-files"
+  } = {},
 ) => run(initialise(root, options).pipe(Effect.provide(NodeServices.layer)))
 
 const OXLINT = {
@@ -256,6 +269,49 @@ describe("inspectRepo", () => {
       rmSync(root, { recursive: true, force: true })
     }
   })
+
+  it("does not claim a gate a kept config does not have", async () => {
+    const root = project(
+      {
+        json: [
+          ["package.json", { scripts: { lint: "oxlint ." } }],
+          ["tsconfig.json", {}],
+          [".oxlintrc.json", OXLINT],
+          [
+            "jig.config.json",
+            {
+              engines: [
+                {
+                  id: "plumb",
+                  kind: "oxlint-plugin",
+                  command: "oxlint",
+                  config: ".oxlintrc.json",
+                },
+              ],
+              gate: { mode: "touched-files", baseline: ".jig-baseline.json" },
+            },
+          ],
+        ],
+      },
+      ["oxlint"],
+    )
+    try {
+      const kept = await run(
+        inspectRepo(root, { gateMode: "all" }).pipe(Effect.provide(NodeServices.layer)),
+      )
+      expect(kept.gateMode).toBe("touched-files")
+      expect(kept.notes.join("\n")).toContain("pass --force")
+
+      const forced = await run(
+        inspectRepo(root, { gateMode: "all", force: true }).pipe(
+          Effect.provide(NodeServices.layer),
+        ),
+      )
+      expect(forced.gateMode).toBe("all")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
 })
 
 describe("initialise", () => {
@@ -297,6 +353,31 @@ describe("initialise", () => {
       expect(onboarding).toContain("jig engines")
       expect(onboarding).toContain("STOP and ask")
       expect(onboarding).toContain("Do not run `jig baseline` without asking")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it("keeps the chosen gate in the config and in the next command", async () => {
+    const root = project(
+      {
+        json: [
+          ["package.json", { scripts: { lint: "oxlint ." } }],
+          ["tsconfig.json", {}],
+          [".oxlintrc.json", OXLINT],
+        ],
+      },
+      ["oxlint"],
+    )
+    try {
+      const plan = await initialiseIn(root, { gateMode: "all", dryRun: true })
+      expect(summaryFor(plan)).toContain("jig init --gate all")
+      expect(onboardingFor(plan.profile)).toContain("jig init --gate all")
+
+      const applied = await initialiseIn(root, { gateMode: "all" })
+      const config = JSON.parse(readFileSync(join(root, "jig.config.json"), "utf8"))
+      expect(config.gate.mode).toBe("all")
+      expect(applied.profile.gateMode).toBe("all")
     } finally {
       rmSync(root, { recursive: true, force: true })
     }

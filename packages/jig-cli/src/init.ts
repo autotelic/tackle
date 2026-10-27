@@ -452,12 +452,15 @@ const resolvedOutput = (declared: CutlistOutput | undefined): ResolvedCutlistOut
  * Read the repository, then decide what is worth enabling.
  *
  * @param root - The project root.
- * @param options - The gate mode the caller asked for, if any.
+ * @param options - The gate mode the caller asked for, and whether a write may replace the config.
  * @returns the profile `init` writes from.
  */
 export const inspectRepo = (
   root: string,
-  options: { readonly gateMode?: "all" | "touched-files" | undefined } = {},
+  options: {
+    readonly gateMode?: "all" | "touched-files" | undefined
+    readonly force?: boolean | undefined
+  } = {},
 ): Effect.Effect<RepoProfile, never, FileSystem.FileSystem | Path.Path> =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
@@ -480,6 +483,22 @@ export const inspectRepo = (
         () => false,
       ))
     const notes: Array<string> = []
+    // A kept config is the effective config: do not show a gate the applied file does not
+    // have. Only `--force` rewrites it, so only `--force` may change the gate here.
+    const gateMode =
+      existing !== undefined && options.force !== true
+        ? existing.gate.mode
+        : (options.gateMode ?? existing?.gate.mode ?? "touched-files")
+    if (
+      existing !== undefined &&
+      options.force !== true &&
+      options.gateMode !== undefined &&
+      options.gateMode !== existing.gate.mode
+    ) {
+      notes.push(
+        `jig.config.json keeps its \`${existing.gate.mode}\` gate; pass --force to apply \`${options.gateMode}\``,
+      )
+    }
     const jigPinned = localJig || dependencies["@autotelic/jig-cli"] !== undefined
     const jig = jigCommandOf(packageManager, jigPinned)
     if (!jigPinned) {
@@ -682,7 +701,7 @@ export const inspectRepo = (
       lint,
       engines,
       notes,
-      gateMode: options.gateMode ?? existing?.gate.mode ?? "touched-files",
+      gateMode,
       baseline: existing?.gate.baseline ?? ".jig-baseline.json",
       cookbook: existing?.agent?.cookbook ?? "JIG.md",
       onboarding: existing?.agent?.onboarding ?? "ONBOARD.md",
@@ -766,6 +785,10 @@ Do not run \`${profile.jig} baseline\` to make a run green without reading what 
 accepts. The baseline is a reviewed ledger, not a mute button.
 `)
 
+/** The `init` invocation that reproduces this plan, including the gate it chose. */
+const initCommandFor = (profile: RepoProfile): string =>
+  `${profile.jig} init${profile.gateMode === "all" ? " --gate all" : ""}${profile.cutlistDraft === undefined ? "" : " --cutlist"}`
+
 /** The agent door: a prompt that starts with the first command, and stops to ask. */
 export const onboardingFor = (profile: RepoProfile): string => {
   const notes =
@@ -775,7 +798,7 @@ export const onboardingFor = (profile: RepoProfile): string => {
 You are working in ${profile.name}. This repository uses \`jig\` as its conformance
 harness. Read this file, then \`JIG.md\`, then start.
 ${profile.summary === "" ? "" : "\n" + profile.summary + "\n"}
-${profile.facts.has("configured") ? "" : "\nThis repository is not initialised yet. Run `" + profile.jig + " init` (or `" + profile.jig + " init --cutlist`) to apply the plan before continuing.\n"}
+${profile.facts.has("configured") ? "" : "\nThis repository is not initialised yet. Run `" + initCommandFor(profile) + "` to apply the plan before continuing.\n"}
 
 ## Do this first
 
@@ -818,7 +841,7 @@ ${profile.facts.has("configured") ? "" : "\nThis repository is not initialised y
 
 - Before installing an engine, changing \`jig.config.json\`, or running
   \`${profile.jig} baseline\`.
-- Before changing the gate to \`all\`.
+- Before changing the gate ${profile.gateMode === "all" ? "back to `touched-files`" : "to `all`"}.
 - When a note says an engine could not run: that is a hole in the census, not a
   finding to fix in the code.
 `)
@@ -857,7 +880,7 @@ export const summaryFor = (result: InitResult): string => {
     "Next:",
     ...(result.dryRun
       ? [
-          `  1. ${profile.jig} init${result.cutlistConfig === "written" ? " --cutlist" : ""}     write this plan after approval`,
+          `  1. ${profile.jig} init${profile.gateMode === "all" ? " --gate all" : ""}${result.cutlistConfig === "written" ? " --cutlist" : ""}     write this plan after approval`,
           `  2. ${profile.jig} engines     confirm each command resolves`,
           `  3. ${profile.jig} check --limit 20     census, then the first 20 findings`,
           `  4. point your agent at ${profile.onboarding}`,
@@ -939,7 +962,10 @@ export const initialise = (
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
-    let profile = yield* inspectRepo(root, { gateMode: options.gateMode })
+    let profile = yield* inspectRepo(root, {
+      gateMode: options.gateMode,
+      force: options.force,
+    })
     const written: Array<string> = []
     const kept: Array<string> = []
     const force = options.force === true

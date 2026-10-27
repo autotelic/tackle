@@ -175,6 +175,9 @@ importers:
       '@autotelic/cutlist':
         specifier: workspace:*
         version: link:packages/cutlist
+      '@autotelic/jig-cli':
+        specifier: workspace:*
+        version: link:packages/jig-cli
       '@autotelic/joggle':
         specifier: workspace:*
         version: link:packages/joggle

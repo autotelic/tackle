@@ -123,6 +123,20 @@ interface CheckParameters {
   readonly limit?: number
 }
 
+/**
+ * The gate a plan is built for.
+ *
+ * `touched-files` is the adoption default, but it cannot validate a clean checkout: the
+ * working-tree diff is empty, so nothing is in scope and the gate passes while the report
+ * still lists findings. A workshop or a first run wants `all`.
+ */
+const gateParameter = Type.Optional(
+  Type.Union([Type.Literal("touched-files"), Type.Literal("all")], {
+    description:
+      "What the gate enforces: only the change in front of you (default), or every finding in the repo. Use `all` when validating from a clean checkout.",
+  }),
+)
+
 const targetFor = (cwd: string | undefined, ctx: ExtensionContext): string =>
   cwd === undefined ? ctx.cwd : resolve(ctx.cwd, cwd)
 
@@ -202,11 +216,12 @@ export default function (pi: ExtensionAPI): void {
     name: "jig_onboard",
     label: "jig Onboard",
     description:
-      "Read the setup plan and agent prompt for jig in this repository without writing anything. It names the package manager, the engines that can run, the paths init would write, and where to stop and ask. Run `jig init` (add `--cutlist` for a UI repo) only after a human approves the plan.",
+      'Read the setup plan and agent prompt for jig in this repository without writing anything. It names the package manager, the engines that can run, the paths init would write, and where to stop and ask. Run `jig init` (add `--cutlist` for a UI repo) only after a human approves the plan. Pass `gate: "all"` when validating from a clean checkout; `touched-files` reports existing debt but does not enforce it until a file is touched.',
     promptSnippet: "Read the jig setup prompt before initialising",
     promptGuidelines: [
       "Use jig_onboard before changing jig.config.json: it writes nothing and shows the engines and paths the scan found.",
       "After approval, run `jig init` (or `jig init --cutlist`) to apply the plan, then `jig_check`.",
+      'For a first run or a workshop on a clean checkout, call jig_onboard with gate "all" so the plan enforces every finding.',
     ],
     parameters: Type.Object({
       cwd: Type.Optional(
@@ -217,10 +232,22 @@ export default function (pi: ExtensionAPI): void {
           description: "The prompt alone, or the prompt with the plan as JSON. Default text.",
         }),
       ),
+      gate: gateParameter,
+      force: Type.Optional(
+        Type.Boolean({
+          description:
+            "Plan a rewrite of jig.config.json, JIG.md and ONBOARD.md; never the baseline. Default false.",
+        }),
+      ),
     }),
     async execute(
       _toolCallId: string,
-      params: { readonly cwd?: string; readonly format?: "text" | "json" },
+      params: {
+        readonly cwd?: string
+        readonly format?: "text" | "json"
+        readonly gate?: "touched-files" | "all"
+        readonly force?: boolean
+      },
       signal: AbortSignal | undefined,
       _onUpdate: unknown,
       ctx: ExtensionContext,
@@ -231,7 +258,15 @@ export default function (pi: ExtensionAPI): void {
         const result = await run(
           pi,
           target,
-          ["onboard", "--cwd", target, "--format", format],
+          [
+            "onboard",
+            "--cwd",
+            target,
+            "--format",
+            format,
+            ...(params.gate === undefined ? [] : ["--gate", params.gate]),
+            ...(params.force === true ? ["--force"] : []),
+          ],
           signal,
         )
         const text = (result.stdout.trim() === "" ? result.stderr : result.stdout).trim()
@@ -248,10 +283,11 @@ export default function (pi: ExtensionAPI): void {
     name: "jig_init",
     label: "jig Init",
     description:
-      "Apply the jig setup plan: write jig.config.json, the baseline, JIG.md, ONBOARD.md, a starter joggle.config.json, and optionally a cutlist draft. Use only after a human has approved the plan from jig_onboard; this writes files.",
+      "Apply the jig setup plan: write jig.config.json, the baseline, JIG.md, ONBOARD.md, a starter joggle.config.json, and optionally a cutlist draft. Use only after a human has approved the plan from jig_onboard; this writes files. Pass the same `gate` the plan used so the applied config matches what was approved.",
     promptSnippet: "Apply the jig setup plan after approval",
     promptGuidelines: [
       "Run jig_onboard first and show the plan to the human. Do not call jig_init until they approve it.",
+      'Pass the same gate jig_onboard planned with; `gate: "all"` is the honest first-run gate on a clean checkout.',
       "After init, run jig_engines and jig_check; do not run jig baseline without asking.",
     ],
     parameters: Type.Object({
@@ -263,10 +299,22 @@ export default function (pi: ExtensionAPI): void {
           description: "Also draft cutlist.config.json from detected UI roots. Default false.",
         }),
       ),
+      gate: gateParameter,
+      force: Type.Optional(
+        Type.Boolean({
+          description:
+            "Rewrite jig.config.json, JIG.md and ONBOARD.md; never the baseline. Default false.",
+        }),
+      ),
     }),
     async execute(
       _toolCallId: string,
-      params: { readonly cwd?: string; readonly cutlist?: boolean },
+      params: {
+        readonly cwd?: string
+        readonly cutlist?: boolean
+        readonly gate?: "touched-files" | "all"
+        readonly force?: boolean
+      },
       signal: AbortSignal | undefined,
       _onUpdate: unknown,
       ctx: ExtensionContext,
@@ -276,7 +324,14 @@ export default function (pi: ExtensionAPI): void {
         const result = await run(
           pi,
           target,
-          ["init", "--cwd", target, ...(params.cutlist === true ? ["--cutlist"] : [])],
+          [
+            "init",
+            "--cwd",
+            target,
+            ...(params.cutlist === true ? ["--cutlist"] : []),
+            ...(params.gate === undefined ? [] : ["--gate", params.gate]),
+            ...(params.force === true ? ["--force"] : []),
+          ],
           signal,
         )
         const text = (result.stdout.trim() === "" ? result.stderr : result.stdout).trim()

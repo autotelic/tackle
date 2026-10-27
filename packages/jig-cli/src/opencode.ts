@@ -169,7 +169,7 @@ export default Plugin.define({
       editor.add({
         name: "onboard",
         description:
-          "Read the setup plan and agent prompt for jig in this repository without writing anything. It names the package manager, the engines that can run, the paths init would write, and where to stop and ask. Run `jig init` only after a human approves the plan.",
+          'Read the setup plan and agent prompt for jig in this repository without writing anything. It names the package manager, the engines that can run, the paths init would write, and where to stop and ask. Run `jig init` only after a human approves the plan. Pass `gate: "all"` when validating from a clean checkout; `touched-files` reports existing debt but does not enforce it until a file is touched.',
         input: {
           type: "object",
           properties: {
@@ -183,17 +183,43 @@ export default Plugin.define({
               enum: ["text", "json"],
               description: "The prompt alone, or the prompt with the plan as JSON. Default: text.",
             },
+            gate: {
+              type: "string",
+              enum: ["touched-files", "all"],
+              description:
+                "What the gate enforces: only the change in front of you (default), or every finding in the repo. Use `all` when validating from a clean checkout.",
+            },
+            force: {
+              type: "boolean",
+              description:
+                "Plan a rewrite of jig.config.json, JIG.md and ONBOARD.md; never the baseline. Default false.",
+            },
           },
           additionalProperties: false,
         },
         options: { namespace: "jig", codemode: true },
         execute: async (input, context) => {
-          const options = (input ?? {}) as { readonly cwd?: unknown; readonly format?: unknown }
+          const options = (input ?? {}) as {
+            readonly cwd?: unknown
+            readonly format?: unknown
+            readonly gate?: unknown
+            readonly force?: unknown
+          }
           const directory = directoryFor(options.cwd, root)
           const format = options.format === "json" ? "json" : "text"
+          const gate =
+            options.gate === "touched-files" || options.gate === "all" ? options.gate : undefined
           const outcome = await runJig(
             directory,
-            ["onboard", "--cwd", directory, "--format", format],
+            [
+              "onboard",
+              "--cwd",
+              directory,
+              "--format",
+              format,
+              ...(gate === undefined ? [] : ["--gate", gate]),
+              ...(options.force === true ? ["--force"] : []),
+            ],
             context.signal,
           )
           return {
@@ -206,7 +232,7 @@ export default Plugin.define({
       editor.add({
         name: "init",
         description:
-          "Apply the jig setup plan: write jig.config.json, the baseline, JIG.md, ONBOARD.md, a starter joggle.config.json, and optionally a cutlist draft. Use only after a human has approved the plan from `jig.onboard`; this writes files.",
+          "Apply the jig setup plan: write jig.config.json, the baseline, JIG.md, ONBOARD.md, a starter joggle.config.json, and optionally a cutlist draft. Use only after a human has approved the plan from `jig.onboard`; this writes files. Pass the same `gate` the plan used so the applied config matches what was approved.",
         input: {
           type: "object",
           properties: {
@@ -219,16 +245,41 @@ export default Plugin.define({
               type: "boolean",
               description: "Also draft cutlist.config.json from detected UI roots. Default false.",
             },
+            gate: {
+              type: "string",
+              enum: ["touched-files", "all"],
+              description:
+                "What the gate enforces: only the change in front of you (default), or every finding in the repo.",
+            },
+            force: {
+              type: "boolean",
+              description:
+                "Rewrite jig.config.json, JIG.md and ONBOARD.md; never the baseline. Default false.",
+            },
           },
           additionalProperties: false,
         },
         options: { namespace: "jig", codemode: true },
         execute: async (input, context) => {
-          const options = (input ?? {}) as { readonly cwd?: unknown; readonly cutlist?: unknown }
+          const options = (input ?? {}) as {
+            readonly cwd?: unknown
+            readonly cutlist?: unknown
+            readonly gate?: unknown
+            readonly force?: unknown
+          }
           const directory = directoryFor(options.cwd, root)
+          const gate =
+            options.gate === "touched-files" || options.gate === "all" ? options.gate : undefined
           const outcome = await runJig(
             directory,
-            ["init", "--cwd", directory, ...(options.cutlist === true ? ["--cutlist"] : [])],
+            [
+              "init",
+              "--cwd",
+              directory,
+              ...(options.cutlist === true ? ["--cutlist"] : []),
+              ...(gate === undefined ? [] : ["--gate", gate]),
+              ...(options.force === true ? ["--force"] : []),
+            ],
             context.signal,
           )
           return {

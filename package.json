@@ -27,6 +27,7 @@
   },
   "devDependencies": {
     "@autotelic/cutlist": "workspace:*",
+    "@autotelic/jig-cli": "workspace:*",
     "@autotelic/joggle": "workspace:*",
     "@autotelic/plumb": "workspace:*",
     "@changesets/cli": "^2.29.0",

@@ -1,6 +1,6 @@
 /* oxlint-disable plumb/no-chained-type-assertions -- a fake for the OpenCode host cannot structurally overlap the real one, which carries twenty-odd domains this plugin never reads; the assertion is the test's subject, not an accident. */
 import { spawnSync } from "node:child_process"
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -63,6 +63,17 @@ const prepareRepo = (): Repo => {
 
 const repo = prepareRepo()
 
+/**
+ * A second temp repo with no `jig.config.json`, so `onboard --gate` has a gate to choose.
+ * The first repo already declares `all`, which would make the flag invisible.
+ */
+const planRoot = mkdtempSync(join(tmpdir(), "jig-plan-"))
+mkdirSync(join(planRoot, "node_modules", ".bin"), { recursive: true })
+writeFileSync(join(planRoot, "package.json"), JSON.stringify({ scripts: { lint: "oxlint ." } }))
+writeFileSync(join(planRoot, "tsconfig.json"), "{}\n")
+writeFileSync(join(planRoot, ".oxlintrc.json"), JSON.stringify({ rules: {} }))
+writeFileSync(join(planRoot, "node_modules", ".bin", "oxlint"), "")
+
 /** The CLI's report bytes, through the same entry the surfaces use. Non-zero exits included. */
 const cliBytes = (args: ReadonlyArray<string>): string => {
   const result = spawnSync(repo.wrapper, [...args], {
@@ -94,7 +105,7 @@ interface PiTool {
   readonly name: string
   readonly execute: (
     callId: string,
-    params: { readonly cwd?: string },
+    params: Record<string, unknown>,
     signal: undefined,
     onUpdate: undefined,
     ctx: { readonly cwd: string },
@@ -110,8 +121,12 @@ const loadPi = async (): Promise<(pi: unknown) => void> => {
   return mod.default
 }
 
-/** Drive the pi extension's `jig_check` tool through a host that only records and executes. */
-const piCheckBytes = async (cwd: string): Promise<string> => {
+/** Drive one pi tool through a host that only records and executes. */
+const piToolBytes = async (
+  name: string,
+  params: Record<string, unknown>,
+  cwd: string,
+): Promise<string> => {
   const tools = new Map<string, PiTool>()
   const pi = {
     exec: async (
@@ -133,19 +148,29 @@ const piCheckBytes = async (cwd: string): Promise<string> => {
   }
   const extension = await loadPi()
   extension(pi)
-  const tool = tools.get("jig_check")
-  if (tool === undefined) throw new Error("jig_check was not registered")
-  const result = await tool.execute("call", { cwd }, undefined, undefined, { cwd })
+  const tool = tools.get(name)
+  if (tool === undefined) throw new Error(`${name} was not registered`)
+  const result = await tool.execute("call", params, undefined, undefined, { cwd })
   return result.content[0]?.text ?? ""
 }
+
+const piCheckBytes = (cwd: string): Promise<string> => piToolBytes("jig_check", { cwd }, cwd)
 
 interface OcTool {
   readonly name: string
   readonly execute: (input: unknown, context: unknown) => Promise<{ readonly content: string }>
 }
 
-/** Drive the OpenCode plugin's `jig.check` tool through a host that only records. */
-const ocCheckBytes = async (cwd: string, format: string): Promise<string> => {
+/** Drive one OpenCode tool through a host that only records. */
+const ocToolBytes = async ({
+  name,
+  input,
+  cwd,
+}: {
+  readonly name: string
+  readonly input: unknown
+  readonly cwd: string
+}): Promise<string> => {
   const tools = new Map<string, OcTool>()
   const editor = {
     list: () => [],
@@ -170,15 +195,19 @@ const ocCheckBytes = async (cwd: string, format: string): Promise<string> => {
   // SAFETY: the host API is far wider than the three domains this plugin touches
   // (`location`, `tool`, `command`); the rest is never read, so the fake is asserted to it.
   await plugin.setup(context as unknown as Parameters<typeof plugin.setup>[0])
-  const tool = tools.get("check")
-  if (tool === undefined) throw new Error("jig.check was not registered")
-  const result = await tool.execute({ cwd, format }, { signal: undefined })
+  const tool = tools.get(name)
+  if (tool === undefined) throw new Error(`jig.${name} was not registered`)
+  const result = await tool.execute(input, { signal: undefined })
   return result.content
 }
+
+const ocCheckBytes = (cwd: string, format: string): Promise<string> =>
+  ocToolBytes({ name: "check", input: { cwd, format }, cwd })
 
 afterAll(() => {
   delete process.env.JIG_BIN
   rmSync(repo.root, { recursive: true, force: true })
+  rmSync(planRoot, { recursive: true, force: true })
 })
 
 describe("the agent surfaces and the CLI", () => {
@@ -204,5 +233,20 @@ describe("the agent surfaces and the CLI", () => {
       }),
       { numRuns: 3 },
     )
+  }, 60_000)
+
+  it("plans the same --gate all onboarding through pi and OpenCode", async () => {
+    const expected = cliBytes(["onboard", "--cwd", planRoot, "--gate", "all", "--format", "json"])
+    expect(expected).toContain('"gateMode": "all"')
+    expect(
+      await piToolBytes("jig_onboard", { cwd: planRoot, gate: "all", format: "json" }, planRoot),
+    ).toBe(expected)
+    expect(
+      await ocToolBytes({
+        name: "onboard",
+        input: { cwd: planRoot, gate: "all", format: "json" },
+        cwd: planRoot,
+      }),
+    ).toBe(expected)
   }, 60_000)
 })

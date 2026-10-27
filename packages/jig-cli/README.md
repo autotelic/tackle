@@ -98,9 +98,14 @@ jig engines                  # what is configured, and whether it is on PATH
 jig menu                     # the cutlist stable shape and artifact files
 jig menu dialog              # the parts, features, and recipes that answer a concept
 jig init                     # inspect the repo, then write the harness it can run
+jig init --gate all          # the same, enforcing every finding from the first run
 jig init --print             # the same plan and agent prompt, writing nothing
 jig onboard                  # just the setup prompt for an agent
+jig onboard --gate all       # the prompt, planning a repo-wide gate
 ```
+
+From this workspace, `pnpm install` links the package into the root `.bin`, so
+`node_modules/.bin/jig` is the built CLI; `pnpm jig` runs the source instead.
 
 ## `jig init` reads before it writes
 
@@ -123,11 +128,20 @@ it. `--gate all` opts into the repo-wide ratchet. The generated `JIG.md` and
 `ONBOARD.md` are specific to the profile, and the summary names what was kept,
 what was written, and the next two commands.
 
+`touched-files` is the adoption default, but it is the wrong gate for validating a
+clean checkout: the working-tree diff is empty, so the touched set is empty, and a
+run can exit 0 while the report lists findings. For a first run, a workshop, or CI
+on a clean PR checkout, pass `--gate all` — or `gate: "all"` to `jig_onboard` /
+`jig.onboard` and `jig_init` / `jig.init`. The plan's next command carries the gate
+it chose, so the applied config matches what was approved.
+
 `jig init --print` and `jig onboard` are the agent door: they run the same
 inspection but write nothing, and print the prompt with the plan's engines,
-notes, and stop-and-ask points. `--format json` returns the same plan as data.
-The pi tool `jig_onboard` and the OpenCode tool `jig.onboard` are the same
-command, and `jig_init` / `jig.init` apply the plan after a human approves it.
+notes, and stop-and-ask points. `--format json` returns the same plan as data,
+and `--gate` / `--force` choose the plan's gate and whether existing files would
+be rewritten. The pi tool `jig_onboard` and the OpenCode tool `jig.onboard` are
+the same command, and `jig_init` / `jig.init` apply the plan after a human
+approves it — with the same `gate` and `force` options.
 
 Cutlist is opt-in because its config is the repository's vocabulary, not a
 generic default. When the tree looks like a UI, `init` says so and nothing more.
