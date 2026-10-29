@@ -53,11 +53,30 @@ const SCHEMA: ReadonlyArray<string> = [
   `CREATE TABLE IF NOT EXISTS inbox (
      seq INTEGER PRIMARY KEY AUTOINCREMENT,
      id TEXT UNIQUE NOT NULL, room TEXT NOT NULL, kind TEXT NOT NULL,
-     pr INTEGER, ticket TEXT, text TEXT NOT NULL, at INTEGER NOT NULL, acked_at INTEGER
+     pr INTEGER, ticket TEXT, text TEXT NOT NULL, at INTEGER NOT NULL,
+     hold_until INTEGER NOT NULL DEFAULT 0, acked_at INTEGER
+   )`,
+  `CREATE TABLE IF NOT EXISTS workers (
+     name TEXT PRIMARY KEY, room TEXT NOT NULL, pr INTEGER, kind TEXT NOT NULL,
+     address TEXT NOT NULL, worktree TEXT NOT NULL, state TEXT NOT NULL,
+     started_at INTEGER NOT NULL, updated_at INTEGER NOT NULL
    )`,
   "CREATE INDEX IF NOT EXISTS jobs_state ON jobs (state, created_at)",
   "CREATE INDEX IF NOT EXISTS receipts_at ON receipts (at DESC)",
 ]
+
+/** One worker session on a machine. */
+export interface Worker {
+  readonly name: string
+  readonly room: string
+  readonly pr?: number
+  readonly kind: string
+  readonly address: string
+  readonly worktree: string
+  readonly state: string
+  readonly startedAt: number
+  readonly updatedAt: number
+}
 
 /** One message waiting for the project session. */
 export interface InboxItem {
@@ -168,6 +187,10 @@ export class Ledger {
   static open(sql: Sql, room: string): Ledger {
     const ledger = new Ledger(sql, room)
     for (const statement of SCHEMA) ledger.#sql.exec(statement)
+    const columns = ledger.#sql.all<SqlRow>("PRAGMA table_info(inbox)")
+    if (!columns.some((column) => String(column.name) === "hold_until")) {
+      ledger.#sql.exec("ALTER TABLE inbox ADD COLUMN hold_until INTEGER NOT NULL DEFAULT 0")
+    }
     return ledger
   }
 
@@ -339,20 +362,43 @@ export class Ledger {
     readonly ticket?: string
     readonly text: string
     readonly at: number
+    readonly holdUntil: number
   }): boolean {
+    const pr = input.pr === undefined ? null : input.pr
+    const ticket = input.ticket === undefined ? null : input.ticket
     return this.#sql.transaction(() => {
       const existing = this.#sql.get<SqlRow>("SELECT seq FROM inbox WHERE id = ?", input.id)
       if (existing !== undefined) return false
+      const open = this.#sql.get<SqlRow>(
+        `SELECT seq, text FROM inbox
+         WHERE acked_at IS NULL AND hold_until > ? AND kind = ?
+           AND (pr IS ? OR ticket IS ?)
+         ORDER BY seq DESC LIMIT 1`,
+        input.at,
+        input.kind,
+        pr,
+        ticket,
+      )
+      if (open !== undefined) {
+        this.#sql.exec(
+          "UPDATE inbox SET text = ?, hold_until = ? WHERE seq = ?",
+          `${String(open.text)}\n\n---\n\n${input.text}`,
+          input.holdUntil,
+          Number(open.seq),
+        )
+        return true
+      }
       this.#sql.exec(
-        `INSERT INTO inbox (id, room, kind, pr, ticket, text, at, acked_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, NULL)`,
+        `INSERT INTO inbox (id, room, kind, pr, ticket, text, at, hold_until, acked_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
         input.id,
         this.#room,
         input.kind,
-        input.pr === undefined ? null : input.pr,
-        input.ticket === undefined ? null : input.ticket,
+        pr,
+        ticket,
         input.text,
         input.at,
+        input.holdUntil,
       )
       return true
     })
@@ -365,11 +411,12 @@ export class Ledger {
    * @param limit - The maximum to return.
    * @returns The messages, oldest first.
    */
-  inbox(after: number, limit = 50): ReadonlyArray<InboxItem> {
+  inbox(after: number, now: number, limit = 50): ReadonlyArray<InboxItem> {
     return this.#sql
       .all<SqlRow>(
-        "SELECT * FROM inbox WHERE seq > ? AND acked_at IS NULL ORDER BY seq LIMIT ?",
+        "SELECT * FROM inbox WHERE seq > ? AND acked_at IS NULL AND hold_until <= ? ORDER BY seq LIMIT ?",
         after,
+        now,
         limit,
       )
       .map((row) => {
@@ -409,6 +456,51 @@ export class Ledger {
         changed += 1
       }
       return changed
+    })
+  }
+
+  /**
+   * Record or refresh a worker session.
+   *
+   * @param worker - The worker's name, address, worktree, and state.
+   * @returns Nothing; the row is the effect.
+   */
+  putWorker(worker: Worker): void {
+    this.#sql.exec(
+      `INSERT INTO workers (name, room, pr, kind, address, worktree, state, started_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(name) DO UPDATE SET
+         state = excluded.state, address = excluded.address,
+         worktree = excluded.worktree, updated_at = excluded.updated_at`,
+      worker.name,
+      this.#room,
+      worker.pr === undefined ? null : worker.pr,
+      worker.kind,
+      worker.address,
+      worker.worktree,
+      worker.state,
+      worker.startedAt,
+      worker.updatedAt,
+    )
+  }
+
+  /** The worker sessions for this room. */
+  workers(): ReadonlyArray<Worker> {
+    return this.#sql.all<SqlRow>("SELECT * FROM workers ORDER BY started_at DESC").map((row) => {
+      const pr = numberOrNull(row.pr)
+      return Object.assign(
+        {
+          name: String(row.name),
+          room: String(row.room),
+          kind: String(row.kind),
+          address: String(row.address),
+          worktree: String(row.worktree),
+          state: String(row.state),
+          startedAt: Number(row.started_at),
+          updatedAt: Number(row.updated_at),
+        },
+        Option.match(pr, { onNone: () => ({}), onSome: (value) => ({ pr: value }) }),
+      )
     })
   }
 

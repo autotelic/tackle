@@ -5,7 +5,7 @@ import { markerOf, type Job } from "@autotelic/board"
 import { Result, Schema } from "effect"
 import type { RoomConfig } from "./config.ts"
 import { hasReviewMarker, postReview, pullRequest, type PullRequest } from "./gh.ts"
-import { addWorktree, fetchCommit, removeWorktree } from "./git.ts"
+import { addWorktree, fetchCommit, fetchPull, removeWorktree } from "./git.ts"
 import { jobsRoot, worktreeRoot } from "./paths.ts"
 import { onPath, run } from "./shell.ts"
 
@@ -269,6 +269,7 @@ export const runReview = async ({
 
   const dir = join(worktreeRoot(config), `pr-${pr.number}-${sha.slice(0, 8)}`)
   if (existsSync(dir)) removeWorktree({ root: config.repo.root, dir })
+  fetchPull({ root: config.repo.root, pr: pr.number })
   fetchCommit({ root: config.repo.root, sha })
   if (Result.isFailure(addWorktree({ root: config.repo.root, sha, dir }))) {
     return { ok: false, state: "failed", note: `cannot create worktree at ${sha.slice(0, 8)}` }

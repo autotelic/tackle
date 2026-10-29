@@ -139,6 +139,7 @@ export default function roomExtension(pi: ExtensionAPI): void {
   let active: string | undefined
   let timer: ReturnType<typeof setInterval> | undefined
   let inboxTimer: ReturnType<typeof setInterval> | undefined
+  let heartbeatTimer: ReturnType<typeof setInterval> | undefined
   let cursor = 0
 
   const refresh = async (ctx: ExtensionContext): Promise<void> => {
@@ -235,11 +236,14 @@ export default function roomExtension(pi: ExtensionAPI): void {
   pi.on("session_start", async (_event, ctx) => {
     const cwd = cwdOf(ctx)
     const id = ctx.sessionManager.getSessionId()
-    await roomFetch(cwd, "/session", {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ id }),
-    })
+    const beat = async (): Promise<void> => {
+      await roomFetch(cwd, "/session", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ id, at: Date.now() }),
+      })
+    }
+    await beat()
     await refresh(ctx)
     timer = setInterval(() => {
       void refresh(ctx)
@@ -249,12 +253,18 @@ export default function roomExtension(pi: ExtensionAPI): void {
       void drain(ctx)
     }, 5_000)
     inboxTimer.unref?.()
+    heartbeatTimer = setInterval(() => {
+      void beat()
+    }, 15_000)
+    heartbeatTimer.unref?.()
   })
 
   pi.on("session_shutdown", async () => {
     if (timer !== undefined) clearInterval(timer)
     if (inboxTimer !== undefined) clearInterval(inboxTimer)
+    if (heartbeatTimer !== undefined) clearInterval(heartbeatTimer)
     timer = undefined
     inboxTimer = undefined
+    heartbeatTimer = undefined
   })
 }

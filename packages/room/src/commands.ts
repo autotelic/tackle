@@ -1,13 +1,17 @@
 import { actorOf, roomOf, stageOf } from "@autotelic/board"
 import { Effect, FileSystem, Option, Result, Schema } from "effect"
+import { homedir } from "node:os"
 import { join } from "node:path"
+import { existsSync, mkdirSync } from "node:fs"
 import { RoomClient, type Board } from "./client.ts"
 import { CONFIG_PATH, type RoomConfig, encodeConfig, readConfig } from "./config.ts"
 import { roomUrl } from "./daemon.ts"
 import { authLogin, linearTokenPresent } from "./gh.ts"
-import { repoOf, topLevel } from "./git.ts"
+import { addWorktree, fetchCommit, fetchPull, removeWorktree, repoOf, topLevel } from "./git.ts"
 import { configPathOf, readIndex, recordRoom, roomsByActivity } from "./paths.ts"
 import { onPath, run } from "./shell.ts"
+import { pullRequest } from "./gh.ts"
+import { worktreeRoot } from "./paths.ts"
 
 /*
  * The commands behind `jig room`.
@@ -175,6 +179,7 @@ export const init = (
           model: "deepseek-v4.1-flash",
           slots: 1,
         },
+        worker: { substrate: "hc" as const },
         createdAt: new Date(options.now).toISOString(),
       },
       options.label === undefined ? {} : { watch: { label: options.label } },
@@ -331,8 +336,113 @@ export const renderBoard = (input: {
     `  chits   ${board.chits.map((entry) => `${entry.state} ${entry.count}`).join(" · ") || "none"}`,
   )
   lines.push(`  here    ${board.presence.map((presence) => presence.host).join(" · ") || "nobody"}`)
+  lines.push(
+    `  work    ${
+      board.workers.map((worker) => `${worker.name} ${worker.address}`).join(" · ") || "none"
+    }`,
+  )
   return lines.join("\n")
 }
+
+/** The herdr-core binary, if this machine has it. */
+const hcOf = (): Option.Option<string> => {
+  const global = valueOf(onPath("hc"))
+  if (Option.isSome(global)) return global
+  const local = join(homedir(), ".local", "bin", "hc")
+  return existsSync(local) ? Option.some(local) : Option.none()
+}
+
+/**
+ * Start an attachable worker session in its own worktree.
+ *
+ * @param input - The repository, the PR, and the kind of work.
+ * @returns The worker name and address, or why it could not start.
+ */
+export const startWorker = (input: {
+  readonly cwd: string
+  readonly pr: number
+  readonly kind: "fix" | "review"
+}): Effect.Effect<
+  { readonly name: string; readonly address: string },
+  string,
+  FileSystem.FileSystem
+> =>
+  Effect.gen(function* () {
+    const hc = Option.getOrUndefined(hcOf())
+    if (hc === undefined) return yield* Effect.fail("herdr-core is not installed (hc)")
+    const root = Option.getOrUndefined(valueOf(topLevel(input.cwd))) ?? input.cwd
+    const config = Result.getOrUndefined(yield* readConfig(configPathOf(root)))
+    if (config === undefined) return yield* Effect.fail("no .room/config.json in this repository")
+    if ((config.worker?.substrate ?? "hc") !== "hc") {
+      return yield* Effect.fail("the rex substrate is not implemented yet")
+    }
+    const pr = Result.getOrUndefined(pullRequest({ number: input.pr, cwd: config.repo.root }))
+    if (pr === undefined) return yield* Effect.fail(`cannot read PR #${input.pr}`)
+    const dir = join(
+      worktreeRoot(config),
+      `pr-${pr.number}-${input.kind}-${pr.headRefOid.slice(0, 8)}`,
+    )
+    mkdirSync(worktreeRoot(config), { recursive: true })
+    if (existsSync(dir)) removeWorktree({ root: config.repo.root, dir })
+    fetchPull({ root: config.repo.root, pr: pr.number })
+    fetchCommit({ root: config.repo.root, sha: pr.headRefOid })
+    const added = addWorktree({ root: config.repo.root, sha: pr.headRefOid, dir })
+    if (Result.isFailure(added)) return yield* Effect.fail(added.failure)
+    const name = `room-${pr.number}-${input.kind}`
+    const launched = run({
+      command: hc,
+      args: ["run", "--bg", "--json", "--name", name, "--cwd", dir, "pi"],
+    })
+    if (launched.code !== 0) return yield* Effect.fail(launched.stderr.trim() || "hc run failed")
+    const decoded = Schema.decodeResult(
+      Schema.fromJsonString(Schema.Struct({ address: Schema.String })),
+    )(launched.stdout)
+    if (Result.isFailure(decoded)) return yield* Effect.fail("hc did not return an address")
+    const address = decoded.success.address
+    yield* Effect.tryPromise({
+      try: () =>
+        new RoomClient(roomUrl(), config.room).putWorker({
+          name,
+          pr: pr.number,
+          kind: input.kind,
+          address,
+          worktree: dir,
+        }),
+      catch: () => "room not reachable",
+    }).pipe(Effect.orElseSucceed(() => ({ ok: false })))
+    return { name, address }
+  })
+
+/** The worker list the room returns, narrowed to what attach needs. */
+interface WorkerList {
+  readonly workers: ReadonlyArray<{ readonly name: string; readonly address: string }>
+}
+
+/**
+ * Attach to a worker session through herdr-core.
+ *
+ * @param input - The repository and the worker name.
+ * @returns The worker's address, or why it could not attach.
+ */
+export const attachWorker = (input: {
+  readonly cwd: string
+  readonly name: string
+}): Effect.Effect<string, string, FileSystem.FileSystem> =>
+  Effect.gen(function* () {
+    const hc = Option.getOrUndefined(hcOf())
+    if (hc === undefined) return yield* Effect.fail("herdr-core is not installed (hc)")
+    const root = Option.getOrUndefined(valueOf(topLevel(input.cwd))) ?? input.cwd
+    const config = Result.getOrUndefined(yield* readConfig(configPathOf(root)))
+    if (config === undefined) return yield* Effect.fail("no .room/config.json in this repository")
+    const workers = yield* Effect.tryPromise({
+      try: () => new RoomClient(roomUrl(), config.room).workers(),
+      catch: () => "room not reachable",
+    }).pipe(Effect.orElseSucceed((): WorkerList => ({ workers: [] })))
+    const worker = workers.workers.find((entry) => entry.name === input.name)
+    if (worker === undefined) return yield* Effect.fail(`no worker named ${input.name}`)
+    const result = yield* Effect.sync(() => run({ command: hc, args: ["attach", worker.address] }))
+    return result.code === 0 ? worker.address : `attach exited ${result.code}`
+  })
 
 /** Re-exported for the picker. */
 export { roomsByActivity }

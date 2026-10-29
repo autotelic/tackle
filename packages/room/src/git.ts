@@ -67,6 +67,24 @@ export const fetchCommit = (input: {
 }
 
 /**
+ * Fetch a pull request's head ref.
+ *
+ * @param input - The repository root and the PR number.
+ * @returns Success, or git's message.
+ */
+export const fetchPull = (input: {
+  readonly root: string
+  readonly pr: number
+}): Result.Result<true, string> => {
+  const result = run({
+    command: "git",
+    args: ["fetch", "origin", `pull/${input.pr}/head`, "--depth=1"],
+    cwd: input.root,
+  })
+  return result.code === 0 ? Result.succeed(true) : Result.fail(result.stderr.trim())
+}
+
+/**
  * Create a detached worktree at a commit.
  *
  * @param input - The repository root, the commit, and the destination.

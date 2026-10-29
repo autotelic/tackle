@@ -25,6 +25,7 @@ const ConfigBody = Schema.Struct({
   actor: Schema.String,
   name: Schema.String.pipe(Schema.withDecodingDefaultKey(Effect.succeed(""))),
   label: Schema.optionalKey(Schema.String),
+  batchMs: Schema.optionalKey(Schema.Finite),
 })
 
 const PresenceBody = Schema.Struct({
@@ -35,9 +36,17 @@ const PresenceBody = Schema.Struct({
 
 const ClaimBody = Schema.Struct({ host: Schema.String })
 
-const IdBody = Schema.Struct({ id: Schema.String })
+const IdBody = Schema.Struct({ id: Schema.String, at: Schema.optionalKey(Schema.Finite) })
 
 const AckBody = Schema.Struct({ seqs: Schema.Array(Schema.Finite) })
+
+const WorkerBody = Schema.Struct({
+  name: Schema.String,
+  pr: Schema.optionalKey(Schema.Finite),
+  kind: Schema.String,
+  address: Schema.String,
+  worktree: Schema.String,
+})
 
 const FinishBody = Schema.Struct({
   id: Schema.String,
@@ -97,6 +106,7 @@ export const handle = async (
         chits: ledger.chitStates(),
         jobs: ledger.jobs().slice(0, 20),
         claims: ledger.claims(now),
+        workers: ledger.workers(),
         presence: ledger.presences(now).map((presence) => ({
           host: presence.host,
           actor: presence.actor,
@@ -114,6 +124,7 @@ export const handle = async (
     ledger.set("actor", body.actor)
     ledger.set("name", body.name)
     if (body.label !== undefined) ledger.set("label", body.label)
+    if (body.batchMs !== undefined) ledger.set("batchMs", String(body.batchMs))
     return json({ body: { ok: true, actor: body.actor } })
   }
 
@@ -139,7 +150,11 @@ export const handle = async (
     }
     const actor = Result.getOrUndefined(ledger.get("actor")) ?? actorOf("")
     const draft = inboxFor({ event, actor })
-    if (Result.isSuccess(draft)) ledger.enqueueInbox({ ...draft.success, at: now })
+    if (Result.isSuccess(draft)) {
+      const batch = Result.getOrUndefined(ledger.get("batchMs"))
+      const batchMs = batch === undefined ? 30_000 : Number(batch)
+      ledger.enqueueInbox({ ...draft.success, at: now, holdUntil: now + batchMs })
+    }
     const watch = Result.getOrUndefined(ledger.get("label"))
     const addressed = watch === undefined ? { event, actor } : { event, actor, label: watch }
     const queued =
@@ -153,7 +168,15 @@ export const handle = async (
     const body = Result.getOrUndefined(Schema.decodeUnknownResult(IdBody)(await rawBody(request)))
     if (body === undefined) return json({ body: { error: "id is required" }, status: 400 })
     ledger.set("session", body.id)
+    ledger.set("session_at", String(body.at === undefined ? now : body.at))
     return json({ body: { ok: true, session: body.id } })
+  }
+
+  if (request.method === "GET" && path === "/session") {
+    const id = Result.getOrUndefined(ledger.get("session"))
+    const raw = Result.getOrUndefined(ledger.get("session_at"))
+    const at = raw === undefined ? 0 : Number(raw)
+    return json({ body: { id: id ?? null, active: at + 60_000 > now, at } })
   }
 
   if (request.method === "GET" && path === "/inbox") {
@@ -161,6 +184,7 @@ export const handle = async (
     const limit = Number(url.searchParams.get("limit") ?? "50")
     const items = ledger.inbox(
       Number.isFinite(after) ? after : 0,
+      now,
       Number.isFinite(limit) ? limit : 50,
     )
     const next = items.length === 0 ? after : (items.at(-1)?.seq ?? after)
@@ -214,6 +238,33 @@ export const handle = async (
     }
     ledger.finishJob(body.id, body.state, body.note, now)
     return json({ body: { ok: true } })
+  }
+
+  if (request.method === "PUT" && path === "/workers") {
+    const body = Result.getOrUndefined(
+      Schema.decodeUnknownResult(WorkerBody)(await rawBody(request)),
+    )
+    if (body === undefined)
+      return json({ body: { error: "name and address are required" }, status: 400 })
+    const worker = Object.assign(
+      {
+        name: body.name,
+        room: ledger.room,
+        kind: body.kind,
+        address: body.address,
+        worktree: body.worktree,
+        state: "live",
+        startedAt: now,
+        updatedAt: now,
+      },
+      body.pr === undefined ? {} : { pr: body.pr },
+    )
+    ledger.putWorker(worker)
+    return json({ body: { ok: true } })
+  }
+
+  if (request.method === "GET" && path === "/workers") {
+    return json({ body: { workers: ledger.workers() } })
   }
 
   if (request.method === "GET" && path === "/jobs") {

@@ -11,6 +11,8 @@ import {
   renderBoard,
   renderChecks,
   renderPlan,
+  startWorker,
+  attachWorker,
   webhookCommand as webhookLine,
 } from "./commands.ts"
 import { readConfig, type RoomConfig } from "./config.ts"
@@ -262,6 +264,56 @@ const devCommand = Command.make(
   Command.withShortDescription("Run the room."),
 )
 
+const workCommand = Command.make(
+  "work",
+  {
+    cwd: cwdFlag,
+    pr: Flag.Int("pr").pipe(Flag.withDescription("Pull request number.")),
+    kind: Flag.Literals("kind", ["fix", "review"]).pipe(
+      Flag.withDescription("The kind of work the session is for."),
+      Flag.withDefault("fix"),
+    ),
+  },
+  (options) =>
+    Effect.gen(function* () {
+      const root = yield* rootOf(options.cwd)
+      const result = yield* startWorker({ cwd: root, pr: options.pr, kind: options.kind }).pipe(
+        Effect.result,
+      )
+      if (Result.isFailure(result)) {
+        yield* write(result.failure)
+        yield* exit(1)
+        return
+      }
+      yield* write(
+        `worker ${result.success.name} · ${result.success.address}\n  attach: jig room attach --name ${result.success.name}`,
+      )
+    }),
+).pipe(
+  Command.withDescription("Start an attachable worker session in its own worktree (herdr-core)."),
+  Command.withShortDescription("Start a worker."),
+)
+
+const attachCommand = Command.make(
+  "attach",
+  {
+    cwd: cwdFlag,
+    name: Flag.String("name").pipe(Flag.withDescription("The worker name from `jig room board`.")),
+  },
+  (options) =>
+    Effect.gen(function* () {
+      const root = yield* rootOf(options.cwd)
+      const result = yield* attachWorker({ cwd: root, name: options.name }).pipe(Effect.result)
+      if (Result.isFailure(result)) {
+        yield* write(result.failure)
+        yield* exit(1)
+      }
+    }),
+).pipe(
+  Command.withDescription("Attach to a worker session through herdr-core."),
+  Command.withShortDescription("Attach to a worker."),
+)
+
 const daemonCommand = Command.make(
   "daemon",
   {
@@ -374,6 +426,8 @@ const cli = Command.make("room").pipe(
     planCommand,
     initCommand,
     boardCommand,
+    workCommand,
+    attachCommand,
     doctorCommand,
     listCommand,
     devCommand,

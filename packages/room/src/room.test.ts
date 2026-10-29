@@ -147,15 +147,74 @@ describe("the label trigger", () => {
   })
 })
 
+describe("workers", () => {
+  it("records and refreshes a worker session", () => {
+    const store = ledger()
+    store.putWorker({
+      name: "room-1-fix",
+      room: store.room,
+      pr: 1,
+      kind: "fix",
+      address: "t2",
+      worktree: "/tmp/wt",
+      state: "live",
+      startedAt: 1,
+      updatedAt: 1,
+    })
+    expect(store.workers()).toHaveLength(1)
+    store.putWorker({
+      name: "room-1-fix",
+      room: store.room,
+      pr: 1,
+      kind: "fix",
+      address: "t2",
+      worktree: "/tmp/wt",
+      state: "done",
+      startedAt: 1,
+      updatedAt: 2,
+    })
+    expect(store.workers()[0]?.state).toBe("done")
+  })
+})
+
 describe("the project inbox", () => {
   it("dedupes by delivery id and acknowledges", () => {
     const store = ledger()
-    expect(store.enqueueInbox({ id: "i1", kind: "turn", pr: 1, text: "hi", at: 1 })).toBe(true)
-    expect(store.enqueueInbox({ id: "i1", kind: "turn", pr: 1, text: "hi", at: 1 })).toBe(false)
-    const items = store.inbox(0)
+    expect(
+      store.enqueueInbox({ id: "i1", kind: "turn", pr: 1, text: "hi", at: 1, holdUntil: 0 }),
+    ).toBe(true)
+    expect(
+      store.enqueueInbox({ id: "i1", kind: "turn", pr: 1, text: "hi", at: 1, holdUntil: 0 }),
+    ).toBe(false)
+    const items = store.inbox(0, 10_000)
     expect(items).toHaveLength(1)
     expect(store.ackInbox([items[0]?.seq ?? 0], 2)).toBe(1)
-    expect(store.inbox(0)).toHaveLength(0)
+    expect(store.inbox(0, 10_000)).toHaveLength(0)
+  })
+
+  it("batches a sweep on one PR until the hold expires", () => {
+    const store = ledger()
+    store.enqueueInbox({
+      id: "b1",
+      kind: "turn",
+      pr: 9,
+      text: "first",
+      at: 1_000,
+      holdUntil: 2_000,
+    })
+    store.enqueueInbox({
+      id: "b2",
+      kind: "turn",
+      pr: 9,
+      text: "second",
+      at: 1_500,
+      holdUntil: 3_000,
+    })
+    expect(store.inbox(0, 2_500)).toHaveLength(0)
+    const items = store.inbox(0, 3_000)
+    expect(items).toHaveLength(1)
+    expect(items[0]?.text).toContain("first")
+    expect(items[0]?.text).toContain("second")
   })
 
   it("routes Ed's comment as a turn and stays quiet on the actor's own", () => {

@@ -40,10 +40,26 @@ the extension registers its session id and polls `/inbox` every five seconds:
 - a labeled PR, a close, or a Linear state change is a **card** — a notification, not a turn;
 - the session's own comments and reviews are receipts only.
 
-Deliveries are deduped by the webhook delivery id and acknowledged after the message is
-handed to Pi. If the session is closed, the inbox waits; reopening it delivers what arrived.
-The laptop must be awake for the turn to run — waking a closed laptop is the job of a
-daemon, not this extension.
+Deliveries are deduped by the webhook delivery id. A sweep on one pull request is held for
+30 seconds and delivered as one message, so four blockers read like one review. The
+extension acknowledges after handing the message to Pi. If the session is closed, `roomd`
+resumes it headlessly (`pi -p --session <id>`) and acknowledges the turn; reopening the
+session shows the work that happened. The machine must be awake — a sleeping laptop is a
+hosting problem, not an extension one.
+
+## Worker sessions
+
+`jig room work --pr 1709 --kind fix` creates a worktree at the PR head and starts an
+attachable Pi session in it through [herdr-core](https://github.com/herdrdev/herdr-core):
+
+```
+worker room-1709-fix · t2
+  attach: jig room attach --name room-1709-fix
+```
+
+`hc` owns the terminal: attach, read, send, wait, and the Program Status Protocol. The room
+records the address in `workers` and shows it on the board. `worker.substrate` in the config
+is `hc` today; `rex` is the named seam for the same runner later.
 
 ## Local loop
 

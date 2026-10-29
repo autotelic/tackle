@@ -9,6 +9,22 @@ import { Data, Result, Schema } from "effect"
  * celld object and a deployed one.
  */
 
+/** One worker session. */
+export const Worker = Schema.Struct({
+  name: Schema.String,
+  room: Schema.String,
+  pr: Schema.optionalKey(Schema.Finite),
+  kind: Schema.String,
+  address: Schema.String,
+  worktree: Schema.String,
+  state: Schema.String,
+  startedAt: Schema.Finite,
+  updatedAt: Schema.Finite,
+})
+
+/** One worker session. */
+export type Worker = typeof Worker.Type
+
 /** The board projection the CLI and the Pi widget render. */
 export const Board = Schema.Struct({
   room: Schema.String,
@@ -19,6 +35,7 @@ export const Board = Schema.Struct({
   presence: Schema.Array(
     Schema.Struct({ host: Schema.String, actor: Schema.String, at: Schema.Finite }),
   ),
+  workers: Schema.Array(Worker),
 })
 
 /** The board projection. */
@@ -106,8 +123,12 @@ export class RoomClient {
     return this.#json("/ingest", { method: "POST", headers, body: JSON.stringify(body) })
   }
 
-  registerSession(id: string): Promise<{ ok: boolean }> {
-    return this.#json("/session", { method: "PUT", body: JSON.stringify({ id }) })
+  registerSession(id: string, at: number): Promise<{ ok: boolean }> {
+    return this.#json("/session", { method: "PUT", body: JSON.stringify({ id, at }) })
+  }
+
+  session(): Promise<{ id: string | null; active: boolean; at: number }> {
+    return this.#json("/session")
   }
 
   inbox(after: number, limit = 50): Promise<{ items: ReadonlyArray<InboxItem>; next: number }> {
@@ -116,6 +137,20 @@ export class RoomClient {
 
   ack(seqs: ReadonlyArray<number>): Promise<{ ok: boolean; changed: number }> {
     return this.#json("/inbox/ack", { method: "POST", body: JSON.stringify({ seqs }) })
+  }
+
+  workers(): Promise<{ workers: ReadonlyArray<Worker> }> {
+    return this.#json("/workers")
+  }
+
+  putWorker(input: {
+    readonly name: string
+    readonly pr?: number
+    readonly kind: string
+    readonly address: string
+    readonly worktree: string
+  }): Promise<{ ok: boolean }> {
+    return this.#json("/workers", { method: "PUT", body: JSON.stringify(input) })
   }
 
   async claim(host: string): Promise<Job | null> {

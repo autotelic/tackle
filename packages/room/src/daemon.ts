@@ -1,5 +1,6 @@
 import { actorOf, hostOf } from "@autotelic/board"
-import { Data, Effect, Result } from "effect"
+import { Clock, Data, Effect, Result } from "effect"
+import { spawn } from "node:child_process"
 import { hostname } from "node:os"
 import type { RoomConfig } from "./config.ts"
 import { authLogin } from "./gh.ts"
@@ -32,6 +33,22 @@ export interface DaemonOptions {
 }
 
 const DEFAULT_URL = "http://127.0.0.1:9876"
+
+/** Resume a closed session headlessly; Pi appends to the same transcript. */
+const wakeSession = (input: {
+  readonly cwd: string
+  readonly session: string
+  readonly text: string
+}): Promise<number> =>
+  new Promise((resolve) => {
+    const child = spawn(
+      "pi",
+      ["-p", "--session", input.session, "--name", "room wake", input.text],
+      { cwd: input.cwd, stdio: "ignore" },
+    )
+    child.on("error", () => resolve(127))
+    child.on("close", (code) => resolve(code ?? 1))
+  })
 
 /** The room URL this machine talks to. */
 export const roomUrl = (): string => process.env.ROOM_URL ?? DEFAULT_URL
@@ -87,13 +104,53 @@ export const daemon = (options: DaemonOptions): Effect.Effect<void, DaemonError>
       ),
     )
 
+    let lastWake = 0
+
+    const wake = Effect.gen(function* () {
+      const now = yield* Clock.currentTimeMillis
+      if (now - lastWake < 60_000) return
+      const session = yield* Effect.tryPromise({
+        try: () => client.session(),
+        catch: (error) => new DaemonError({ message: String(error) }),
+      })
+      if (!session.active || session.id === null) return
+      const inbox = yield* Effect.tryPromise({
+        try: () => client.inbox(0),
+        catch: (error) => new DaemonError({ message: String(error) }),
+      })
+      const turns = inbox.items.filter((item) => item.kind === "turn")
+      if (turns.length === 0) return
+      lastWake = now
+      log(`wake ${session.id}`)
+      const code = yield* Effect.tryPromise({
+        try: () =>
+          wakeSession({
+            cwd: options.config.repo.root,
+            session: session.id === null ? "" : session.id,
+            text: turns.map((item) => item.text).join("\n\n---\n\n"),
+          }),
+        catch: (error) => new DaemonError({ message: String(error) }),
+      })
+      if (code !== 0) {
+        log(`wake failed: ${code}`)
+        return
+      }
+      yield* Effect.tryPromise({
+        try: () => client.ack(turns.map((item) => item.seq)),
+        catch: (error) => new DaemonError({ message: String(error) }),
+      })
+    }).pipe(Effect.catch((error) => Effect.sync(() => log(`wake: ${error.message}`))))
+
     yield* Effect.forkChild(Effect.forever(Effect.flatMap(beat, () => Effect.sleep("20 seconds"))))
 
     if (options.once) {
+      yield* wake
       yield* work
       return
     }
 
     log(`roomd ${options.config.room} → ${options.url} (${host})`)
-    return yield* Effect.forever(Effect.flatMap(work, () => Effect.sleep("2 seconds")))
+    return yield* Effect.forever(
+      Effect.flatMap(wake, () => Effect.flatMap(work, () => Effect.sleep("2 seconds"))),
+    )
   })
