@@ -3,5 +3,20 @@
     "name": "baseline",
     "version": 1
   },
-  "identities": []
+  "identities": [
+    "plumb/no-conditional-empty-object-spread:packages/protocol/src/graph.test.ts",
+    "plumb/no-conditional-empty-object-spread:packages/protocol/src/graph.ts",
+    "plumb/no-nondeterministic-core:packages/cutlist/src/cli.ts",
+    "plumb/no-redundant-derived-field:packages/protocol/src/graph.ts",
+    "plumb/no-reinterpret-cast:packages/jig-cli/src/init.ts",
+    "plumb/plumb-effect/guarded-op-must-return-option:packages/protocol/src/graph.ts",
+    "plumb/plumb-effect/prefer-effect-predicate-over-boolean-function:packages/protocol/src/graph.ts",
+    "plumb/prefer-property-tests:packages/cutlist/src/check.test.ts",
+    "plumb/prefer-property-tests:packages/cutlist/src/edges.test.ts",
+    "plumb/prefer-property-tests:packages/cutlist/src/outputs.test.ts",
+    "plumb/prefer-property-tests:packages/jig-cli/src/gitattributes.test.ts",
+    "plumb/prefer-property-tests:packages/protocol/src/graph.test.ts",
+    "plumb/require-safety-comment-for-type-assertion:packages/jig-cli/src/init.ts",
+    "plumb/require-sort-comparator:packages/jig-cli/src/init.test.ts"
+  ]
 }
