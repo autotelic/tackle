@@ -61,6 +61,10 @@ worker room-1709-fix · t2
 records the address in `workers` and shows it on the board. `worker.substrate` in the config
 is `hc` today; `rex` is the named seam for the same runner later.
 
+Review jobs use the same substrate: the worktree is prepared, `run.sh` writes Pi's JSONL to
+the job directory, and `hc` runs it while the daemon polls the terminal. If `hc` is missing,
+the review falls back to the direct `pi -p` child. A marked review on #1 was posted this way.
+
 ## Local loop
 
 ```sh

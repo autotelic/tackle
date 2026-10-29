@@ -1,8 +1,9 @@
 import { spawn } from "node:child_process"
-import { existsSync, readFileSync } from "node:fs"
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import { homedir } from "node:os"
 import { join } from "node:path"
 import { markerOf, type Job } from "@autotelic/board"
-import { Result, Schema } from "effect"
+import { Option, Result, Schema } from "effect"
 import type { RoomConfig } from "./config.ts"
 import { hasReviewMarker, postReview, pullRequest, type PullRequest } from "./gh.ts"
 import { addWorktree, fetchCommit, fetchPull, removeWorktree } from "./git.ts"
@@ -197,6 +198,99 @@ const runPi = (args: ReadonlyArray<string>, cwd: string) =>
     })
   })
 
+/** The herdr-core binary, if this machine has it. */
+const hcOf = (): Option.Option<string> => {
+  const global = Result.getOrUndefined(onPath("hc"))
+  if (global !== undefined) return Option.some(global)
+  const local = join(homedir(), ".local", "bin", "hc")
+  return existsSync(local) ? Option.some(local) : Option.none()
+}
+
+const HcState = Schema.Struct({
+  state: Schema.String,
+  exit_code: Schema.optionalKey(Schema.NullOr(Schema.Finite)),
+})
+
+/** Poll a worker terminal until its program exits. */
+const waitHc = async (input: {
+  readonly hc: string
+  readonly address: string
+}): Promise<number> => {
+  for (let attempt = 0; attempt < 900; attempt += 1) {
+    const result = run({ command: input.hc, args: ["get", input.address, "--json"] })
+    const decoded = Schema.decodeResult(Schema.fromJsonString(HcState))(result.stdout)
+    if (Result.isSuccess(decoded) && decoded.success.state !== "live") {
+      const code = decoded.success.exit_code
+      return code === undefined || code === null ? 1 : code
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1_000))
+  }
+  return 124
+}
+
+/** The assistant text in a Pi JSONL stream. */
+const piText = (stream: string): string => {
+  const texts: Array<string> = []
+  for (const line of stream.split("\n")) {
+    const decoded = Schema.decodeResult(Schema.fromJsonString(PiEvent))(line)
+    if (Result.isFailure(decoded)) continue
+    const event = decoded.success
+    const message = event.message
+    if (event.type !== "message" || message === undefined || message.role !== "assistant") {
+      continue
+    }
+    const text = (message.content ?? []).flatMap((part) =>
+      part.type === "text" && part.text !== undefined ? [part.text] : [],
+    )
+    if (text.join("").trim() !== "") texts.push(text.join(""))
+  }
+  return texts.at(-1)?.trim() ?? ""
+}
+
+/** Run the review's Pi inside an hc terminal; undefined when hc could not launch it. */
+const runPiInHc = async (input: {
+  readonly hc: string
+  readonly dir: string
+  readonly sessionDir: string
+  readonly name: string
+  readonly provider: string
+  readonly model: string
+  readonly prompt: string
+}): Promise<{ text: string; code: number } | undefined> => {
+  mkdirSync(input.sessionDir, { recursive: true })
+  const promptFile = join(input.sessionDir, "prompt.md")
+  const answerFile = join(input.sessionDir, "answer.jsonl")
+  const errFile = join(input.sessionDir, "answer.err")
+  const script = join(input.sessionDir, "run.sh")
+  writeFileSync(promptFile, input.prompt)
+  writeFileSync(
+    script,
+    [
+      "#!/bin/sh",
+      `exec pi -p --mode json --provider ${input.provider} --model ${input.model}` +
+        ` --session-dir "${input.sessionDir}" --name "${input.name}"` +
+        ` --tools "read,grep,find,ls,bash" "$(cat "${promptFile}")"` +
+        ` > "${answerFile}" 2> "${errFile}"`,
+      "",
+    ].join("\n"),
+  )
+  chmodSync(script, 0o755)
+  run({ command: input.hc, args: ["kill", input.name] })
+  run({ command: input.hc, args: ["rm", input.name] })
+  const launched = run({
+    command: input.hc,
+    args: ["run", "--bg", "--json", "--name", input.name, "--cwd", input.dir, "sh", script],
+  })
+  const decoded = Schema.decodeResult(
+    Schema.fromJsonString(Schema.Struct({ address: Schema.String })),
+  )(launched.stdout)
+  if (Result.isFailure(decoded)) return undefined
+  const code = await waitHc({ hc: input.hc, address: decoded.success.address })
+  run({ command: input.hc, args: ["rm", decoded.success.address] })
+  const output = existsSync(answerFile) ? readFileSync(answerFile, "utf8") : ""
+  return { text: piText(output), code }
+}
+
 const bodyOf = ({
   room,
   sha,
@@ -302,25 +396,40 @@ export const runReview = async ({
     }
 
     const sessionDir = join(jobsRoot(config), `pr-${pr.number}-${sha.slice(0, 8)}`)
-    const answer = await runPi(
-      [
-        "-p",
-        "--mode",
-        "json",
-        "--provider",
-        config.review.provider,
-        "--model",
-        config.review.model,
-        "--session-dir",
-        sessionDir,
-        "--name",
-        `review #${pr.number}`,
-        "--tools",
-        "read,grep,find,ls,bash",
-        prompt,
-      ],
-      dir,
-    )
+    const hc = hcOf()
+    const viaHc =
+      (config.worker?.substrate ?? "local") === "hc" && Option.isSome(hc)
+        ? await runPiInHc({
+            hc: hc.value,
+            dir,
+            sessionDir,
+            name: `room-review-${pr.number}`,
+            provider: config.review.provider,
+            model: config.review.model,
+            prompt,
+          })
+        : undefined
+    const answer =
+      viaHc ??
+      (await runPi(
+        [
+          "-p",
+          "--mode",
+          "json",
+          "--provider",
+          config.review.provider,
+          "--model",
+          config.review.model,
+          "--session-dir",
+          sessionDir,
+          "--name",
+          `review #${pr.number}`,
+          "--tools",
+          "read,grep,find,ls,bash",
+          prompt,
+        ],
+        dir,
+      ))
     if (answer.code !== 0) {
       return {
         ok: false,
