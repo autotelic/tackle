@@ -86,6 +86,12 @@ const initCommand = Command.make(
       Flag.withDescription("Where this room runs (default: local/<login>)."),
       Flag.optional,
     ),
+    label: Flag.String("label").pipe(
+      Flag.withDescription(
+        "The GitHub label that addresses this room (optional; review requests still work).",
+      ),
+      Flag.optional,
+    ),
     force: Flag.Boolean("force").pipe(
       Flag.withDescription("Rewrite an existing .room/config.json."),
       Flag.withDefault(false),
@@ -102,6 +108,7 @@ const initCommand = Command.make(
           projectName: options.projectName,
           workspace: Option.getOrUndefined(options.workspace),
           stage: Option.getOrUndefined(options.stage),
+          label: Option.getOrUndefined(options.label),
           force: options.force,
           now: yield* Clock.currentTimeMillis,
         }),

@@ -41,6 +41,11 @@ export const RoomConfig = Schema.Struct({
     model: Schema.String,
     slots: Schema.Finite,
   }),
+  watch: Schema.optionalKey(
+    Schema.Struct({
+      label: Schema.String,
+    }),
+  ),
   createdAt: Schema.String,
 })
 

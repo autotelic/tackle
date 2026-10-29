@@ -23,6 +23,7 @@ const PullRequest = Schema.Struct({
   merged: Schema.optionalKey(Schema.Boolean),
   user: Schema.optionalKey(User),
   head: Schema.optionalKey(Head),
+  labels: Schema.optionalKey(Schema.Array(Schema.Struct({ name: Schema.String }))),
 })
 
 const Review = Schema.Struct({
@@ -42,6 +43,7 @@ const GithubPayload = Schema.Struct({
   action: Schema.String.pipe(Schema.withDecodingDefaultKey(Effect.succeed(""))),
   pull_request: Schema.optionalKey(PullRequest),
   requested_reviewer: Schema.optionalKey(User),
+  label: Schema.optionalKey(Schema.Struct({ name: Schema.String })),
   review: Schema.optionalKey(Review),
   comment: Schema.optionalKey(Comment),
 })
@@ -68,6 +70,16 @@ export type RoomEvent =
       readonly reviewer: string
       readonly author: string
       readonly title: string
+      readonly draft: boolean
+    }
+  | {
+      readonly kind: "pr.ready"
+      readonly id: string
+      readonly at: number
+      readonly pr: number
+      readonly sha: string
+      readonly author: string
+      readonly labels: ReadonlyArray<string>
       readonly draft: boolean
     }
   | {
@@ -139,6 +151,25 @@ export const fromGithub = ({
       reviewer: payload.requested_reviewer?.login ?? "",
       author,
       title: pr?.title ?? "",
+      draft: pr?.draft === true,
+    }
+  }
+  if (
+    event === "pull_request" &&
+    (action === "opened" || action === "labeled" || action === "ready_for_review")
+  ) {
+    const labels = [
+      ...(pr?.labels?.map((entry) => entry.name) ?? []),
+      ...(payload.label?.name === undefined ? [] : [payload.label.name]),
+    ]
+    return {
+      kind: "pr.ready",
+      id: delivery,
+      at: now,
+      pr: number,
+      sha,
+      author,
+      labels: [...new Set(labels)],
       draft: pr?.draft === true,
     }
   }

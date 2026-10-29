@@ -23,6 +23,7 @@ export interface ApiOptions {
 const ConfigBody = Schema.Struct({
   actor: Schema.String,
   name: Schema.String.pipe(Schema.withDecodingDefaultKey(Effect.succeed(""))),
+  label: Schema.optionalKey(Schema.String),
 })
 
 const PresenceBody = Schema.Struct({
@@ -109,6 +110,7 @@ export const handle = async (
     if (body === undefined) return json({ body: { error: "actor is required" }, status: 400 })
     ledger.set("actor", body.actor)
     ledger.set("name", body.name)
+    if (body.label !== undefined) ledger.set("label", body.label)
     return json({ body: { ok: true, actor: body.actor } })
   }
 
@@ -133,10 +135,12 @@ export const handle = async (
       return json({ body: { event: event.kind, accepted: false, queued: false } })
     }
     const actor = Result.getOrUndefined(ledger.get("actor")) ?? actorOf("")
+    const watch = Result.getOrUndefined(ledger.get("label"))
+    const addressed = watch === undefined ? { event, actor } : { event, actor, label: watch }
     const queued =
-      shouldReview({ event, actor }) && event.kind === "review.requested"
-        ? ledger.enqueue(reviewJob({ event, room: ledger.room, now }))
-        : false
+      (event.kind === "review.requested" || event.kind === "pr.ready") &&
+      shouldReview(addressed) &&
+      ledger.enqueue(reviewJob({ event, room: ledger.room, now }))
     return json({ body: { event: event.kind, accepted: true, queued } })
   }
 

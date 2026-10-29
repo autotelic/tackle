@@ -81,8 +81,11 @@ export class RoomClient {
       : Result.fail("board did not decode")
   }
 
-  configure(actor: string, name: string): Promise<{ ok: boolean }> {
-    return this.#json("/config", { method: "PUT", body: JSON.stringify({ actor, name }) })
+  configure(actor: string, name: string, label: string | undefined): Promise<{ ok: boolean }> {
+    return this.#json("/config", {
+      method: "PUT",
+      body: JSON.stringify(label === undefined ? { actor, name } : { actor, name, label }),
+    })
   }
 
   ingest(

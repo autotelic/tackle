@@ -122,6 +122,7 @@ export interface InitOptions {
   readonly projectName: string
   readonly workspace: string | undefined
   readonly stage: string | undefined
+  readonly label: string | undefined
   readonly force: boolean
   readonly now: number
 }
@@ -156,25 +157,28 @@ export const init = (
       return yield* Effect.fail(`${CONFIG_PATH} already exists; pass --force to rewrite it`)
     }
     const stage = options.stage ?? stageOf(login)
-    const config: RoomConfig = {
-      version: 1,
-      room: roomOf({ projectId: options.projectId, stage }),
-      name: options.name,
-      stage,
-      project: Object.assign(
-        { kind: "linear" as const, id: options.projectId, name: options.projectName },
-        options.workspace === undefined ? {} : { workspace: options.workspace },
-      ),
-      repo: { owner: repo.owner, name: repo.name, root },
-      ingress: { github: "forward", linear: "poll" },
-      review: {
-        trigger: "review_requested",
-        provider: "opencode-go",
-        model: "deepseek-v4.1-flash",
-        slots: 1,
+    const config: RoomConfig = Object.assign(
+      {
+        version: 1 as const,
+        room: roomOf({ projectId: options.projectId, stage }),
+        name: options.name,
+        stage,
+        project: Object.assign(
+          { kind: "linear" as const, id: options.projectId, name: options.projectName },
+          options.workspace === undefined ? {} : { workspace: options.workspace },
+        ),
+        repo: { owner: repo.owner, name: repo.name, root },
+        ingress: { github: "forward" as const, linear: "poll" as const },
+        review: {
+          trigger: "review_requested" as const,
+          provider: "opencode-go",
+          model: "deepseek-v4.1-flash",
+          slots: 1,
+        },
+        createdAt: new Date(options.now).toISOString(),
       },
-      createdAt: new Date(options.now).toISOString(),
-    }
+      options.label === undefined ? {} : { watch: { label: options.label } },
+    )
     yield* Effect.orElseSucceed(
       fs.makeDirectory(join(root, ".room"), { recursive: true }),
       () => undefined,
@@ -189,7 +193,12 @@ export const init = (
       lastSeen: options.now,
     })
     const configured = yield* Effect.tryPromise({
-      try: () => new RoomClient(roomUrl(), config.room).configure(actorOf(login), config.name),
+      try: () =>
+        new RoomClient(roomUrl(), config.room).configure(
+          actorOf(login),
+          config.name,
+          options.label,
+        ),
       catch: () => "room not reachable",
     }).pipe(
       Effect.map(() => true),

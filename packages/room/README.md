@@ -44,9 +44,13 @@ jig room daemon                                   # the hands
 both are local-only. A room is addressed by `linear:<projectId>@<stage>`; `local/<login>`
 is the stage until the room is shared.
 
-The review is triggered by a **review request**, not a push. The daemon checks the PR's
-reviews for its marker before posting, so a re-delivered webhook cannot post twice, and a
-re-request after a push runs again.
+The review is triggered by either address:
+
+- a **review request** naming the room's actor, or
+- a **labeled PR** carrying the room's `--label`, authored by someone else.
+
+A push is not a request. The daemon checks the PR's reviews for its marker before posting,
+so a re-delivered webhook cannot post twice, and a re-request after a push runs again.
 
 ## Pi
 
@@ -58,13 +62,14 @@ it with `pi -e packages/room/extensions/pi.ts`, or install this package as a Pi 
 
 ```sh
 CELLD_ESBUILD="$(pwd)/packages/room/node_modules/.bin/esbuild" celld dev
-jig room init --room e2e --linear-project <id> --linear-name "E2E"
+jig room init --room e2e --linear-project <id> --linear-name "E2E" --label multi-season
 jig room webhook | sh
 jig room board
 ```
 
-A `review_requested` webhook is deduped by delivery id, queued as `pr:<n>:<sha>`, claimed
-exactly once, and shown in the board. The Pi widget refreshes every 15 seconds.
+A `review_requested` or labeled `pull_request` webhook is deduped by delivery id, queued as
+`pr:<n>:<sha>`, claimed exactly once, and shown in the board. A labeled PR by the room's own
+actor is ignored. The Pi widget refreshes every 15 seconds.
 
 ## Alchemy and celld
 

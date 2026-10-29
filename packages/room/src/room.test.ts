@@ -33,6 +33,7 @@ class NodeSql implements Sql {
 }
 import { describe, expect, it } from "vitest"
 import { fromGithub, fromLinear } from "./ingest.ts"
+import { shouldReview } from "./policy.ts"
 import { Ledger } from "./ledger.ts"
 import type { Job } from "@autotelic/board"
 
@@ -92,6 +93,56 @@ describe("webhooks", () => {
       body: { action: "update", data: { identifier: "DEV-1506", state: { name: "Done" } } },
     })
     expect(event).toMatchObject({ kind: "issue.changed", identifier: "DEV-1506", state: "Done" })
+  })
+})
+
+describe("the label trigger", () => {
+  const labeled = () => {
+    const event = fromGithub({
+      event: "pull_request",
+      delivery: "d2",
+      now: 10,
+      body: {
+        action: "labeled",
+        pull_request: {
+          number: 1710,
+          title: "season",
+          draft: false,
+          user: { login: "eadmundo" },
+          head: { sha: "abcdef123456" },
+          labels: [{ name: "multi-season" }],
+        },
+        label: { name: "multi-season" },
+      },
+    })
+    return event
+  }
+
+  it("turns a labeled PR into a pr.ready event with its labels", () => {
+    expect(labeled()).toMatchObject({
+      kind: "pr.ready",
+      pr: 1710,
+      author: "eadmundo",
+      labels: ["multi-season"],
+    })
+  })
+
+  it("acts on the label, without a review request", () => {
+    expect(shouldReview({ event: labeled(), actor: "github:togmund", label: "multi-season" })).toBe(
+      true,
+    )
+  })
+
+  it("does not review its own actor's PR", () => {
+    expect(
+      shouldReview({ event: labeled(), actor: "github:eadmundo", label: "multi-season" }),
+    ).toBe(false)
+  })
+
+  it("does not act on a different label", () => {
+    expect(shouldReview({ event: labeled(), actor: "github:togmund", label: "payroll" })).toBe(
+      false,
+    )
   })
 })
 
