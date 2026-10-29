@@ -127,6 +127,7 @@ export interface InitOptions {
   readonly workspace: string | undefined
   readonly stage: string | undefined
   readonly label: string | undefined
+  readonly linearUser: string | undefined
   readonly force: boolean
   readonly now: number
 }
@@ -183,6 +184,7 @@ export const init = (
         createdAt: new Date(options.now).toISOString(),
       },
       options.label === undefined ? {} : { watch: { label: options.label } },
+      options.linearUser === undefined ? {} : { linearUser: options.linearUser },
     )
     yield* Effect.orElseSucceed(
       fs.makeDirectory(join(root, ".room"), { recursive: true }),
@@ -203,6 +205,7 @@ export const init = (
           actorOf(login),
           config.name,
           options.label,
+          options.linearUser,
         ),
       catch: () => "room not reachable",
     }).pipe(

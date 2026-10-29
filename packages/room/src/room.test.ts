@@ -244,6 +244,33 @@ describe("the project inbox", () => {
     expect(Result.isFailure(inboxFor({ event, actor: "github:eadmundo" }))).toBe(true)
   })
 
+  it("turns a Linear comment into a turn, and can ignore the actor's own", () => {
+    const event = fromLinear({
+      delivery: "lc1",
+      now: 1,
+      body: {
+        type: "Comment",
+        action: "create",
+        data: {
+          body: "Can you check the season rollup?",
+          issue: { identifier: "DEV-1506" },
+          user: { name: "Ed" },
+        },
+      },
+    })
+    expect(event).toMatchObject({
+      kind: "comment.created",
+      ticket: "DEV-1506",
+      author: "Ed",
+    })
+    const draft = Result.getOrUndefined(inboxFor({ event, actor: "github:togmund" }))
+    expect(draft?.kind).toBe("turn")
+    expect(draft?.ticket).toBe("DEV-1506")
+    expect(Result.isFailure(inboxFor({ event, actor: "github:togmund", linearUser: "Ed" }))).toBe(
+      true,
+    )
+  })
+
   it("turns a label into a card, not a turn", () => {
     const event = fromGithub({
       event: "pull_request",

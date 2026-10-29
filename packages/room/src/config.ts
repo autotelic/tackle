@@ -51,6 +51,7 @@ export const RoomConfig = Schema.Struct({
       substrate: Schema.Literals(["hc", "rex"]),
     }),
   ),
+  linearUser: Schema.optionalKey(Schema.String),
   createdAt: Schema.String,
 })
 

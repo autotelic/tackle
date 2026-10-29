@@ -94,6 +94,10 @@ const initCommand = Command.make(
       ),
       Flag.optional,
     ),
+    linearUser: Flag.String("linear-user").pipe(
+      Flag.withDescription("The Linear display name to treat as this person (optional)."),
+      Flag.optional,
+    ),
     force: Flag.Boolean("force").pipe(
       Flag.withDescription("Rewrite an existing .room/config.json."),
       Flag.withDefault(false),
@@ -111,6 +115,7 @@ const initCommand = Command.make(
           workspace: Option.getOrUndefined(options.workspace),
           stage: Option.getOrUndefined(options.stage),
           label: Option.getOrUndefined(options.label),
+          linearUser: Option.getOrUndefined(options.linearUser),
           force: options.force,
           now: yield* Clock.currentTimeMillis,
         }),

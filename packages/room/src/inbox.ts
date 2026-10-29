@@ -39,10 +39,23 @@ const where = (path: string, line: number): string =>
 export const inboxFor = ({
   event,
   actor,
+  linearUser,
 }: {
   readonly event: RoomEvent
   readonly actor: string
+  readonly linearUser?: string
 }): Result.Result<InboxDraft, string> => {
+  if (event.kind === "comment.created") {
+    if (linearUser !== undefined && event.author === linearUser) {
+      return Result.fail("the actor's own Linear comment")
+    }
+    return Result.succeed({
+      id: `inbox:${event.id}`,
+      kind: "turn",
+      ticket: event.ticket,
+      text: `${event.author} commented on ${event.ticket}:\n\n${clip(event.body)}`,
+    })
+  }
   if (event.kind === "thread.created") {
     if (actorOf(event.author) === actor) return Result.fail("not addressed to this session")
     return Result.succeed({

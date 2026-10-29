@@ -26,6 +26,7 @@ const ConfigBody = Schema.Struct({
   name: Schema.String.pipe(Schema.withDecodingDefaultKey(Effect.succeed(""))),
   label: Schema.optionalKey(Schema.String),
   batchMs: Schema.optionalKey(Schema.Finite),
+  linearUser: Schema.optionalKey(Schema.String),
 })
 
 const PresenceBody = Schema.Struct({
@@ -125,6 +126,7 @@ export const handle = async (
     ledger.set("name", body.name)
     if (body.label !== undefined) ledger.set("label", body.label)
     if (body.batchMs !== undefined) ledger.set("batchMs", String(body.batchMs))
+    if (body.linearUser !== undefined) ledger.set("linearUser", body.linearUser)
     return json({ body: { ok: true, actor: body.actor } })
   }
 
@@ -149,7 +151,10 @@ export const handle = async (
       return json({ body: { event: event.kind, accepted: false, queued: false } })
     }
     const actor = Result.getOrUndefined(ledger.get("actor")) ?? actorOf("")
-    const draft = inboxFor({ event, actor })
+    const linearUser = Result.getOrUndefined(ledger.get("linearUser"))
+    const draft = inboxFor(
+      linearUser === undefined ? { event, actor } : { event, actor, linearUser },
+    )
     if (Result.isSuccess(draft)) {
       const batch = Result.getOrUndefined(ledger.get("batchMs"))
       const batchMs = batch === undefined ? 30_000 : Number(batch)

@@ -52,12 +52,21 @@ const GithubPayload = Schema.Struct({
 
 const LinearState = Schema.Struct({ name: Schema.optionalKey(Schema.String) })
 
+const LinearUser = Schema.Struct({
+  name: Schema.optionalKey(Schema.String),
+  email: Schema.optionalKey(Schema.String),
+})
+
 const LinearIssue = Schema.Struct({
   identifier: Schema.optionalKey(Schema.String),
   state: Schema.optionalKey(LinearState),
+  body: Schema.optionalKey(Schema.String),
+  issue: Schema.optionalKey(Schema.Struct({ identifier: Schema.optionalKey(Schema.String) })),
+  user: Schema.optionalKey(LinearUser),
 })
 
 const LinearPayload = Schema.Struct({
+  type: Schema.optionalKey(Schema.String),
   action: Schema.String.pipe(Schema.withDecodingDefaultKey(Effect.succeed(""))),
   data: Schema.optionalKey(LinearIssue),
 })
@@ -113,6 +122,14 @@ export type RoomEvent =
       readonly pr: number
       readonly sha: string
       readonly merged: boolean
+    }
+  | {
+      readonly kind: "comment.created"
+      readonly id: string
+      readonly at: number
+      readonly ticket: string
+      readonly author: string
+      readonly body: string
     }
   | {
       readonly kind: "issue.changed"
@@ -230,6 +247,21 @@ export const fromLinear = ({
     Schema.decodeUnknownResult(LinearPayload)(body),
     (): typeof LinearPayload.Type => ({ action: "" }),
   )
+  if (payload.type === "Comment") {
+    const ticket = payload.data?.issue?.identifier ?? ""
+    const body = payload.data?.body ?? ""
+    if (body === "") {
+      return { kind: "unknown", id: delivery, at: now, name: `linear.comment.${payload.action}` }
+    }
+    return {
+      kind: "comment.created",
+      id: delivery,
+      at: now,
+      ticket,
+      author: payload.data?.user?.name ?? payload.data?.user?.email ?? "",
+      body,
+    }
+  }
   const identifier = payload.data?.identifier ?? ""
   if (identifier === "") {
     return { kind: "unknown", id: delivery, at: now, name: `linear.${payload.action}` }
