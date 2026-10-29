@@ -30,6 +30,21 @@ room/
 The room is the listener. Webhooks land on `/r/<room>/ingest`; the daemon is a client that
 claims jobs. That is why `roomd` has no HTTP server of its own.
 
+## The project session
+
+The room can deliver events into the Pi session you are already using. On `session_start`
+the extension registers its session id and polls `/inbox` every five seconds:
+
+- a comment or review from someone else on a pull request is a **turn** — it becomes a
+  follow-up message and starts a run;
+- a labeled PR, a close, or a Linear state change is a **card** — a notification, not a turn;
+- the session's own comments and reviews are receipts only.
+
+Deliveries are deduped by the webhook delivery id and acknowledged after the message is
+handed to Pi. If the session is closed, the inbox waits; reopening it delivers what arrived.
+The laptop must be awake for the turn to run — waking a closed laptop is the job of a
+daemon, not this extension.
+
 ## Local loop
 
 ```sh

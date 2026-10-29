@@ -10,6 +10,7 @@
  * Effect schemas the CLI uses.
  */
 import { execFile } from "node:child_process"
+import { readFileSync } from "node:fs"
 import { existsSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -104,9 +105,41 @@ const boardArgs = (cwd: string, room: string | undefined): ReadonlyArray<string>
   "--json",
 ]
 
+interface RoomConfigFile {
+  readonly room: string
+}
+
+const roomOf = (cwd: string): RoomConfigFile | undefined => {
+  try {
+    const value = JSON.parse(readFileSync(join(cwd, ".room", "config.json"), "utf8")) as {
+      room?: unknown
+    }
+    return typeof value.room === "string" ? { room: value.room } : undefined
+  } catch {
+    return undefined
+  }
+}
+
+const baseUrl = (): string => process.env.ROOM_URL ?? "http://127.0.0.1:9876"
+
+const roomFetch = async (cwd: string, path: string, init?: RequestInit): Promise<unknown> => {
+  const config = roomOf(cwd)
+  if (config === undefined) return undefined
+  const response = await fetch(`${baseUrl()}/r/${encodeURIComponent(config.room)}${path}`, init)
+  return response.ok ? response.json() : undefined
+}
+
+interface InboxItem {
+  readonly seq: number
+  readonly kind: "turn" | "card"
+  readonly text: string
+}
+
 export default function roomExtension(pi: ExtensionAPI): void {
   let active: string | undefined
   let timer: ReturnType<typeof setInterval> | undefined
+  let inboxTimer: ReturnType<typeof setInterval> | undefined
+  let cursor = 0
 
   const refresh = async (ctx: ExtensionContext): Promise<void> => {
     const view = await json<BoardView>(boardArgs(cwdOf(ctx), active), cwdOf(ctx))
@@ -163,16 +196,65 @@ export default function roomExtension(pi: ExtensionAPI): void {
     },
   })
 
+  const drain = async (ctx: ExtensionContext): Promise<void> => {
+    const cwd = cwdOf(ctx)
+    const config = roomOf(cwd)
+    if (config === undefined) return
+    const value = (await roomFetch(cwd, `/inbox?after=${cursor}&limit=50`)) as
+      | { items?: ReadonlyArray<InboxItem>; next?: number }
+      | undefined
+    if (value === undefined) return
+    const items = value.items ?? []
+    if (items.length === 0) {
+      cursor = value.next ?? cursor
+      return
+    }
+    const turns = items.filter((item) => item.kind === "turn")
+    const cards = items.filter((item) => item.kind === "card")
+    if (turns.length > 0) {
+      pi.sendMessage(
+        {
+          customType: "room.event",
+          content: `[room]\n\n${turns.map((item) => item.text).join("\n\n---\n\n")}`,
+          display: true,
+        },
+        { deliverAs: "followUp", triggerTurn: true },
+      )
+    }
+    if (cards.length > 0 && ctx.hasUI) {
+      ctx.ui.notify(cards.map((item) => item.text).join("\n"), "info")
+    }
+    await roomFetch(cwd, "/inbox/ack", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ seqs: items.map((item) => item.seq) }),
+    })
+    cursor = value.next ?? items.at(-1)?.seq ?? cursor
+  }
+
   pi.on("session_start", async (_event, ctx) => {
+    const cwd = cwdOf(ctx)
+    const id = ctx.sessionManager.getSessionId()
+    await roomFetch(cwd, "/session", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id }),
+    })
     await refresh(ctx)
     timer = setInterval(() => {
       void refresh(ctx)
     }, 15_000)
     timer.unref?.()
+    inboxTimer = setInterval(() => {
+      void drain(ctx)
+    }, 5_000)
+    inboxTimer.unref?.()
   })
 
   pi.on("session_shutdown", async () => {
     if (timer !== undefined) clearInterval(timer)
+    if (inboxTimer !== undefined) clearInterval(inboxTimer)
     timer = undefined
+    inboxTimer = undefined
   })
 }

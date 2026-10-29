@@ -34,6 +34,7 @@ class NodeSql implements Sql {
 import { describe, expect, it } from "vitest"
 import { fromGithub, fromLinear } from "./ingest.ts"
 import { shouldReview } from "./policy.ts"
+import { inboxFor } from "./inbox.ts"
 import { Ledger } from "./ledger.ts"
 import type { Job } from "@autotelic/board"
 
@@ -143,6 +144,64 @@ describe("the label trigger", () => {
     expect(shouldReview({ event: labeled(), actor: "github:togmund", label: "payroll" })).toBe(
       false,
     )
+  })
+})
+
+describe("the project inbox", () => {
+  it("dedupes by delivery id and acknowledges", () => {
+    const store = ledger()
+    expect(store.enqueueInbox({ id: "i1", kind: "turn", pr: 1, text: "hi", at: 1 })).toBe(true)
+    expect(store.enqueueInbox({ id: "i1", kind: "turn", pr: 1, text: "hi", at: 1 })).toBe(false)
+    const items = store.inbox(0)
+    expect(items).toHaveLength(1)
+    expect(store.ackInbox([items[0]?.seq ?? 0], 2)).toBe(1)
+    expect(store.inbox(0)).toHaveLength(0)
+  })
+
+  it("routes Ed's comment as a turn and stays quiet on the actor's own", () => {
+    const event = fromGithub({
+      event: "pull_request_review_comment",
+      delivery: "c1",
+      now: 1,
+      body: {
+        action: "created",
+        pull_request: {
+          number: 1709,
+          user: { login: "togmund" },
+          head: { sha: "abcdef" },
+        },
+        comment: {
+          id: 9,
+          user: { login: "eadmundo" },
+          path: "services/a.ts",
+          line: 224,
+          body: "The season resolves from the wrong row.",
+        },
+      },
+    })
+    const draft = Result.getOrUndefined(inboxFor({ event, actor: "github:togmund" }))
+    expect(draft?.kind).toBe("turn")
+    expect(draft?.text).toContain("eadmundo commented on #1709")
+    expect(Result.isFailure(inboxFor({ event, actor: "github:eadmundo" }))).toBe(true)
+  })
+
+  it("turns a label into a card, not a turn", () => {
+    const event = fromGithub({
+      event: "pull_request",
+      delivery: "l1",
+      now: 1,
+      body: {
+        action: "labeled",
+        pull_request: {
+          number: 1710,
+          user: { login: "eadmundo" },
+          head: { sha: "abcdef" },
+          labels: [{ name: "multi-season" }],
+        },
+        label: { name: "multi-season" },
+      },
+    })
+    expect(Result.getOrUndefined(inboxFor({ event, actor: "github:togmund" }))?.kind).toBe("card")
   })
 })
 

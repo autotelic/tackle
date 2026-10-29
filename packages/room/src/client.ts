@@ -24,6 +24,17 @@ export const Board = Schema.Struct({
 /** The board projection. */
 export type Board = typeof Board.Type
 
+/** One message waiting for the project session. */
+export interface InboxItem {
+  readonly seq: number
+  readonly id: string
+  readonly kind: "turn" | "card"
+  readonly pr?: number
+  readonly ticket?: string
+  readonly text: string
+  readonly at: number
+}
+
 /** What the room client can fail with. */
 export class RoomClientError extends Data.TaggedError("RoomClientError")<{
   readonly message: string
@@ -93,6 +104,18 @@ export class RoomClient {
     body: Schema.Json,
   ): Promise<{ accepted: boolean; queued: boolean }> {
     return this.#json("/ingest", { method: "POST", headers, body: JSON.stringify(body) })
+  }
+
+  registerSession(id: string): Promise<{ ok: boolean }> {
+    return this.#json("/session", { method: "PUT", body: JSON.stringify({ id }) })
+  }
+
+  inbox(after: number, limit = 50): Promise<{ items: ReadonlyArray<InboxItem>; next: number }> {
+    return this.#json(`/inbox?after=${after}&limit=${limit}`)
+  }
+
+  ack(seqs: ReadonlyArray<number>): Promise<{ ok: boolean; changed: number }> {
+    return this.#json("/inbox/ack", { method: "POST", body: JSON.stringify({ seqs }) })
   }
 
   async claim(host: string): Promise<Job | null> {

@@ -50,9 +50,25 @@ const SCHEMA: ReadonlyArray<string> = [
      host TEXT PRIMARY KEY, room TEXT NOT NULL, actor TEXT NOT NULL,
      at INTEGER NOT NULL, ttl INTEGER NOT NULL, session TEXT
    )`,
+  `CREATE TABLE IF NOT EXISTS inbox (
+     seq INTEGER PRIMARY KEY AUTOINCREMENT,
+     id TEXT UNIQUE NOT NULL, room TEXT NOT NULL, kind TEXT NOT NULL,
+     pr INTEGER, ticket TEXT, text TEXT NOT NULL, at INTEGER NOT NULL, acked_at INTEGER
+   )`,
   "CREATE INDEX IF NOT EXISTS jobs_state ON jobs (state, created_at)",
   "CREATE INDEX IF NOT EXISTS receipts_at ON receipts (at DESC)",
 ]
+
+/** One message waiting for the project session. */
+export interface InboxItem {
+  readonly seq: number
+  readonly id: string
+  readonly kind: "turn" | "card"
+  readonly pr?: number
+  readonly ticket?: string
+  readonly text: string
+  readonly at: number
+}
 
 /** What an acquisition decided. */
 export interface ClaimOutcome {
@@ -307,6 +323,93 @@ export class Ledger {
     return this.#sql
       .all<SqlRow>("SELECT * FROM jobs ORDER BY created_at DESC")
       .flatMap((row) => Option.match(toJob(row), { onNone: () => [], onSome: (job) => [job] }))
+  }
+
+  /**
+   * Put one message in the project session's inbox. The delivery id is the identity, so a
+   * retried webhook appends nothing.
+   *
+   * @param input - The message, its kind, and its anchor.
+   * @returns True when this delivery was new.
+   */
+  enqueueInbox(input: {
+    readonly id: string
+    readonly kind: "turn" | "card"
+    readonly pr?: number
+    readonly ticket?: string
+    readonly text: string
+    readonly at: number
+  }): boolean {
+    return this.#sql.transaction(() => {
+      const existing = this.#sql.get<SqlRow>("SELECT seq FROM inbox WHERE id = ?", input.id)
+      if (existing !== undefined) return false
+      this.#sql.exec(
+        `INSERT INTO inbox (id, room, kind, pr, ticket, text, at, acked_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, NULL)`,
+        input.id,
+        this.#room,
+        input.kind,
+        input.pr === undefined ? null : input.pr,
+        input.ticket === undefined ? null : input.ticket,
+        input.text,
+        input.at,
+      )
+      return true
+    })
+  }
+
+  /**
+   * The unacknowledged messages after a cursor.
+   *
+   * @param after - The last sequence the session has seen.
+   * @param limit - The maximum to return.
+   * @returns The messages, oldest first.
+   */
+  inbox(after: number, limit = 50): ReadonlyArray<InboxItem> {
+    return this.#sql
+      .all<SqlRow>(
+        "SELECT * FROM inbox WHERE seq > ? AND acked_at IS NULL ORDER BY seq LIMIT ?",
+        after,
+        limit,
+      )
+      .map((row) => {
+        const pr = numberOrNull(row.pr)
+        const ticket = nullable(row.ticket)
+        return Object.assign(
+          {
+            seq: Number(row.seq),
+            id: String(row.id),
+            kind: row.kind === "card" ? ("card" as const) : ("turn" as const),
+            text: String(row.text),
+            at: Number(row.at),
+          },
+          Option.match(pr, { onNone: () => ({}), onSome: (value) => ({ pr: value }) }),
+          Option.match(ticket, { onNone: () => ({}), onSome: (value) => ({ ticket: value }) }),
+        )
+      })
+  }
+
+  /**
+   * Acknowledge messages the session has taken in.
+   *
+   * @param seqs - The sequence numbers to acknowledge.
+   * @param now - The instant of acknowledgement.
+   * @returns How many rows changed.
+   */
+  ackInbox(seqs: ReadonlyArray<number>, now: number): number {
+    return this.#sql.transaction(() => {
+      let changed = 0
+      for (const seq of seqs) {
+        const result = this.#sql.get<SqlRow>(
+          "SELECT seq FROM inbox WHERE seq = ? AND acked_at IS NULL",
+          seq,
+        )
+        if (result === undefined) continue
+        this.#sql.exec("UPDATE inbox SET acked_at = ? WHERE seq = ?", now, seq)
+        changed += 1
+      }
+      return changed
+    })
   }
 
   /** A delivery id is the receipt id, so a re-delivered webhook appends nothing. */

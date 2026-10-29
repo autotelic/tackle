@@ -2,6 +2,7 @@ import { JOB_STATES, actorOf } from "@autotelic/board"
 import { Effect, Result, Schema } from "effect"
 import type { Ledger } from "./ledger.ts"
 import { fromGithub, fromLinear } from "./ingest.ts"
+import { inboxFor } from "./inbox.ts"
 import { reviewJob, shouldReview } from "./policy.ts"
 
 /*
@@ -35,6 +36,8 @@ const PresenceBody = Schema.Struct({
 const ClaimBody = Schema.Struct({ host: Schema.String })
 
 const IdBody = Schema.Struct({ id: Schema.String })
+
+const AckBody = Schema.Struct({ seqs: Schema.Array(Schema.Finite) })
 
 const FinishBody = Schema.Struct({
   id: Schema.String,
@@ -135,6 +138,8 @@ export const handle = async (
       return json({ body: { event: event.kind, accepted: false, queued: false } })
     }
     const actor = Result.getOrUndefined(ledger.get("actor")) ?? actorOf("")
+    const draft = inboxFor({ event, actor })
+    if (Result.isSuccess(draft)) ledger.enqueueInbox({ ...draft.success, at: now })
     const watch = Result.getOrUndefined(ledger.get("label"))
     const addressed = watch === undefined ? { event, actor } : { event, actor, label: watch }
     const queued =
@@ -142,6 +147,30 @@ export const handle = async (
       shouldReview(addressed) &&
       ledger.enqueue(reviewJob({ event, room: ledger.room, now }))
     return json({ body: { event: event.kind, accepted: true, queued } })
+  }
+
+  if (request.method === "PUT" && path === "/session") {
+    const body = Result.getOrUndefined(Schema.decodeUnknownResult(IdBody)(await rawBody(request)))
+    if (body === undefined) return json({ body: { error: "id is required" }, status: 400 })
+    ledger.set("session", body.id)
+    return json({ body: { ok: true, session: body.id } })
+  }
+
+  if (request.method === "GET" && path === "/inbox") {
+    const after = Number(url.searchParams.get("after") ?? "0")
+    const limit = Number(url.searchParams.get("limit") ?? "50")
+    const items = ledger.inbox(
+      Number.isFinite(after) ? after : 0,
+      Number.isFinite(limit) ? limit : 50,
+    )
+    const next = items.length === 0 ? after : (items.at(-1)?.seq ?? after)
+    return json({ body: { items, next } })
+  }
+
+  if (request.method === "POST" && path === "/inbox/ack") {
+    const body = Result.getOrUndefined(Schema.decodeUnknownResult(AckBody)(await rawBody(request)))
+    if (body === undefined) return json({ body: { error: "seqs is required" }, status: 400 })
+    return json({ body: { ok: true, changed: ledger.ackInbox(body.seqs, now) } })
   }
 
   if (request.method === "POST" && path === "/presence") {

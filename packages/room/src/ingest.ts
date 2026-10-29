@@ -29,6 +29,7 @@ const PullRequest = Schema.Struct({
 const Review = Schema.Struct({
   user: Schema.optionalKey(User),
   state: Schema.optionalKey(Schema.String),
+  body: Schema.optionalKey(Schema.String),
 })
 
 const Comment = Schema.Struct({
@@ -37,6 +38,7 @@ const Comment = Schema.Struct({
   path: Schema.optionalKey(Schema.String),
   line: Schema.optionalKey(Schema.Finite),
   original_line: Schema.optionalKey(Schema.Finite),
+  body: Schema.optionalKey(Schema.String),
 })
 
 const GithubPayload = Schema.Struct({
@@ -90,6 +92,7 @@ export type RoomEvent =
       readonly sha: string
       readonly reviewer: string
       readonly state: string
+      readonly body: string
     }
   | {
       readonly kind: "thread.created"
@@ -101,6 +104,7 @@ export type RoomEvent =
       readonly path: string
       readonly line: number
       readonly commentId: number
+      readonly body: string
     }
   | {
       readonly kind: "pr.closed"
@@ -182,6 +186,7 @@ export const fromGithub = ({
       sha,
       reviewer: payload.review?.user?.login ?? "",
       state: payload.review?.state ?? "",
+      body: payload.review?.body ?? "",
     }
   }
   if (event === "pull_request_review_comment" && action === "created") {
@@ -195,6 +200,7 @@ export const fromGithub = ({
       path: payload.comment?.path ?? "",
       line: payload.comment?.line ?? payload.comment?.original_line ?? 0,
       commentId: payload.comment?.id ?? 0,
+      body: payload.comment?.body ?? "",
     }
   }
   if (event === "pull_request" && action === "closed") {
