@@ -59,6 +59,7 @@ const SCHEMA: ReadonlyArray<string> = [
   `CREATE TABLE IF NOT EXISTS workers (
      name TEXT PRIMARY KEY, room TEXT NOT NULL, pr INTEGER, kind TEXT NOT NULL,
      address TEXT NOT NULL, worktree TEXT NOT NULL, state TEXT NOT NULL,
+     port INTEGER, url TEXT, app_address TEXT,
      started_at INTEGER NOT NULL, updated_at INTEGER NOT NULL
    )`,
   "CREATE INDEX IF NOT EXISTS jobs_state ON jobs (state, created_at)",
@@ -74,6 +75,9 @@ export interface Worker {
   readonly address: string
   readonly worktree: string
   readonly state: string
+  readonly port?: number
+  readonly url?: string
+  readonly appAddress?: string
   readonly startedAt: number
   readonly updatedAt: number
 }
@@ -190,6 +194,18 @@ export class Ledger {
     const columns = ledger.#sql.all<SqlRow>("PRAGMA table_info(inbox)")
     if (!columns.some((column) => String(column.name) === "hold_until")) {
       ledger.#sql.exec("ALTER TABLE inbox ADD COLUMN hold_until INTEGER NOT NULL DEFAULT 0")
+    }
+    const workerColumns = ledger.#sql.all<SqlRow>("PRAGMA table_info(workers)")
+    const hasWorkerColumn = (name: string): boolean =>
+      workerColumns.some((column) => String(column.name) === name)
+    if (!hasWorkerColumn("port")) {
+      ledger.#sql.exec("ALTER TABLE workers ADD COLUMN port INTEGER")
+    }
+    if (!hasWorkerColumn("url")) {
+      ledger.#sql.exec("ALTER TABLE workers ADD COLUMN url TEXT")
+    }
+    if (!hasWorkerColumn("app_address")) {
+      ledger.#sql.exec("ALTER TABLE workers ADD COLUMN app_address TEXT")
     }
     return ledger
   }
@@ -467,11 +483,12 @@ export class Ledger {
    */
   putWorker(worker: Worker): void {
     this.#sql.exec(
-      `INSERT INTO workers (name, room, pr, kind, address, worktree, state, started_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO workers (name, room, pr, kind, address, worktree, state, port, url, app_address, started_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(name) DO UPDATE SET
          state = excluded.state, address = excluded.address,
-         worktree = excluded.worktree, updated_at = excluded.updated_at`,
+         worktree = excluded.worktree, port = excluded.port, url = excluded.url,
+         app_address = excluded.app_address, updated_at = excluded.updated_at`,
       worker.name,
       this.#room,
       worker.pr === undefined ? null : worker.pr,
@@ -479,9 +496,23 @@ export class Ledger {
       worker.address,
       worker.worktree,
       worker.state,
+      worker.port === undefined ? null : worker.port,
+      worker.url === undefined ? null : worker.url,
+      worker.appAddress === undefined ? null : worker.appAddress,
       worker.startedAt,
       worker.updatedAt,
     )
+  }
+
+  /**
+   * Mark a worker stopped.
+   *
+   * @param name - The worker name.
+   * @param now - The instant.
+   * @returns Nothing; the row is the effect.
+   */
+  stopWorker(name: string, now: number): void {
+    this.#sql.exec("UPDATE workers SET state = 'stopped', updated_at = ? WHERE name = ?", now, name)
   }
 
   /** The worker sessions for this room. */
@@ -500,6 +531,18 @@ export class Ledger {
           updatedAt: Number(row.updated_at),
         },
         Option.match(pr, { onNone: () => ({}), onSome: (value) => ({ pr: value }) }),
+        Option.match(numberOrNull(row.port), {
+          onNone: () => ({}),
+          onSome: (value) => ({ port: value }),
+        }),
+        Option.match(nullable(row.url), {
+          onNone: () => ({}),
+          onSome: (value) => ({ url: value }),
+        }),
+        Option.match(nullable(row.app_address), {
+          onNone: () => ({}),
+          onSome: (value) => ({ appAddress: value }),
+        }),
       )
     })
   }

@@ -47,7 +47,12 @@ const WorkerBody = Schema.Struct({
   kind: Schema.String,
   address: Schema.String,
   worktree: Schema.String,
+  port: Schema.optionalKey(Schema.Finite),
+  url: Schema.optionalKey(Schema.String),
+  appAddress: Schema.optionalKey(Schema.String),
 })
+
+const StopWorkerBody = Schema.Struct({ name: Schema.String })
 
 const FinishBody = Schema.Struct({
   id: Schema.String,
@@ -107,7 +112,7 @@ export const handle = async (
         chits: ledger.chitStates(),
         jobs: ledger.jobs().slice(0, 20),
         claims: ledger.claims(now),
-        workers: ledger.workers(),
+        workers: ledger.workers().filter((worker) => worker.state === "live"),
         presence: ledger.presences(now).map((presence) => ({
           host: presence.host,
           actor: presence.actor,
@@ -263,6 +268,9 @@ export const handle = async (
         updatedAt: now,
       },
       body.pr === undefined ? {} : { pr: body.pr },
+      body.port === undefined ? {} : { port: body.port },
+      body.url === undefined ? {} : { url: body.url },
+      body.appAddress === undefined ? {} : { appAddress: body.appAddress },
     )
     ledger.putWorker(worker)
     return json({ body: { ok: true } })
@@ -270,6 +278,15 @@ export const handle = async (
 
   if (request.method === "GET" && path === "/workers") {
     return json({ body: { workers: ledger.workers() } })
+  }
+
+  if (request.method === "POST" && path === "/workers/stop") {
+    const body = Result.getOrUndefined(
+      Schema.decodeUnknownResult(StopWorkerBody)(await rawBody(request)),
+    )
+    if (body === undefined) return json({ body: { error: "name is required" }, status: 400 })
+    ledger.stopWorker(body.name, now)
+    return json({ body: { ok: true } })
   }
 
   if (request.method === "GET" && path === "/jobs") {

@@ -18,6 +18,9 @@ export const Worker = Schema.Struct({
   address: Schema.String,
   worktree: Schema.String,
   state: Schema.String,
+  port: Schema.optionalKey(Schema.Finite),
+  url: Schema.optionalKey(Schema.String),
+  appAddress: Schema.optionalKey(Schema.String),
   startedAt: Schema.Finite,
   updatedAt: Schema.Finite,
 })
@@ -160,8 +163,15 @@ export class RoomClient {
     readonly kind: string
     readonly address: string
     readonly worktree: string
+    readonly port?: number
+    readonly url?: string
+    readonly appAddress?: string
   }): Promise<{ ok: boolean }> {
     return this.#json("/workers", { method: "PUT", body: JSON.stringify(input) })
+  }
+
+  stopWorker(name: string): Promise<{ ok: boolean }> {
+    return this.#json("/workers/stop", { method: "POST", body: JSON.stringify({ name }) })
   }
 
   async claim(host: string): Promise<Job | null> {

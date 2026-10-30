@@ -49,6 +49,21 @@ export const RoomConfig = Schema.Struct({
   worker: Schema.optionalKey(
     Schema.Struct({
       substrate: Schema.Literals(["hc", "rex"]),
+      app: Schema.optionalKey(
+        Schema.Struct({
+          setup: Schema.optionalKey(Schema.String),
+          up: Schema.String,
+          down: Schema.optionalKey(Schema.String),
+          health: Schema.optionalKey(Schema.String),
+          database: Schema.optionalKey(
+            Schema.Struct({
+              create: Schema.String,
+              drop: Schema.String,
+            }),
+          ),
+          env: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
+        }),
+      ),
     }),
   ),
   linearUser: Schema.optionalKey(Schema.String),

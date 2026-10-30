@@ -12,6 +12,7 @@ import {
   renderChecks,
   renderPlan,
   startWorker,
+  stopWorker,
   attachWorker,
   webhookCommand as webhookLine,
 } from "./commands.ts"
@@ -319,6 +320,28 @@ const attachCommand = Command.make(
   Command.withShortDescription("Attach to a worker."),
 )
 
+const stopCommand = Command.make(
+  "stop",
+  {
+    cwd: cwdFlag,
+    name: Flag.String("name").pipe(Flag.withDescription("The worker name from `jig room board`.")),
+  },
+  (options) =>
+    Effect.gen(function* () {
+      const root = yield* rootOf(options.cwd)
+      const result = yield* stopWorker({ cwd: root, name: options.name }).pipe(Effect.result)
+      if (Result.isFailure(result)) {
+        yield* write(result.failure)
+        yield* exit(1)
+        return
+      }
+      yield* write(`stopped ${result.success}`)
+    }),
+).pipe(
+  Command.withDescription("Stop a worker: its app, database, terminals, and worktree."),
+  Command.withShortDescription("Stop a worker."),
+)
+
 const daemonCommand = Command.make(
   "daemon",
   {
@@ -433,6 +456,7 @@ const cli = Command.make("room").pipe(
     boardCommand,
     workCommand,
     attachCommand,
+    stopCommand,
     doctorCommand,
     listCommand,
     devCommand,

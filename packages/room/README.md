@@ -65,6 +65,29 @@ Review jobs use the same substrate: the worktree is prepared, `run.sh` writes Pi
 the job directory, and `hc` runs it while the daemon polls the terminal. If `hc` is missing,
 the review falls back to the direct `pi -p` child. A marked review on #1 was posted this way.
 
+## Worker environments
+
+A worker is not only a checkout. `room work` allocates a port, writes an env file, runs the
+database command, starts the app in `hc`, and starts Pi in the same worktree:
+
+```json
+"worker": {
+  "substrate": "hc",
+  "app": {
+    "setup": "pnpm install",
+    "up": "pnpm dev --port $PORT",
+    "health": "http://127.0.0.1:${PORT}/",
+    "database": { "create": "createdb room_${WORKER}", "drop": "dropdb room_${WORKER}" },
+    "env": { "DATABASE_URL": "postgres://localhost/room_${WORKER}" }
+  }
+}
+```
+
+`${PORT}`, `${WORKER}`, and `${WORKTREE}` expand into the env file and commands. The board
+shows the worker and its URL (`room-1-fix t7 · http://127.0.0.1:53180/`). `room stop` runs
+`down`, drops the database, kills both terminals, and removes the worktree. Without an
+`app` block, `room work` still creates the worktree and the attachable Pi session.
+
 ## Local loop
 
 ```sh

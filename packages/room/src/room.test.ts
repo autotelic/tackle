@@ -158,10 +158,14 @@ describe("workers", () => {
       address: "t2",
       worktree: "/tmp/wt",
       state: "live",
+      port: 53180,
+      url: "http://127.0.0.1:53180/",
+      appAddress: "t6",
       startedAt: 1,
       updatedAt: 1,
     })
     expect(store.workers()).toHaveLength(1)
+    expect(store.workers()[0]?.url).toBe("http://127.0.0.1:53180/")
     store.putWorker({
       name: "room-1-fix",
       room: store.room,

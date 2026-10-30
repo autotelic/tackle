@@ -2,7 +2,8 @@ import { actorOf, roomOf, stageOf } from "@autotelic/board"
 import { Effect, FileSystem, Option, Result, Schema } from "effect"
 import { homedir } from "node:os"
 import { join } from "node:path"
-import { existsSync, mkdirSync } from "node:fs"
+import { chmodSync, existsSync, mkdirSync, writeFileSync } from "node:fs"
+import { createServer } from "node:net"
 import { RoomClient, type Board } from "./client.ts"
 import { CONFIG_PATH, type RoomConfig, encodeConfig, readConfig } from "./config.ts"
 import { roomUrl } from "./daemon.ts"
@@ -11,7 +12,7 @@ import { addWorktree, fetchCommit, fetchPull, removeWorktree, repoOf, topLevel }
 import { configPathOf, readIndex, recordRoom, roomsByActivity } from "./paths.ts"
 import { onPath, run } from "./shell.ts"
 import { pullRequest } from "./gh.ts"
-import { worktreeRoot } from "./paths.ts"
+import { jobsRoot, worktreeRoot } from "./paths.ts"
 
 /*
  * The commands behind `jig room`.
@@ -341,7 +342,12 @@ export const renderBoard = (input: {
   lines.push(`  here    ${board.presence.map((presence) => presence.host).join(" · ") || "nobody"}`)
   lines.push(
     `  work    ${
-      board.workers.map((worker) => `${worker.name} ${worker.address}`).join(" · ") || "none"
+      board.workers
+        .map(
+          (worker) =>
+            `${worker.name} ${worker.address}${worker.url === undefined ? "" : ` · ${worker.url}`}`,
+        )
+        .join(" · ") || "none"
     }`,
   )
   return lines.join("\n")
@@ -355,18 +361,58 @@ const hcOf = (): Option.Option<string> => {
   return existsSync(local) ? Option.some(local) : Option.none()
 }
 
+/** A port nobody is using right now. */
+const freePort = (): Promise<number> =>
+  new Promise((resolve, reject) => {
+    const server = createServer()
+    server.on("error", () => reject("no free port"))
+    server.listen(0, "127.0.0.1", () => {
+      const address = server.address()
+      const parsed = Schema.decodeUnknownResult(Schema.Struct({ port: Schema.Finite }))(address)
+      if (Result.isFailure(parsed)) {
+        server.close()
+        reject("no free port")
+        return
+      }
+      const port = parsed.success.port
+      server.close(() => resolve(port))
+    })
+  })
+
+const expand = (
+  value: string,
+  vars: { readonly port: string; readonly worker: string; readonly worktree: string },
+): string =>
+  value
+    .replaceAll("${PORT}", vars.port)
+    .replaceAll("${WORKER}", vars.worker)
+    .replaceAll("${WORKTREE}", vars.worktree)
+
+const shellFile = (input: {
+  readonly dir: string
+  readonly name: string
+  readonly lines: ReadonlyArray<string>
+}): string => {
+  mkdirSync(input.dir, { recursive: true })
+  const file = join(input.dir, `${input.name}.sh`)
+  writeFileSync(file, ["#!/bin/sh", ...input.lines, ""].join("\n"))
+  chmodSync(file, 0o755)
+  return file
+}
+
 /**
- * Start an attachable worker session in its own worktree.
+ * Start an attachable worker session in its own worktree, with its own port, environment,
+ * and (when configured) database and app.
  *
  * @param input - The repository, the PR, and the kind of work.
- * @returns The worker name and address, or why it could not start.
+ * @returns The worker name, its attach address, and the app URL when one was started.
  */
 export const startWorker = (input: {
   readonly cwd: string
   readonly pr: number
   readonly kind: "fix" | "review"
 }): Effect.Effect<
-  { readonly name: string; readonly address: string },
+  { readonly name: string; readonly address: string; readonly url?: string },
   string,
   FileSystem.FileSystem
 > =>
@@ -391,35 +437,165 @@ export const startWorker = (input: {
     fetchCommit({ root: config.repo.root, sha: pr.headRefOid })
     const added = addWorktree({ root: config.repo.root, sha: pr.headRefOid, dir })
     if (Result.isFailure(added)) return yield* Effect.fail(added.failure)
+
     const name = `room-${pr.number}-${input.kind}`
-    const launched = run({
-      command: hc,
-      args: ["run", "--bg", "--json", "--name", name, "--cwd", dir, "pi"],
+    const app = config.worker?.app
+    const port = yield* Effect.tryPromise({
+      try: () => freePort(),
+      catch: (error) => String(error),
     })
-    if (launched.code !== 0) return yield* Effect.fail(launched.stderr.trim() || "hc run failed")
-    const decoded = Schema.decodeResult(
+    const vars = { port: String(port), worker: name, worktree: dir }
+    const sessionDir = join(jobsRoot(config), name)
+    mkdirSync(sessionDir, { recursive: true })
+    const envFile = join(sessionDir, "env.sh")
+    const env = Object.assign({}, app?.env ?? {}, {
+      PORT: vars.port,
+      ROOM_WORKER: name,
+      WORKTREE: dir,
+    })
+    writeFileSync(
+      envFile,
+      `${Object.entries(env)
+        .map(([key, value]) => `export ${key}='${expand(value, vars).replaceAll("'", "'\\''")}'`)
+        .join("\n")}\n`,
+    )
+    if (app?.database !== undefined) {
+      const created = run({
+        command: "sh",
+        args: ["-c", `. "${envFile}"; ${expand(app.database.create, vars)}`],
+        cwd: dir,
+      })
+      if (created.code !== 0) {
+        return yield* Effect.fail(created.stderr.trim() || "database create failed")
+      }
+    }
+
+    let appAddress: string | undefined
+    let url: string | undefined
+    if (app !== undefined) {
+      const appScript = shellFile({
+        dir: sessionDir,
+        name: "app",
+        lines: [
+          `. "${envFile}"`,
+          `cd "${dir}"`,
+          ...(app.setup === undefined ? [] : [expand(app.setup, vars)]),
+          `exec ${expand(app.up, vars)}`,
+        ],
+      })
+      const appName = `${name}-app`
+      run({ command: hc, args: ["kill", appName] })
+      run({ command: hc, args: ["rm", appName] })
+      const launched = run({
+        command: hc,
+        args: ["run", "--bg", "--json", "--name", appName, "--cwd", dir, "sh", appScript],
+      })
+      const decoded = Schema.decodeResult(
+        Schema.fromJsonString(Schema.Struct({ address: Schema.String })),
+      )(launched.stdout)
+      if (Result.isFailure(decoded)) {
+        return yield* Effect.fail(launched.stderr.trim() || "app failed to start")
+      }
+      appAddress = decoded.success.address
+      url = app.health === undefined ? `http://127.0.0.1:${port}` : expand(app.health, vars)
+    }
+
+    const piScript = shellFile({
+      dir: sessionDir,
+      name: "pi",
+      lines: [`. "${envFile}"`, `cd "${dir}"`, "exec pi"],
+    })
+    run({ command: hc, args: ["kill", name] })
+    run({ command: hc, args: ["rm", name] })
+    const launchedPi = run({
+      command: hc,
+      args: ["run", "--bg", "--json", "--name", name, "--cwd", dir, "sh", piScript],
+    })
+    const decodedPi = Schema.decodeResult(
       Schema.fromJsonString(Schema.Struct({ address: Schema.String })),
-    )(launched.stdout)
-    if (Result.isFailure(decoded)) return yield* Effect.fail("hc did not return an address")
-    const address = decoded.success.address
+    )(launchedPi.stdout)
+    if (Result.isFailure(decodedPi)) {
+      return yield* Effect.fail(launchedPi.stderr.trim() || "hc did not return an address")
+    }
+    const address = decodedPi.success.address
     yield* Effect.tryPromise({
       try: () =>
-        new RoomClient(roomUrl(), config.room).putWorker({
-          name,
-          pr: pr.number,
-          kind: input.kind,
-          address,
-          worktree: dir,
-        }),
+        new RoomClient(roomUrl(), config.room).putWorker(
+          Object.assign(
+            { name, pr: pr.number, kind: input.kind, address, worktree: dir, port },
+            url === undefined ? {} : { url },
+            appAddress === undefined ? {} : { appAddress },
+          ),
+        ),
       catch: () => "room not reachable",
     }).pipe(Effect.orElseSucceed(() => ({ ok: false })))
-    return { name, address }
+    return Object.assign({ name, address }, url === undefined ? {} : { url })
   })
 
 /** The worker list the room returns, narrowed to what attach needs. */
 interface WorkerList {
-  readonly workers: ReadonlyArray<{ readonly name: string; readonly address: string }>
+  readonly workers: ReadonlyArray<{
+    readonly name: string
+    readonly address: string
+    readonly worktree: string
+    readonly appAddress?: string
+  }>
 }
+
+/**
+ * Stop a worker: its app, its database, its terminals, and its worktree.
+ *
+ * @param input - The repository and the worker name.
+ * @returns The stopped worker's name, or why it could not stop.
+ */
+export const stopWorker = (input: {
+  readonly cwd: string
+  readonly name: string
+}): Effect.Effect<string, string, FileSystem.FileSystem> =>
+  Effect.gen(function* () {
+    const hc = Option.getOrUndefined(hcOf())
+    if (hc === undefined) return yield* Effect.fail("herdr-core is not installed (hc)")
+    const root = Option.getOrUndefined(valueOf(topLevel(input.cwd))) ?? input.cwd
+    const config = Result.getOrUndefined(yield* readConfig(configPathOf(root)))
+    if (config === undefined) return yield* Effect.fail("no .room/config.json in this repository")
+    const workers = yield* Effect.tryPromise({
+      try: () => new RoomClient(roomUrl(), config.room).workers(),
+      catch: () => "room not reachable",
+    }).pipe(Effect.orElseSucceed((): WorkerList => ({ workers: [] })))
+    const worker = workers.workers.find((entry) => entry.name === input.name)
+    if (worker === undefined) return yield* Effect.fail(`no worker named ${input.name}`)
+    const app = config.worker?.app
+    const envFile = join(jobsRoot(config), input.name, "env.sh")
+    if (app?.down !== undefined && existsSync(envFile)) {
+      run({
+        command: "sh",
+        args: [
+          "-c",
+          `. "${envFile}"; ${expand(app.down, { port: "", worker: input.name, worktree: worker.worktree })}`,
+        ],
+        cwd: worker.worktree,
+      })
+    }
+    if (app?.database !== undefined && existsSync(envFile)) {
+      run({
+        command: "sh",
+        args: [
+          "-c",
+          `. "${envFile}"; ${expand(app.database.drop, { port: "", worker: input.name, worktree: worker.worktree })}`,
+        ],
+        cwd: worker.worktree,
+      })
+    }
+    run({ command: hc, args: ["kill", worker.address] })
+    const appAddress = worker.appAddress
+    if (appAddress !== undefined) run({ command: hc, args: ["kill", appAddress] })
+    removeWorktree({ root: config.repo.root, dir: worker.worktree })
+    yield* Effect.tryPromise({
+      try: () => new RoomClient(roomUrl(), config.room).stopWorker(input.name),
+      catch: () => "room not reachable",
+    }).pipe(Effect.orElseSucceed(() => ({ ok: false })))
+    return input.name
+  })
 
 /**
  * Attach to a worker session through herdr-core.
