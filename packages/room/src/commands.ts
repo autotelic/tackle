@@ -9,7 +9,14 @@ import { CONFIG_PATH, type RoomConfig, encodeConfig, readConfig } from "./config
 import { roomUrl } from "./daemon.ts"
 import { authLogin, linearTokenPresent } from "./gh.ts"
 import { addWorktree, fetchCommit, fetchPull, removeWorktree, repoOf, topLevel } from "./git.ts"
-import { configPathOf, readIndex, recordRoom, roomsByActivity } from "./paths.ts"
+import {
+  configPathOf,
+  findConfigPath,
+  legacyConfigPathOf,
+  readIndex,
+  recordRoom,
+  roomsByActivity,
+} from "./paths.ts"
 import { onPath, run } from "./shell.ts"
 import { pullRequest } from "./gh.ts"
 import { jobsRoot, worktreeRoot } from "./paths.ts"
@@ -48,7 +55,7 @@ export const plan = (cwd: string): Effect.Effect<Plan, never, FileSystem.FileSys
     const root = Option.getOrUndefined(valueOf(topLevel(cwd))) ?? cwd
     const repo = Option.getOrUndefined(valueOf(repoOf(root)))
     const login = Option.getOrUndefined(valueOf(authLogin()))
-    const config = Result.getOrUndefined(yield* readConfig(configPathOf(root)))
+    const config = Result.getOrUndefined(yield* readConfig(findConfigPath(root)))
     const index = yield* readIndex
     return {
       root,
@@ -92,7 +99,7 @@ export const renderPlan = (value: Plan, now: number): string => {
   if (value.config !== undefined) {
     lines.push(`  existing  ${value.config.name} · ${value.config.room}`)
   } else {
-    lines.push("  existing  no .room/config.json in this repo")
+    lines.push("  existing  no room.config.json in this repo")
   }
   if (value.rooms.length > 0) {
     lines.push("")
@@ -158,7 +165,8 @@ export const init = (
     const repo = Option.getOrUndefined(valueOf(repoOf(root)))
     if (repo === undefined) return yield* Effect.fail("no GitHub origin remote")
     const path = configPathOf(root)
-    const exists = yield* Effect.orElseSucceed(fs.exists(path), () => false)
+    const existing = findConfigPath(root)
+    const exists = yield* Effect.orElseSucceed(fs.exists(existing), () => false)
     if (exists && !options.force) {
       return yield* Effect.fail(`${CONFIG_PATH} already exists; pass --force to rewrite it`)
     }
@@ -192,6 +200,18 @@ export const init = (
       () => undefined,
     )
     yield* fs.writeFileString(path, encodeConfig(config))
+    if (existing !== path) {
+      yield* Effect.orElseSucceed(fs.remove(existing), () => undefined)
+    }
+    const legacy = legacyConfigPathOf(root)
+    if (legacy !== existing) {
+      yield* Effect.orElseSucceed(fs.remove(legacy), () => undefined)
+    }
+    const legacyDir = join(root, ".room")
+    const leftovers = yield* Effect.orElseSucceed(fs.readDirectory(legacyDir), () => [])
+    if (leftovers.length === 0) {
+      yield* Effect.orElseSucceed(fs.remove(legacyDir, { recursive: true }), () => undefined)
+    }
     yield* recordRoom({
       room: config.room,
       name: config.name,
@@ -237,7 +257,7 @@ export const doctor = (
 ): Effect.Effect<ReadonlyArray<Check>, never, FileSystem.FileSystem> =>
   Effect.gen(function* () {
     const root = Option.getOrUndefined(valueOf(topLevel(cwd))) ?? cwd
-    const config = Result.getOrUndefined(yield* readConfig(configPathOf(root)))
+    const config = Result.getOrUndefined(yield* readConfig(findConfigPath(root)))
     const checks: Array<Check> = []
     checks.push({
       name: "config",
@@ -420,8 +440,8 @@ export const startWorker = (input: {
     const hc = Option.getOrUndefined(hcOf())
     if (hc === undefined) return yield* Effect.fail("herdr-core is not installed (hc)")
     const root = Option.getOrUndefined(valueOf(topLevel(input.cwd))) ?? input.cwd
-    const config = Result.getOrUndefined(yield* readConfig(configPathOf(root)))
-    if (config === undefined) return yield* Effect.fail("no .room/config.json in this repository")
+    const config = Result.getOrUndefined(yield* readConfig(findConfigPath(root)))
+    if (config === undefined) return yield* Effect.fail("no room.config.json in this repository")
     if ((config.worker?.substrate ?? "hc") !== "hc") {
       return yield* Effect.fail("the rex substrate is not implemented yet")
     }
@@ -556,8 +576,8 @@ export const stopWorker = (input: {
     const hc = Option.getOrUndefined(hcOf())
     if (hc === undefined) return yield* Effect.fail("herdr-core is not installed (hc)")
     const root = Option.getOrUndefined(valueOf(topLevel(input.cwd))) ?? input.cwd
-    const config = Result.getOrUndefined(yield* readConfig(configPathOf(root)))
-    if (config === undefined) return yield* Effect.fail("no .room/config.json in this repository")
+    const config = Result.getOrUndefined(yield* readConfig(findConfigPath(root)))
+    if (config === undefined) return yield* Effect.fail("no room.config.json in this repository")
     const workers = yield* Effect.tryPromise({
       try: () => new RoomClient(roomUrl(), config.room).workers(),
       catch: () => "room not reachable",
@@ -611,8 +631,8 @@ export const attachWorker = (input: {
     const hc = Option.getOrUndefined(hcOf())
     if (hc === undefined) return yield* Effect.fail("herdr-core is not installed (hc)")
     const root = Option.getOrUndefined(valueOf(topLevel(input.cwd))) ?? input.cwd
-    const config = Result.getOrUndefined(yield* readConfig(configPathOf(root)))
-    if (config === undefined) return yield* Effect.fail("no .room/config.json in this repository")
+    const config = Result.getOrUndefined(yield* readConfig(findConfigPath(root)))
+    if (config === undefined) return yield* Effect.fail("no room.config.json in this repository")
     const workers = yield* Effect.tryPromise({
       try: () => new RoomClient(roomUrl(), config.room).workers(),
       catch: () => "room not reachable",

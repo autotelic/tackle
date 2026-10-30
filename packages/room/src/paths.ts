@@ -1,4 +1,5 @@
 import { Effect, FileSystem, Result, Schema } from "effect"
+import { existsSync } from "node:fs"
 import { homedir } from "node:os"
 import { join } from "node:path"
 import type { RoomConfig } from "./config.ts"
@@ -8,7 +9,7 @@ import type { RoomConfig } from "./config.ts"
  *
  * `~/.room/<login>/<projectId>/` is the whole namespace. Two people on one machine cannot
  * collide, two checkouts of one repo cannot collide, and a second room for the same project
- * at another stage is a sibling directory. The committed half is `.room/config.json`; the
+ * at another stage is a sibling directory. The committed half is `room.config.json`; the
  * rest is local state, worktrees, and job transcripts.
  */
 
@@ -128,9 +129,32 @@ export const roomsByActivity: Effect.Effect<
  * The committed config path for a repository root.
  *
  * @param root - The repository root.
+ * @returns `<root>/room.config.json`.
+ */
+export const configPathOf = (root: string): string => join(root, "room.config.json")
+
+/**
+ * The pre-move config path, read for compatibility.
+ *
+ * @deprecated Use {@link configPathOf}; this path is read only for older rooms.
+ * @param root - The repository root.
  * @returns `<root>/.room/config.json`.
  */
-export const configPathOf = (root: string): string => join(root, ".room", "config.json")
+export const legacyConfigPathOf = (root: string): string => join(root, ".room", "config.json")
+
+/**
+ * The config a repository actually has: the root file, else the earlier one, else the new
+ * path (so `init` has somewhere to write).
+ *
+ * @param root - The repository root.
+ * @returns The path to read, or the path `init` would write.
+ */
+export const findConfigPath = (root: string): string =>
+  existsSync(configPathOf(root))
+    ? configPathOf(root)
+    : existsSync(legacyConfigPathOf(root))
+      ? legacyConfigPathOf(root)
+      : configPathOf(root)
 
 /**
  * The state directory, created if absent.

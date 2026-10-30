@@ -5,7 +5,7 @@ Pi, and one fenced post.
 
 ```
 jig room plan        read the repo, the token, and the rooms; print the init it would run
-jig room init        write .room/config.json, register the room
+jig room init        write room.config.json, register the room
 jig room dev         run the room locally with `celld dev`
 jig room board       jobs, chits, and presence (the same JSON the Pi widget reads)
 jig room doctor      prove the loop: config, identity, celld, forward, room

@@ -73,6 +73,7 @@ interface BoardView {
   readonly jobs?: ReadonlyArray<{ state: string }>
   readonly chits?: ReadonlyArray<{ state: string; count: number }>
   readonly presence?: ReadonlyArray<{ host: string }>
+  readonly workers?: ReadonlyArray<{ name: string; address: string; url?: string }>
 }
 
 const count = (jobs: BoardView["jobs"], state: string): number =>
@@ -90,7 +91,15 @@ const linesOf = (view: BoardView | undefined): ReadonlyArray<string> => {
   const jobs = `jobs  running ${count(view.jobs, "running")} · queued ${count(view.jobs, "queued")} · failed ${count(view.jobs, "failed")}`
   const chits = `chits ${(view.chits ?? []).map((entry) => `${entry.state} ${entry.count}`).join(" · ") || "none"}`
   const here = `here  ${(view.presence ?? []).map((entry) => entry.host).join(" · ") || "nobody"}`
-  return [head, jobs, chits, here]
+  const work = `work  ${
+    (view.workers ?? [])
+      .map(
+        (worker) =>
+          `${worker.name} ${worker.address}${worker.url === undefined ? "" : ` · ${worker.url}`}`,
+      )
+      .join(" · ") || "none"
+  }`
+  return [head, jobs, chits, here, work]
 }
 
 // A tool's context does not always carry `cwd` (the runtime gives the process's), so fall
@@ -110,14 +119,15 @@ interface RoomConfigFile {
 }
 
 const roomOf = (cwd: string): RoomConfigFile | undefined => {
-  try {
-    const value = JSON.parse(readFileSync(join(cwd, ".room", "config.json"), "utf8")) as {
-      room?: unknown
+  for (const path of [join(cwd, "room.config.json"), join(cwd, ".room", "config.json")]) {
+    try {
+      const value = JSON.parse(readFileSync(path, "utf8")) as { room?: unknown }
+      if (typeof value.room === "string") return { room: value.room }
+    } catch {
+      // try the next location
     }
-    return typeof value.room === "string" ? { room: value.room } : undefined
-  } catch {
-    return undefined
   }
+  return undefined
 }
 
 const baseUrl = (): string => process.env.ROOM_URL ?? "http://127.0.0.1:9876"

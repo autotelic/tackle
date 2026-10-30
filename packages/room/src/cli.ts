@@ -3,7 +3,9 @@ import { CliError, Command, Flag } from "effect/cli"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { jobOf } from "@autotelic/board"
 import { spawnSync } from "node:child_process"
+import { existsSync } from "node:fs"
 import { fileURLToPath } from "node:url"
+import { join } from "node:path"
 import {
   doctor,
   init,
@@ -18,7 +20,7 @@ import {
 } from "./commands.ts"
 import { readConfig, type RoomConfig } from "./config.ts"
 import { daemon, roomUrl } from "./daemon.ts"
-import { configPathOf, readIndex, roomsByActivity } from "./paths.ts"
+import { findConfigPath, readIndex, roomsByActivity } from "./paths.ts"
 import { RoomClient } from "./client.ts"
 import { runReview } from "./review.ts"
 
@@ -166,7 +168,7 @@ const boardCommand = Command.make(
       const named = Option.getOrUndefined(options.room)
       let config: RoomConfig | undefined
       if (named === undefined) {
-        config = Result.getOrUndefined(yield* readConfig(configPathOf(root)))
+        config = Result.getOrUndefined(yield* readConfig(findConfigPath(root)))
       } else {
         const index = yield* readIndex
         const entry = index.rooms.find((room) => room.name === named || room.room === named)
@@ -255,8 +257,14 @@ const devCommand = Command.make(
   (options) =>
     Effect.gen(function* () {
       const root = fileURLToPath(new URL("..", import.meta.url))
+      const esbuild = join(root, "node_modules", ".bin", "esbuild")
+      const env = existsSync(esbuild) ? { ...process.env, CELLD_ESBUILD: esbuild } : process.env
       const result = yield* Effect.sync(() =>
-        spawnSync("celld", ["dev", "--port", options.port], { cwd: root, stdio: "inherit" }),
+        spawnSync("celld", ["dev", "--port", options.port], {
+          cwd: root,
+          stdio: "inherit",
+          env,
+        }),
       )
       if (result.error !== undefined) {
         yield* write("celld is not installed:\n  curl -fsSL https://celld.dev/install.sh | sh")
@@ -354,7 +362,7 @@ const daemonCommand = Command.make(
   (options) =>
     Effect.gen(function* () {
       const root = yield* rootOf(options.cwd)
-      const config = Result.getOrUndefined(yield* readConfig(configPathOf(root)))
+      const config = Result.getOrUndefined(yield* readConfig(findConfigPath(root)))
       if (config === undefined) {
         yield* write("room daemon: no .room/config.json")
         yield* exit(1)
@@ -389,7 +397,7 @@ const reviewCommand = Command.make(
   (options) =>
     Effect.gen(function* () {
       const root = yield* rootOf(options.cwd)
-      const config = Result.getOrUndefined(yield* readConfig(configPathOf(root)))
+      const config = Result.getOrUndefined(yield* readConfig(findConfigPath(root)))
       if (config === undefined) {
         yield* write("room review: no .room/config.json")
         yield* exit(1)
@@ -433,7 +441,7 @@ const reviewCommand = Command.make(
 const webhookCommand = Command.make("webhook", { cwd: cwdFlag }, (options) =>
   Effect.gen(function* () {
     const root = yield* rootOf(options.cwd)
-    const config = Result.getOrUndefined(yield* readConfig(configPathOf(root)))
+    const config = Result.getOrUndefined(yield* readConfig(findConfigPath(root)))
     if (config === undefined) {
       yield* write("room webhook: no .room/config.json")
       yield* exit(1)

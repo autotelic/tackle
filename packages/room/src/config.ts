@@ -1,7 +1,7 @@
 import { Effect, FileSystem, Result, Schema } from "effect"
 
 /*
- * The room config: `.room/config.json`, committed.
+ * The room config: `room.config.json`, committed.
  *
  * It is the contract a second machine inherits — the Linear project, the repo, the stage,
  * the ingress mode, the review policy. Secrets and local paths never live here; those are
@@ -12,7 +12,10 @@ import { Effect, FileSystem, Result, Schema } from "effect"
  */
 
 /** Where the config lives, relative to the repository root. */
-export const CONFIG_PATH = ".room/config.json"
+export const CONFIG_PATH = "room.config.json"
+
+/** The pre-move location, read for compatibility and never written. */
+export const LEGACY_CONFIG_PATH = ".room/config.json"
 
 /** A room's committed configuration. */
 export const RoomConfig = Schema.Struct({
@@ -89,7 +92,7 @@ export const decodeConfig = (value: Schema.JsonObject): Result.Result<RoomConfig
 /**
  * Read a room config from disk.
  *
- * @param file - The absolute path to `.room/config.json`.
+ * @param file - The absolute path to `room.config.json`.
  * @returns Some(config) when the file exists and decodes, None otherwise.
  */
 export const readConfig = (
