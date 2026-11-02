@@ -20,11 +20,13 @@ import { recommended } from "@effect/tsgo/oxlint-presets"
  *
  * `plumb-react` is absent on purpose: nothing here renders.
  *
- * `plumb-effect/require-schema-type-derivation` is off, matching
- * `packages/joggle/oxlint.config.ts`: it collects schema names and interfaces at Program:exit
- * without reading the `extends` clause, so it reports every Schema-derived interface as
- * hand-rolled, and its createOnce cross-file state makes the same tree report 33/39/40
- * findings run to run. A rule that cannot hold a reproducible baseline cannot join a ratchet.
+ * `plumb-effect/require-schema-type-derivation` used to be off here and in
+ * `packages/joggle/oxlint.config.ts` for two defects that are now fixed: its `createOnce`
+ * visitor kept the schema map across files (so `b.ts` was reported against a schema in
+ * `a.ts`, at line 1, and the same tree answered 33/39/40 findings run to run), and it never
+ * read the `extends` clause, so `interface X extends Schema.Type<typeof XSchema>` — the fix
+ * it asks for — was reported as hand-rolled. The rule is per-file now, and both scopes
+ * measure zero findings over repeat runs, so it runs with the rest of the set.
  *
  * The `ignorePatterns` mirror the flags `pnpm lint` and `jig`'s plumb engine pass on the
  * command line. They are documentation here; the command line is what actually works —
@@ -213,7 +215,6 @@ export default {
     ...plumbRulesByMetaType,
     ...plumbEffectRulesByMetaType,
     ...EFFECT_TSGO,
-    "plumb-effect/require-schema-type-derivation": "off",
     // A direct conflict between our own rule and the ecosystem's. plumb wants an optional
     // parameter spelled `T | undefined` so the absence is explicit at every call site;
     // `typescript/no-useless-default-assignment` wants `?`, because `= undefined` is

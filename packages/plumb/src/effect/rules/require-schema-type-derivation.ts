@@ -16,9 +16,7 @@ function isSchemaStructCall(expression: ESTree.Expression | ESTree.SpreadElement
 	if (callee.type !== "MemberExpression" || callee.computed) return false;
 	if (callee.property.type !== "Identifier" || !STRUCT_PROPERTIES.has(callee.property.name)) return false;
 	const object = callee.object;
-	return (
-		object.type === "Identifier" && /schema$/iu.test(object.name)
-	);
+	return object.type === "Identifier" && /schema$/iu.test(object.name);
 }
 
 /** Fold a declared name to its stem so `RationalSchema`/`rational` and `rationalSchema` collide.
@@ -34,8 +32,14 @@ function normaliseName(name: string): string {
 /**
  * Single source of truth: once a Schema exists, it is the canonical shape.
  * A hand-written twin type drifts from it silently: derive the static side
- * with `Schema.Type<typeof x>` so identical data can only have one declared
- * form.
+ * with `Schema.Type<typeof x>` so identical data can only have one declared form.
+ *
+ * Per-file state, reset in `before`: the maps describe one file's declarations, so a
+ * run never reports an interface in `b.ts` against a schema declared in `a.ts` -- at
+ * line 1, citing a name the file does not contain -- or answers differently depending
+ * on the order files were visited. An interface with a heritage clause is skipped for
+ * the same reason: `interface X extends Schema.Type<typeof XSchema>` is the fix this
+ * rule asks for, not the twin it reports.
  */
 export const requireSchemaTypeDerivationRule = defineRule({
 	meta: {
@@ -54,6 +58,10 @@ export const requireSchemaTypeDerivationRule = defineRule({
 		const typeAliases = new Map<string, { node: ESTree.Node; name: string }>();
 
 		return {
+			before() {
+				schemas.clear();
+				typeAliases.clear();
+			},
 			VariableDeclarator(node) {
 				if (node.id.type !== "Identifier" || node.init === null || node.init === undefined) return;
 				if (!isSchemaStructCall(node.init)) return;
@@ -64,7 +72,7 @@ export const requireSchemaTypeDerivationRule = defineRule({
 				typeAliases.set(normaliseName(node.id.name), { node, name: node.id.name });
 			},
 			TSInterfaceDeclaration(node) {
-				if (node.id.type !== "Identifier") return;
+				if (node.id.type !== "Identifier" || node.extends.length > 0) return;
 				typeAliases.set(normaliseName(node.id.name), { node, name: node.id.name });
 			},
 			"Program:exit"() {

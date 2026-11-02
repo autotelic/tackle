@@ -143,16 +143,6 @@ export default {
   rules: {
     ...every(),
     ...EFFECT_TSGO,
-    // plumb:allow-off: this rule is non-deterministic AND reports the pattern it
-    // recommends. Read its detection: it collects schema names, collects every
-    // interface, and reports the overlap at Program:exit without ever looking at
-    // the `extends` clause -- so `interface X extends Schema.Schema.Type<typeof X>`
-    // is reported as re-declaring X by hand. It also uses a createOnce visitor
-    // with cross-file state, so the same tree reports 33, 39 or 40 findings
-    // depending on the order files are visited. Both need fixing upstream before
-    // this can hold a baseline; until then it cannot be part of a ratchet that is
-    // supposed to be reproducible.
-    "plumb-effect/require-schema-type-derivation": "off",
     // Effect 4.0.5 still marks the AI, HTTP, and process modules joggle is built on as
     // `@stability unstable`, so `recommended`'s own `unstable-api-usage` fires on nearly
     // every file. The fact is accepted; the rule stays available to a consumer who wants the

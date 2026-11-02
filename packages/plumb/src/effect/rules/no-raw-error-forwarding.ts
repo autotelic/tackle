@@ -55,6 +55,10 @@ function isLoggingCall(sourceCode: SourceCode, node: ESTree.Node): boolean {
  * structured evidence as fields, rendering its message from those fields. The
  * error then flows through Effect's typed error channel instead of being
  * stringified at every boundary.
+ *
+ * The catch-param stack is emptied in `before`: it is balanced by `CatchClause`
+ * enter/exit, but a file whose parse bails out never reaches the exit, and an empty
+ * stack at file start is the invariant every other per-file rule keeps.
  */
 export const noRawErrorForwardingRule = defineRule({
 	meta: {
@@ -72,6 +76,7 @@ export const noRawErrorForwardingRule = defineRule({
 		const catchParamStack: Array<ReadonlySet<string>> = [];
 		return {
 			before() {
+				catchParamStack.length = 0;
 				if (TEST_FILE.test(context.filename.replaceAll("\\", "/"))) return false;
 			},
 			CatchClause(node) {
