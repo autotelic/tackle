@@ -68,6 +68,21 @@ describe("explainRule", () => {
     expect(text).toContain("help: use Y")
   })
 
+  it("resolves every spelling a person can copy: bare, engine-reported, and printed", () => {
+    const diagnostics = [
+      diag({ engine: "plumb", ruleId: "plumb-effect/require-schema-type-derivation" }),
+    ]
+    const report = reportOf(diagnostics)
+    const configured = ["plumb", "joggle"]
+    for (const spelling of [
+      "require-schema-type-derivation",
+      "plumb-effect/require-schema-type-derivation",
+      "plumb/plumb-effect/require-schema-type-derivation",
+    ]) {
+      expect(explainRule(report, spelling, configured)).toContain("1 finding(s)")
+    }
+  })
+
   it("matches a bare rule id across engines", () => {
     const diagnostics = [diag({ engine: "joggle", ruleId: "no-x", identity: "i" })]
     expect(explainRule(reportOf(diagnostics), "no-x", ["joggle"])).toContain("1 finding(s)")

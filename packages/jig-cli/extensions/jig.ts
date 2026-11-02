@@ -16,6 +16,7 @@
  * `pi install /absolute/path/to/tackle/packages/jig-cli` adds it globally.
  */
 import { existsSync } from "node:fs"
+import { homedir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent"
@@ -33,6 +34,24 @@ const onPath = (name: string): string | undefined => {
   }
   return undefined
 }
+
+/**
+ * Put `HOME` back when the host handed this process an environment without it.
+ *
+ * `pi.exec` inherits this process's environment and takes no `env` option, so the only place
+ * a missing variable can be repaired is here. pi spawns without a login shell and has been
+ * seen to hand over an environment with no `HOME`; a launcher such as Doppler finds its own
+ * auth there, so without it a judged run silently degrades to "no key" for a reason nobody
+ * can see. Nested secret layers (a personal Doppler config around a repository one) are
+ * otherwise the host's business, and this file must not touch anything else.
+ */
+const repairEnvironment = (): void => {
+  if (process.env.HOME !== undefined && process.env.HOME !== "") return
+  const home = homedir()
+  if (home !== "") process.env.HOME = home
+}
+
+repairEnvironment()
 
 /** How to launch jig: a command and its leading args. */
 interface Launcher {
@@ -70,6 +89,7 @@ const run = async (
   args: ReadonlyArray<string>,
   signal: AbortSignal | undefined,
 ): Promise<ExecOutcome> => {
+  repairEnvironment()
   const { command, args: prefix } = cli()
   const result = await pi.exec(command, [...prefix, ...args], {
     cwd,

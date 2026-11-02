@@ -1,4 +1,5 @@
 import fc from "fast-check"
+import { execFileSync } from "node:child_process"
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -424,6 +425,45 @@ describe("inspectRepo", () => {
     }
   })
 
+  it("says so when another ledger already answers these findings", async () => {
+    const root = project(
+      {
+        json: [
+          ["package.json", {}],
+          ["tsconfig.json", {}],
+          [".oxlint-errors-baseline.json", { identities: ["no-x:a.ts"] }],
+        ],
+      },
+      [],
+    )
+    try {
+      const profile = await inspect(root)
+      expect(profile.notes.join("\n")).toContain(".oxlint-errors-baseline.json")
+      expect(profile.notes.join("\n")).toContain("which one owns these findings")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it("prints the invocation a person can type, not the binary a global install owns", async () => {
+    const root = project(
+      {
+        json: [["package.json", { packageManager: "pnpm@10.0.0" }]],
+        text: [["src/components/Button.tsx", "export const Button = () => null\n"]],
+      },
+      ["cutlist"],
+    )
+    try {
+      const result = await initialiseIn(root, { cutlist: true })
+      // The project has its own node_modules/.bin/cutlist, so the paste names the
+      // package-manager invocation instead of a command only some PATHs have.
+      expect(onboardingFor(result.profile)).toContain("pnpm exec cutlist build")
+      expect(summaryFor(result)).toContain("pnpm exec cutlist build")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
   it("documents the room when this repo runs one, and asks before registering it", async () => {
     const root = project(
       {
@@ -446,6 +486,34 @@ describe("inspectRepo", () => {
       expect(onboardingFor(profile)).toContain("gh extension install cli/gh-webhook")
       expect(onboardingFor(profile)).toContain("room doctor")
       expect(cookbookFor(profile)).toContain("room daemon")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+})
+
+describe("a repository that ignores the harness", () => {
+  it("reports the written paths git refuses to track", async () => {
+    const root = project({ json: [["package.json", {}]] }, [])
+    try {
+      execFileSync("git", ["init", "-q"], { cwd: root })
+      writeFileSync(
+        join(root, ".gitignore"),
+        [
+          "jig.config.json",
+          "jig.config.json".replace("jig.config", "joggle.config"),
+          "JIG.md",
+          "ONBOARD.md",
+          ".jig-baseline.json",
+        ].join("\n") + "\n",
+      )
+      const result = await initialiseIn(root)
+      expect(result.ignored).toEqual(
+        expect.arrayContaining(["jig.config.json", "JIG.md", "ONBOARD.md", ".jig-baseline.json"]),
+      )
+      expect(summaryFor(result)).toContain("local-only")
+      // The paste asks the person to settle it, because jig cannot edit their .gitignore.
+      expect(onboardingFor(result.profile)).toContain("gitignored")
     } finally {
       rmSync(root, { recursive: true, force: true })
     }

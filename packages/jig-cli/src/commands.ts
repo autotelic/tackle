@@ -52,20 +52,42 @@ export const explainRule = (
   rule: string,
   configured: ReadonlyArray<string>,
 ): string => {
-  const slash = rule.indexOf("/")
-  const engine = slash < 0 ? undefined : rule.slice(0, slash)
-  if (engine !== undefined && !configured.includes(engine)) {
-    return `jig: no configured engine named "${engine}"; configured: ${configured.join(", ")}`
-  }
-  const matches = report.diagnostics.filter((diagnostic) =>
-    engine === undefined ? diagnostic.ruleId === rule : ruleNameOf(diagnostic) === rule,
+  // One rule has three spellings: the bare id (`require-schema-type-derivation`), the id the
+  // JSON report carries (`plumb-effect/require-schema-type-derivation`), and the id the human
+  // report prints (`plumb/plumb-effect/require-schema-type-derivation`). Only the printed one
+  // used to resolve, which is the one nobody copies out of the JSON.
+  const input = rule.trim()
+  const slash = input.indexOf("/")
+  const head = slash < 0 ? undefined : input.slice(0, slash)
+  const engine = head !== undefined && configured.includes(head) ? head : undefined
+  const name = engine === undefined ? input : input.slice(engine.length + 1)
+  const scoped =
+    engine === undefined
+      ? report.diagnostics
+      : report.diagnostics.filter((diagnostic) => diagnostic.engine === engine)
+  const matches = scoped.filter(
+    (diagnostic) =>
+      diagnostic.ruleId === name ||
+      ruleNameOf(diagnostic) === name ||
+      diagnostic.ruleId.split("/").at(-1) === name,
   )
   if (matches.length === 0) {
+    // A leading segment that is neither a configured engine nor a rule-id prefix is a
+    // misspelled engine, not a rule that stayed quiet.
+    const unknownEngine =
+      engine === undefined &&
+      head !== undefined &&
+      !report.diagnostics.some((diagnostic) => diagnostic.ruleId.startsWith(head + "/"))
+    if (unknownEngine) {
+      return `jig: no configured engine named "${head ?? ""}"; configured: ${configured.join(", ")}`
+    }
     const who = engine === undefined ? "no configured engine named it" : `the ${engine} engine ran`
-    return `jig: ${rule} — nothing in this run (${who})`
+    return `jig: ${input} — nothing in this run (${who})`
   }
   const first = matches[0]
-  const lines = [`${first === undefined ? rule : ruleNameOf(first)} — ${matches.length} finding(s)`]
+  const lines = [
+    `${first === undefined ? input : ruleNameOf(first)} — ${matches.length} finding(s)`,
+  ]
   matches.forEach((diagnostic, index) => {
     lines.push(...findingBlock(diagnostic, index + 1))
   })

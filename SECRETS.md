@@ -51,6 +51,36 @@ pi has no such split; `pi` and its `pi.exec` children inherit one environment.
 Doppler is the manager this repository happens to use. It is not part of the design: any
 launcher that populates the environment works, and none of them is a code dependency.
 
+## Two layers: a personal config and the repository's
+
+A maintainer often runs two: a personal project holding the model key, and the repository's
+own project holding whatever the repo needs. They compose by nesting the launcher, and the
+nesting is not symmetric — `doppler run` resolves a project from the **working directory's**
+`doppler.yaml`, and that beats `--project`/`--config` _and_ `DOPPLER_PROJECT`/`DOPPLER_CONFIG`
+in the environment. A bare `doppler run` from inside a repository therefore enters the
+repository's layer, whatever the outer one was.
+
+```sh
+# personal layer outside, repository layer entered from the repository root
+cd ~/personal && doppler run -p personal -c dev -- \
+  sh -c 'cd "$1" && exec doppler run -p tackle -c dev -- pi' _ ~/autotelic/tackle
+```
+
+Four rules follow from that:
+
+- **Enter each layer from its own root.** `cd` into the layer's directory rather than trusting
+  a flag to win; the working directory is what Doppler reads.
+- **The inner layer's identity shadows the outer one's.** `DOPPLER_PROJECT`, `DOPPLER_CONFIG`
+  and `DOPPLER_ENVIRONMENT` describe the innermost run, so name the layers in the launcher,
+  never in the environment.
+- **`HOME` has to survive.** Doppler finds its own auth there. pi spawns children without a
+  login shell and has handed over an environment without `HOME`; jig's pi extension puts it
+  back before it spawns anything, and a launcher the agent runs needs the same guarantee.
+- **Two layers are still one environment by the time `jig` runs.** `jig` reads no secret and
+  starts no manager: it inherits, and both agent surfaces inherit from it in turn. A run that
+  needs a key it was not started with says `not judged`; that sentence is the check, and it
+  never prints a value.
+
 ## Why the environment, and not a tool-side loader
 
 The two hosts do not offer the same conveniences:

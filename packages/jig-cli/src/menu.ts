@@ -94,20 +94,46 @@ const outputPath = (
   return resolve(root, configured ?? OUTPUT_DEFAULTS[key])
 }
 
-/** Resolve the artifacts the same way cutlist's config does. */
+/**
+ * The directory cutlist scans here: its engine's own `--cwd`, else the repository root.
+ *
+ * A repo may catalogue a tree that is not the root -- tackle catalogues its own exemplar --
+ * and cutlist reads its config from the directory it scans. `jig menu` used to look only at
+ * the root, so it reported "no cutlist artifact" on a repo whose artifact was right there,
+ * and `jig menu --cwd examples/self` was the only way to see it.
+ *
+ * @param root - The repository root.
+ * @returns The directory the configured `cutlist` engine runs in, or `root`.
+ */
+export const cutlistRootOf = (root: string): string => {
+  const config = readJson(join(root, "jig.config.json"))
+  const engines = isRecord(config) && Array.isArray(config.engines) ? config.engines : []
+  for (const engine of engines) {
+    if (!isRecord(engine) || engine.id !== "cutlist") continue
+    const args = Array.isArray(engine.args) ? engine.args : []
+    const index = args.findIndex((arg) => arg === "--cwd")
+    const value = index < 0 ? undefined : args[index + 1]
+    if (typeof value !== "string" || value === "" || value === ".") return root
+    return resolve(root, value)
+  }
+  return root
+}
+
+/** Resolve the artifacts the same way cutlist's config does, where its engine scans. */
 export const artifactPaths = (root: string): ArtifactPaths => {
-  const config = readJson(join(root, "cutlist.config.json"))
+  const base = cutlistRootOf(root)
+  const config = readJson(join(base, "cutlist.config.json"))
   const output = isRecord(config) && isRecord(config.output) ? config.output : undefined
-  const menu = outputPath(root, output, "menu")
+  const menu = outputPath(base, output, "menu")
   return {
     dir: resolve(menu, ".."),
-    catalog: outputPath(root, output, "catalog"),
+    catalog: outputPath(base, output, "catalog"),
     menu,
-    menuJson: outputPath(root, output, "menuJson"),
-    patterns: outputPath(root, output, "patterns"),
-    patternsJson: outputPath(root, output, "patternsJson"),
-    recipes: outputPath(root, output, "recipes"),
-    recipesJson: outputPath(root, output, "recipesJson"),
+    menuJson: outputPath(base, output, "menuJson"),
+    patterns: outputPath(base, output, "patterns"),
+    patternsJson: outputPath(base, output, "patternsJson"),
+    recipes: outputPath(base, output, "recipes"),
+    recipesJson: outputPath(base, output, "recipesJson"),
   }
 }
 

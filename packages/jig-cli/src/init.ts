@@ -14,6 +14,7 @@ import {
 import { emptyBaseline, readBaseline, writeBaseline } from "./baseline.ts"
 import { loadConfig } from "./config.ts"
 import { resolveEngineCommand } from "./engines.ts"
+import { exec, type Spawner } from "./exec.ts"
 import {
   GENERATED_BEGIN,
   GENERATED_END,
@@ -90,6 +91,8 @@ export interface InitResult {
   readonly profile: RepoProfile
   readonly written: ReadonlyArray<string>
   readonly kept: ReadonlyArray<string>
+  /** Written paths this repository's .gitignore keeps out of git, so nobody can review them. */
+  readonly ignored: ReadonlyArray<string>
   readonly joggleConfig: "kept" | "written" | "absent"
   readonly cutlistConfig: "kept" | "written" | "absent"
   /** What happened to `.gitattributes`: the generated-artifact block, never the whole file. */
@@ -607,6 +610,22 @@ export const inspectRepo = (
         "jig resolves from PATH; pin @autotelic/jig-cli as a devDependency so CI runs the same version",
       )
     }
+    // A repo that already gates these findings with its own ledger (an oxlint baseline, say)
+    // does not want a second one silently: two ledgers over one rule set means neither is the
+    // record of what was reviewed.
+    const ownLedger = existing?.gate.baseline ?? ".jig-baseline.json"
+    const otherLedgers = files.filter(
+      (file) => file !== ownLedger && file.endsWith(".json") && /baseline/iu.test(file),
+    )
+    if (otherLedgers.length > 0) {
+      notes.push(
+        "another ledger is already here (" +
+          otherLedgers.join(", ") +
+          "); jig keeps `" +
+          ownLedger +
+          "` — decide which one owns these findings before enabling the gate",
+      )
+    }
     const agentDocs = ["AGENTS.md", "CLAUDE.md", ".cursorrules"].filter((file) =>
       files.includes(file),
     )
@@ -946,6 +965,21 @@ Do not run \`${profile.jig} baseline\` to make a run green without reading what 
 accepts. The baseline is a reviewed ledger, not a mute button.
 `)
 
+/**
+ * How a person types a tool in this repo: through the package manager when the project has
+ * its own copy, plainly when a global one is the only one there is. `jig engines` already
+ * resolves this for spawning; the next steps a human reads must agree with it, or the paste
+ * tells them to type a command that is not on PATH.
+ */
+const invocationOf = (input: {
+  readonly profile: RepoProfile
+  readonly tool: string
+  readonly args: string
+}): string =>
+  resolveEngineCommand({ root: input.profile.root, command: input.tool }) === input.tool
+    ? input.tool + " " + input.args
+    : input.profile.run + " exec " + input.tool + " " + input.args
+
 /** The `init` invocation that reproduces this plan, including the gate it chose. */
 const initCommandFor = (profile: RepoProfile): string =>
   `${profile.jig} init${profile.gateMode === "all" ? " --gate all" : ""}${profile.cutlistDraft === undefined ? "" : " --cutlist"}`
@@ -1005,25 +1039,30 @@ export const onboardingFor = (profile: RepoProfile): string => {
       : `This repository is not initialised yet. Run \`${initCommandFor(profile)}\`: it writes \`jig.config.json\`, an empty \`${profile.baseline}\`, \`${profile.cookbook}\`, and \`${profile.onboarding}\`.`,
     profile.cutlistDraft === undefined
       ? ""
-      : "The same command drafts `cutlist.config.json`, because this tree looks like a UI. Review the vocabulary it infers, run `cutlist build`, commit the catalog, then re-run with `--force`. A draft is not enabled before a person has read it.",
+      : `The same command drafts \`cutlist.config.json\`, because this tree looks like a UI. Review the vocabulary it infers, run \`${invocationOf({ profile, tool: "cutlist", args: "build" })}\`, commit the catalog, then re-run with \`--force\`. A draft is not enabled before a person has read it.`,
     `Then \`${profile.jig} check --limit 20\`: read the census before the findings. An engine marked \`skipped\`, \`replayed\`, or "candidates not judged" did not look, and a note is never a pass.`,
+    "Secrets are the environment and the host owns them: if a run needs a key this session was not started with, say so and stop. Never add a loader, and never nest a second `doppler run` from this directory -- it resolves the project from the working directory's `doppler.yaml`, so the layer you think you added is not the one that wins.",
   ]
     .filter((line) => line !== "")
     .join("\n\n")
+  const piWired = profile.hosts.has("pi")
+  const opencodeWired = profile.hosts.has("opencode")
   const wire = [
-    `- **pi**: \`pi install ${profile.jigSource} --local\` writes \`.pi/settings.json\`, and the package's extension adds \`jig_check\`, \`jig_engines\`, \`jig_onboard\`, \`jig_init\`, and \`jig_menu\`.`,
-    '- **opencode**: add `"@autotelic/jig-cli/opencode"` to `"plugin"` in `opencode.json`, and the plugin adds `jig.check`, `jig.engines`, `jig.menu`, `jig.onboard`, and `jig.init`.',
-    ...(profile.hosts.has("pi")
-      ? [
-          "- pi is already wired here (`.pi/settings.json`): run `pi update --extensions` rather than adding a second entry.",
-        ]
-      : []),
-    ...(profile.hosts.has("opencode")
-      ? [
-          '- OpenCode is already wired here: keep the existing `"plugin"` entry or `.opencode/plugins/` file rather than adding another.',
-        ]
-      : []),
-  ].join("\n")
+    piWired
+      ? "- **pi** is already wired here (`.pi/settings.json`): run `pi update --extensions` rather than adding a second entry."
+      : `- **pi**: \`pi install ${profile.jigSource} --local\` writes \`.pi/settings.json\`, and the package's extension adds \`jig_check\`, \`jig_engines\`, \`jig_onboard\`, \`jig_init\`, and \`jig_menu\`.`,
+    opencodeWired
+      ? '- **OpenCode** is already wired here: keep the existing `"plugin"` entry or `.opencode/plugins/` file rather than adding another.'
+      : '- **opencode**: add `"@autotelic/jig-cli/opencode"` to `"plugin"` in `opencode.json`, and the plugin adds `jig.check`, `jig.engines`, `jig.menu`, `jig.onboard`, and `jig.init`.',
+    // A repo that denies every tool by default makes a plugin that adds tools invisible, and
+    // the failure looks like "the plugin did not load" rather than "the tools are off".
+    opencodeWired
+      ? ""
+      : '- If that OpenCode config denies tools wholesale (`"tools": { "*": false }`), allow `jig.*` explicitly or the plugin\'s tools stay invisible.',
+    piWired || opencodeWired ? "" : "Ask me which host I use if neither file exists.",
+  ]
+    .filter((line) => line !== "")
+    .join("\n")
   const room = (): string =>
     profile.facts.has("room")
       ? `${section("The room — **STOP and ask**")}
@@ -1080,6 +1119,8 @@ jig --version
 
 If \`jig\` is not found, the global bin directory is not on PATH: ${GLOBAL_BIN_HINT[profile.packageManager]}.${source}
 
+If the install itself fails with a 404, the package is not on the registry yet: ask me for a checkout and link it instead (\`${DEV_INSTALL[profile.packageManager]} -w link:<checkout>/packages/jig-cli\`), then point pi at the linked copy (\`pi install ./node_modules/@autotelic/jig-cli --local\`) — an unpublished name is treated as a relative path.
+
 ${section("Read what this repository already decided")}
 
 ${readFirst}
@@ -1094,11 +1135,13 @@ ${section("Initialise, then read the census")}
 
 ${initialise}
 
+${section("Commit it, or say it is local-only — **STOP and ask**")}
+
+\`git status\` after init: the harness is config, two docs, a ledger, and a generated block. If any of them is *ignored* here, stop and tell me, because a harness git cannot see gates this machine and nothing else — no CI, no reviewer, no second machine. Do not edit \`.gitignore\` without asking; the baseline and the gate are worth nothing to anyone who cannot check out the record.
+
 ${section("Wire this agent")}
 
 ${wire}
-
-Ask me which host I use if neither file exists.
 
 ${room()}${section("Report, then stop")}
 
@@ -1150,6 +1193,11 @@ export const summaryFor = (result: InitResult): string => {
       : [`  gitattributes    ${result.gitattributes} (generated block only)`]),
     `  ${action.padEnd(16)} ${result.written.length === 0 ? "nothing" : result.written.join(", ")}`,
     ...(result.kept.length === 0 ? [] : [`  ${keptAction.padEnd(16)} ${result.kept.join(", ")}`]),
+    ...(result.ignored.length === 0
+      ? []
+      : [
+          `  ${"gitignored".padEnd(16)} ${result.ignored.join(", ")} — local-only: no CI can run what git cannot see`,
+        ]),
     ...profile.notes.map((note) => `  note             ${note}`),
     "",
     "Next:",
@@ -1167,7 +1215,7 @@ export const summaryFor = (result: InitResult): string => {
             `  2. ${profile.jig} check --limit 20     census, then the first 20 findings`,
             ...(result.cutlistConfig === "written"
               ? [
-                  "  3. cutlist build     review the catalog, commit it, then re-run jig init --force",
+                  `  3. ${invocationOf({ profile, tool: "cutlist", args: "build" })}     review the catalog, commit it, then re-run jig init --force`,
                   `  4. paste ${profile.onboarding} into your agent`,
                 ]
               : [`  3. paste ${profile.onboarding} into your agent`]),
@@ -1194,6 +1242,38 @@ export const initJson = (result: InitResult, prompt?: string): string => {
     2,
   )
 }
+
+/**
+ * The written paths git here refuses to track.
+ *
+ * `jig init` writes a config, two docs, a ledger, and a generated block. A repository can
+ * ignore every one of them -- the first adopter we ran against ignores all seven -- and then
+ * the harness is local-only: no CI runs it, the baseline never reaches a reviewer, and
+ * `JIG.md`'s "run `jig check --format github` in the pull-request workflow" cannot be done.
+ * `init` cannot change the ignore rules; it can refuse to call that a clean write.
+ *
+ * @param input - The repository root and the paths to test.
+ * @returns The paths git reports as ignored; empty when git cannot answer.
+ */
+const ignoredByGit = (input: {
+  readonly root: string
+  readonly files: ReadonlyArray<string>
+}): Effect.Effect<ReadonlyArray<string>, never, Spawner> =>
+  input.files.length === 0
+    ? Effect.succeed([])
+    : Effect.match(
+        exec({ binary: "git", args: ["check-ignore", "--", ...input.files], cwd: input.root }),
+        {
+          onFailure: () => [],
+          onSuccess: (outcome) =>
+            outcome.code === 0
+              ? outcome.stdout
+                  .split("\n")
+                  .map((line) => line.trim())
+                  .filter((line) => line !== "")
+              : [],
+        },
+      )
 
 /** Write one generated file unless it already exists, and record which happened. */
 const writeIfAbsent = (input: {
@@ -1233,7 +1313,11 @@ export const initialise = (
     readonly cutlist?: boolean | undefined
     readonly dryRun?: boolean | undefined
   } = {},
-): Effect.Effect<InitResult, PlatformError.PlatformError, FileSystem.FileSystem | Path.Path> =>
+): Effect.Effect<
+  InitResult,
+  PlatformError.PlatformError,
+  FileSystem.FileSystem | Path.Path | Spawner
+> =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
@@ -1273,7 +1357,9 @@ export const initialise = (
           ...profile,
           notes: [
             ...profile.notes.filter((note) => !note.startsWith("cutlist not enabled")),
-            "cutlist draft written: review cutlist.config.json, run `cutlist build`, then re-run `jig init --force` to enable it",
+            "cutlist draft written: review cutlist.config.json, run `" +
+              invocationOf({ profile, tool: "cutlist", args: "build" }) +
+              "`, then re-run `jig init --force` to enable it",
           ],
         }
       }
@@ -1364,5 +1450,28 @@ export const initialise = (
       }
     }
 
-    return { profile, written, kept, joggleConfig, cutlistConfig, gitattributes, dryRun, accepted }
+    // The write is done; whether anyone can commit it is a separate question, and one the
+    // person only learns when the branch is pushed and the config is not in it.
+    const ignored = yield* ignoredByGit({ root, files: [...written, profile.baseline] })
+    const noted =
+      ignored.length === 0
+        ? profile
+        : {
+            ...profile,
+            notes: [
+              ...profile.notes,
+              `${ignored.length} path(s) here are gitignored (${ignored.join(", ")}): the harness is local-only, so it gates this machine and nothing else`,
+            ],
+          }
+    return {
+      profile: noted,
+      written,
+      kept,
+      ignored,
+      joggleConfig,
+      cutlistConfig,
+      gitattributes,
+      dryRun,
+      accepted,
+    }
   })

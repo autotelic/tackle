@@ -24,6 +24,8 @@ If `jig` is not found, the global bin directory is not on PATH: run `pnpm setup`
 
 `./packages/jig-cli` is this checkout: run step 1 again after a build that changes the CLI.
 
+If the install itself fails with a 404, the package is not on the registry yet: ask me for a checkout and link it instead (`pnpm add -D -w link:<checkout>/packages/jig-cli`), then point pi at the linked copy (`pi install ./node_modules/@autotelic/jig-cli --local`) — an unpublished name is treated as a relative path.
+
 ## 2. Read what this repository already decided
 
 - `JIG.md` — the commands, the gate, and what a note means. Read it before you run anything.
@@ -42,16 +44,18 @@ Engines are devDependencies here, never global installs: `pnpm add -D <package>`
 
 Then `pnpm jig check --limit 20`: read the census before the findings. An engine marked `skipped`, `replayed`, or "candidates not judged" did not look, and a note is never a pass.
 
-## 5. Wire this agent
+Secrets are the environment and the host owns them: if a run needs a key this session was not started with, say so and stop. Never add a loader, and never nest a second `doppler run` from this directory -- it resolves the project from the working directory's `doppler.yaml`, so the layer you think you added is not the one that wins.
 
-- **pi**: `pi install ./packages/jig-cli --local` writes `.pi/settings.json`, and the package's extension adds `jig_check`, `jig_engines`, `jig_onboard`, `jig_init`, and `jig_menu`.
-- **opencode**: add `"@autotelic/jig-cli/opencode"` to `"plugin"` in `opencode.json`, and the plugin adds `jig.check`, `jig.engines`, `jig.menu`, `jig.onboard`, and `jig.init`.
-- pi is already wired here (`.pi/settings.json`): run `pi update --extensions` rather than adding a second entry.
-- OpenCode is already wired here: keep the existing `"plugin"` entry or `.opencode/plugins/` file rather than adding another.
+## 5. Commit it, or say it is local-only — **STOP and ask**
 
-Ask me which host I use if neither file exists.
+`git status` after init: the harness is config, two docs, a ledger, and a generated block. If any of them is _ignored_ here, stop and tell me, because a harness git cannot see gates this machine and nothing else — no CI, no reviewer, no second machine. Do not edit `.gitignore` without asking; the baseline and the gate are worth nothing to anyone who cannot check out the record.
 
-## 6. The room — **STOP and ask**
+## 6. Wire this agent
+
+- **pi** is already wired here (`.pi/settings.json`): run `pi update --extensions` rather than adding a second entry.
+- **OpenCode** is already wired here: keep the existing `"plugin"` entry or `.opencode/plugins/` file rather than adding another.
+
+## 7. The room — **STOP and ask**
 
 This repository keeps a project room: one ledger per Linear project, a daemon on this
 machine, and a review job that runs jig, a Pi, and one fenced post.
@@ -75,11 +79,11 @@ Ask before installing anything doctor names. What the checks mean:
 `hc` (herdr-core) is only needed by `pnpm jig room work`, and the wake needs the machine
 awake: a sleeping laptop is a hosting problem, not a bug.
 
-## 7. Report, then stop
+## 8. Report, then stop
 
 Tell me what you installed, what `pnpm jig init` wrote and kept, the census, and the first findings. Then wait for me.
 
-## 8. Never, without asking me
+## 9. Never, without asking me
 
 - `pnpm jig baseline` — it accepts every current finding, and an unreviewed baseline is debt made invisible.
 - Changing the gate back to `touched-files`, or adding an ignore to get green.
@@ -87,7 +91,7 @@ Tell me what you installed, what `pnpm jig init` wrote and kept, the census, and
 - `pnpm jig room init`, which registers the room against Linear.
 - Changing `jig.config.json` by hand instead of re-running `init`.
 
-## 9. What this scan already found
+## 10. What this scan already found
 
 - room not initialised: no room.config.json; `pnpm jig room plan` prints the init it would run
 
