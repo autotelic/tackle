@@ -57,6 +57,7 @@
     "maxWarnings": -1
   },
   "agent": {
-    "cookbook": "JIG.md"
+    "cookbook": "JIG.md",
+    "onboarding": "ONBOARD.md"
   }
 }

@@ -439,8 +439,8 @@ describe("inspectRepo", () => {
       expect(cookbookFor(profile)).toContain("room doctor")
       expect(cookbookFor(profile)).toContain("room board")
       expect(onboardingFor(profile)).toContain("room doctor")
-      expect(onboardingFor(profile)).toContain("room init")
-      expect(onboardingFor(profile)).toContain("Before")
+      expect(onboardingFor(profile)).toContain("room plan")
+      expect(onboardingFor(profile)).toContain("**STOP and ask**")
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
@@ -485,7 +485,9 @@ describe("initialise", () => {
       const onboarding = readFileSync(join(root, "ONBOARD.md"), "utf8")
       expect(onboarding).toContain("jig engines")
       expect(onboarding).toContain("STOP and ask")
-      expect(onboarding).toContain("Do not run `jig baseline` without asking")
+      // The prompt is the door: it names the global install and the ratchet's one sin.
+      expect(onboarding).toContain("Never, without asking me")
+      expect(onboarding).toContain("`jig baseline`")
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
@@ -786,6 +788,8 @@ const profileFor = (gateMode: "all" | "touched-files") => ({
   baseline: ".jig-baseline.json",
   cookbook: "JIG.md",
   onboarding: "ONBOARD.md",
+  jigSource: "@autotelic/jig-cli",
+  hosts: new Set<"opencode" | "pi">(),
   cutlistDraft: undefined,
 })
 
@@ -815,6 +819,43 @@ describe("rendering", () => {
 
   it("tells an agent to run init when the repo is not configured yet", () => {
     expect(onboardingFor(profileFor("touched-files"))).toContain("not initialised yet")
+  })
+
+  it("starts by putting the CLI on the machine, in the package manager's own dialect", () => {
+    expect(onboardingFor(profileFor("all"))).toContain("pnpm add -g @autotelic/jig-cli")
+    expect(onboardingFor(profileFor("all"))).toContain("pnpm setup")
+    expect(onboardingFor({ ...profileFor("all"), packageManager: "npm", run: "npm" })).toContain(
+      "npm install -g @autotelic/jig-cli",
+    )
+    expect(onboardingFor({ ...profileFor("all"), packageManager: "yarn", run: "yarn" })).toContain(
+      "yarn global add @autotelic/jig-cli",
+    )
+  })
+
+  it("names the checkout this tree builds, and keeps the hosts already wired", async () => {
+    const root = project(
+      {
+        json: [
+          ["package.json", {}],
+          [".pi/settings.json", { packages: ["../packages/jig-cli"] }],
+          ["opencode.json", {}],
+        ],
+        text: [["packages/jig-cli/package.json", "{}"]],
+      },
+      [],
+    )
+    try {
+      const profile = await inspect(root)
+      expect(profile.jigSource).toBe("./packages/jig-cli")
+      expect([...profile.hosts].sort((a, b) => a.localeCompare(b))).toEqual(["opencode", "pi"])
+      const prompt = onboardingFor(profile)
+      expect(prompt).toContain("-g ./packages/jig-cli")
+      expect(prompt).toContain("pi update --extensions")
+      // A wired host is updated, not added twice.
+      expect(prompt).toContain("keep the existing")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
   })
 
   it("names the engines, the gate, and the first command in the docs", async () => {

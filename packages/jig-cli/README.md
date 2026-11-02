@@ -128,6 +128,13 @@ it. `--gate all` opts into the repo-wide ratchet. The generated `JIG.md` and
 `ONBOARD.md` are specific to the profile, and the summary names what was kept,
 what was written, and the next two commands.
 
+`ONBOARD.md` is one paste-able prompt, not a reference: it opens with the global
+install of the CLI (the checkout when this tree builds jig, npm otherwise, and
+the manager's own verb), reads the config it just wrote, installs what the census
+says is missing, runs `init`, wires the agent host (`pi install … --local`, or
+a `"plugin"` entry in `opencode.json`) and, in a repo that runs one, plans the
+room. `JIG.md` stays the reference; the prompt is the door.
+
 `touched-files` is the adoption default, but it is the wrong gate for validating a
 clean checkout: the working-tree diff is empty, so the touched set is empty, and a
 run can exit 0 while the report lists findings. For a first run, a workshop, or CI
@@ -136,7 +143,7 @@ on a clean PR checkout, pass `--gate all` — or `gate: "all"` to `jig_onboard` 
 it chose, so the applied config matches what was approved.
 
 `jig init --print` and `jig onboard` are the agent door: they run the same
-inspection but write nothing, and print the prompt with the plan's engines,
+inspection but write nothing, and print that same prompt with the plan's engines,
 notes, and stop-and-ask points. `--format json` returns the same plan as data,
 and `--gate` / `--force` choose the plan's gate and whether existing files would
 be rewritten. The pi tool `jig_onboard` and the OpenCode tool `jig.onboard` are

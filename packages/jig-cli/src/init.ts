@@ -73,6 +73,10 @@ export interface RepoProfile {
   readonly baseline: string
   readonly cookbook: string
   readonly onboarding: string
+  /** Where this machine installs the CLI from: this checkout when it builds jig, else npm. */
+  readonly jigSource: string
+  /** Agent hosts this repository already wires, so the prompt does not ask for them twice. */
+  readonly hosts: ReadonlySet<"opencode" | "pi">
   /** A cutlist config inferred from the tree, when this looks like a UI. */
   readonly cutlistDraft: CutlistConfig | undefined
   /** Where cutlist writes, with its defaults filled in. Absent when this repo has no cutlist. */
@@ -578,6 +582,26 @@ export const inspectRepo = (
     }
     const jigPinned = localJig || dependencies["@autotelic/jig-cli"] !== undefined
     const jig = jigCommandOf(packageManager, jigPinned)
+    // The CLI has to be on the machine before any of this runs. A tree that builds jig is
+    // the honest source for it -- the package is not on npm -- and a repo that only depends
+    // on it wants the published one.
+    const jigSource = (yield* existsAt({
+      fs,
+      path,
+      root,
+      relative: "packages/jig-cli/package.json",
+    }))
+      ? "./packages/jig-cli"
+      : "@autotelic/jig-cli"
+    // Agent surfaces already wired: the prompt says "keep this", not "add another".
+    const hosts = new Set<"opencode" | "pi">()
+    if (yield* existsAt({ fs, path, root, relative: ".pi/settings.json" })) hosts.add("pi")
+    if (
+      files.includes("opencode.json") ||
+      (yield* existsAt({ fs, path, root, relative: ".opencode/plugins" }))
+    ) {
+      hosts.add("opencode")
+    }
     if (!jigPinned) {
       notes.push(
         "jig resolves from PATH; pin @autotelic/jig-cli as a devDependency so CI runs the same version",
@@ -816,6 +840,8 @@ export const inspectRepo = (
       baseline: existing?.gate.baseline ?? ".jig-baseline.json",
       cookbook: existing?.agent?.cookbook ?? "JIG.md",
       onboarding: existing?.agent?.onboarding ?? "ONBOARD.md",
+      jigSource,
+      hosts,
       cutlistDraft,
       cutlistOutput,
       cutlistExisting,
@@ -916,61 +942,150 @@ accepts. The baseline is a reviewed ledger, not a mute button.
 const initCommandFor = (profile: RepoProfile): string =>
   `${profile.jig} init${profile.gateMode === "all" ? " --gate all" : ""}${profile.cutlistDraft === undefined ? "" : " --cutlist"}`
 
-/** The agent door: a prompt that starts with the first command, and stops to ask. */
+// Keyed by manager so the compiler, not a reader, proves every case is covered: the
+// global install verb, the devDependency verb, and where the bins land are each different.
+const GLOBAL_INSTALL = {
+  bun: (spec: string) => `bun add -g ${spec}`,
+  npm: (spec: string) => `npm install -g ${spec}`,
+  pnpm: (spec: string) => `pnpm add -g ${spec}`,
+  yarn: (spec: string) => `yarn global add ${spec}`,
+} satisfies Readonly<Record<PackageManager, (spec: string) => string>>
+
+const DEV_INSTALL = {
+  bun: "bun add -D",
+  npm: "npm install -D",
+  pnpm: "pnpm add -D",
+  yarn: "yarn add -D",
+} satisfies Readonly<Record<PackageManager, string>>
+
+const GLOBAL_BIN_HINT = {
+  bun: "`bun` links bins into `$HOME/.bun/bin`: add it to PATH, open a new shell, and try again",
+  npm: "add `$(npm prefix -g)/bin` to PATH, open a new shell, and try again",
+  pnpm: "run `pnpm setup` (it puts `pnpm bin -g` on PATH), open a new shell, and try again",
+  yarn: "add `$(yarn global bin)` to PATH, open a new shell, and try again",
+} satisfies Readonly<Record<PackageManager, string>>
+
+/**
+ * The agent door: one prompt, pasted whole, that sets the harness up end to end.
+ *
+ * The shape is the one that works -- Alchemy's and rat-stack's: a line of intent, one
+ * named command per step, the doc to read before acting, and an explicit place to stop
+ * and ask. Nothing is left as "see the README": a prompt that stops at "run init" leaves
+ * the person to discover the CLI install, the agent wiring, and the room alone. `JIG.md`
+ * stays the reference; this is the door.
+ */
 export const onboardingFor = (profile: RepoProfile): string => {
-  const notes =
-    profile.notes.length === 0 ? "" : "\n" + profile.notes.map((note) => `- ${note}`).join("\n")
-  return tighten(`# ONBOARD.md
+  let counted = 0
+  const section = (title: string): string => `## ${(counted += 1)}. ${title}`
+  const summary = profile.summary === "" ? "" : "\n\n" + profile.summary
+  const source = profile.jigSource.startsWith(".")
+    ? `\n\n\`${profile.jigSource}\` is this checkout: run step 1 again after a build that changes the CLI.`
+    : ""
+  const engines = profile.engines.length === 0 ? "none yet" : engineSummary(profile)
+  const readFirst = [
+    `- \`${profile.cookbook}\` — the commands, the gate, and what a note means. Read it before you run anything.`,
+    `- \`jig.config.json\` — engines: ${engines}; gate: \`${profile.gateMode}\`; baseline: \`${profile.baseline}\`.`,
+    ...(profile.agentDocs.length === 0
+      ? []
+      : [
+          `- ${profile.agentDocs.map((doc) => "`" + doc + "`").join(", ")} — how this repository wants to be worked in.`,
+        ]),
+  ].join("\n")
+  const initialise = [
+    profile.facts.has("configured")
+      ? `\`jig.config.json\` is already here, and nothing needs applying: a re-run keeps it. \`${initCommandFor(profile)} --force\` rewrites the config and the two docs — never the baseline — so run that only when the plan changes.`
+      : `This repository is not initialised yet. Run \`${initCommandFor(profile)}\`: it writes \`jig.config.json\`, an empty \`${profile.baseline}\`, \`${profile.cookbook}\`, and \`${profile.onboarding}\`.`,
+    profile.cutlistDraft === undefined
+      ? ""
+      : "The same command drafts `cutlist.config.json`, because this tree looks like a UI. Review the vocabulary it infers, run `cutlist build`, commit the catalog, then re-run with `--force`. A draft is not enabled before a person has read it.",
+    `Then \`${profile.jig} check --limit 20\`: read the census before the findings. An engine marked \`skipped\`, \`replayed\`, or "candidates not judged" did not look, and a note is never a pass.`,
+  ]
+    .filter((line) => line !== "")
+    .join("\n\n")
+  const wire = [
+    `- **pi**: \`pi install ${profile.jigSource} --local\` writes \`.pi/settings.json\`, and the package's extension adds \`jig_check\`, \`jig_engines\`, \`jig_onboard\`, \`jig_init\`, and \`jig_menu\`.`,
+    '- **opencode**: add `"@autotelic/jig-cli/opencode"` to `"plugin"` in `opencode.json`, and the plugin adds `jig.check`, `jig.engines`, `jig.menu`, `jig.onboard`, and `jig.init`.',
+    ...(profile.hosts.has("pi")
+      ? [
+          "- pi is already wired here (`.pi/settings.json`): run `pi update --extensions` rather than adding a second entry.",
+        ]
+      : []),
+    ...(profile.hosts.has("opencode")
+      ? [
+          '- OpenCode is already wired here: keep the existing `"plugin"` entry or `.opencode/plugins/` file rather than adding another.',
+        ]
+      : []),
+  ].join("\n")
+  const room = (): string =>
+    profile.facts.has("room")
+      ? `${section("The room — **STOP and ask**")}
 
-You are working in ${profile.name}. This repository uses \`jig\` as its conformance
-harness. Read this file, then \`JIG.md\`, then start.
-${profile.summary === "" ? "" : "\n" + profile.summary + "\n"}
-${profile.facts.has("configured") ? "" : "\nThis repository is not initialised yet. Run `" + initCommandFor(profile) + "` to apply the plan before continuing.\n"}
+This repository runs a project room. Run \`${profile.jig} room plan\`, show me the init it would run, and wait: \`${profile.jig} room init\` registers the room against Linear and writes \`room.config.json\`. After I approve, run it, then \`${profile.jig} room doctor\` to prove the loop before trusting a review job.
 
-## Do this first
+`
+      : ""
+  const notes = (): string =>
+    profile.notes.length === 0
+      ? ""
+      : `${section("What this scan already found")}
 
-1. Run \`${profile.jig} engines\`. Confirm every configured engine resolves.
-   **STOP and ask** before installing anything, and do not install a tool globally.
-2. Run \`${profile.jig} check --limit 20\`. Read the census before the findings: an
-   engine marked \`skipped\`, \`replayed\`, or "candidates not judged" did not look at
-   everything, and a note is not a pass.
-3. Read \`JIG.md\` for the commands and the gate.
+${profile.notes.map((note) => "- " + note).join("\n")}`
+  return tighten(`# ${profile.onboarding}
 
-## The rules of the ratchet
+> Paste this whole file into your coding agent at the root of \`${profile.name}\`. It sets the
+> harness up end to end; nothing here is applied until the agent runs it.
 
-- **Do not run \`${profile.jig} baseline\` without asking.** It accepts every current
-  finding, and a baseline accepted without review is debt made invisible.
-- Fix findings in files you are already changing. Do not disable a rule to get green;
-  if a rule is wrong for this repo, say so and ask before adding an ignore.
-- Use \`${profile.run}\` for package scripts.
-- The gate is \`${profile.gateMode}\`: ${
-    profile.gateMode === "touched-files"
-      ? "only findings in the change in front of you fail the run."
-      : "every finding in the repository fails the run."
-  }
+Set \`${profile.name}\` up with \`jig\`, the conformance harness this repository configures: every
+engine in one report, and a gate that fails on what is new.${summary}
 
-## What this repo configured
+Run the steps in order, running the commands yourself. When a step says **STOP and ask**,
+stop and wait for me.
 
-- package manager: ${profile.packageManager}
-- engines: ${engineSummary(profile)}
-- plumb: ${profile.lint.config === undefined ? "not configured" : profile.lint.config}${profile.lint.script === undefined ? "" : " via `" + profile.run + " " + profile.lint.script + "`"}
-- typescript: ${profile.facts.has("typescript") ? "yes" : "no"}
-- gate: ${profile.gateMode}
-- baseline: ${profile.baseline}${profile.cutlistDraft === undefined ? "" : "\n- cutlist: a draft is available (run `" + profile.jig + " init --cutlist`)"}${notes}
+${section("Put `jig` on this machine")}
 
-${profile.facts.has("room") ? "## The room\n\nThis repository runs a project room.\n\n1. `" + profile.jig + " room doctor` — prove the loop before trusting a review job.\n2. `" + profile.jig + " room board` — jobs, chits, and presence.\n\n" : ""}## When you need more
+The CLI is the one thing that belongs to the machine rather than the repository.
 
-- \`${profile.jig} explain <rule>\` — the rule's findings, help, and history here.
-- \`${profile.jig} menu\` — the component catalog, when cutlist is enabled.
-- \`${profile.jig} --help\` — every command.
+\`\`\`sh
+${GLOBAL_INSTALL[profile.packageManager](profile.jigSource)}
+jig --version
+\`\`\`
 
-## Stop and ask
+If \`jig\` is not found, the global bin directory is not on PATH: ${GLOBAL_BIN_HINT[profile.packageManager]}.${source}
 
-- Before installing an engine, changing \`jig.config.json\`, or running
-  \`${profile.jig} baseline\`.
-- Before changing the gate ${profile.gateMode === "all" ? "back to `touched-files`" : "to `all`"}.
-${profile.facts.has("room") ? "- Before `" + profile.jig + " room init`: it registers the room against Linear and writes `room.config.json`.\n" : ""}- When a note says an engine could not run: that is a hole in the census, not a
-  finding to fix in the code.
+${section("Read what this repository already decided")}
+
+${readFirst}
+
+${profile.facts.has("configured") ? "" : "`" + profile.cookbook + "` and `jig.config.json` do not exist yet: step 4 writes them, and what is written is the plan's defaults. Read both the moment they land.\n\n"}Then run \`${profile.jig} engines\` and confirm every configured engine resolves.
+
+${section("Install what is missing — **STOP and ask**")}
+
+Engines are devDependencies here, never global installs: \`${DEV_INSTALL[profile.packageManager]} <package>\`, then \`${profile.jig} engines\` again. Before you install anything, tell me the engine, the package, and what the census says is missing.
+
+${section("Initialise, then read the census")}
+
+${initialise}
+
+${section("Wire this agent")}
+
+${wire}
+
+Ask me which host I use if neither file exists.
+
+${room()}${section("Report, then stop")}
+
+Tell me what you installed, what \`${profile.jig} init\` wrote and kept, the census, and the first findings. Then wait for me.
+
+${section("Never, without asking me")}
+
+- \`${profile.jig} baseline\` — it accepts every current finding, and an unreviewed baseline is debt made invisible.
+- Changing the gate ${profile.gateMode === "all" ? "back to `touched-files`" : "to `all`"}, or adding an ignore to get green.
+- Installing an engine, or anything else globally. Step 1 is the one exception.
+${profile.facts.has("room") ? "- `" + profile.jig + " room init`, which registers the room against Linear.\n" : ""}- Changing \`jig.config.json\` by hand instead of re-running \`init\`.
+
+${notes()}
+
+An engine marked \`skipped\`, \`replayed\`, or "no command" is a hole in the census, not a pass and not a finding to fix in the code.
 `)
 }
 
@@ -1015,7 +1130,7 @@ export const summaryFor = (result: InitResult): string => {
           `  1. ${profile.jig} init${profile.gateMode === "all" ? " --gate all" : ""}${result.cutlistConfig === "written" ? " --cutlist" : ""}     write this plan after approval`,
           `  2. ${profile.jig} engines     confirm each command resolves`,
           `  3. ${profile.jig} check --limit 20     census, then the first 20 findings`,
-          `  4. point your agent at ${profile.onboarding}`,
+          `  4. paste ${profile.onboarding} into your agent`,
         ]
       : profile.engines.length === 0
         ? ["  1. install at least one engine (see the notes above)", "  2. re-run jig init --force"]
@@ -1025,9 +1140,9 @@ export const summaryFor = (result: InitResult): string => {
             ...(result.cutlistConfig === "written"
               ? [
                   "  3. cutlist build     review the catalog, commit it, then re-run jig init --force",
-                  `  4. point your agent at ${profile.onboarding}`,
+                  `  4. paste ${profile.onboarding} into your agent`,
                 ]
-              : [`  3. point your agent at ${profile.onboarding}`]),
+              : [`  3. paste ${profile.onboarding} into your agent`]),
           ]),
   ]
   return lines.join("\n")
