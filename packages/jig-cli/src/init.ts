@@ -53,7 +53,9 @@ export interface RepoProfile {
   /** The command that runs jig: `pnpm jig` when it is a local dependency, else `jig`. */
   readonly jig: string
   /** Facts about the repo that change what the docs say. A set, not flags that can disagree. */
-  readonly facts: ReadonlySet<"ci" | "configured" | "live-judgement" | "typescript" | "workspaces">
+  readonly facts: ReadonlySet<
+    "ci" | "configured" | "live-judgement" | "room" | "typescript" | "workspaces"
+  >
   readonly agentDocs: ReadonlyArray<string>
   /** A short, factual sentence about the repository, from AGENTS.md, README or package.json. */
   readonly summary: string
@@ -75,6 +77,8 @@ export interface RepoProfile {
   readonly cutlistDraft: CutlistConfig | undefined
   /** Where cutlist writes, with its defaults filled in. Absent when this repo has no cutlist. */
   readonly cutlistOutput?: ResolvedCutlistOutput | undefined
+  /** The cutlist config this repo already keeps, and the directory its engine scans. */
+  readonly cutlistExisting?: { readonly path: string; readonly directory: string } | undefined
 }
 
 /** What `init` wrote and what it left alone. */
@@ -449,6 +453,79 @@ const resolvedOutput = (declared: CutlistOutput | undefined): ResolvedCutlistOut
 }
 
 /**
+ * The directory a configured `cutlist` engine runs in, from its own `--cwd`.
+ *
+ * A repo may catalogue a tree that is not the root -- this repository catalyses its own
+ * exemplar -- and cutlist reads its config from the directory it scans, not from the root.
+ * `""` means the root, where cutlist's own default applies.
+ */
+const cutlistCwdOf = (configured: ReadonlyArray<EngineRef>): string => {
+  const engine = configured.find((ref) => ref.id === "cutlist")
+  const args = engine?.args ?? []
+  const index = args.findIndex((arg) => arg === "--cwd")
+  const directory = index < 0 ? "" : (args[index + 1] ?? "")
+  return directory === "." ? "" : directory.replace(/\/+$/u, "")
+}
+
+/** Cutlist's output paths, seen from the repository root rather than the directory it scans. */
+const underDirectory = (
+  output: ResolvedCutlistOutput,
+  directory: string,
+): ResolvedCutlistOutput => {
+  if (directory === "") return output
+  const under = (path: string): string => directory + "/" + path
+  const moved: Omit<ResolvedCutlistOutput, "diagrams"> = {
+    catalog: under(output.catalog),
+    manifest: under(output.manifest),
+    menuJson: under(output.menuJson),
+    menu: under(output.menu),
+    intent: under(output.intent),
+    patterns: under(output.patterns),
+    patternsJson: under(output.patternsJson),
+    recipes: under(output.recipes),
+    recipesJson: under(output.recipesJson),
+    hooks: under(output.hooks),
+    tokens: under(output.tokens),
+  }
+  const diagrams = output.diagrams
+  return diagrams === undefined ? moved : { ...moved, diagrams: under(diagrams) }
+}
+
+/**
+ * The engines a plan carries: the ones the repo configured, plus what this run detected.
+ *
+ * A repo's own entry wins for the same id -- detection cannot reproduce the `args` a project
+ * chose (`--ignore-pattern examples/**`, a second `oxlint` config for one package) -- and a
+ * configured engine whose command no longer resolves is dropped, because an engine that
+ * cannot run makes a report look clean when nothing ran.
+ */
+const mergeEngines = (input: {
+  readonly configured: ReadonlyArray<EngineRef>
+  readonly detected: ReadonlyArray<EngineRef>
+  readonly root: string
+  readonly notes: Array<string>
+}): ReadonlyArray<EngineRef> => {
+  const kept: Array<EngineRef> = []
+  for (const engine of input.configured) {
+    const command = engine.command ?? engine.id
+    // `enabled: false` is the repo's own decision, and it needs no command to honour it.
+    if (engine.enabled === false || available({ root: input.root, command })) {
+      kept.push(engine)
+      continue
+    }
+    input.notes.push(
+      "engine `" +
+        engine.id +
+        "` is configured but `" +
+        command +
+        "` does not resolve; it was dropped from the plan",
+    )
+  }
+  const ids = new Set(kept.map((engine) => engine.id))
+  return [...kept, ...input.detected.filter((engine) => !ids.has(engine.id))]
+}
+
+/**
  * Read the repository, then decide what is worth enabling.
  *
  * @param root - The project root.
@@ -563,7 +640,7 @@ export const inspectRepo = (
       command: packageManager + " " + name,
     }))
 
-    const engines: Array<EngineRef> = []
+    const detected: Array<EngineRef> = []
 
     if (lint.tool === "oxlint" && lint.config !== undefined) {
       if (!available({ root, command: "oxlint" })) {
@@ -573,7 +650,7 @@ export const inspectRepo = (
           "plumb not enabled: " + lint.config + " does not load @autotelic/plumb in jsPlugins",
         )
       } else {
-        engines.push(
+        detected.push(
           script?.args === undefined || script.args.length === 0
             ? { id: "plumb", kind: "oxlint-plugin", command: "oxlint", config: lint.config }
             : {
@@ -607,7 +684,7 @@ export const inspectRepo = (
           "joggle not enabled: joggle is not installed here (pnpm add -D @autotelic/joggle)",
         )
       } else {
-        engines.push({ id: "joggle", kind: "process", command: "joggle" })
+        detected.push({ id: "joggle", kind: "process", command: "joggle" })
         if (
           resolveEngineCommand({ root, command: "joggle" }) === "joggle" &&
           dependencies["@autotelic/joggle"] === undefined
@@ -639,22 +716,30 @@ export const inspectRepo = (
     }
 
     // The configured paths, not the defaults, are what `.gitattributes` must describe: a
-    // repo that moved the artifact still gets its own files collapsed.
-    const installedCutlist =
-      files.includes("cutlist.config.json") === true
-        ? decodeCutlistConfig(
-            parseJson(
-              yield* Effect.orElseSucceed(
-                fs.readFileString(path.join(root, "cutlist.config.json")),
-                () => "",
-              ),
-            ),
-          )
-        : undefined
+    // repo that moved the artifact still gets its own files collapsed. The config is read
+    // where the engine scans, so a catalog generated under `examples/` is described too.
+    const cutlistDirectory = cutlistCwdOf(existing?.engines ?? [])
+    const cutlistPath =
+      cutlistDirectory === "" ? "cutlist.config.json" : cutlistDirectory + "/cutlist.config.json"
+    const keepsCutlist = yield* existsAt({ fs, path, root, relative: cutlistPath })
+    const installedCutlist = keepsCutlist
+      ? decodeCutlistConfig(
+          parseJson(
+            yield* Effect.orElseSucceed(fs.readFileString(path.join(root, cutlistPath)), () => ""),
+          ),
+        )
+      : undefined
+    const cutlistExisting =
+      installedCutlist === undefined || keepsCutlist !== true
+        ? undefined
+        : { path: cutlistPath, directory: cutlistDirectory }
     const cutlistOutput =
       installedCutlist === undefined && cutlistDraft === undefined
         ? undefined
-        : resolvedOutput(installedCutlist?.output ?? cutlistDraft?.output)
+        : underDirectory(
+            resolvedOutput(installedCutlist?.output ?? cutlistDraft?.output),
+            cutlistDirectory,
+          )
 
     if (files.includes("cutlist.config.json")) {
       if (!available({ root, command: "cutlist" })) {
@@ -662,7 +747,7 @@ export const inspectRepo = (
           "cutlist not enabled: cutlist.config.json exists but the command is not installed",
         )
       } else {
-        engines.push({ id: "cutlist", kind: "process", command: "cutlist" })
+        detected.push({ id: "cutlist", kind: "process", command: "cutlist" })
         if (
           resolveEngineCommand({ root, command: "cutlist" }) === "cutlist" &&
           dependencies["@autotelic/cutlist"] === undefined
@@ -680,6 +765,31 @@ export const inspectRepo = (
       )
     }
 
+    // The room is the same product as the harness: a repo that keeps one -- or builds one --
+    // wants its commands in the docs, and a room without a config is "not initialised", not
+    // "configured".
+    const room =
+      files.includes("room.config.json") ||
+      dependencies["@autotelic/room"] !== undefined ||
+      (yield* existsAt({ fs, path, root, relative: "packages/room/package.json" }))
+    if (room && !files.includes("room.config.json")) {
+      notes.push(
+        "room not initialised: no room.config.json; `" +
+          jig +
+          " room plan` prints the init it would run",
+      )
+    }
+
+    // A repo's engine list is a decision, not a detection artefact: a forced run adds what
+    // this run found and drops what no longer resolves, but it never erases an engine the
+    // repo configured.
+    const engines = mergeEngines({
+      configured: existing?.engines ?? [],
+      detected,
+      root,
+      notes,
+    })
+
     return {
       root,
       name: path.basename(root),
@@ -694,6 +804,7 @@ export const inspectRepo = (
         ...(liveJudgement ? (["live-judgement"] as const) : []),
         ...(ci ? (["ci"] as const) : []),
         ...(hasConfig ? (["configured"] as const) : []),
+        ...(room ? (["room"] as const) : []),
       ]),
       agentDocs,
       summary,
@@ -707,6 +818,7 @@ export const inspectRepo = (
       onboarding: existing?.agent?.onboarding ?? "ONBOARD.md",
       cutlistDraft,
       cutlistOutput,
+      cutlistExisting,
     }
   })
 
@@ -729,6 +841,22 @@ const engineSummary = (profile: RepoProfile): string =>
         )
         .join(", ")
 
+/** The room's commands, for the repositories that run one. */
+const roomSection = (profile: RepoProfile): string =>
+  profile.facts.has("room")
+    ? `## The room
+
+\`jig room\` is this repo's listener: one ledger per Linear project, a daemon on each
+machine, and a review job that runs \`${profile.jig}\`, a Pi, and one fenced post.
+
+- \`${profile.jig} room plan\` — read the repo, the token, and the rooms; print the init it would run
+- \`${profile.jig} room init\` — write \`room.config.json\` and register the room
+- \`${profile.jig} room doctor\` — prove the loop: config, identity, celld, webhook, room
+- \`${profile.jig} room board\` — jobs, chits, and presence
+
+`
+    : ""
+
 /** One blank line between sections, however the template was assembled. */
 const tighten = (text: string): string => text.replace(/\n{3,}/gu, "\n\n")
 
@@ -750,7 +878,7 @@ ${profile.summary === "" ? "" : "\n" + profile.summary + "\n"}
 | \`${profile.jig} engines\` | what is configured, and whether each command resolves |
 | \`${profile.jig} baseline\` | accept the current findings; the ledger only shrinks after that |
 | \`${profile.jig} explain <rule>\` | everything jig knows about one rule, here, now |
-${profile.engines.some((engine) => engine.id === "cutlist") ? "| `" + profile.jig + " menu` | the component catalog cutlist built |\n" : ""}${profile.commands.length === 0 ? "" : "\n## The repo's own commands\n\n" + profile.commands.map((command) => "- `" + command.command + "` — the repo's " + command.name + " script").join("\n") + "\n"}
+${profile.facts.has("room") ? "| `" + profile.jig + " room board` | the room: jobs, chits, and presence |\n" : ""}${profile.engines.some((engine) => engine.id === "cutlist") ? "| `" + profile.jig + " menu` | the component catalog cutlist built |\n" : ""}${profile.commands.length === 0 ? "" : "\n## The repo's own commands\n\n" + profile.commands.map((command) => "- `" + command.command + "` — the repo's " + command.name + " script").join("\n") + "\n"}
 
 ## What runs
 
@@ -758,14 +886,13 @@ ${profile.engines.some((engine) => engine.id === "cutlist") ? "| `" + profile.ji
 - gate: \`${profile.gateMode}\`, failing on \`any-new\` identity
 - baseline: \`${profile.baseline}\`
 ${profile.notes.length === 0 ? "" : "\nNotes:\n" + profile.notes.map((note) => "- " + note).join("\n") + "\n"}
-
-${
-  profile.gateMode === "touched-files"
-    ? "Only findings in the change in front of you fail a run. Existing debt is reported,\nnot enforced, until you touch it."
-    : "Every finding in the repository fails a run. Accept the current debt deliberately\nwith `" +
-      profile.jig +
-      " baseline`, or switch the gate to `touched-files`."
-}
+${roomSection(profile)}${
+    profile.gateMode === "touched-files"
+      ? "Only findings in the change in front of you fail a run. Existing debt is reported,\nnot enforced, until you touch it."
+      : "Every finding in the repository fails a run. Accept the current debt deliberately\nwith `" +
+        profile.jig +
+        " baseline`, or switch the gate to `touched-files`."
+  }
 
 ${profile.facts.has("ci") ? "## CI\n\nRun `" + profile.jig + " check --format github` in the pull-request workflow. The gate holds new identities only, so the first run explains the debt instead of failing on it.\n\n" : ""}## Judgement
 
@@ -831,7 +958,7 @@ ${profile.facts.has("configured") ? "" : "\nThis repository is not initialised y
 - gate: ${profile.gateMode}
 - baseline: ${profile.baseline}${profile.cutlistDraft === undefined ? "" : "\n- cutlist: a draft is available (run `" + profile.jig + " init --cutlist`)"}${notes}
 
-## When you need more
+${profile.facts.has("room") ? "## The room\n\nThis repository runs a project room.\n\n1. `" + profile.jig + " room doctor` — prove the loop before trusting a review job.\n2. `" + profile.jig + " room board` — jobs, chits, and presence.\n\n" : ""}## When you need more
 
 - \`${profile.jig} explain <rule>\` — the rule's findings, help, and history here.
 - \`${profile.jig} menu\` — the component catalog, when cutlist is enabled.
@@ -842,9 +969,20 @@ ${profile.facts.has("configured") ? "" : "\nThis repository is not initialised y
 - Before installing an engine, changing \`jig.config.json\`, or running
   \`${profile.jig} baseline\`.
 - Before changing the gate ${profile.gateMode === "all" ? "back to `touched-files`" : "to `all`"}.
-- When a note says an engine could not run: that is a hole in the census, not a
+${profile.facts.has("room") ? "- Before `" + profile.jig + " room init`: it registers the room against Linear and writes `room.config.json`.\n" : ""}- When a note says an engine could not run: that is a hole in the census, not a
   finding to fix in the code.
 `)
+}
+
+/** What happened to cutlist: a config it already keeps, a draft it wants reviewed, or nothing. */
+const cutlistSummary = (result: InitResult): string => {
+  if (result.cutlistConfig === "written") {
+    return result.dryRun
+      ? "draft would be written — review it after applying"
+      : "draft written — review, build, then re-run init --force"
+  }
+  const existing = result.profile.cutlistExisting
+  return existing === undefined ? result.cutlistConfig : `configured (${existing.path})`
 }
 
 /** The human summary `init` prints, before the next steps. */
@@ -863,13 +1001,7 @@ export const summaryFor = (result: InitResult): string => {
     `  engines          ${engineSummary(profile)}`,
     `  gate             ${profile.gateMode}`,
     `  baseline         ${profile.baseline} (${result.accepted} accepted finding(s))`,
-    `  cutlist          ${
-      result.cutlistConfig !== "written"
-        ? result.cutlistConfig
-        : result.dryRun
-          ? "draft would be written — review it after applying"
-          : "draft written — review, build, then re-run init --force"
-    }`,
+    `  cutlist          ${cutlistSummary(result)}`,
     ...(result.gitattributes === "absent"
       ? []
       : [`  gitattributes    ${result.gitattributes} (generated block only)`]),

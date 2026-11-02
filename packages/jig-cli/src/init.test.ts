@@ -312,6 +312,139 @@ describe("inspectRepo", () => {
       rmSync(root, { recursive: true, force: true })
     }
   })
+
+  it("keeps the engines a config declares, and adds the ones this run detects", async () => {
+    const root = project(
+      {
+        json: [
+          ["package.json", { scripts: { lint: "oxlint ." } }],
+          ["tsconfig.json", {}],
+          [".oxlintrc.json", OXLINT],
+          [
+            "jig.config.json",
+            {
+              engines: [
+                {
+                  id: "plumb-goals",
+                  kind: "oxlint-plugin",
+                  command: "oxlint",
+                  config: "goals/oxlint.config.ts",
+                  args: ["goals/src"],
+                },
+              ],
+              gate: { mode: "all", baseline: ".jig-baseline.json" },
+            },
+          ],
+        ],
+      },
+      ["oxlint", "joggle"],
+    )
+    try {
+      const profile = await inspect(root)
+      expect(profile.engines.map((engine) => engine.id)).toEqual(["plumb-goals", "plumb", "joggle"])
+      // A repo's own entry wins: detection cannot reproduce the scope it chose.
+      expect(profile.engines[0]?.args).toEqual(["goals/src"])
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it("drops a configured engine whose command no longer resolves, and says so", async () => {
+    const root = project(
+      {
+        json: [
+          ["package.json", {}],
+          ["tsconfig.json", {}],
+          [
+            "jig.config.json",
+            {
+              engines: [{ id: "gone", kind: "process", command: "not-a-real-engine" }],
+              gate: { mode: "all", baseline: ".jig-baseline.json" },
+            },
+          ],
+        ],
+      },
+      ["joggle"],
+    )
+    try {
+      const profile = await inspect(root)
+      expect(profile.engines.map((engine) => engine.id)).toEqual(["joggle"])
+      expect(profile.notes.join("\n")).toContain("does not resolve")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it("reads cutlist where its engine scans, and describes the artifact from the root", async () => {
+    const root = project(
+      {
+        json: [
+          ["package.json", {}],
+          ["tsconfig.json", {}],
+          [
+            "jig.config.json",
+            {
+              engines: [
+                {
+                  id: "cutlist",
+                  kind: "process",
+                  command: "cutlist",
+                  args: ["--cwd", "examples/self"],
+                },
+              ],
+              gate: { mode: "all", baseline: ".jig-baseline.json" },
+            },
+          ],
+        ],
+        text: [
+          [
+            "examples/self/cutlist.config.json",
+            JSON.stringify({
+              roots: ["src"],
+              tiers: { primitive: [], shared: [], local: [] },
+              tokens: { from: "src/styles/app.css" },
+              ownership: { routeOwner: "first-segment", transitive: false },
+              output: { catalog: "tools/vocab/catalog.json" },
+            }),
+          ],
+        ],
+      },
+      ["cutlist"],
+    )
+    try {
+      const result = await initialiseIn(root)
+      expect(result.profile.cutlistExisting?.path).toBe("examples/self/cutlist.config.json")
+      // The configured cutlist survives, and the detected joggle is added beside it.
+      expect(result.profile.engines.map((engine) => engine.id)).toEqual(["cutlist", "joggle"])
+      expect(summaryFor(result)).toContain("configured (examples/self/cutlist.config.json)")
+      const text = readFileSync(join(root, ".gitattributes"), "utf8")
+      expect(text).toContain("examples/self/tools/vocab/catalog.json linguist-generated=true")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it("documents the room when this repo runs one, and asks before registering it", async () => {
+    const root = project(
+      {
+        json: [["package.json", {}]],
+        text: [["packages/room/package.json", "{}"]],
+      },
+      [],
+    )
+    try {
+      const profile = await inspect(root)
+      expect(profile.facts.has("room")).toBe(true)
+      expect(profile.notes.join("\n")).toContain("room not initialised")
+      expect(cookbookFor(profile)).toContain("room doctor")
+      expect(cookbookFor(profile)).toContain("room board")
+      expect(onboardingFor(profile)).toContain("room doctor")
+      expect(onboardingFor(profile)).toContain("room init")
+      expect(onboardingFor(profile)).toContain("Before")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
 })
 
 describe("initialise", () => {
@@ -589,6 +722,47 @@ describe("initialise", () => {
       )
       expect(forced.kept).toContain(".jig-baseline.json")
       expect(readFileSync(join(root, ".jig-baseline.json"), "utf8")).toBe(baseline)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it("writes every engine a configured harness declares when forced", async () => {
+    const root = project(
+      {
+        json: [
+          ["package.json", { scripts: { lint: "oxlint ." } }],
+          ["tsconfig.json", {}],
+          [".oxlintrc.json", OXLINT],
+          [
+            "jig.config.json",
+            {
+              engines: [
+                {
+                  id: "plumb-goals",
+                  kind: "oxlint-plugin",
+                  command: "oxlint",
+                  config: "goals/oxlint.config.ts",
+                },
+                { id: "joggle", kind: "process", command: "joggle", config: "joggle.config.json" },
+              ],
+              gate: { mode: "all", baseline: ".jig-baseline.json" },
+            },
+          ],
+        ],
+      },
+      ["oxlint", "joggle"],
+    )
+    try {
+      await initialiseIn(root, { force: true })
+      const config = JSON.parse(readFileSync(join(root, "jig.config.json"), "utf8"))
+      expect(config.engines.map((engine: { id: string }) => engine.id)).toEqual([
+        "plumb-goals",
+        "joggle",
+        "plumb",
+      ])
+      // The repo's own config for an engine it configured is not replaced by the generic one.
+      expect(config.engines[1].config).toBe("joggle.config.json")
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
