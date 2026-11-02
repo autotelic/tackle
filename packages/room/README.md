@@ -10,7 +10,8 @@ jig room dev         run the room locally with `celld dev`
 jig room board       jobs, chits, and presence (the same JSON the Pi widget reads)
 jig room doctor      prove the loop: config, identity, celld, forward, room
 jig room webhook     print the `gh webhook forward` command for this room
-jig room daemon      claim jobs and run reviews
+jig room daemon      claim jobs, run reviews, deliver into the durable session
+jig room session     the durable conversation: --json, --say <text>, --note <kind>, --watch
 jig room review      run one review by hand
 jig room list        rooms, most recently active first
 ```

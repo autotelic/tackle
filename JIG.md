@@ -46,7 +46,8 @@ machine, and a review job that runs `pnpm jig`, a Pi, and one fenced post.
 - `pnpm jig room doctor` — prove the loop: config, identity, celld, pi, the forward, the room
 - `pnpm jig room dev` — run the room locally with `celld dev`
 - `pnpm jig room webhook` — print the `gh webhook forward` command for this room
-- `pnpm jig room daemon` — claim jobs, run reviews, wake the project session
+- `pnpm jig room daemon` — claim jobs, run reviews, deliver into the durable session
+- `pnpm jig room session` — the room's durable conversation (--json, --say, --watch, --note)
 - `pnpm jig room work --pr N` — a worktree, an app, and an attachable Pi session
 - `pnpm jig room board` — jobs, chits, and presence
 

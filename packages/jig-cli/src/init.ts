@@ -1106,7 +1106,8 @@ machine, and a review job that runs \`${profile.jig}\`, a Pi, and one fenced pos
 - \`${profile.jig} room doctor\` — prove the loop: config, identity, celld, pi, the forward, the room
 - \`${profile.jig} room dev\` — run the room locally with \`celld dev\`
 - \`${profile.jig} room webhook\` — print the \`gh webhook forward\` command for this room
-- \`${profile.jig} room daemon\` — claim jobs, run reviews, wake the project session
+- \`${profile.jig} room daemon\` — claim jobs, run reviews, deliver into the durable session
+- \`${profile.jig} room session\` — the room's durable conversation (--json, --say, --watch, --note)
 - \`${profile.jig} room work --pr N\` — a worktree, an app, and an attachable Pi session
 - \`${profile.jig} room board\` — jobs, chits, and presence
 
