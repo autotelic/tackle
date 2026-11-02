@@ -39,7 +39,6 @@ import { describe, expect, it } from "vitest"
 import type { Board } from "./client.ts"
 import type { RoomConfig } from "./config.ts"
 import { doctor, renderBoard } from "./commands.ts"
-import { shouldWake } from "./daemon.ts"
 import { fromGithub, fromLinear } from "./ingest.ts"
 import { shouldReview } from "./policy.ts"
 import { inboxFor } from "./inbox.ts"
@@ -135,10 +134,9 @@ const diagnose = async (look: (name: string) => string | undefined) => {
 }
 
 describe("the board", () => {
-  it("names the session the room will deliver to, so ownership is not a guess", () => {
+  it("reports delivery next to claims, so four events never read as none", () => {
     const board: Board = {
       room: "probe",
-      session: { id: "abcdef1234567890", at: 1_700_000_000_000, active: true },
       inbox: { pending: 2, turns: 2, cards: 0, held: 1 },
       counts: { chits: 0, jobs: 0, receipts: 0 },
       chits: [],
@@ -148,25 +146,8 @@ describe("the board", () => {
       workers: [],
     }
     const text = renderBoard({ config: CONFIG, board, now: 1_700_000_012_000 })
-    expect(text).toContain("session abcdef12 · attached, 12s ago")
     // Four delivered events used to read as "chits none": delivery is not a claimable chit.
     expect(text).toContain("inbox   2 turn(s) · 0 card(s) waiting · 1 held by the batch")
-  })
-
-  it("says when nobody has registered, instead of leaving the line blank", () => {
-    const board: Board = {
-      room: "probe",
-      session: { id: null, at: 0, active: false },
-      counts: { chits: 0, jobs: 0, receipts: 0 },
-      chits: [],
-      jobs: [],
-      claims: [],
-      presence: [],
-      workers: [],
-    }
-    expect(renderBoard({ config: CONFIG, board, now: 1_700_000_000_000 })).toContain(
-      "none registered",
-    )
   })
 })
 
@@ -180,27 +161,6 @@ describe("the doctor", () => {
     const installed = await diagnose(() => "/usr/bin/yes")
     expect(installed?.ok).toBe(true)
   }, 30_000)
-})
-
-describe("the sleeping session", () => {
-  it("resumes a stale session, and never one the person still has open", () => {
-    expect(shouldWake({ id: "sess-1", active: false })).toBe(true)
-    expect(shouldWake({ id: "sess-1", active: true })).toBe(false)
-    expect(shouldWake({ id: null, active: false })).toBe(false)
-    expect(shouldWake({ id: null, active: true })).toBe(false)
-  })
-
-  it("property: waking is exactly a known session with a stale heartbeat", () => {
-    fc.assert(
-      fc.property(
-        fc.option(fc.string({ minLength: 1 }), { nil: null }),
-        fc.boolean(),
-        (id, active) => {
-          expect(shouldWake({ id, active })).toBe(id !== null && !active)
-        },
-      ),
-    )
-  })
 })
 
 describe("the label trigger", () => {

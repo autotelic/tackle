@@ -21,6 +21,7 @@ import {
 import { readConfig, type RoomConfig } from "./config.ts"
 import { daemon, roomUrl } from "./daemon.ts"
 import { seedRoom } from "./seed.ts"
+import { followRoomSession, openSessionFor, roomSessionView, submitToRoom } from "./session.ts"
 import { findConfigPath, readIndex, roomsByActivity } from "./paths.ts"
 import { RoomClient } from "./client.ts"
 import { runReview } from "./review.ts"
@@ -221,6 +222,94 @@ const doctorCommand = Command.make("doctor", { cwd: cwdFlag }, (options) =>
     "Prove the loop: config, identity, celld, pi, the GitHub forward, and the room.",
   ),
   Command.withShortDescription("Check the room."),
+)
+
+const sessionCommand = Command.make(
+  "session",
+  {
+    cwd: cwdFlag,
+    json: jsonFlag,
+    say: Flag.String("say").pipe(
+      Flag.withDescription("Hand this text to the room's durable conversation as input."),
+      Flag.optional,
+    ),
+    watch: Flag.Boolean("watch").pipe(
+      Flag.withDescription("Follow the conversation and print new entries as JSON lines."),
+      Flag.withDefault(false),
+    ),
+  },
+  (options) =>
+    Effect.gen(function* () {
+      const root = yield* rootOf(options.cwd)
+      const config = Result.getOrUndefined(yield* readConfig(findConfigPath(root)))
+      if (config === undefined) {
+        yield* write("room session: no room here; run `jig room plan`")
+        yield* exit(1)
+        return
+      }
+      const session = yield* Effect.tryPromise({
+        try: () => openSessionFor(config),
+        catch: (error) => String(error),
+      }).pipe(Effect.orElseSucceed(() => undefined))
+      if (session === undefined) {
+        yield* write("room session: could not open the conversation storage")
+        yield* exit(1)
+        return
+      }
+      const text = Option.getOrUndefined(options.say)
+      if (text !== undefined) {
+        const id = yield* Effect.tryPromise({
+          try: () => submitToRoom({ session, text }),
+          catch: (error) => String(error),
+        }).pipe(Effect.orElseSucceed(() => undefined))
+        yield* write(
+          id === undefined ? "room session: the input was not admitted" : `admitted ${id}`,
+        )
+      }
+      if (options.watch) {
+        const stop = yield* Effect.tryPromise({
+          try: () =>
+            followRoomSession({
+              session,
+              onEntries: (entries) => {
+                for (const entry of entries) {
+                  process.stdout.write(
+                    `${JSON.stringify({ session: session.id, id: entry.id, kind: entry.kind, text: entry.text })}\n`,
+                  )
+                }
+              },
+            }),
+          catch: (error) => String(error),
+        }).pipe(Effect.orElseSucceed(() => undefined))
+        if (stop === undefined) {
+          yield* write("room session: could not follow the conversation")
+          yield* exit(1)
+          return
+        }
+        yield* write(`following ${session.id} · ^C stops the client, not the conversation`)
+        return yield* Effect.never
+      }
+      const view = yield* Effect.tryPromise({
+        try: () => roomSessionView(session),
+        catch: (error) => String(error),
+      }).pipe(Effect.orElseSucceed(() => undefined))
+      if (options.json) {
+        yield* write(
+          `${JSON.stringify(view ?? { id: session.id, busy: false, queued: 0 }, null, 2)}\n`,
+        )
+      } else {
+        yield* write(
+          view === undefined
+            ? `session ${session.id}`
+            : `session ${view.id}${view.busy ? " · busy" : ""}${view.runFailure === undefined ? "" : ` · ${view.runFailure}`}`,
+        )
+      }
+    }),
+).pipe(
+  Command.withDescription(
+    "Read or drive the room's durable conversation: the session that survives the process.",
+  ),
+  Command.withShortDescription("The room's durable session."),
 )
 
 const listCommand = Command.make("list", { json: jsonFlag }, (options) =>
@@ -508,6 +597,7 @@ const cli = Command.make("room").pipe(
     attachCommand,
     stopCommand,
     doctorCommand,
+    sessionCommand,
     listCommand,
     devCommand,
     daemonCommand,

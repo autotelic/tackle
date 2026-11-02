@@ -49,6 +49,17 @@ export const worktreeRoot = (config: RoomConfig): string => join(stateDir(config
  */
 export const jobsRoot = (config: RoomConfig): string => join(stateDir(config), "jobs")
 
+/**
+ * The room's durable conversation.
+ *
+ * pi-durable commits the transcript here, so the session survives the process that ran it; a
+ * second client (another person's Pi, or the daemon) opens the same file to watch or submit.
+ *
+ * @param config - The room's committed config.
+ * @returns The absolute sqlite path.
+ */
+export const sessionPath = (config: RoomConfig): string => join(stateDir(config), "session.sqlite")
+
 /** The index of rooms on this machine. */
 export const indexOfRooms = (): string => join(roomHome(), "index.json")
 

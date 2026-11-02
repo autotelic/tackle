@@ -1,9 +1,10 @@
 import { actorOf, hostOf } from "@autotelic/board"
-import { Clock, Data, Effect, Predicate, Result } from "effect"
-import { spawn } from "node:child_process"
+import { Data, Effect, Result } from "effect"
+
 import { hostname } from "node:os"
 import type { RoomConfig } from "./config.ts"
 import { seedRoom } from "./seed.ts"
+import { openSessionFor, submitToRoom } from "./session.ts"
 import { authLogin } from "./gh.ts"
 import { RoomClient } from "./client.ts"
 import { runReview } from "./review.ts"
@@ -35,38 +36,6 @@ export interface DaemonOptions {
 
 const DEFAULT_URL = "http://127.0.0.1:9876"
 
-/**
- * Whether the daemon should resume the conversation itself.
- *
- * The extension owns the inbox while a session is open: it drains every five seconds and
- * heartbeats `PUT /session`. A stale heartbeat means nobody is holding the session, so the
- * daemon resumes it headlessly and acknowledges the turns. Waking an open session would put
- * a second writer in the same transcript.
- *
- * @param session - The registered session id and whether its heartbeat is fresh.
- * @returns True when these turns should be delivered by resuming the session.
- */
-export const shouldWake: Predicate.Predicate<{
-  readonly id: string | null
-  readonly active: boolean
-}> = (session) => session.id !== null && !session.active
-
-/** Resume a closed session headlessly; Pi appends to the same transcript. */
-const wakeSession = (input: {
-  readonly cwd: string
-  readonly session: string
-  readonly text: string
-}): Promise<number> =>
-  new Promise((resolve) => {
-    const child = spawn(
-      "pi",
-      ["-p", "--session", input.session, "--name", "room wake", input.text],
-      { cwd: input.cwd, stdio: "ignore" },
-    )
-    child.on("error", () => resolve(127))
-    child.on("close", (code) => resolve(code ?? 1))
-  })
-
 /** The room URL this machine talks to. */
 export const roomUrl = (): string => process.env.ROOM_URL ?? DEFAULT_URL
 
@@ -86,6 +55,17 @@ export const daemon = (options: DaemonOptions): Effect.Effect<void, DaemonError>
     const actor = actorOf(login.success)
     const client = new RoomClient(options.url, options.config.room)
     const log = options.log
+    // The room's conversation, opened where the daemon runs: delivery is a submit, and the
+    // library owns resume, queueing, and single-writer admission.
+    const session = yield* Effect.tryPromise({
+      try: () => openSessionFor(options.config),
+      catch: (error) => new DaemonError({ message: String(error) }),
+    }).pipe(Effect.orElseSucceed(() => undefined))
+    log(
+      session === undefined
+        ? "session: could not open the room's durable conversation"
+        : `session: ${session.id} open at ${options.config.room}`,
+    )
 
     // The ledger starts empty on every fresh celld, and the committed config is the only
     // place the actor, the label, and the batch hold are written down.
@@ -133,53 +113,40 @@ export const daemon = (options: DaemonOptions): Effect.Effect<void, DaemonError>
       ),
     )
 
-    let lastWake = 0
-
-    const wake = Effect.gen(function* () {
-      const now = yield* Clock.currentTimeMillis
-      if (now - lastWake < 60_000) return
-      const session = yield* Effect.tryPromise({
-        try: () => client.session(),
-        catch: (error) => new DaemonError({ message: String(error) }),
-      })
-      if (!shouldWake(session)) return
+    // Delivery, not a wake: the conversation is durable, so a turn is an input. The library
+    // queues it behind a running answer (follow-up) and starts the run when it is idle, which
+    // is the admission rule the room used to approximate with a heartbeat and a spawn.
+    const deliver = Effect.gen(function* () {
+      if (session === undefined) return
       const inbox = yield* Effect.tryPromise({
         try: () => client.inbox(0),
         catch: (error) => new DaemonError({ message: String(error) }),
       })
       const turns = inbox.items.filter((item) => item.kind === "turn")
       if (turns.length === 0) return
-      lastWake = now
-      log(`wake ${session.id}`)
-      const code = yield* Effect.tryPromise({
-        try: () =>
-          wakeSession({
-            cwd: options.config.repo.root,
-            session: session.id === null ? "" : session.id,
-            text: turns.map((item) => item.text).join("\n\n---\n\n"),
-          }),
-        catch: (error) => new DaemonError({ message: String(error) }),
-      })
-      if (code !== 0) {
-        log(`wake failed: ${code}`)
-        return
+      for (const turn of turns) {
+        yield* Effect.tryPromise({
+          try: () => submitToRoom({ session, text: turn.text }),
+          catch: (error) => new DaemonError({ message: String(error) }),
+        })
       }
       yield* Effect.tryPromise({
-        try: () => client.ack(turns.map((item) => item.seq)),
+        try: () => client.ack(turns.map((turn) => turn.seq)),
         catch: (error) => new DaemonError({ message: String(error) }),
       })
-    }).pipe(Effect.catch((error) => Effect.sync(() => log(`wake: ${error.message}`))))
+      log(`delivered ${String(turns.length)} turn(s) to session ${session.id}`)
+    }).pipe(Effect.catch((error) => Effect.sync(() => log(`deliver: ${error.message}`))))
 
     yield* Effect.forkChild(Effect.forever(Effect.flatMap(beat, () => Effect.sleep("20 seconds"))))
 
     if (options.once) {
-      yield* wake
+      yield* deliver
       yield* work
       return
     }
 
     log(`roomd ${options.config.room} → ${options.url} (${host})`)
     return yield* Effect.forever(
-      Effect.flatMap(wake, () => Effect.flatMap(work, () => Effect.sleep("2 seconds"))),
+      Effect.flatMap(deliver, () => Effect.flatMap(work, () => Effect.sleep("2 seconds"))),
     )
   })

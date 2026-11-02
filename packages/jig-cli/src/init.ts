@@ -578,7 +578,7 @@ const workspaceDirsOf = (
       const prefix = glob.slice(0, -2)
       const entries = yield* Effect.orElseSucceed(
         fs.readDirectory(path.join(root, prefix)),
-        () => [] as ReadonlyArray<string>,
+        (): ReadonlyArray<string> => [],
       )
       for (const entry of [...entries].sort((left, right) => left.localeCompare(right))) {
         const relative = prefix + "/" + entry + "/package.json"
@@ -631,13 +631,22 @@ const architectureDraftOf = (
 
 /** A repo's declared output paths with `cutlist`'s defaults filled in under them. */
 const resolvedOutput = (declared: CutlistOutput | undefined): ResolvedCutlistOutput => {
-  const values = Object.entries(cutlistDefaultOutput).map(([key, fallback]) => [
-    key,
-    (declared as Readonly<Record<string, string | undefined>> | undefined)?.[key] ?? fallback,
-  ])
+  const stated = new Map(Object.entries(declared ?? {}))
+  const at = (key: keyof typeof cutlistDefaultOutput): string =>
+    stated.get(key) ?? cutlistDefaultOutput[key]
   // `diagrams` is opt-in, so it is copied rather than defaulted: no path, no rendering.
   return {
-    ...(Object.fromEntries(values) as Required<Omit<CutlistOutput, "diagrams">>),
+    catalog: at("catalog"),
+    manifest: at("manifest"),
+    menuJson: at("menuJson"),
+    menu: at("menu"),
+    intent: at("intent"),
+    patterns: at("patterns"),
+    patternsJson: at("patternsJson"),
+    recipes: at("recipes"),
+    recipesJson: at("recipesJson"),
+    hooks: at("hooks"),
+    tokens: at("tokens"),
     diagrams: declared?.diagrams,
   }
 }

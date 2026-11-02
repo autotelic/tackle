@@ -107,13 +107,20 @@ export const handle = async (
   if (request.method === "GET" && path === "/board") {
     // Which session the room is watching belongs on the board: waking or delivering a turn
     // addresses exactly this id, so "who owns it" must be visible from any terminal.
-    const sessionId = Result.getOrUndefined(ledger.get("session")) ?? null
-    const sessionRaw = Result.getOrUndefined(ledger.get("session_at"))
-    const sessionAt = sessionRaw === undefined ? 0 : Number(sessionRaw)
     return json({
       body: {
         room: ledger.room,
-        session: { id: sessionId, at: sessionAt, active: sessionAt + 60_000 > now },
+        counts: ledger.counts(),
+        presences: ledger.presences(now).length,
+        jobs: ledger.jobs().slice(0, 10),
+      },
+    })
+  }
+
+  if (request.method === "GET" && path === "/board") {
+    return json({
+      body: {
+        room: ledger.room,
         counts: ledger.counts(),
         chits: ledger.chitStates(),
         // What arrived and has not been taken: chits are claimable work, the inbox is
@@ -181,21 +188,6 @@ export const handle = async (
       shouldReview(addressed) &&
       ledger.enqueue(reviewJob({ event, room: ledger.room, now }))
     return json({ body: { event: event.kind, accepted: true, queued } })
-  }
-
-  if (request.method === "PUT" && path === "/session") {
-    const body = Result.getOrUndefined(Schema.decodeUnknownResult(IdBody)(await rawBody(request)))
-    if (body === undefined) return json({ body: { error: "id is required" }, status: 400 })
-    ledger.set("session", body.id)
-    ledger.set("session_at", String(body.at === undefined ? now : body.at))
-    return json({ body: { ok: true, session: body.id } })
-  }
-
-  if (request.method === "GET" && path === "/session") {
-    const id = Result.getOrUndefined(ledger.get("session"))
-    const raw = Result.getOrUndefined(ledger.get("session_at"))
-    const at = raw === undefined ? 0 : Number(raw)
-    return json({ body: { id: id ?? null, active: at + 60_000 > now, at } })
   }
 
   if (request.method === "GET" && path === "/inbox") {

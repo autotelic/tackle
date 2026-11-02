@@ -1,17 +1,23 @@
 /**
  * The room, in Pi's terminal.
  *
- * A widget above the editor, a `/room` picker, and a `room_board` tool. Everything is read
- * by shelling out to the `room` CLI — the same rule as jig's extension: this file owns no
- * projection and re-implements no report, so the model and the terminal get the same bytes.
+ * The session is a durable conversation (pi-durable), not a process this file keeps alive:
+ * every surface opens the same storage, watches it, and submits into it. That is what makes
+ * the room multiplayer — two people, two Pi sessions, one conversation — and it is why this
+ * file has no heartbeat, no ownership claim, and no wake spawn.
  *
- * This file is not typechecked by the package (Pi strips types itself, and `tsconfig.json`
- * includes `src` only), which is why it uses `any` at the JSON boundary rather than the
- * Effect schemas the CLI uses.
+ * Three surfaces, all reading the CLI (the same rule as jig's extension: this file owns no
+ * projection):
+ *
+ *   the editor's top border   room <name> ................ busy · queued · why it stopped
+ *   /room say <text>          submit an input into the durable conversation
+ *   room_board                the board's JSON, untouched
+ *
+ * This file is not typechecked by the package (Pi strips types itself), which is why the JSON
+ * boundary uses structural types and the Pi editor import is dynamic.
  */
-import { execFile } from "node:child_process"
-import { readFileSync } from "node:fs"
-import { existsSync } from "node:fs"
+import { execFile, spawn } from "node:child_process"
+import { existsSync, readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { promisify } from "node:util"
@@ -35,15 +41,10 @@ const launcher = (): { command: string; args: ReadonlyArray<string> } => {
   if (override !== undefined && override !== "") return { command: override, args: [] }
   const global = onPath("room")
   if (global !== undefined) return { command: global, args: [] }
-  // `process.execPath` can be Pi's own binary, not Node. Ask PATH first, exactly as jig's
-  // OpenCode plugin does; otherwise `node <cli>` runs Pi with the CLI as an argument.
   const node = onPath("node") ?? process.execPath
   const built = join(packageRoot, "dist", "cli.js")
   if (existsSync(built)) return { command: node, args: [built] }
-  return {
-    command: node,
-    args: ["--conditions=development", join(packageRoot, "src", "cli.ts")],
-  }
+  return { command: node, args: ["--conditions=development", join(packageRoot, "src", "cli.ts")] }
 }
 
 const invoke = async (args: ReadonlyArray<string>, cwd: string): Promise<string | undefined> => {
@@ -66,65 +67,36 @@ const json = async <T>(args: ReadonlyArray<string>, cwd: string): Promise<T | un
   }
 }
 
+/** What `room session --json` says about the durable conversation. */
+interface SessionView {
+  readonly id: string
+  readonly busy: boolean
+  readonly queued: number
+  readonly runFailure?: string
+}
+
 interface BoardView {
   readonly name?: string
   readonly stage?: string
   readonly reachable?: boolean
-  /** The session the room will deliver to and wake, and whether its heartbeat is fresh. */
-  readonly session?: { readonly id: string | null; readonly at: number; readonly active: boolean }
   readonly jobs?: ReadonlyArray<{ state: string }>
-  readonly chits?: ReadonlyArray<{ state: string; count: number }>
-  readonly presence?: ReadonlyArray<{ host: string }>
-  readonly workers?: ReadonlyArray<{ name: string; address: string; url?: string }>
+  readonly workers?: ReadonlyArray<{ name: string; url?: string }>
 }
-
-const count = (jobs: BoardView["jobs"], state: string): number =>
-  (jobs ?? []).filter((job) => job.state === state).length
-
-const linesOf = (view: BoardView | undefined): ReadonlyArray<string> => {
-  if (view === undefined || view.name === undefined) {
-    return ["room  none here", "      /room to join · jig room plan"]
-  }
-  if (view.reachable === false) {
-    const head = `room  ${view.name} · ${view.stage ?? ""}`
-    return [head, "      roomd not running · jig room dev"]
-  }
-  const head = `room  ${view.name} · ${view.stage ?? ""}`
-  const jobs = `jobs  running ${count(view.jobs, "running")} · queued ${count(view.jobs, "queued")} · failed ${count(view.jobs, "failed")}`
-  const chits = `chits ${(view.chits ?? []).map((entry) => `${entry.state} ${entry.count}`).join(" · ") || "none"}`
-  const here = `here  ${(view.presence ?? []).map((entry) => entry.host).join(" · ") || "nobody"}`
-  const work = `work  ${
-    (view.workers ?? [])
-      .map(
-        (worker) =>
-          `${worker.name} ${worker.address}${worker.url === undefined ? "" : ` · ${worker.url}`}`,
-      )
-      .join(" · ") || "none"
-  }`
-  return [head, jobs, chits, here, work]
-}
-
-// A tool's context does not always carry `cwd` (the runtime gives the process's), so fall
-// back to it rather than passing `undefined` into the CLI.
-const cwdOf = (ctx: { cwd?: string }): string => ctx.cwd ?? process.cwd()
-
-const boardArgs = (cwd: string, room: string | undefined): ReadonlyArray<string> => [
-  "board",
-  "--cwd",
-  cwd,
-  ...(room === undefined ? [] : ["--room", room]),
-  "--json",
-]
 
 interface RoomConfigFile {
   readonly room: string
+  readonly name?: string
 }
 
 const roomOf = (cwd: string): RoomConfigFile | undefined => {
   for (const path of [join(cwd, "room.config.json"), join(cwd, ".room", "config.json")]) {
     try {
-      const value = JSON.parse(readFileSync(path, "utf8")) as { room?: unknown }
-      if (typeof value.room === "string") return { room: value.room }
+      const value = JSON.parse(readFileSync(path, "utf8")) as { room?: unknown; name?: unknown }
+      if (typeof value.room === "string") {
+        return typeof value.name === "string"
+          ? { room: value.room, name: value.name }
+          : { room: value.room }
+      }
     } catch {
       // try the next location
     }
@@ -132,104 +104,159 @@ const roomOf = (cwd: string): RoomConfigFile | undefined => {
   return undefined
 }
 
-const baseUrl = (): string => process.env.ROOM_URL ?? "http://127.0.0.1:9876"
+const cwdOf = (ctx: { cwd?: string }): string => ctx.cwd ?? process.cwd()
 
-const roomFetch = async (cwd: string, path: string, init?: RequestInit): Promise<unknown> => {
-  const config = roomOf(cwd)
-  if (config === undefined) return undefined
-  const response = await fetch(`${baseUrl()}/r/${encodeURIComponent(config.room)}${path}`, init)
-  return response.ok ? response.json() : undefined
+/**
+ * One line of border: `── left ───── right ──`, truncated to the width.
+ *
+ * The same shape pi's own border-status example uses, and the shape pi-fabric draws its
+ * session badge in: a label in the editor's top border rather than a block above the editor.
+ */
+const fitBorder = (
+  left: string,
+  right: string,
+  width: number,
+  border: (text: string) => string,
+  visible: (text: string) => number,
+  truncate: (text: string, width: number) => string,
+): string => {
+  if (width <= 0) return ""
+  if (width === 1) return border("─")
+  let leftText = left
+  let rightText = right
+  const fixed = 2
+  const gap = 3
+  while (fixed + visible(leftText) + visible(rightText) + gap > width && visible(rightText) > 0) {
+    rightText = truncate(rightText, Math.max(0, visible(rightText) - 1))
+  }
+  while (fixed + visible(leftText) + visible(rightText) + gap > width && visible(leftText) > 0) {
+    leftText = truncate(leftText, Math.max(0, visible(leftText) - 1))
+  }
+  const fill = Math.max(0, width - fixed - visible(leftText) - visible(rightText))
+  return border("─") + leftText + border("─".repeat(fill)) + rightText + border("─")
 }
 
-interface InboxItem {
-  readonly seq: number
-  readonly kind: "turn" | "card"
-  readonly text: string
+/** The badge: which room, and what its durable conversation is doing. */
+const badgeOf = (
+  config: RoomConfigFile | undefined,
+  view: SessionView | undefined,
+): ReadonlyArray<string> => {
+  if (config === undefined) return []
+  const state =
+    view === undefined
+      ? "not attached"
+      : view.runFailure !== undefined
+        ? `${view.runFailure}`
+        : view.busy
+          ? "busy"
+          : view.queued > 0
+            ? `${view.queued} queued`
+            : "idle"
+  return [` room ${config.name ?? config.room} `, ` ${state} `]
 }
 
 export default function roomExtension(pi: ExtensionAPI): void {
   let active: string | undefined
+  let badge: ReadonlyArray<string> = []
   let timer: ReturnType<typeof setInterval> | undefined
-  let inboxTimer: ReturnType<typeof setInterval> | undefined
-  let heartbeatTimer: ReturnType<typeof setInterval> | undefined
-  let cursor = 0
-
-  /**
-   * The session's own name, once it is the one the room will wake.
-   *
-   * The utility, not the decoration: a room delivers to exactly one session id, so "which
-   * session owns this room" has to be answerable at a glance -- in the status line, and in the
-   * session name the resume picker and the terminal title show. A second session that starts
-   * later takes ownership by heartbeating, and the first one's tag says so.
-   */
-  const tagOf = (view: BoardView | undefined, mine: string | undefined): string => {
-    if (view === undefined || view.name === undefined) return "room none here"
-    if (view.reachable === false) return `room ${view.name} · roomd down`
-    const owner = view.session?.id ?? null
-    if (owner === null) return `room ${view.name} · no session`
-    if (mine !== undefined && owner === mine) return `room ${view.name} · this session`
-    return `room ${view.name} · session ${owner.slice(0, 8)}`
-  }
+  let follower: ReturnType<typeof spawn> | undefined
 
   const refresh = async (ctx: ExtensionContext): Promise<void> => {
-    const view = await json<BoardView>(boardArgs(cwdOf(ctx), active), cwdOf(ctx))
-    const mine = ctx.sessionManager === undefined ? undefined : ctx.sessionManager.getSessionId()
-    if (ctx.mode === "tui" && ctx.hasUI) {
-      ctx.ui.setWidget("room", [...linesOf(view)], { placement: "aboveEditor" })
-      // A keyed status line survives a screenful of output, which the widget does not.
-      ctx.ui.setStatus("room", tagOf(view, mine))
+    const cwd = cwdOf(ctx)
+    const config = roomOf(cwd)
+    if (config === undefined) {
+      badge = []
+      return
     }
-    // Name the owning session once, and only if nobody has named it: a person's `/name` wins.
-    if (view !== undefined && view.reachable !== false && mine !== undefined) {
-      const owner = view.session?.id ?? null
-      const named = typeof pi.getSessionName === "function" ? pi.getSessionName() : ""
-      if (owner === mine && (named === undefined || named === "") && view.name !== undefined) {
-        pi.setSessionName(`room ${view.name}`)
+    const view = await json<SessionView>(["session", "--cwd", cwd, "--json"], cwd)
+    badge = badgeOf(config, view)
+    if (ctx.mode === "tui" && ctx.hasUI) ctx.ui.requestRender?.()
+  }
+
+  const attach = async (ctx: ExtensionContext): Promise<void> => {
+    const cwd = cwdOf(ctx)
+    if (roomOf(cwd) === undefined) return
+    if (follower !== undefined) return
+    const { command, args } = launcher()
+    const child = spawn(command, [...args, "session", "--cwd", cwd, "--watch"], {
+      cwd,
+      stdio: ["ignore", "pipe", "ignore"],
+    })
+    follower = child
+    let buffer = ""
+    child.stdout?.on("data", (chunk: Buffer) => {
+      buffer += chunk.toString()
+      let index = buffer.indexOf("\n")
+      while (index >= 0) {
+        const line = buffer.slice(0, index)
+        buffer = buffer.slice(index + 1)
+        index = buffer.indexOf("\n")
+        const entry = (() => {
+          try {
+            return JSON.parse(line) as { kind?: string; text?: string }
+          } catch {
+            return undefined
+          }
+        })()
+        if (entry?.text === undefined || entry.text === "") continue
+        const speaker = entry.kind === "pi.user" ? "you" : "room"
+        pi.sendMessage(
+          {
+            customType: "room.session",
+            content: `[${speaker}] ${entry.text}`,
+            display: true,
+          },
+          { deliverAs: "followUp", triggerTurn: false },
+        )
       }
-    }
+    })
+  }
+
+  const detach = (): void => {
+    follower?.kill()
+    follower = undefined
   }
 
   pi.registerCommand("room", {
-    description: "Join a room, or show the one this repository is in.",
-    handler: async (_args, ctx) => {
-      const rooms =
-        (await json<ReadonlyArray<{ name: string; stage: string }>>(
-          ["list", "--json"],
-          cwdOf(ctx),
-        )) ?? []
-      if (rooms.length === 0) {
-        ctx.ui.notify("no rooms yet — run `jig room plan` in a repository", "info")
+    description: "Show the room's durable session, or say something into it.",
+    handler: async (args, ctx) => {
+      const text = (args ?? "").trim()
+      const cwd = cwdOf(ctx)
+      const config = roomOf(cwd)
+      if (config === undefined) {
+        ctx.ui.notify("no room here -- run `jig room plan` in a repository", "info")
         return
       }
-      const choice = await ctx.ui.select(
-        "Room",
-        rooms.map((room) => `${room.name}  ${room.stage}`),
+      if (text.startsWith("say ")) {
+        const said = text.slice("say ".length).trim()
+        if (said === "") {
+          ctx.ui.notify("room say: nothing to say", "info")
+          return
+        }
+        const outcome = await invoke(["session", "--cwd", cwd, "--say", said], cwd)
+        ctx.ui.notify(outcome ?? "room: the input was not admitted", "info")
+        await refresh(ctx)
+        return
+      }
+      await refresh(ctx)
+      const view = await json<SessionView>(["session", "--cwd", cwd, "--json"], cwd)
+      ctx.ui.notify(
+        view === undefined
+          ? `room ${config.name ?? config.room}: not attached`
+          : `room ${config.name ?? config.room} · ${view.id} · ${view.busy ? "busy" : (view.runFailure ?? "idle")}`,
+        "info",
       )
-      if (choice === undefined) return
-      const index = rooms.findIndex((room) => choice.startsWith(`${room.name} `))
-      active = index === -1 ? undefined : rooms[index]?.name
-      await refresh(ctx)
-      ctx.ui.notify(`room: ${active ?? "this repository"}`, "info")
-    },
-  })
-
-  pi.registerCommand("board", {
-    description: "Refresh the room board above the editor.",
-    handler: async (_args, ctx) => {
-      await refresh(ctx)
-      const view = await json<BoardView>(boardArgs(cwdOf(ctx), active), cwdOf(ctx))
-      const text = linesOf(view).join("\n")
-      ctx.ui.notify(text, "info")
     },
   })
 
   pi.registerTool({
     name: "room_board",
     description:
-      "Read the project room's board: the running, queued and failed review jobs, the chit counts by state, and which hosts are present. Use it when the person asks what is reviewable or who is on what.",
+      "Read the project room's board: running, queued and failed review jobs, delivery waiting, and which hosts are present. Use it when the person asks what is reviewable or who is on what.",
     parameters: Type.Object({}),
     execute: async (_params, ctx) => {
-      const text = await invoke(boardArgs(cwdOf(ctx), active), cwdOf(ctx))
+      const cwd = cwdOf(ctx)
+      const text = await invoke(["board", "--cwd", cwd, "--json"], cwd)
       return {
         content: [{ type: "text" as const, text: text ?? "room: no board (run `jig room plan`)" }],
         details: undefined,
@@ -237,74 +264,43 @@ export default function roomExtension(pi: ExtensionAPI): void {
     },
   })
 
-  const drain = async (ctx: ExtensionContext): Promise<void> => {
-    const cwd = cwdOf(ctx)
-    const config = roomOf(cwd)
-    if (config === undefined) return
-    const value = (await roomFetch(cwd, `/inbox?after=${cursor}&limit=50`)) as
-      | { items?: ReadonlyArray<InboxItem>; next?: number }
-      | undefined
-    if (value === undefined) return
-    const items = value.items ?? []
-    if (items.length === 0) {
-      cursor = value.next ?? cursor
-      return
-    }
-    const turns = items.filter((item) => item.kind === "turn")
-    const cards = items.filter((item) => item.kind === "card")
-    if (turns.length > 0) {
-      pi.sendMessage(
-        {
-          customType: "room.event",
-          content: `[room]\n\n${turns.map((item) => item.text).join("\n\n---\n\n")}`,
-          display: true,
-        },
-        { deliverAs: "followUp", triggerTurn: true },
+  pi.on("session_start", async (_event, ctx) => {
+    await refresh(ctx)
+    await attach(ctx)
+    if (ctx.mode === "tui" && ctx.hasUI) {
+      const piModule = await import("@earendil-works/pi-coding-agent")
+      const tui = await import("@earendil-works/pi-tui")
+      class RoomBorderEditor extends piModule.CustomEditor {
+        render(width: number): string[] {
+          const lines = super.render(width)
+          if (lines.length === 0) return lines
+          const [left, right] = badge
+          const borderColor = (text: string) => this.borderColor(text)
+          if (left === undefined || right === undefined) return lines
+          lines[0] = fitBorder(
+            left,
+            right,
+            width,
+            borderColor,
+            (text) => tui.visibleWidth(text),
+            (text, size) => tui.truncateToWidth(text, size, ""),
+          )
+          return lines
+        }
+      }
+      ctx.ui.setEditorComponent(
+        (tuiApi, theme, keybindings) => new RoomBorderEditor(tuiApi, theme, keybindings),
       )
     }
-    if (cards.length > 0 && ctx.hasUI) {
-      ctx.ui.notify(cards.map((item) => item.text).join("\n"), "info")
-    }
-    await roomFetch(cwd, "/inbox/ack", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ seqs: items.map((item) => item.seq) }),
-    })
-    cursor = value.next ?? items.at(-1)?.seq ?? cursor
-  }
-
-  pi.on("session_start", async (_event, ctx) => {
-    const cwd = cwdOf(ctx)
-    const id = ctx.sessionManager.getSessionId()
-    const beat = async (): Promise<void> => {
-      await roomFetch(cwd, "/session", {
-        method: "PUT",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ id, at: Date.now() }),
-      })
-    }
-    await beat()
-    await refresh(ctx)
     timer = setInterval(() => {
       void refresh(ctx)
-    }, 15_000)
+    }, 10_000)
     timer.unref?.()
-    inboxTimer = setInterval(() => {
-      void drain(ctx)
-    }, 5_000)
-    inboxTimer.unref?.()
-    heartbeatTimer = setInterval(() => {
-      void beat()
-    }, 15_000)
-    heartbeatTimer.unref?.()
   })
 
   pi.on("session_shutdown", async () => {
     if (timer !== undefined) clearInterval(timer)
-    if (inboxTimer !== undefined) clearInterval(inboxTimer)
-    if (heartbeatTimer !== undefined) clearInterval(heartbeatTimer)
     timer = undefined
-    inboxTimer = undefined
-    heartbeatTimer = undefined
+    detach()
   })
 }
