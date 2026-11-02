@@ -41,6 +41,15 @@ export const Board = Schema.Struct({
   ),
   counts: Schema.Struct({ chits: Schema.Finite, jobs: Schema.Finite, receipts: Schema.Finite }),
   chits: Schema.Array(Schema.Struct({ state: Schema.String, count: Schema.Finite })),
+  /** Delivered and not yet acknowledged: the counts an empty board used to hide. */
+  inbox: Schema.optionalKey(
+    Schema.Struct({
+      pending: Schema.Finite,
+      turns: Schema.Finite,
+      cards: Schema.Finite,
+      held: Schema.Finite,
+    }),
+  ),
   jobs: Schema.Array(JobSchema),
   claims: Schema.Array(ClaimSchema),
   presence: Schema.Array(
@@ -120,19 +129,21 @@ export class RoomClient {
       : Result.fail("board did not decode")
   }
 
-  configure(
-    actor: string,
-    name: string,
-    label: string | undefined,
-    linearUser: string | undefined,
-  ): Promise<{ ok: boolean }> {
+  configure(input: {
+    readonly actor: string
+    readonly name: string
+    readonly label?: string | undefined
+    readonly linearUser?: string | undefined
+    readonly batchMs?: number | undefined
+  }): Promise<{ ok: boolean }> {
     return this.#json("/config", {
       method: "PUT",
       body: JSON.stringify(
         Object.assign(
-          { actor, name },
-          label === undefined ? {} : { label },
-          linearUser === undefined ? {} : { linearUser },
+          { actor: input.actor, name: input.name },
+          input.label === undefined ? {} : { label: input.label },
+          input.linearUser === undefined ? {} : { linearUser: input.linearUser },
+          input.batchMs === undefined ? {} : { batchMs: input.batchMs },
         ),
       ),
     })

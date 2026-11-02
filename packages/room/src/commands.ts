@@ -220,21 +220,52 @@ export const init = (
       configPath: path,
       lastSeen: options.now,
     })
+    // Seed from the file, not from today's flags: the committed config is what a second
+    // machine inherits, and a re-run without `--label` must not silently drop it.
     const configured = yield* Effect.tryPromise({
-      try: () =>
-        new RoomClient(roomUrl(), config.room).configure(
-          actorOf(login),
-          config.name,
-          options.label,
-          options.linearUser,
-        ),
-      catch: () => "room not reachable",
+      try: () => seedRoom({ config, url: roomUrl() }),
+      catch: () => Result.fail("room not reachable"),
     }).pipe(
       Effect.map(() => true),
       Effect.orElseSucceed(() => false),
     )
     return { config, path, configured }
   }).pipe(Effect.mapError((error) => String(error)))
+
+/**
+ * Put the committed config's decisions into the room's running ledger.
+ *
+ * `room.config.json` is the committed half and the ledger is the running half, and nothing
+ * copied one into the other. An attached room therefore accepted every webhook, queued no job,
+ * delivered no inbox item, and read clean: the actor, the watched label, and the batch hold
+ * lived only in the file. Seeding is idempotent, so every startup runs it.
+ *
+ * @param input - The room's config and the URL it is listening on.
+ * @returns What was seeded, or why the room did not take it.
+ */
+export const seedRoom = async (input: {
+  readonly config: RoomConfig
+  readonly url: string
+}): Promise<Result.Result<string, string>> => {
+  const login = input.config.stage.split("/").at(-1) ?? ""
+  const label = input.config.watch?.label
+  try {
+    await new RoomClient(input.url, input.config.room).configure({
+      actor: actorOf(login),
+      name: input.config.name,
+      ...(label === undefined ? {} : { label }),
+      ...(input.config.linearUser === undefined ? {} : { linearUser: input.config.linearUser }),
+      ...(input.config.batchMs === undefined ? {} : { batchMs: input.config.batchMs }),
+    })
+  } catch {
+    return Result.fail(`room not reachable at ${input.url}`)
+  }
+  return Result.succeed(
+    `actor ${actorOf(login) || "none"}` +
+      (label === undefined ? "" : ` · label ${label}`) +
+      (input.config.batchMs === undefined ? "" : ` · batch ${String(input.config.batchMs)}ms`),
+  )
+}
 
 /** One doctor line. */
 export const Check = Schema.Struct({
@@ -379,6 +410,16 @@ export const renderBoard = (input: {
   )
   lines.push(
     `  chits   ${board.chits.map((entry) => `${entry.state} ${entry.count}`).join(" · ") || "none"}`,
+  )
+  const inbox = board.inbox
+  lines.push(
+    `  inbox   ${
+      inbox === undefined || inbox.pending === 0
+        ? "none waiting"
+        : `${String(inbox.turns)} turn(s) · ${String(inbox.cards)} card(s) waiting${
+            inbox.held === 0 ? "" : ` · ${String(inbox.held)} held by the batch`
+          }`
+    }`,
   )
   lines.push(`  here    ${board.presence.map((presence) => presence.host).join(" · ") || "nobody"}`)
   lines.push(

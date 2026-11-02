@@ -116,6 +116,9 @@ export const handle = async (
         session: { id: sessionId, at: sessionAt, active: sessionAt + 60_000 > now },
         counts: ledger.counts(),
         chits: ledger.chitStates(),
+        // What arrived and has not been taken: chits are claimable work, the inbox is
+        // delivery, and reporting one as the other made four delivered events read as none.
+        inbox: ledger.inboxCounts(now),
         jobs: ledger.jobs().slice(0, 20),
         claims: ledger.claims(now),
         workers: ledger.workers().filter((worker) => worker.state === "live"),

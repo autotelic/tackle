@@ -421,6 +421,29 @@ export class Ledger {
   }
 
   /**
+   * How much is waiting to be delivered, whether or not the batch hold has expired.
+   *
+   * The board used to report chits only, so four delivered events read as "none" -- and a
+   * count of ready rows would hide the ones a batch is still holding. Delivery and claims are
+   * different vocabularies, and both are visible now.
+   *
+   * @param now - The instant the question is asked at.
+   * @returns The unacknowledged messages, split by kind and by whether the hold expired.
+   */
+  inboxCounts(now: number): { pending: number; turns: number; cards: number; held: number } {
+    const rows = this.#sql.all<{ kind: string; held: number }>(
+      "SELECT kind, CASE WHEN hold_until > ? THEN 1 ELSE 0 END AS held FROM inbox WHERE acked_at IS NULL",
+      now,
+    )
+    return {
+      pending: rows.length,
+      turns: rows.filter((row) => row.kind === "turn").length,
+      cards: rows.filter((row) => row.kind === "card").length,
+      held: rows.filter((row) => row.held === 1).length,
+    }
+  }
+
+  /**
    * The unacknowledged messages after a cursor.
    *
    * @param after - The last sequence the session has seen.

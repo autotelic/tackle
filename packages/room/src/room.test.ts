@@ -139,6 +139,7 @@ describe("the board", () => {
     const board: Board = {
       room: "probe",
       session: { id: "abcdef1234567890", at: 1_700_000_000_000, active: true },
+      inbox: { pending: 2, turns: 2, cards: 0, held: 1 },
       counts: { chits: 0, jobs: 0, receipts: 0 },
       chits: [],
       jobs: [],
@@ -148,6 +149,8 @@ describe("the board", () => {
     }
     const text = renderBoard({ config: CONFIG, board, now: 1_700_000_012_000 })
     expect(text).toContain("session abcdef12 · attached, 12s ago")
+    // Four delivered events used to read as "chits none": delivery is not a claimable chit.
+    expect(text).toContain("inbox   2 turn(s) · 0 card(s) waiting · 1 held by the batch")
   })
 
   it("says when nobody has registered, instead of leaving the line blank", () => {

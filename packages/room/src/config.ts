@@ -70,6 +70,8 @@ export const RoomConfig = Schema.Struct({
     }),
   ),
   linearUser: Schema.optionalKey(Schema.String),
+  /** How long a sweep on one PR is held before it is delivered as one message. Default 30s. */
+  batchMs: Schema.optionalKey(Schema.Finite),
   createdAt: Schema.String,
 })
 

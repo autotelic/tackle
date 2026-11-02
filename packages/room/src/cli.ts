@@ -2,7 +2,7 @@ import { Clock, Console, Effect, Option, Path, Result, Runtime } from "effect"
 import { CliError, Command, Flag } from "effect/cli"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { jobOf } from "@autotelic/board"
-import { spawnSync } from "node:child_process"
+import { spawn, spawnSync } from "node:child_process"
 import { existsSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { join } from "node:path"
@@ -16,6 +16,7 @@ import {
   startWorker,
   stopWorker,
   attachWorker,
+  seedRoom,
   webhookCommand as webhookLine,
 } from "./commands.ts"
 import { readConfig, type RoomConfig } from "./config.ts"
@@ -102,7 +103,7 @@ const initCommand = Command.make(
       Flag.optional,
     ),
     force: Flag.Boolean("force").pipe(
-      Flag.withDescription("Rewrite an existing .room/config.json."),
+      Flag.withDescription("Rewrite an existing room.config.json."),
       Flag.withDefault(false),
     ),
   },
@@ -148,7 +149,7 @@ const initCommand = Command.make(
       )
     }),
 ).pipe(
-  Command.withDescription("Write .room/config.json, register the room, and print the local loop."),
+  Command.withDescription("Write room.config.json, register the room, and print the local loop."),
   Command.withShortDescription("Create a room here."),
 )
 
@@ -260,19 +261,59 @@ const devCommand = Command.make(
       const root = fileURLToPath(new URL("..", import.meta.url))
       const esbuild = join(root, "node_modules", ".bin", "esbuild")
       const env = existsSync(esbuild) ? { ...process.env, CELLD_ESBUILD: esbuild } : process.env
-      const result = yield* Effect.sync(() =>
-        spawnSync("celld", ["dev", "--port", options.port], {
-          cwd: root,
-          stdio: "inherit",
-          env,
-        }),
-      )
-      if (result.error !== undefined) {
+      const url = `http://127.0.0.1:${options.port}`
+      const child = spawn("celld", ["dev", "--port", options.port], {
+        cwd: root,
+        stdio: "inherit",
+        env,
+      })
+      const missing = yield* Effect.tryPromise({
+        try: () =>
+          new Promise<boolean>((resolve) => {
+            child.on("error", () => resolve(true))
+            child.on("spawn", () => resolve(false))
+          }),
+        catch: () => true,
+      }).pipe(Effect.orElseSucceed(() => true))
+      if (missing) {
         yield* write("celld is not installed:\n  curl -fsSL https://celld.dev/install.sh | sh")
         yield* exit(1)
         return
       }
-      yield* exit(result.status ?? 1)
+      // A room is up before it is useful: the committed config is the only thing that knows
+      // the actor, the watched label, and the batch hold, and nothing copied it into the
+      // ledger. An unseeded room accepts every webhook, queues nothing, and reads clean.
+      const config = Result.getOrUndefined(yield* readConfig(findConfigPath(process.cwd())))
+      if (config !== undefined) {
+        const up = yield* Effect.tryPromise({
+          try: async () => {
+            const client = new RoomClient(url, config.room)
+            for (let attempt = 0; attempt < 40; attempt++) {
+              if ((await client.health().catch(() => undefined)) !== undefined) return true
+              await new Promise((resolve) => setTimeout(resolve, 500))
+            }
+            return false
+          },
+          catch: () => false,
+        }).pipe(Effect.orElseSucceed(() => false))
+        const seeded = up
+          ? yield* Effect.tryPromise({
+              try: () => seedRoom({ config, url }),
+              catch: () => Result.fail(`room not reachable at ${url}`),
+            }).pipe(Effect.orElseSucceed(() => Result.fail(`room not reachable at ${url}`)))
+          : Result.fail(`room did not answer at ${url}`)
+        yield* write(
+          Result.isSuccess(seeded)
+            ? `room seeded: ${seeded.success}`
+            : `room not seeded: ${seeded.failure} (webhooks will be accepted and go nowhere)`,
+        )
+      }
+      const code = yield* Effect.tryPromise({
+        try: () =>
+          new Promise<number>((resolve) => child.on("exit", (value) => resolve(value ?? 1))),
+        catch: () => 1,
+      }).pipe(Effect.orElseSucceed(() => 1))
+      yield* exit(code)
     }),
 ).pipe(
   Command.withDescription("Run the room locally with `celld dev`."),
@@ -365,7 +406,7 @@ const daemonCommand = Command.make(
       const root = yield* rootOf(options.cwd)
       const config = Result.getOrUndefined(yield* readConfig(findConfigPath(root)))
       if (config === undefined) {
-        yield* write("room daemon: no .room/config.json")
+        yield* write("room daemon: no room.config.json")
         yield* exit(1)
         return
       }
@@ -400,7 +441,7 @@ const reviewCommand = Command.make(
       const root = yield* rootOf(options.cwd)
       const config = Result.getOrUndefined(yield* readConfig(findConfigPath(root)))
       if (config === undefined) {
-        yield* write("room review: no .room/config.json")
+        yield* write("room review: no room.config.json")
         yield* exit(1)
         return
       }
@@ -444,7 +485,7 @@ const webhookCommand = Command.make("webhook", { cwd: cwdFlag }, (options) =>
     const root = yield* rootOf(options.cwd)
     const config = Result.getOrUndefined(yield* readConfig(findConfigPath(root)))
     if (config === undefined) {
-      yield* write("room webhook: no .room/config.json")
+      yield* write("room webhook: no room.config.json")
       yield* exit(1)
       return
     }

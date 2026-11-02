@@ -3,6 +3,7 @@ import { Clock, Data, Effect, Predicate, Result } from "effect"
 import { spawn } from "node:child_process"
 import { hostname } from "node:os"
 import type { RoomConfig } from "./config.ts"
+import { seedRoom } from "./commands.ts"
 import { authLogin } from "./gh.ts"
 import { RoomClient } from "./client.ts"
 import { runReview } from "./review.ts"
@@ -85,6 +86,18 @@ export const daemon = (options: DaemonOptions): Effect.Effect<void, DaemonError>
     const actor = actorOf(login.success)
     const client = new RoomClient(options.url, options.config.room)
     const log = options.log
+
+    // The ledger starts empty on every fresh celld, and the committed config is the only
+    // place the actor, the label, and the batch hold are written down.
+    const seeded = yield* Effect.tryPromise({
+      try: () => seedRoom({ config: options.config, url: options.url }),
+      catch: () => Result.fail("room not reachable"),
+    }).pipe(Effect.orElseSucceed(() => Result.fail("room not reachable")))
+    log(
+      Result.isSuccess(seeded)
+        ? `seeded ${seeded.success}`
+        : `seed: ${seeded.failure} -- webhooks are accepted and go nowhere until the room is up`,
+    )
 
     const beat = Effect.tryPromise({
       try: () => client.beat(host, actor, 60_000),
