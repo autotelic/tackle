@@ -5,6 +5,7 @@ import {
   cutlistDefaultOutput,
   decodeCutlistConfig,
   parseJson,
+  isRecord,
   type CutlistConfig,
   type CutlistOutput,
   type EngineRef,
@@ -44,6 +45,9 @@ import { packageJsonOf } from "./package-json.ts"
 
 type PackageManager = "bun" | "npm" | "pnpm" | "yarn"
 
+/** joggle's own ledger: identities are `rule + file set`, so a moved line does not re-fail. */
+const JOGGLE_BASELINE = ".joggle-baseline.json"
+
 /** What a repository already has, and therefore what `init` should enable. */
 export interface RepoProfile {
   readonly root: string
@@ -80,6 +84,15 @@ export interface RepoProfile {
   readonly hosts: ReadonlySet<"opencode" | "pi">
   /** A cutlist config inferred from the tree, when this looks like a UI. */
   readonly cutlistDraft: CutlistConfig | undefined
+  /** Layers proposed from the workspace, with no `forbid`: a person supplies the judgement. */
+  readonly architectureDraft?:
+    | {
+        readonly layers: ReadonlyArray<{
+          readonly name: string
+          readonly include: ReadonlyArray<string>
+        }>
+      }
+    | undefined
   /** Where cutlist writes, with its defaults filled in. Absent when this repo has no cutlist. */
   readonly cutlistOutput?: ResolvedCutlistOutput | undefined
   /** The cutlist config this repo already keeps, and the directory its engine scans. */
@@ -93,6 +106,13 @@ export interface InitResult {
   readonly kept: ReadonlyArray<string>
   /** Written paths this repository's .gitignore keeps out of git, so nobody can review them. */
   readonly ignored: ReadonlyArray<string>
+  /** Engine-owned ledgers: the ratchet is born accepted, once, and never rewritten. */
+  readonly engineBaselines: ReadonlyArray<{
+    readonly id: string
+    readonly path: string
+    readonly accepted: number
+    readonly action: "kept" | "written" | "would accept"
+  }>
   readonly joggleConfig: "kept" | "written" | "absent"
   readonly cutlistConfig: "kept" | "written" | "absent"
   /** What happened to `.gitattributes`: the generated-artifact block, never the whole file. */
@@ -446,6 +466,64 @@ const cutlistDraftOf = (
     return Object.keys(alias).length === 0 ? draft : { ...draft, alias }
   })
 
+/** The workspace directories a pnpm/npm workspace declares that actually hold a package. */
+const workspaceDirsOf = (
+  fs: FileSystem.FileSystem,
+  path: Path.Path,
+  root: string,
+  files: ReadonlyArray<string>,
+): Effect.Effect<ReadonlyArray<string>, never, FileSystem.FileSystem | Path.Path> =>
+  Effect.gen(function* () {
+    const text = files.includes("pnpm-workspace.yaml")
+      ? yield* Effect.orElseSucceed(
+          fs.readFileString(path.join(root, "pnpm-workspace.yaml")),
+          () => "",
+        )
+      : ""
+    const globs = [...text.matchAll(/^\s*-\s*["']?([^"'\s#]+)["']?\s*$/gmu)]
+      .map((match) => match[1])
+      .filter((glob): glob is string => glob !== undefined && glob.endsWith("/*"))
+    const found: Array<string> = []
+    for (const glob of globs) {
+      const prefix = glob.slice(0, -2)
+      const entries = yield* Effect.orElseSucceed(
+        fs.readDirectory(path.join(root, prefix)),
+        () => [] as ReadonlyArray<string>,
+      )
+      for (const entry of [...entries].sort((left, right) => left.localeCompare(right))) {
+        const relative = prefix + "/" + entry + "/package.json"
+        if (yield* existsAt({ fs, path, root, relative })) found.push(prefix + "/" + entry)
+      }
+    }
+    return found
+  })
+
+/**
+ * Layers proposed from the workspace, and nothing more.
+ *
+ * A repo with no `architecture` block gets none of joggle's `layer-direction`
+ * and `layer-purity` findings -- 184 real ones on the first adopter -- because nobody told it
+ * that a domain package may not import React. The *include* set is decidable: the workspace
+ * globs plus a package.json. The *order* and the `forbid` sets are judgement, so this draft
+ * writes neither, and a person adds `forbid` where it is true.
+ */
+const architectureDraftOf = (
+  fs: FileSystem.FileSystem,
+  path: Path.Path,
+  root: string,
+  files: ReadonlyArray<string>,
+): Effect.Effect<RepoProfile["architectureDraft"], never, FileSystem.FileSystem | Path.Path> =>
+  Effect.gen(function* () {
+    const dirs = yield* workspaceDirsOf(fs, path, root, files)
+    if (dirs.length < 2) return undefined
+    return {
+      layers: dirs.map((dir) => ({
+        name: dir.slice(dir.lastIndexOf("/") + 1),
+        include: [dir + "/**"],
+      })),
+    }
+  })
+
 /** A repo's declared output paths with `cutlist`'s defaults filled in under them. */
 const resolvedOutput = (declared: CutlistOutput | undefined): ResolvedCutlistOutput => {
   const values = Object.entries(cutlistDefaultOutput).map(([key, fallback]) => [
@@ -635,6 +713,7 @@ export const inspectRepo = (
       () => false,
     )
     const cutlistDraft = yield* cutlistDraftOf(fs, path, root)
+    const architectureDraft = yield* architectureDraftOf(fs, path, root, files)
     const summary = yield* repositorySummaryOf({
       fs,
       path,
@@ -727,7 +806,18 @@ export const inspectRepo = (
           "joggle not enabled: joggle is not installed here (pnpm add -D @autotelic/joggle)",
         )
       } else {
-        detected.push({ id: "joggle", kind: "process", command: "joggle" })
+        // A replay is not a look, and an untyped check misses the Effect rules: both are
+        // correctness, not taste. `--typecheck` stays off on purpose -- its tsgo run ignores
+        // each package's tsconfig (`jsx`, `paths`) and reports tens of thousands of false
+        // errors on a monorepo. The engine owns its own baseline so the ratchet key is
+        // `rule + file set`, which does not churn when a line moves.
+        detected.push({
+          id: "joggle",
+          kind: "process",
+          command: "joggle",
+          config: "joggle.config.json",
+          args: [...(typescript ? ["--types"] : []), "--no-replay", "--baseline", JOGGLE_BASELINE],
+        })
         if (
           resolveEngineCommand({ root, command: "joggle" }) === "joggle" &&
           dependencies["@autotelic/joggle"] === undefined
@@ -862,6 +952,7 @@ export const inspectRepo = (
       jigSource,
       hosts,
       cutlistDraft,
+      architectureDraft,
       cutlistOutput,
       cutlistExisting,
     }
@@ -1000,6 +1091,12 @@ const DEV_INSTALL = {
   yarn: "yarn add -D",
 } satisfies Readonly<Record<PackageManager, string>>
 
+/** Installing a devDependency here: a pnpm workspace root refuses it without `-w`. */
+const devInstallOf = (profile: RepoProfile): string =>
+  profile.packageManager === "pnpm" && profile.facts.has("workspaces")
+    ? "pnpm add -Dw"
+    : DEV_INSTALL[profile.packageManager]
+
 const GLOBAL_BIN_HINT = {
   bun: "`bun` links bins into `$HOME/.bun/bin`: add it to PATH, open a new shell, and try again",
   npm: "add `$(npm prefix -g)/bin` to PATH, open a new shell, and try again",
@@ -1021,7 +1118,7 @@ export const onboardingFor = (profile: RepoProfile): string => {
   const section = (title: string): string => `## ${(counted += 1)}. ${title}`
   const summary = profile.summary === "" ? "" : "\n\n" + profile.summary
   const source = profile.jigSource.startsWith(".")
-    ? `\n\n\`${profile.jigSource}\` is this checkout: run step 1 again after a build that changes the CLI.`
+    ? `\n\n\`${profile.jigSource}\` is this checkout: build it first (\`${profile.run} build\`, or \`${profile.run} --filter @autotelic/jig-cli build\`), and build again after a change to the CLI -- the installed bin runs \`dist/\`, not the source.`
     : ""
   const engines = profile.engines.length === 0 ? "none yet" : engineSummary(profile)
   const readFirst = [
@@ -1040,6 +1137,7 @@ export const onboardingFor = (profile: RepoProfile): string => {
     profile.cutlistDraft === undefined
       ? ""
       : `The same command drafts \`cutlist.config.json\`, because this tree looks like a UI. Review the vocabulary it infers, run \`${invocationOf({ profile, tool: "cutlist", args: "build" })}\`, commit the catalog, then re-run with \`--force\`. A draft is not enabled before a person has read it.`,
+    `Init writes each engine's own ledger too (joggle's is born accepted, and is never rewritten), so day one is "nothing new" rather than a pile nobody has judged.`,
     `Then \`${profile.jig} check --limit 20\`: read the census before the findings. An engine marked \`skipped\`, \`replayed\`, or "candidates not judged" did not look, and a note is never a pass.`,
     "Secrets are the environment and the host owns them: if a run needs a key this session was not started with, say so and stop. Never add a loader, and never nest a second `doppler run` from this directory -- it resolves the project from the working directory's `doppler.yaml`, so the layer you think you added is not the one that wins.",
   ]
@@ -1119,7 +1217,7 @@ jig --version
 
 If \`jig\` is not found, the global bin directory is not on PATH: ${GLOBAL_BIN_HINT[profile.packageManager]}.${source}
 
-If the install itself fails with a 404, the package is not on the registry yet: ask me for a checkout and link it instead (\`${DEV_INSTALL[profile.packageManager]} -w link:<checkout>/packages/jig-cli\`), then point pi at the linked copy (\`pi install ./node_modules/@autotelic/jig-cli --local\`) — an unpublished name is treated as a relative path.
+If the install itself fails with a 404, the package is not on the registry yet: ask me for a checkout and link it instead (\`${devInstallOf(profile)} link:<checkout>/packages/jig-cli\`), then point pi at the linked copy (\`pi install ./node_modules/@autotelic/jig-cli --local\`) — an unpublished name is treated as a relative path.
 
 ${section("Read what this repository already decided")}
 
@@ -1129,7 +1227,7 @@ ${profile.facts.has("configured") ? "" : "`" + profile.cookbook + "` and `jig.co
 
 ${section("Install what is missing — **STOP and ask**")}
 
-Engines are devDependencies here, never global installs: \`${DEV_INSTALL[profile.packageManager]} <package>\`, then \`${profile.jig} engines\` again. Before you install anything, tell me the engine, the package, and what the census says is missing.
+Engines are devDependencies here, never global installs: \`${devInstallOf(profile)} <package>\`, then \`${profile.jig} engines\` again. Before you install anything, tell me the engine, the package, and what the census says is missing.
 
 ${section("Initialise, then read the census")}
 
@@ -1193,6 +1291,10 @@ export const summaryFor = (result: InitResult): string => {
       : [`  gitattributes    ${result.gitattributes} (generated block only)`]),
     `  ${action.padEnd(16)} ${result.written.length === 0 ? "nothing" : result.written.join(", ")}`,
     ...(result.kept.length === 0 ? [] : [`  ${keptAction.padEnd(16)} ${result.kept.join(", ")}`]),
+    ...result.engineBaselines.map(
+      (baseline) =>
+        `  ${"engine ledger".padEnd(16)} ${baseline.path} — ${baseline.action}${baseline.accepted === 0 ? "" : ` ${baseline.accepted} finding(s)`}`,
+    ),
     ...(result.ignored.length === 0
       ? []
       : [
@@ -1438,8 +1540,11 @@ export const initialise = (
         // with a key can change it to `report` when it wants the candidates listed.
         // The repository summary is the one piece of prose a judged rule can use, and
         // it is already written down in the repo's own agent docs or README.
+        // JSON.stringify drops the undefined keys, so an absent draft or summary never reaches
+        // the file -- and the object keeps its literal type instead of widening to a dictionary.
         const starter = {
           unavailable: "count" as const,
+          architecture: profile.architectureDraft,
           evidence: profile.summary === "" ? undefined : { repository: profile.summary },
         }
         if (!dryRun) {
@@ -1450,9 +1555,79 @@ export const initialise = (
       }
     }
 
+    // Born accepted: an engine with its own ledger gets one written once, so day one is
+    // "nothing new" instead of a pile a person must judge before the gate means anything.
+    // Never rewritten, for the same reason `.jig-baseline.json` is never rewritten.
+    const engineBaselines: Array<{
+      readonly id: string
+      readonly path: string
+      readonly accepted: number
+      readonly action: "kept" | "written" | "would accept"
+    }> = []
+    const joggle = profile.engines.find((engine) => engine.id === "joggle")
+    // Only when the effective config will actually read it: a ledger nothing references is a
+    // second answer waiting to disagree with the first.
+    const wantsLedger = (joggle?.args ?? []).includes("--baseline")
+    if (joggle !== undefined && wantsLedger) {
+      const target = path.join(root, JOGGLE_BASELINE)
+      const exists = yield* Effect.orElseSucceed(fs.exists(target), () => false)
+      if (exists) {
+        kept.push(JOGGLE_BASELINE)
+        engineBaselines.push({ id: "joggle", path: JOGGLE_BASELINE, accepted: 0, action: "kept" })
+      } else if (dryRun) {
+        engineBaselines.push({
+          id: "joggle",
+          path: JOGGLE_BASELINE,
+          accepted: 0,
+          action: "would accept",
+        })
+      } else {
+        const outcome = yield* Effect.orElseSucceed(
+          exec({
+            binary: resolveEngineCommand({ root, command: "joggle" }),
+            args: ["check", ...(joggle.args ?? []), "--update-baseline", JOGGLE_BASELINE],
+            cwd: root,
+          }),
+          () => undefined,
+        )
+        const wrote = yield* Effect.orElseSucceed(fs.exists(target), () => false)
+        if (!wrote) {
+          profile = {
+            ...profile,
+            notes: [
+              ...profile.notes,
+              "joggle did not write " +
+                JOGGLE_BASELINE +
+                (outcome === undefined
+                  ? " (the command did not start)"
+                  : " (exit " + String(outcome.code) + ")") +
+                "; run `joggle check --update-baseline " +
+                JOGGLE_BASELINE +
+                "` by hand",
+            ],
+          }
+        } else {
+          const text = yield* Effect.orElseSucceed(fs.readFileString(target), () => "")
+          const parsed = parseJson(text)
+          const identities =
+            isRecord(parsed) && Array.isArray(parsed["identities"]) ? parsed["identities"] : []
+          written.push(JOGGLE_BASELINE)
+          engineBaselines.push({
+            id: "joggle",
+            path: JOGGLE_BASELINE,
+            accepted: identities.length,
+            action: "written",
+          })
+        }
+      }
+    }
+
     // The write is done; whether anyone can commit it is a separate question, and one the
     // person only learns when the branch is pushed and the config is not in it.
-    const ignored = yield* ignoredByGit({ root, files: [...written, profile.baseline] })
+    const ignored = yield* ignoredByGit({
+      root,
+      files: [...new Set([...written, profile.baseline])],
+    })
     const noted =
       ignored.length === 0
         ? profile
@@ -1468,6 +1643,7 @@ export const initialise = (
       written,
       kept,
       ignored,
+      engineBaselines,
       joggleConfig,
       cutlistConfig,
       gitattributes,

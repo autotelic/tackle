@@ -22,9 +22,9 @@ jig --version
 
 If `jig` is not found, the global bin directory is not on PATH: run `pnpm setup` (it puts `pnpm bin -g` on PATH), open a new shell, and try again.
 
-`./packages/jig-cli` is this checkout: run step 1 again after a build that changes the CLI.
+`./packages/jig-cli` is this checkout: build it first (`pnpm build`, or `pnpm --filter @autotelic/jig-cli build`), and build again after a change to the CLI -- the installed bin runs `dist/`, not the source.
 
-If the install itself fails with a 404, the package is not on the registry yet: ask me for a checkout and link it instead (`pnpm add -D -w link:<checkout>/packages/jig-cli`), then point pi at the linked copy (`pi install ./node_modules/@autotelic/jig-cli --local`) — an unpublished name is treated as a relative path.
+If the install itself fails with a 404, the package is not on the registry yet: ask me for a checkout and link it instead (`pnpm add -Dw link:<checkout>/packages/jig-cli`), then point pi at the linked copy (`pi install ./node_modules/@autotelic/jig-cli --local`) — an unpublished name is treated as a relative path.
 
 ## 2. Read what this repository already decided
 
@@ -36,11 +36,13 @@ Then run `pnpm jig engines` and confirm every configured engine resolves.
 
 ## 3. Install what is missing — **STOP and ask**
 
-Engines are devDependencies here, never global installs: `pnpm add -D <package>`, then `pnpm jig engines` again. Before you install anything, tell me the engine, the package, and what the census says is missing.
+Engines are devDependencies here, never global installs: `pnpm add -Dw <package>`, then `pnpm jig engines` again. Before you install anything, tell me the engine, the package, and what the census says is missing.
 
 ## 4. Initialise, then read the census
 
 `jig.config.json` is already here, and nothing needs applying: a re-run keeps it. `pnpm jig init --gate all --force` rewrites the config and the two docs — never the baseline — so run that only when the plan changes.
+
+Init writes each engine's own ledger too (joggle's is born accepted, and is never rewritten), so day one is "nothing new" rather than a pile nobody has judged.
 
 Then `pnpm jig check --limit 20`: read the census before the findings. An engine marked `skipped`, `replayed`, or "candidates not judged" did not look, and a note is never a pass.
 

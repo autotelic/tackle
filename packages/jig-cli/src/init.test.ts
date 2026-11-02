@@ -139,6 +139,58 @@ describe("inspectRepo", () => {
     }
   })
 
+  it("writes joggle's correctness flags, and its own ledger, not just its name", async () => {
+    const root = project(
+      {
+        json: [
+          ["package.json", {}],
+          ["tsconfig.json", {}],
+        ],
+      },
+      ["joggle"],
+    )
+    try {
+      const profile = await inspect(root)
+      const joggle = profile.engines.find((engine) => engine.id === "joggle")
+      // A replay is not a look, and an untyped check misses the Effect rules.
+      expect(joggle?.config).toBe("joggle.config.json")
+      expect(joggle?.args).toEqual([
+        "--types",
+        "--no-replay",
+        "--baseline",
+        ".joggle-baseline.json",
+      ])
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it("proposes architecture layers from the workspace, without inventing judgment", async () => {
+    const root = project(
+      {
+        json: [
+          ["package.json", {}],
+          ["tsconfig.json", {}],
+          ["packages/domain/package.json", { name: "@acme/domain" }],
+          ["packages/rest/package.json", { name: "@acme/rest" }],
+        ],
+        text: [["pnpm-workspace.yaml", 'packages:\n  - "packages/*"\n']],
+      },
+      ["joggle"],
+    )
+    try {
+      await initialiseIn(root)
+      const starter = JSON.parse(readFileSync(join(root, "joggle.config.json"), "utf8"))
+      // The include set is decidable; the order and the forbid sets are a person's call.
+      expect(starter.architecture.layers).toEqual([
+        { name: "domain", include: ["packages/domain/**"] },
+        { name: "rest", include: ["packages/rest/**"] },
+      ])
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
   it("enables cutlist only when the repo has its config and the command", async () => {
     const root = project(
       {
