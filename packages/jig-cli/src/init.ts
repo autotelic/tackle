@@ -1309,6 +1309,7 @@ ${profile.notes.map((note) => "- " + note).join("\n")}`
 
 > Paste this whole file into your coding agent at the root of \`${profile.name}\`. It sets the
 > harness up end to end; nothing here is applied until the agent runs it.
+${profile.jigSource.startsWith(".") ? ">\n> This repository is where `jig` comes from. To set up a *different* repository, send the\n> person [`ADOPT.md`](./ADOPT.md) instead: it starts from this checkout and ends in theirs.\n" : ""}
 
 Set \`${profile.name}\` up with \`jig\`, the conformance harness this repository configures: every
 engine in one report, and a gate that fails on what is new.${summary}

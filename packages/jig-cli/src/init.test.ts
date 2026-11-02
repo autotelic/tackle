@@ -1057,6 +1057,9 @@ describe("rendering", () => {
       expect([...profile.hosts].sort((a, b) => a.localeCompare(b))).toEqual(["opencode", "pi"])
       const prompt = onboardingFor(profile)
       expect(prompt).toContain("-g ./packages/jig-cli")
+      // This repository *is* the source: a person pointed here by URL needs the adopter file.
+      expect(prompt).toContain("ADOPT.md")
+      expect(onboardingFor(profileFor("all"))).not.toContain("ADOPT.md")
       expect(prompt).toContain("pi update --extensions")
       // A wired host is updated, not added twice.
       expect(prompt).toContain("keep the existing")

@@ -8,6 +8,18 @@ shape, one baseline, one agent document** — the four seams — over engines th
 each useful alone. That is the Vite+/VoidZero move: keep the engines separate, ship
 one surface, make onboarding a prompt.
 
+## Onboard a repository
+
+Point a person at one file:
+
+- **[ADOPT.md](./ADOPT.md)** — for _their_ repository. Paste-able, starts from this checkout
+  (clone, build, link the CLI and the engines), ends with `jig init` in their tree and a census
+  they have read. This is the file to send; the raw form works for an agent that fetches URLs:
+  `https://raw.githubusercontent.com/autotelic/tackle/main/ADOPT.md`.
+- **`ONBOARD.md` in any initialised repository** — the same prompt for that repository, generated
+  by `jig init` from what it found (engines, gate, cutlist, room). `jig onboard` prints it
+  without writing anything.
+
 ## The pieces
 
 | Package               | What it is                                                                                                                                                                                          | Runs alone as                               | Consumes                                | Emits                                                                                                                             |

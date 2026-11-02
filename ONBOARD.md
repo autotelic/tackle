@@ -2,6 +2,9 @@
 
 > Paste this whole file into your coding agent at the root of `tackle`. It sets the
 > harness up end to end; nothing here is applied until the agent runs it.
+>
+> This repository is where `jig` comes from. To set up a _different_ repository, send the
+> person [`ADOPT.md`](./ADOPT.md) instead: it starts from this checkout and ends in theirs.
 
 Set `tackle` up with `jig`, the conformance harness this repository configures: every
 engine in one report, and a gate that fails on what is new.
