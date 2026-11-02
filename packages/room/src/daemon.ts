@@ -1,5 +1,5 @@
 import { actorOf, hostOf } from "@autotelic/board"
-import { Clock, Data, Effect, Result } from "effect"
+import { Clock, Data, Effect, Predicate, Result } from "effect"
 import { spawn } from "node:child_process"
 import { hostname } from "node:os"
 import type { RoomConfig } from "./config.ts"
@@ -33,6 +33,22 @@ export interface DaemonOptions {
 }
 
 const DEFAULT_URL = "http://127.0.0.1:9876"
+
+/**
+ * Whether the daemon should resume the conversation itself.
+ *
+ * The extension owns the inbox while a session is open: it drains every five seconds and
+ * heartbeats `PUT /session`. A stale heartbeat means nobody is holding the session, so the
+ * daemon resumes it headlessly and acknowledges the turns. Waking an open session would put
+ * a second writer in the same transcript.
+ *
+ * @param session - The registered session id and whether its heartbeat is fresh.
+ * @returns True when these turns should be delivered by resuming the session.
+ */
+export const shouldWake: Predicate.Predicate<{
+  readonly id: string | null
+  readonly active: boolean
+}> = (session) => session.id !== null && !session.active
 
 /** Resume a closed session headlessly; Pi appends to the same transcript. */
 const wakeSession = (input: {
@@ -113,7 +129,7 @@ export const daemon = (options: DaemonOptions): Effect.Effect<void, DaemonError>
         try: () => client.session(),
         catch: (error) => new DaemonError({ message: String(error) }),
       })
-      if (!session.active || session.id === null) return
+      if (!shouldWake(session)) return
       const inbox = yield* Effect.tryPromise({
         try: () => client.inbox(0),
         catch: (error) => new DaemonError({ message: String(error) }),

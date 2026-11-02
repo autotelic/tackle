@@ -32,6 +32,7 @@ class NodeSql implements Sql {
   }
 }
 import { describe, expect, it } from "vitest"
+import { shouldWake } from "./daemon.ts"
 import { fromGithub, fromLinear } from "./ingest.ts"
 import { shouldReview } from "./policy.ts"
 import { inboxFor } from "./inbox.ts"
@@ -94,6 +95,27 @@ describe("webhooks", () => {
       body: { action: "update", data: { identifier: "DEV-1506", state: { name: "Done" } } },
     })
     expect(event).toMatchObject({ kind: "issue.changed", identifier: "DEV-1506", state: "Done" })
+  })
+})
+
+describe("the sleeping session", () => {
+  it("resumes a stale session, and never one the person still has open", () => {
+    expect(shouldWake({ id: "sess-1", active: false })).toBe(true)
+    expect(shouldWake({ id: "sess-1", active: true })).toBe(false)
+    expect(shouldWake({ id: null, active: false })).toBe(false)
+    expect(shouldWake({ id: null, active: true })).toBe(false)
+  })
+
+  it("property: waking is exactly a known session with a stale heartbeat", () => {
+    fc.assert(
+      fc.property(
+        fc.option(fc.string({ minLength: 1 }), { nil: null }),
+        fc.boolean(),
+        (id, active) => {
+          expect(shouldWake({ id, active })).toBe(id !== null && !active)
+        },
+      ),
+    )
   })
 })
 
