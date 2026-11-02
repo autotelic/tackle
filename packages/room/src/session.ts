@@ -185,6 +185,31 @@ export const noteToRoom = async (input: {
 }
 
 /**
+ * The last entries, for a surface that cannot stream.
+ *
+ * `--watch` serves a person watching; an agent asking "what happened while I was away" needs
+ * one answer, oldest last, which is this. The window is a page of the transcript, not the model
+ * context: compaction and resets stay visible.
+ *
+ * @param input - The session and how many entries to read.
+ * @returns The entries, oldest first.
+ */
+export const recentEntries = async (input: {
+  readonly session: RoomSession
+  readonly limit: number
+}): Promise<ReadonlyArray<SessionEntry>> => {
+  const page = await input.session.root.entries(
+    { order: "descending" },
+    Math.max(1, input.limit),
+    undefined,
+    BACKGROUND_CONTEXT,
+  )
+  return page.items
+    .map((entry) => ({ id: String(entry.id), kind: String(entry.kind), text: textOf(entry) }))
+    .reverse()
+}
+
+/**
  * Follow the conversation: the entries at attachment, then each commit that adds more.
  *
  * This is what makes the room multiplayer without a second registry: every surface attaches to

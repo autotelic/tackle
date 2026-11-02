@@ -191,12 +191,13 @@ export default function roomExtension(pi: ExtensionAPI): void {
   const refresh = async (ctx: ExtensionContext): Promise<void> => {
     const cwd = cwdOf(ctx)
     const config = roomOf(cwd)
-    if (config === undefined) {
+    if (config === undefined && active === undefined) {
       badge = []
       return
     }
-    const view = await json<SessionView>(["session", "--cwd", cwd, "--json"], cwd)
-    badge = badgeOf(config, view)
+    const named = active === undefined ? [] : ["--room", active]
+    const view = await json<SessionView>(["session", "--cwd", cwd, ...named, "--json"], cwd)
+    badge = badgeOf(active === undefined ? config : { room: active, name: active }, view)
     if (ctx.mode === "tui" && ctx.hasUI) ctx.ui.requestRender?.()
   }
 
@@ -244,8 +245,34 @@ export default function roomExtension(pi: ExtensionAPI): void {
       const text = (args ?? "").trim()
       const cwd = cwdOf(ctx)
       const config = roomOf(cwd)
-      if (config === undefined) {
-        ctx.ui.notify("no room here -- run `jig room plan` in a repository", "info")
+      if (config === undefined && active === undefined) {
+        const rooms =
+          (await json<ReadonlyArray<{ name: string; stage: string }>>(["list", "--json"], cwd)) ??
+          []
+        ctx.ui.notify(
+          rooms.length === 0
+            ? "no rooms yet -- run `jig room plan` in a repository"
+            : [
+                "rooms:",
+                ...rooms.map((room) => `  ${room.name}  ${room.stage}`),
+                "/room use <name>",
+              ].join("\n"),
+          "info",
+        )
+        return
+      }
+      if (text.startsWith("use ")) {
+        const name = text.slice("use ".length).trim()
+        const rooms =
+          (await json<ReadonlyArray<{ name: string; stage: string }>>(["list", "--json"], cwd)) ??
+          []
+        if (!rooms.some((room) => room.name === name)) {
+          ctx.ui.notify(`room use: no room named ${name} -- \`jig room list\` shows them`, "info")
+          return
+        }
+        active = name
+        ctx.ui.notify(`room: ${name}`, "info")
+        await refresh(ctx)
         return
       }
       if (text.startsWith("say ")) {
@@ -267,6 +294,139 @@ export default function roomExtension(pi: ExtensionAPI): void {
           : `room ${config.name ?? config.room} · ${view.id} · ${view.busy ? "busy" : (view.runFailure ?? "idle")}`,
         "info",
       )
+    },
+  })
+
+  /** The room's durable conversation as one answer: the view, then the last entries. */
+  /** The room's durable conversation as one answer: the view, then the last entries. */
+  pi.registerTool({
+    name: "room_session",
+    description:
+      "Read the room's durable conversation: its id, whether a run is working, why the last run stopped, and the most recent entries (a review comment, a Linear change, a broadcast the surface recorded). Use it when the person asks what happened in the room or what is queued.",
+    parameters: Type.Object({
+      recent: Type.Optional(Type.Number({ description: "How many entries to read. Default 10." })),
+      room: Type.Optional(
+        Type.String({ description: "A room name from the index. Default: this repository's." }),
+      ),
+    }),
+    execute: async (params, ctx) => {
+      const cwd = cwdOf(ctx)
+      const name = params.room ?? active
+      const recent = params.recent === undefined ? "10" : String(params.recent)
+      const view = await json<{
+        readonly view?: SessionView
+        readonly entries?: ReadonlyArray<{ readonly kind: string; readonly text: string }>
+      }>(
+        [
+          "session",
+          "--cwd",
+          cwd,
+          ...(name === undefined ? [] : ["--room", name]),
+          "--json",
+          "--recent",
+          recent,
+        ],
+        cwd,
+      )
+      if (view?.view === undefined) {
+        return {
+          content: [
+            { type: "text" as const, text: "room session: no room here (run `jig room plan`)" },
+          ],
+          details: undefined,
+        }
+      }
+      const head = `session ${view.view.id} · ${view.view.runFailure ?? (view.view.busy ? "busy" : "idle")} · ${view.view.queued} queued`
+      const lines = (view.entries ?? []).map(
+        (entry) => `${entry.kind.padEnd(14)} ${entry.text.replaceAll("\n", " ")}`,
+      )
+      return {
+        content: [{ type: "text" as const, text: [head, ...lines].join("\n") }],
+        details: undefined,
+      }
+    },
+  })
+
+  /** Record a fact deliberately: a write, so the model never sees it as a prompt. */
+  pi.registerTool({
+    name: "room_note",
+    description:
+      "Record a fact in the room's durable conversation without asking the model anything (a write, not an input). Use it for decisions the surface cannot infer: a rename, a migration, a deliberate deferral. The automatic hooks already record edits and session close.",
+    parameters: Type.Object({
+      kind: Type.String({ description: "Entry kind, for example room.decision." }),
+      data: Type.Optional(Type.String({ description: "JSON payload. Default {}." })),
+    }),
+    execute: async (params, ctx) => {
+      const cwd = cwdOf(ctx)
+      const args = ["session", "--cwd", cwd, "--note", params.kind]
+      if (params.data !== undefined) args.push("--data", params.data)
+      if (active !== undefined) args.push("--room", active)
+      const text = await invoke(args, cwd)
+      return {
+        content: [{ type: "text" as const, text: text ?? "room note: not recorded" }],
+        details: undefined,
+      }
+    },
+  })
+
+  /** What `room init` would write: nothing is applied. */
+  pi.registerTool({
+    name: "room_plan",
+    description:
+      "Read the room setup plan for this repository without writing anything: the Linear project, the GitHub label, the ingress, and the room name it would use. Show it to the person; `room_init` applies it only after they approve.",
+    parameters: Type.Object({}),
+    execute: async (_params, ctx) => {
+      const cwd = cwdOf(ctx)
+      const text = await invoke(["plan", "--cwd", cwd, "--json"], cwd)
+      return {
+        content: [{ type: "text" as const, text: text ?? "room plan: no plan" }],
+        details: undefined,
+      }
+    },
+  })
+
+  /** Apply the plan. Writes room.config.json and registers the room. */
+  pi.registerTool({
+    name: "room_init",
+    description:
+      "Write room.config.json and register the room. Run only after a human approved the plan from room_plan: it creates a committed file and records the room in this machine's index. It does not create webhooks; `room webhook --create` does that for a deployed room.",
+    parameters: Type.Object({
+      room: Type.String({ description: "Room name, for example multi-season." }),
+      project: Type.String({ description: "Linear project id (linearis projects list)." }),
+      projectName: Type.String({ description: "Linear project name, as a person reads it." }),
+      label: Type.Optional(
+        Type.String({ description: "The GitHub label that addresses this room." }),
+      ),
+      linearUser: Type.Optional(
+        Type.String({ description: "The Linear display name for this person." }),
+      ),
+      stage: Type.Optional(
+        Type.String({ description: "Where the room runs. Default local/<login>." }),
+      ),
+      force: Type.Optional(Type.Boolean({ description: "Rewrite an existing room.config.json." })),
+    }),
+    execute: async (params, ctx) => {
+      const cwd = cwdOf(ctx)
+      const args = [
+        "init",
+        "--cwd",
+        cwd,
+        "--room",
+        params.room,
+        "--linear-project",
+        params.project,
+        "--linear-name",
+        params.projectName,
+      ]
+      if (params.label !== undefined) args.push("--label", params.label)
+      if (params.linearUser !== undefined) args.push("--linear-user", params.linearUser)
+      if (params.stage !== undefined) args.push("--stage", params.stage)
+      if (params.force === true) args.push("--force")
+      const text = await invoke(args, cwd)
+      return {
+        content: [{ type: "text" as const, text: text ?? "room init: not applied" }],
+        details: undefined,
+      }
     },
   })
 

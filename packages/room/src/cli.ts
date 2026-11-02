@@ -26,6 +26,7 @@ import {
   followRoomSession,
   noteToRoom,
   openSessionFor,
+  recentEntries,
   roomSessionView,
   submitToRoom,
 } from "./session.ts"
@@ -233,10 +234,29 @@ const doctorCommand = Command.make("doctor", { cwd: cwdFlag }, (options) =>
   Command.withShortDescription("Check the room."),
 )
 
+/** Resolve a room's config from this repository, or by name from the machine's index. */
+const configFor = (root: string, named: string | undefined) =>
+  Effect.gen(function* () {
+    if (named === undefined) return Result.getOrUndefined(yield* readConfig(findConfigPath(root)))
+    const index = yield* readIndex
+    const entry = index.rooms.find((room) => room.name === named || room.room === named)
+    return entry === undefined
+      ? undefined
+      : Result.getOrUndefined(yield* readConfig(entry.configPath))
+  })
+
 const sessionCommand = Command.make(
   "session",
   {
     cwd: cwdFlag,
+    room: Flag.String("room").pipe(
+      Flag.withDescription("A room name from the index (default: the room in this repository)."),
+      Flag.optional,
+    ),
+    recent: Flag.Int("recent").pipe(
+      Flag.withDescription("Read the last N entries instead of streaming them."),
+      Flag.optional,
+    ),
     json: jsonFlag,
     say: Flag.String("say").pipe(
       Flag.withDescription("Hand this text to the room's durable conversation as input."),
@@ -260,7 +280,7 @@ const sessionCommand = Command.make(
   (options) =>
     Effect.gen(function* () {
       const root = yield* rootOf(options.cwd)
-      const config = Result.getOrUndefined(yield* readConfig(findConfigPath(root)))
+      const config = yield* configFor(root, Option.getOrUndefined(options.room))
       if (config === undefined) {
         yield* write("room session: no room here; run `jig room plan`")
         yield* exit(1)
@@ -319,13 +339,33 @@ const sessionCommand = Command.make(
         yield* write(`following ${session.id} · ^C stops the client, not the conversation`)
         return yield* Effect.never
       }
+      const limit = Option.getOrUndefined(options.recent)
+      const entries =
+        limit === undefined
+          ? undefined
+          : yield* Effect.tryPromise({
+              try: () => recentEntries({ session, limit }),
+              catch: (error) => String(error),
+            }).pipe(Effect.orElseSucceed(() => undefined))
       const view = yield* Effect.tryPromise({
         try: () => roomSessionView(session),
         catch: (error) => String(error),
       }).pipe(Effect.orElseSucceed(() => undefined))
       if (options.json) {
         yield* write(
-          `${JSON.stringify(view ?? { id: session.id, busy: false, queued: 0 }, null, 2)}\n`,
+          `${JSON.stringify(
+            entries === undefined
+              ? (view ?? { id: session.id, busy: false, queued: 0 })
+              : { view, entries },
+            null,
+            2,
+          )}\n`,
+        )
+      } else if (entries !== undefined) {
+        yield* write(
+          entries
+            .map((entry) => `${entry.kind.padEnd(14)} ${entry.text.replaceAll("\n", " ")}`)
+            .join("\n"),
         )
       } else {
         yield* write(
