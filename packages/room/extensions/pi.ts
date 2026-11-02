@@ -70,6 +70,8 @@ interface BoardView {
   readonly name?: string
   readonly stage?: string
   readonly reachable?: boolean
+  /** The session the room will deliver to and wake, and whether its heartbeat is fresh. */
+  readonly session?: { readonly id: string | null; readonly at: number; readonly active: boolean }
   readonly jobs?: ReadonlyArray<{ state: string }>
   readonly chits?: ReadonlyArray<{ state: string; count: number }>
   readonly presence?: ReadonlyArray<{ host: string }>
@@ -152,10 +154,38 @@ export default function roomExtension(pi: ExtensionAPI): void {
   let heartbeatTimer: ReturnType<typeof setInterval> | undefined
   let cursor = 0
 
+  /**
+   * The session's own name, once it is the one the room will wake.
+   *
+   * The utility, not the decoration: a room delivers to exactly one session id, so "which
+   * session owns this room" has to be answerable at a glance -- in the status line, and in the
+   * session name the resume picker and the terminal title show. A second session that starts
+   * later takes ownership by heartbeating, and the first one's tag says so.
+   */
+  const tagOf = (view: BoardView | undefined, mine: string | undefined): string => {
+    if (view === undefined || view.name === undefined) return "room none here"
+    if (view.reachable === false) return `room ${view.name} · roomd down`
+    const owner = view.session?.id ?? null
+    if (owner === null) return `room ${view.name} · no session`
+    if (mine !== undefined && owner === mine) return `room ${view.name} · this session`
+    return `room ${view.name} · session ${owner.slice(0, 8)}`
+  }
+
   const refresh = async (ctx: ExtensionContext): Promise<void> => {
     const view = await json<BoardView>(boardArgs(cwdOf(ctx), active), cwdOf(ctx))
+    const mine = ctx.sessionManager === undefined ? undefined : ctx.sessionManager.getSessionId()
     if (ctx.mode === "tui" && ctx.hasUI) {
       ctx.ui.setWidget("room", [...linesOf(view)], { placement: "aboveEditor" })
+      // A keyed status line survives a screenful of output, which the widget does not.
+      ctx.ui.setStatus("room", tagOf(view, mine))
+    }
+    // Name the owning session once, and only if nobody has named it: a person's `/name` wins.
+    if (view !== undefined && view.reachable !== false && mine !== undefined) {
+      const owner = view.session?.id ?? null
+      const named = typeof pi.getSessionName === "function" ? pi.getSessionName() : ""
+      if (owner === mine && (named === undefined || named === "") && view.name !== undefined) {
+        pi.setSessionName(`room ${view.name}`)
+      }
     }
   }
 

@@ -105,9 +105,15 @@ export const handle = async (
   }
 
   if (request.method === "GET" && path === "/board") {
+    // Which session the room is watching belongs on the board: waking or delivering a turn
+    // addresses exactly this id, so "who owns it" must be visible from any terminal.
+    const sessionId = Result.getOrUndefined(ledger.get("session")) ?? null
+    const sessionRaw = Result.getOrUndefined(ledger.get("session_at"))
+    const sessionAt = sessionRaw === undefined ? 0 : Number(sessionRaw)
     return json({
       body: {
         room: ledger.room,
+        session: { id: sessionId, at: sessionAt, active: sessionAt + 60_000 > now },
         counts: ledger.counts(),
         chits: ledger.chitStates(),
         jobs: ledger.jobs().slice(0, 20),

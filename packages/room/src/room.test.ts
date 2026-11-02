@@ -36,7 +36,9 @@ class NodeSql implements Sql {
   }
 }
 import { describe, expect, it } from "vitest"
-import { doctor } from "./commands.ts"
+import type { Board } from "./client.ts"
+import type { RoomConfig } from "./config.ts"
+import { doctor, renderBoard } from "./commands.ts"
 import { shouldWake } from "./daemon.ts"
 import { fromGithub, fromLinear } from "./ingest.ts"
 import { shouldReview } from "./policy.ts"
@@ -103,7 +105,7 @@ describe("webhooks", () => {
   })
 })
 
-const CONFIG = {
+const CONFIG: RoomConfig = {
   version: 1,
   room: "probe",
   name: "probe",
@@ -131,6 +133,39 @@ const diagnose = async (look: (name: string) => string | undefined) => {
     rmSync(root, { recursive: true, force: true })
   }
 }
+
+describe("the board", () => {
+  it("names the session the room will deliver to, so ownership is not a guess", () => {
+    const board: Board = {
+      room: "probe",
+      session: { id: "abcdef1234567890", at: 1_700_000_000_000, active: true },
+      counts: { chits: 0, jobs: 0, receipts: 0 },
+      chits: [],
+      jobs: [],
+      claims: [],
+      presence: [],
+      workers: [],
+    }
+    const text = renderBoard({ config: CONFIG, board, now: 1_700_000_012_000 })
+    expect(text).toContain("session abcdef12 · attached, 12s ago")
+  })
+
+  it("says when nobody has registered, instead of leaving the line blank", () => {
+    const board: Board = {
+      room: "probe",
+      session: { id: null, at: 0, active: false },
+      counts: { chits: 0, jobs: 0, receipts: 0 },
+      chits: [],
+      jobs: [],
+      claims: [],
+      presence: [],
+      workers: [],
+    }
+    expect(renderBoard({ config: CONFIG, board, now: 1_700_000_000_000 })).toContain(
+      "none registered",
+    )
+  })
+})
 
 describe("the doctor", () => {
   // doctor spawns `gh` and probes the room URL: give it room to breathe under a parallel run.

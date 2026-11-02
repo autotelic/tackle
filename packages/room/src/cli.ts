@@ -200,7 +200,8 @@ const boardCommand = Command.make(
         )
         return
       }
-      yield* write(renderBoard({ config, board }))
+      const now = yield* Clock.currentTimeMillis
+      yield* write(renderBoard({ config, board, now }))
     }),
 ).pipe(
   Command.withDescription("Render the room's board: jobs, chits, and who is present."),

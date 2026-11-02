@@ -31,6 +31,14 @@ export type Worker = typeof Worker.Type
 /** The board projection the CLI and the Pi widget render. */
 export const Board = Schema.Struct({
   room: Schema.String,
+  /** The session the room will deliver to and wake, and whether its heartbeat is fresh. */
+  session: Schema.optionalKey(
+    Schema.Struct({
+      id: Schema.NullOr(Schema.String),
+      at: Schema.Finite,
+      active: Schema.Boolean,
+    }),
+  ),
   counts: Schema.Struct({ chits: Schema.Finite, jobs: Schema.Finite, receipts: Schema.Finite }),
   chits: Schema.Array(Schema.Struct({ state: Schema.String, count: Schema.Finite })),
   jobs: Schema.Array(JobSchema),
