@@ -69,6 +69,7 @@ export const explainRule = (
     (diagnostic) =>
       diagnostic.ruleId === name ||
       ruleNameOf(diagnostic) === name ||
+      ruleNameOf(diagnostic).endsWith("/" + name) ||
       diagnostic.ruleId.split("/").at(-1) === name,
   )
   if (matches.length === 0) {
@@ -77,7 +78,10 @@ export const explainRule = (
     const unknownEngine =
       engine === undefined &&
       head !== undefined &&
-      !report.diagnostics.some((diagnostic) => diagnostic.ruleId.startsWith(head + "/"))
+      !report.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.ruleId.startsWith(head + "/") || ruleNameOf(diagnostic).startsWith(head + "/"),
+      )
     if (unknownEngine) {
       return `jig: no configured engine named "${head ?? ""}"; configured: ${configured.join(", ")}`
     }

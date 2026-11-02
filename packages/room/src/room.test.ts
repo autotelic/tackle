@@ -133,6 +133,7 @@ const diagnose = async (look: (name: string) => string | undefined) => {
 }
 
 describe("the doctor", () => {
+  // doctor spawns `gh` and probes the room URL: give it room to breathe under a parallel run.
   it("names a missing pi, because the review and the wake both run it", async () => {
     const missing = await diagnose((name) => (name === "pi" ? undefined : "/usr/bin/" + name))
     expect(missing?.ok).toBe(false)
@@ -140,7 +141,7 @@ describe("the doctor", () => {
 
     const installed = await diagnose(() => "/usr/bin/yes")
     expect(installed?.ok).toBe(true)
-  })
+  }, 30_000)
 })
 
 describe("the sleeping session", () => {

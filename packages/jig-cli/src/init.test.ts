@@ -191,6 +191,73 @@ describe("inspectRepo", () => {
     }
   })
 
+  it("picks the root that owns the design system, not the first one alphabetically", async () => {
+    const colours = (count: number): string =>
+      "export default { theme: { extend: { colors: { " +
+      Array.from({ length: count }, (_, index) => `c${String(index)}: "#000000"`).join(", ") +
+      " } } } }\n"
+    const vars = (count: number): string =>
+      ":root {\n" +
+      Array.from({ length: count }, (_, index) => `  --x-${String(index)}: 1px;`).join("\n") +
+      "\n}\n"
+    const root = project(
+      {
+        json: [["package.json", {}]],
+        text: [
+          ["services/auth-ui/app/components/Button.tsx", "export const Button = () => null\n"],
+          ["services/auth-ui/app/tailwind.config.ts", colours(8)],
+          ["services/auth-ui/app/app.css", "[data-theme=dark] { --a: 1px; --b: 1px; }\n"],
+          ["services/ui/app/components/ui/Button.tsx", "export const Button = () => null\n"],
+          ["services/ui/app/tailwind.config.ts", colours(20)],
+          ["services/ui/app/tailwind.css", vars(20)],
+        ],
+      },
+      ["cutlist"],
+    )
+    try {
+      await initialiseIn(root, { cutlist: true })
+      const config = JSON.parse(readFileSync(join(root, "cutlist.config.json"), "utf8"))
+      // auth-ui sorts first and used to win: it has 8 colours and no :root layer.
+      expect(config.tokens.from).toBe("services/ui/app/tailwind.config.ts")
+      expect(config.tokens.vars).toBe("services/ui/app/tailwind.css")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it("splits a UI root into the tiers its findings live in, and leaves the rules off", async () => {
+    const root = project(
+      {
+        json: [
+          ["package.json", {}],
+          ["tsconfig.json", {}],
+          ["packages/domain/package.json", { name: "@acme/domain" }],
+          ["packages/rest/package.json", { name: "@acme/rest" }],
+        ],
+        text: [
+          ["pnpm-workspace.yaml", 'packages:\n  - "packages/*"\n'],
+          ["apps/web/components/ui/Button.tsx", "export const Button = () => null\n"],
+          ["apps/web/routes/index.tsx", "export const Route = () => null\n"],
+        ],
+      },
+      ["joggle"],
+    )
+    try {
+      await initialiseIn(root)
+      const starter = JSON.parse(readFileSync(join(root, "joggle.config.json"), "utf8"))
+      const names = starter.architecture.layers.map((layer: { name: string }) => layer.name)
+      // One `apps/web/**` layer cannot see components/ui -> components -> routes.
+      expect(names).toEqual(
+        expect.arrayContaining(["domain", "rest", "web-primitive", "web-local"]),
+      )
+      // The order and the forbid sets are judgement: nothing pretends to enforce them.
+      expect(starter.rules["joggle/layer-direction"]).toBe("off")
+      expect(starter.rules["joggle/layer-purity"]).toBe("off")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
   it("enables cutlist only when the repo has its config and the command", async () => {
     const root = project(
       {
@@ -545,6 +612,21 @@ describe("inspectRepo", () => {
 })
 
 describe("a repository that ignores the harness", () => {
+  it("says when a ledger can be committed while its rulebook cannot", async () => {
+    const root = project({ json: [["package.json", {}]] }, [])
+    try {
+      execFileSync("git", ["init", "-q"], { cwd: root })
+      writeFileSync(join(root, ".gitignore"), "jig.config.json\n")
+      const result = await initialiseIn(root)
+      const notes = result.profile.notes.join("\n")
+      // The record travels and the rules that produced it do not: a ratchet nobody can read.
+      expect(notes).toContain("can be committed while")
+      expect(notes).toContain("jig.config.json")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
   it("reports the written paths git refuses to track", async () => {
     const root = project({ json: [["package.json", {}]] }, [])
     try {

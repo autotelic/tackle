@@ -39,6 +39,10 @@ const configFlag = Flag.String("config").pipe(
   Flag.optional,
 )
 
+/** Said by `jig engines` when there is no config: these rows are jig's defaults, not the repo's. */
+const DEFAULTS_NOTICE =
+  "no jig.config.json here: these are jig's defaults, not this repository's config -- run `jig init`"
+
 /** Resolve the root and its config the same way in every command. */
 const context = ({
   cwd,
@@ -50,10 +54,13 @@ const context = ({
   Effect.gen(function* () {
     const path = yield* Path.Path
     const root = path.resolve(Option.getOrUndefined(cwd) ?? process.cwd())
-    const settings = yield* loadConfig(
-      path.resolve(root, Option.getOrUndefined(config) ?? "jig.config.json"),
-    )
-    return { path, root, settings }
+    const file = path.resolve(root, Option.getOrUndefined(config) ?? "jig.config.json")
+    const fs = yield* FileSystem.FileSystem
+    // A default config is not this repo's config: a command that prints engines must be able
+    // to say so instead of presenting jig's defaults as something someone configured.
+    const configured = yield* Effect.orElseSucceed(fs.exists(file), () => false)
+    const settings = yield* loadConfig(file)
+    return { path, root, settings, configured }
   })
 
 const checkCommand = Command.make(
@@ -151,10 +158,14 @@ const baselineCommand = Command.make("baseline", { cwd: cwdFlag, config: configF
 
 const enginesCommand = Command.make("engines", { cwd: cwdFlag, config: configFlag }, (options) =>
   Effect.gen(function* () {
-    const { root, settings } = yield* context({ cwd: options.cwd, config: options.config })
+    const { root, settings, configured } = yield* context({
+      cwd: options.cwd,
+      config: options.config,
+    })
     const onPath = (name: string): boolean =>
       (process.env.PATH ?? "").split(":").some((dir) => dir !== "" && existsSync(join(dir, name)))
-    const lines = ["engine              kind            command        source"]
+    const header = "engine              kind            command        source"
+    const lines = configured ? [header] : [header, DEFAULTS_NOTICE]
     for (const engine of settings.engines) {
       const command = engine.command ?? engine.id
       const enabled = engine.enabled === false ? " (disabled)" : ""

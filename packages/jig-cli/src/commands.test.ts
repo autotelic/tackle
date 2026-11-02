@@ -83,6 +83,18 @@ describe("explainRule", () => {
     }
   })
 
+  it("resolves an engine-namespaced rule id that is not a configured engine", () => {
+    // The other shape a plugin can take: the namespace is part of the engine, so the printed
+    // id is `plumb-effect/require-…` and `plumb-effect` was never a configured engine.
+    const diagnostics = [diag({ engine: "plumb-effect", ruleId: "require-schema-type-derivation" })]
+    expect(
+      explainRule(reportOf(diagnostics), "plumb-effect/require-schema-type-derivation", [
+        "plumb",
+        "joggle",
+      ]),
+    ).toContain("1 finding(s)")
+  })
+
   it("matches a bare rule id across engines", () => {
     const diagnostics = [diag({ engine: "joggle", ruleId: "no-x", identity: "i" })]
     expect(explainRule(reportOf(diagnostics), "no-x", ["joggle"])).toContain("1 finding(s)")

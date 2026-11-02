@@ -418,12 +418,117 @@ const aliasesOf = (
     return Object.fromEntries(found)
   })
 
+/** What one UI root's stylesheets and its tailwind config say about the design system. */
+const tokensFor = (
+  fs: FileSystem.FileSystem,
+  path: Path.Path,
+  root: string,
+  roots: ReadonlyArray<string>,
+): Effect.Effect<{
+  readonly config: CutlistConfig["tokens"]
+  readonly note?: string | undefined
+}> =>
+  Effect.gen(function* () {
+    const CONFIGS = ["tailwind.config.ts", "tailwind.config.js", "tailwind.config.mjs"]
+    const STYLES = [
+      "app/tailwind.css",
+      "app.css",
+      "styles/app.css",
+      "app/styles/app.css",
+      "tailwind.css",
+    ]
+    const scores: Array<{
+      readonly entry: string
+      readonly from: string
+      readonly vars: string | undefined
+      readonly properties: number
+      readonly colours: number
+      readonly rootLayer: boolean
+      readonly score: number
+    }> = []
+    for (const entry of roots) {
+      const parent = entry.split("/").slice(0, -1).join("/")
+      const config = yield* firstOf(
+        fs,
+        path,
+        root,
+        [entry, parent].flatMap((directory) =>
+          CONFIGS.map((name) => (directory === "" ? name : directory + "/" + name)),
+        ),
+      )
+      const css = yield* firstOf(
+        fs,
+        path,
+        root,
+        STYLES.map((name) => entry + "/" + name),
+      )
+      const configText =
+        config === undefined
+          ? ""
+          : yield* Effect.orElseSucceed(fs.readFileString(path.join(root, config)), () => "")
+      const cssText =
+        css === undefined
+          ? ""
+          : yield* Effect.orElseSucceed(fs.readFileString(path.join(root, css)), () => "")
+      const properties = [...cssText.matchAll(/--[\w-]+\s*:/gu)].length
+      const colours = [...configText.matchAll(/#[0-9a-f]{3,8}\b/giu)].length
+      const rootLayer = /:root\s*\{/u.test(cssText)
+      scores.push({
+        entry,
+        from: config ?? css ?? "tailwind.config.ts",
+        vars: css === undefined || config === undefined ? undefined : css,
+        properties,
+        colours,
+        rootLayer,
+        // A token layer is the thing being chosen: `:root` plus the properties it declares,
+        // weighted against the palette its tailwind config carries. The first root alphabetically
+        // used to win, which on a two-app repo picked the app with 7 tokens over the one with 31.
+        score: (rootLayer ? 3 : 0) + properties + colours,
+      })
+    }
+    const best = [...scores].sort(
+      (left, right) => right.score - left.score || left.entry.localeCompare(right.entry),
+    )[0]
+    if (best === undefined) return { config: { from: "tailwind.config.ts" } }
+    const config: CutlistConfig["tokens"] =
+      best.vars === undefined ? { from: best.from } : { from: best.from, vars: best.vars }
+    const other = scores.find((candidate) => candidate.entry !== best.entry)
+    if (other === undefined || other.score === 0) return { config }
+    // A two-app repo has two palettes and the draft describes one: say which one it left out,
+    // with the numbers, so a person can disagree with the choice instead of finding it at 7 tokens.
+    return {
+      config,
+      note:
+        "tokens come from " +
+        best.entry +
+        " (" +
+        String(best.colours) +
+        " colour key(s), " +
+        String(best.properties) +
+        " custom propert" +
+        (best.properties === 1 ? "y" : "ies") +
+        (best.rootLayer ? ", a :root layer" : "") +
+        "); " +
+        other.entry +
+        " keeps its own palette (" +
+        String(other.colours) +
+        " colour key(s), " +
+        String(other.properties) +
+        " custom propert" +
+        (other.properties === 1 ? "y" : "ies") +
+        (other.rootLayer ? "" : ", behind [data-theme]") +
+        ") that this vocabulary does not describe",
+    }
+  })
+
 /** A cutlist config inferred from common UI layouts, for a person to review. */
 const cutlistDraftOf = (
   fs: FileSystem.FileSystem,
   path: Path.Path,
   root: string,
-): Effect.Effect<CutlistConfig | undefined> =>
+): Effect.Effect<
+  { readonly config: CutlistConfig; readonly note?: string | undefined } | undefined
+> =>
   Effect.gen(function* () {
     const roots = yield* uiRootsOf(fs, path, root)
     if (roots.length === 0) return undefined
@@ -435,35 +540,20 @@ const cutlistDraftOf = (
     const primitive = (yield* anyUnder("/components/ui")) ? ["components/ui"] : []
     const shared = (yield* anyUnder("/components")) ? ["components"] : []
     const local = (yield* anyUnder("/routes")) ? ["routes"] : []
-    const under = (directory: string, file: string): string =>
-      directory === "" ? file : directory + "/" + file
-    const tokenCandidates: Array<string> = []
-    for (const entry of roots) {
-      const parent = entry.split("/").slice(0, -1).join("/")
-      for (const directory of [entry, parent]) {
-        for (const name of ["tailwind.config.ts", "tailwind.config.js", "tailwind.config.mjs"]) {
-          tokenCandidates.push(under(directory, name))
-        }
-      }
-      for (const name of ["tailwind.css", "app.css", "styles/app.css", "styles/tailwind.css"]) {
-        tokenCandidates.push(under(entry, name))
-      }
-    }
-    tokenCandidates.push("tailwind.config.ts", "tailwind.config.js")
-    const tokens = yield* firstOf(fs, path, root, tokenCandidates)
-    const from = tokens ?? "tailwind.config.ts"
     const alias = yield* aliasesOf(fs, path, root, roots)
+    const tokens = yield* tokensFor(fs, path, root, roots)
     const draft: CutlistConfig = {
       $schema: "https://autotelic.dev/tackle/protocol/cutlist.config.json",
       roots,
       tiers: { primitive, shared, local },
-      tokens: from.endsWith(".css") ? { from, vars: from } : { from },
+      tokens: tokens.config,
       ownership: { routeOwner: "first-segment", transitive: false },
       // Spell the paths out: a reviewer should see what `build` will write, and
       // `jig init` uses the same map for `.gitattributes`.
       output: cutlistDefaultOutput,
     }
-    return Object.keys(alias).length === 0 ? draft : { ...draft, alias }
+    const config = Object.keys(alias).length === 0 ? draft : { ...draft, alias }
+    return tokens.note === undefined ? { config } : { config, note: tokens.note }
   })
 
 /** The workspace directories a pnpm/npm workspace declares that actually hold a package. */
@@ -516,12 +606,27 @@ const architectureDraftOf = (
   Effect.gen(function* () {
     const dirs = yield* workspaceDirsOf(fs, path, root, files)
     if (dirs.length < 2) return undefined
-    return {
-      layers: dirs.map((dir) => ({
+    const layers: Array<{ readonly name: string; readonly include: ReadonlyArray<string> }> =
+      dirs.map((dir) => ({
         name: dir.slice(dir.lastIndexOf("/") + 1),
         include: [dir + "/**"],
-      })),
+      }))
+    // A UI root that owns `components/ui` → `components` → `routes` is three layers, not one:
+    // a single `services/ui/**` layer cannot see the direction the majority of findings live in.
+    const uiRoots = yield* uiRootsOf(fs, path, root)
+    for (const entry of uiRoots) {
+      const name = entry.split("/").at(-1) ?? entry
+      for (const [tier, directory] of [
+        ["primitive", "components/ui"],
+        ["shared", "components"],
+        ["local", "routes"],
+      ] as const) {
+        if (yield* existsAt({ fs, path, root, relative: entry + "/" + directory })) {
+          layers.push({ name: name + "-" + tier, include: [entry + "/" + directory + "/**"] })
+        }
+      }
     }
+    return { layers }
   })
 
 /** A repo's declared output paths with `cutlist`'s defaults filled in under them. */
@@ -712,7 +817,9 @@ export const inspectRepo = (
       fs.exists(path.join(root, ".github", "workflows")),
       () => false,
     )
-    const cutlistDraft = yield* cutlistDraftOf(fs, path, root)
+    const cutlist = yield* cutlistDraftOf(fs, path, root)
+    const cutlistDraft = cutlist?.config
+    if (cutlist?.note !== undefined) notes.push(cutlist.note)
     const architectureDraft = yield* architectureDraftOf(fs, path, root, files)
     const summary = yield* repositorySummaryOf({
       fs,
@@ -1038,7 +1145,7 @@ ${roomSection(profile)}${
         " baseline`, or switch the gate to `touched-files`."
   }
 
-${profile.facts.has("ci") ? "## CI\n\nRun `" + profile.jig + " check --format github` in the pull-request workflow. The gate holds new identities only, so the first run explains the debt instead of failing on it.\n\n" : ""}## Judgement
+${profile.facts.has("ci") ? "## CI\n\nRun `" + profile.jig + " check --format github` in the pull-request workflow. The gate holds new identities only, so the first run explains the debt instead of failing on it. For machine output (`--format json`, `sarif`, `github`), use `" + profile.run + " exec jig`: `" + profile.run + " jig` prepends the package manager's own engine warning to stdout and corrupts the document.\n\n" : ""}## Judgement
 
 joggle judges candidates with the TypeSafe model. ${profile.facts.has("live-judgement") ? "A TYPESAFE_API_KEY is present in this environment, so a run can judge." : "No TYPESAFE_API_KEY is present in this environment, so unjudged candidates are counted, not printed. Set the key to judge, or keep the count in CI."}
 
@@ -1138,6 +1245,9 @@ export const onboardingFor = (profile: RepoProfile): string => {
       ? ""
       : `The same command drafts \`cutlist.config.json\`, because this tree looks like a UI. Review the vocabulary it infers, run \`${invocationOf({ profile, tool: "cutlist", args: "build" })}\`, commit the catalog, then re-run with \`--force\`. A draft is not enabled before a person has read it.`,
     `Init writes each engine's own ledger too (joggle's is born accepted, and is never rewritten), so day one is "nothing new" rather than a pile nobody has judged.`,
+    profile.architectureDraft === undefined
+      ? ""
+      : `The same run drafts \`architecture.layers\` in \`joggle.config.json\` from this workspace: includes only, in directory order, with \`layer-direction\`/\`layer-purity\` off, because neither the order nor the \`forbid\` sets can be inferred from a tree. Order the layers by what depends on what, add \`forbid\` where it is true, then turn those two rules on -- until then a clean architecture report means nothing looked.`,
     `Then \`${profile.jig} check --limit 20\`: read the census before the findings. An engine marked \`skipped\`, \`replayed\`, or "candidates not judged" did not look, and a note is never a pass.`,
     "Secrets are the environment and the host owns them: if a run needs a key this session was not started with, say so and stop. Never add a loader, and never nest a second `doppler run` from this directory -- it resolves the project from the working directory's `doppler.yaml`, so the layer you think you added is not the one that wins.",
   ]
@@ -1545,6 +1655,13 @@ export const initialise = (
         const starter = {
           unavailable: "count" as const,
           architecture: profile.architectureDraft,
+          // The draft is includes only: the order and the `forbid` sets are judgement, so the
+          // rules that would read them stay off until someone sets them. An alphabetical draft
+          // that silently reports 0 is worse than no draft at all.
+          rules:
+            profile.architectureDraft === undefined
+              ? undefined
+              : { "joggle/layer-direction": "off" as const, "joggle/layer-purity": "off" as const },
           evidence: profile.summary === "" ? undefined : { repository: profile.summary },
         }
         if (!dryRun) {
@@ -1624,20 +1741,44 @@ export const initialise = (
 
     // The write is done; whether anyone can commit it is a separate question, and one the
     // person only learns when the branch is pushed and the config is not in it.
+    // Ask about the rulebooks too: a ledger git can see while its config it cannot is worse
+    // than a local-only harness -- the record travels and the rules that produced it do not.
+    const rulebooks = [
+      "jig.config.json",
+      ...(profile.engines.some((engine) => engine.id === "joggle") ? ["joggle.config.json"] : []),
+      ...(profile.cutlistExisting === undefined ? [] : [profile.cutlistExisting.path]),
+    ]
+    const ledgers = [
+      profile.baseline,
+      ...(profile.engines.some((engine) => engine.id === "joggle") ? [JOGGLE_BASELINE] : []),
+    ]
     const ignored = yield* ignoredByGit({
       root,
-      files: [...new Set([...written, profile.baseline])],
+      files: [...new Set([...written, ...kept, profile.baseline, ...rulebooks])],
     })
-    const noted =
-      ignored.length === 0
-        ? profile
-        : {
-            ...profile,
-            notes: [
-              ...profile.notes,
-              `${ignored.length} path(s) here are gitignored (${ignored.join(", ")}): the harness is local-only, so it gates this machine and nothing else`,
-            ],
-          }
+    const ignoredSet = new Set(ignored)
+    const committable = [...written, ...kept]
+    const hiddenRulebook = rulebooks.find((file) => ignoredSet.has(file))
+    const visibleLedger = ledgers.find(
+      (file) => committable.includes(file) && !ignoredSet.has(file),
+    )
+    const split =
+      hiddenRulebook === undefined || visibleLedger === undefined
+        ? undefined
+        : "`" +
+          visibleLedger +
+          "` can be committed while `" +
+          hiddenRulebook +
+          "` cannot: the record travels, the rules that produced it do not"
+    const added = [
+      ...(ignored.length === 0
+        ? []
+        : [
+            `${ignored.length} path(s) here are gitignored (${ignored.join(", ")}): the harness is local-only, so it gates this machine and nothing else`,
+          ]),
+      ...(split === undefined ? [] : [split]),
+    ]
+    const noted = added.length === 0 ? profile : { ...profile, notes: [...profile.notes, ...added] }
     return {
       profile: noted,
       written,

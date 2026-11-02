@@ -44,6 +44,8 @@ Engines are devDependencies here, never global installs: `pnpm add -Dw <package>
 
 Init writes each engine's own ledger too (joggle's is born accepted, and is never rewritten), so day one is "nothing new" rather than a pile nobody has judged.
 
+The same run drafts `architecture.layers` in `joggle.config.json` from this workspace: includes only, in directory order, with `layer-direction`/`layer-purity` off, because neither the order nor the `forbid` sets can be inferred from a tree. Order the layers by what depends on what, add `forbid` where it is true, then turn those two rules on -- until then a clean architecture report means nothing looked.
+
 Then `pnpm jig check --limit 20`: read the census before the findings. An engine marked `skipped`, `replayed`, or "candidates not judged" did not look, and a note is never a pass.
 
 Secrets are the environment and the host owns them: if a run needs a key this session was not started with, say so and stop. Never add a loader, and never nest a second `doppler run` from this directory -- it resolves the project from the working directory's `doppler.yaml`, so the layer you think you added is not the one that wins.

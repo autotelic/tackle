@@ -59,7 +59,7 @@ with `pnpm jig baseline`, or switch the gate to `touched-files`.
 
 ## CI
 
-Run `pnpm jig check --format github` in the pull-request workflow. The gate holds new identities only, so the first run explains the debt instead of failing on it.
+Run `pnpm jig check --format github` in the pull-request workflow. The gate holds new identities only, so the first run explains the debt instead of failing on it. For machine output (`--format json`, `sarif`, `github`), use `pnpm exec jig`: `pnpm jig` prepends the package manager's own engine warning to stdout and corrupts the document.
 
 ## Judgement
 
