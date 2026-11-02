@@ -2,7 +2,7 @@ import { Clock, Console, Effect, Option, Path, Result, Runtime } from "effect"
 import { CliError, Command, Flag } from "effect/cli"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { jobOf } from "@autotelic/board"
-import { spawn, spawnSync } from "node:child_process"
+import { spawn } from "node:child_process"
 import { existsSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { join } from "node:path"
@@ -16,11 +16,11 @@ import {
   startWorker,
   stopWorker,
   attachWorker,
-  seedRoom,
   webhookCommand as webhookLine,
 } from "./commands.ts"
 import { readConfig, type RoomConfig } from "./config.ts"
 import { daemon, roomUrl } from "./daemon.ts"
+import { seedRoom } from "./seed.ts"
 import { findConfigPath, readIndex, roomsByActivity } from "./paths.ts"
 import { RoomClient } from "./client.ts"
 import { runReview } from "./review.ts"

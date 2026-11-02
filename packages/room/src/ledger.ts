@@ -430,7 +430,7 @@ export class Ledger {
    * @param now - The instant the question is asked at.
    * @returns The unacknowledged messages, split by kind and by whether the hold expired.
    */
-  inboxCounts(now: number): { pending: number; turns: number; cards: number; held: number } {
+  inboxCounts(now: number) {
     const rows = this.#sql.all<{ kind: string; held: number }>(
       "SELECT kind, CASE WHEN hold_until > ? THEN 1 ELSE 0 END AS held FROM inbox WHERE acked_at IS NULL",
       now,
