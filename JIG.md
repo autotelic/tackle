@@ -8,15 +8,15 @@ This repo is both the product and the reference implementation: the tools are bu
 
 ## Commands
 
-| Command | What it does |
-| --- | --- |
-| `pnpm jig check` | every engine, one report, fail on what is new |
-| `pnpm jig check --limit 50` | the census and the first 50 findings |
-| `pnpm jig engines` | what is configured, and whether each command resolves |
-| `pnpm jig baseline` | accept the current findings; the ledger only shrinks after that |
-| `pnpm jig explain <rule>` | everything jig knows about one rule, here, now |
-| `pnpm jig room board` | the room: jobs, chits, and presence |
-| `pnpm jig menu` | the component catalog cutlist built |
+| Command                     | What it does                                                    |
+| --------------------------- | --------------------------------------------------------------- |
+| `pnpm jig check`            | every engine, one report, fail on what is new                   |
+| `pnpm jig check --limit 50` | the census and the first 50 findings                            |
+| `pnpm jig engines`          | what is configured, and whether each command resolves           |
+| `pnpm jig baseline`         | accept the current findings; the ledger only shrinks after that |
+| `pnpm jig explain <rule>`   | everything jig knows about one rule, here, now                  |
+| `pnpm jig room board`       | the room: jobs, chits, and presence                             |
+| `pnpm jig menu`             | the component catalog cutlist built                             |
 
 ## The repo's own commands
 
@@ -33,6 +33,7 @@ This repo is both the product and the reference implementation: the tools are bu
 - baseline: `.jig-baseline.json`
 
 Notes:
+
 - room not initialised: no room.config.json; `pnpm jig room plan` prints the init it would run
 
 ## The room
