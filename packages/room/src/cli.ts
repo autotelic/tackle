@@ -1,5 +1,6 @@
 import { Clock, Console, Effect, Option, Path, Result, Runtime } from "effect"
 import { CliError, Command, Flag } from "effect/cli"
+
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { jobOf } from "@autotelic/board"
 import { spawn } from "node:child_process"
@@ -21,7 +22,13 @@ import {
 import { readConfig, type RoomConfig } from "./config.ts"
 import { daemon, roomUrl } from "./daemon.ts"
 import { seedRoom } from "./seed.ts"
-import { followRoomSession, openSessionFor, roomSessionView, submitToRoom } from "./session.ts"
+import {
+  followRoomSession,
+  noteToRoom,
+  openSessionFor,
+  roomSessionView,
+  submitToRoom,
+} from "./session.ts"
 import { findConfigPath, readIndex, roomsByActivity } from "./paths.ts"
 import { RoomClient } from "./client.ts"
 import { runReview } from "./review.ts"
@@ -233,6 +240,16 @@ const sessionCommand = Command.make(
       Flag.withDescription("Hand this text to the room's durable conversation as input."),
       Flag.optional,
     ),
+    note: Flag.String("note").pipe(
+      Flag.withDescription(
+        "Record a fact as a write (kind): the model does not see it, the transcript does.",
+      ),
+      Flag.optional,
+    ),
+    data: Flag.String("data").pipe(
+      Flag.withDescription("JSON payload for --note. Default {}."),
+      Flag.optional,
+    ),
     watch: Flag.Boolean("watch").pipe(
       Flag.withDescription("Follow the conversation and print new entries as JSON lines."),
       Flag.withDefault(false),
@@ -264,6 +281,17 @@ const sessionCommand = Command.make(
         }).pipe(Effect.orElseSucceed(() => undefined))
         yield* write(
           id === undefined ? "room session: the input was not admitted" : `admitted ${id}`,
+        )
+      }
+      const kind = Option.getOrUndefined(options.note)
+      if (kind !== undefined) {
+        const raw = Option.getOrUndefined(options.data) ?? ""
+        const id = yield* Effect.tryPromise({
+          try: () => noteToRoom({ session, kind, data: { raw } }),
+          catch: (error) => String(error),
+        }).pipe(Effect.orElseSucceed(() => undefined))
+        yield* write(
+          id === undefined ? "room session: the note was not recorded" : `recorded ${id}`,
         )
       }
       if (options.watch) {

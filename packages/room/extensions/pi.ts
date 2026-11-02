@@ -13,8 +13,10 @@
  *   /room say <text>          submit an input into the durable conversation
  *   room_board                the board's JSON, untouched
  *
- * This file is not typechecked by the package (Pi strips types itself), which is why the JSON
- * boundary uses structural types and the Pi editor import is dynamic.
+ * This file is not typechecked by the package (Pi strips types itself), and jig's plumb engine
+ * excludes `packages/room/extensions/**` (jig.config.json), so the boundary narrows with the
+ * primitives the Pi runtime has rather than Effect Schema. The Pi editor import stays dynamic so
+ * the module loads without the host package.
  */
 import { execFile, spawn } from "node:child_process"
 import { existsSync, readFileSync } from "node:fs"
@@ -98,7 +100,7 @@ const roomOf = (cwd: string): RoomConfigFile | undefined => {
           : { room: value.room }
       }
     } catch {
-      // try the next location
+      continue
     }
   }
   return undefined
@@ -155,6 +157,31 @@ const badgeOf = (
   return [` room ${config.name ?? config.room} `, ` ${state} `]
 }
 
+/** The tool name on a tool event, without asserting a shape the event did not promise. */
+const toolNameOf = (event: unknown): string =>
+  typeof event === "object" &&
+  event !== null &&
+  "toolName" in event &&
+  typeof event.toolName === "string"
+    ? event.toolName
+    : ""
+
+/** One streamed entry, or nothing when the line is not one. */
+const parsedEntry = (
+  line: string,
+): { readonly kind: string; readonly text: string } | undefined => {
+  let value: unknown
+  try {
+    value = JSON.parse(line)
+  } catch {
+    return undefined
+  }
+  if (typeof value !== "object" || value === null) return undefined
+  if (!("kind" in value) || typeof value.kind !== "string") return undefined
+  if (!("text" in value) || typeof value.text !== "string") return undefined
+  return { kind: value.kind, text: value.text }
+}
+
 export default function roomExtension(pi: ExtensionAPI): void {
   let active: string | undefined
   let badge: ReadonlyArray<string> = []
@@ -191,14 +218,8 @@ export default function roomExtension(pi: ExtensionAPI): void {
         const line = buffer.slice(0, index)
         buffer = buffer.slice(index + 1)
         index = buffer.indexOf("\n")
-        const entry = (() => {
-          try {
-            return JSON.parse(line) as { kind?: string; text?: string }
-          } catch {
-            return undefined
-          }
-        })()
-        if (entry?.text === undefined || entry.text === "") continue
+        const entry = parsedEntry(line)
+        if (entry === undefined) continue
         const speaker = entry.kind === "pi.user" ? "you" : "room"
         pi.sendMessage(
           {
@@ -264,6 +285,29 @@ export default function roomExtension(pi: ExtensionAPI): void {
     },
   })
 
+  /**
+   * Record a fact in the durable conversation without asking the model anything.
+   *
+   * This is the automatic broadcast the brief called for: a hook fires, the entry lands. An
+   * agent that had to *choose* to broadcast would sometimes not, so the surface does it and the
+   * agent never sees it as a prompt.
+   */
+  const note = async (
+    ctx: ExtensionContext,
+    kind: string,
+    data: Record<string, string>,
+  ): Promise<void> => {
+    const cwd = cwdOf(ctx)
+    if (roomOf(cwd) === undefined) return
+    await invoke(["session", "--cwd", cwd, "--note", kind, "--data", JSON.stringify(data)], cwd)
+  }
+
+  pi.on("tool_execution_end", async (event, ctx) => {
+    const name = toolNameOf(event)
+    if (name !== "edit" && name !== "write") return
+    await note(ctx, "room.edit", { tool: name })
+  })
+
   pi.on("session_start", async (_event, ctx) => {
     await refresh(ctx)
     await attach(ctx)
@@ -298,7 +342,8 @@ export default function roomExtension(pi: ExtensionAPI): void {
     timer.unref?.()
   })
 
-  pi.on("session_shutdown", async () => {
+  pi.on("session_shutdown", async (_event, ctx) => {
+    await note(ctx, "room.session", { event: "close" })
     if (timer !== undefined) clearInterval(timer)
     timer = undefined
     detach()

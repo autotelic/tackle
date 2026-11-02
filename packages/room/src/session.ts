@@ -161,6 +161,30 @@ export const submitToRoom = async (input: {
 }
 
 /**
+ * Record a fact in the conversation without asking the model anything.
+ *
+ * pi-durable distinguishes an *input* (the model answers) from a *write* (an entry the model
+ * does not see). Broadcast is the second: a tool ran, a file changed, a session opened — facts a
+ * person or an agent decided are worth recording, pushed by a hook rather than chosen by the
+ * agent, and never a prompt. The brief asked for exactly this, because an agent that must
+ * choose to broadcast will not.
+ *
+ * @param input - The session, the entry kind, and the JSON payload.
+ * @returns The submission id.
+ */
+export const noteToRoom = async (input: {
+  readonly session: RoomSession
+  readonly kind: string
+  readonly data: { readonly raw: string }
+}): Promise<string> => {
+  const submission = await input.session.root.submit(
+    { type: "write", entry: { kind: input.kind, data: input.data } },
+    BACKGROUND_CONTEXT,
+  )
+  return String(submission.id)
+}
+
+/**
  * Follow the conversation: the entries at attachment, then each commit that adds more.
  *
  * This is what makes the room multiplayer without a second registry: every surface attaches to
