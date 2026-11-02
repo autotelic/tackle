@@ -4,3 +4,16 @@
 
 # Long and generated; collapse it in diffs rather than letting it dominate the page.
 pnpm-lock.yaml linguist-generated=true
+
+# jig: generated artifacts — collapse in review; do not edit
+examples/self/tools/ui-catalog/catalog.json linguist-generated=true
+examples/self/tools/ui-catalog/plumb-ui.config.json linguist-generated=true
+examples/self/tools/ui-catalog/menu.json linguist-generated=true
+examples/self/tools/ui-catalog/MENU.md linguist-generated=true
+examples/self/tools/ui-catalog/PATTERNS.md linguist-generated=true
+examples/self/tools/ui-catalog/patterns.json linguist-generated=true
+examples/self/tools/ui-catalog/RECIPES.md linguist-generated=true
+examples/self/tools/ui-catalog/recipes.json linguist-generated=true
+examples/self/tools/ui-catalog/hooks.md linguist-generated=true
+examples/self/tools/ui-catalog/tokens.md linguist-generated=true
+# jig: end
