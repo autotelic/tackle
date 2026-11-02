@@ -877,8 +877,16 @@ machine, and a review job that runs \`${profile.jig}\`, a Pi, and one fenced pos
 
 - \`${profile.jig} room plan\` — read the repo, the token, and the rooms; print the init it would run
 - \`${profile.jig} room init\` — write \`room.config.json\` and register the room
-- \`${profile.jig} room doctor\` — prove the loop: config, identity, celld, webhook, room
+- \`${profile.jig} room doctor\` — prove the loop: config, identity, celld, pi, the forward, the room
+- \`${profile.jig} room dev\` — run the room locally with \`celld dev\`
+- \`${profile.jig} room webhook\` — print the \`gh webhook forward\` command for this room
+- \`${profile.jig} room daemon\` — claim jobs, run reviews, wake the project session
+- \`${profile.jig} room work --pr N\` — a worktree, an app, and an attachable Pi session
 - \`${profile.jig} room board\` — jobs, chits, and presence
+
+\`${profile.jig} room doctor\` names the prerequisites this machine is missing — \`celld\`,
+the \`gh webhook\` extension, a Linear token at \`~/.linearis/token\`, \`pi\` on PATH — so the
+list never goes stale here. \`hc\` (herdr-core) is only needed by \`room work\`.
 
 `
     : ""
@@ -1020,7 +1028,27 @@ export const onboardingFor = (profile: RepoProfile): string => {
     profile.facts.has("room")
       ? `${section("The room — **STOP and ask**")}
 
-This repository runs a project room. Run \`${profile.jig} room plan\`, show me the init it would run, and wait: \`${profile.jig} room init\` registers the room against Linear and writes \`room.config.json\`. After I approve, run it, then \`${profile.jig} room doctor\` to prove the loop before trusting a review job.
+This repository keeps a project room: one ledger per Linear project, a daemon on this
+machine, and a review job that runs jig, a Pi, and one fenced post.
+
+\`\`\`sh
+${profile.jig} room plan            # read it, then show me the init line and wait
+${profile.jig} room init            # only after I approve: writes room.config.json, registers the room
+${profile.jig} room doctor          # names what is missing on this machine
+${profile.jig} room dev             # the room, locally
+${profile.jig} room webhook | sh    # forward GitHub events to it
+${profile.jig} room daemon          # its own terminal: claims jobs, wakes the session
+\`\`\`
+
+Ask before installing anything doctor names. What the checks mean:
+
+- \`celld\` — the room itself: \`curl -fsSL https://celld.dev/install.sh | sh\`
+- \`gh webhook\` — the GitHub forward: \`gh extension install cli/gh-webhook\`
+- a Linear token at \`~/.linearis/token\` (\`linearis\`), when this room watches Linear
+- \`pi\` — the review and the session wake both run it, so it has to be on PATH
+
+\`hc\` (herdr-core) is only needed by \`${profile.jig} room work\`, and the wake needs the machine
+awake: a sleeping laptop is a hosting problem, not a bug.
 
 `
       : ""

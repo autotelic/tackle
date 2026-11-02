@@ -247,15 +247,18 @@ export const Check = Schema.Struct({
 export type Check = typeof Check.Type
 
 /**
- * Prove the loop: config, identity, celld, the forward, and the room.
+ * Prove the loop: config, identity, celld, `pi`, the forward, and the room.
  *
  * @param cwd - The directory the person ran the command in.
+ * @param options - An alternate PATH lookup, so a test can describe a machine it is not on.
  * @returns The checks, in the order a person reads them.
  */
 export const doctor = (
   cwd: string,
+  options: { readonly look?: (name: string) => string | undefined } = {},
 ): Effect.Effect<ReadonlyArray<Check>, never, FileSystem.FileSystem> =>
   Effect.gen(function* () {
+    const look = options.look ?? ((name: string) => Option.getOrUndefined(valueOf(onPath(name))))
     const root = Option.getOrUndefined(valueOf(topLevel(cwd))) ?? cwd
     const config = Result.getOrUndefined(yield* readConfig(findConfigPath(root)))
     const checks: Array<Check> = []
@@ -277,11 +280,20 @@ export const doctor = (
       detail:
         login === undefined ? "no login to compare" : `stage ${config.stage} vs token ${login}`,
     })
-    const celld = Option.getOrUndefined(valueOf(onPath("celld")))
+    const celld = look("celld")
     checks.push({
       name: "celld",
       ok: celld !== undefined,
       detail: celld ?? "not installed: curl -fsSL https://celld.dev/install.sh | sh",
+    })
+    // Both halves of the loop run `pi`: the review spawns it, and the wake resumes the
+    // project session with it. A missing `pi` is silent otherwise -- the room looks healthy
+    // until the first event nobody answers.
+    const pi = look("pi")
+    checks.push({
+      name: "pi",
+      ok: pi !== undefined,
+      detail: pi ?? "not on PATH: the review and the session wake both run it",
     })
     const webhook = run({ command: "gh", args: ["extension", "list"] })
     checks.push({

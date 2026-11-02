@@ -53,7 +53,27 @@ Ask me which host I use if neither file exists.
 
 ## 6. The room — **STOP and ask**
 
-This repository runs a project room. Run `pnpm jig room plan`, show me the init it would run, and wait: `pnpm jig room init` registers the room against Linear and writes `room.config.json`. After I approve, run it, then `pnpm jig room doctor` to prove the loop before trusting a review job.
+This repository keeps a project room: one ledger per Linear project, a daemon on this
+machine, and a review job that runs jig, a Pi, and one fenced post.
+
+```sh
+pnpm jig room plan            # read it, then show me the init line and wait
+pnpm jig room init            # only after I approve: writes room.config.json, registers the room
+pnpm jig room doctor          # names what is missing on this machine
+pnpm jig room dev             # the room, locally
+pnpm jig room webhook | sh    # forward GitHub events to it
+pnpm jig room daemon          # its own terminal: claims jobs, wakes the session
+```
+
+Ask before installing anything doctor names. What the checks mean:
+
+- `celld` — the room itself: `curl -fsSL https://celld.dev/install.sh | sh`
+- `gh webhook` — the GitHub forward: `gh extension install cli/gh-webhook`
+- a Linear token at `~/.linearis/token` (`linearis`), when this room watches Linear
+- `pi` — the review and the session wake both run it, so it has to be on PATH
+
+`hc` (herdr-core) is only needed by `pnpm jig room work`, and the wake needs the machine
+awake: a sleeping laptop is a hosting problem, not a bug.
 
 ## 7. Report, then stop
 

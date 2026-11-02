@@ -441,6 +441,11 @@ describe("inspectRepo", () => {
       expect(onboardingFor(profile)).toContain("room doctor")
       expect(onboardingFor(profile)).toContain("room plan")
       expect(onboardingFor(profile)).toContain("**STOP and ask**")
+      // The prompt names what the room needs on the machine, and says who checks it.
+      expect(onboardingFor(profile)).toContain("celld")
+      expect(onboardingFor(profile)).toContain("gh extension install cli/gh-webhook")
+      expect(onboardingFor(profile)).toContain("room doctor")
+      expect(cookbookFor(profile)).toContain("room daemon")
     } finally {
       rmSync(root, { recursive: true, force: true })
     }

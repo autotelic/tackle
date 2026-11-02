@@ -216,7 +216,7 @@ const doctorCommand = Command.make("doctor", { cwd: cwdFlag }, (options) =>
   }),
 ).pipe(
   Command.withDescription(
-    "Prove the loop: config, identity, celld, the GitHub forward, and the room.",
+    "Prove the loop: config, identity, celld, pi, the GitHub forward, and the room.",
   ),
   Command.withShortDescription("Check the room."),
 )

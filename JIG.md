@@ -43,8 +43,16 @@ machine, and a review job that runs `pnpm jig`, a Pi, and one fenced post.
 
 - `pnpm jig room plan` — read the repo, the token, and the rooms; print the init it would run
 - `pnpm jig room init` — write `room.config.json` and register the room
-- `pnpm jig room doctor` — prove the loop: config, identity, celld, webhook, room
+- `pnpm jig room doctor` — prove the loop: config, identity, celld, pi, the forward, the room
+- `pnpm jig room dev` — run the room locally with `celld dev`
+- `pnpm jig room webhook` — print the `gh webhook forward` command for this room
+- `pnpm jig room daemon` — claim jobs, run reviews, wake the project session
+- `pnpm jig room work --pr N` — a worktree, an app, and an attachable Pi session
 - `pnpm jig room board` — jobs, chits, and presence
+
+`pnpm jig room doctor` names the prerequisites this machine is missing — `celld`,
+the `gh webhook` extension, a Linear token at `~/.linearis/token`, `pi` on PATH — so the
+list never goes stale here. `hc` (herdr-core) is only needed by `room work`.
 
 Every finding in the repository fails a run. Accept the current debt deliberately
 with `pnpm jig baseline`, or switch the gate to `touched-files`.

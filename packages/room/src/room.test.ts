@@ -1,5 +1,9 @@
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { DatabaseSync } from "node:sqlite"
-import { Result } from "effect"
+import { NodeServices } from "@effect/platform-node"
+import { Effect, Result } from "effect"
 import * as fc from "fast-check"
 import type { Sql, SqlValue } from "./sql.ts"
 
@@ -32,6 +36,7 @@ class NodeSql implements Sql {
   }
 }
 import { describe, expect, it } from "vitest"
+import { doctor } from "./commands.ts"
 import { shouldWake } from "./daemon.ts"
 import { fromGithub, fromLinear } from "./ingest.ts"
 import { shouldReview } from "./policy.ts"
@@ -95,6 +100,46 @@ describe("webhooks", () => {
       body: { action: "update", data: { identifier: "DEV-1506", state: { name: "Done" } } },
     })
     expect(event).toMatchObject({ kind: "issue.changed", identifier: "DEV-1506", state: "Done" })
+  })
+})
+
+const CONFIG = {
+  version: 1,
+  room: "probe",
+  name: "probe",
+  stage: "local/togmund",
+  project: { kind: "linear", id: "p", name: "p" },
+  repo: { owner: "o", name: "r", root: "." },
+  ingress: { github: "forward", linear: "poll" },
+  review: { trigger: "review_requested", provider: "p", model: "m", slots: 1 },
+  createdAt: "2026-01-01T00:00:00.000Z",
+}
+
+/** Run the doctor's checks against a machine this test describes. */
+const diagnose = async (look: (name: string) => string | undefined) => {
+  const root = mkdtempSync(join(tmpdir(), "room-doctor-"))
+  const previous = process.env.ROOM_URL
+  process.env.ROOM_URL = "http://127.0.0.1:9"
+  writeFileSync(join(root, "room.config.json"), JSON.stringify(CONFIG))
+  try {
+    const checks = await Effect.runPromise(
+      doctor(root, { look }).pipe(Effect.provide(NodeServices.layer)),
+    )
+    return checks.find((check) => check.name === "pi")
+  } finally {
+    process.env.ROOM_URL = previous
+    rmSync(root, { recursive: true, force: true })
+  }
+}
+
+describe("the doctor", () => {
+  it("names a missing pi, because the review and the wake both run it", async () => {
+    const missing = await diagnose((name) => (name === "pi" ? undefined : "/usr/bin/" + name))
+    expect(missing?.ok).toBe(false)
+    expect(missing?.detail).toContain("the review and the session wake both run it")
+
+    const installed = await diagnose(() => "/usr/bin/yes")
+    expect(installed?.ok).toBe(true)
   })
 })
 
