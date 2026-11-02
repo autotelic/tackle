@@ -3,7 +3,7 @@ import { CliError, Command, Flag } from "effect/cli"
 
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { jobOf } from "@autotelic/board"
-import { spawn } from "node:child_process"
+import { spawn, spawnSync } from "node:child_process"
 import { existsSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { join } from "node:path"
@@ -17,11 +17,11 @@ import {
   startWorker,
   stopWorker,
   attachWorker,
-  webhookCommand as webhookLine,
 } from "./commands.ts"
 import { readConfig, type RoomConfig } from "./config.ts"
 import { daemon, roomUrl } from "./daemon.ts"
 import { seedRoom } from "./seed.ts"
+import { linearWebhook, webhookCommand as webhookLine, webhookRegistration } from "./webhooks.ts"
 import {
   followRoomSession,
   noteToRoom,
@@ -153,6 +153,8 @@ const initCommand = Command.make(
           "  jig room dev",
           `  ${webhookLine(result.config)}`,
           "  jig room daemon",
+          `  jig room session     the durable conversation (--say, --watch, --note)`,
+          `  jig room webhook --create     register the webhook on a deployed room`,
         ].join("\n"),
       )
     }),
@@ -597,20 +599,57 @@ const reviewCommand = Command.make(
   Command.withShortDescription("Review one PR."),
 )
 
-const webhookCommand = Command.make("webhook", { cwd: cwdFlag }, (options) =>
-  Effect.gen(function* () {
-    const root = yield* rootOf(options.cwd)
-    const config = Result.getOrUndefined(yield* readConfig(findConfigPath(root)))
-    if (config === undefined) {
-      yield* write("room webhook: no room.config.json")
-      yield* exit(1)
-      return
-    }
-    yield* write(webhookLine(config))
-  }),
+const webhookCommand = Command.make(
+  "webhook",
+  {
+    cwd: cwdFlag,
+    create: Flag.Boolean("create").pipe(
+      Flag.withDescription(
+        "Register the room's GitHub webhook instead of forwarding: needs a public ROOM_URL.",
+      ),
+      Flag.withDefault(false),
+    ),
+    apply: Flag.Boolean("apply").pipe(
+      Flag.withDescription("Run the gh api call. Without it, print the command."),
+      Flag.withDefault(false),
+    ),
+  },
+  (options) =>
+    Effect.gen(function* () {
+      const root = yield* rootOf(options.cwd)
+      const config = Result.getOrUndefined(yield* readConfig(findConfigPath(root)))
+      if (config === undefined) {
+        yield* write("room webhook: no room.config.json")
+        yield* exit(1)
+        return
+      }
+      if (!options.create) {
+        yield* write(webhookLine(config))
+        const linear = linearWebhook({ config, url: roomUrl() })
+        yield* write("\nLinear: point a webhook at " + linear + " with the linearis token")
+        return
+      }
+      const registration = webhookRegistration({ config, url: roomUrl() })
+      if (registration.kind === "local") {
+        yield* write("room webhook: " + registration.reason)
+        yield* exit(1)
+        return
+      }
+      yield* write("gh " + registration.argv.join(" "))
+      if (!options.apply) {
+        yield* write("(add --apply to run it)")
+        return
+      }
+      const outcome = yield* Effect.sync(() =>
+        spawnSync("gh", [...registration.argv], { stdio: "inherit" }),
+      )
+      yield* exit(outcome.status ?? 1)
+    }),
 ).pipe(
-  Command.withDescription("Print the `gh webhook forward` command for this room."),
-  Command.withShortDescription("Print the forward command."),
+  Command.withDescription(
+    "Forward this room's GitHub events locally, or register a real webhook (--create) on a deployed room.",
+  ),
+  Command.withShortDescription("Wire the room's webhooks."),
 )
 
 const cli = Command.make("room").pipe(

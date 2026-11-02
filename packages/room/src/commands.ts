@@ -331,20 +331,6 @@ export const renderChecks = (checks: ReadonlyArray<Check>): string =>
     .join("\n")
 
 /**
- * The `gh webhook forward` command for a room.
- *
- * @param config - The room's config.
- * @returns A shell-ready command.
- */
-export const webhookCommand = (config: RoomConfig): string =>
-  [
-    "gh webhook forward",
-    `  --repo ${config.repo.owner}/${config.repo.name}`,
-    "  --events pull_request,pull_request_review,pull_request_review_comment",
-    `  --url ${roomUrl()}/r/${encodeURIComponent(config.room)}/ingest`,
-  ].join(" \\\n")
-
-/**
  * Render the board as the lines a terminal shows.
  *
  * @param input - The room's config and its board, when the room answered.

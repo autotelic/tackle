@@ -37,6 +37,18 @@ single-writer admission, forking, and handoff are that library's job; the room m
 second registry, heartbeat, or wake spawn to do them again. The first version did, and the
 symptom was a room that accepted events and queued nothing until someone PUT a config by hand.
 
+### Three things the durability buys, and where they live
+
+| What                                                                                                                                      | Where                                                                                                                          |
+| ----------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Delivery** — an inbox turn becomes a conversation input; a running answer queues it, an idle one starts                                 | `daemon.ts` → `submitToRoom`                                                                                                   |
+| **Broadcast** — facts a hook records (an edit ran, a session closed) without asking the model                                             | `noteToRoom` (a pi-durable _write_), `room session --note`, the Pi extension's `tool_execution_end` / `session_shutdown` hooks |
+| **Multiplayer** — every surface opens the same storage: the daemon delivers, each person's Pi watches and submits, nobody owns a terminal | `room session --watch` (JSONL), `room session --say`, the editor-border badge                                                  |
+
+`room webhook` wires the events: it prints `gh webhook forward` for a local room, and with
+`--create` prints (or `--apply` runs) the `gh api` call that registers a real webhook on a
+deployed one. Linear's delivery URL is printed beside it.
+
 ## The project session
 
 The room can deliver events into the Pi session you are already using. On `session_start`
