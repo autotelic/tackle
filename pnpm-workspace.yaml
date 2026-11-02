@@ -16,6 +16,12 @@ packages:
 
 # Pin shared runtime versions ONCE. Effect is a shared runtime, so pin exactly —
 # never a caret — and bump deliberately across every package at the same time.
+# pnpm 12 refuses to install past a dependency whose build script was not approved.
+# pi-durable pulls these two transitively; neither script is needed to run a room.
+ignoredBuiltDependencies:
+  - "@google/genai"
+  - protobufjs
+
 catalog:
   effect: "4.0.5" # stable v4
   # The OpenCode plugin API, used only by jig's optional `./opencode` surface.
@@ -86,6 +92,14 @@ minimumReleaseAgeExclude:
   - "@opencode/util@2.1.2"
   - pele@1.7.0
   - "@cloudflare/workers-types@5.20261023.1"
+  - "@earendil-works/chord@1.5.0"
+  - "@earendil-works/pi-ai@1.5.0"
+  - "@earendil-works/pi-codemode@1.5.0"
+  - "@earendil-works/pi-durable@1.5.0"
+  - "@earendil-works/pi-schema@1.5.0"
+  - "@earendil-works/pi-telemetry@1.5.0"
 
 allowBuilds:
+  "@google/genai": set this to true or false
   esbuild: true
+  protobufjs: set this to true or false

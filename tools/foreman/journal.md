@@ -1011,7 +1011,15 @@ the order: build the machine, then let it run the ratchet.
 The §4 instruments I skipped in Round 1 — `hands`, `fork`, `move`, `API`, `stream` — plus the
 `pi-durable` question.
 
-### 1.1 `pi-durable` is not in this environment
+### 1.1 `pi-durable` is not in this environment — **corrected 2026-11-02**
+
+> **Correction.** `pi-durable` is `@earendil-works/pi-durable@1.5.0`: on npm, installed under
+> `~/.pi/agent/npm/node_modules`, and a dependency of `pi-fabric`, whose runner list names it
+> (`RUNNERS = ["pi-durable", "pi", …]`). The search below looked for `pi-durable` and
+> `@autotelic/pi-durable` and concluded "absent from npm", which was wrong on both counts. The
+> foreman stayed dependency-free on `node:sqlite` for a reason that did not exist, and the room
+> then hand-rolled a session registry (heartbeat, staleness, `pi -p --session` wake) that
+> `pi-durable` already provides. Read the rest of this section as history, not as fact.
 
 `Harness.open`, `NodeExecutionEnv`, `openNodeSqliteStorage`, and `harness.usage` appear **only
 in `FOREMAN.md`**. No package provides them: not in `node_modules`, not in any sibling repo, not

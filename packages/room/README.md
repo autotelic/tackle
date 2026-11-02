@@ -30,6 +30,13 @@ room/
 The room is the listener. Webhooks land on `/r/<room>/ingest`; the daemon is a client that
 claims jobs. That is why `roomd` has no HTTP server of its own.
 
+The session is a **durable conversation** ([@earendil-works/pi-durable](https://www.npmjs.com/package/@earendil-works/pi-durable)),
+not a process the room keeps alive: `src/session.ts` opens it over the room's own sqlite storage,
+submits delivered items as inputs, and reads a view (busy, queue, why the last run ended). Resume,
+single-writer admission, forking, and handoff are that library's job; the room must not grow a
+second registry, heartbeat, or wake spawn to do them again. The first version did, and the
+symptom was a room that accepted events and queued nothing until someone PUT a config by hand.
+
 ## The project session
 
 The room can deliver events into the Pi session you are already using. On `session_start`
