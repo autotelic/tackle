@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { qualityOf } from "../src/rule.ts"
 import { verdictOf } from "../src/verdict.ts"
 
 /**
@@ -48,10 +49,20 @@ describe("verdictOf", () => {
 it("a Noul's agreement becomes its margin", () => {
   // Every ask agreed: a full margin, as a unanimous Choice would have.
   expect(verdictOf({ probability: 0.8, consistency: 1 }, [])?.margin).toBe(1)
-  // Two of three: some margin.
-  expect(verdictOf({ probability: 0.8, consistency: 2 / 3 }, [])?.margin).toBeCloseTo(1 / 3, 5)
-  // An even split: no margin at all, so `qualityOf` flags it for review.
+  // Two of three: the asks disagreed, which is no margin -- three fair asks split
+  // 2-1 three times in four.
+  expect(verdictOf({ probability: 0.8, consistency: 2 / 3 }, [])?.margin).toBe(0)
+  // An even split: no margin at all.
   expect(verdictOf({ probability: 0.8, consistency: 0.5 }, [])?.margin).toBe(0)
   // Asked once: no signal, so the floor is the only gate.
   expect(verdictOf({ probability: 0.8 }, [])?.margin).toBe(1)
+})
+
+it("a 2-1 split above the floor is reviewed, not acted on", () => {
+  // Asks of 0.9, 0.8 and 0.1: the mean clears the floor, one ask said no.
+  const split = verdictOf({ probability: 0.6, consistency: 2 / 3 }, [])
+  const unanimous = verdictOf({ probability: 0.6, consistency: 1 }, [])
+  if (split === undefined || unanimous === undefined) throw new Error("no verdict")
+  expect(qualityOf({ score: split.probability, margin: split.margin }).quality).toBe("review")
+  expect(qualityOf({ score: unanimous.probability, margin: unanimous.margin }).quality).toBe("act")
 })

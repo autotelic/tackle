@@ -152,6 +152,18 @@ export const policy = {
        * the report as an info finding a reader can weigh.
        */
       reviewFloor: 0.6,
+      /**
+       * The share of a Noul's repeated asks that must agree before the agreement
+       * counts as a margin at all.
+       *
+       * Mapping agreement straight onto the margin let a 2-1 split through: it
+       * reads as 0.33, over `minMargin`, the same as a 67/33 Choice. But a Choice's
+       * distribution is the model's own spread, and a split among three asks is a
+       * sample of three -- one a coin flip produces three times in four. So below
+       * this share the asks disagreed, the margin is 0, and the answer is reviewed
+       * rather than acted on. At three repeats it means every ask agreed.
+       */
+      minAgreement: 1,
     },
     /** Token budget for one request when batching is used. Around 32,000 is the
      *  API limit, shared between state and questions. */

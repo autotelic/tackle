@@ -160,9 +160,16 @@ call to learn nothing. `memoize` does the same, because a rule that answers its
 own questions directly (`DecisionModel.decide`) never reaches the plan engine, and
 the reduction cannot live in one of the two paths. `reduceRepeats` reduces the asks to the mean and the share
 that sided with the majority, and `verdictOf` maps the agreement onto the margin
-by its distance from a coin flip -- every ask agreed is 1, an even split is 0. So
-a probability the model reaches by different routes is gated exactly as a Choice
-the model shrugged across.
+by its distance from a coin flip -- every ask agreed is 1, an even split is 0.
+
+That mapping alone let a 2-1 split through. Its margin is 0.33, over `minMargin`
+(0.25), the same as a 67/33 Choice -- but a Choice's distribution is the model's
+own spread, and a split among three asks is a sample of three, which three fair
+coin flips produce three times in four. So `gates.minAgreement` sets the share of
+asks that must agree before agreement counts as a margin; below it the margin is
+0 and `qualityOf` routes the answer to review. At three repeats that means every
+ask agreed. In the committed caches, 12 of 549 repeated Nouls split, and the 6
+whose mean cleared the floor had been acted on at full severity.
 
 The reduced answer is what is cached, so a replay carries the agreement rather
 than re-asking. That is why `decisionVersion` was bumped: a cached single-ask

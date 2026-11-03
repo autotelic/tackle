@@ -1,4 +1,5 @@
 import type { Decision } from "effect/ai"
+import { policy } from "./policy.ts"
 import type { Consistency } from "./rule.ts"
 
 /**
@@ -48,12 +49,19 @@ export const verdictOf = (
     // is its margin: one yes/no has no distribution, so without the repeats the
     // probability floor was its only gate (docs/typesafe.md, self-consistency).
     // The agreement maps onto the margin's range by its distance from a coin
-    // flip: every ask agreed is 1, an even split is 0.
+    // flip: every ask agreed is 1, an even split is 0. Below the agreement floor
+    // the asks disagreed, and a disagreement among a handful of asks is no margin.
     const agreement = answer.consistency === undefined ? undefined : clamp01(answer.consistency)
+    const margin =
+      agreement === undefined
+        ? 1
+        : agreement < policy.decision.gates.minAgreement
+          ? 0
+          : 2 * agreement - 1
     return {
       label: undefined,
       probability: clamp01(answer.probability),
-      margin: agreement === undefined ? 1 : 2 * agreement - 1,
+      margin,
       confidence: undefined,
     }
   }
