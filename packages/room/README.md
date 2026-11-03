@@ -119,7 +119,13 @@ jig room daemon                                   # the hands
 ```
 
 `celld dev` keeps its state in `packages/room/.celld/dev` and needs `esbuild` on PATH;
-both are local-only. A room is addressed by `linear:<projectId>@<stage>`; `local/<login>`
+both are local-only. That store **is the ledger** — jobs, receipts, claims — and celld derives it
+from the directory holding `wrangler.json`, with no flag or environment variable to relocate it.
+So a `git clean -fdx` in this checkout deletes the room's board, and a second `celld dev` against
+the same directory fights it for the store's lease (`node-lease CAS ambiguous`). A probe or a
+second instance belongs in its own directory: copy `wrangler.json`, symlink `worker/` and
+`node_modules/`, and run `celld dev <that dir>`. `jig room dev` prints the store path it uses, and
+`--clean` is the only thing that deletes one. A room is addressed by `linear:<projectId>@<stage>`; `local/<login>`
 is the stage until the room is shared. That address is the room's identity in every URL
 (`/r/<address>/ingest`, `/r/<address>/board`) and it is what the CLI sends. The friendly `name` is a
 label, never an address: a request to `/r/<name>/…` creates a second, unseeded ledger that accepts

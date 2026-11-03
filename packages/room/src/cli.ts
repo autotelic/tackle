@@ -467,6 +467,12 @@ const devCommand = Command.make(
       Flag.withDescription("The celld Worker listener port (default 9876)."),
       Flag.withDefault("9876"),
     ),
+    clean: Flag.Boolean("clean").pipe(
+      Flag.withDescription(
+        "Delete the local store before starting. That store is the room's ledger: every job, receipt, and claim goes with it.",
+      ),
+      Flag.withDefault(false),
+    ),
   },
   (options) =>
     Effect.gen(function* () {
@@ -474,7 +480,20 @@ const devCommand = Command.make(
       const esbuild = join(root, "node_modules", ".bin", "esbuild")
       const env = existsSync(esbuild) ? { ...process.env, CELLD_ESBUILD: esbuild } : process.env
       const url = `http://127.0.0.1:${options.port}`
-      const child = spawn("celld", ["dev", "--port", options.port], {
+      // celld derives its store from the directory holding the wrangler config, and no flag or
+      // env var relocates it. That store is the room's ledger, it lives inside the checkout, and
+      // a git clean or a second instance against this directory destroys it -- so name it, and
+      // delete it only when asked.
+      const store = join(root, ".celld", "dev")
+      yield* write(
+        "store: " +
+          store +
+          " (the room's ledger; git clean here removes it, and a probe belongs in its own copy of wrangler.json)",
+      )
+      if (options.clean) yield* write("store: --clean was given, so the ledger is about to go")
+      const celldArgs = ["dev", "--port", options.port]
+      if (options.clean) celldArgs.push("--clean")
+      const child = spawn("celld", celldArgs, {
         cwd: root,
         stdio: "inherit",
         env,
