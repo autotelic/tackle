@@ -120,7 +120,11 @@ jig room daemon                                   # the hands
 
 `celld dev` keeps its state in `packages/room/.celld/dev` and needs `esbuild` on PATH;
 both are local-only. A room is addressed by `linear:<projectId>@<stage>`; `local/<login>`
-is the stage until the room is shared.
+is the stage until the room is shared. That address is the room's identity in every URL
+(`/r/<address>/ingest`, `/r/<address>/board`) and it is what the CLI sends. The friendly `name` is a
+label, never an address: a request to `/r/<name>/…` creates a second, unseeded ledger that accepts
+events and queues nothing — a broken-looking room, not a typo the room can report. `room dev` prints
+the address, and `room board --json` carries it as `address`.
 
 The review is triggered by either address:
 

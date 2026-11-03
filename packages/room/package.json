@@ -21,6 +21,10 @@
     "./cli": {
       "development": "./src/cli.ts",
       "default": "./dist/cli.js"
+    },
+    "./opencode": {
+      "development": "./src/opencode.ts",
+      "default": "./dist/opencode.js"
     }
   },
   "publishConfig": {
@@ -43,6 +47,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "catalog:",
     "@effect/tsgo": "catalog:",
+    "@opencode/plugin": "catalog:",
     "@types/node": "catalog:",
     "@typescript/native": "catalog:",
     "esbuild": "catalog:",
@@ -51,10 +56,10 @@
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "typebox": "*"
+    "@opencode/plugin": "*"
   },
   "peerDependenciesMeta": {
-    "typebox": {
+    "@opencode/plugin": {
       "optional": true
     }
   },

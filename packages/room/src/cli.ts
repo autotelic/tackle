@@ -206,6 +206,7 @@ const boardCommand = Command.make(
             board === undefined
               ? {
                   room: config.room,
+                  address: config.room,
                   name: config.name,
                   stage: config.stage,
                   reachable: false,
@@ -213,7 +214,7 @@ const boardCommand = Command.make(
                   // identical in the JSON a tool or a badge reads.
                   reason: `roomd not reachable at ${roomUrl()}`,
                 }
-              : { ...board, name: config.name, stage: config.stage },
+              : { ...board, address: config.room, name: config.name, stage: config.stage },
             null,
             2,
           ),
@@ -455,6 +456,15 @@ const devCommand = Command.make(
       // ledger. An unseeded room accepts every webhook, queues nothing, and reads clean.
       const config = Result.getOrUndefined(yield* readConfig(findConfigPath(process.cwd())))
       if (config !== undefined) {
+        // The address is not the name. A request to /r/<name>/… creates a second, unseeded
+        // ledger that accepts events and queues nothing, which reads as a bug in the room.
+        yield* write(
+          "room address: " +
+            config.room +
+            '   (the name "' +
+            config.name +
+            '" is a label, not an address)',
+        )
         const up = yield* Effect.tryPromise({
           try: async () => {
             const client = new RoomClient(url, config.room)
