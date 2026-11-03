@@ -2,22 +2,22 @@
 "@autotelic/jig-cli": minor
 ---
 
-`jig init --skills` installs the three agent skills a room-based workflow needs.
+`jig init` installs four small agent skills beside the config and the docs.
 
-Setup was the same three manual steps in every repository — install intercom, name the sessions,
-remember which command resumes a room — and every one of them was a place to get it wrong. A skill
-is instructions a host loads on demand, so the setup belongs with the harness instead:
+Setting up a room-and-reviewer workflow was three manual steps in every repository — install
+intercom, name the sessions, remember the resume command — and every step was a place to get it
+wrong. A skill is instructions a host loads on demand, so it ships with the harness:
 
-- `room` — open, join, and resume a room; `jig room resume` is the diff, and its `cursor lost`
-  line is what a cold start honestly says.
-- `intercom-setup` — install pi-intercom once, alias each session, and **check `intercom list`
-  before the first real message**: a send to a peer that is not listed looks successful and
-  arrives nowhere, which is the failure this skill exists to prevent.
-- `feedback-loop` — a builder and a tester on one real repository: what the tester owes (the
-  command it ran and the output it got), and what the builder owes (which commit, which gate).
+- `room` (14 lines) — plan, daemon, session, resume; `cursor lost` and "a card written at an older
+  sha is a question, not an instruction".
+- `intercom-setup` (20) — install once, alias each session, and **list before you send**: a peer
+  that is not listed receives nothing and the send still looks successful.
+- `feedback-loop` (14) — a builder and a tester on a real repository: the tester owes the command
+  and its output, the builder owes the commit and the gate.
+- `project-run` (18) — a GitHub label plus a Linear project as the whole brief: open the room, take
+  one item, watch `gh pr checks --watch` and `jig room resume`, and report to a tackle session,
+  starting one in the tackle checkout when none is listed.
 
-The skills live in `packages/jig-cli/skills/` and are declared as `pi.skills`, so
-`pi install @autotelic/jig-cli` provides them globally; `--skills` copies them into
-`.agents/skills/`, the one directory pi and OpenCode both discover. Content is compared, not
-timestamps: a re-run reports `kept` and writes nothing, and `--print` reports `would write`
-without touching the tree.
+They are files under `.agents/skills/` — the one directory pi and OpenCode both discover — so init
+writes them like any other harness file, and the onboarding prompt says so in the step that already
+runs `jig init`. A skill someone edits is kept and reported; `--force` replaces it.

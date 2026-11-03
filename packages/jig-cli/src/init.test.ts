@@ -1194,3 +1194,35 @@ describe("init --skills", () => {
     }
   })
 })
+
+it("installs the skills by default: they are harness files, not a second step", async () => {
+  const root = project({}, ["pnpm"])
+  try {
+    const result = await initialiseIn(root)
+    expect(result.skills.length).toBeGreaterThan(0)
+    expect(result.skills.map((skill) => skill.name)).toContain("project-run")
+    expect(existsSync(join(root, ".agents", "skills", "project-run", "SKILL.md"))).toBe(true)
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+it("keeps a skill someone edited, and --force replaces it", async () => {
+  const root = project({}, ["pnpm"])
+  try {
+    await initialiseIn(root)
+    const target = join(root, ".agents", "skills", "room", "SKILL.md")
+    const mine = "---\nname: room\ndescription: mine.\n---\n\nour own room notes\n"
+    writeFileSync(target, mine)
+    const kept = await initialiseIn(root)
+    expect(kept.skills.find((skill) => skill.name === "room")?.state).toBe("kept")
+    expect(readFileSync(target, "utf8")).toBe(mine)
+    expect(kept.profile.notes.some((note) => note.includes("differs from the shipped skill"))).toBe(
+      true,
+    )
+    await initialiseIn(root, { force: true })
+    expect(readFileSync(target, "utf8")).not.toBe(mine)
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})

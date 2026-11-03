@@ -1268,6 +1268,7 @@ export const onboardingFor = (profile: RepoProfile): string => {
       ? ""
       : `The same command drafts \`cutlist.config.json\`, because this tree looks like a UI. Review the vocabulary it infers, run \`${invocationOf({ profile, tool: "cutlist", args: "build" })}\`, commit the catalog, then re-run with \`--force\`. A draft is not enabled before a person has read it.`,
     `Init writes each engine's own ledger too (joggle's is born accepted, and is never rewritten), so day one is "nothing new" rather than a pile nobody has judged.`,
+    `The same run installs the agent skills into \`.agents/skills/\` — \`room\`, \`intercom-setup\`, \`feedback-loop\`, \`project-run\`. pi and OpenCode both read that directory, so there is no second install; a skill someone edits is kept, and \`--force\` replaces it.`,
     profile.architectureDraft === undefined
       ? ""
       : `The same run drafts \`architecture.layers\` in \`joggle.config.json\` from this workspace: includes only, in directory order, with \`layer-direction\`/\`layer-purity\` off, because neither the order nor the \`forbid\` sets can be inferred from a tree. Order the layers by what depends on what, add \`forbid\` where it is true, then turn those two rules on -- until then a clean architecture report means nothing looked.`,
@@ -1375,7 +1376,6 @@ Two things make it real, and both are your call, not mine to assume:
 
 - \`${profile.jig} init --unignore\` removes the exact \`.gitignore\` lines that hide the harness. It reports a path hidden by a *pattern* instead of editing the pattern, so tell me which of those you want changed.
 - \`${profile.jig} init --hooks\` writes \`.git/hooks/pre-commit\` running \`jig check --gate touched-files\`: only the change in front of you. The hook prints a line and exits 0 when this machine has no CLI, and it will not replace a hook that is already there.
-- \`${profile.jig} init --skills\` copies the bundled agent skills into \`.agents/skills\`, the one directory pi and OpenCode both discover: \`room\` for durable multi-session work, \`intercom-setup\` for session-to-session messaging, and \`feedback-loop\` for a builder and a tester on one real repository. Re-running it compares content and reports \`kept\`.
 
 Do not run either one without asking: one changes what git tracks for everyone, the other changes what every commit does.
 
@@ -1559,6 +1559,8 @@ const installSkills = (input: {
   readonly path: Path.Path
   readonly root: string
   readonly write: boolean
+  readonly force: boolean
+  readonly notes: Array<string>
 }): Effect.Effect<InitResult["skills"], PlatformError.PlatformError> =>
   Effect.gen(function* () {
     const source = skillsSource(input.path)
@@ -1581,6 +1583,14 @@ const installSkills = (input: {
       )
       if (existing === body) {
         installed.push({ name, state: "kept" })
+        continue
+      }
+      // A skill someone edited is theirs: only --force replaces it, and a skip says so.
+      if (existing !== "" && !input.force) {
+        installed.push({ name, state: "kept" })
+        input.notes.push(
+          ".agents/skills/" + name + "/SKILL.md differs from the shipped skill; it was left alone",
+        )
         continue
       }
       if (input.write) {
@@ -2036,8 +2046,12 @@ export const initialise = (
     }
     // Opt-in, like the hook: a repository that already keeps skills of its own keeps them, because
     // only a file this wrote is a file this would replace.
+    // Part of init, not a second install step: the skills are files in the repo, and both hosts
+    // read .agents/skills, so onboarding them is onboarding the harness.
     const skills: InitResult["skills"] =
-      options.skills === true ? yield* installSkills({ fs, path, root, write: !dryRun }) : []
+      options.skills === false
+        ? []
+        : yield* installSkills({ fs, path, root, write: !dryRun, force, notes: hookNotes })
     for (const skill of skills) {
       if (skill.state === "written") written.push(".agents/skills/" + skill.name + "/SKILL.md")
     }
