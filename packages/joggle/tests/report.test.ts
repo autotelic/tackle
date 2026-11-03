@@ -117,6 +117,19 @@ it("a run with no model key says so, rather than only counting it unavailable", 
   expect(out).toContain("no model key reached the provider")
 })
 
+it("the committed cache is counted apart from wire replays, and a zero is printed", () => {
+  const replayed = render(
+    {
+      ...report([diagnostic()]),
+      decision: { requests: 1, replayed: 0, cached: 976, calls: 0, unavailable: 1, inputTokens: 0, outputTokens: 0 },
+    },
+    "text",
+  )
+  expect(replayed).toContain("0 replayed, 1 unavailable, 976 committed answers reused")
+  // A stored run from before the count decodes without it, and reads as none.
+  expect(render(report([diagnostic()]), "text")).toContain("0 committed answers reused")
+})
+
 it("exit codes follow errors and the warning budget", () => {
   expect(exitCodeFor(report([]), -1)).toBe(0)
   expect(exitCodeFor(report([diagnostic()]), -1)).toBe(0)

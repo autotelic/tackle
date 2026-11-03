@@ -3,7 +3,7 @@ import * as AiError from "effect/ai/AiError"
 import type { DecisionModel } from "effect/ai"
 import { layer as atomsLayer, type Atoms } from "./atoms.ts"
 import { isUnreachable, DecisionStats } from "./decision.ts"
-import { answerPlans, chunkPlans, type Plan, type PlanAnswers, type PlanChunk } from "./plans.ts"
+import { answerPlans, chunkPlans, replayPlans, type Plan, type PlanAnswers, type PlanChunk } from "./plans.ts"
 import { emptyTypeIndex, loadTypeFacts, type TypeFactRequest, type TypeIndex } from "./typetrace.ts"
 import { indexOfNodeTypes, typesAtPositions, type NodeTypeIndex, type NodeTypeQuery } from "./typefacts.ts"
 import { shortHash } from "./state.ts"
@@ -652,12 +652,24 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
                 }),
         ),
       )
+    // A model that was never reached still leaves the committed verdicts. The
+    // chunk is replayed from them, and the failure is kept so the rest of the
+    // chunk reads as unjudged -- counted, skipped or reported, as configured --
+    // rather than as answered.
+    interface ChunkResult {
+      readonly values: ReadonlyArray<unknown> | undefined
+      readonly failure: AiError.AiError | undefined
+    }
     const chunkResults = yield* Effect.forEach(
       allowed,
       (chunk) =>
         answerChunk(chunk.plans).pipe(
-          Effect.map((values) => Result.succeed(values)),
-          Effect.catch((error) => Effect.succeed(Result.fail(error))),
+          Effect.map((values): ChunkResult => ({ values, failure: undefined })),
+          Effect.catch((error) =>
+            isUnreachable(error)
+              ? Effect.map(replayPlans(chunk.plans), (values): ChunkResult => ({ values, failure: error }))
+              : Effect.succeed<ChunkResult>({ values: undefined, failure: error }),
+          ),
         ),
       { concurrency: policy.decision.requestConcurrency },
     )
@@ -669,11 +681,11 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
       if (allowedSet.has(chunk)) {
         const result = chunkResults[resultIndex]
         resultIndex += 1
-        if (result !== undefined && Result.isSuccess(result)) {
-          values.push(...result.success)
+        if (result?.failure !== undefined) failure ??= result.failure
+        if (result?.values !== undefined) {
+          values.push(...result.values)
           continue
         }
-        if (result !== undefined && Result.isFailure(result)) failure ??= result.failure
       }
       for (let i = 0; i < chunk.plans.length; i += 1) values.push(undefined)
     }
