@@ -10,7 +10,7 @@ import {
   type Presence,
   type Receipt,
 } from "@autotelic/board"
-import { Option, Result } from "effect"
+import { Option, Result, Schema } from "effect"
 import type { Sql, SqlRow, SqlValue } from "./sql.ts"
 
 /*
@@ -23,6 +23,25 @@ import type { Sql, SqlRow, SqlValue } from "./sql.ts"
  * claim still carries its epoch, which is the fence that stops a paused process from
  * writing after someone else has taken over.
  */
+
+/** What a `ci.completed` receipt carries forward, so the board can derive a verdict line. */
+const CiPayload = Schema.Struct({
+  pr: Schema.NullOr(Schema.Finite),
+  sha: Schema.String,
+  workflow: Schema.String,
+  conclusion: Schema.String,
+  url: Schema.String,
+})
+
+/** One CI verdict on the board. */
+export interface Check {
+  readonly pr: number
+  readonly workflow: string
+  readonly conclusion: string
+  readonly sha: string
+  readonly url: string
+  readonly at: number
+}
 
 const SCHEMA: ReadonlyArray<string> = [
   "CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)",
@@ -621,6 +640,40 @@ export class Ledger {
     })
   }
 
+  /**
+   * The newest CI verdict per pull request and workflow, derived from receipts.
+   *
+   * A workflow run is a fact, not work: it becomes a receipt and nothing else. The board derives
+   * the line on read, so the ledger stays the only state and a rerun simply wins as the newest.
+   * `skipped` is carried as its own conclusion — a paths-filtered run that skipped every job is
+   * not a pass.
+   *
+   * @returns One check per (pr, workflow), newest last.
+   */
+  checks(): ReadonlyArray<Check> {
+    const seen = new Map<string, Check>()
+    for (const receipt of this.receipts(500)) {
+      if (receipt.kind !== "ci.completed" || receipt.payload === undefined) continue
+      const decoded: typeof CiPayload.Type | undefined = Result.getOrUndefined(
+        Schema.decodeUnknownResult(CiPayload)(receipt.payload),
+      )
+      if (decoded === undefined || decoded.pr === null) continue
+      const key = String(decoded.pr) + ":" + decoded.workflow
+      if (seen.has(key)) continue
+      seen.set(key, {
+        pr: decoded.pr,
+        workflow: decoded.workflow,
+        conclusion: decoded.conclusion,
+        sha: decoded.sha,
+        url: decoded.url,
+        at: receipt.at,
+      })
+    }
+    return [...seen.values()].sort(
+      (left, right) => left.pr - right.pr || left.workflow.localeCompare(right.workflow),
+    )
+  }
+
   receipts(limit = 50): ReadonlyArray<Receipt> {
     return this.#sql
       .all<SqlRow>("SELECT * FROM receipts ORDER BY at DESC LIMIT ?", limit)
@@ -636,6 +689,16 @@ export class Ledger {
           Option.match(nullable(row.job), { onNone: () => ({}), onSome: (job) => ({ job }) }),
           Option.match(nullable(row.actor), { onNone: () => ({}), onSome: (actor) => ({ actor }) }),
           Option.match(nullable(row.host), { onNone: () => ({}), onSome: (host) => ({ host }) }),
+          Option.match(nullable(row.payload), {
+            onNone: () => ({}),
+            // SAFETY: the column is written by `append` from a JSON value it stringified; a
+            // hand-edited row degrades to no payload rather than to a parse error.
+            onSome: (payload) => ({
+              payload: Result.getOrUndefined(
+                Schema.decodeResult(Schema.fromJsonString(Schema.Json))(payload),
+              ),
+            }),
+          }),
         )
         return Option.match(Option.fromUndefinedOr(Result.getOrUndefined(decodeReceipt(base))), {
           onNone: () => [],

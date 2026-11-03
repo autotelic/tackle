@@ -26,6 +26,17 @@ const PullRequest = Schema.Struct({
   labels: Schema.optionalKey(Schema.Array(Schema.Struct({ name: Schema.String }))),
 })
 
+/** A GitHub Actions run, as the \`workflow_run\` webhook describes it. */
+const WorkflowRun = Schema.Struct({
+  id: Schema.optionalKey(Schema.Finite),
+  run_attempt: Schema.optionalKey(Schema.Finite),
+  name: Schema.optionalKey(Schema.String),
+  conclusion: Schema.optionalKey(Schema.String),
+  head_sha: Schema.optionalKey(Schema.String),
+  html_url: Schema.optionalKey(Schema.String),
+  pull_requests: Schema.optionalKey(Schema.Array(Schema.Struct({ number: Schema.Finite }))),
+})
+
 const Review = Schema.Struct({
   user: Schema.optionalKey(User),
   state: Schema.optionalKey(Schema.String),
@@ -47,6 +58,7 @@ const GithubPayload = Schema.Struct({
   requested_reviewer: Schema.optionalKey(User),
   label: Schema.optionalKey(Schema.Struct({ name: Schema.String })),
   review: Schema.optionalKey(Review),
+  workflow_run: Schema.optionalKey(WorkflowRun),
   comment: Schema.optionalKey(Comment),
 })
 
@@ -116,6 +128,18 @@ export type RoomEvent =
       readonly commentId: number
       readonly body: string
       readonly labels: ReadonlyArray<string>
+    }
+  | {
+      readonly kind: "ci.completed"
+      readonly id: string
+      readonly at: number
+      readonly pr: number | null
+      readonly sha: string
+      readonly workflow: string
+      readonly conclusion: string
+      readonly url: string
+      readonly runId: number
+      readonly attempt: number
     }
   | {
       readonly kind: "pr.closed"
@@ -224,6 +248,25 @@ export const fromGithub = ({
       labels: [...new Set((pr?.labels ?? []).map((entry) => entry.name))],
     }
   }
+  const run = payload.workflow_run
+  if (event === "workflow_run" && action === "completed" && run !== undefined) {
+    const runId = run.id ?? 0
+    const attempt = run.run_attempt ?? 1
+    return {
+      kind: "ci.completed",
+      // A rerun on the same commit is new information, so the attempt is part of the identity.
+      id: `gh:workflow_run:${String(runId)}:${String(attempt)}`,
+      at: now,
+      pr: run.pull_requests?.[0]?.number ?? null,
+      sha: run.head_sha ?? "",
+      workflow: run.name ?? "workflow",
+      conclusion: run.conclusion ?? "",
+      url: run.html_url ?? "",
+      runId,
+      attempt,
+    }
+  }
+
   if (event === "pull_request" && action === "closed") {
     return {
       kind: "pr.closed",

@@ -356,6 +356,25 @@ export const renderBoard = (input: {
   lines.push(
     `  chits   ${board.chits.map((entry) => `${entry.state} ${entry.count}`).join(" · ") || "none"}`,
   )
+  const checks = board.checks ?? []
+  if (checks.length > 0) {
+    const mark = (conclusion: string): string =>
+      conclusion === "success"
+        ? "ok"
+        : conclusion === "skipped"
+          ? "--"
+          : conclusion === "cancelled" || conclusion === "timed_out"
+            ? conclusion
+            : "failed"
+    lines.push(
+      "  ci      " +
+        checks
+          .map(
+            (check) => "#" + String(check.pr) + " " + check.workflow + " " + mark(check.conclusion),
+          )
+          .join(" · "),
+    )
+  }
   const inbox = board.inbox
   lines.push(
     `  inbox   ${

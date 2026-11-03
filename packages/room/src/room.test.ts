@@ -337,6 +337,114 @@ describe("unreadable entries", () => {
   })
 })
 
+const ciRun = (input: {
+  readonly attempt?: number
+  readonly conclusion?: string
+  readonly pr?: number | null
+}) =>
+  fromGithub({
+    event: "workflow_run",
+    delivery: "wf-1",
+    now: 10,
+    body: {
+      action: "completed",
+      workflow_run: {
+        id: 9001,
+        run_attempt: input.attempt ?? 1,
+        name: "Lint & test",
+        conclusion: input.conclusion ?? "failure",
+        head_sha: "abc123",
+        html_url: "https://example.test/run/9001",
+        pull_requests: input.pr === null ? [] : [{ number: input.pr ?? 1776 }],
+      },
+    },
+  })
+
+describe("CI runs", () => {
+  it("is a fact: an event and a receipt, never a turn or a job", () => {
+    const event = ciRun({})
+    expect(event).toMatchObject({
+      kind: "ci.completed",
+      pr: 1776,
+      workflow: "Lint & test",
+      conclusion: "failure",
+      attempt: 1,
+    })
+    // A rerun on the same commit is new information, so the attempt is in the identity.
+    expect(event.id).toBe("gh:workflow_run:9001:1")
+    expect(ciRun({ attempt: 2, conclusion: "success" }).id).toBe("gh:workflow_run:9001:2")
+    expect(inboxFor({ event, actor: "github:togmund" })).toMatchObject({ _tag: "Failure" })
+  })
+
+  it("derives the newest verdict per pull request and workflow", () => {
+    const store = ledger()
+    const receipt = (id: string, at: number, conclusion: string) =>
+      store.append({
+        id,
+        room: store.room,
+        at,
+        kind: "ci.completed",
+        payload: {
+          pr: 1776,
+          sha: "abc123",
+          workflow: "Lint & test",
+          conclusion,
+          url: "https://example.test/run/9001",
+        },
+      })
+    receipt("run-1", 1, "failure")
+    receipt("run-2", 2, "success")
+    // A run with no pull request has no board line.
+    store.append({
+      id: "orphan",
+      room: store.room,
+      at: 3,
+      kind: "ci.completed",
+      payload: { pr: null, sha: "x", workflow: "Deploy", conclusion: "failure", url: "" },
+    })
+    expect(store.checks()).toEqual([
+      {
+        pr: 1776,
+        workflow: "Lint & test",
+        conclusion: "success",
+        sha: "abc123",
+        url: "https://example.test/run/9001",
+        at: 2,
+      },
+    ])
+  })
+
+  it("keeps a skipped run its own verdict, on the board", () => {
+    const store = ledger()
+    store.append({
+      id: "run-skip",
+      room: store.room,
+      at: 1,
+      kind: "ci.completed",
+      payload: {
+        pr: 1744,
+        sha: "def456",
+        workflow: "Lint & test",
+        conclusion: "skipped",
+        url: "",
+      },
+    })
+    const board: Board = {
+      room: "probe",
+      checks: store.checks(),
+      counts: { chits: 0, jobs: 0, receipts: 1 },
+      chits: [],
+      jobs: [],
+      claims: [],
+      presence: [],
+      workers: [],
+    }
+    const text = renderBoard({ config: CONFIG, board, now: 1 })
+    // A paths-filtered run that skipped every job is not a pass.
+    expect(text).toContain("ci      #1744 Lint & test --")
+  })
+})
+
 describe("talk and telemetry", () => {
   it("keeps the surface narrating itself out of the conversation view", () => {
     // A live room held 19 room.edit entries of 29; the conversation view must still read as one.

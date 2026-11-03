@@ -116,6 +116,7 @@ export const handle = async (
         // What arrived and has not been taken: chits are claimable work, the inbox is
         // delivery, and reporting one as the other made four delivered events read as none.
         inbox: ledger.inboxCounts(now),
+        checks: ledger.checks(),
         jobs: ledger.jobs().slice(0, 20),
         claims: ledger.claims(now),
         workers: ledger.workers().filter((worker) => worker.state === "live"),
@@ -152,12 +153,24 @@ export const handle = async (
       github !== null
         ? fromGithub({ event: github, delivery, body: raw, now })
         : fromLinear({ delivery, body: raw, now })
+    // A CI verdict is a fact, not work: it becomes a receipt and nothing else, and the board
+    // derives its line on read. The payload is what that derivation needs.
+    const ci =
+      event.kind === "ci.completed"
+        ? {
+            pr: event.pr,
+            sha: event.sha,
+            workflow: event.workflow,
+            conclusion: event.conclusion,
+            url: event.url,
+          }
+        : undefined
     const fresh = ledger.append({
       id: event.id,
       room: ledger.room,
       at: now,
       kind: event.kind,
-      payload: { event: event.kind },
+      payload: ci === undefined ? { event: event.kind } : { event: event.kind, ...ci },
     })
     if (!fresh) {
       return json({ body: { event: event.kind, accepted: false, queued: false } })

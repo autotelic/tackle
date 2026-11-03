@@ -33,6 +33,19 @@ export const Board = Schema.Struct({
   room: Schema.String,
   counts: Schema.Struct({ chits: Schema.Finite, jobs: Schema.Finite, receipts: Schema.Finite }),
   chits: Schema.Array(Schema.Struct({ state: Schema.String, count: Schema.Finite })),
+  /** The newest CI verdict per pull request and workflow, derived from receipts. */
+  checks: Schema.optionalKey(
+    Schema.Array(
+      Schema.Struct({
+        pr: Schema.Finite,
+        workflow: Schema.String,
+        conclusion: Schema.String,
+        sha: Schema.String,
+        url: Schema.String,
+        at: Schema.Finite,
+      }),
+    ),
+  ),
   /** Delivered and not yet acknowledged: the counts an empty board used to hide. */
   inbox: Schema.optionalKey(
     Schema.Struct({
