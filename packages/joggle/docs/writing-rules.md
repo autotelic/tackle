@@ -186,7 +186,9 @@ rule *and* the option carries no comparative meaning. `duplicate-implementation`
 operations a verdict may propose to the ones the repository permits
 (`permitted`, in `src/rules/cluster-verdict.ts`): "a fact, so the model cannot propose a merge
 across a package boundary". Nothing was being measured by offering it: a package boundary is not a
-judgement, and an answer that crossed one would be a finding nobody could act on.
+judgement, and an answer that crossed one would be a finding nobody could act on. The prune is
+*disclosed*: the panel says which operations remain, and the questionnaire says when only some
+members are shown ("only those can be chosen").
 
 A verdict calibration reduces keeps its labels fixed instead. `intent-drift` asks
 `migrate` / `fix_tag` / `keep` even when `missing` is empty, so `fix_tag` is impossible. The
@@ -196,14 +198,17 @@ denominator: one candidate's 0.8 would no longer mean what the next one's 0.8 me
 impossible label also buys a signal a pruned question cannot produce — a model that picks
 `fix_tag` with nothing to fix is saying the panel or the question is wrong. The check comes
 afterwards and is structural rather than advisory: `findingsFor(mode)` prints only the half the
-verdict chose, so the impossible answer yields no finding at all, not a filtered one.
+verdict chose, and the reader turns an incoherent pick into a recorded `gated` drop with its
+reason ("the tag names no missing replacement"). No finding, and no silence either.
 
 Two consequences:
 
 - **"Impossible" means provable from the panel, not unlikely.** Pruning on a hunch deletes the
   measurement and records it as a decision.
-- **Whatever you prune must still be visible in the census.** An option never offered must not
-  read as an option considered and passed.
+- **Disclose the prune in the panel, and drop the answer on the record.** A question that
+  prefilters its options has to say so where the model can read it; a question that keeps them has
+  to turn the impossible answer into a `gated` drop with a reason. Both are ways of making sure
+  "not offered" and "offered and rejected" never print the same.
 
 ## The fence
 
