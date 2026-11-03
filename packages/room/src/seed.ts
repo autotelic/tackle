@@ -21,6 +21,7 @@ interface SeedBody {
   label?: string
   linearUser?: string
   batchMs?: number
+  trigger?: "review_comment" | "review_requested" | "review_submitted"
 }
 
 /**
@@ -42,6 +43,7 @@ export const seedRoom = async (input: {
   if (label !== undefined) body.label = label
   if (input.config.linearUser !== undefined) body.linearUser = input.config.linearUser
   if (input.config.batchMs !== undefined) body.batchMs = input.config.batchMs
+  body.trigger = input.config.review.trigger
   // SAFETY: configure() is the room's HTTP boundary and rejects on a transport failure; a
   // room that is down is a note here, not a reason to abort the daemon's loop.
   try {

@@ -92,7 +92,15 @@ export const JOB_KINDS = ["review", "fix", "build"] as const
 export type JobKind = (typeof JOB_KINDS)[number]
 
 /** Where a job is. */
-export const JOB_STATES = ["queued", "claimed", "running", "done", "failed", "skipped"] as const
+export const JOB_STATES = [
+  "queued",
+  "claimed",
+  "running",
+  "done",
+  "failed",
+  "skipped",
+  "void",
+] as const
 
 /** A job's state. */
 export type JobState = (typeof JOB_STATES)[number]

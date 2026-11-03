@@ -127,6 +127,7 @@ export class RoomClient {
     readonly label?: string | undefined
     readonly linearUser?: string | undefined
     readonly batchMs?: number | undefined
+    readonly trigger?: string | undefined
   }): Promise<{ ok: boolean }> {
     return this.#json("/config", {
       method: "PUT",
@@ -136,6 +137,7 @@ export class RoomClient {
           input.label === undefined ? {} : { label: input.label },
           input.linearUser === undefined ? {} : { linearUser: input.linearUser },
           input.batchMs === undefined ? {} : { batchMs: input.batchMs },
+          input.trigger === undefined ? {} : { trigger: input.trigger },
         ),
       ),
     })
@@ -195,6 +197,10 @@ export class RoomClient {
 
   start(id: string): Promise<{ ok: boolean }> {
     return this.#json("/jobs/start", { method: "POST", body: JSON.stringify({ id }) })
+  }
+
+  voidJob(id: string): Promise<{ voided: number }> {
+    return this.#json("/jobs/void", { method: "POST", body: JSON.stringify({ id }) })
   }
 
   finish(id: string, state: string, note: string | undefined): Promise<{ ok: boolean }> {

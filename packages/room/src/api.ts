@@ -3,7 +3,7 @@ import { Effect, Result, Schema } from "effect"
 import type { Ledger } from "./ledger.ts"
 import { fromGithub, fromLinear } from "./ingest.ts"
 import { inboxFor } from "./inbox.ts"
-import { reviewJob, shouldReview } from "./policy.ts"
+import { reviewJob, shouldReview, ReviewTriggerSchema } from "./policy.ts"
 
 /*
  * The room's HTTP surface.
@@ -27,6 +27,9 @@ const ConfigBody = Schema.Struct({
   label: Schema.optionalKey(Schema.String),
   batchMs: Schema.optionalKey(Schema.Finite),
   linearUser: Schema.optionalKey(Schema.String),
+  trigger: Schema.optionalKey(
+    Schema.Literals(["review_requested", "review_submitted", "review_comment"]),
+  ),
 })
 
 const PresenceBody = Schema.Struct({
@@ -135,6 +138,7 @@ export const handle = async (
     if (body.label !== undefined) ledger.set("label", body.label)
     if (body.batchMs !== undefined) ledger.set("batchMs", String(body.batchMs))
     if (body.linearUser !== undefined) ledger.set("linearUser", body.linearUser)
+    if (body.trigger !== undefined) ledger.set("trigger", body.trigger)
     return json({ body: { ok: true, actor: body.actor } })
   }
 
@@ -168,10 +172,21 @@ export const handle = async (
       const batchMs = batch === undefined ? 30_000 : Number(batch)
       ledger.enqueueInbox({ ...draft.success, at: now, holdUntil: now + batchMs })
     }
+    const decided = Result.getOrUndefined(
+      Schema.decodeUnknownResult(ReviewTriggerSchema)(Result.getOrUndefined(ledger.get("trigger"))),
+    )
     const watch = Result.getOrUndefined(ledger.get("label"))
-    const addressed = watch === undefined ? { event, actor } : { event, actor, label: watch }
+    const addressed: Parameters<typeof shouldReview>[0] = {
+      event,
+      actor,
+      label: watch,
+      trigger: decided,
+    }
     const queued =
-      (event.kind === "review.requested" || event.kind === "pr.ready") &&
+      (event.kind === "review.requested" ||
+        event.kind === "pr.ready" ||
+        event.kind === "review.submitted" ||
+        event.kind === "thread.created") &&
       shouldReview(addressed) &&
       ledger.enqueue(reviewJob({ event, room: ledger.room, now }))
     return json({ body: { event: event.kind, accepted: true, queued } })
@@ -225,6 +240,12 @@ export const handle = async (
     if (body === undefined) return json({ body: { error: "id is required" }, status: 400 })
     ledger.startJob(body.id, now)
     return json({ body: { ok: true } })
+  }
+
+  if (request.method === "POST" && path === "/jobs/void") {
+    const body = Result.getOrUndefined(Schema.decodeUnknownResult(IdBody)(await rawBody(request)))
+    if (body === undefined) return json({ body: { error: "id is required" }, status: 400 })
+    return json({ body: { voided: ledger.voidJob(body.id, now) } })
   }
 
   if (request.method === "POST" && path === "/jobs/finish") {

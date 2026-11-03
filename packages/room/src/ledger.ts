@@ -321,7 +321,36 @@ export class Ledger {
     })
   }
 
-  /** The next queued job, claimed by this host. */
+  /**
+   * Void a queued or claimed job so no daemon will run it.
+   *
+   * A probe job that survives a restart is a review nobody asked for: the store persists, so a
+   * daemon started tomorrow would claim it and post against a PR that may not exist. Deleting
+   * the row loses the record; `void` keeps it and takes it out of the queue.
+   *
+   * @param id - The job id.
+   * @param now - The instant of the decision.
+   * @returns How many rows changed (0 when the job was unknown or already finished).
+   */
+  voidJob(id: string, now: number): number {
+    return this.#sql.transaction(() => {
+      const row = this.#sql.get<SqlRow>(
+        "SELECT id FROM jobs WHERE id = ? AND state IN ('queued', 'claimed')",
+        id,
+      )
+      if (row === undefined) return 0
+      this.#sql.exec("UPDATE jobs SET state = 'void', updated_at = ? WHERE id = ?", now, id)
+      return 1
+    })
+  }
+
+  /**
+   * Claim the oldest queued job for a host.
+   *
+   * @param host - The claiming daemon.
+   * @param now - The instant of the claim.
+   * @returns The claimed job, or why there was none.
+   */
   claimJob(host: string, now: number): Result.Result<Job, string> {
     return this.#sql.transaction(() => {
       const row = this.#sql.get<SqlRow>(

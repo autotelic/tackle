@@ -1,5 +1,5 @@
 import { Clock, Console, Effect, Option, Path, Result, Runtime } from "effect"
-import { CliError, Command, Flag } from "effect/cli"
+import { Argument, CliError, Command, Flag } from "effect/cli"
 
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { jobOf } from "@autotelic/board"
@@ -254,6 +254,47 @@ const configFor = (root: string, named: string | undefined) =>
       : Result.getOrUndefined(yield* readConfig(entry.configPath))
   })
 
+const voidCommand = Command.make(
+  "void",
+  {
+    id: Argument.String("id").pipe(
+      Argument.withDescription("Job id from the board, for example pr:47:abc123."),
+    ),
+    cwd: cwdFlag,
+    room: Flag.String("room").pipe(
+      Flag.withDescription("A room name from the index (default: the room in this repository)."),
+      Flag.optional,
+    ),
+  },
+  (options) =>
+    Effect.gen(function* () {
+      const root = yield* rootOf(options.cwd)
+      const config = yield* configFor(root, Option.getOrUndefined(options.room))
+      if (config === undefined) {
+        yield* write("room void: no room here; run `jig room plan`")
+        yield* exit(1)
+        return
+      }
+      const outcome = yield* Effect.tryPromise({
+        try: () => new RoomClient(roomUrl(), config.room).voidJob(options.id),
+        catch: (error) => String(error),
+      }).pipe(Effect.orElseSucceed(() => undefined))
+      if (outcome === undefined) {
+        yield* write("room void: roomd did not answer at " + roomUrl())
+        yield* exit(1)
+        return
+      }
+      yield* write(
+        outcome.voided === 0
+          ? "room void: no queued or claimed job " + options.id
+          : "voided " + options.id + " (the row stays on the board)",
+      )
+    }),
+).pipe(
+  Command.withDescription("Void a queued or claimed job so no daemon runs it. The record stays."),
+  Command.withShortDescription("Void a job."),
+)
+
 const sessionCommand = Command.make(
   "session",
   {
@@ -487,6 +528,33 @@ const devCommand = Command.make(
             ? `room seeded: ${seeded.success}`
             : `room not seeded: ${seeded.failure} (webhooks will be accepted and go nowhere)`,
         )
+        // Two silences this line exists to break: nothing arrives (no forward, no webhook), and
+        // a job from a previous run is still claimable, so a daemon would run a stale review.
+        const reachable = up
+          ? yield* Effect.tryPromise({
+              try: () => new RoomClient(url, config.room).board(),
+              catch: () => Result.fail("room did not answer"),
+            }).pipe(Effect.orElseSucceed(() => Result.fail("room did not answer")))
+          : undefined
+        const count = (state: string): number =>
+          reachable !== undefined && Result.isSuccess(reachable)
+            ? reachable.success.jobs.filter((job) => job.state === state).length
+            : 0
+        if (count("queued") + count("claimed") > 0) {
+          yield* write(
+            `jobs: ${String(count("queued"))} queued, ${String(count("claimed"))} claimed -- a daemon will run them; void one with ${"`room void <id>`"}`,
+          )
+        }
+        yield* write(
+          config.ingress.github === "forward"
+            ? `ingress: github forward -- nothing arrives until you run ${"`room webhook | sh`"}`
+            : `ingress: github webhook -- register it once with ${"`room webhook --create`"}`,
+        )
+        if (config.ingress.linear === "poll") {
+          yield* write(
+            `ingress: linear poll -- no poller is implemented; register Linear's webhook with ${"`room webhook`"}`,
+          )
+        }
       }
       const code = yield* Effect.tryPromise({
         try: () =>
@@ -726,6 +794,7 @@ const cli = Command.make("room").pipe(
     stopCommand,
     doctorCommand,
     sessionCommand,
+    voidCommand,
     listCommand,
     devCommand,
     daemonCommand,

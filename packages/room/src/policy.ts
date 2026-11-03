@@ -1,4 +1,4 @@
-import { Predicate } from "effect"
+import { Predicate, Schema } from "effect"
 import { actorOf, jobOf, type Job, type RoomId } from "@autotelic/board"
 import type { RoomEvent } from "./ingest.ts"
 
@@ -14,10 +14,20 @@ import type { RoomEvent } from "./ingest.ts"
  * or a thread decides when the next pass happens.
  */
 
+/** Which inbound event a room accepts as a request for a review. */
+export const ReviewTriggerSchema = Schema.Literals([
+  "review_requested",
+  "review_submitted",
+  "review_comment",
+])
+export type ReviewTrigger = typeof ReviewTriggerSchema.Type
+
 /** The events that can open a review job. */
 type ReviewEvent =
   | Extract<RoomEvent, { kind: "review.requested" }>
   | Extract<RoomEvent, { kind: "pr.ready" }>
+  | Extract<RoomEvent, { kind: "review.submitted" }>
+  | Extract<RoomEvent, { kind: "thread.created" }>
 
 /**
  * Whether this event asks this room for a review.
@@ -28,8 +38,9 @@ type ReviewEvent =
 export const shouldReview: Predicate.Predicate<{
   readonly event: RoomEvent
   readonly actor: string
-  readonly label?: string
-}> = ({ event, actor, label }) => {
+  readonly label?: string | undefined
+  readonly trigger?: ReviewTrigger | undefined
+}> = ({ event, actor, label, trigger }) => {
   if (event.kind === "review.requested") {
     return !event.draft && event.reviewer !== "" && actorOf(event.reviewer) === actor
   }
@@ -42,8 +53,36 @@ export const shouldReview: Predicate.Predicate<{
       !event.draft
     )
   }
+  // A submitted review is feedback, and feedback is a request for the next pass. Only
+  // `changes_requested` qualifies: an approval does not ask for another review, and the room's
+  // own review is excluded by the author check, so a pass cannot trigger itself.
+  if (event.kind === "review.submitted") {
+    return (
+      trigger === "review_submitted" &&
+      event.state === "changes_requested" &&
+      event.reviewer !== "" &&
+      actorOf(event.reviewer) !== actor &&
+      labelsMatch({ labels: event.labels, label })
+    )
+  }
+  // An inline review comment is the narrowest form of "look at this again". It is opt-in
+  // (`review_comment`) because every thread would otherwise re-run the review.
+  if (event.kind === "thread.created") {
+    return (
+      trigger === "review_comment" &&
+      event.author !== "" &&
+      actorOf(event.author) !== actor &&
+      labelsMatch({ labels: event.labels, label })
+    )
+  }
   return false
 }
+
+/** Whether a PR carries the room's label, when a label is configured. */
+const labelsMatch = (input: {
+  readonly labels: ReadonlyArray<string>
+  readonly label?: string | undefined
+}): boolean => input.label === undefined || input.label === "" || input.labels.includes(input.label)
 
 /**
  * The job a review event creates.

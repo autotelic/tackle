@@ -102,6 +102,7 @@ export type RoomEvent =
       readonly reviewer: string
       readonly state: string
       readonly body: string
+      readonly labels: ReadonlyArray<string>
     }
   | {
       readonly kind: "thread.created"
@@ -114,6 +115,7 @@ export type RoomEvent =
       readonly line: number
       readonly commentId: number
       readonly body: string
+      readonly labels: ReadonlyArray<string>
     }
   | {
       readonly kind: "pr.closed"
@@ -204,6 +206,7 @@ export const fromGithub = ({
       reviewer: payload.review?.user?.login ?? "",
       state: payload.review?.state ?? "",
       body: payload.review?.body ?? "",
+      labels: [...new Set((pr?.labels ?? []).map((entry) => entry.name))],
     }
   }
   if (event === "pull_request_review_comment" && action === "created") {
@@ -218,6 +221,7 @@ export const fromGithub = ({
       line: payload.comment?.line ?? payload.comment?.original_line ?? 0,
       commentId: payload.comment?.id ?? 0,
       body: payload.comment?.body ?? "",
+      labels: [...new Set((pr?.labels ?? []).map((entry) => entry.name))],
     }
   }
   if (event === "pull_request" && action === "closed") {

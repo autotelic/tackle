@@ -213,6 +213,131 @@ describe("the label trigger", () => {
   })
 })
 
+describe("a submitted review as a trigger", () => {
+  const reviewed = (state: string, labels: ReadonlyArray<string> = ["multi-season"]) =>
+    fromGithub({
+      event: "pull_request_review",
+      delivery: "d-review",
+      now: 10,
+      body: {
+        action: "submitted",
+        review: { user: { login: "eadmundo" }, state, body: "drops the parent id" },
+        pull_request: {
+          number: 1711,
+          draft: false,
+          user: { login: "eadmundo" },
+          head: { sha: "abcdef123456" },
+          labels: labels.map((name) => ({ name })),
+        },
+      },
+    })
+
+  it("carries the PR's labels, so the policy can scope itself", () => {
+    expect(reviewed("changes_requested")).toMatchObject({
+      kind: "review.submitted",
+      labels: ["multi-season"],
+    })
+  })
+
+  it("queues on changes_requested when the room asks for feedback", () => {
+    expect(
+      shouldReview({
+        event: reviewed("changes_requested"),
+        actor: "github:togmund",
+        label: "multi-season",
+        trigger: "review_submitted",
+      }),
+    ).toBe(true)
+  })
+
+  it("ignores an approval: it does not ask for another pass", () => {
+    expect(
+      shouldReview({
+        event: reviewed("approved"),
+        actor: "github:togmund",
+        label: "multi-season",
+        trigger: "review_submitted",
+      }),
+    ).toBe(false)
+  })
+
+  it("ignores its own review, so a pass cannot trigger itself", () => {
+    expect(
+      shouldReview({
+        event: reviewed("changes_requested"),
+        actor: "github:eadmundo",
+        label: "multi-season",
+        trigger: "review_submitted",
+      }),
+    ).toBe(false)
+  })
+
+  it("stays quiet unless the config asks for it", () => {
+    expect(
+      shouldReview({
+        event: reviewed("changes_requested"),
+        actor: "github:togmund",
+        label: "multi-season",
+        trigger: "review_requested",
+      }),
+    ).toBe(false)
+    expect(
+      shouldReview({
+        event: reviewed("changes_requested"),
+        actor: "github:togmund",
+        label: "multi-season",
+      }),
+    ).toBe(false)
+  })
+
+  it("scopes an inline comment to the room's label", () => {
+    const comment = fromGithub({
+      event: "pull_request_review_comment",
+      delivery: "d-thread",
+      now: 10,
+      body: {
+        action: "created",
+        comment: { id: 9, user: { login: "eadmundo" }, path: "a.ts", line: 4, body: "this line" },
+        pull_request: {
+          number: 1712,
+          draft: false,
+          user: { login: "eadmundo" },
+          head: { sha: "abcdef123456" },
+          labels: [{ name: "other" }],
+        },
+      },
+    })
+    expect(
+      shouldReview({
+        event: comment,
+        actor: "github:togmund",
+        label: "multi-season",
+        trigger: "review_comment",
+      }),
+    ).toBe(false)
+  })
+})
+
+describe("voiding a job", () => {
+  it("takes a queued job out of the queue without losing the row", () => {
+    const store = ledger()
+    store.enqueue(job("pr:47:abc123"))
+    expect(store.voidJob("pr:47:abc123", 2)).toBe(1)
+    // The daemon can no longer claim it, and the record is still on the board.
+    expect(Result.getOrUndefined(store.claimJob("mac@worker", 3))).toBeUndefined()
+    expect(store.jobs()[0]?.state).toBe("void")
+  })
+
+  it("reports nothing to void for an unknown or finished job", () => {
+    const store = ledger()
+    expect(store.voidJob("pr:1:none", 1)).toBe(0)
+    store.enqueue(job("pr:1:abc"))
+    store.claimJob("mac@worker", 2)
+    store.finishJob("pr:1:abc", "done", undefined, 3)
+    expect(store.voidJob("pr:1:abc", 4)).toBe(0)
+  })
+})
+
 describe("workers", () => {
   it("records and refreshes a worker session", () => {
     const store = ledger()

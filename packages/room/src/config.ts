@@ -39,7 +39,7 @@ export const RoomConfig = Schema.Struct({
     linear: Schema.Literals(["poll", "webhook"]),
   }),
   review: Schema.Struct({
-    trigger: Schema.Literal("review_requested"),
+    trigger: Schema.Literals(["review_requested", "review_submitted", "review_comment"]),
     provider: Schema.String,
     model: Schema.String,
     slots: Schema.Finite,
