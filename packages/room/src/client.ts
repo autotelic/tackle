@@ -180,6 +180,24 @@ export class RoomClient {
     return this.#json(`/inbox?after=${after}&limit=${limit}`)
   }
 
+  /** Put one card in the inbox. The id is the identity, so a re-run appends nothing. */
+  postInbox(input: {
+    readonly id: string
+    readonly kind: "card" | "turn"
+    readonly pr?: number | undefined
+    readonly text: string
+  }): Promise<{ accepted: boolean }> {
+    return this.#json("/inbox", {
+      method: "POST",
+      body: JSON.stringify(
+        Object.assign(
+          { id: input.id, kind: input.kind, text: input.text },
+          input.pr === undefined ? {} : { pr: input.pr },
+        ),
+      ),
+    })
+  }
+
   ack(seqs: ReadonlyArray<number>): Promise<{ ok: boolean; changed: number }> {
     return this.#json("/inbox/ack", { method: "POST", body: JSON.stringify({ seqs }) })
   }

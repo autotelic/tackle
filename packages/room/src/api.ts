@@ -44,6 +44,13 @@ const IdBody = Schema.Struct({ id: Schema.String, at: Schema.optionalKey(Schema.
 
 const AckBody = Schema.Struct({ seqs: Schema.Array(Schema.Finite) })
 
+const PostInboxBody = Schema.Struct({
+  id: Schema.String,
+  kind: Schema.Literals(["turn", "card"]),
+  pr: Schema.optionalKey(Schema.Finite),
+  text: Schema.String,
+})
+
 const WorkerBody = Schema.Struct({
   name: Schema.String,
   pr: Schema.optionalKey(Schema.Finite),
@@ -227,6 +234,18 @@ export const handle = async (
     )
     const next = items.length === 0 ? after : (items.at(-1)?.seq ?? after)
     return json({ body: { items, next } })
+  }
+
+  if (request.method === "POST" && path === "/inbox") {
+    const body = Result.getOrUndefined(
+      Schema.decodeUnknownResult(PostInboxBody)(await rawBody(request)),
+    )
+    if (body === undefined)
+      return json({ body: { error: "id and text are required" }, status: 400 })
+    // No hold: a resume card is already the aggregate of a whole PR's news.
+    const entry = { id: body.id, kind: body.kind, text: body.text, at: now, holdUntil: 0 }
+    const accepted = ledger.enqueueInbox(body.pr === undefined ? entry : { ...entry, pr: body.pr })
+    return json({ body: { accepted } })
   }
 
   if (request.method === "POST" && path === "/inbox/ack") {

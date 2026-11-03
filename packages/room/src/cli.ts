@@ -1,4 +1,4 @@
-import { Clock, Console, Effect, Option, Path, Result, Runtime } from "effect"
+import { Clock, Console, Effect, FileSystem, Option, Path, Result, Runtime } from "effect"
 import { Argument, CliError, Command, Flag } from "effect/cli"
 
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
@@ -31,9 +31,11 @@ import {
   roomSessionView,
   submitToRoom,
 } from "./session.ts"
-import { findConfigPath, readIndex, roomsByActivity } from "./paths.ts"
+import { findConfigPath, readIndex, roomsByActivity, stateDir } from "./paths.ts"
+import { cursorFile, decodeCursor, observe, planResume, renderResume } from "./resume.ts"
 import { RoomClient } from "./client.ts"
 import { runReview } from "./review.ts"
+import { run } from "./shell.ts"
 
 /*
  * `room`, as an effect/cli program.
@@ -255,6 +257,100 @@ const configFor = (root: string, named: string | undefined) =>
       : Result.getOrUndefined(yield* readConfig(entry.configPath))
   })
 
+const resumeCommand = Command.make(
+  "resume",
+  {
+    cwd: cwdFlag,
+    room: Flag.String("room").pipe(
+      Flag.withDescription("A room name from the index (default: the room in this repository)."),
+      Flag.optional,
+    ),
+    pr: Flag.String("pr").pipe(
+      Flag.withDescription("Comma-separated pull requests. Default: every open one."),
+      Flag.optional,
+    ),
+    limit: Flag.Int("limit").pipe(
+      Flag.withDescription("How many open pull requests to consider when --pr is absent."),
+      Flag.withDefault(20),
+    ),
+    apply: Flag.Boolean("apply").pipe(
+      Flag.withDescription(
+        "Append the cards to the room inbox and advance the cursor. Without it nothing is written.",
+      ),
+      Flag.withDefault(false),
+    ),
+  },
+  (options) =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem
+      const root = yield* rootOf(options.cwd)
+      const config = yield* configFor(root, Option.getOrUndefined(options.room))
+      if (config === undefined) {
+        yield* write("room resume: no room here; run `jig room plan`")
+        yield* exit(1)
+        return
+      }
+      const directory = stateDir(config)
+      const file = cursorFile({ stateDir: directory })
+      const text = yield* Effect.orElseSucceed(fs.readFileString(file), () => "")
+      const cursor = text === "" ? undefined : decodeCursor(text)
+      const only = Option.getOrUndefined(options.pr)
+      const wanted =
+        only === undefined
+          ? []
+          : only
+              .split(",")
+              .map((value) => Number(value.trim()))
+              .filter((value) => Number.isFinite(value) && value > 0)
+      const observations = observe({
+        repo: config.repo.owner + "/" + config.repo.name,
+        only: wanted,
+        limit: options.limit,
+        gh: (args: ReadonlyArray<string>) => {
+          const outcome = run({ command: "gh", args })
+          return outcome.code === 0 ? outcome.stdout : undefined
+        },
+      })
+      if (observations.length === 0) {
+        yield* write("room resume: gh returned nothing (no open pull requests, or no gh)")
+        yield* exit(1)
+        return
+      }
+      const now = yield* Clock.currentTimeMillis
+      const plan = planResume({ observations, cursor, now })
+      if (options.apply && plan.cards.length > 0) {
+        const client = new RoomClient(roomUrl(), config.room)
+        for (const card of plan.cards) {
+          yield* Effect.tryPromise({
+            try: () =>
+              client.postInbox({ id: card.id, kind: "card", pr: card.pr, text: card.text }),
+            catch: (error) => String(error),
+          }).pipe(Effect.orElseSucceed(() => ({ accepted: false })))
+        }
+        yield* Effect.orElseSucceed(
+          fs.makeDirectory(directory, { recursive: true }),
+          () => undefined,
+        )
+        yield* Effect.orElseSucceed(
+          fs.writeFileString(file, JSON.stringify(plan.next, null, 2) + "\n"),
+          () => undefined,
+        )
+      }
+      yield* write(renderResume({ plan, applied: options.apply }))
+      yield* write(
+        "cursor: " +
+          file +
+          (options.apply
+            ? " (advanced)"
+            : " (not advanced: pass --apply to record what you just read)"),
+      )
+    }),
+).pipe(
+  Command.withDescription(
+    "Diff GitHub against what this machine last saw: new reviews, inline notes, edits, dismissals, and whether the head moved.",
+  ),
+  Command.withShortDescription("Resume after being away."),
+)
 const voidCommand = Command.make(
   "void",
   {
@@ -824,6 +920,7 @@ const cli = Command.make("room").pipe(
     doctorCommand,
     sessionCommand,
     voidCommand,
+    resumeCommand,
     listCommand,
     devCommand,
     daemonCommand,
