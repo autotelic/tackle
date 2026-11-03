@@ -5,7 +5,7 @@ import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context"
 import { createModels } from "@earendil-works/pi-ai/models"
 import { createRegistry, Harness, LiveDoc } from "@earendil-works/pi-durable"
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
-import type { Conversation, LiveState } from "@earendil-works/pi-durable"
+import type { Conversation, JsonObject, LiveState } from "@earendil-works/pi-durable"
 import type { ConversationView } from "@earendil-works/pi-durable"
 import type { RoomConfig } from "./config.ts"
 import { sessionPath } from "./paths.ts"
@@ -93,6 +93,8 @@ const Part = Schema.Struct({ text: Schema.optionalKey(Schema.String) })
 const PartsMessage = Schema.Struct({ content: Schema.Array(Part) })
 const decodeText = Schema.decodeUnknownResult(TextMessage)
 const decodeParts = Schema.decodeUnknownResult(PartsMessage)
+const decodeString = Schema.decodeUnknownResult(Schema.String)
+const decodeEnvelope = Schema.decodeUnknownResult(Schema.Struct({ raw: Schema.String }))
 
 /**
  * The text a transcript entry carries.
@@ -115,7 +117,15 @@ const textOf = (entry: ConversationView["entries"][number]): string => {
       if (part.text !== undefined) parts.push(part.text)
     }
   }
-  return parts.join("\n").trim()
+  const text = parts.join("\n").trim()
+  if (text !== "") return text
+  // A write carries no model messages: its payload *is* the entry. Without this the view
+  // showed kinds and nothing else, so a recorded note was invisible.
+  if (entry.data === undefined) return ""
+  const envelope = Result.getOrUndefined(decodeEnvelope(entry.data))
+  if (envelope !== undefined) return envelope.raw
+  const quoted = Result.getOrUndefined(decodeString(entry.data))
+  return quoted ?? JSON.stringify(entry.data)
 }
 
 const viewOf = (value: ConversationView): ReadonlyArray<SessionEntry> =>
@@ -175,7 +185,7 @@ export const submitToRoom = async (input: {
 export const noteToRoom = async (input: {
   readonly session: RoomSession
   readonly kind: string
-  readonly data: { readonly raw: string }
+  readonly data: JsonObject
 }): Promise<string> => {
   const submission = await input.session.root.submit(
     { type: "write", entry: { kind: input.kind, data: input.data } },

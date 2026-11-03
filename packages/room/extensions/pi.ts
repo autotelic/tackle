@@ -309,7 +309,7 @@ export default function roomExtension(pi: ExtensionAPI): void {
         Type.String({ description: "A room name from the index. Default: this repository's." }),
       ),
     }),
-    execute: async (params, ctx) => {
+    execute: async (_toolCallId, params, _signal, _onUpdate, ctx) => {
       const cwd = cwdOf(ctx)
       const name = params.room ?? active
       const recent = params.recent === undefined ? "10" : String(params.recent)
@@ -356,7 +356,7 @@ export default function roomExtension(pi: ExtensionAPI): void {
       kind: Type.String({ description: "Entry kind, for example room.decision." }),
       data: Type.Optional(Type.String({ description: "JSON payload. Default {}." })),
     }),
-    execute: async (params, ctx) => {
+    execute: async (_toolCallId, params, _signal, _onUpdate, ctx) => {
       const cwd = cwdOf(ctx)
       const args = ["session", "--cwd", cwd, "--note", params.kind]
       if (params.data !== undefined) args.push("--data", params.data)
@@ -375,7 +375,7 @@ export default function roomExtension(pi: ExtensionAPI): void {
     description:
       "Read the room setup plan for this repository without writing anything: the Linear project, the GitHub label, the ingress, and the room name it would use. Show it to the person; `room_init` applies it only after they approve.",
     parameters: Type.Object({}),
-    execute: async (_params, ctx) => {
+    execute: async (_toolCallId, _params, _signal, _onUpdate, ctx) => {
       const cwd = cwdOf(ctx)
       const text = await invoke(["plan", "--cwd", cwd, "--json"], cwd)
       return {
@@ -405,7 +405,7 @@ export default function roomExtension(pi: ExtensionAPI): void {
       ),
       force: Type.Optional(Type.Boolean({ description: "Rewrite an existing room.config.json." })),
     }),
-    execute: async (params, ctx) => {
+    execute: async (_toolCallId, params, _signal, _onUpdate, ctx) => {
       const cwd = cwdOf(ctx)
       const args = [
         "init",
@@ -435,7 +435,7 @@ export default function roomExtension(pi: ExtensionAPI): void {
     description:
       "Read the project room's board: running, queued and failed review jobs, delivery waiting, and which hosts are present. Use it when the person asks what is reviewable or who is on what.",
     parameters: Type.Object({}),
-    execute: async (_params, ctx) => {
+    execute: async (_toolCallId, _params, _signal, _onUpdate, ctx) => {
       const cwd = cwdOf(ctx)
       const text = await invoke(["board", "--cwd", cwd, "--json"], cwd)
       return {

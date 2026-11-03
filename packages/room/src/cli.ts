@@ -204,7 +204,15 @@ const boardCommand = Command.make(
         yield* write(
           JSON.stringify(
             board === undefined
-              ? { room: config.room, name: config.name, stage: config.stage, reachable: false }
+              ? {
+                  room: config.room,
+                  name: config.name,
+                  stage: config.stage,
+                  reachable: false,
+                  // Without this, "nothing queued" and "the surface cannot reach roomd" look
+                  // identical in the JSON a tool or a badge reads.
+                  reason: `roomd not reachable at ${roomUrl()}`,
+                }
               : { ...board, name: config.name, stage: config.stage },
             null,
             2,
@@ -307,9 +315,12 @@ const sessionCommand = Command.make(
       }
       const kind = Option.getOrUndefined(options.note)
       if (kind !== undefined) {
-        const raw = Option.getOrUndefined(options.data) ?? ""
+        // The payload travels verbatim: a note is a string a person or an agent wrote, and the
+        // view renders it as-is (session.ts unwraps the envelope). Re-encoding it here is how a
+        // recorded note ended up double-quoted in the transcript.
+        const data = { raw: Option.getOrUndefined(options.data) ?? "" }
         const id = yield* Effect.tryPromise({
-          try: () => noteToRoom({ session, kind, data: { raw } }),
+          try: () => noteToRoom({ session, kind, data }),
           catch: (error) => String(error),
         }).pipe(Effect.orElseSucceed(() => undefined))
         yield* write(
