@@ -9,7 +9,8 @@
   "files": [
     "dist",
     "bin",
-    "extensions"
+    "extensions",
+    "skills"
   ],
   "type": "module",
   "exports": {
@@ -63,6 +64,9 @@
   "pi": {
     "extensions": [
       "./extensions"
+    ],
+    "skills": [
+      "./skills"
     ]
   }
 }

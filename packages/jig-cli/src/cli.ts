@@ -220,6 +220,12 @@ const initCommand = Command.make(
       ),
       Flag.withDefault(false),
     ),
+    skills: Flag.Boolean("skills").pipe(
+      Flag.withDescription(
+        "Copy the bundled agent skills into .agents/skills, the one directory pi and OpenCode both discover.",
+      ),
+      Flag.withDefault(false),
+    ),
     format: Flag.Literals("format", ["text", "json"]).pipe(
       Flag.withDescription("How to render the plan. JSON is for a host that reads it."),
       Flag.withDefault("text"),
@@ -236,6 +242,7 @@ const initCommand = Command.make(
         dryRun: options.print,
         hooks: options.hooks,
         unignore: options.unignore,
+        skills: options.skills,
       })
       const prompt = options.print ? onboardingFor(result.profile) : undefined
       if (options.format === "json") {

@@ -1,6 +1,14 @@
 import fc from "fast-check"
 import { execFileSync } from "node:child_process"
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs"
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { describe, expect, it } from "vitest"
@@ -1137,6 +1145,50 @@ describe("rendering", () => {
       expect(cookbookFor(profile)).toContain("touched-files")
       expect(onboardingFor(profile)).toContain("jig check --limit 20")
       expect(configFor(profile).engines).toHaveLength(2)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+})
+
+describe("init --skills", () => {
+  it("copies the bundled skills into .agents/skills, where both hosts look", async () => {
+    const root = project({}, ["pnpm"])
+    try {
+      const result = await initialiseIn(root, { skills: true })
+      const names = result.skills.map((skill) => skill.name)
+      expect(names).toContain("room")
+      expect(names).toContain("intercom-setup")
+      expect(names).toContain("feedback-loop")
+      expect(result.skills.every((skill) => skill.state === "written")).toBe(true)
+      const body = readFileSync(join(root, ".agents", "skills", "room", "SKILL.md"), "utf8")
+      // Frontmatter is the contract both hosts read: a name and a routing description.
+      expect(body.startsWith("---\nname: room\ndescription:")).toBe(true)
+      expect(result.written).toContain(".agents/skills/room/SKILL.md")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it("reports kept when the file already matches, and writes nothing", async () => {
+    const root = project({}, ["pnpm"])
+    try {
+      await initialiseIn(root, { skills: true })
+      const before = readFileSync(join(root, ".agents", "skills", "room", "SKILL.md"), "utf8")
+      const again = await initialiseIn(root, { skills: true })
+      expect(again.skills.every((skill) => skill.state === "kept")).toBe(true)
+      expect(readFileSync(join(root, ".agents", "skills", "room", "SKILL.md"), "utf8")).toBe(before)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it("writes nothing in --print mode, and says what it would write", async () => {
+    const root = project({}, ["pnpm"])
+    try {
+      const planned = await initialiseIn(root, { skills: true, dryRun: true })
+      expect(planned.skills.every((skill) => skill.state === "would write")).toBe(true)
+      expect(existsSync(join(root, ".agents"))).toBe(false)
     } finally {
       rmSync(root, { recursive: true, force: true })
     }

@@ -100,6 +100,8 @@ jig menu dialog              # the parts, features, and recipes that answer a co
 jig init                     # inspect the repo, then write the harness it can run
 jig init --gate all          # the same, enforcing every finding from the first run
 jig init --print             # the same plan and agent prompt, writing nothing
+jig init --hooks             # .git/hooks/pre-commit, running the scoped gate
+jig init --skills            # .agents/skills: room, intercom-setup, feedback-loop
 jig onboard                  # just the setup prompt for an agent
 jig onboard --gate all       # the prompt, planning a repo-wide gate
 ```

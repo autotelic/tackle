@@ -129,6 +129,11 @@ export interface InitResult {
   readonly accepted: number
   /** What happened to the scoped pre-commit hook. */
   readonly hooks: "absent" | "foreign" | "kept" | "not-a-repo" | "would write" | "written"
+  /** The agent skills `--skills` copied into `.agents/skills`, and what happened to each. */
+  readonly skills: ReadonlyArray<{
+    readonly name: string
+    readonly state: "kept" | "would write" | "written"
+  }>
 }
 
 /** Whether a command resolves from the project or the ambient PATH. */
@@ -1370,6 +1375,7 @@ Two things make it real, and both are your call, not mine to assume:
 
 - \`${profile.jig} init --unignore\` removes the exact \`.gitignore\` lines that hide the harness. It reports a path hidden by a *pattern* instead of editing the pattern, so tell me which of those you want changed.
 - \`${profile.jig} init --hooks\` writes \`.git/hooks/pre-commit\` running \`jig check --gate touched-files\`: only the change in front of you. The hook prints a line and exits 0 when this machine has no CLI, and it will not replace a hook that is already there.
+- \`${profile.jig} init --skills\` copies the bundled agent skills into \`.agents/skills\`, the one directory pi and OpenCode both discover: \`room\` for durable multi-session work, \`intercom-setup\` for session-to-session messaging, and \`feedback-loop\` for a builder and a tester on one real repository. Re-running it compares content and reports \`kept\`.
 
 Do not run either one without asking: one changes what git tracks for everyone, the other changes what every commit does.
 
@@ -1428,6 +1434,13 @@ export const summaryFor = (result: InitResult): string => {
     `  ${action.padEnd(16)} ${result.written.length === 0 ? "nothing" : result.written.join(", ")}`,
     ...(result.kept.length === 0 ? [] : [`  ${keptAction.padEnd(16)} ${result.kept.join(", ")}`]),
     ...(result.hooks === "absent" ? [] : [`  hook             pre-commit ${result.hooks}`]),
+    ...(result.skills.length === 0
+      ? []
+      : [
+          `  ${"skills".padEnd(16)} ${result.skills
+            .map((skill) => `${skill.name} (${skill.state})`)
+            .join(", ")}`,
+        ]),
     ...(result.ignore.some((entry) => entry.status === "removed")
       ? [
           `  unignored        ${result.ignore
@@ -1524,6 +1537,65 @@ const ignoredByGit = (input: {
               : [],
         },
       )
+
+/**
+ * Where the bundled skills live. `src` and `dist` sit at the same depth in the package, so one
+ * relative hop reaches them from a source run and from the installed binary alike.
+ */
+const skillsSource = (path: Path.Path): string => path.join(import.meta.dirname, "..", "skills")
+
+/**
+ * Copy the bundled skills into the repository's portable location.
+ *
+ * `.agents/skills` is the one directory pi and OpenCode both discover, so an adopter gets the
+ * workflows without installing this package. Content is compared, not timestamps: a re-run on an
+ * untouched tree reports `kept` and writes nothing.
+ *
+ * @param input - Filesystem, path, repo root, whether to write.
+ * @returns One entry per skill, in directory order.
+ */
+const installSkills = (input: {
+  readonly fs: FileSystem.FileSystem
+  readonly path: Path.Path
+  readonly root: string
+  readonly write: boolean
+}): Effect.Effect<InitResult["skills"], PlatformError.PlatformError> =>
+  Effect.gen(function* () {
+    const source = skillsSource(input.path)
+    // `readDirectory` yields plain names here, not dirent tuples.
+    const names = yield* Effect.orElseSucceed(
+      input.fs.readDirectory(source),
+      (): Array<string> => [],
+    )
+    const installed: Array<{ name: string; state: "kept" | "would write" | "written" }> = []
+    for (const name of [...names].sort((left, right) => left.localeCompare(right))) {
+      const body = yield* Effect.orElseSucceed(
+        input.fs.readFileString(input.path.join(source, name, "SKILL.md")),
+        (): string => "",
+      )
+      if (body === "") continue
+      const target = input.path.join(input.root, ".agents", "skills", name, "SKILL.md")
+      const existing = yield* Effect.orElseSucceed(
+        input.fs.readFileString(target),
+        (): string => "",
+      )
+      if (existing === body) {
+        installed.push({ name, state: "kept" })
+        continue
+      }
+      if (input.write) {
+        yield* Effect.orElseSucceed(
+          input.fs.makeDirectory(input.path.dirname(target), { recursive: true }),
+          () => undefined,
+        )
+        yield* Effect.orElseSucceed(input.fs.writeFileString(target, body), () => undefined)
+        installed.push({ name, state: "written" })
+      } else {
+        installed.push({ name, state: "would write" })
+      }
+    }
+    return installed
+  })
 
 /** The line a generated hook carries, so a re-run recognises its own work. */
 const HOOK_MARKER = "# jig: generated pre-commit"
@@ -1648,6 +1720,7 @@ export const initialise = (
     readonly dryRun?: boolean | undefined
     readonly hooks?: boolean | undefined
     readonly unignore?: boolean | undefined
+    readonly skills?: boolean | undefined
   } = {},
 ): Effect.Effect<
   InitResult,
@@ -1961,6 +2034,13 @@ export const initialise = (
         }
       }
     }
+    // Opt-in, like the hook: a repository that already keeps skills of its own keeps them, because
+    // only a file this wrote is a file this would replace.
+    const skills: InitResult["skills"] =
+      options.skills === true ? yield* installSkills({ fs, path, root, write: !dryRun }) : []
+    for (const skill of skills) {
+      if (skill.state === "written") written.push(".agents/skills/" + skill.name + "/SKILL.md")
+    }
     const withNotes =
       hookNotes.length === 0 ? noted : { ...noted, notes: [...noted.notes, ...hookNotes] }
     return {
@@ -1983,5 +2063,6 @@ export const initialise = (
       dryRun,
       accepted,
       hooks,
+      skills,
     }
   })
