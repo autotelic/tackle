@@ -208,6 +208,18 @@ const initCommand = Command.make(
       Flag.withDescription("Print the plan and the agent prompt without writing anything."),
       Flag.withDefault(false),
     ),
+    hooks: Flag.Boolean("hooks").pipe(
+      Flag.withDescription(
+        "Write .git/hooks/pre-commit running the scoped gate. It steps aside loudly when the CLI is not on the machine, and never replaces a hook that is not jig's.",
+      ),
+      Flag.withDefault(false),
+    ),
+    unignore: Flag.Boolean("unignore").pipe(
+      Flag.withDescription(
+        "Remove the .gitignore lines that hide this harness. A pattern that hides one is reported, never edited.",
+      ),
+      Flag.withDefault(false),
+    ),
     format: Flag.Literals("format", ["text", "json"]).pipe(
       Flag.withDescription("How to render the plan. JSON is for a host that reads it."),
       Flag.withDefault("text"),
@@ -222,6 +234,8 @@ const initCommand = Command.make(
         gateMode: Option.getOrUndefined(options.gate),
         cutlist: options.cutlist,
         dryRun: options.print,
+        hooks: options.hooks,
+        unignore: options.unignore,
       })
       const prompt = options.print ? onboardingFor(result.profile) : undefined
       if (options.format === "json") {

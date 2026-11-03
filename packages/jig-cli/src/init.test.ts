@@ -2,7 +2,7 @@ import fc from "fast-check"
 import { execFileSync } from "node:child_process"
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
 import { describe, expect, it } from "vitest"
 import { Effect } from "effect"
 import { NodeServices } from "@effect/platform-node"
@@ -46,15 +46,8 @@ const project = (
 
 const inspect = (root: string) => run(inspectRepo(root).pipe(Effect.provide(NodeServices.layer)))
 
-const initialiseIn = (
-  root: string,
-  options: {
-    readonly force?: boolean
-    readonly cutlist?: boolean
-    readonly dryRun?: boolean
-    readonly gateMode?: "all" | "touched-files"
-  } = {},
-) => run(initialise(root, options).pipe(Effect.provide(NodeServices.layer)))
+const initialiseIn = (root: string, options: NonNullable<Parameters<typeof initialise>[1]> = {}) =>
+  run(initialise(root, options).pipe(Effect.provide(NodeServices.layer)))
 
 const OXLINT = {
   jsPlugins: [{ name: "plumb", specifier: "@autotelic/plumb" }],
@@ -642,12 +635,71 @@ describe("a repository that ignores the harness", () => {
         ].join("\n") + "\n",
       )
       const result = await initialiseIn(root)
-      expect(result.ignored).toEqual(
+      expect(result.ignore.map((entry) => entry.path)).toEqual(
         expect.arrayContaining(["jig.config.json", "JIG.md", "ONBOARD.md", ".jig-baseline.json"]),
       )
       expect(summaryFor(result)).toContain("local-only")
       // The paste asks the person to settle it, because jig cannot edit their .gitignore.
       expect(onboardingFor(result.profile)).toContain("gitignored")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+})
+
+describe("making the harness real", () => {
+  it("removes the exact ignore lines, and names what a pattern still hides", async () => {
+    const root = project({ json: [["package.json", {}]] }, [])
+    try {
+      execFileSync("git", ["init", "-q"], { cwd: root })
+      writeFileSync(
+        join(root, ".gitignore"),
+        ["JIG.md", "*.config.json", "tools/ui-catalog/"].join("\n") + "\n",
+      )
+      const result = await initialiseIn(root, { unignore: true })
+      // The line is gone; the glob is reported and left alone.
+      expect(
+        result.ignore.filter((entry) => entry.status === "removed").map((entry) => entry.path),
+      ).toEqual(["JIG.md"])
+      const text = readFileSync(join(root, ".gitignore"), "utf8")
+      expect(text).not.toContain("JIG.md")
+      expect(text).toContain("*.config.json")
+      expect(result.profile.notes.join("\n")).toContain("hidden by a pattern")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it("writes a scoped hook that steps aside, then keeps its own work", async () => {
+    const root = project({ json: [["package.json", {}]] }, [])
+    try {
+      execFileSync("git", ["init", "-q"], { cwd: root })
+      const first = await initialiseIn(root, { hooks: true })
+      expect(first.hooks).toBe("written")
+      const hook = readFileSync(join(root, ".git", "hooks", "pre-commit"), "utf8")
+      expect(hook).toContain("jig: generated pre-commit")
+      expect(hook).toContain("check --gate touched-files")
+      // A machine without the CLI must not fail a commit.
+      expect(hook).toContain("pre-commit check skipped")
+
+      const second = await initialiseIn(root, { hooks: true })
+      expect(second.hooks).toBe("kept")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it("never replaces a hook that is not jig's", async () => {
+    const root = project({ json: [["package.json", {}]] }, [])
+    try {
+      execFileSync("git", ["init", "-q"], { cwd: root })
+      const hook = join(root, ".git", "hooks", "pre-commit")
+      mkdirSync(dirname(hook), { recursive: true })
+      writeFileSync(hook, "#!/bin/sh\necho someone-else\n")
+      const result = await initialiseIn(root, { hooks: true })
+      expect(result.hooks).toBe("foreign")
+      expect(result.profile.notes.join("\n")).toContain("left alone")
+      expect(readFileSync(hook, "utf8")).toContain("someone-else")
     } finally {
       rmSync(root, { recursive: true, force: true })
     }

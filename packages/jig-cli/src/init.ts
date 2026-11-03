@@ -104,8 +104,14 @@ export interface InitResult {
   readonly profile: RepoProfile
   readonly written: ReadonlyArray<string>
   readonly kept: ReadonlyArray<string>
-  /** Written paths this repository's .gitignore keeps out of git, so nobody can review them. */
-  readonly ignored: ReadonlyArray<string>
+  /**
+   * What this repository's ignore rules do to the harness, one record per path: still hidden, hidden
+   * by a pattern only, or removed from \`.gitignore\` by this run.
+   */
+  readonly ignore: ReadonlyArray<{
+    readonly path: string
+    readonly status: "hidden" | "pattern" | "removed"
+  }>
   /** Engine-owned ledgers: the ratchet is born accepted, once, and never rewritten. */
   readonly engineBaselines: ReadonlyArray<{
     readonly id: string
@@ -121,6 +127,8 @@ export interface InitResult {
   readonly dryRun: boolean
   /** Findings already accepted in the baseline, when one was kept. */
   readonly accepted: number
+  /** What happened to the scoped pre-commit hook. */
+  readonly hooks: "absent" | "foreign" | "kept" | "not-a-repo" | "would write" | "written"
 }
 
 /** Whether a command resolves from the project or the ambient PATH. */
@@ -1356,7 +1364,14 @@ ${initialise}
 
 ${section("Commit it, or say it is local-only — **STOP and ask**")}
 
-\`git status\` after init: the harness is config, two docs, a ledger, and a generated block. If any of them is *ignored* here, stop and tell me, because a harness git cannot see gates this machine and nothing else — no CI, no reviewer, no second machine. Do not edit \`.gitignore\` without asking; the baseline and the gate are worth nothing to anyone who cannot check out the record.
+\`git status\` after init: the harness is config, two docs, a ledger, and a generated block. If any of them is *ignored* here, stop and tell me, because a harness git cannot see gates this machine and nothing else — no CI, no reviewer, no second machine.
+
+Two things make it real, and both are your call, not mine to assume:
+
+- \`${profile.jig} init --unignore\` removes the exact \`.gitignore\` lines that hide the harness. It reports a path hidden by a *pattern* instead of editing the pattern, so tell me which of those you want changed.
+- \`${profile.jig} init --hooks\` writes \`.git/hooks/pre-commit\` running \`jig check --gate touched-files\`: only the change in front of you. The hook prints a line and exits 0 when this machine has no CLI, and it will not replace a hook that is already there.
+
+Do not run either one without asking: one changes what git tracks for everyone, the other changes what every commit does.
 
 ${section("Wire this agent")}
 
@@ -1412,14 +1427,26 @@ export const summaryFor = (result: InitResult): string => {
       : [`  gitattributes    ${result.gitattributes} (generated block only)`]),
     `  ${action.padEnd(16)} ${result.written.length === 0 ? "nothing" : result.written.join(", ")}`,
     ...(result.kept.length === 0 ? [] : [`  ${keptAction.padEnd(16)} ${result.kept.join(", ")}`]),
+    ...(result.hooks === "absent" ? [] : [`  hook             pre-commit ${result.hooks}`]),
+    ...(result.ignore.some((entry) => entry.status === "removed")
+      ? [
+          `  unignored        ${result.ignore
+            .filter((entry) => entry.status === "removed")
+            .map((entry) => entry.path)
+            .join(", ")} (the harness can be committed)`,
+        ]
+      : []),
     ...result.engineBaselines.map(
       (baseline) =>
         `  ${"engine ledger".padEnd(16)} ${baseline.path} — ${baseline.action}${baseline.accepted === 0 ? "" : ` ${baseline.accepted} finding(s)`}`,
     ),
-    ...(result.ignored.length === 0
+    ...(result.ignore.filter((entry) => entry.status !== "removed").length === 0
       ? []
       : [
-          `  ${"gitignored".padEnd(16)} ${result.ignored.join(", ")} — local-only: no CI can run what git cannot see`,
+          `  ${"gitignored".padEnd(16)} ${result.ignore
+            .filter((entry) => entry.status !== "removed")
+            .map((entry) => entry.path)
+            .join(", ")} — local-only: no CI can run what git cannot see`,
         ]),
     ...profile.notes.map((note) => `  note             ${note}`),
     "",
@@ -1498,6 +1525,90 @@ const ignoredByGit = (input: {
         },
       )
 
+/** The line a generated hook carries, so a re-run recognises its own work. */
+const HOOK_MARKER = "# jig: generated pre-commit"
+
+/**
+ * The pre-commit hook: jig's scoped gate, and a loud step-aside when the CLI is absent.
+ *
+ * `--gate touched-files` is exactly "the change in front of you", so the hook needs no new mode.
+ * The guard matters more than the check: in a repository whose harness is gitignored, a
+ * contributor without the CLI would fail every commit, and a hook that fails for them is how a
+ * good gate becomes a hostile one.
+ *
+ * @param input - The command that runs jig here, and whether this is a plan.
+ * @returns The hook body.
+ */
+const preCommitHook = (input: { readonly jig: string }): string => {
+  const binary = input.jig.split(" ")[0] ?? input.jig
+  return [
+    "#!/bin/sh",
+    HOOK_MARKER + " -- the scoped gate. Delete this file to disable it.",
+    "#",
+    "# It runs the change in front of you, never the whole repository. With no CLI on this",
+    "# machine it says so and exits 0: a hook that fails for a contributor who has not installed",
+    "# the harness is how a local-only gate becomes a hostile one.",
+    "if ! command -v " + binary + " >/dev/null 2>&1; then",
+    '  echo "jig: no ' + input.jig + ' on this machine; pre-commit check skipped" >&2',
+    "  exit 0",
+    "fi",
+    "exec " + input.jig + " check --gate touched-files",
+    "",
+  ].join("\n")
+}
+
+/** The root-level harness files whose ignore lines \`--unignore\` may remove. */
+const unignorable = (profile: RepoProfile): ReadonlyArray<string> =>
+  [
+    "jig.config.json",
+    "joggle.config.json",
+    profile.cutlistExisting?.path ?? "cutlist.config.json",
+    profile.baseline,
+    profile.cookbook,
+    profile.onboarding,
+  ].filter((path) => !path.includes("/"))
+
+/**
+ * Remove the exact lines that hide the harness, and say what a pattern still hides.
+ *
+ * A line can be deleted safely; a glob cannot, so this never guesses at one -- it reports it and
+ * leaves the decision to a person. Editing `.gitignore` changes what git tracks for everyone, so
+ * it happens only when asked.
+ *
+ * @param input - The root, the candidate paths, and whether this is a plan.
+ * @returns The lines removed, and the ones a pattern hides.
+ */
+const unignoreHarness = (input: {
+  readonly root: string
+  readonly paths: ReadonlyArray<string>
+  readonly dryRun: boolean
+}): Effect.Effect<
+  { readonly removed: ReadonlyArray<string>; readonly patterned: ReadonlyArray<string> },
+  never,
+  FileSystem.FileSystem | Path.Path | Spawner
+> =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const path = yield* Path.Path
+    const file = path.join(input.root, ".gitignore")
+    const text = yield* Effect.orElseSucceed(fs.readFileString(file), () => "")
+    if (text === "") return { removed: [], patterned: [] }
+    const lines = text.split("\n")
+    const removed: Array<string> = []
+    const kept = lines.filter((line) => {
+      const trimmed = line.trim()
+      if (!input.paths.includes(trimmed)) return true
+      removed.push(trimmed)
+      return false
+    })
+    if (removed.length > 0 && !input.dryRun) {
+      yield* Effect.orElseSucceed(fs.writeFileString(file, kept.join("\n")), () => undefined)
+    }
+    // Everything else that still ignores a candidate came from a pattern, not a line.
+    const leftover = yield* ignoredByGit({ root: input.root, files: input.paths })
+    return { removed, patterned: leftover.filter((path) => !removed.includes(path)) }
+  })
+
 /** Write one generated file unless it already exists, and record which happened. */
 const writeIfAbsent = (input: {
   readonly fs: FileSystem.FileSystem
@@ -1535,6 +1646,8 @@ export const initialise = (
     readonly gateMode?: "all" | "touched-files" | undefined
     readonly cutlist?: boolean | undefined
     readonly dryRun?: boolean | undefined
+    readonly hooks?: boolean | undefined
+    readonly unignore?: boolean | undefined
   } = {},
 ): Effect.Effect<
   InitResult,
@@ -1781,25 +1894,94 @@ export const initialise = (
           "` can be committed while `" +
           hiddenRulebook +
           "` cannot: the record travels, the rules that produced it do not"
+    const unignored =
+      options.unignore === true
+        ? yield* unignoreHarness({
+            root,
+            paths: unignorable(profile),
+            dryRun,
+          })
+        : { removed: [], patterned: [] }
+    const unignoreNote =
+      unignored.removed.length === 0
+        ? []
+        : [
+            `${dryRun ? "would remove" : "removed"} ${String(unignored.removed.length)} ignore line(s) (${unignored.removed.join(", ")}): the harness can be committed now`,
+          ]
+    const patternNote =
+      unignored.patterned.length === 0
+        ? []
+        : [
+            `${unignored.patterned.join(", ")} ${unignored.patterned.length === 1 ? "is" : "are"} hidden by a pattern rather than a line; nothing here removes a glob -- un-ignore ${unignored.patterned.length === 1 ? "it" : "them"} by hand if that is what you want`,
+          ]
     const added = [
       ...(ignored.length === 0
         ? []
         : [
             `${ignored.length} path(s) here are gitignored (${ignored.join(", ")}): the harness is local-only, so it gates this machine and nothing else`,
           ]),
+      ...unignoreNote,
+      ...patternNote,
       ...(split === undefined ? [] : [split]),
     ]
     const noted = added.length === 0 ? profile : { ...profile, notes: [...profile.notes, ...added] }
+    // The scoped hook is opt-in: a hook enabled before a baseline is committed fails the first
+    // push for everyone, and a hook that fires where the harness is gitignored is worse.
+    let hooks: InitResult["hooks"] = "absent"
+    // A note list computed in inspectRepo is a readonly array; the hook outcome is decided here.
+    const hookNotes: Array<string> = []
+    if (options.hooks === true) {
+      const hooksDir = path.join(root, ".git", "hooks")
+      const inside = yield* Effect.orElseSucceed(fs.exists(path.join(root, ".git")), () => false)
+      if (!inside) {
+        hooks = "not-a-repo"
+        hookNotes.push(
+          "--hooks was given but this is not a git repository; nothing was written to .git/hooks",
+        )
+      } else {
+        const target = path.join(hooksDir, "pre-commit")
+        const body = preCommitHook({ jig: profile.jig })
+        const existing = yield* Effect.orElseSucceed(fs.readFileString(target), () => undefined)
+        if (existing !== undefined && !existing.includes(HOOK_MARKER)) {
+          hooks = "foreign"
+          hookNotes.push(".git/hooks/pre-commit already exists and is not jig's; it was left alone")
+        } else if (existing === body) {
+          hooks = "kept"
+        } else if (dryRun) {
+          hooks = "would write"
+        } else {
+          yield* Effect.orElseSucceed(
+            fs.makeDirectory(hooksDir, { recursive: true }),
+            () => undefined,
+          )
+          yield* Effect.orElseSucceed(fs.writeFileString(target, body), () => undefined)
+          yield* Effect.orElseSucceed(fs.chmod(target, 0o755), () => undefined)
+          hooks = "written"
+          written.push(".git/hooks/pre-commit")
+        }
+      }
+    }
+    const withNotes =
+      hookNotes.length === 0 ? noted : { ...noted, notes: [...noted.notes, ...hookNotes] }
     return {
-      profile: noted,
+      profile: withNotes,
       written,
       kept,
-      ignored,
+      ignore: [
+        ...unignored.removed.map((path) => ({ path, status: "removed" as const })),
+        ...unignored.patterned.map((path) => ({ path, status: "pattern" as const })),
+        ...ignored
+          .filter(
+            (path) => !unignored.removed.includes(path) && !unignored.patterned.includes(path),
+          )
+          .map((path) => ({ path, status: "hidden" as const })),
+      ],
       engineBaselines,
       joggleConfig,
       cutlistConfig,
       gitattributes,
       dryRun,
       accepted,
+      hooks,
     }
   })
