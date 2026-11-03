@@ -369,9 +369,25 @@ export const renderBoard = (input: {
     lines.push(
       "  ci      " +
         checks
-          .map(
-            (check) => "#" + String(check.pr) + " " + check.workflow + " " + mark(check.conclusion),
-          )
+          .map((check) => {
+            const head =
+              "#" + String(check.pr) + " " + check.workflow + " " + mark(check.conclusion)
+            // Only a rerun earns the qualifier: a permanent "attempt 1" is clutter people stop
+            // reading, and a rerun that hides what it replaced is the failure this guards.
+            const attempt = check.attempt ?? 1
+            const previous = check.previous ?? null
+            if (attempt <= 1 || previous === null) return head
+            return (
+              head +
+              " (rerun " +
+              String(attempt) +
+              "; attempt " +
+              String(previous.attempt) +
+              " " +
+              mark(previous.conclusion) +
+              ")"
+            )
+          })
           .join(" · "),
     )
   }

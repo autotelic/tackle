@@ -410,8 +410,52 @@ describe("CI runs", () => {
         sha: "abc123",
         url: "https://example.test/run/9001",
         at: 2,
+        runId: 0,
+        attempt: 1,
+        // The receipt fixture carries no runId, so there is no earlier attempt to name.
+        previous: null,
       },
     ])
+  })
+
+  it("names the attempt a rerun replaced, and leaves a first attempt unqualified", () => {
+    const store = ledger()
+    const receipt = (id: string, at: number, attempt: number, conclusion: string) =>
+      store.append({
+        id,
+        room: store.room,
+        at,
+        kind: "ci.completed",
+        payload: {
+          pr: 1776,
+          sha: "abc123",
+          workflow: "Lint & test",
+          conclusion,
+          url: "",
+          runId: 9200,
+          attempt,
+        },
+      })
+    receipt("run-9200-1", 1, 1, "failure")
+    receipt("run-9200-2", 2, 2, "success")
+    const board = (checks: NonNullable<Board["checks"]>): Board => ({
+      room: "probe",
+      checks,
+      counts: { chits: 0, jobs: 0, receipts: 2 },
+      chits: [],
+      jobs: [],
+      claims: [],
+      presence: [],
+      workers: [],
+    })
+    const text = renderBoard({ config: CONFIG, board: board(store.checks()), now: 3 })
+    // A rerun must not launder the attempt it replaced.
+    expect(text).toContain("ci      #1776 Lint & test ok (rerun 2; attempt 1 failed)")
+
+    const first = store.checks().map((check) => ({ ...check, attempt: 1, previous: null }))
+    expect(renderBoard({ config: CONFIG, board: board(first), now: 3 })).toContain(
+      "ci      #1776 Lint & test ok",
+    )
   })
 
   it("keeps a skipped run its own verdict, on the board", () => {

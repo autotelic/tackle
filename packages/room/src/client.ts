@@ -43,6 +43,11 @@ export const Board = Schema.Struct({
         sha: Schema.String,
         url: Schema.String,
         at: Schema.Finite,
+        runId: Schema.optionalKey(Schema.Finite),
+        attempt: Schema.optionalKey(Schema.Finite),
+        previous: Schema.optionalKey(
+          Schema.NullOr(Schema.Struct({ conclusion: Schema.String, attempt: Schema.Finite })),
+        ),
       }),
     ),
   ),

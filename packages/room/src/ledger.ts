@@ -31,6 +31,10 @@ const CiPayload = Schema.Struct({
   workflow: Schema.String,
   conclusion: Schema.String,
   url: Schema.String,
+  // Absent on receipts written before the projection carried them; defaulted rather than
+  // rejected, so an old room still renders.
+  runId: Schema.optionalKey(Schema.Finite),
+  attempt: Schema.optionalKey(Schema.Finite),
 })
 
 /** One CI verdict on the board. */
@@ -41,6 +45,11 @@ export interface Check {
   readonly sha: string
   readonly url: string
   readonly at: number
+  /** The run this verdict came from, and which attempt of it. */
+  readonly runId: number
+  readonly attempt: number
+  /** The newest earlier attempt of the same run, when there was one and it differed. */
+  readonly previous: { readonly conclusion: string; readonly attempt: number } | null
 }
 
 const SCHEMA: ReadonlyArray<string> = [
@@ -651,22 +660,40 @@ export class Ledger {
    * @returns One check per (pr, workflow), newest last.
    */
   checks(): ReadonlyArray<Check> {
-    const seen = new Map<string, Check>()
+    const decoded: Array<{ readonly at: number; readonly run: typeof CiPayload.Type }> = []
     for (const receipt of this.receipts(500)) {
       if (receipt.kind !== "ci.completed" || receipt.payload === undefined) continue
-      const decoded: typeof CiPayload.Type | undefined = Result.getOrUndefined(
+      const run: typeof CiPayload.Type | undefined = Result.getOrUndefined(
         Schema.decodeUnknownResult(CiPayload)(receipt.payload),
       )
-      if (decoded === undefined || decoded.pr === null) continue
-      const key = String(decoded.pr) + ":" + decoded.workflow
+      if (run === undefined || run.pr === null) continue
+      decoded.push({ at: receipt.at, run })
+    }
+    const seen = new Map<string, Check>()
+    for (const { at, run } of decoded) {
+      const key = String(run.pr) + ":" + run.workflow
       if (seen.has(key)) continue
+      const runId = run.runId ?? 0
+      const attempt = run.attempt ?? 1
+      // A rerun must not launder the attempt it replaced: name the newest earlier attempt of
+      // the same run when its verdict differs.
+      const earlier = decoded
+        .filter((candidate) => (candidate.run.runId ?? 0) === runId)
+        .filter((candidate) => (candidate.run.attempt ?? 1) < attempt)
+        .sort((left, right) => (right.run.attempt ?? 1) - (left.run.attempt ?? 1))[0]
       seen.set(key, {
-        pr: decoded.pr,
-        workflow: decoded.workflow,
-        conclusion: decoded.conclusion,
-        sha: decoded.sha,
-        url: decoded.url,
-        at: receipt.at,
+        pr: run.pr ?? 0,
+        workflow: run.workflow,
+        conclusion: run.conclusion,
+        sha: run.sha,
+        url: run.url,
+        at,
+        runId,
+        attempt,
+        previous:
+          earlier === undefined || earlier.run.conclusion === run.conclusion
+            ? null
+            : { conclusion: earlier.run.conclusion, attempt: earlier.run.attempt ?? 1 },
       })
     }
     return [...seen.values()].sort(

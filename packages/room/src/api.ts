@@ -163,6 +163,8 @@ export const handle = async (
             workflow: event.workflow,
             conclusion: event.conclusion,
             url: event.url,
+            runId: event.runId,
+            attempt: event.attempt,
           }
         : undefined
     const fresh = ledger.append({
@@ -173,7 +175,17 @@ export const handle = async (
       payload: ci === undefined ? { event: event.kind } : { event: event.kind, ...ci },
     })
     if (!fresh) {
-      return json({ body: { event: event.kind, accepted: false, queued: false } })
+      // Name the collision. A duplicate refusal without the id it collided with reads like a
+      // dedupe bug to whoever is probing the room, and they will go read \`ledger.append\`.
+      return json({
+        body: {
+          event: event.kind,
+          accepted: false,
+          queued: false,
+          reason: "duplicate",
+          id: event.id,
+        },
+      })
     }
     const actor = Result.getOrUndefined(ledger.get("actor")) ?? actorOf("")
     const linearUser = Result.getOrUndefined(ledger.get("linearUser"))
