@@ -41,7 +41,7 @@ import type { RoomConfig } from "./config.ts"
 import { doctor, renderBoard } from "./commands.ts"
 import { fromGithub, fromLinear } from "./ingest.ts"
 import { shouldReview } from "./policy.ts"
-import { isTelemetry } from "./session.ts"
+import { isTelemetry, sessionEntryOf } from "./session.ts"
 import { inboxFor } from "./inbox.ts"
 import { Ledger } from "./ledger.ts"
 import type { Job } from "@autotelic/board"
@@ -316,6 +316,24 @@ describe("a submitted review as a trigger", () => {
         trigger: "review_comment",
       }),
     ).toBe(false)
+  })
+})
+
+describe("unreadable entries", () => {
+  it("names an entry with no kind instead of rendering undefined", () => {
+    // The live room's entry 9: kind "undefined", no payload, written before the argument fix.
+    expect(sessionEntryOf({ id: "9", kind: "undefined" })).toEqual({
+      id: "9",
+      kind: "unreadable",
+      text: "(no kind or payload; written by an older surface)",
+    })
+    expect(
+      sessionEntryOf({ id: "21", kind: "room.decision", data: { raw: '{"probe":"x"}' } }),
+    ).toEqual({
+      id: "21",
+      kind: "room.decision",
+      text: '{"probe":"x"}',
+    })
   })
 })
 

@@ -103,9 +103,10 @@ const decodeEnvelope = Schema.decodeUnknownResult(Schema.Struct({ raw: Schema.St
  * and an entry may carry none. A shape this does not recognize contributes nothing, so a
  * library change degrades to an empty line instead of a wrong one.
  */
-const textOf = (entry: ConversationView["entries"][number]): string => {
+const textOf = (entry: { readonly model?: unknown; readonly data?: unknown }): string => {
   const parts: Array<string> = []
-  for (const message of entry.model ?? []) {
+  const messages: ReadonlyArray<unknown> = Array.isArray(entry.model) ? entry.model : []
+  for (const message of messages) {
     const text = Result.getOrUndefined(decodeText(message))
     if (text !== undefined) {
       parts.push(text.content)
@@ -128,12 +129,35 @@ const textOf = (entry: ConversationView["entries"][number]): string => {
   return quoted ?? JSON.stringify(entry.data)
 }
 
-const viewOf = (value: ConversationView): ReadonlyArray<SessionEntry> =>
-  value.entries.map((entry) => ({
+/**
+ * One entry as the view shows it.
+ *
+ * An entry written with no kind -- a surface bug from before the argument fix carried one -- must
+ * not read as `undefined`: that looks like the viewer broke, which is the opposite of what an
+ * anomaly should look like. It is named as unreadable, with the reason, and stays visible.
+ *
+ * @param entry - The stored entry, or the part of one a test needs.
+ * @returns The entry as a surface renders it.
+ */
+export const sessionEntryOf = (entry: {
+  readonly id: string | number
+  readonly kind: string
+  readonly model?: unknown
+  readonly data?: unknown
+}): SessionEntry => {
+  const kind = String(entry.kind)
+  if (kind !== "" && kind !== "undefined") {
+    return { id: String(entry.id), kind, text: textOf(entry) }
+  }
+  return {
     id: String(entry.id),
-    kind: String(entry.kind),
-    text: textOf(entry),
-  }))
+    kind: "unreadable",
+    text: "(no kind or payload; written by an older surface)",
+  }
+}
+
+const viewOf = (value: ConversationView): ReadonlyArray<SessionEntry> =>
+  value.entries.map(sessionEntryOf)
 
 /**
  * Read the conversation's live state.
@@ -236,7 +260,7 @@ export const recentEntries = async (input: {
     BACKGROUND_CONTEXT,
   )
   return page.items
-    .map((entry) => ({ id: String(entry.id), kind: String(entry.kind), text: textOf(entry) }))
+    .map(sessionEntryOf)
     .filter((entry) => input.includeTelemetry === true || !isTelemetry(entry.kind))
     .slice(0, wanted)
     .reverse()
