@@ -25,6 +25,7 @@ import { linearWebhook, webhookCommand as webhookLine, webhookRegistration } fro
 import {
   followRoomSession,
   noteToRoom,
+  isTelemetry,
   openSessionFor,
   recentEntries,
   roomSessionView,
@@ -304,8 +305,16 @@ const sessionCommand = Command.make(
       Flag.optional,
     ),
     recent: Flag.Int("recent").pipe(
-      Flag.withDescription("Read the last N entries instead of streaming them."),
+      Flag.withDescription(
+        "Read the last N entries instead of streaming them. Talk only by default.",
+      ),
       Flag.optional,
+    ),
+    all: Flag.Boolean("all").pipe(
+      Flag.withDescription(
+        "Include the surface's own telemetry (room.edit, room.session) in --recent and --watch.",
+      ),
+      Flag.withDefault(false),
     ),
     json: jsonFlag,
     say: Flag.String("say").pipe(
@@ -376,6 +385,7 @@ const sessionCommand = Command.make(
               session,
               onEntries: (entries) => {
                 for (const entry of entries) {
+                  if (!options.all && isTelemetry(entry.kind)) continue
                   process.stdout.write(
                     `${JSON.stringify({ session: session.id, id: entry.id, kind: entry.kind, text: entry.text })}\n`,
                   )
@@ -397,7 +407,7 @@ const sessionCommand = Command.make(
         limit === undefined
           ? undefined
           : yield* Effect.tryPromise({
-              try: () => recentEntries({ session, limit }),
+              try: () => recentEntries({ session, limit, includeTelemetry: options.all }),
               catch: (error) => String(error),
             }).pipe(Effect.orElseSucceed(() => undefined))
       const view = yield* Effect.tryPromise({

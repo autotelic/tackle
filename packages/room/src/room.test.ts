@@ -41,6 +41,7 @@ import type { RoomConfig } from "./config.ts"
 import { doctor, renderBoard } from "./commands.ts"
 import { fromGithub, fromLinear } from "./ingest.ts"
 import { shouldReview } from "./policy.ts"
+import { isTelemetry } from "./session.ts"
 import { inboxFor } from "./inbox.ts"
 import { Ledger } from "./ledger.ts"
 import type { Job } from "@autotelic/board"
@@ -315,6 +316,18 @@ describe("a submitted review as a trigger", () => {
         trigger: "review_comment",
       }),
     ).toBe(false)
+  })
+})
+
+describe("talk and telemetry", () => {
+  it("keeps the surface narrating itself out of the conversation view", () => {
+    // A live room held 19 room.edit entries of 29; the conversation view must still read as one.
+    for (const kind of ["room.edit", "room.session", "room.tool"]) {
+      expect(isTelemetry(kind)).toBe(true)
+    }
+    for (const kind of ["room.decision", "room.message", "room.reply", "pi.user"]) {
+      expect(isTelemetry(kind)).toBe(false)
+    }
   })
 })
 

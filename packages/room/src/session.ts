@@ -1,5 +1,5 @@
 import { mkdirSync } from "node:fs"
-import { Result, Schema } from "effect"
+import { Predicate, Result, Schema } from "effect"
 import { dirname } from "node:path"
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context"
 import { createModels } from "@earendil-works/pi-ai/models"
@@ -195,27 +195,50 @@ export const noteToRoom = async (input: {
 }
 
 /**
+ * The kinds the surface writes about its own work: an edit ran, a session opened or closed.
+ *
+ * They are worth recording and useless in a conversation view: every `edit` buries the decision
+ * someone needs to read. A view shows talk by default and telemetry on request.
+ */
+const TELEMETRY: ReadonlySet<string> = new Set(["room.edit", "room.session", "room.tool"])
+
+/**
+ * Whether an entry is the surface narrating itself rather than a person or the model talking.
+ *
+ * @param kind - The entry's kind.
+ * @returns True for the surface's own telemetry.
+ */
+export const isTelemetry: Predicate.Predicate<string> = (kind) => TELEMETRY.has(kind)
+
+/**
  * The last entries, for a surface that cannot stream.
  *
  * `--watch` serves a person watching; an agent asking "what happened while I was away" needs
  * one answer, oldest last, which is this. The window is a page of the transcript, not the model
- * context: compaction and resets stay visible.
+ * context: compaction and resets stay visible. Telemetry is filtered out unless asked for, so a
+ * busy room still reads as a conversation.
  *
- * @param input - The session and how many entries to read.
+ * @param input - The session, how many entries to read, and whether to include telemetry.
  * @returns The entries, oldest first.
  */
 export const recentEntries = async (input: {
   readonly session: RoomSession
   readonly limit: number
+  readonly includeTelemetry?: boolean | undefined
 }): Promise<ReadonlyArray<SessionEntry>> => {
+  // One page, widened when telemetry is filtered out: the window should hold `limit` entries of
+  // the kind asked for, not whatever mixture happens to be newest.
+  const wanted = Math.max(1, input.limit)
   const page = await input.session.root.entries(
     { order: "descending" },
-    Math.max(1, input.limit),
+    input.includeTelemetry === true ? wanted : wanted * 8,
     undefined,
     BACKGROUND_CONTEXT,
   )
   return page.items
     .map((entry) => ({ id: String(entry.id), kind: String(entry.kind), text: textOf(entry) }))
+    .filter((entry) => input.includeTelemetry === true || !isTelemetry(entry.kind))
+    .slice(0, wanted)
     .reverse()
 }
 

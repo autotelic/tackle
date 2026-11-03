@@ -305,6 +305,12 @@ export default function roomExtension(pi: ExtensionAPI): void {
       "Read the room's durable conversation: its id, whether a run is working, why the last run stopped, and the most recent entries (a review comment, a Linear change, a broadcast the surface recorded). Use it when the person asks what happened in the room or what is queued.",
     parameters: Type.Object({
       recent: Type.Optional(Type.Number({ description: "How many entries to read. Default 10." })),
+      all: Type.Optional(
+        Type.Boolean({
+          description:
+            "Include the surface's own telemetry (room.edit, room.session) as well as talk.",
+        }),
+      ),
       room: Type.Optional(
         Type.String({ description: "A room name from the index. Default: this repository's." }),
       ),
@@ -325,6 +331,7 @@ export default function roomExtension(pi: ExtensionAPI): void {
           "--json",
           "--recent",
           recent,
+          ...(params.all === true ? ["--all"] : []),
         ],
         cwd,
       )
@@ -462,10 +469,40 @@ export default function roomExtension(pi: ExtensionAPI): void {
     await invoke(["session", "--cwd", cwd, "--note", kind, "--data", JSON.stringify(data)], cwd)
   }
 
-  pi.on("tool_execution_end", async (event, ctx) => {
+  /**
+   * Edits are broadcast in batches, not one note per tool call.
+   *
+   * One note per edit buried the conversation (19 of 29 entries in a live room were room.edit)
+   * and made every edit's latency depend on roomd answering. A batch says the same thing once
+   * per window, and it is fire-and-forget: a room that is down must not slow an edit.
+   */
+  let pendingEdits = 0
+  let editTimer: ReturnType<typeof setTimeout> | undefined
+  const flushEdits = (ctx: ExtensionContext): void => {
+    if (editTimer !== undefined) {
+      clearTimeout(editTimer)
+      editTimer = undefined
+    }
+    if (pendingEdits === 0) return
+    const count = String(pendingEdits)
+    pendingEdits = 0
+    void note(ctx, "room.edit", { count })
+  }
+
+  pi.on("tool_execution_end", (event, ctx) => {
     const name = toolNameOf(event)
     if (name !== "edit" && name !== "write") return
-    await note(ctx, "room.edit", { tool: name })
+    pendingEdits += 1
+    if (pendingEdits >= 25) {
+      flushEdits(ctx)
+      return
+    }
+    if (editTimer !== undefined) return
+    editTimer = setTimeout(() => {
+      editTimer = undefined
+      flushEdits(ctx)
+    }, 60_000)
+    editTimer.unref?.()
   })
 
   pi.on("session_start", async (_event, ctx) => {
@@ -503,6 +540,7 @@ export default function roomExtension(pi: ExtensionAPI): void {
   })
 
   pi.on("session_shutdown", async (_event, ctx) => {
+    flushEdits(ctx)
     await note(ctx, "room.session", { event: "close" })
     if (timer !== undefined) clearInterval(timer)
     timer = undefined
