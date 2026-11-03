@@ -82,6 +82,8 @@ export interface Report {
   readonly decision: {
     readonly requests: number
     readonly replayed: number
+    /** Distinct answers the committed cache gave, apart from wire replays. */
+    readonly cached?: number
     /** Wire calls. Fewer than requests means batching worked. */
     readonly calls: number
     readonly unavailable: number
@@ -191,8 +193,9 @@ const provenance = (report: Report): string => {
   }
   const { judged } = counts(report)
   if (report.diagnostics.length === 0 && report.decision.requests === 0) return ""
-  const { requests, calls, replayed, unavailable, inputTokens } = report.decision
+  const { requests, calls, replayed, cached = 0, unavailable, inputTokens } = report.decision
   const u = unavailable > 0 ? `, ${unavailable} unavailable` : ""
+  const committed = `, ${cached.toLocaleString("en-US")} committed answers reused`
   const phases = report.timings
     .filter((timing) => timing.ms >= 50)
     .sort((a, b) => b.ms - a.ms)
@@ -200,7 +203,7 @@ const provenance = (report: Report): string => {
     .join(", ")
   const where = phases === "" ? "" : ` (${phases})`
   const tokens = `${inputTokens.toLocaleString("en-US")} input tokens`
-  return `Finished in ${Math.round(report.elapsedMs / 100) / 10}s on ${plural(report.files, "file")} using ${plural(report.rules, "rule")}${where}. ${judged} of ${report.diagnostics.length} findings verified by the model; ${requests} decisions in ${calls} API calls, ${replayed} replayed${u}, ${tokens}.`
+  return `Finished in ${Math.round(report.elapsedMs / 100) / 10}s on ${plural(report.files, "file")} using ${plural(report.rules, "rule")}${where}. ${judged} of ${report.diagnostics.length} findings verified by the model; ${requests} decisions in ${calls} API calls, ${replayed} replayed${u}${committed}, ${tokens}.`
 }
 
 const notes = (report: Report): ReadonlyArray<string> => {

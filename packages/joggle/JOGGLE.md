@@ -235,9 +235,16 @@ branches that judge different candidates merge as a directory merge, and
 `joggle cache prune` keeps the store from growing without a ceiling. A legacy
 single `answers.json` is still read, and the next write migrates it. The layout,
 the merge driver and the deployment modes are in
-[docs/artifacts.md](./docs/artifacts.md). Bump `policy.decisionVersion` when you
-change a question's wording, and every cached answer for it is invalidated at
-once instead of silently replayed against newer questions.
+[docs/artifacts.md](./docs/artifacts.md). A changed question needs nothing: the
+key hashes the question and the atoms it read, so that question misses and every
+other keeps its answer. `policy.decisionVersion` is in every key, so bumping it
+discards every committed answer for every rule. Bump it only when what a stored
+answer *means* changes while the question does not.
+
+Replay degrades per question, not per run. With no key, a request that carries
+one unanswered question fails, and the engine still reads every plan the cache
+answers whole; the rest are unjudged and handled by `unavailable`. The report
+says how many answers came from the committed cache, apart from wire replays.
 
 When the judge is unavailable, the rule's own `onUnavailable` decides, and a
 repository may override it for the whole run with `unavailable`, or per rule with

@@ -422,6 +422,55 @@ export const chunkPlans = <A>(
 /* The engine                                                                  */
 /* -------------------------------------------------------------------------- */
 
+/** A remembered answer to one decision, validated as the provider's would be. */
+const cachedAnswer = (
+  cache: PlanAnswerStore,
+  key: string,
+  decision: Decision.Any,
+): Effect.Effect<Option.Option<Decision.Answer<Decision.Any>>> =>
+  Effect.gen(function* () {
+    const stored = yield* cache.get(key)
+    if (Option.isNone(stored)) return Option.none()
+    const valid = yield* revalidate(decision, stored.value)
+    return Option.map(valid, (answer) => withConsistency(answer, consistencyOf(stored.value)))
+  })
+
+/**
+ * Read the plans the cache can answer whole, without asking the model.
+ *
+ * The path for a run whose model cannot be reached. A request that carries one
+ * uncached question fails as a whole, and before this the cached answers in the
+ * same chunk failed with it: one new candidate silenced every committed verdict
+ * beside it. A plan is replayed only when every one of its decisions is
+ * remembered, because a reader handed half its answers would judge on what
+ * happened to be cached; the rest read as unanswered.
+ *
+ * @param plans - the plans to replay.
+ * @returns one `read` output per plan, in order; undefined where any decision
+ *   was not remembered.
+ */
+export const replayPlans = <A>(
+  plans: ReadonlyArray<Plan<A>>,
+): Effect.Effect<ReadonlyArray<A | undefined>, never, PlanAnswers> =>
+  Effect.gen(function* () {
+    const cache = yield* PlanAnswers
+    const replayed: Array<A | undefined> = []
+    for (const plan of plans) {
+      const collected: Record<string, Decision.Answer<Decision.Any>> = {}
+      let whole = true
+      for (const [name, decision] of Object.entries(plan.decisions)) {
+        const cached = yield* cachedAnswer(cache, answerKeyFor(decision, plan.atoms), decision)
+        if (Option.isNone(cached)) {
+          whole = false
+          break
+        }
+        collected[name] = cached.value
+      }
+      replayed.push(whole ? plan.read(collected) : undefined)
+    }
+    return replayed
+  })
+
 /**
  * Answer many plans in one request, from the cache where it can.
  *
@@ -473,13 +522,10 @@ export const answerPlansRaw = (
     const answers = new Map<string, Decision.Answer<Decision.Any>>()
     const pending: Array<{ readonly key: string }> = []
     for (const [key, entry] of distinct) {
-      const stored = yield* cache.get(key)
-      if (Option.isSome(stored)) {
-        const valid = yield* revalidate(entry.decision, stored.value)
-        if (Option.isSome(valid)) {
-          answers.set(key, withConsistency(valid.value, consistencyOf(stored.value)))
-          continue
-        }
+      const cached = yield* cachedAnswer(cache, key, entry.decision)
+      if (Option.isSome(cached)) {
+        answers.set(key, cached.value)
+        continue
       }
       pending.push({ key })
     }

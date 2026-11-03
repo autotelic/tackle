@@ -22,11 +22,20 @@ export const policy = {
   model: "jev-latest",
 
   /**
-   * Part of the judgement cache key. Bump it when a question's wording, options
-   * or evidence change, so verdicts produced by older questions are not replayed
-   * against newer ones.
+   * Part of every judgement cache key, so a bump invalidates EVERY committed
+   * answer, for every rule, at once.
+   *
+   * Do not bump it for a change to a question's wording, options or evidence:
+   * the key already hashes the whole decision and the atoms it read, so that
+   * question misses on its own and every other question keeps its answer. Bump it
+   * only when what a stored answer MEANS changes while the question does not --
+   * as when a Noul began to be stored as the mean over its repeats.
+   *
+   * It reads 2026-09-25 again on purpose. A bump to 2026-10-22 came with new rules
+   * whose questions were new keys anyway, changed no answer's meaning, and
+   * stranded all 6,403 committed verdicts; nothing had been judged under it.
    */
-  decisionVersion: "2026-10-22",
+  decisionVersion: "2026-09-25",
 
   /**
    * The declared analysis version: a FALLBACK and an OVERRIDE, not the gate.

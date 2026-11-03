@@ -193,8 +193,10 @@ second signal.
   questions name `question`, `compare` and `focus`, and their criteria carry
   `means` / `excludes` rather than a bare sentence. The older rules still join
   strings and rely on backticked paths inside them, which is the simpler form
-  the docs also allow; converting one is a rule-local change, and it bumps
-  `decisionVersion` because the wording is part of the cache key.
+  the docs also allow; converting one is a rule-local change. It needs no
+  `decisionVersion` bump: the wording is already in that question's key, so it
+  misses on its own. A bump for this reason once stranded every committed answer
+  in the repository (see `policy.ts`).
 
 ## Sources
 

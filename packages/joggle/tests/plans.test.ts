@@ -6,6 +6,7 @@ import {
   answerOf,
   answerPlans,
   PlanAnswers,
+  replayPlans,
   StoredAnswer,
   storedOf,
   type Plan,
@@ -212,6 +213,40 @@ test("an answer round-trips through its stored form", () => {
     expect(Result.isSuccess(decoded)).toBe(true)
     if (Result.isSuccess(decoded)) expect(answerOf(decoded.success)).toEqual(answer)
   }
+})
+
+test("a replay reads only the plans the cache answers whole", async () => {
+  const result = await Effect.runPromise(
+    withEngine((run, calls) =>
+      Effect.gen(function* () {
+        return yield* run(
+          Effect.gen(function* () {
+            const atoms = yield* Atoms
+            const shared = yield* atoms.add({ file: "src/f.ts", source: "export const f = 1" })
+            const answered = plan("f", shared)
+            yield* answerPlans([answered])
+            // The same remembered decision, plus one nobody has answered.
+            const half: Plan<string> = {
+              ...answered,
+              decisions: {
+                ...answered.decisions,
+                extra: Decision.classify({
+                  instructions: "Is `f` named well?",
+                  criteria: { yes: "It is.", no: "It is not." },
+                }),
+              },
+            }
+            const replayed = yield* replayPlans([answered, half])
+            return { replayed, calls: yield* Ref.get(calls) }
+          }),
+        )
+      }),
+    ),
+  )
+  // A reader handed half its answers would judge on what happened to be cached.
+  expect(result.replayed).toEqual(["yes", undefined])
+  // The replay never reaches the model.
+  expect(result.calls).toBe(1)
 })
 
 test("no plans is no request", async () => {

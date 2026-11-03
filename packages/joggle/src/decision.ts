@@ -270,8 +270,16 @@ export const layer = (
       // `answers.json` is read and migrated on the first write. See
       // `docs/artifacts.md`.
       const answers = yield* makeAnswerStore(fs, path, options.cacheDir)
+      // Distinct keys, not reads: a chunk whose model was unreachable is read once
+      // to build the request and again to replay it.
+      const cachedKeys = new Set<string>()
       const planAnswers: PlanAnswerStore = {
-        get: (key) => Effect.map(answers.get(key), (stored) => Option.map(stored, answerOf)),
+        get: (key) =>
+          Effect.gen(function* () {
+            const stored = yield* answers.get(key)
+            if (Option.isSome(stored)) yield* Effect.sync(() => cachedKeys.add(key))
+            return Option.map(stored, answerOf)
+          }),
         put: (key, answer) => answers.put(key, storedOf(answer)),
       }
 
@@ -280,7 +288,9 @@ export const layer = (
       const decisionModel = memoize(providerModel, planAnswers)
 
       return Context.make(DecisionModel.DecisionModel, decisionModel).pipe(
-        Context.add(DecisionStats, { read: Ref.get(stats) }),
+        Context.add(DecisionStats, {
+          read: Effect.map(Ref.get(stats), (current) => ({ ...current, cached: cachedKeys.size })),
+        }),
         Context.add(PlanAnswers, planAnswers),
       )
     }),

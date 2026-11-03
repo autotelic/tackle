@@ -189,7 +189,17 @@ export interface Drop extends Schema.Schema.Type<typeof Drop> {}
 
 export const DecisionTotals = Schema.Struct({
   requests: Schema.Number,
+  /** Whole requests answered from the machine-local wire cache. */
   replayed: Schema.Number,
+  /**
+   * Answers read from the committed per-question cache, `.joggle/answers/`.
+   *
+   * Counted apart from `replayed` because they are a different unit -- one
+   * question, not one request -- and they are the replay path CI depends on. A
+   * run that reported only wire replays read "0 replayed" whether or not the
+   * committed verdicts were used. Optional so a stored run from before it decodes.
+   */
+  cached: Schema.optionalKey(Schema.Number),
   calls: Schema.Number,
   unavailable: Schema.Number,
   inputTokens: Schema.Number,
