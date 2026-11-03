@@ -21,6 +21,11 @@ import { Option, Result, Schema } from "effect"
  *
  * A V2-only plugin fails to load on a 1.x host with "must default export an object with
  * server()"; a V1-only plugin never reaches the V2 tool transform. Export both.
+ *
+ * How a host *finds* the module differs too, and it is not interchangeable: opencode 1.x reads
+ * plugin FILES (`.opencode/plugins/` or `~/.config/opencode/plugins/`) and ignores the `plugin`
+ * array in `opencode.json`; opencode 2 reads that array. Verified on 1.19: the same build in
+ * `.opencode/plugins/room.js` registers all five tools, while the array alone registers none.
  */
 
 const run = promisify(execFile)

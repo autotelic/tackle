@@ -13,8 +13,10 @@ import { Plugin } from "@opencode/plugin"
  * terminal shows, because "the agent gets a different answer than CI" is the failure this
  * whole workspace exists to prevent. The plugin is a transport, not a second renderer.
  *
- * Published as `@autotelic/jig-cli/opencode`; OpenCode loads it from the `plugin`
- * array in `opencode.json`, or from `.opencode/plugins/` when a project vendors it. `@opencode/plugin` is an optional peer — nothing else here needs it.
+ * Published as `@autotelic/jig-cli/opencode`. opencode 2 loads it from the `plugin` array in
+ * `opencode.json`; opencode 1.x reads plugin FILES and ignores that array, so it needs
+ * `.opencode/plugins/jig.ts` re-exporting this default. The module carries both shapes, so one
+ * re-export works either way. `@opencode/plugin` is an optional peer.
  */
 
 const run = promisify(execFile)
