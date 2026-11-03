@@ -115,7 +115,7 @@ const runJig = async (
 const directoryFor = (value: unknown, root: string): string =>
   typeof value === "string" && value !== "" ? resolve(root, value) : root
 
-export default Plugin.define({
+const v2 = Plugin.define({
   id: "autotelic.jig",
 
   async setup(ctx) {
@@ -438,3 +438,45 @@ export default Plugin.define({
     })
   },
 })
+
+/**
+ * The V1 shape: opencode 1.x wants `default.id` plus `default.server()`, whose result carries
+ * the tools at their flat names. It runs the default invocation of each command; the argument
+ * schemas above belong to the V2 tool transform, and a V1 host passes no schema.
+ */
+const server = async () => {
+  const root = process.cwd()
+  const tool = (args: ReadonlyArray<string>) => async () =>
+    (await runJig(root, args, undefined)).output
+  return {
+    tool: {
+      jig_check: {
+        description: "Run every configured engine and return one merged report.",
+        args: {},
+        execute: tool(["check", "--cwd", root]),
+      },
+      jig_onboard: {
+        description: "Read the setup plan and agent prompt without writing anything.",
+        args: {},
+        execute: tool(["onboard", "--cwd", root]),
+      },
+      jig_init: {
+        description: "Apply the setup plan: only after a human approved it.",
+        args: {},
+        execute: tool(["init", "--cwd", root]),
+      },
+      jig_menu: {
+        description: "Read the cutlist artifact's stable shape.",
+        args: {},
+        execute: tool(["menu", "--cwd", root, "--format", "json"]),
+      },
+      jig_engines: {
+        description: "List configured engines and where their command resolves from.",
+        args: {},
+        execute: tool(["engines", "--cwd", root]),
+      },
+    },
+  }
+}
+
+export default { ...v2, id: "autotelic.jig", server }
