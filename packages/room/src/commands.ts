@@ -342,7 +342,7 @@ export const renderBoard = (input: {
   /** The instant the board was read: taken at the boundary so rendering stays pure. */
   readonly now: number
 }): string => {
-  const { config, board, now } = input
+  const { config, board } = input
   const lines = [`room ${config.name} · ${config.stage}`]
   if (board === undefined) {
     lines.push(`  roomd   not reachable at ${roomUrl()} — run \`jig room dev\``)
@@ -350,15 +350,8 @@ export const renderBoard = (input: {
   }
   const byState = (state: string): number => board.jobs.filter((job) => job.state === state).length
   lines.push(`  roomd   reachable · ${board.presence.length} present`)
-  const session = board.session
-  const age = session === undefined || session.at === 0 ? 0 : Math.round((now - session.at) / 1000)
-  const owner =
-    session === undefined || session.id === null
-      ? "none registered -- run `pi` with this package installed"
-      : `${session.id.slice(0, 8)} · ${session.active ? "attached" : "stale"}${age === 0 ? "" : `, ${String(age)}s ago`}`
-  lines.push(`  session ${owner}`)
   lines.push(
-    `  jobs    running ${byState("running")} · queued ${byState("queued")} · failed ${byState("failed")}`,
+    `  jobs    running ${byState("running")} · claimed ${byState("claimed")} · queued ${byState("queued")} · failed ${byState("failed")}`,
   )
   lines.push(
     `  chits   ${board.chits.map((entry) => `${entry.state} ${entry.count}`).join(" · ") || "none"}`,

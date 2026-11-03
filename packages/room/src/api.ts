@@ -105,19 +105,6 @@ export const handle = async (
   }
 
   if (request.method === "GET" && path === "/board") {
-    // Which session the room is watching belongs on the board: waking or delivering a turn
-    // addresses exactly this id, so "who owns it" must be visible from any terminal.
-    return json({
-      body: {
-        room: ledger.room,
-        counts: ledger.counts(),
-        presences: ledger.presences(now).length,
-        jobs: ledger.jobs().slice(0, 10),
-      },
-    })
-  }
-
-  if (request.method === "GET" && path === "/board") {
     return json({
       body: {
         room: ledger.room,
