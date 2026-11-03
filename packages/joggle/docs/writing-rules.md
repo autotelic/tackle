@@ -179,6 +179,32 @@ A `preset` is the same thing packaged to share with others:
   groups by it and prints the ratchet order. Leave it off for a rule that checks
   the code against a requirement instead.
 
+### Ask only the question the facts still allow
+
+An option a fact makes impossible should not be asked — but only when the fact is provable in the
+rule *and* the option carries no comparative meaning. `duplicate-implementation` narrows the
+operations a verdict may propose to the ones the repository permits
+(`permitted`, in `src/rules/cluster-verdict.ts`): "a fact, so the model cannot propose a merge
+across a package boundary". Nothing was being measured by offering it: a package boundary is not a
+judgement, and an answer that crossed one would be a finding nobody could act on.
+
+A verdict calibration reduces keeps its labels fixed instead. `intent-drift` asks
+`migrate` / `fix_tag` / `keep` even when `missing` is empty, so `fix_tag` is impossible. The
+answer's probability is compared across every candidate that declares the same
+`violations` (`{ verdict: ["migrate", "fix_tag"] }`), and dropping a label changes the
+denominator: one candidate's 0.8 would no longer mean what the next one's 0.8 means. Keeping the
+impossible label also buys a signal a pruned question cannot produce — a model that picks
+`fix_tag` with nothing to fix is saying the panel or the question is wrong. The check comes
+afterwards and is structural rather than advisory: `findingsFor(mode)` prints only the half the
+verdict chose, so the impossible answer yields no finding at all, not a filtered one.
+
+Two consequences:
+
+- **"Impossible" means provable from the panel, not unlikely.** Pruning on a hunch deletes the
+  measurement and records it as a decision.
+- **Whatever you prune must still be visible in the census.** An option never offered must not
+  read as an option considered and passed.
+
 ## The fence
 
 Those lines are not advice. `@autotelic/joggle/plugin` exports `metaFindings`,
