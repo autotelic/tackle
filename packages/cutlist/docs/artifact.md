@@ -320,12 +320,13 @@ because a budget that is not enforced is a wish.
 
 The artifact must be byte-identical for the same tree and config, or `--check` is theater.
 
-- No absolute paths. **`catalog.root` is absolute today, and it is inside the hash.** The
-  same tree measured through `--cwd /var/…` and through `process.cwd()`
+- No absolute paths. `catalog.root` used to be the absolute path of the crawl, inside the
+  hash. The same tree measured through `--cwd /var/…` and through `process.cwd()`
   (`/private/var/…`) produced two model hashes, `e5e14a63…` and `2b081cab…`, so `jig check`
-  reported a catalog it had just built as stale. Resolve the root once, store it relative to
-  the repository, and hash the relative form. Until then the staleness gate and the snapshot
-  diff are both noise.
+  reported a catalog it had just built as stale, and the exemplar's committed catalog was
+  current only in the checkout that built it. `root` is now always `.`, the directory every
+  part path is relative to; the field stays because readers already require it.
+  `src/root.test.ts` crawls the same tree from different directories and expects one model.
 - No timestamps, hostnames, or run ids.
 - Every array sorted by a stated key; every map emitted in a stated order.
 - A hash over the model and a per-file hash in `plan.json`, so a stale `atlas/` is caught,
@@ -465,7 +466,7 @@ The concrete format work, in order:
 | When      | What                                                                                                                                                        | Where                                |
 | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
 | **Now**   | catalog, manifest, `MENU.md`/`menu.json`, `PATTERNS.md`/`patterns.json`, `RECIPES.md`/`recipes.json`, `tools/ui-intent/`, hooks, tokens; `diagrams/` opt-in | `cutlist/src`                        |
-| **Next**  | determinism: relative `root`, one hash for one tree                                                                                                         | `cutlist/src`                        |
+| **Now**   | determinism: `root` is `.`, one hash for one tree                                                                                                           | `cutlist/src`                        |
 | **Next**  | `plan.json`                                                                                                                                                 | `cutlist/src/render`, `protocol/src` |
 | **Next**  | the part record + `workspace`; entries, index, graph, trees                                                                                                 | `protocol/schema`, `cutlist/src`     |
 | **Next**  | the snapshot diff; candidate evidence (the signature delta)                                                                                                 | `cutlist/src/render`                 |

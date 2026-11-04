@@ -192,6 +192,12 @@ export interface Catalog {
   readonly lexicon: LexiconRef
   /** Content hash of everything below. `--check` compares it against the tree. */
   readonly hash: string
+  /**
+   * The directory every part path is relative to, as written by cutlist: always `.`.
+   *
+   * Kept, and still required, because readers already decode it. It used to be the
+   * absolute path of the checkout, which put the machine into the hash.
+   */
   readonly root: string
   readonly tokens: CatalogTokens
   readonly tiers: Tiers
