@@ -636,7 +636,9 @@ export const buildCatalog = (
     }
     const withoutHash = {
       lexicon: lexiconRef("catalog"),
-      root,
+      // Never the absolute path the crawl ran in: it is inside the hash, so the
+      // committed catalog was current on one machine and stale on every other.
+      root: ".",
       tokens,
       tiers: config.tiers,
       sharedRoots: [...config.tiers.shared],
