@@ -32,6 +32,18 @@ _Avoid_: handler, callback
 The verification commands (tests, lint) the loop runs against the repository after a session completes. Their results decide whether work is good; the agent never grades itself.
 _Avoid_: CI
 
+**Pass**:
+One Session followed by the Checks the Loop runs on its result. Budgets count Passes per issue.
+_Avoid_: iteration, attempt, cycle
+
+**Checkpoint**:
+The commit the Loop makes and pushes on the issue's branch at the end of every Session, whatever its Terminal state. Each Receipt names one. A Session cut off by a crash or restart still gets a Checkpoint and counts as a failed Pass.
+_Avoid_: snapshot, save point
+
+**Receipt**:
+The Loop's record of one Pass, appended as a comment on the issue: the Session's Terminal state and the Checks results. Written by the Loop, never by the agent. After a restart, Receipts are how the Loop recovers an issue's history.
+_Avoid_: log, status update
+
 **Feature done**:
 The repository-level condition `pr.open ∧ checks.passed` on the loop's branch that triggers review-oriented rules. Never based on the agent's self-report.
 _Avoid_: done, finished
