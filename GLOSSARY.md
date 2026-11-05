@@ -44,6 +44,18 @@ _Avoid_: snapshot, save point
 The Loop's record of one Pass, appended as a comment on the issue: the Session's Terminal state and the Checks results. Written by the Loop, never by the agent. After a restart, Receipts are how the Loop recovers an issue's history.
 _Avoid_: log, status update
 
+**Failure set**:
+What failed in a Pass's Checks: one entry per failing Check that has no test report (typecheck, lint, app didn't start), plus one per failing test. Its size is the frontier the Loop compares across Passes, and an empty set means `checks.passed`.
+_Avoid_: errors, failures count
+
+**Parked**:
+An issue the Loop has stopped working on until a person acts: its budget ran out, it stalled, or it has an unanswered question and no live Session. The Loop moves on to other issues meanwhile.
+_Avoid_: blocked (a Session waiting on a person is blocked-on-human), stuck
+
+**Pause**:
+The Loop stops taking Passes on every issue because the provider or the Checks harness is failing, not the issue's work. A Pause doesn't use any issue's budget.
+_Avoid_: parked, stopped
+
 **Feature done**:
-The repository-level condition `pr.open ∧ checks.passed` on the loop's branch that triggers review-oriented rules. Never based on the agent's self-report.
+The repository-level condition `pr.open ∧ checks.passed ∧ work present` on the loop's branch that triggers review-oriented rules, where work present means the branch changes code and adds at least one test compared with the base branch. Never based on the agent's self-report.
 _Avoid_: done, finished
