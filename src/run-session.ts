@@ -13,9 +13,9 @@ import { join, resolve } from 'node:path'
  *
  * Exit code: 0 = completed, 1 = failed, 2 = blocked-on-human.
  */
-import { createInterface } from 'node:readline'
 import { loadConfig } from './config.ts'
 import { runSession } from './session.ts'
+import { createTerminalHumanChannel } from './terminal-human.ts'
 
 function parseArgs(argv: string[]): Record<string, string> {
   const args: Record<string, string> = {}
@@ -46,30 +46,8 @@ const prompt = args.prompt ?? (await readFile(args.promptFile as string, 'utf8')
 const stamp = new Date().toISOString().replaceAll(/[:.]/g, '-')
 const logPath = args.log ? resolve(args.log) : join(repoDir, '.treadle', `session-${stamp}.jsonl`)
 
-const rl = createInterface({ input: process.stdin, output: process.stdout })
-let rlClosed = false
-let pendingReject: ((error: Error) => void) | null = null
-rl.once('close', () => {
-  rlClosed = true
-  pendingReject?.(new Error('stdin closed'))
-})
-const askHuman = (question: string): Promise<string> =>
-  new Promise((resolveAnswer, reject) => {
-    if (rlClosed) {
-      reject(new Error('stdin is closed'))
-      return
-    }
-    pendingReject = reject
-    try {
-      rl.question(`\n[ask_human] ${question}\nanswer> `, (answer) => {
-        pendingReject = null
-        resolveAnswer(answer)
-      })
-    } catch (error) {
-      pendingReject = null
-      reject(error)
-    }
-  })
+const human = createTerminalHumanChannel()
+const askHuman = human.askHuman
 
 const outcome = await runSession({
   cwd,
@@ -89,7 +67,7 @@ const outcome = await runSession({
     if (event.type === 'session.blocked') console.log('\nsession.blocked — see question below')
   },
 })
-rl.close()
+human.close()
 
 console.log(`\nterminal: ${outcome.terminal}${outcome.reason ? ` — ${outcome.reason}` : ''}`)
 console.log(`turns: ${outcome.turns}  duration: ${(outcome.durationMs / 1000).toFixed(1)}s`)
