@@ -27,8 +27,8 @@ const RULE_ID = "joggle/prose-voice"
 /**
  * The labels that mean this rule is violated.
  *
- * `no_issue` is not one of them. It is the answer for a sentence that states a
- * fact, and `verdictOf` reads it as a probability near zero.
+ * A sentence that states a fact answers `no_issue`, which `verdictOf` reads as a
+ * probability near zero.
  */
 const VIOLATIONS = {
   tell: [

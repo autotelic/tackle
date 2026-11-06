@@ -53,7 +53,7 @@ export interface Plan<A> extends Questionnaire<A> {
    * The files this candidate is about.
    *
    * The engine judges a candidate only when one of its files is in the run's
-   * scope. A rule that forgets to filter therefore cannot spend a token on a
+   * scope. A rule that filters nothing therefore cannot spend a token on a
    * candidate the run is not about, and cannot act on one either: an out-of-scope
    * plan is never sent and its answer is never read.
    */
@@ -258,11 +258,11 @@ const revalidate = (
   })
 
 /**
- * A DecisionModel that remembers every answer, one decision at a time.
+ * A DecisionModel that stores every answer, one decision at a time.
  *
- * The wire cache remembers a whole REQUEST, and that cannot be the replay path:
+ * The wire cache stores a whole REQUEST, and that cannot be the replay path:
  * its key changes when any question in the request changes, and the file it
- * writes is far too large to commit. This remembers one answer at a time, keyed
+ * writes is far too large to commit. This stores one answer at a time, keyed
  * by the decision and the state it was answered against, so a reviewed verdict
  * replays with no key and no tokens, and a request whose questions are all
  * remembered never reaches the model at all.
@@ -353,8 +353,8 @@ export const memoize = (
  * A plan's answers, in the rule's own type.
  *
  * The engine erases the verdict type so plans from different rules can travel in
- * one request; this puts it back at the boundary, where the rule knows every
- * answer came from its own decisions and is in the order it asked them.
+ * one request; this puts it back at the boundary, where every answer came from the
+ * rule's own decisions, in the order it asked them.
  */
 export const verdictsOf = <A>(answers: ReadonlyArray<unknown>): ReadonlyArray<A | undefined> =>
   // SAFETY: the caller built these plans, so each answer is the type its own
@@ -431,8 +431,8 @@ export const chunkPlans = <A>(
  * - Every decision's atoms go into ONE state, so a declaration two rules both
  *   judge is sent once.
  * - A decision already answered from cache is not sent, so a request carries only
- *   what is genuinely new. That is what keeps a batched call from losing the
- *   per-candidate cache granularity a per-candidate call had.
+ *   what is new. That keeps a batched call from losing the per-candidate cache
+ *   granularity a per-candidate call had.
  *
  * The state is `{ atoms: { id: value } }` and the decisions reference it by id.
  * A plan-local state (`declarations`, `files`) could not be merged into one

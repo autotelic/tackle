@@ -24,7 +24,7 @@ export const tsgoStub = Layer.succeed(
 /** A model that answers from a table, for a rule that asks. */
 export const modelStub = (answers: Readonly<Record<string, StubAnswer>>) => decisionStub(answers)
 
-/** A model that refuses, for a rule that must degrade without one. */
+/** A model that fails, for a rule that must degrade without one. */
 export const modelFailing = (reason: string) => refusingModel(reason)
 
 /**

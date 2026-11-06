@@ -32,7 +32,7 @@ import type { Catalog, CatalogComponent, TierName } from "@autotelic/protocol"
  * the workspace reads it, and it never touches the model.
  */
 
-/** `pele`'s guards, not ours to raise: above these it refuses to draw at all. */
+/** `pele`'s guards, not ours to raise: above these it draws nothing. */
 const SOURCE_LIMIT = 50_000
 const EDGE_LIMIT = 5_000
 

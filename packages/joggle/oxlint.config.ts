@@ -29,6 +29,8 @@ import { recommended } from "@effect/tsgo/oxlint-presets"
 
 const GENERIC = [
   "no-anonymous-wide-tuples",
+  "no-anthropomorphic-program",
+  "no-antithesis-clause",
   "no-barrel-export-star",
   "no-boolean-field-signals",
   "no-builtin-throws",
@@ -46,6 +48,7 @@ const GENERIC = [
   "no-object-parameters",
   "no-optional-function-parameters",
   "no-product-of-state-booleans",
+  "no-prose-verdict",
   "no-redundant-derived-field",
   "no-reflect-apply",
   "no-reflect-get",
@@ -166,6 +169,17 @@ export default {
    */
   overrides: [
     {
+      // The prompt in this rule quotes the defects it reports, and a quote is the
+      // definition: a rule that names a phrase has to write the phrase down. The
+      // three prose rules cannot tell an example from a slip.
+      files: ["src/rules/prose-voice.ts"],
+      rules: {
+        "plumb/no-antithesis-clause": "off",
+        "plumb/no-anthropomorphic-program": "off",
+        "plumb/no-prose-verdict": "off",
+      },
+    },
+    {
       // @autotelic/joggle/plugin exists to re-export a supported surface. A barrel export is
       // a smell in an application, where it hides what a module actually owns;
       // here the point IS the aggregate -- one name a rule author imports, and
@@ -277,7 +291,7 @@ export default {
     {
       // The engine erases a plan's verdict type so plans from different rules can
       // travel in one request; a rule's phase puts it back at the boundary, where
-      // it knows every answer came from its own questionnaire. The assertion is
+      // every answer there came from its own questionnaire. The assertion is
       // the erasure boundary itself, and the SAFETY comment beside it states the
       // invariant.
       files: ["src/rules/cluster-verdict.ts", "src/plans.ts", "src/operation.ts"],

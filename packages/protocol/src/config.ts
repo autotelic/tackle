@@ -98,7 +98,7 @@ export interface CutlistOutput {
   readonly intent?: string
   /** The pattern language: compositions, primitives, families, and the stable shape. */
   readonly patterns?: string
-  /** The same pattern view as JSON, for an agent that wants to sort or filter it. */
+  /** The same pattern view as JSON, for an agent that sorts or filters it. */
   readonly patternsJson?: string
   /** Copyable imports and usage skeletons for features and load-bearing parts. */
   readonly recipes?: string

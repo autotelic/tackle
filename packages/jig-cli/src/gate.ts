@@ -79,8 +79,8 @@ export const gateVerdict = (run: HarnessRun, options: GateOptions): GateVerdict 
     ...run.report.generators
       .filter((generator) => generator.status === "errored")
       .map((generator) => generator.id),
-    // No engines is not a clean run: nothing was looked at. It is a setup fault,
-    // which is the infrastructure band, not a finding.
+    // No engines means nothing was looked at. That is a setup fault in the
+    // infrastructure band, not a finding.
     ...(run.report.generators.length === 0 ? ["jig"] : []),
   ]
   const scope = inScope(run, options)

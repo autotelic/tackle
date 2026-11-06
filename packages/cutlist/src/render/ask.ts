@@ -122,7 +122,7 @@ export const renderSimilar = ({
 }
 
 /**
- * `similar --file`: a sketch that is not in the catalog yet.
+ * `similar --file`: a sketch the catalog does not contain yet.
  *
  * This is the shape the question actually arrives in — a mock author has written the thing
  * once and wants to know whether it already exists. The sketch is parsed, not committed, so

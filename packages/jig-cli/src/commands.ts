@@ -161,9 +161,8 @@ export const lesson = (engines: ReadonlyArray<string>, diff: BaselineDiff): Less
 /**
  * The cookbook (`JIG.md`), scaffolded from what the repo already accepts.
  *
- * The point of `learn` over `init`'s static text is the accepted-rule list: an agent that
- * knows which rules this repo already tolerates can tell "new" from "known" without a second
- * source. An empty list says so explicitly rather than leaving the section out.
+ * `learn` differs from `init`'s static text in the accepted-rule list: an agent holding that
+ * list can tell "new" from "known" without a second source. An empty list says so explicitly rather than leaving the section out.
  */
 export const renderLesson = (input: Lesson): string => {
   const lines = [

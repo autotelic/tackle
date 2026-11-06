@@ -60,9 +60,8 @@ const find = (workspace: Workspace, scope: Scope): MeaningCandidates => {
   // that may be one thing: down": every migration's `down` function, chained by
   // union-find, none of which can be deleted.
   //
-  // The bound is not a new threshold. It is the size at which the evidence stops
-  // being complete, which is the point at which the question stops being
-  // answerable.
+  // The bound is the size at which the evidence stops being complete, and the
+  // question stops being answerable.
   const answerable = clustered.clusters.filter(
     (cluster) => cluster.members.length <= policy.evidence.maxMembers,
   )

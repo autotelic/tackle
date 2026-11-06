@@ -27,8 +27,8 @@ import type { Workspace } from "./workspace.ts"
 /**
  * What a rule produced, and what it declined to do.
  *
- * The notes are not decoration. Every bound in this program is a decision not to
- * look at something, and a bound nobody can see is indistinguishable from a bug:
+ * Every bound in this program is a decision not to look at something, and a bound
+ * nobody can see is indistinguishable from a bug:
  * the eighteen definitions of one helper stayed invisible for three runs because
  * a cap discarded them silently. A rule that hits a limit now says so, in its own
  * words, and the limit appears in the report beside the findings.
@@ -115,8 +115,8 @@ export const inScope = (scope: Scope, file: string): boolean =>
 /**
  * True when this file is in scope for a rule that reads the IMPORT GRAPH.
  *
- * A moved file's content is not new, but its edges are: a move can put a module
- * on the wrong side of a boundary it used to respect. So graph rules see the
+ * A moved file keeps its content, and its edges change: a move can put a module on
+ * the wrong side of a boundary it used to respect. So graph rules see the
  * union, and content rules see `changed` alone.
  */
 export const inGraphScope = (scope: Scope, file: string): boolean =>
@@ -351,8 +351,7 @@ export const finding = (input: {
  * The one question every rule asks, and the only answer code reads.
  *
  * It lived in each rule file until joggle reported its own copy of it three
- * times. That is the tool working: the shape was identical, the names were
- * identical, and nothing about the three copies was intentional.
+ * times: same shape, same names, and no intentional difference between the copies.
  */
 /**
  * The names a judged question uses to decline, and the only two there are.
@@ -360,9 +359,9 @@ export const finding = (input: {
  * The TypeSafe docs put `noIssue` in the mechanism map for EVERY dimension --
  * "The selected evidence does not support a concrete correctness issue". It sits
  * beside `condition` and `state` as a member of the vocabulary the model chooses
- * from, not as a low score or an absent answer. So a decline is an ANSWER, and
- * code can read it as one; that is the whole point. A question with no way to
- * decline still gets answered, just with a small number that means nothing.
+ * from, not as a low score or an absent answer. A decline is an ANSWER, and code
+ * reads it as one. A question with no way to decline still gets answered, just
+ * with a small number that means nothing.
  *
  * This rule set had four names for two ideas -- `not_duplication`, `distinct`,
  * `keep_local`, `none` -- which meant no shared reader, and no place to see that

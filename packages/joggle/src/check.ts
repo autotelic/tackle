@@ -270,7 +270,7 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
   // The rule set comes from the context, where a plugin's rules have already
   // been merged with the built-in ones. A run does not know or care where a rule
   // came from: a plugin rule is selectable, configurable, severable and ignorable
-  // like any other, which is the whole point of a registry rather than an array.
+  // like any other, which is what a registry buys over an array.
   const universe: ReadonlyArray<Rule | PlannedRule> = yield* Rules
   const selected = (
     options.rules === undefined
@@ -646,7 +646,7 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
     )
 
     // A plan is judged only when one of its files is in the run's scope. This is
-    // the enforcement, not a convention: a rule that forgets to filter still
+    // the enforcement, not a convention: a rule that filters nothing still
     // cannot spend a token on a candidate the run is not about, because the
     // engine never sends it and its answer is never read.
     const inScopePlan = (plan: Plan<unknown>): boolean =>

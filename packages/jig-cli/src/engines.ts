@@ -148,7 +148,7 @@ const codeClimateSeverity = (value: unknown): Severity => {
   return "error"
 }
 
-/** A path as the report wants it: repository-relative when it sits under the root. */
+/** A path as the report prints it: repository-relative when it sits under the root. */
 const relativeTo = ({ file, root }: { readonly file: string; readonly root: string }): string =>
   file.startsWith(`${root}/`) ? file.slice(root.length + 1) : file
 

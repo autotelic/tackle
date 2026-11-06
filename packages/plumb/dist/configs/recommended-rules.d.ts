@@ -15,7 +15,7 @@ export declare function recommendedRulesFor(plugin: RuleSetSource): Readonly<Rec
  *
  * A `problem` is an error; a `suggestion` (or any other type) is a warning. Same
  * namespacing as {@link recommendedRulesFor}, so the two are interchangeable in a
- * config that wants the split rather than a flat `error`.
+ * config that asks for the split rather than a flat `error`.
  *
  * @param {RuleSetSource} plugin - The plugin whose rules to enable.
  * @returns {Readonly<Record<string, "error" | "warn">>} Namespaced rule ids mapped to severity.

@@ -229,9 +229,9 @@ interface ParseCacheScope {
 /**
  * The cache on disk, discarded whole when the tool's own source has changed.
  *
- * The parser is part of the tool, so an entry produced by a different parser is
- * not a cache hit -- it is a wrong answer. That is the same reasoning as the run
- * manifest, applied to the operation that dominates the run.
+ * The parser is part of the tool, so an entry produced by a different parser is a
+ * wrong answer rather than a cache hit. The run manifest applies the same
+ * reasoning to the operation that dominates the run.
  */
 export const loadParses = ({ cacheDir, tool }: ParseCacheScope): Effect.Effect<ParseCache, never, FileSystem.FileSystem | Path.Path> =>
   Effect.gen(function* () {

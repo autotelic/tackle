@@ -271,8 +271,8 @@ export const policy = {
    * Orchestration comparison (kept for the call-pattern rule below).
    *
    * `minCalls` is what makes a shared call sequence mean something: two functions
-   * that each make one call are not "the same orchestration", they are two
-   * functions with one call. It is a search bound, and the only number here.
+   * that each make one call are two functions with one call, not a shared
+   * orchestration. It is a search bound, and the only number here.
    */
   callPattern: {
     minCalls: 4,

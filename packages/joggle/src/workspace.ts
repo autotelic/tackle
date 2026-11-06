@@ -2289,8 +2289,7 @@ export const discoverFiles = (
  * Parses to reuse, keyed by a file and its content.
  *
  * Declared here rather than in the module that persists it, so the direction is
- * one-way: the cache knows what a parse is, and the parser does not know there is
- * a cache on disk.
+ * one-way: the cache holds parses, and the parser has no cache on disk.
  */
 export interface Parses {
   readonly get: (file: string, text: string) => SourceFile | undefined

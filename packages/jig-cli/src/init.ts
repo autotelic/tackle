@@ -792,7 +792,7 @@ export const inspectRepo = (
     const jig = jigCommandOf(packageManager, jigPinned)
     // The CLI has to be on the machine before any of this runs. A tree that builds jig is
     // the honest source for it -- the package is not on npm -- and a repo that only depends
-    // on it wants the published one.
+    // on it needs the published one.
     const jigSource = (yield* existsAt({
       fs,
       path,
@@ -1400,7 +1400,7 @@ An engine marked \`skipped\`, \`replayed\`, or "no command" is a hole in the cen
 `)
 }
 
-/** What happened to cutlist: a config it already keeps, a draft it wants reviewed, or nothing. */
+/** What happened to cutlist: a config it already keeps, a draft to review, or nothing. */
 const cutlistSummary = (result: InitResult): string => {
   if (result.cutlistConfig === "written") {
     return result.dryRun
@@ -1487,7 +1487,7 @@ export const summaryFor = (result: InitResult): string => {
   return lines.join("\n")
 }
 
-/** The plan as data, for a host that wants to reason about it rather than read prose. */
+/** The plan as data, for a host that reads it rather than reads prose. */
 export const initJson = (result: InitResult, prompt?: string): string => {
   const profile = { ...result.profile, facts: [...result.profile.facts] }
   const plan = {
@@ -1854,7 +1854,7 @@ export const initialise = (
       } else {
         // A repository without a model key should not print every unjudged candidate
         // as a warning. `count` keeps the census honest and the output usable; a repo
-        // with a key can change it to `report` when it wants the candidates listed.
+        // with a key can change it to `report` when it needs the candidates listed.
         // The repository summary is the one piece of prose a judged rule can use, and
         // it is already written down in the repo's own agent docs or README.
         // JSON.stringify drops the undefined keys, so an absent draft or summary never reaches

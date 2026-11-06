@@ -42,7 +42,7 @@ export interface RuleTestOptions {
   /**
    * The answers to give, when the rule asks for any.
    *
-   * Absent means a model that refuses with a clear reason. A structural rule
+   * Absent means a model that fails with a clear reason. A structural rule
    * never reaches it -- and the type has to ask for a service either way, because
    * a rule that turns out to be judged must not be a compile error. Defaulting to
    * refusal rather than to silence means a rule that DOES ask fails loudly
