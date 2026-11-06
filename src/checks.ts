@@ -194,7 +194,9 @@ export async function runChecks(
   const branch = await currentBranch(repoDir)
   const steps: StepResult[] = []
   let infrastructureFailure: InfrastructureFailure | null = null
-  const env = { ...process.env } as Record<string, string>
+  // CI=true so pnpm purges a stale node_modules without asking a TTY that
+  // isn't there (bit us on a reused worktree, #16).
+  const env = { CI: 'true', ...process.env } as Record<string, string>
 
   // 0. Install.
   const installLog = join(logsDir, 'install.log')

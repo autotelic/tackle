@@ -570,7 +570,10 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
 }
 
 async function installDeps(worktreeDir: string): Promise<void> {
-  await execFileAsync('zsh', ['-lic', 'pnpm install --frozen-lockfile'], { cwd: worktreeDir })
+  await execFileAsync('zsh', ['-lic', 'pnpm install --frozen-lockfile'], {
+    cwd: worktreeDir,
+    env: { ...process.env, CI: 'true' },
+  })
 }
 
 function stamp(): string {
