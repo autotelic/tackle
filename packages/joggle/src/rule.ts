@@ -267,7 +267,8 @@ export interface Sized<T> {
  * Kept as the reference implementation: it compares every pair inside the size
  * window, so it is complete by construction. `allPairs` in similarity.ts uses
  * prefix filtering to avoid the quadratic count, and a test asserts the two
- * report the same pairs. When they disagree, this one is right.
+ * report the same pairs. When the two disagree, this implementation is the
+ * reference.
  *
  * Jaccard(A, B) >= t implies |A| / |B| >= t, because the intersection cannot be
  * larger than the smaller side. So once the list is sorted by size, each left

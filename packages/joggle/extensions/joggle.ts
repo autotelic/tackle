@@ -161,8 +161,8 @@ interface JsonReport {
  * The default text format is for a person reading a terminal: it carries a
  * census, a provenance line and a funnel of notes, and a model pays for all of
  * it on every call. This keeps the finding, the help that says what to do about
- * it, and the repair the rule proposes -- which is the material an agent needs
- * in order to act -- and drops the rest.
+ * it, and the repair the rule proposes, which is what an agent needs in order to
+ * act. The rest is dropped.
  */
 const render = (report: JsonReport, limit: number): string => {
   const { summary } = report

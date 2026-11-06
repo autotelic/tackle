@@ -359,7 +359,7 @@ export const nameScore = (input: { readonly one: string; readonly two: string })
 /**
  * Whether a pair of names is worth asking about.
  *
- * The whole difference between a rule that costs money and one that spends it.
+ * The filter is what keeps a judged rule from spending a judgement on every pair.
  * Identical expanded words always qualify (the spellings differ and nothing
  * else); a name nested in the other by exactly one word qualifies, because
  * whether that word carries meaning is the question the rule exists to ask.

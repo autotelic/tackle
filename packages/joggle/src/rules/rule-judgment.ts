@@ -18,7 +18,7 @@ import type { Diagnostic, Drop } from "../schema.ts"
 import type { SourceFile, Workspace } from "../workspace.ts"
 
 // meta-allow: no-pattern-classifier -- it reads RULE source for `id:` and `judged:` -- a structural scan of rule files,
-// which is what the rule is for. docs/rule-coupling.md.
+// which is the rule's subject (docs/rule-coupling.md).
 const RULE_ID = "joggle/rule-judgment"
 
 /**

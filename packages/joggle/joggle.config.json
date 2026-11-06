@@ -23,6 +23,11 @@
     },
     {
       "rule": "joggle/prose-voice",
+      "path": "packages/joggle/src/rules/prose-voice.ts",
+      "reason": "the prompt and the criteria in this module quote the defects it names, and a definition has to quote what it defines. Every other file is held to the rule"
+    },
+    {
+      "rule": "joggle/prose-voice",
       "path": "packages/joggle/docs/reference/**",
       "reason": "pasted external texts (a book, published articles) kept as reference. This rule reports the repository's own voice, and a physicist's prose is not a finding anyone here can act on"
     },

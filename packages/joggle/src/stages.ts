@@ -27,7 +27,7 @@ export interface StageOutcome extends Schema.Schema.Type<typeof StageOutcome> {}
  * The state every staged question carries: its own panel, the stage it is, and
  * what the earlier stages said.
  *
- * The earlier outcomes are in the state on purpose. A judgement asked at stage 3
+ * The earlier outcomes are in the state deliberately. A judgement asked at stage 3
  * with no knowledge of why stages 1 and 2 declined is a judgement about a
  * different question, and the answer cache keys on the state, so a site that
  * stopped at `combine` and a site that fell through to `expand` can never

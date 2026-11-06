@@ -23,7 +23,7 @@ const RULE_ID = "joggle/reimplemented-primitive"
 /**
  * A function that inlines exactly what an existing declaration already does.
  *
- * Two halves, and the split is the point of `docs/two-regimes.md`.
+ * The rule has two halves; `docs/two-regimes.md` is why.
  *
  * The deterministic half is GENERATION: which pairs are even candidates. That is
  * the resolved call graph -- a function whose whole body is a run of calls has a

@@ -27,8 +27,8 @@ const RULE_ID = "joggle/declared-staleness"
 // The deterministic half is the shape: a read of a table, or a type whose fields
 // repeat a table's columns. There is no list of names that mean "cache". Whether
 // the data may be stale, and whether anything near the read says so, are two
-// questions -- the second is asked because recognising a declaration by token is
-// exactly the kind of hand-maintained vocabulary the classifier replaces.
+// questions -- the second is asked because recognising a declaration by token
+// would mean keeping a list of names, which is what the classifier replaces.
 export const declaredStaleness: PlannedRule = {
   id: RULE_ID,
   severity: "warn",

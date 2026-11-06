@@ -20,7 +20,7 @@ import type { Consistency, DecisionAnswers } from "./rule.ts"
  * a content-addressed path -- so any set of questionnaires can be answered
  * against the union of their atoms without rewriting an instruction.
  *
- * This is the half the engine batches. `Plan` adds the fields a rule names a
+ * The engine batches this half. `Plan` adds the fields a rule names a
  * candidate with, and those are the same shape in every rule that builds one.
  */
 export interface Questionnaire<A> {

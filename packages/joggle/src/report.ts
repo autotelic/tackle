@@ -296,7 +296,7 @@ const notes = (report: Report): ReadonlyArray<string> => {
 /* -------------------------------------------------------------------------- */
 
 /**
- * The report grouped by entropy reversal.
+ * How the report groups findings by entropy reversal.
  *
  * joggle is the entropy reverser: you press the frontier out, then look at what
  * you built and ask what it can be rebuilt from. Each finding says which move it

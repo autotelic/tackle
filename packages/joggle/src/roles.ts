@@ -49,7 +49,7 @@ export const moduleOf = (unit: Unit): string => {
 /**
  * The package a specifier names: `react`, `@oxlint/plugins`, `effect/...`.
  *
- * Shared with the dependency check, which learned it first: `fastify-cli/start.js`
+ * The dependency check uses the same function: `fastify-cli/start.js`
  * is a path INTO `fastify-cli`, and comparing raw specifiers reports subpath
  * imports as undeclared.
  */

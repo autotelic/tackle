@@ -109,6 +109,17 @@ const voiceReview = (id: string, hasNeighbour: boolean) => {
     : Decision.classify({ instructions, criteria: base })
 }
 
+/**
+ * A test or a fixture directory.
+ *
+ * A fixture holds the defect on purpose: the suite asserts that the rule reports
+ * it. Judging the rule's own test data reports the fixture, not the repository.
+ */
+const TEST_PATH = /\/(?:tests?|__tests__|fixtures)\//u
+
+/** Whether a file's prose is read by a maintainer rather than by a test. */
+const isSourceProse = (file: string): boolean => !TEST_PATH.test("/" + file)
+
 /** Whether a sentence is long enough to judge and short enough to bound. */
 const usable = (sentence: Sentence): boolean =>
   sentence.text.length >= policy.proseVoice.minChars &&
@@ -134,6 +145,7 @@ const docCandidates = (units: ReadonlyArray<Unit>): ReadonlyArray<Candidate> => 
   const candidates: Array<Candidate> = []
   for (const unit of units) {
     if (unit.doc === undefined) continue
+    if (!isSourceProse(unit.file)) continue
     const sentences = sentencesOfDoc(unit.doc)
     sentences.forEach((sentence, index) => {
       if (!usable(sentence)) return
@@ -157,6 +169,7 @@ const docCandidates = (units: ReadonlyArray<Unit>): ReadonlyArray<Candidate> => 
 const proseCandidates = (workspace: Workspace): ReadonlyArray<Candidate> => {
   const candidates: Array<Candidate> = []
   for (const file of workspace.prose) {
+    if (!isSourceProse(file.path)) continue
     file.sentences.forEach((sentence, index) => {
       if (!usable(sentence)) return
       const { before, after } = neighboursOf(file.sentences, index)
@@ -207,6 +220,7 @@ const surfaceOf = (
 const stringCandidates = (files: ReadonlyArray<SourceFile>): ReadonlyArray<Candidate> => {
   const candidates: Array<Candidate> = []
   for (const file of files) {
+    if (!isSourceProse(file.path)) continue
     for (const literal of file.facts.literals) {
       if (!readsAsProse(literal.value)) continue
       const surface = surfaceOf(file, literal.start)
