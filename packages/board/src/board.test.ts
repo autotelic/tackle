@@ -1,6 +1,6 @@
 import { Result } from "effect"
 import { describe, expect, it } from "vitest"
-import { actorOf, chitOf, hostOf, jobOf, markerOf, roomOf, stageOf } from "./ids.ts"
+import { actorOf, chitOf, hostOf, jobOf, labelRoomOf, markerOf, roomOf, stageOf } from "./ids.ts"
 import { decodeChit, decodeClaim } from "./decode.ts"
 import { acquire, conflicts, isLive, liveClaims, nextEpoch } from "./invariants.ts"
 import type { Claim } from "./records.ts"
@@ -19,6 +19,16 @@ const claimOf = (overrides: Partial<Claim> = {}): Claim => ({
 describe("identities", () => {
   it("derives the same room from the same project and stage", () => {
     expect(roomOf({ projectId: "p", stage: stageOf("Togmund") })).toBe("linear:p@local/togmund")
+  })
+
+  it("addresses a label-only room by its label, in one case", () => {
+    expect(labelRoomOf({ label: "Maintenance", stage: "local/t" })).toBe(
+      "github:maintenance@local/t",
+    )
+    // A label and a project id must not collide in the index: the prefix is the kind.
+    expect(labelRoomOf({ label: "p", stage: "local/t" })).not.toBe(
+      roomOf({ projectId: "p", stage: "local/t" }),
+    )
   })
 
   it("makes a thread address out of ticket, pr, path, and line", () => {
