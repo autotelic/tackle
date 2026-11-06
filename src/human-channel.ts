@@ -13,8 +13,8 @@ import { createTerminalHumanChannel } from './terminal-human.ts'
  * otherwise. `--channel terminal|telepi` forces a choice.
  */
 export type HumanChannel = {
-  askHuman: (question: string) => Promise<string>
-  askWithOptions: (question: string, options: string[]) => Promise<string>
+  askHuman: (question: string, signal?: AbortSignal) => Promise<string>
+  askWithOptions: (question: string, options: string[], signal?: AbortSignal) => Promise<string>
   close: () => void
 }
 

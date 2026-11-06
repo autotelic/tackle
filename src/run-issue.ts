@@ -296,10 +296,12 @@ async function main(): Promise<number> {
           'comment',
           String(issue.number),
           '--body',
-          `**Question from the Session:**\n\n${outcome.reason ?? ''}`,
+          `**Question from the Session:**\n\n${outcome.reason ?? ''}\n\n` +
+            'Answer with /treadle whenever you like — the question stays open, and the Loop ' +
+            'picks the issue back up when your answer lands.',
         )
         await park(repoDir, config, issue.number)
-        console.log('blocked-on-human: question posted, issue parked')
+        console.log('blocked-on-human: question posted and stays open, issue parked')
         return 3
       }
 

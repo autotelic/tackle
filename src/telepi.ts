@@ -116,16 +116,16 @@ export type TelePiChannelOptions = {
 }
 
 export type TelePiHumanChannel = {
-  askHuman: (question: string) => Promise<string>
+  askHuman: (question: string, signal?: AbortSignal) => Promise<string>
   /** Escalation variant (Retry / Skip / Stop, #9): the answer is one of options. */
-  askWithOptions: (question: string, options: string[]) => Promise<string>
+  askWithOptions: (question: string, options: string[], signal?: AbortSignal) => Promise<string>
 }
 
 export function createTelePiHumanChannel(options: TelePiChannelOptions): TelePiHumanChannel {
   const pollMs = options.pollMs ?? 2000
   const send = options.send ?? ((text: string) => sendTelegramMessage(options.config, text))
 
-  async function ask(question: string, choices?: string[]): Promise<string> {
+  async function ask(question: string, choices?: string[], signal?: AbortSignal): Promise<string> {
     await mkdir(options.questionsDir, { recursive: true })
     await mkdir(options.answersDir, { recursive: true })
     const id = `${new Date().toISOString().replaceAll(/[:.]/g, '-')}-${Math.random().toString(36).slice(2, 8)}`
@@ -146,26 +146,28 @@ export function createTelePiHumanChannel(options: TelePiChannelOptions): TelePiH
     }
 
     const answerPath = join(options.answersDir, `${id}.json`)
-    try {
-      for (;;) {
-        try {
-          const answer = JSON.parse(await readFile(answerPath, 'utf8')) as AnswerFile
-          if (answer.id === id && typeof answer.answer === 'string') {
-            await rm(answerPath, { force: true })
-            return answer.answer
-          }
-        } catch {
-          // Not there yet, or partially written; look again in a moment.
+    for (;;) {
+      // A cancelled wait (the Session's ask_human timed out or was aborted)
+      // stops polling but LEAVES the question file: the question stays
+      // answerable via /treadle, and the Loop's answer watcher picks the
+      // late answer up and resumes the issue (#8/#9 park-and-resume).
+      if (signal?.aborted) throw new Error('wait cancelled')
+      try {
+        const answer = JSON.parse(await readFile(answerPath, 'utf8')) as AnswerFile
+        if (answer.id === id && typeof answer.answer === 'string') {
+          await rm(answerPath, { force: true })
+          await rm(questionPath, { force: true })
+          return answer.answer
         }
-        await new Promise((resolve) => setTimeout(resolve, pollMs))
+      } catch {
+        // Not there yet, or partially written; look again in a moment.
       }
-    } finally {
-      await rm(questionPath, { force: true })
+      await new Promise((resolve) => setTimeout(resolve, pollMs))
     }
   }
 
   return {
-    askHuman: (question) => ask(question),
-    askWithOptions: (question, choices) => ask(question, choices),
+    askHuman: (question, signal) => ask(question, undefined, signal),
+    askWithOptions: (question, choices, signal) => ask(question, choices, signal),
   }
 }

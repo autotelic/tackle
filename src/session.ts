@@ -45,8 +45,8 @@ export type RunSessionOptions = {
   timeoutMs: number
   /** How long ask_human waits for an answer (budgets.askHumanTimeoutMinutes). */
   askHumanTimeoutMs: number
-  /** The human channel. Terminal until #14; TelePi after. */
-  askHuman: (question: string) => Promise<string>
+  /** The human channel (terminal or TelePi, #14). */
+  askHuman: (question: string, signal?: AbortSignal) => Promise<string>
   /** Per-Session JSONL event log. */
   logPath: string
   onEvent?: (event: SessionDriverEvent) => void
@@ -90,7 +90,7 @@ function jsonl(value: unknown): string {
 }
 
 function createAskHumanTool(hooks: {
-  askHuman: (question: string) => Promise<string>
+  askHuman: (question: string, signal?: AbortSignal) => Promise<string>
   timeoutMs: number
   onBlocked: (question: string) => void
   onUnblocked: () => void
@@ -119,6 +119,9 @@ function createAskHumanTool(hooks: {
         | { kind: 'channel-error'; detail: string }
       const wait = await new Promise<WaitResult>((resolve) => {
         let settled = false
+        // Cancel the channel's wait however this settles, so an unanswered
+        // question's watcher doesn't get its answer eaten by a dead wait.
+        const cancelWait = new AbortController()
         const timer = setTimeout(() => finish({ kind: 'timeout' }), hooks.timeoutMs)
         const onAbort = () => finish({ kind: 'aborted' })
         const finish = (result: WaitResult) => {
@@ -126,10 +129,11 @@ function createAskHumanTool(hooks: {
           settled = true
           clearTimeout(timer)
           signal?.removeEventListener('abort', onAbort)
+          cancelWait.abort()
           resolve(result)
         }
         signal?.addEventListener('abort', onAbort, { once: true })
-        hooks.askHuman(params.question).then(
+        hooks.askHuman(params.question, cancelWait.signal).then(
           (text) => finish({ kind: 'answer', text }),
           (error) => finish({ kind: 'channel-error', detail: String(error) }),
         )

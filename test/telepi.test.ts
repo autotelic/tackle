@@ -119,6 +119,27 @@ describe('createTelePiHumanChannel', () => {
     await expect(pending).resolves.toBe('Skip')
   })
 
+  it('leaves the question answerable when the session-side wait is cancelled', async () => {
+    dir = await mkdtemp(join(tmpdir(), 'treadle-telepi-'))
+    const channel = createTelePiHumanChannel({
+      config: { botToken: 't', chatId: 'c' },
+      questionsDir: join(dir, 'questions'),
+      answersDir: join(dir, 'answers'),
+      pollMs: 20,
+      send: async () => {},
+    })
+    const controller = new AbortController()
+    const pending = channel.askHuman('not right now?', controller.signal)
+    setTimeout(() => controller.abort(), 50)
+    await expect(pending).rejects.toThrow(/wait cancelled/)
+    // The question file persists: /treadle can still answer it, and the
+    // Loop's answer watcher will pick the late answer up.
+    const names = await import('node:fs/promises').then((fs) =>
+      fs.readdir(join(dir as string, 'questions')),
+    )
+    expect(names).toHaveLength(1)
+  })
+
   it('removes the question file and rejects when the message cannot be sent', async () => {
     dir = await mkdtemp(join(tmpdir(), 'treadle-telepi-'))
     const channel = createTelePiHumanChannel({
