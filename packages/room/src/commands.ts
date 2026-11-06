@@ -1,5 +1,5 @@
-import { roomOf, stageOf } from "@autotelic/board"
-import { Effect, FileSystem, Option, Result, Schema } from "effect"
+import { jobOf, labelRoomOf, roomOf, stageOf, type Job } from "@autotelic/board"
+import { Clock, Effect, FileSystem, Option, Result, Schema } from "effect"
 import { homedir } from "node:os"
 import { join } from "node:path"
 import { chmodSync, existsSync, mkdirSync, writeFileSync } from "node:fs"
@@ -20,6 +20,8 @@ import {
 } from "./paths.ts"
 import { onPath, run } from "./shell.ts"
 import { pullRequest } from "./gh.ts"
+import { renderDriver, type Driver } from "./driver.ts"
+import { runReview } from "./review.ts"
 import { jobsRoot, worktreeRoot } from "./paths.ts"
 
 /*
@@ -98,7 +100,11 @@ export const renderPlan = (value: Plan, now: number): string => {
   lines.push(`  stage     ${value.login === undefined ? "local/<login>" : stageOf(value.login)}`)
   lines.push("")
   if (value.config !== undefined) {
-    lines.push(`  existing  ${value.config.name} · ${value.config.room}`)
+    // The room this directory is bound to, then what it is for. The address
+    // (`linear:<uuid>@<stage>`) is how the code names a room, not how a person does.
+    lines.push(
+      `  existing  ${value.config.name} (${value.config.project.name}, ${value.config.stage})`,
+    )
   } else {
     lines.push("  existing  no room.config.json in this repo")
   }
@@ -114,16 +120,17 @@ export const renderPlan = (value: Plan, now: number): string => {
   lines.push("")
   lines.push("  questions")
   lines.push("    1. room name?          e.g. multi-season")
-  lines.push("    2. linear project?     the id from `linearis projects list`")
+  lines.push("    2. address?            a Linear project id (`linearis projects list`),")
+  lines.push("                           or a GitHub label for a workstream with no project")
   lines.push(
     `    3. stage?              ${value.login === undefined ? "local/<login>" : stageOf(value.login)}`,
   )
+  const stage = value.login === undefined ? "" : ` --stage ${stageOf(value.login)}`
   lines.push("")
   lines.push("  next")
-  lines.push(
-    `    jig room init --room <name> --linear-project <id> --linear-name "<name>"` +
-      (value.login === undefined ? "" : ` --stage ${stageOf(value.login)}`),
-  )
+  lines.push(`    jig room init --room <name> --linear-project <id> --linear-name "<name>"${stage}`)
+  lines.push("    or, when the workstream is a label and has no Linear project:")
+  lines.push(`    jig room init --room <name> --label <github-label>${stage}`)
   return lines.join("\n")
 }
 
@@ -131,14 +138,80 @@ export const renderPlan = (value: Plan, now: number): string => {
 export interface InitOptions {
   readonly cwd: string
   readonly name: string
-  readonly projectId: string
-  readonly projectName: string
+  /**
+   * A Linear project is one kind of address, and it needs both flags; a GitHub label is the
+   * other kind. Which one a config carries is decided by {@link addressRefusal}, not here.
+   */
+  readonly projectId: string | undefined
+  readonly projectName: string | undefined
   readonly workspace: string | undefined
   readonly stage: string | undefined
+  /** The GitHub label: the address of a label-only room, and the watch label of any room. */
   readonly label: string | undefined
   readonly linearUser: string | undefined
   readonly force: boolean
   readonly now: number
+}
+
+/** What a room is addressed by, before it is known whether that address is complete. */
+export interface Address {
+  readonly projectId: string | undefined
+  readonly projectName: string | undefined
+  readonly label: string | undefined
+}
+
+/**
+ * Fill absent address flags from the config a rewrite is replacing.
+ *
+ * `--force` without an address keeps the room it rebinds: the flags that created the config are
+ * the ones a re-run is most likely to omit, and dropping them would turn a Linear room into a
+ * refusal for no reason a person asked for.
+ *
+ * @param input - The flags and the config being rewritten, when there is one.
+ * @returns The address, with the previous one where a flag was silent.
+ */
+export const resolveAddress = (
+  input: Address & { readonly previous: RoomConfig | undefined },
+): Address => {
+  const previous = input.previous
+  const linear = previous?.project.kind === "linear" ? previous.project : undefined
+  const label = previous?.project.kind === "github" ? previous.project.id : undefined
+  return {
+    projectId: input.projectId ?? linear?.id,
+    projectName: input.projectName ?? linear?.name,
+    label: input.label ?? label ?? previous?.watch?.label,
+  }
+}
+
+/**
+ * Why a room cannot be created from this address, or undefined when it can.
+ *
+ * The one thing a room cannot be without is an address: the project or the label is what names
+ * the workstream, and a room that has neither is a ledger nothing routes to. `--label` is the
+ * address of a label-addressed room and the watched label of a project one, which is why the two
+ * are not exclusive.
+ *
+ * @param input - The address flags, after {@link resolveAddress}.
+ * @returns The refusal, as the sentence a person reads, or nothing when it may proceed.
+ *
+ * Not `Option`: plumb's rules want a tagged failure (`Effect`/`Either`) when the two refusals
+ * differ in *why*, and they do. Converting this one helper alone would leave `initRefusal`
+ * beside it in the older idiom, so the whole refusal family moves together or not at all.
+ */
+export const addressRefusal = (input: Address): string | undefined => {
+  const project = input.projectId !== undefined || input.projectName !== undefined
+  if (project && (input.projectId === undefined || input.projectName === undefined)) {
+    return (
+      "--linear-project and --linear-name go together: the id addresses the room, " +
+      "the name is what a person reads"
+    )
+  }
+  if (project) return undefined
+  if (input.label !== undefined) return undefined
+  return (
+    "a room needs an address: --linear-project <id> --linear-name <name>, " +
+    "or --label <github-label> for a workstream with no Linear project"
+  )
 }
 
 /** What an init produced. */
@@ -146,6 +219,124 @@ export interface InitResult {
   readonly config: RoomConfig
   readonly path: string
   readonly configured: boolean
+  /** Fields no flag speaks for, carried over from the config this run rewrote. */
+  readonly kept: ReadonlyArray<string>
+}
+
+/**
+ * Why `init` refuses to write, absent when it may.
+ *
+ * A checkout holds one room, and every session in that directory reads it. Naming the room the
+ * checkout is already bound to is the difference between a safety check and an unexplained
+ * "already exists": the person needs to know that `--force` rebinds the *directory*, not just
+ * this command's config file.
+ */
+export const initRefusal = (input: {
+  readonly exists: boolean
+  readonly force: boolean
+  readonly previous: RoomConfig | undefined
+}): string | undefined => {
+  if (!input.exists || input.force) return undefined
+  if (input.previous === undefined) {
+    return `${CONFIG_PATH} already exists and does not decode; pass --force to rewrite it`
+  }
+  return (
+    `${CONFIG_PATH} already exists: this checkout is bound to ${input.previous.name} ` +
+    `(${input.previous.project.name}, ${input.previous.stage}). Every session in this directory ` +
+    `uses that room. Pass --force to rebind it.`
+  )
+}
+
+/**
+ * The config an init writes: flags win, and the file being rewritten supplies the rest.
+ *
+ * Rebinding is not a reset. A review model, a worker block, an ingress policy and the watch
+ * label are decisions written into the file, and no flag expresses them -- so rebuilding them
+ * from defaults silently changed how the room behaved. A `--force` re-run used to drop
+ * `watch.label` exactly this way and left the label column empty.
+ */
+export const initRoomConfig = (input: {
+  readonly options: Pick<
+    InitOptions,
+    "name" | "projectId" | "projectName" | "workspace" | "label" | "linearUser" | "now"
+  >
+  readonly stage: string
+  readonly repo: { readonly owner: string; readonly name: string }
+  readonly root: string
+  readonly previous: RoomConfig | undefined
+}): RoomConfig => {
+  const previous = input.previous
+  const address = resolveAddress({ ...input.options, previous })
+  const watch = input.options.label === undefined ? previous?.watch : { label: input.options.label }
+  const linearUser = input.options.linearUser ?? previous?.linearUser
+  const workspace =
+    input.options.workspace ??
+    (previous?.project.kind === "linear" ? previous.project.workspace : undefined)
+  // addressRefusal refuses the incomplete cases before a config is built. The empty label here
+  // keeps the type honest instead of asserting that one of the two address flags arrived.
+  const label = address.label ?? ""
+  const project: RoomConfig["project"] =
+    address.projectId !== undefined && address.projectName !== undefined
+      ? Object.assign(
+          { kind: "linear" as const, id: address.projectId, name: address.projectName },
+          workspace === undefined ? {} : { workspace },
+        )
+      : { kind: "github" as const, id: label, name: label }
+  // A rewrite that changes the address's kind is not a rewrite: the ingress was chosen for the
+  // old one (a Linear poll for what is now a label), so it goes back to that kind's default.
+  const ingress =
+    previous !== undefined && previous.project.kind === project.kind
+      ? previous.ingress
+      : {
+          github: "forward" as const,
+          linear: project.kind === "linear" ? ("poll" as const) : ("none" as const),
+        }
+  return Object.assign(
+    {
+      version: 1 as const,
+      room:
+        project.kind === "linear"
+          ? roomOf({ projectId: project.id, stage: input.stage })
+          : labelRoomOf({ label: project.id, stage: input.stage }),
+      name: input.options.name,
+      stage: input.stage,
+      project,
+      repo: { owner: input.repo.owner, name: input.repo.name, root: input.root },
+      ingress,
+      review: previous?.review ?? {
+        trigger: "review_requested" as const,
+        provider: "opencode-go",
+        model: "deepseek-v4.1-flash",
+        slots: 1,
+      },
+      worker: previous?.worker ?? { substrate: "hc" as const },
+      createdAt: new Date(input.options.now).toISOString(),
+    },
+    watch === undefined ? {} : { watch },
+    linearUser === undefined ? {} : { linearUser },
+    previous?.batchMs === undefined ? {} : { batchMs: previous.batchMs },
+  )
+}
+
+/** What a re-run carried over, named so the person can see the file did not lose it. */
+export const keptFields = (
+  previous: RoomConfig | undefined,
+  options: Pick<InitOptions, "label" | "linearUser" | "workspace">,
+): ReadonlyArray<string> => {
+  if (previous === undefined) return []
+  const kept = ["review", "ingress"]
+  if (previous.worker !== undefined) kept.push("worker")
+  if (previous.watch !== undefined && options.label === undefined) kept.push("watch.label")
+  if (previous.batchMs !== undefined) kept.push("batchMs")
+  if (previous.linearUser !== undefined && options.linearUser === undefined) kept.push("linearUser")
+  if (
+    previous.project.kind === "linear" &&
+    previous.project.workspace !== undefined &&
+    options.workspace === undefined
+  ) {
+    kept.push("workspace")
+  }
+  return kept
 }
 
 /**
@@ -168,34 +359,26 @@ export const init = (
     const path = configPathOf(root)
     const existing = findConfigPath(root)
     const exists = yield* Effect.orElseSucceed(fs.exists(existing), () => false)
-    if (exists && !options.force) {
-      return yield* Effect.fail(`${CONFIG_PATH} already exists; pass --force to rewrite it`)
-    }
+    const previous = exists ? Result.getOrUndefined(yield* readConfig(existing)) : undefined
+    const refusal = initRefusal({ exists, force: options.force, previous })
+    if (refusal !== undefined) return yield* Effect.fail(refusal)
+    const address = resolveAddress({
+      projectId: options.projectId,
+      projectName: options.projectName,
+      label: options.label,
+      previous,
+    })
+    const unaddressed = addressRefusal(address)
+    if (unaddressed !== undefined) return yield* Effect.fail(unaddressed)
     const stage = options.stage ?? stageOf(login)
-    const config: RoomConfig = Object.assign(
-      {
-        version: 1 as const,
-        room: roomOf({ projectId: options.projectId, stage }),
-        name: options.name,
-        stage,
-        project: Object.assign(
-          { kind: "linear" as const, id: options.projectId, name: options.projectName },
-          options.workspace === undefined ? {} : { workspace: options.workspace },
-        ),
-        repo: { owner: repo.owner, name: repo.name, root },
-        ingress: { github: "forward" as const, linear: "poll" as const },
-        review: {
-          trigger: "review_requested" as const,
-          provider: "opencode-go",
-          model: "deepseek-v4.1-flash",
-          slots: 1,
-        },
-        worker: { substrate: "hc" as const },
-        createdAt: new Date(options.now).toISOString(),
-      },
-      options.label === undefined ? {} : { watch: { label: options.label } },
-      options.linearUser === undefined ? {} : { linearUser: options.linearUser },
-    )
+    const config = initRoomConfig({
+      options: { ...options, ...address },
+      stage,
+      repo,
+      root,
+      previous,
+    })
+    const kept = keptFields(previous, options)
     yield* Effect.orElseSucceed(
       fs.makeDirectory(join(root, ".room"), { recursive: true }),
       () => undefined,
@@ -230,7 +413,7 @@ export const init = (
       Effect.map(() => true),
       Effect.orElseSucceed(() => false),
     )
-    return { config, path, configured }
+    return { config, path, configured, kept }
   }).pipe(Effect.mapError((error) => String(error)))
 
 /** One doctor line. */
@@ -300,10 +483,17 @@ export const doctor = (
         ? "installed"
         : "gh extension install cli/gh-webhook",
     })
+    // A label-addressed room has no project to read, so a missing Linear token is not a fault
+    // there: reporting it as one would send a person to log in to a service they do not use.
+    const wantsLinear = config.project.kind === "linear"
     checks.push({
       name: "linear",
-      ok: linearTokenPresent(),
-      detail: linearTokenPresent() ? "token present" : "no ~/.linearis/token",
+      ok: !wantsLinear || linearTokenPresent(),
+      detail: !wantsLinear
+        ? "not used: this room is addressed by a GitHub label"
+        : linearTokenPresent()
+          ? "token present"
+          : "no ~/.linearis/token",
     })
     const health = yield* Effect.tryPromise({
       try: () => new RoomClient(roomUrl(), config.room).health(),
@@ -341,9 +531,16 @@ export const renderBoard = (input: {
   readonly board: Board | undefined
   /** The instant the board was read: taken at the boundary so rendering stays pure. */
   readonly now: number
+  /**
+   * The session that claimed the room's conversation, read from this machine's state. It is not
+   * part of the daemon's board: the claim is local, and it has to be readable even when roomd is
+   * down, which is exactly when a second session is deciding whether to start.
+   */
+  readonly driver?: Driver | undefined
 }): string => {
   const { config, board } = input
   const lines = [`room ${config.name} · ${config.stage}`]
+  lines.push(`  ${renderDriver({ driver: input.driver, now: input.now })}`)
   if (board === undefined) {
     lines.push(`  roomd   not reachable at ${roomUrl()} — run \`jig room dev\``)
     return lines.join("\n")
@@ -356,6 +553,15 @@ export const renderBoard = (input: {
   lines.push(
     `  chits   ${board.chits.map((entry) => `${entry.state} ${entry.count}`).join(" · ") || "none"}`,
   )
+  // A label filter that drops in silence is indistinguishable from an ingress that never
+  // arrived, so the count is on the board rather than only in the ledger.
+  const unrouted = board.unrouted ?? 0
+  if (unrouted > 0) {
+    lines.push(
+      `  unrouted ${String(unrouted)} review event(s) were not this room's label` +
+        (config.watch?.label === undefined ? "" : ` (${config.watch.label})`),
+    )
+  }
   const checks = board.checks ?? []
   if (checks.length > 0) {
     const mark = (conclusion: string): string =>
@@ -413,6 +619,56 @@ export const renderBoard = (input: {
     }`,
   )
   return lines.join("\n")
+}
+
+/** The substrate that hosts a worker's terminal. */
+export type Substrate = "hc" | "rex"
+
+/** Start a worker's Pi under herdr-core and return its address. */
+const launchHc = (input: {
+  readonly hc: string
+  readonly name: string
+  readonly dir: string
+  readonly script: string
+}): Result.Result<string, string> => {
+  run({ command: input.hc, args: ["kill", input.name] })
+  run({ command: input.hc, args: ["rm", input.name] })
+  const launched = run({
+    command: input.hc,
+    args: ["run", "--bg", "--json", "--name", input.name, "--cwd", input.dir, "sh", input.script],
+  })
+  const decoded = Schema.decodeResult(
+    Schema.fromJsonString(Schema.Struct({ address: Schema.String })),
+  )(launched.stdout)
+  return Result.isFailure(decoded)
+    ? Result.fail(launched.stderr.trim() || launched.failure || "hc did not return an address")
+    : Result.succeed(decoded.success.address)
+}
+
+/**
+ * Start a worker's Pi as a Rex session and return the session id.
+ *
+ * One session per worker, not a tab in somebody else's: `rex new <label>` is the whole launch,
+ * and the app can show it when a person wants to watch. `--json` hands back the id, which the
+ * room records as the worker's address — the same field hc fills with a terminal address.
+ */
+const launchRex = (input: {
+  readonly name: string
+  readonly dir: string
+  readonly script: string
+}): Result.Result<string, string> => {
+  const rex = Result.getOrUndefined(onPath("rex"))
+  if (rex === undefined) return Result.fail("rex is not on PATH")
+  const created = run({
+    command: rex,
+    args: ["new", input.name, "-c", input.dir, "--json", "--", "sh", input.script],
+  })
+  const decoded = Schema.decodeResult(
+    Schema.fromJsonString(Schema.Struct({ session_id: Schema.String })),
+  )(created.stdout)
+  return Result.isFailure(decoded)
+    ? Result.fail(created.stderr.trim() || created.failure || "rex did not return a session")
+    : Result.succeed(decoded.success.session_id)
 }
 
 /** The herdr-core binary, if this machine has it. */
@@ -473,40 +729,92 @@ export const startWorker = (input: {
   readonly cwd: string
   readonly pr: number
   readonly kind: "fix" | "review"
+  /** Overrides `worker.substrate` for this launch (`jig room work --substrate`). */
+  readonly substrate?: Substrate | undefined
 }): Effect.Effect<
-  { readonly name: string; readonly address: string; readonly url?: string },
+  {
+    readonly name: string
+    readonly address: string
+    readonly worktree: string
+    readonly url?: string
+  },
   string,
   FileSystem.FileSystem
 > =>
   Effect.gen(function* () {
-    const hc = Option.getOrUndefined(hcOf())
-    if (hc === undefined) return yield* Effect.fail("herdr-core is not installed (hc)")
     const root = Option.getOrUndefined(valueOf(topLevel(input.cwd))) ?? input.cwd
     const config = Result.getOrUndefined(yield* readConfig(findConfigPath(root)))
     if (config === undefined) return yield* Effect.fail("no room.config.json in this repository")
-    if ((config.worker?.substrate ?? "hc") !== "hc") {
-      return yield* Effect.fail("the rex substrate is not implemented yet")
+    const substrate: Substrate = input.substrate ?? config.worker?.substrate ?? "hc"
+    const hc = substrate === "hc" ? Option.getOrUndefined(hcOf()) : undefined
+    if (substrate === "hc" && hc === undefined) {
+      return yield* Effect.fail("herdr-core is not installed (hc)")
     }
-    const pr = Result.getOrUndefined(pullRequest({ number: input.pr, cwd: config.repo.root }))
-    if (pr === undefined) return yield* Effect.fail(`cannot read PR #${input.pr}`)
-    const dir = join(
-      worktreeRoot(config),
-      `pr-${pr.number}-${input.kind}-${pr.headRefOid.slice(0, 8)}`,
-    )
-    mkdirSync(worktreeRoot(config), { recursive: true })
-    if (existsSync(dir)) removeWorktree({ root: config.repo.root, dir })
-    fetchPull({ root: config.repo.root, pr: pr.number })
-    fetchCommit({ root: config.repo.root, sha: pr.headRefOid })
-    const added = addWorktree({ root: config.repo.root, sha: pr.headRefOid, dir })
-    if (Result.isFailure(added)) return yield* Effect.fail(added.failure)
+    if (substrate === "rex" && Result.isFailure(onPath("rex"))) {
+      return yield* Effect.fail("rex is not on PATH")
+    }
+    if (substrate === "rex" && config.worker?.app !== undefined) {
+      return yield* Effect.fail(
+        "the app block is only implemented under hc; a rex worker starts the review session",
+      )
+    }
+    // A review worker starts from the same handoff `--prepare` produces: the worktree is at the
+    // reviewed sha and the prompt is written, so the session's first turn is `cd`, not
+    // "resolve the PR, find the sha, reconstruct the contract".
+    let dir = ""
+    let prNumber = input.pr
+    let promptFile: string | undefined
+    if (input.kind === "review") {
+      const now = yield* Clock.currentTimeMillis
+      const prepared = yield* Effect.tryPromise({
+        try: () =>
+          runReview({
+            config,
+            job: {
+              id: jobOf({ pr: input.pr, sha: "manual" }),
+              room: config.room,
+              kind: "review",
+              pr: input.pr,
+              sha: "manual",
+              state: "queued",
+              attempts: 0,
+              createdAt: now,
+              updatedAt: now,
+            } satisfies Job,
+            dryRun: false,
+            prepare: true,
+            log: () => undefined,
+          }),
+        catch: (error) => String(error),
+      })
+      const handoff = prepared.handoff
+      if (handoff === undefined) return yield* Effect.fail(prepared.note)
+      dir = handoff.worktree
+      prNumber = handoff.pr
+      promptFile = handoff.promptFile
+    } else {
+      const pr = Result.getOrUndefined(pullRequest({ number: input.pr, cwd: config.repo.root }))
+      if (pr === undefined) return yield* Effect.fail(`cannot read PR #${input.pr}`)
+      prNumber = pr.number
+      dir = join(worktreeRoot(config), `pr-${pr.number}-${input.kind}-${pr.headRefOid.slice(0, 8)}`)
+      mkdirSync(worktreeRoot(config), { recursive: true })
+      if (existsSync(dir)) removeWorktree({ root: config.repo.root, dir })
+      fetchPull({ root: config.repo.root, pr: pr.number })
+      fetchCommit({ root: config.repo.root, sha: pr.headRefOid })
+      const added = addWorktree({ root: config.repo.root, sha: pr.headRefOid, dir })
+      if (Result.isFailure(added)) return yield* Effect.fail(added.failure)
+    }
 
-    const name = `room-${pr.number}-${input.kind}`
+    const name = `room-${prNumber}-${input.kind}`
     const app = config.worker?.app
-    const port = yield* Effect.tryPromise({
-      try: () => freePort(),
-      catch: (error) => String(error),
-    })
-    const vars = { port: String(port), worker: name, worktree: dir }
+    const port =
+      app === undefined
+        ? undefined
+        : yield* Effect.tryPromise({
+            try: () => freePort(),
+            catch: (error) => String(error),
+          })
+    const vars = { port: String(port ?? 0), worker: name, worktree: dir }
     const sessionDir = join(jobsRoot(config), name)
     mkdirSync(sessionDir, { recursive: true })
     const envFile = join(sessionDir, "env.sh")
@@ -534,7 +842,9 @@ export const startWorker = (input: {
 
     let appAddress: string | undefined
     let url: string | undefined
-    if (app !== undefined) {
+    // The app block is hc-only: a substrate that hosts one terminal has nowhere to put it,
+    // and `startWorker` already refused a rex worker with an app configured.
+    if (app !== undefined && hc !== undefined) {
       const appScript = shellFile({
         dir: sessionDir,
         name: "app",
@@ -565,34 +875,69 @@ export const startWorker = (input: {
     const piScript = shellFile({
       dir: sessionDir,
       name: "pi",
-      lines: [`. "${envFile}"`, `cd "${dir}"`, "exec pi"],
+      lines: [
+        `. "${envFile}"`,
+        `cd "${dir}"`,
+        // A prepared review starts with its prompt, so "kick off a review" means the review
+        // begins; a fix worker starts bare and waits for a person.
+        promptFile === undefined ? "exec pi" : `exec pi "$(cat '${promptFile}')"`,
+      ],
     })
-    run({ command: hc, args: ["kill", name] })
-    run({ command: hc, args: ["rm", name] })
-    const launchedPi = run({
-      command: hc,
-      args: ["run", "--bg", "--json", "--name", name, "--cwd", dir, "sh", piScript],
-    })
-    const decodedPi = Schema.decodeResult(
-      Schema.fromJsonString(Schema.Struct({ address: Schema.String })),
-    )(launchedPi.stdout)
-    if (Result.isFailure(decodedPi)) {
-      return yield* Effect.fail(launchedPi.stderr.trim() || "hc did not return an address")
-    }
-    const address = decodedPi.success.address
+    const launchedPi =
+      substrate === "rex"
+        ? launchRex({ name, dir, script: piScript })
+        : launchHc({ hc: hc ?? "", name, dir, script: piScript })
+    if (Result.isFailure(launchedPi)) return yield* Effect.fail(launchedPi.failure)
+    const address = launchedPi.success
     yield* Effect.tryPromise({
       try: () =>
         new RoomClient(roomUrl(), config.room).putWorker(
           Object.assign(
-            { name, pr: pr.number, kind: input.kind, address, worktree: dir, port },
+            { name, pr: prNumber, kind: input.kind, address, worktree: dir },
+            port === undefined ? {} : { port },
             url === undefined ? {} : { url },
             appAddress === undefined ? {} : { appAddress },
           ),
         ),
       catch: () => "room not reachable",
     }).pipe(Effect.orElseSucceed(() => ({ ok: false })))
-    return Object.assign({ name, address }, url === undefined ? {} : { url })
+    return Object.assign({ name, address, worktree: dir }, url === undefined ? {} : { url })
   })
+
+/**
+ * The open PRs that ask this person to review, as GitHub reports them.
+ *
+ * The search is GitHub's, not a filter of ours: `review-requested:@me` is the same question the
+ * command line answers, and it drops a PR once a review is submitted.
+ *
+ * @param config - The room, for the repository and the directory to run `gh` in.
+ * @returns The PR numbers, empty when `gh` could not answer.
+ */
+export const reviewRequests = (config: RoomConfig): ReadonlyArray<number> => {
+  const repo = `${config.repo.owner}/${config.repo.name}`
+  const listed = run({
+    command: "gh",
+    args: [
+      "pr",
+      "list",
+      "-R",
+      repo,
+      "--search",
+      "review-requested:@me",
+      "--state",
+      "open",
+      "--json",
+      "number",
+      "--limit",
+      "20",
+    ],
+    cwd: config.repo.root,
+  })
+  const decoded = Schema.decodeResult(
+    Schema.fromJsonString(Schema.Array(Schema.Struct({ number: Schema.Finite }))),
+  )(listed.stdout)
+  return Result.isSuccess(decoded) ? decoded.success.map((entry) => entry.number) : []
+}
 
 /** The worker list the room returns, narrowed to what attach needs. */
 interface WorkerList {
@@ -616,7 +961,6 @@ export const stopWorker = (input: {
 }): Effect.Effect<string, string, FileSystem.FileSystem> =>
   Effect.gen(function* () {
     const hc = Option.getOrUndefined(hcOf())
-    if (hc === undefined) return yield* Effect.fail("herdr-core is not installed (hc)")
     const root = Option.getOrUndefined(valueOf(topLevel(input.cwd))) ?? input.cwd
     const config = Result.getOrUndefined(yield* readConfig(findConfigPath(root)))
     if (config === undefined) return yield* Effect.fail("no room.config.json in this repository")
@@ -648,9 +992,17 @@ export const stopWorker = (input: {
         cwd: worker.worktree,
       })
     }
-    run({ command: hc, args: ["kill", worker.address] })
-    const appAddress = worker.appAddress
-    if (appAddress !== undefined) run({ command: hc, args: ["kill", appAddress] })
+    // The address names the substrate: an hc terminal, or a Rex session id. Stopping the one
+    // the worker actually got is the difference between a stopped worker and a vanished room entry.
+    if (worker.address.startsWith("session:")) {
+      const rex = Result.getOrUndefined(onPath("rex"))
+      if (rex !== undefined) run({ command: rex, args: ["kill", worker.address] })
+    } else {
+      if (hc === undefined) return yield* Effect.fail("herdr-core is not installed (hc)")
+      run({ command: hc, args: ["kill", worker.address] })
+      const appAddress = worker.appAddress
+      if (appAddress !== undefined) run({ command: hc, args: ["kill", appAddress] })
+    }
     removeWorktree({ root: config.repo.root, dir: worker.worktree })
     yield* Effect.tryPromise({
       try: () => new RoomClient(roomUrl(), config.room).stopWorker(input.name),
@@ -671,7 +1023,6 @@ export const attachWorker = (input: {
 }): Effect.Effect<string, string, FileSystem.FileSystem> =>
   Effect.gen(function* () {
     const hc = Option.getOrUndefined(hcOf())
-    if (hc === undefined) return yield* Effect.fail("herdr-core is not installed (hc)")
     const root = Option.getOrUndefined(valueOf(topLevel(input.cwd))) ?? input.cwd
     const config = Result.getOrUndefined(yield* readConfig(findConfigPath(root)))
     if (config === undefined) return yield* Effect.fail("no room.config.json in this repository")
@@ -681,6 +1032,14 @@ export const attachWorker = (input: {
     }).pipe(Effect.orElseSucceed((): WorkerList => ({ workers: [] })))
     const worker = workers.workers.find((entry) => entry.name === input.name)
     if (worker === undefined) return yield* Effect.fail(`no worker named ${input.name}`)
+    // Rex has no "attach": a session id is shown by asking the app to select it.
+    if (worker.address.startsWith("session:")) {
+      return (
+        `rex session ${worker.address} — show it with: ` +
+        `rex -C <client> do session.select session_id=${worker.address}`
+      )
+    }
+    if (hc === undefined) return yield* Effect.fail("herdr-core is not installed (hc)")
     const result = yield* Effect.sync(() => run({ command: hc, args: ["attach", worker.address] }))
     return result.code === 0 ? worker.address : `attach exited ${result.code}`
   })

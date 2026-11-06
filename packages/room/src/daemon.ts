@@ -1,5 +1,5 @@
 import { actorOf, hostOf } from "@autotelic/board"
-import { Data, Effect, Result } from "effect"
+import { Data, Effect, Predicate, Result } from "effect"
 
 import { hostname } from "node:os"
 import type { RoomConfig } from "./config.ts"
@@ -40,6 +40,27 @@ const DEFAULT_URL = "http://127.0.0.1:9876"
 export const roomUrl = (): string => process.env.ROOM_URL ?? DEFAULT_URL
 
 /**
+ * Whether this process should hand itself to Node's watcher instead of running the loop.
+ *
+ * `--watch` restarts the process when any imported file changes, which is the dev loop for
+ * daemon.ts and everything it pulls in (review.ts, session.ts). A re-exec rather than an
+ * in-process watcher: the loop holds nothing worth preserving, and a fresh process is the
+ * honest restart -- an interrupted job lands back on the queue when its claim expires.
+ *
+ * The marker is an environment variable, not `process.execArgv.includes("--watch")`: Node
+ * strips its own exec arguments for the watched child (they arrive empty), so that check passed
+ * in the parent, failed in the child, and every watcher spawned another. The env var is the one
+ * thing that survives the re-exec.
+ *
+ * @param input - The flag and whether this process is already the watched copy.
+ * @returns True when the caller should spawn the watched copy and exit.
+ */
+export const wantsWatcher: Predicate.Predicate<{
+  readonly watch: boolean
+  readonly watched: boolean
+}> = (input) => input.watch && !input.watched
+
+/**
  * Run the room's daemon.
  *
  * @param options - The room, the URL, whether to run one job, and a logger.
@@ -47,14 +68,43 @@ export const roomUrl = (): string => process.env.ROOM_URL ?? DEFAULT_URL
  */
 export const daemon = (options: DaemonOptions): Effect.Effect<void, DaemonError> =>
   Effect.gen(function* () {
+    const client = new RoomClient(options.url, options.config.room)
+    const log = options.log
+    // Refuse before anything else. A daemon started without a room server retried a fetch that
+    // could never succeed -- one line every two seconds -- and buried the instruction that says
+    // what to do (`jig room dev`). A server that dies later is a different case: the loop below
+    // keeps trying, because a restart is something to wait for, not to give up on.
+    const reachable = yield* Effect.tryPromise({
+      try: () => client.health(),
+      catch: (error) => new DaemonError({ message: String(error) }),
+    }).pipe(
+      Effect.as(true),
+      Effect.orElseSucceed(() => false),
+    )
+    if (!reachable) {
+      const start = "jig room dev"
+      return yield* new DaemonError({
+        message: `no room server at ${options.url} -- run \`${start}\` first`,
+      })
+    }
     const login = yield* Effect.sync(authLogin)
     if (Result.isFailure(login)) {
       return yield* new DaemonError({ message: login.failure })
     }
     const host = hostOf({ login: login.success, hostname: hostname() })
     const actor = actorOf(login.success)
-    const client = new RoomClient(options.url, options.config.room)
-    const log = options.log
+    // One line per distinct failure, not one per attempt: three lines a second about a server
+    // that is down is not a log, it is a wall, and the line that answers it scrolls away.
+    let lastFailure = ""
+    const failed = (tag: string, text: string): void => {
+      const line = `${tag}: ${text}`
+      if (line === lastFailure) return
+      lastFailure = line
+      log(line)
+    }
+    const recovered = (): void => {
+      lastFailure = ""
+    }
     // The room's conversation, opened where the daemon runs: delivery is a submit, and the
     // library owns resume, queueing, and single-writer admission.
     const session = yield* Effect.tryPromise({
@@ -82,7 +132,10 @@ export const daemon = (options: DaemonOptions): Effect.Effect<void, DaemonError>
     const beat = Effect.tryPromise({
       try: () => client.beat(host, actor, 60_000),
       catch: (error) => new DaemonError({ message: String(error) }),
-    }).pipe(Effect.catch((error) => Effect.sync(() => log(`presence: ${error.message}`))))
+    }).pipe(
+      Effect.tap(() => Effect.sync(recovered)),
+      Effect.catch((error) => Effect.sync(() => failed("presence", error.message))),
+    )
 
     const work = Effect.gen(function* () {
       const job = yield* Effect.tryPromise({
@@ -96,7 +149,7 @@ export const daemon = (options: DaemonOptions): Effect.Effect<void, DaemonError>
       })
       log(`review ${job.id}`)
       const result = yield* Effect.tryPromise({
-        try: () => runReview({ config: options.config, job, dryRun: false, log }),
+        try: () => runReview({ config: options.config, job, dryRun: false, prepare: false, log }),
         catch: (error) => new DaemonError({ message: String(error) }),
       })
       yield* Effect.tryPromise({
@@ -108,7 +161,7 @@ export const daemon = (options: DaemonOptions): Effect.Effect<void, DaemonError>
     }).pipe(
       Effect.catch((error) =>
         Effect.sync(() =>
-          log(`  failed: ${error instanceof Error ? error.message : String(error)}`),
+          failed("  failed", error instanceof Error ? error.message : String(error)),
         ),
       ),
     )
@@ -134,8 +187,9 @@ export const daemon = (options: DaemonOptions): Effect.Effect<void, DaemonError>
         try: () => client.ack(turns.map((turn) => turn.seq)),
         catch: (error) => new DaemonError({ message: String(error) }),
       })
+      recovered()
       log(`delivered ${String(turns.length)} turn(s) to session ${session.id}`)
-    }).pipe(Effect.catch((error) => Effect.sync(() => log(`deliver: ${error.message}`))))
+    }).pipe(Effect.catch((error) => Effect.sync(() => failed("deliver", error.message))))
 
     yield* Effect.forkChild(Effect.forever(Effect.flatMap(beat, () => Effect.sleep("20 seconds"))))
 

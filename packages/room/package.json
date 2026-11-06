@@ -34,7 +34,8 @@
     "room": "node --conditions=development src/cli.ts",
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.worker.json --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "tui": "sh scripts/tui-repl.sh"
   },
   "dependencies": {
     "@autotelic/board": "workspace:*",

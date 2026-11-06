@@ -40,6 +40,32 @@ const comment = (id: number, body: string, createdAt = "2026-11-03T17:58:09Z") =
   createdAt,
 })
 
+/** A cursor as a previous run would have written it. */
+const cursorAt = (input: {
+  pr?: number
+  head: string
+  lastReviewId: number
+  lastCommentId?: number
+  reRequestedSha?: string
+}) => {
+  const entry = {
+    lastReviewId: input.lastReviewId,
+    lastCommentId: input.lastCommentId ?? 0,
+    seenSha: input.head,
+    seenAt: 1,
+  }
+  return {
+    version: 1 as const,
+    seenAt: 1,
+    prs: {
+      [String(input.pr ?? 1776)]:
+        input.reRequestedSha === undefined
+          ? entry
+          : { ...entry, reRequestedSha: input.reRequestedSha },
+    },
+  }
+}
+
 describe("room resume", () => {
   it("a: a cold start with nothing new says nothing new, not a replay", () => {
     const first = planResume({ observations: [observation()], cursor: undefined, now: 1 })
@@ -176,5 +202,62 @@ describe("room resume", () => {
     expect(decodeCursor(JSON.stringify(emptyCursor))).toEqual(emptyCursor)
     const plan = planResume({ observations: [observation()], cursor: emptyCursor, now: 1 })
     expect(plan.lost).toBe(true)
+  })
+})
+
+describe("the re-request a push never asked for", () => {
+  const base = "83fe79a31aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  const head = "3b51f361fbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  const moved = observation({
+    headSha: head,
+    reviews: [review(11, "changes_requested", base)],
+  })
+
+  it("names the obligation a synchronize hook cannot see, once per head", () => {
+    // The review was reported at the old head; only the head has moved since.
+    const before = cursorAt({ head: base, lastReviewId: 11 })
+    const plan = planResume({ observations: [moved], cursor: before, now: 2 })
+    expect(plan.cards).toHaveLength(1)
+    expect(plan.cards[0]?.text).toContain("changes requested at 83fe79a3")
+    expect(plan.cards[0]?.text).toContain("head is now 3b51f361")
+    expect(plan.cards[0]?.text).toContain("no re-request since the push")
+    // Recorded, so the same state is not reported again and again.
+    expect(plan.next.prs["1776"]?.reRequestedSha).toBe(head)
+    expect(planResume({ observations: [moved], cursor: plan.next, now: 3 }).cards).toEqual([])
+    // A further push is a new obligation: the reviewed commit is even further behind.
+    const further = observation({
+      headSha: "cd26f3affccccccccccccccccccccccccccccccc",
+      reviews: [review(11, "changes_requested", base)],
+    })
+    expect(planResume({ observations: [further], cursor: plan.next, now: 4 }).cards).toHaveLength(1)
+  })
+
+  it("is not an approval, and not a review written at the head", () => {
+    const approved = observation({ headSha: head, reviews: [review(11, "approved", base)] })
+    expect(
+      planResume({
+        observations: [approved],
+        cursor: cursorAt({ head: base, lastReviewId: 11 }),
+        now: 2,
+      }).cards,
+    ).toEqual([])
+    const atHead = observation({ headSha: head, reviews: [review(11, "changes_requested", head)] })
+    expect(
+      planResume({
+        observations: [atHead],
+        cursor: cursorAt({ head: base, lastReviewId: 11 }),
+        now: 2,
+      }).cards,
+    ).toEqual([])
+  })
+
+  it("says it on the cold-start card too, rather than a second card", () => {
+    // A cold start already names the latest review and the head; repeating it as a re-request
+    // card in the next run would be the same fact twice.
+    const plan = planResume({ observations: [moved], cursor: undefined, now: 1 })
+    expect(plan.cards).toHaveLength(1)
+    expect(plan.cards[0]?.text).toContain("no re-request since the push")
+    expect(plan.next.prs["1776"]?.reRequestedSha).toBe(head)
+    expect(planResume({ observations: [moved], cursor: plan.next, now: 2 }).cards).toEqual([])
   })
 })

@@ -145,8 +145,9 @@ const PlanIn = Schema.Struct({ cwd: Schema.optionalKey(Schema.String) })
 
 const InitIn = Schema.Struct({
   room: Schema.String,
-  project: Schema.String,
-  projectName: Schema.String,
+  /** A Linear project is one kind of address; a label with no project is the other. */
+  project: Schema.optionalKey(Schema.String),
+  projectName: Schema.optionalKey(Schema.String),
   label: Schema.optionalKey(Schema.String),
   linearUser: Schema.optionalKey(Schema.String),
   stage: Schema.optionalKey(Schema.String),
@@ -220,22 +221,15 @@ const initOp = async (
   const options = Result.getOrUndefined(Schema.decodeUnknownResult(InitIn)(input))
   if (options === undefined) {
     return {
-      content: "room init: room, project and projectName are required",
+      content:
+        "room init: room is required, with a Linear project or a GitHub label as its address",
       metadata: { exitCode: 2, cwd: root },
     }
   }
   const directory = directoryFor(options.cwd, root)
-  const args = [
-    "init",
-    "--cwd",
-    directory,
-    "--room",
-    options.room,
-    "--linear-project",
-    options.project,
-    "--linear-name",
-    options.projectName,
-  ]
+  const args = ["init", "--cwd", directory, "--room", options.room]
+  if (options.project !== undefined) args.push("--linear-project", options.project)
+  if (options.projectName !== undefined) args.push("--linear-name", options.projectName)
   if (options.label !== undefined) args.push("--label", options.label)
   if (options.linearUser !== undefined) args.push("--linear-user", options.linearUser)
   if (options.stage !== undefined) args.push("--stage", options.stage)

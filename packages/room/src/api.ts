@@ -3,7 +3,7 @@ import { Effect, Result, Schema } from "effect"
 import type { Ledger } from "./ledger.ts"
 import { fromGithub, fromLinear } from "./ingest.ts"
 import { inboxFor } from "./inbox.ts"
-import { reviewJob, shouldReview, ReviewTriggerSchema } from "./policy.ts"
+import { reviewJob, shouldReview, unaddressed, ReviewTriggerSchema } from "./policy.ts"
 
 /*
  * The room's HTTP surface.
@@ -126,6 +126,9 @@ export const handle = async (
         checks: ledger.checks(),
         jobs: ledger.jobs().slice(0, 20),
         claims: ledger.claims(now),
+        // A review request scoped away by the label is still a fact: the board says how many,
+        // so a filtered room does not look like a dead forwarder.
+        unrouted: ledger.unrouted(),
         workers: ledger.workers().filter((worker) => worker.state === "live"),
         presence: ledger.presences(now).map((presence) => ({
           host: presence.host,
@@ -214,13 +217,24 @@ export const handle = async (
       label: watch,
       trigger: decided,
     }
-    const queued =
-      (event.kind === "review.requested" ||
-        event.kind === "pr.ready" ||
-        event.kind === "review.submitted" ||
-        event.kind === "thread.created") &&
-      shouldReview(addressed) &&
-      ledger.enqueue(reviewJob({ event, room: ledger.room, now }))
+    const isReviewEvent =
+      event.kind === "review.requested" ||
+      event.kind === "pr.ready" ||
+      event.kind === "review.submitted" ||
+      event.kind === "thread.created"
+    // The decision, not the enqueue result: a job that already existed was addressed to the
+    // room even though nothing new was queued, so it must not be counted as unrouted.
+    const addressedToRoom = isReviewEvent && shouldReview(addressed)
+    const queued = addressedToRoom && ledger.enqueue(reviewJob({ event, room: ledger.room, now }))
+    if (unaddressed({ event, label: watch, queued: addressedToRoom })) {
+      ledger.append({
+        id: `${event.id}#unrouted`,
+        room: ledger.room,
+        at: now,
+        kind: "review.unrouted",
+        payload: { event: event.kind },
+      })
+    }
     return json({ body: { event: event.kind, accepted: true, queued } })
   }
 

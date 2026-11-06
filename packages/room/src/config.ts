@@ -17,18 +17,36 @@ export const CONFIG_PATH = "room.config.json"
 /** The pre-move location, read for compatibility and never written. */
 export const LEGACY_CONFIG_PATH = ".room/config.json"
 
+/**
+ * A workstream with a Linear project behind it: the project id is the address.
+ */
+export const LinearProject = Schema.Struct({
+  kind: Schema.Literal("linear"),
+  id: Schema.String,
+  name: Schema.String,
+  workspace: Schema.optionalKey(Schema.String),
+})
+
+/**
+ * A workstream addressed by a GitHub label, with no Linear project.
+ *
+ * `id` is the label, because the label is the address: it is what a PR carries and what a
+ * webhook names. A room still needs one string for the ledger, the state directory, and the
+ * index key, and inventing a placeholder there would make two label rooms look alike.
+ */
+export const LabelProject = Schema.Struct({
+  kind: Schema.Literal("github"),
+  id: Schema.String,
+  name: Schema.String,
+})
+
 /** A room's committed configuration. */
 export const RoomConfig = Schema.Struct({
   version: Schema.Literal(1),
   room: Schema.String,
   name: Schema.String,
   stage: Schema.String,
-  project: Schema.Struct({
-    kind: Schema.Literal("linear"),
-    id: Schema.String,
-    name: Schema.String,
-    workspace: Schema.optionalKey(Schema.String),
-  }),
+  project: Schema.Union([LinearProject, LabelProject]),
   repo: Schema.Struct({
     owner: Schema.String,
     name: Schema.String,
@@ -36,7 +54,11 @@ export const RoomConfig = Schema.Struct({
   }),
   ingress: Schema.Struct({
     github: Schema.Literals(["forward", "poll"]),
-    linear: Schema.Literals(["poll", "webhook"]),
+    /**
+     * `none` is a label-addressed room: there is no project to poll, and a poller pointed at
+     * one would either fail or, worse, pull a foreign project's issues into this ledger.
+     */
+    linear: Schema.Literals(["poll", "webhook", "none"]),
   }),
   review: Schema.Struct({
     trigger: Schema.Literals(["review_requested", "review_submitted", "review_comment"]),
@@ -44,6 +66,17 @@ export const RoomConfig = Schema.Struct({
     model: Schema.String,
     slots: Schema.Finite,
   }),
+  /**
+   * The label that answers "is this PR this room's?" — used for both jobs on purpose.
+   *
+   * It addresses the room (a PR carrying it is `pr.ready`), and it scopes a review request
+   * (a request names a person, so without it every request in the organisation lands in
+   * whichever room watches them). Splitting these into `watch.label` and `review.label` was
+   * considered and refused: two fields can drift, and the drift is silent in both directions
+   * (a relabel for review routing stops the room seeing its own PRs, or the reverse). One field
+   * meaning "this PR belongs to this room" is easier to keep true, and when it is wrong the
+   * board counts the delivery as `unrouted` instead of hiding it.
+   */
   watch: Schema.optionalKey(
     Schema.Struct({
       label: Schema.String,

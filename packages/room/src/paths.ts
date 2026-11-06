@@ -114,7 +114,13 @@ export const recordRoom = (
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const current = yield* readIndex
-    const rooms = current.rooms.filter((room) => room.room !== entry.room)
+    // One checkout holds one room, so the config path *is* the binding. A rebind used to leave
+    // the previous room's entry pointing at the same path, and `board --room <old name>` then
+    // read the new room's config and showed it under the old name -- a stale entry that lies,
+    // rather than a room that is gone.
+    const rooms = current.rooms.filter(
+      (room) => room.room !== entry.room && room.configPath !== entry.configPath,
+    )
     const next: RoomIndex = { version: 1, rooms: [...rooms, entry] }
     yield* Effect.orElseSucceed(fs.makeDirectory(roomHome(), { recursive: true }), () => undefined)
     yield* Effect.orElseSucceed(

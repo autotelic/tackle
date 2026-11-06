@@ -14,12 +14,13 @@ import {
   renderBoard,
   renderChecks,
   renderPlan,
+  reviewRequests,
   startWorker,
   stopWorker,
   attachWorker,
 } from "./commands.ts"
 import { readConfig, type RoomConfig } from "./config.ts"
-import { daemon, roomUrl } from "./daemon.ts"
+import { daemon, roomUrl, wantsWatcher } from "./daemon.ts"
 import { seedRoom } from "./seed.ts"
 import { linearWebhook, webhookCommand as webhookLine, webhookRegistration } from "./webhooks.ts"
 import {
@@ -32,9 +33,21 @@ import {
   submitToRoom,
 } from "./session.ts"
 import { findConfigPath, readIndex, roomsByActivity, stateDir } from "./paths.ts"
+import { topLevel } from "./git.ts"
+import {
+  callerOf,
+  claimedWorktree,
+  readDriver,
+  releaseDriver,
+  renderDriver,
+  sayRefusal,
+  worktreeName,
+  writeDriver,
+} from "./driver.ts"
+import { hostname } from "node:os"
 import { cursorFile, decodeCursor, observe, planResume, renderResume } from "./resume.ts"
 import { RoomClient } from "./client.ts"
-import { runReview } from "./review.ts"
+import { runReview, type ReviewResult } from "./review.ts"
 import { run } from "./shell.ts"
 
 /*
@@ -91,10 +104,14 @@ const initCommand = Command.make(
     cwd: cwdFlag,
     room: Flag.String("room").pipe(Flag.withDescription("Room name, e.g. multi-season.")),
     project: Flag.String("linear-project").pipe(
-      Flag.withDescription("Linear project id, from `linearis projects list`."),
+      Flag.withDescription(
+        "Linear project id, from `linearis projects list` (one kind of address).",
+      ),
+      Flag.optional,
     ),
     projectName: Flag.String("linear-name").pipe(
       Flag.withDescription("Linear project name, as a person would read it."),
+      Flag.optional,
     ),
     workspace: Flag.String("workspace").pipe(
       Flag.withDescription("Linear workspace slug, for the audit record."),
@@ -106,7 +123,7 @@ const initCommand = Command.make(
     ),
     label: Flag.String("label").pipe(
       Flag.withDescription(
-        "The GitHub label that addresses this room (optional; review requests still work).",
+        "The GitHub label this room watches. For a workstream with no Linear project, the label is also the room's address.",
       ),
       Flag.optional,
     ),
@@ -126,8 +143,8 @@ const initCommand = Command.make(
         init({
           cwd: root,
           name: options.room,
-          projectId: options.project,
-          projectName: options.projectName,
+          projectId: Option.getOrUndefined(options.project),
+          projectName: Option.getOrUndefined(options.projectName),
           workspace: Option.getOrUndefined(options.workspace),
           stage: Option.getOrUndefined(options.stage),
           label: Option.getOrUndefined(options.label),
@@ -147,6 +164,9 @@ const initCommand = Command.make(
           `room: ${result.config.room}`,
           `  config   ${result.path}`,
           `  stage    ${result.config.stage}`,
+          ...(result.kept.length === 0
+            ? []
+            : [`  kept     ${result.kept.join(", ")} (from the config this rewrote)`]),
           `  roomd    ${
             result.configured
               ? `configured at ${roomUrl()}`
@@ -203,6 +223,9 @@ const boardCommand = Command.make(
           catch: () => Result.fail("room did not answer"),
         }).pipe(Effect.orElseSucceed(() => Result.fail("room did not answer"))),
       )
+      // Read from this machine's state, not from the daemon: the claim is what a second session
+      // looks for before starting one, and roomd being down is no reason to hide it.
+      const driver = yield* readDriver(config)
       if (options.json) {
         yield* write(
           JSON.stringify(
@@ -213,11 +236,18 @@ const boardCommand = Command.make(
                   name: config.name,
                   stage: config.stage,
                   reachable: false,
+                  driver: driver ?? null,
                   // Without this, "nothing queued" and "the surface cannot reach roomd" look
                   // identical in the JSON a tool or a badge reads.
                   reason: `roomd not reachable at ${roomUrl()}`,
                 }
-              : { ...board, address: config.room, name: config.name, stage: config.stage },
+              : {
+                  ...board,
+                  address: config.room,
+                  name: config.name,
+                  stage: config.stage,
+                  driver: driver ?? null,
+                },
             null,
             2,
           ),
@@ -225,7 +255,7 @@ const boardCommand = Command.make(
         return
       }
       const now = yield* Clock.currentTimeMillis
-      yield* write(renderBoard({ config, board, now }))
+      yield* write(renderBoard({ config, board, now, driver }))
     }),
 ).pipe(
   Command.withDescription("Render the room's board: jobs, chits, and who is present."),
@@ -431,6 +461,44 @@ const sessionCommand = Command.make(
       Flag.withDescription("Follow the conversation and print new entries as JSON lines."),
       Flag.withDefault(false),
     ),
+    replay: Flag.Boolean("replay").pipe(
+      Flag.withDescription(
+        "With --watch, print what is already committed as the first batch. --no-replay starts at the head.",
+      ),
+      Flag.withDefault(true),
+    ),
+    session: Flag.String("session").pipe(
+      Flag.withDescription(
+        "The caller's session id. Default: $PI_SESSION_ID, else user@host from a plain terminal.",
+      ),
+      Flag.optional,
+    ),
+    worktree: Flag.String("worktree").pipe(
+      Flag.withDescription(
+        "The checkout this session is working in. Default: git's top level for the current directory.",
+      ),
+      Flag.optional,
+    ),
+    attach: Flag.Boolean("attach").pipe(
+      Flag.withDescription(
+        "Record this session and worktree as the room's driver. Two sessions cannot drive one conversation by accident.",
+      ),
+      Flag.withDefault(false),
+    ),
+    release: Flag.Boolean("release").pipe(
+      Flag.withDescription("Stop driving. Only the attached session may, without --take-over."),
+      Flag.withDefault(false),
+    ),
+    takeOver: Flag.Boolean("take-over").pipe(
+      Flag.withDescription(
+        "Take the room from the session that claimed it, and claim it yourself.",
+      ),
+      Flag.withDefault(false),
+    ),
+    status: Flag.Boolean("status").pipe(
+      Flag.withDescription("Print who is driving, and whether a run is working. Reads only."),
+      Flag.withDefault(false),
+    ),
   },
   (options) =>
     Effect.gen(function* () {
@@ -450,8 +518,88 @@ const sessionCommand = Command.make(
         yield* exit(1)
         return
       }
+      const now = yield* Clock.currentTimeMillis
+      const caller = callerOf({
+        explicit: Option.getOrUndefined(options.session),
+        env: process.env,
+        machine: hostname(),
+      })
+      // Not `root`: that is where the room's config lives, and a session working in another
+      // worktree of the same repository would otherwise claim the room's directory instead of
+      // its own.
+      const worktree = claimedWorktree({
+        explicit: Option.getOrUndefined(options.worktree),
+        toplevel: Result.getOrUndefined(topLevel(process.cwd())),
+        root,
+      })
+      if (options.attach) {
+        yield* writeDriver(config, {
+          sessionId: caller,
+          worktree,
+          host: hostname(),
+          attachedAt: now,
+        })
+        // The claim is also a fact about the conversation: a reader of the transcript with
+        // --all should see who attached and when, not only the file that says so now.
+        yield* Effect.tryPromise({
+          try: () =>
+            noteToRoom({
+              session,
+              kind: "room.session",
+              data: { raw: `attached ${caller} · ${worktreeName(worktree)}` },
+            }),
+          catch: (error) => String(error),
+        }).pipe(Effect.orElseSucceed(() => undefined))
+        yield* write(`attached ${caller} · ${worktreeName(worktree)}`)
+      }
+      if (options.release) {
+        const held = yield* readDriver(config)
+        if (held !== undefined && held.sessionId !== caller && !options.takeOver) {
+          yield* write(
+            `room session: ${held.sessionId} (${worktreeName(held.worktree)}) is driving this room\n` +
+              "  pass --take-over to release it",
+          )
+          yield* exit(1)
+          return
+        }
+        yield* releaseDriver(config)
+        yield* write("released")
+      }
+      if (options.status) {
+        const held = yield* readDriver(config)
+        const live = yield* Effect.tryPromise({
+          try: () => roomSessionView(session),
+          catch: (error) => String(error),
+        }).pipe(Effect.orElseSucceed(() => undefined))
+        yield* write(
+          [
+            `  ${renderDriver({ driver: held, now })}`,
+            `  session  ${live === undefined ? session.id : live.id}${live?.busy === true ? " · busy" : ""}`,
+            ...(held === undefined ? [] : [`  worktree ${held.worktree}`]),
+          ].join("\n"),
+        )
+        return
+      }
       const text = Option.getOrUndefined(options.say)
       if (text !== undefined) {
+        const held = yield* readDriver(config)
+        const refusal = sayRefusal({ driver: held, caller, now, takeOver: options.takeOver })
+        if (refusal !== undefined) {
+          yield* write(`room session: ${refusal}`)
+          yield* exit(1)
+          return
+        }
+        // Taking over is a claim, not only a bypass: if it cleared nothing, the other session's
+        // claim would refuse the very next sentence.
+        if (options.takeOver && (held === undefined || held.sessionId !== caller)) {
+          yield* writeDriver(config, {
+            sessionId: caller,
+            worktree,
+            host: hostname(),
+            attachedAt: now,
+          })
+          yield* write(`took the room from ${held?.sessionId ?? "nobody"}`)
+        }
         const id = yield* Effect.tryPromise({
           try: () => submitToRoom({ session, text }),
           catch: (error) => String(error),
@@ -479,6 +627,7 @@ const sessionCommand = Command.make(
           try: () =>
             followRoomSession({
               session,
+              replay: options.replay,
               onEntries: (entries) => {
                 for (const entry of entries) {
                   if (!options.all && isTelemetry(entry.kind)) continue
@@ -511,11 +660,14 @@ const sessionCommand = Command.make(
         catch: (error) => String(error),
       }).pipe(Effect.orElseSucceed(() => undefined))
       if (options.json) {
+        // The driver travels with the view: a tool asking "is anyone driving this room" should
+        // not have to read a second file it does not know the path of.
+        const held = yield* readDriver(config)
         yield* write(
           `${JSON.stringify(
             entries === undefined
-              ? (view ?? { id: session.id, busy: false, queued: 0 })
-              : { view, entries },
+              ? { ...(view ?? { id: session.id, busy: false, queued: 0 }), driver: held ?? null }
+              : { view, entries, driver: held ?? null },
             null,
             2,
           )}\n`,
@@ -697,26 +849,66 @@ const workCommand = Command.make(
   "work",
   {
     cwd: cwdFlag,
-    pr: Flag.Int("pr").pipe(Flag.withDescription("Pull request number.")),
+    pr: Flag.Int("pr").pipe(
+      Flag.withDescription("Pull request number. Omit with --review-requested."),
+      Flag.optional,
+    ),
     kind: Flag.Literals("kind", ["fix", "review"]).pipe(
       Flag.withDescription("The kind of work the session is for."),
       Flag.withDefault("fix"),
+    ),
+    substrate: Flag.Literals("substrate", ["hc", "rex"]).pipe(
+      Flag.withDescription(
+        "Where the worker's terminal lives. Default: worker.substrate in room.config.json.",
+      ),
+      Flag.optional,
+    ),
+    reviewRequested: Flag.Boolean("review-requested").pipe(
+      Flag.withDescription(
+        "Start a worker for every open PR that asks for your review (gh pr list --search review-requested:@me).",
+      ),
+      Flag.withDefault(false),
     ),
   },
   (options) =>
     Effect.gen(function* () {
       const root = yield* rootOf(options.cwd)
-      const result = yield* startWorker({ cwd: root, pr: options.pr, kind: options.kind }).pipe(
-        Effect.result,
-      )
-      if (Result.isFailure(result)) {
-        yield* write(result.failure)
+      const config = Result.getOrUndefined(yield* readConfig(findConfigPath(root)))
+      if (config === undefined) {
+        yield* write("room work: no room.config.json")
         yield* exit(1)
         return
       }
-      yield* write(
-        `worker ${result.success.name} · ${result.success.address}\n  attach: jig room attach --name ${result.success.name}`,
-      )
+      const only = Option.getOrUndefined(options.pr)
+      const numbers =
+        only !== undefined ? [only] : options.reviewRequested ? reviewRequests(config) : []
+      if (numbers.length === 0) {
+        yield* write(
+          "room work: pass --pr <n>, or --review-requested for every review waiting on you",
+        )
+        yield* exit(1)
+        return
+      }
+      const substrate = Option.getOrUndefined(options.substrate)
+      for (const pr of numbers) {
+        const result = yield* startWorker({
+          cwd: root,
+          pr,
+          kind: options.kind,
+          substrate,
+        }).pipe(Effect.result)
+        if (Result.isFailure(result)) {
+          yield* write(`room work: #${pr}: ${result.failure}`)
+          continue
+        }
+        yield* write(
+          [
+            `worker ${result.success.name} · ${result.success.address}`,
+            `  worktree ${result.success.worktree}`,
+            `  attach: jig room attach --name ${result.success.name}`,
+          ].join("\n"),
+        )
+      }
     }),
 ).pipe(
   Command.withDescription("Start an attachable worker session in its own worktree (herdr-core)."),
@@ -773,9 +965,31 @@ const daemonCommand = Command.make(
       Flag.withDescription("Claim and run one job, then exit."),
       Flag.withDefault(false),
     ),
+    watch: Flag.Boolean("watch").pipe(
+      Flag.withDescription(
+        "Restart when an imported source file changes (node --watch). A job in flight is interrupted; its claim expires on its own.",
+      ),
+      Flag.withDefault(false),
+    ),
   },
   (options) =>
     Effect.gen(function* () {
+      // Re-exec before anything else, so the flag works in any directory: the watched copy is
+      // the one that reads the config, seeds the room, and claims.
+      if (wantsWatcher({ watch: options.watch, watched: process.env.ROOM_WATCHED === "1" })) {
+        const watched = spawn(
+          process.execPath,
+          ["--watch", ...process.execArgv, ...process.argv.slice(1)],
+          { stdio: "inherit", env: { ...process.env, ROOM_WATCHED: "1" } },
+        )
+        const code = yield* Effect.tryPromise({
+          try: () =>
+            new Promise<number>((resolve) => watched.on("exit", (value) => resolve(value ?? 1))),
+          catch: () => 1,
+        }).pipe(Effect.orElseSucceed(() => 1))
+        yield* exit(code)
+        return
+      }
       const root = yield* rootOf(options.cwd)
       const config = Result.getOrUndefined(yield* readConfig(findConfigPath(root)))
       if (config === undefined) {
@@ -789,9 +1003,12 @@ const daemonCommand = Command.make(
         once: options.once,
         log: (line) => process.stdout.write(`${line}\n`),
       }).pipe(
-        Effect.orElseSucceed(() => {
-          process.exitCode = 1
-        }),
+        Effect.catch((error) =>
+          Effect.sync(() => {
+            process.stdout.write(`room daemon: ${error.message}\n`)
+            process.exitCode = 1
+          }),
+        ),
       )
     }),
 ).pipe(
@@ -808,6 +1025,13 @@ const reviewCommand = Command.make(
       Flag.withDescription("Prepare the worktree and the prompt; do not call Pi or post."),
       Flag.withDefault(false),
     ),
+    prepare: Flag.Boolean("prepare").pipe(
+      Flag.withDescription(
+        "Prepare the worktree and prompt and hand both back, leaving them in place. Calls no Pi and posts nothing.",
+      ),
+      Flag.withDefault(false),
+    ),
+    json: jsonFlag,
   },
   (options) =>
     Effect.gen(function* () {
@@ -835,17 +1059,40 @@ const reviewCommand = Command.make(
               updatedAt: now,
             },
             dryRun: options.dryRun,
+            prepare: options.prepare,
             log: (line) => process.stdout.write(`${line}\n`),
           }),
         catch: () => "review failed",
       }).pipe(
-        Effect.orElseSucceed(() => ({
+        Effect.orElseSucceed((): ReviewResult => ({
           ok: false,
-          state: "failed" as const,
+          state: "failed",
           note: "review failed",
         })),
       )
-      yield* write(`${result.state}: ${result.note}`)
+      const handoff = result.handoff
+      if (options.prepare && options.json) {
+        // The wake carries this verbatim: pr, sha, worktree, prompt, marker.
+        yield* write(
+          JSON.stringify(
+            handoff ?? { prepared: false, state: result.state, note: result.note },
+            null,
+            2,
+          ),
+        )
+      } else if (handoff !== undefined) {
+        yield* write(
+          [
+            `prepared ${result.note}`,
+            `  worktree ${handoff.worktree}`,
+            `  prompt   ${handoff.promptFile}`,
+            `  marker   ${handoff.marker}`,
+            "  the worktree is yours: remove it with 'git worktree remove <path>' when the review is posted",
+          ].join("\n"),
+        )
+      } else {
+        yield* write(`${result.state}: ${result.note}`)
+      }
       yield* exit(result.ok ? 0 : 1)
     }),
 ).pipe(
