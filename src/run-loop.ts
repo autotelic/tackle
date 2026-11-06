@@ -105,8 +105,19 @@ const nightly = {
   },
 }
 
+// A re-entered working issue goes first (#8): the machine's initial state
+// is 'picking', so the queue poll must return it ahead of everything else.
+let reenterIssue = startup.kind === 're-enter' ? startup.issue : null
+
 const machineDeps: LoopMachineDeps = {
-  pickIssue: () => pickNextIssue(repoDir, config, (issue) => answeredFirst.has(issue)),
+  pickIssue: () => {
+    if (reenterIssue) {
+      const issue = reenterIssue
+      reenterIssue = null
+      return Promise.resolve(issue)
+    }
+    return pickNextIssue(repoDir, config, (issue) => answeredFirst.has(issue))
+  },
   makeIssueLoop: (issue) =>
     runIssueLoop({
       repoDir,
