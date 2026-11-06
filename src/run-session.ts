@@ -14,8 +14,8 @@ import { join, resolve } from 'node:path'
  * Exit code: 0 = completed, 1 = failed, 2 = blocked-on-human.
  */
 import { loadConfig } from './config.ts'
+import { createHumanChannel } from './human-channel.ts'
 import { runSession } from './session.ts'
-import { createTerminalHumanChannel } from './terminal-human.ts'
 
 function parseArgs(argv: string[]): Record<string, string> {
   const args: Record<string, string> = {}
@@ -46,7 +46,10 @@ const prompt = args.prompt ?? (await readFile(args.promptFile as string, 'utf8')
 const stamp = new Date().toISOString().replaceAll(/[:.]/g, '-')
 const logPath = args.log ? resolve(args.log) : join(repoDir, '.treadle', `session-${stamp}.jsonl`)
 
-const human = createTerminalHumanChannel()
+const channelArg = process.argv.includes('--channel')
+  ? (process.argv[process.argv.indexOf('--channel') + 1] as 'terminal' | 'telepi')
+  : undefined
+const human = await createHumanChannel(channelArg)
 const askHuman = human.askHuman
 
 const outcome = await runSession({

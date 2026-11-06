@@ -17,14 +17,19 @@ import { join, resolve } from 'node:path'
 import { promisify } from 'node:util'
 import { runChecks } from './checks.ts'
 import { type LoopConfig, loadConfig } from './config.ts'
+import { createHumanChannel } from './human-channel.ts'
 import { buildSessionPrompt } from './prompt.ts'
 import { type Receipt, renderReceipt } from './receipt.ts'
 import { runSession, type SessionOutcome } from './session.ts'
-import { createTerminalHumanChannel } from './terminal-human.ts'
 
 const execFileAsync = promisify(execFile)
 
-function parseArgs(argv: string[]): { repo: string; issue?: number; budget?: number } {
+function parseArgs(argv: string[]): {
+  repo: string
+  issue?: number
+  budget?: number
+  channel?: 'terminal' | 'telepi'
+} {
   const args: Record<string, string> = {}
   for (let i = 0; i < argv.length; i += 2) {
     const key = argv[i]
@@ -36,13 +41,21 @@ function parseArgs(argv: string[]): { repo: string; issue?: number; budget?: num
     args[key.slice(2)] = value
   }
   if (!args.repo) {
-    console.error('usage: node src/run-issue.ts --repo <path> [--issue <n>] [--budget <n>]')
+    console.error(
+      'usage: node src/run-issue.ts --repo <path> [--issue <n>] [--budget <n>] [--channel terminal|telepi]',
+    )
+    process.exit(64)
+  }
+  const channel = args.channel
+  if (channel !== undefined && channel !== 'terminal' && channel !== 'telepi') {
+    console.error('--channel must be terminal or telepi')
     process.exit(64)
   }
   return {
     repo: resolve(args.repo),
     issue: args.issue ? Number(args.issue) : undefined,
     budget: args.budget ? Number(args.budget) : undefined,
+    ...(channel ? { channel } : {}),
   }
 }
 
@@ -187,11 +200,30 @@ async function main(): Promise<number> {
       return 2
     }
 
-    const human = createTerminalHumanChannel()
-    const passes: { outcome: SessionOutcome; lastText: string | null }[] = []
-    let previousNote: string | null = null
+    const nameWithOwner = await gh(
+      repoDir,
+      'repo',
+      'view',
+      '--json',
+      'nameWithOwner',
+      '--jq',
+      '.nameWithOwner',
+    ).then(
+      (s) => s.trim(),
+      () => null,
+    )
     let lastReportDir: string | null = null
     let lastReport: typeof baseline | null = null
+    const human = await createHumanChannel(args.channel, () => ({
+      issue: issue.number,
+      ...(nameWithOwner
+        ? { issueUrl: `https://github.com/${nameWithOwner}/issues/${issue.number}` }
+        : {}),
+      branch,
+      checkSummary: lastReport ? summarize(lastReport) : 'baseline checks passed',
+    }))
+    const passes: { outcome: SessionOutcome; lastText: string | null }[] = []
+    let previousNote: string | null = null
 
     for (let pass = 1; pass <= budget; pass++) {
       console.log(`\n— pass ${pass} of ${budget}: session`)
@@ -345,6 +377,18 @@ async function main(): Promise<number> {
       () => {},
     )
   }
+}
+
+function summarize(report: {
+  outcome: string | null
+  frontier: number
+  failureSet: { check: string; test?: string }[]
+}): string {
+  const entries = report.failureSet
+    .slice(0, 3)
+    .map((entry) => (entry.test ? `${entry.check} › ${entry.test}` : entry.check))
+  const base = `${report.outcome}, frontier ${report.frontier}`
+  return entries.length > 0 ? `${base} — ${entries.join('; ')}` : base
 }
 
 async function park(repoDir: string, config: LoopConfig, issueNumber: number): Promise<void> {
