@@ -119,7 +119,7 @@ export const reversal: Rule = {
   judged: true,
   move: "contract",
   messages: messages({
-    stops_at_contract: "{{names}} are one declaration written {{count}} times.",
+    stops_at_contract: "{{names}} are one declaration written {{count}} times: {{at}}.",
     stops_at_contract_help:
       "This is the contract stage: a primitive already exists. Keep one declaration, import it everywhere, and delete the copies. Nothing else has to change.",
     stops_at_combine: "`{{whole}}` repeats every field of `{{part}}` and adds {{count}}: {{added}}.",
@@ -152,9 +152,23 @@ export const reversal: Rule = {
         report({
           about: first ?? { file: "", start: 0 },
           messageId: "stops_at_contract",
-          data: { names: names.slice(0, 4).join(", "), count: group.members.length },
+          data: {
+            names: names.slice(0, 4).join(", "),
+            count: group.members.length,
+            // Where each copy is. A name alone is not a site: two files can hold
+            // the same pair of names and a reader needs the paths to act.
+            at: group.members
+              .filter((unit) => names.slice(0, 4).includes(unit.name))
+              .slice(0, 4)
+              .map((unit) => unit.name + " at " + unit.file + ":" + String(unit.location.line))
+              .join("; "),
+          },
           helpId: "stops_at_contract_help",
-          identity: [RULE_ID, "contract", names.join("\u0000")].join("\u0000"),
+          identity: [
+            RULE_ID,
+            "contract",
+            ...group.members.map((unit) => unit.file + "#" + unit.name).sort((left, right) => left.localeCompare(right)),
+          ].join("\u0000"),
           judged: false,
           severity: "warn",
           move: "contract",

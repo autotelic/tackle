@@ -4,7 +4,14 @@ import { Decision, DecisionModel } from "effect/ai"
 import { Atoms } from "../atoms.ts"
 import { isUnreachable } from "../decision.ts"
 import { cascadeOf } from "../cascade.ts"
-import { derivedOperation, describeOperation, permitted, settle } from "../operation.ts"
+import {
+  derivedOperation,
+  describeOperation,
+  permitted,
+  relationshipOf,
+  settle,
+  type PackageRelationship,
+} from "../operation.ts"
 import { answerPlans, PlanAnswers, type Plan, type Questionnaire } from "../plans.ts"
 import { locator, messages, reporter, type Report } from "../reporting.ts"
 import type { Move } from "../moves.ts"
@@ -224,10 +231,14 @@ export const collapseQuestionnaire: ClusterRule["questionnaire"] = ({
     // What the repository permits here. A fact, so the model cannot propose a
     // merge across a package boundary.
     const operations = permitted(workspace, cluster.members)
+    // The package relationship is a fact about the manifests, not a judgement:
+    // asking a model to infer it from paths asked it to repeat the code's work.
+    const relationship = relationshipOf(workspace, cluster.members)
     const ids = yield* atoms.addAll(described.map((member) => declarationEvidence(member)))
     const facts = yield* atoms.add({
       identical: cluster.identical,
       overlap: Number(cluster.overlap.toFixed(3)),
+      relationship,
       // The material a panel would need before judging where a thing belongs.
       // No configuration: the paths are in the graph and the relationships are
       // in the paths.
@@ -269,14 +280,6 @@ export const collapseQuestionnaire: ClusterRule["questionnaire"] = ({
           ].join("\n"),
           criteria: duplicateVocabulary.role,
         }),
-        relationship: Decision.classify({
-          instructions: [
-            `How do \`atoms[${facts}].common_directory\` and the files in \`atoms[${facts}].files\` relate?`,
-            "Decide from the paths whether any of these files could import another. Same directory, same deployable, sibling packages, or separate services.",
-            "Choose `different_deployables` when nothing suggests they can share code.",
-          ].join("\n"),
-          criteria: duplicateVocabulary.relationship,
-        }),
         verdict: Decision.classify({
           instructions: [
             `What should happen to the declarations named by \`${refs}\`?`,
@@ -284,8 +287,8 @@ export const collapseQuestionnaire: ClusterRule["questionnaire"] = ({
               ? `They are syntactically identical, including property names and types.${note}`
               : `They are up to ${Math.round(cluster.overlap * 100)}% structurally similar but not identical.${note}`,
             "Choose `no_issue` when the similarity is coincidence rather than repetition.",
-            "Choose `keep_variants` when the copies are DELIBERATELY separate, so one should not replace the other: a wire contract or a framework-required shape defined on each side of a deployable boundary (neither side may import the other), a special case of a general routine, or a stable shape the framework requires.",
-            "Two identical request bodies in two independently deployed services are `keep_variants`, not `collapse`: sharing them would couple the deploys, which is worse than the repetition.",
+            "Choose `keep_variants` when the repetition is deliberate, so one copy should not replace the other: a special case of a general routine, or a stable shape a framework requires.",
+            "Which operations this repository can actually make is already decided from the import graph and appears in the `prescription` options. Answer about intent, not about what is possible.",
             resolved,
           ]
             .filter((line) => line !== "")
@@ -326,7 +329,7 @@ export const collapseQuestionnaire: ClusterRule["questionnaire"] = ({
             `What should be done about the declarations named by \`${refs}\`?`,
             "Answer with the ONE thing a reviewer should do, having read what they are and where they live.",
             `The operations the import graph permits here are: ${operations.join(", ") || "none"}. \`atoms[${facts}].files\` lists every file involved.`,
-            "Choose `share_a_contract` when the copies cross a boundary that must not import across, and both sides must still agree.",
+            "Choose `share_a_contract` when both sides must keep agreeing but no permitted operation is available, so one shared contract is the answer.",
             "Choose `leave_it` when the repetition is framework-required or stable enough that changing it costs more than it saves.",
           ].join("\n"),
           criteria: duplicateVocabulary.prescription,
@@ -354,7 +357,6 @@ export const collapseQuestionnaire: ClusterRule["questionnaire"] = ({
           ? redundant.probability
           : (verdict.confidence ?? 1)
       const role = answers["role"]
-      const relationship = answers["relationship"]
       // The prescription is the model's answer; the table that used to derive it
       // is gone. `prescriptionFor` remains for the unverified path and for tests.
       const prescribed = answers["prescription"]
@@ -369,9 +371,9 @@ export const collapseQuestionnaire: ClusterRule["questionnaire"] = ({
             duplicateVocabulary.prescription[
               prescribed.label as keyof typeof duplicateVocabulary.prescription
             ] ?? undefined
-          : role === undefined || !("label" in role) || relationship === undefined || !("label" in relationship)
+          : role === undefined || !("label" in role)
             ? undefined
-            : prescriptionFor({ role: role.label, relationship: relationship.label })
+            : prescriptionFor({ role: role.label, relationship })
       // Ranked by consequence, gated by redundancy. A finding that does not
       // matter is still a finding and still reported; it sorts last.
       //
@@ -479,7 +481,7 @@ const commonDirectory = (paths: ReadonlyArray<string>): string => {
 /** The role and the relationship the two cluster members have. */
 interface PrescriptionInput {
   readonly role: string
-  readonly relationship: string
+  readonly relationship: PackageRelationship
 }
 
 /**
@@ -498,11 +500,11 @@ interface PrescriptionInput {
  * defect the architecture exists to prevent.
  */
 export const prescriptionFor = ({ role, relationship }: PrescriptionInput): string => {
-  if (relationship === "same_module" || relationship === "same_package") {
+  if (relationship === "same_package") {
     return "Delete the copies and import one: these files can reach each other."
   }
   if (role === "wire_contract") {
-    return "Expected. A contract that crosses a deployable boundary is duplicated by design: give it a shared contracts package if the two must agree, and leave it alone if they must not."
+    return "Expected: these declarations sit in different packages, so one cannot replace the other. Give both sides a shared contracts package if they must agree, and leave it alone if they must not."
   }
   if (role === "domain_concept") {
     return "The same concept in two deployables that cannot import each other, which is the case a shared package exists for. Move the concept into one both depend on."

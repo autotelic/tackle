@@ -14,7 +14,6 @@ import { choice, modelStub, noul, rate } from "./support.ts"
 const answers = {
   redundant: noul(0.9),
   role: choice("domain_concept", 0.9),
-  relationship: choice("same_package", 0.9),
   verdict: choice("collapse", 0.9),
   consequence: rate(3, 0.9),
   canonical: choice("member_0", 0.9),
@@ -56,7 +55,6 @@ it.effect("a judged finding carries every question, both operations, and the agr
     for (const question of [
       "redundant",
       "role",
-      "relationship",
       "verdict",
       "consequence",
       "canonical",

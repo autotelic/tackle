@@ -53,9 +53,35 @@ const packageOf = (workspace: Workspace, file: string): string | undefined => {
 export const permitted = (
   workspace: Workspace,
   members: ReadonlyArray<Unit>,
-): ReadonlyArray<Operation> => {
-  const packages = new Set(members.map((member) => packageOf(workspace, member.file)))
-  return packages.size <= 1 ? ["merge", "move"] : ["move"]
+): ReadonlyArray<Operation> =>
+  relationshipOf(workspace, members) === "same_package" ? ["merge", "move"] : ["move"]
+
+/** Whether the declarations live under one package, as the manifests say. */
+export type PackageRelationship = "same_package" | "different_packages"
+
+/**
+ * The package relationship, decided from the manifests.
+ *
+ * This used to be a QUESTION. It is not a judgement: the manifest above a file
+ * names its package, so whether two declarations can reach each other is a fact
+ * about the repository, and asking a model to infer it from paths was asking it
+ * to repeat work the code had already done. A repository with no manifests has
+ * one deployable as far as the graph can say.
+ *
+ * @param workspace - the analysed workspace, for the nearest manifests.
+ * @param members - the declarations that would collapse into one.
+ * @returns whether they sit under one package or several.
+ */
+export const relationshipOf = (
+  workspace: Workspace,
+  members: ReadonlyArray<Unit>,
+): PackageRelationship => {
+  const named = new Set(
+    members
+      .map((member) => packageOf(workspace, member.file))
+      .filter((name): name is string => name !== undefined),
+  )
+  return named.size <= 1 ? "same_package" : "different_packages"
 }
 
 /**

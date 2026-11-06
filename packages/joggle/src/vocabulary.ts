@@ -29,9 +29,10 @@ export const duplicateVocabulary = {
    *
    * The same duplication has opposite prescriptions depending on this answer and
    * nothing else. A wire contract defined on both sides of a service boundary is
-   * correct -- two independently deployed services share a shape, not a module. A
-   * domain concept defined on both sides is the defect the whole architecture
-   * exists to prevent. The paths say which; the model is the thing that can tell.
+   * correct -- two packages that must not depend on each other share a shape,
+   * not a module. A domain concept defined on both sides is the defect the whole
+   * architecture exists to prevent. The package fact says which can reach which;
+   * the model is the thing that can tell what the declaration is.
    */
   role: {
     wire_contract:
@@ -42,22 +43,6 @@ export const duplicateVocabulary = {
       "A helper that exists to make other code work, and means nothing on its own.",
     framework_glue:
       "A shape a framework requires, such as route props, loader data, or a config object.",
-  },
-  /**
-   * How the files holding the copies relate, which decides whether any of them
-   * can import the others.
-   *
-   * This is what a declared layering used to be asked for. It is inferable from
-   * the paths and the import graph, and it is genuinely fuzzy at the edges -- is
-   * `app/routes/finance/x` a sibling of `app/routes/payroll/y` or in the same
-   * module? -- which is exactly the shape of question worth asking.
-   */
-  relationship: {
-    same_module: "One directory, or one feature: they are edited together.",
-    same_package: "One deployable, different features.",
-    sibling_packages: "Different packages inside one repository, able to depend on each other.",
-    different_deployables:
-      "Separately deployed services. Neither may import the other, whatever their paths suggest.",
   },
   /**
    * How much it MATTERS, which is a different question from whether it is true.
@@ -109,7 +94,7 @@ export const duplicateVocabulary = {
       "The shared part belongs somewhere every copy can depend on. Move it there and import it from each site.",
     split: "One name with two meanings. Give each meaning its own name and declaration.",
     share_a_contract:
-      "Expected duplication across a deployable boundary. Give both sides one shared contracts package if they must agree, and leave it alone if they must not.",
+      "Keep both declarations and give them one shared contract to agree on. For when no permitted operation can replace one with the other.",
     leave_it:
       "Framework shapes and stable copies that nobody will change. Leave them as they are.",
   },
