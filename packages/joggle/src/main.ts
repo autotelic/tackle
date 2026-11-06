@@ -1,6 +1,6 @@
 import { Cause, Config, Effect, Exit, FileSystem, Layer, Option, Path, Predicate, Result, Runtime } from "effect"
 import { Argument, Command, Flag } from "effect/cli"
-import { DecisionModel } from "effect/ai"
+import { Decision, DecisionModel } from "effect/ai"
 import * as FetchHttpClient from "effect/http/FetchHttpClient"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { checkRepository } from "./check.ts"
@@ -19,7 +19,7 @@ import { answerPlansRaw, chunkPlans, type Plan, type PlanAnswers } from "./plans
 import { layer as atomsLayer, type Atoms } from "./atoms.ts"
 import { summarizeCalibration, type CalibrationState, type CalibrationSummary } from "./calibration.ts"
 import { verdictOf } from "./verdict.ts"
-import { everyFile, qualityOf, type DecisionAnswers, type PlannedRule } from "./rule.ts"
+import { everyFile, qualityOf, type DecisionAnswers, type PlannedRule, type Rule } from "./rule.ts"
 import { allRules, builtIn, Rules } from "./rules/index.ts"
 import { layerFromConfig as tsgoLayer } from "./tsgo.ts"
 import { emptyTypeIndex, loadTypeFacts, type TypeFactRequest, type TypeIndex } from "./typetrace.ts"
@@ -468,6 +468,19 @@ const calibrateCommand = Command.make(
           isEnabled(ruleSet.effective, rule.id, rule.severity) &&
           (wanted === undefined || wanted.includes(rule.id)),
       )
+      // A plain rule answers its own questions, so it never reaches the plan
+      // engine. The layer's observer records what it asked, and the rule declares
+      // which labels violate, so the staged cascade is measurable too.
+      const plainRules = ruleSet.rules.filter(
+        (rule): rule is Rule =>
+          !("plan" in rule) &&
+          rule.judged &&
+          isEnabled(ruleSet.effective, rule.id, rule.severity) &&
+          (wanted === undefined || wanted.includes(rule.id)),
+      )
+      const recorded: Array<{
+        readonly answers: Readonly<Record<string, Decision.Answer<Decision.Any>>>
+      }> = []
       const cacheDir = yield* cacheDirFor(cwd, Option.getOrUndefined(config.cacheDir))
       const apiKey = yield* Config.option(Config.String("TYPESAFE_API_KEY"))
       const inputs = config.paths.length > 0 ? config.paths : ["."]
@@ -494,7 +507,15 @@ const calibrateCommand = Command.make(
             tool,
             settings: shortHash(canonical({ config: ruleSet.effective, types: config.types })),
           })
-          const loaded = yield* loadTypeFacts({ root: cwd, cacheDir, tool, manifest } satisfies TypeFactRequest)
+          // The machine cache, like the declaration facts: a trace is a function
+          // of the whole program, so it is a performance artifact and not a
+          // decision a repository should carry in its diff.
+          const loaded = yield* loadTypeFacts({
+            root: cwd,
+            cacheDir: yield* runCacheDirFor(cwd),
+            tool,
+            manifest,
+          } satisfies TypeFactRequest)
           types = loaded.index
         }
         const workspace = yield* loadWorkspace(cwd, inputs, { types })
@@ -610,12 +631,62 @@ const calibrateCommand = Command.make(
             out.push({ rule: rule.id, decision, summary: summarizeCalibration(states), sample, note })
           }
         }
+        for (const rule of plainRules) {
+          recorded.length = 0
+          const ran = yield* Effect.result(
+            rule.run(workspace, everyFile, { config: ruleSet.effective, nodeTypes }),
+          )
+          if (Result.isFailure(ran)) {
+            out.push({
+              rule: rule.id,
+              decision: "-",
+              summary: summarizeCalibration([]),
+              sample: [],
+              note: "the rule could not run: " + String(ran.failure),
+            })
+            continue
+          }
+          const byDecision = new Map<string, Array<CalibrationState>>()
+          for (const event of recorded) {
+            for (const [decision, labels] of Object.entries(rule.violations ?? {})) {
+              const verdict = verdictOf(event.answers[decision], labels)
+              if (verdict === undefined) continue
+              const quality = qualityOf({
+                score: verdict.probability,
+                margin: verdict.margin,
+                confidence: verdict.confidence,
+              })
+              const states = byDecision.get(decision) ?? []
+              states.push({ probability: verdict.probability, acted: quality.quality === "act" })
+              byDecision.set(decision, states)
+            }
+          }
+          if (byDecision.size === 0) {
+            out.push({
+              rule: rule.id,
+              decision: "-",
+              summary: summarizeCalibration([]),
+              sample: [],
+              note: "no violating decision was declared or asked",
+            })
+            continue
+          }
+          for (const [decision, states] of byDecision) {
+            out.push({ rule: rule.id, decision, summary: summarizeCalibration(states), sample: [], note: "" })
+          }
+        }
         return out
       }).pipe(
         Effect.provide(
           Layer.mergeAll(
             atomsLayer,
-            decisionLayer({ cacheDir, wireCacheDir: yield* runCacheDirFor(cwd), offline: false, apiKey }),
+            decisionLayer({
+              cacheDir,
+              wireCacheDir: yield* runCacheDirFor(cwd),
+              offline: false,
+              apiKey,
+              onAnswer: (event) => recorded.push({ answers: event.answers }),
+            }),
             // The trace and the node types both run tsgo; the calibrate command
             // provides it only because `--types` may have asked for them.
             tsgoLayer(cwd, {

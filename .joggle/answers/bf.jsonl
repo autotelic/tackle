@@ -1,3 +1,4 @@
+bf0141a54e418346	1793943082	{"confidence":0.96,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.03,"framework_glue":0,"implementation_detail":0.97,"wire_contract":0}}
 bf02d367ff5d833f	1792252958	{"confidence":0.91,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.93,"stale_reference":0,"wrong_behavior":0.05,"wrong_contract":0.02}}
 bf0b4d73bdef23c9	1792689876	{"confidence":0.84,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.88,"stale_reference":0.06,"wrong_behavior":0.05,"wrong_contract":0.01}}
 bf10dc60cc9aa6b2	1792543161	{"confidence":0.6,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.3,"framework_glue":0,"implementation_detail":0.7,"wire_contract":0}}
@@ -25,6 +26,7 @@ bf938ddd0427499d	1792617317	{"confidence":0.3,"kind":"Classify","label":"share_a
 bf995f3e3eaa19fc	1792252958	{"confidence":0.91,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.93,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0.04}}
 bf99c98613e7cd2c	1792535007	{"confidence":0.79,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.84,"component_or_feature":0.1,"not_applicable":0.05,"route_or_handler":0.01}}
 bfa02bc93962ff0c	1792265611	{"confidence":0.56,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.67,"different_order":0,"different_work":0.33,"same_operation":0}}
+bfa83b331e073002	1793943082	{"confidence":0.41,"kind":"Classify","label":"move","probabilities":{"leave_it":0.03,"merge":0.29,"move":0.53,"share_a_contract":0.12,"split":0.03}}
 bfbae0905fcf8ffe	1793942972	{"confidence":0.39,"kind":"Classify","label":"member_3","probabilities":{"member_0":0.16,"member_1":0.04,"member_2":0.26,"member_3":0.54}}
 bfbb382a35231c45	1792252958	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0.02}}
 bfbccf370148e3a1	1793942971	{"confidence":0.87,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.9,"stale_reference":0,"wrong_behavior":0.08,"wrong_contract":0.02}}

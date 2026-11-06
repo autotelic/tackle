@@ -1,3 +1,4 @@
+2708c4282affdd2b	1793943082	{"confidence":0.34,"kind":"Classify","label":"move","probabilities":{"leave_it":0.07,"merge":0.04,"move":0.47,"share_a_contract":0.39,"split":0.03}}
 270a05b1bb1435f3	1793942972	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0.02,"wrong_behavior":0.01,"wrong_contract":0}}
 2717d8a7be6fcfb3	1793942974	{"confidence":0.88,"kind":"Classify","label":"neither","probabilities":{"fact":0.06,"neither":0.92,"recomputation":0.02}}
 271d13aba8bcf578	1792621702	{"confidence":0.88,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.92,"not_a_derivation":0.07,"reimplements":0.01}}

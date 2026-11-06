@@ -1,5 +1,6 @@
 e50090380743dee0	1792689876	{"confidence":0.34,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.14,"common_idiom":0.56,"shared_helper":0.3}}
 e50569dbe2c68b49	1793942971	{"confidence":0.93,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0,"wrong_behavior":0.04,"wrong_contract":0.01}}
+e50a9d1fc3ad9698	1793943263	{"confidence":0.8,"kind":"Classify","label":"composes","probabilities":{"already_composed":0.07,"composes":0.87,"independent":0.06}}
 e50c96c3daaa1ba7	1793942972	{"confidence":0.42,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.09,"common_idiom":0.61,"shared_helper":0.3}}
 e513a4f7a2526bbf	1793942973	{"confidence":0.91,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.94,"not_a_derivation":0.05,"reimplements":0.01}}
 e5195d9a5f63e3cc	1793942973	{"confidence":0.26,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.02,"merge":0.41,"move":0.36,"share_a_contract":0.13,"split":0.08}}
@@ -21,6 +22,7 @@ e56d007a012250e9	1793942974	{"confidence":0.49,"kind":"Classify","label":"legiti
 e56d5b828bd6ac3b	1792252958	{"confidence":0.77,"kind":"Classify","label":"domain_concept","probabilities":{"domain_concept":0.83,"framework_glue":0.04,"implementation_detail":0.03,"wire_contract":0.1}}
 e56d9567a6010566	1793942975	{"confidence":0.7,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.18,"must_be_current":0.02,"not_a_projection":0.8}}
 e56de3b11127d806	1793942973	{"confidence":0.35,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.43,"no_difference":0.08,"removes_a_hazard":0.22,"slightly_clearer":0.27},"rating":1.8}
+e57eb67ce0ec04e0	1793943081	{"confidence":0.82,"kind":"Classify","label":"value","probabilities":{"meaning":0.11,"unclear":0.01,"value":0.88}}
 e58b5a640bd82111	1793942973	{"confidence":0.58,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.72,"not_a_derivation":0.27,"reimplements":0.01}}
 e58f2eb4e01c749f	1793942971	{"consistency":1,"kind":"Probability","probability":0.79}
 e58fc98542191ec7	1793942971	{"consistency":1,"kind":"Probability","probability":0.8122222222222222}

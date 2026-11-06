@@ -59,6 +59,9 @@ const nameQuestionnaire: ClusterRule["questionnaire"] = ({
 
     return {
       atoms: [leftId, rightId, factsId],
+      // The Noul is the violation: its probability IS P(one concept), so the
+      // violating set is empty and calibration reduces it.
+      violations: { one_concept: [] },
       decisions: {
         one_concept: Decision.probability({
           instructions:

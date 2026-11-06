@@ -26,6 +26,7 @@
 619ebf5831d0f85d	1793942974	{"confidence":0.88,"kind":"Classify","label":"neither","probabilities":{"fact":0.04,"neither":0.92,"recomputation":0.04}}
 61a2aa0cf5bace3a	1793942971	{"consistency":1,"kind":"Probability","probability":0.7188888888888888}
 61a93955fdccd1a4	1793942973	{"confidence":0.92,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.94,"different_order":0.04,"different_work":0.02,"same_operation":0}}
+61b110068f0ffef0	1793943081	{"confidence":0.39,"kind":"Classify","label":"move","probabilities":{"leave_it":0.02,"merge":0.19,"move":0.51,"share_a_contract":0.28,"split":0}}
 61b13960615500a2	1792269251	{"confidence":0.44,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.08,"framework_glue":0,"implementation_detail":0.58,"wire_contract":0.34}}
 61b7922834ff69f7	1792535008	{"confidence":0.95,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.96,"component_or_feature":0.02,"not_applicable":0.02,"route_or_handler":0}}
 61bb720f90fe0819	1792252958	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
@@ -38,6 +39,7 @@
 61d30afcbad651de	1792617317	{"confidence":0.45,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.15,"common_idiom":0.63,"shared_helper":0.22}}
 61d61f44d68f3325	1793942974	{"confidence":0.85,"kind":"Classify","label":"general","probabilities":{"general":0.9,"names_a_caller":0.01,"shared_vocabulary":0.09}}
 61d717f88606614c	1792252958	{"confidence":0.48,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.65,"unclear":0,"value":0.35}}
+61d911715638aecf	1793943081	{"confidence":0.3,"kind":"Classify","label":"unclear","probabilities":{"meaning":0.05,"unclear":0.53,"value":0.42}}
 61dedaca1330e147	1792252958	{"confidence":0.3,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.01,"common_idiom":0.53,"shared_helper":0.46}}
 61e49b92f5027ddb	1792617317	{"confidence":0.99,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.01,"same_module":0,"same_package":0,"sibling_packages":0.99}}
 61e8794e32b44e07	1792535008	{"confidence":0.41,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.56,"component_or_feature":0.29,"not_applicable":0.11,"route_or_handler":0.04}}

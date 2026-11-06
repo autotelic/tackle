@@ -31,6 +31,7 @@ fb7ce110ade75c5b	1793942970	{"confidence":0.67,"kind":"Classify","label":"no_iss
 fb80189521722c9f	1793942972	{"confidence":0.61,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.05,"common_idiom":0.74,"shared_helper":0.21}}
 fb803e31c3be1c24	1793942973	{"confidence":0.25,"kind":"Classify","label":"collapse","probabilities":{"collapse":0.5,"keep_variants":0.24,"no_issue":0.26}}
 fb8280d74102de05	1793942976	{"confidence":0.97,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.01,"not_an_invariant":0.98,"repair_path":0.01}}
+fb84f517fc4edbb5	1793943082	{"confidence":0.29,"kind":"Classify","label":"move","probabilities":{"leave_it":0.07,"merge":0.33,"move":0.43,"share_a_contract":0.14,"split":0.03}}
 fb8a6e7db1a627c6	1793942976	{"consistency":1,"kind":"Probability","probability":0.7600000000000001}
 fb8f94610fd270aa	1792535007	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0.01}}
 fb909c9bdaefc436	1792691059	{"confidence":0.49,"kind":"Classify","label":"same_package","probabilities":{"different_deployables":0,"same_module":0.38,"same_package":0.62,"sibling_packages":0}}
@@ -56,6 +57,7 @@ fbe739f3a7ee7caf	1793942971	{"confidence":0.84,"kind":"Classify","label":"no_iss
 fbe7f84b881aff38	1792593149	{"confidence":0.51,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.05,"common_idiom":0.67,"shared_helper":0.28}}
 fbe8f623e70d325f	1792684420	{"confidence":0.29,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.47,"stale_reference":0.45,"wrong_behavior":0.04,"wrong_contract":0.04}}
 fbeb1a99b5f49b21	1793942975	{"confidence":0.96,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0,"must_be_current":0.03,"not_a_projection":0.97}}
+fbec9645fa6b0ea4	1793943261	{"confidence":0.79,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.03,"keep_variants":0.86,"no_issue":0.11}}
 fbf4a0b99156d7dc	1792543161	{"consistency":1,"kind":"Probability","probability":0.35333333333333333}
 fbf61890b6ed1ec1	1793942971	{"confidence":0.51,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.01,"name_meaning":0.13,"no_issue":0.23,"semantic_verdict":0.63}}
 fbf65f45ab6101e6	1792621702	{"consistency":1,"kind":"Probability","probability":0.31666666666666665}

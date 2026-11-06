@@ -16,7 +16,7 @@ import {
   Semaphore,
 } from "effect"
 import * as AiError from "effect/ai/AiError"
-import { DecisionModel } from "effect/ai"
+import { Decision, DecisionModel } from "effect/ai"
 import type * as HttpClient from "effect/http/HttpClient"
 import { TypeSafeClient, TypeSafeDecisionModel, TypeSafeSchema } from "@effect/ai-typesafe"
 import { canonical } from "./canonical.ts"
@@ -68,6 +68,18 @@ export interface Options {
   readonly offline: boolean
   /** Absent means judged rules fail with a clear reason and deterministic rules still run. */
   readonly apiKey: Option.Option<string>
+  /**
+   * Observe every answered decision.
+   *
+   * Calibration reduces PLANNED questions; a plain rule that answers its own
+   * questions never reaches the plan engine, so the instrument cannot see it
+   * without a seam here. The observer sees validated answers, whether they came
+   * from the wire or the committed cache.
+   */
+  readonly onAnswer?: ((event: {
+    readonly decisions: Readonly<Record<string, Decision.Any>>
+    readonly answers: Readonly<Record<string, Decision.Answer<Decision.Any>>>
+  }) => void) | undefined
 }
 
 const emptyStats: DecisionTotals = {
@@ -277,7 +289,29 @@ export const layer = (
 
       // Every answer is remembered per decision, so the committed cache is the
       // replay path and the wire cache is only a performance artifact.
-      const decisionModel = memoize(providerModel, planAnswers)
+      const base = memoize(providerModel, planAnswers)
+      const decisionModel =
+        options.onAnswer === undefined
+          ? base
+          : DecisionModel.DecisionModel.of(
+              Object.assign({}, base, {
+                decide: <
+                  Input extends Schema.Constraint,
+                  Decisions extends Record<string, Decision.Any>,
+                >(
+                  definition: Decision.Definition<Input, Decisions>,
+                  decideOptions: DecisionModel.DecideOptions<Input>,
+                ) =>
+                  Effect.tap(base.decide(definition, decideOptions), (decided) =>
+                    Effect.sync(() =>
+                      options.onAnswer?.({
+                        decisions: definition.decisions,
+                        answers: decided.answers,
+                      }),
+                    ),
+                  ),
+              }),
+            )
 
       return Context.make(DecisionModel.DecisionModel, decisionModel).pipe(
         Context.add(DecisionStats, { read: Ref.get(stats) }),

@@ -15,9 +15,11 @@ dc2cfb763a5405b9	1793942974	{"confidence":0.73,"kind":"Classify","label":"legiti
 dc2f9370f5816784	1792252958	{"confidence":0.62,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.19,"internal_only":0.75,"unaccounted":0.06}}
 dc32c840131340a7	1793942969	{"confidence":0.36,"kind":"Classify","label":"rendering_edge","probabilities":{"domain_core":0.06,"infrastructure":0.01,"library_core":0.35,"not_applicable":0.08,"rendering_edge":0.45,"transport_edge":0,"utilities":0.05}}
 dc338b9f39df61f6	1793942974	{"consistency":1,"kind":"Probability","probability":0.32666666666666666}
+dc359eac9f733236	1793943082	{"confidence":0.73,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.09,"keep_variants":0.82,"no_issue":0.09}}
 dc35cdc3d5c2ea2b	1793942976	{"confidence":0.94,"kind":"Classify","label":"detect_only","probabilities":{"detect_only":0.96,"not_an_invariant":0.03,"repair_path":0.01}}
 dc35e580798122f0	1793942973	{"confidence":0.46,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.02,"merge":0.57,"move":0.2,"share_a_contract":0.1,"split":0.11}}
 dc35e9c881bf7fa1	1793942972	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
+dc362b7abad5d6e5	1793943261	{"confidence":0.16,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.44,"member_1":0.12,"member_2":0.44}}
 dc3abc6251dc0b85	1792689876	{"confidence":0.75,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.81,"different_order":0,"different_work":0.19,"same_operation":0}}
 dc3dc52758e0372b	1792252958	{"confidence":0.27,"kind":"Rate","label":"slightly_clearer","probabilities":{"meaningfully_better":0.3,"no_difference":0.11,"removes_a_hazard":0.16,"slightly_clearer":0.43},"rating":1.51}
 dc4510355195ec79	1793942972	{"confidence":0.91,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.93,"stale_reference":0.01,"wrong_behavior":0.05,"wrong_contract":0.01}}

@@ -35,10 +35,13 @@
 2eb515358c914bfb	1792535008	{"confidence":0.57,"kind":"Classify","label":"mechanical","probabilities":{"domain_logic":0.32,"infrastructure":0,"input_adaptation":0,"mechanical":0.62,"not_applicable":0.03,"orchestration":0.03,"rendering":0,"request_validation":0,"transport_concern":0}}
 2eb69f8739728f90	1793942974	{"confidence":0.97,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.01,"internal_only":0.98,"unaccounted":0.01}}
 2eb898dada566e8b	1793942974	{"consistency":1,"kind":"Probability","probability":0.19666666666666666}
+2eb991631b7667f8	1793943082	{"confidence":0.19,"kind":"Rate","label":"slightly_clearer","probabilities":{"meaningfully_better":0.34,"no_difference":0.11,"removes_a_hazard":0.18,"slightly_clearer":0.37},"rating":1.59}
 2ebc47d961584798	1793942973	{"confidence":0.25,"kind":"Classify","label":"not_a_derivation","probabilities":{"legitimate_local":0.32,"not_a_derivation":0.5,"reimplements":0.18}}
 2ecd1f8674f552c8	1792252958	{"confidence":0.67,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.75,"different_order":0,"different_work":0.24,"same_operation":0.01}}
 2edd0db37dc048dd	1792252958	{"confidence":0.37,"kind":"Rate","label":"slightly_clearer","probabilities":{"meaningfully_better":0.36,"no_difference":0.07,"removes_a_hazard":0.1,"slightly_clearer":0.47},"rating":1.5}
 2edfcdda646ac0b5	1792691059	{"confidence":0.51,"kind":"Classify","label":"domain_core","probabilities":{"domain_core":0.58,"infrastructure":0.03,"library_core":0.35,"not_applicable":0,"rendering_edge":0.01,"transport_edge":0.02,"utilities":0.01}}
 2ee16abc0c42c607	1793942973	{"confidence":0.87,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.05,"framework_glue":0,"implementation_detail":0.9,"wire_contract":0.05}}
 2ee51e1adb25575a	1793942976	{"confidence":0.91,"kind":"Classify","label":"detect_only","probabilities":{"detect_only":0.94,"not_an_invariant":0.05,"repair_path":0.01}}
+2ef4bf9c920c9443	1793943081	{"confidence":0.92,"kind":"Classify","label":"move","probabilities":{"move":0.96,"no_issue":0.04}}
 2efdb2524168e238	1793942973	{"consistency":1,"kind":"Probability","probability":0.54}
+2effa61c79bbd7de	1793943082	{"confidence":0.58,"kind":"Classify","label":"move","probabilities":{"move":0.79,"no_issue":0.21}}

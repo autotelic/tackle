@@ -27,6 +27,7 @@
 1799a3a5a98c1200	1792592675	{"confidence":0.33,"kind":"Classify","label":"value","probabilities":{"meaning":0.45,"unclear":0,"value":0.55}}
 17a238998b698d22	1792252958	{"confidence":0.91,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.93,"stale_reference":0,"wrong_behavior":0.05,"wrong_contract":0.02}}
 17a2468178d66123	1792535008	{"confidence":0.41,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.56,"component_or_feature":0.17,"not_applicable":0.16,"route_or_handler":0.11}}
+17a4f78fce4f9695	1793943262	{"confidence":0.79,"kind":"Classify","label":"composes","probabilities":{"already_composed":0.05,"composes":0.86,"independent":0.09}}
 17a5c2378a330539	1792535009	{"confidence":0.53,"kind":"Classify","label":"infrastructure","probabilities":{"domain_logic":0.17,"infrastructure":0.58,"input_adaptation":0,"mechanical":0.01,"not_applicable":0,"orchestration":0.24,"rendering":0,"request_validation":0,"transport_concern":0}}
 17a8859db8e16918	1792252958	{"confidence":0.55,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.7,"not_a_derivation":0.3,"reimplements":0}}
 17ab40f7a9bd4652	1793942971	{"confidence":0.76,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.82,"stale_reference":0,"wrong_behavior":0.11,"wrong_contract":0.07}}
@@ -43,4 +44,5 @@
 17e6940c059677c7	1792252958	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
 17e6e9690fe87511	1792252958	{"confidence":0.91,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.93,"stale_reference":0,"wrong_behavior":0.06,"wrong_contract":0.01}}
 17ef88ef57390a34	1792684422	{"confidence":0.45,"kind":"Classify","label":"collapse","probabilities":{"collapse":0.63,"keep_variants":0.29,"no_issue":0.08}}
+17fbe38852008e8e	1793943082	{"consistency":1,"kind":"Probability","probability":0.11333333333333333}
 17fda641a79484b3	1792621702	{"confidence":0.61,"kind":"Classify","label":"same_package","probabilities":{"different_deployables":0,"same_module":0.29,"same_package":0.71,"sibling_packages":0}}

@@ -230,16 +230,17 @@ answering a different question from one that sees two identical `source` blocks.
 Each is deterministic, or deterministic-with-a-judge, and each is unreachable
 from text.
 
-- **`joggle/one-concept-one-type`** — one declared name that resolves to
-  different shapes in different files. JOGGLE.md measures the case: `User`, 46
-  resolved entries, 3 shapes, 4 of them `any`.
+- **`joggle/one-concept-one-type`** — **implemented**: one declared name that
+  resolves to different structures, in any files (file-local, same-file and
+  interface-vs-alias included), keyed on the member-sorted fingerprint rather
+  than the printed type.
 - **`joggle/declared-resolved-drift`** — the annotation promises a type the
   checker does not enforce (`any`, `unknown`, or a wider type). entropy-machine
   caught `addTodo: void` where the DB said `Todo`.
-- **`joggle/structural-collapse`** — two differently named declarations the
-  checker proves structurally identical (`Checker_isTypeIdenticalTo`). This is a
-  **fact**, so it reports without a judgement; the judge then answers only "one
-  concept or two names", which is the question JOGGLE.md says the judge is for.
+- **`joggle/structural-collapse`** — **implemented**: two differently named
+  declarations with the same fingerprint that `isTypeAssignableTo` holds in both
+  directions. The proof is the compiler's; the one judgement is "one concept or
+  two names".
 - **`joggle/opaque-primitive`** — a `string`/`number` parameter where a branded
   domain type of that meaning already exists and is not used. Extends
   `name-the-primitive` from a name check to a type check.
@@ -255,8 +256,12 @@ from text.
 - **`joggle/leaked-type`** — a public return type that names an implementation
   type instead of the declared interface, decided from resolved origin.
 
-The first three are the priority: they are the ones JOGGLE.md already promises,
-and they replace text similarity with a proof.
+**Value-set separation is implemented too.** Each member now carries the exact
+values a literal union allows, which is what tells one vocabulary written
+incompletely from two vocabularies sharing a field name; `field-type-drift`
+reports the two sets. The remaining bullets are still owed: `declared-resolved-drift`,
+`opaque-primitive`, `passthrough-chain`, `untyped-channel`,
+`impossible-state` and `leaked-type`.
 
 ## The next increment: measured, and it is not the trace
 
@@ -335,9 +340,10 @@ them.
   (manage-plots vs pay-review), `treesSupervised`/`RecordOptions` (application vs
   test). It also suppressed `estimate_tree_basis`, which nobody flagged; that is
   the accepted cost of a hazard test rather than an identity test.
-- **The value sets, from the checker.** Still the only thing that separates two
-  vocabularies that DO share a path -- two roles in one package, say. Needs a host
-  (`getTypeAtLocation` per property), per the route table above.
+- **The value sets, from the checker: done.** `MemberFact.variants` carries the
+  literal set of a union member, captured by `resolveDeclarations` with no host
+  and no second checker; `field-type-drift` reports the two sets when they
+  differ.
 - **Config.** `ignore` remains for a repository that knows a pair is expected.
 
 The resolver stays either way: frozen, documented, and the least bad instrument
@@ -359,37 +365,46 @@ for the pairs relatedness keeps.
 - Foreign hosts: `etsoxlintrunner/runner.go`, `_patches/tsgolint/001-effect-rules.patch`, `_patches/oxlint/001-effect-plugin.patch`.
 - README for the diagnostic surface and the superset claim: `README.md`, `AGENTS.md`.
 
-## The node-type layer, as built
+## The node-type layer, as built — and the declaration facts
 
-`src/typefacts.ts` is the smallest form of the own-checker-host route above, and
-it needs no fork: `@typescript/native-preview` -- the `tsgo` binary joggle already
-runs -- exposes `Checker.getTypeAtPosition(file, position)`. One program, a
-lookup per position, and the checker's own printed type.
+`src/typefacts.ts` needs no fork: `@typescript/native/unstable/async` — the
+`tsgo` API joggle already runs — exposes `Checker.getTypeAtPosition(file,
+position)`, and positions are the join. Both the checker and oxc read byte
+offsets from the same file, so the join is exact.
 
-The join is the point. The declaration trace (`tsgo --generateTrace`) joins a NAME
-to its resolved type, and the doc above records why that is awkward: aliases
-expand, one name is several entries, some names never appear under their own name.
-A node map joins by BYTE OFFSET, which both the checker and the oxc parser read
-from the same file, so it is exact.
+Two readers, two questions:
 
-It is a REQUEST LIST rather than a whole-project dump, because the output for
-1,870 files would be enormous and a rule only asks about the nodes its candidates
-built. `check.ts` collects the positions in scope, asks once per run under
-`--types`, and puts `RunContext.nodeTypes` on the context.
+- `typesAtPositions` answers the type of ONE TOKEN (hover, in effect). That is
+  what a returned expression or a guard's reference needs, and it is
+  `RunContext.nodeTypes` under `--types`.
+- `resolveDeclarations` answers what a DECLARATION is, for every unit, by
+  default and without `--types`: the printed type, each member with its own
+  resolved type, a member's literal value set (`"admin" | "owner"` from
+  `getTypes()` on a literal union), union variants, bases, the alias the checker
+  kept, a member-sorted structural fingerprint, and an `identicalGroup` proven by
+  `Checker.isTypeAssignableTo` in both directions. One program per run, a request
+  list keyed by the run manifest, cached in the machine cache beside the parse
+  cache.
 
-**What it answers, and what it does not.** `getTypeAtPosition` resolves the TOKEN
-at a position -- hover, in effect -- so a binary expression's offset answers its
-LEFT OPERAND (`payroll`, not the comparison that gives it a boolean). It answers
-an IDENTIFIER's type, exactly, which is what `declared-resolved-drift` and
-`opaque-primitive` need. It does NOT answer an expression's type. The declaration
-trace does not either, for this purpose: it carries interfaces and aliases, not
-function signatures.
+**What changed, and what it cost.** The trace was the first route because it
+needed no API; it carries a named declaration's type but never its members
+(measured above). The async API carries them: `getPropertiesOfType` for the
+members, `getTypeOfSymbol` for their types, `getTypes` for a union, and
+`isTypeAssignableTo` for the proof. The expensive call is `typeToString`, so it
+is budgeted (`policy.typeFacts`: 64 members, 12,000 printed types), and a
+truncated member list gets no `identicalGroup` rather than a wrong one.
 
-To get expression types the next step is the native AST, not the position API:
-`Program.getSourceFile` gives the checker's own tree, and
-`Checker.getTypeAtLocation(returnStatement.expression)` is the exact answer --
-`inferred-over-recorded` reads a comparison from the AST today for that reason.
+**What it does not answer.** An expression's type is still not here: a binary
+expression's offset answers its left operand, and the declaration facts are facts
+about declarations. `inferred-over-recorded` reads a comparison from the AST for
+that reason. The next step for expressions is the native AST
+(`getTypeAtLocation` on the checker's own tree), not this API.
 
-Two rules now read types: `types-over-logic` reads `workspace.types` (a guard's
-declared type), and the ones in "Rules this unlocks" are a candidate generator
-plus a question each.
+**Rules that read it.** `one-concept-one-type` compares the structural
+fingerprint across type-like declarations; `structural-collapse` reports the
+compiler-proven `identicalGroup` with one judgement; `field-type-drift`
+compares resolved member types and names the value sets when both sides were
+proven literal; `compose-types` puts resolved types in its shared-field
+evidence; `name-the-primitive` carries each field's resolved types;
+`reversal`'s combine stage reads them; and the collapse questionnaire sends the
+fingerprint and the group to the judge.

@@ -6,6 +6,7 @@
 421a0dc8b470dd77	1793942974	{"confidence":0.34,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.67,"member_1":0.33}}
 4220cc7cd4af47f3	1793942970	{"confidence":0.49,"kind":"Classify","label":"coincidental","probabilities":{"already_named":0.08,"coincidental":0.66,"one_concept":0.26}}
 422a4cf2cfbd9a05	1793942976	{"confidence":0.97,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.02,"not_an_invariant":0.98,"repair_path":0}}
+4230463583657355	1793943263	{"confidence":0.77,"kind":"Classify","label":"composes","probabilities":{"already_composed":0.06,"composes":0.85,"independent":0.09}}
 423905b58c389096	1792252958	{"confidence":0.18,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.29,"merge":0.34,"move":0.34,"share_a_contract":0.02,"split":0.01}}
 424b4f5277fb9ae2	1792252958	{"confidence":0.41,"kind":"Classify","label":"value","probabilities":{"meaning":0.3,"unclear":0.09,"value":0.61}}
 424e91a0909a5367	1793942975	{"consistency":1,"kind":"Probability","probability":0.77}

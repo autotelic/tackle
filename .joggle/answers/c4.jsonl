@@ -6,6 +6,7 @@ c421b6141b01fcd9	1793942975	{"consistency":1,"kind":"Probability","probability":
 c422da4c6e67a3b8	1793942972	{"confidence":0.49,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.17,"common_idiom":0.66,"shared_helper":0.17}}
 c42fac7101e3965c	1792687043	{"consistency":1,"kind":"Probability","probability":0.9}
 c4326f675fa1187e	1793942974	{"confidence":0.4,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.4,"names_a_caller":0,"shared_vocabulary":0.6}}
+c4389813c6b805df	1793943081	{"consistency":0.6666666666666667,"kind":"Probability","probability":0.47000000000000003}
 c43aaa769c6190fc	1793942976	{"confidence":0.91,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.05,"not_an_invariant":0.94,"repair_path":0.01}}
 c441be333542ae61	1792543161	{"confidence":0.4,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.55,"different_order":0,"different_work":0.45,"same_operation":0}}
 c445a2ee970e0a86	1793942974	{"confidence":0.28,"kind":"Classify","label":"move","probabilities":{"move":0.64,"no_issue":0.36}}
@@ -28,6 +29,7 @@ c49760e8e5e114a9	1792265611	{"confidence":0.98,"kind":"Classify","label":"member
 c49a50c3b55036d5	1792542865	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
 c4aba9119541355d	1792619055	{"confidence":0.8,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.87,"not_a_derivation":0.02,"reimplements":0.11}}
 c4b035c404d4cfa4	1793942972	{"confidence":0.85,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.89,"stale_reference":0.02,"wrong_behavior":0.07,"wrong_contract":0.02}}
+c4ba3d9656ee522f	1793943423	{"confidence":0.74,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.11,"must_be_current":0.06,"not_a_projection":0.83}}
 c4bdf6999f6f2d9e	1793942974	{"confidence":0.25,"kind":"Classify","label":"move","probabilities":{"merge":0.05,"move":0.5,"no_issue":0.45}}
 c4c3ddd6b851a4e1	1792252958	{"confidence":0.41,"kind":"Classify","label":"general","probabilities":{"general":0.61,"names_a_caller":0.01,"shared_vocabulary":0.38}}
 c4cb1304370a9c52	1793942973	{"confidence":0.04,"kind":"Rate","label":"removes_a_hazard","probabilities":{"meaningfully_better":0.21,"no_difference":0.15,"removes_a_hazard":0.49,"slightly_clearer":0.15},"rating":2.04}

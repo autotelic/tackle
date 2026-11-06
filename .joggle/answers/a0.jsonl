@@ -1,3 +1,4 @@
+a00e230b26d42a20	1793943082	{"confidence":0.68,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.16,"member_1":0.84}}
 a00f8908dfb55d22	1792542865	{"confidence":0.32,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.49,"member_1":0.08,"member_2":0.32,"member_3":0.11}}
 a01207f8ff2b53c4	1792689876	{"confidence":0.16,"kind":"Classify","label":"collapse","probabilities":{"collapse":0.44,"keep_variants":0.44,"no_issue":0.12}}
 a0120ab4832ef389	1793942974	{"confidence":0.89,"kind":"Classify","label":"neither","probabilities":{"fact":0.06,"neither":0.93,"recomputation":0.01}}
@@ -26,6 +27,7 @@ a08cee055460ed56	1792252958	{"confidence":0.99,"kind":"Classify","label":"no_iss
 a0930092ebb4e3ae	1793942974	{"confidence":0.12,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.44,"member_1":0.56}}
 a099b3122f15c33d	1793942976	{"confidence":0.88,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.07,"not_an_invariant":0.92,"repair_path":0.01}}
 a09c6c0e35591613	1792689876	{"confidence":0.77,"kind":"Classify","label":"different_work","probabilities":{"different_inputs":0.17,"different_order":0,"different_work":0.83,"same_operation":0}}
+a09f1f46a1346afb	1793943081	{"confidence":0.34,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.33,"member_1":0.67}}
 a0a49257a48103b6	1792252958	{"confidence":0.98,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.99,"member_1":0.01}}
 a0aebc00f0b27b5a	1792269251	{"confidence":0.44,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.08,"framework_glue":0,"implementation_detail":0.58,"wire_contract":0.34}}
 a0b4eeff6ebc29a4	1793942974	{"confidence":0.68,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.2,"independent":0.79,"meaning_switched":0.01}}

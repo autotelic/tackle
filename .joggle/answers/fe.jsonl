@@ -1,10 +1,12 @@
 fe07d80cb4e2a496	1793942973	{"confidence":0.79,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.01,"keep_variants":0.86,"no_issue":0.13}}
+fe0c43ed0b654fa0	1793943081	{"confidence":0.49,"kind":"Classify","label":"value","probabilities":{"meaning":0.32,"unclear":0.02,"value":0.66}}
 fe0e103b00843c05	1793942972	{"confidence":0.54,"kind":"Classify","label":"no_concept","probabilities":{"no_concept":0.77,"true":0.23}}
 fe0fe17bea61a6b7	1792535008	{"confidence":0.73,"kind":"Classify","label":"infrastructure","probabilities":{"domain_logic":0.15,"infrastructure":0.76,"input_adaptation":0,"mechanical":0.01,"not_applicable":0.01,"orchestration":0.07,"rendering":0,"request_validation":0,"transport_concern":0}}
 fe18dcaf47e1a181	1792252958	{"confidence":0.3,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.35,"member_1":0.65}}
 fe216192dee11fc1	1793942973	{"consistency":1,"kind":"Probability","probability":0.5644444444444445}
 fe2638880973e562	1792535009	{"confidence":0.61,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.71,"component_or_feature":0.16,"not_applicable":0.1,"route_or_handler":0.03}}
 fe26f61331223567	1793942971	{"confidence":0.83,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.87,"stale_reference":0,"wrong_behavior":0.12,"wrong_contract":0.01}}
+fe29bfe355d8ad4e	1793943081	{"confidence":0.37,"kind":"Classify","label":"domain_concept","probabilities":{"domain_concept":0.53,"framework_glue":0.06,"implementation_detail":0.4,"wire_contract":0.01}}
 fe2a8bc81cfe58c1	1793942973	{"confidence":0.62,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.75,"not_a_derivation":0.16,"reimplements":0.09}}
 fe2dc3d4ab530898	1792253093	{"confidence":0.55,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.02,"merge":0.64,"move":0.18,"share_a_contract":0.16,"split":0}}
 fe2ee793234fbc91	1792252958	{"consistency":1,"kind":"Probability","probability":0.9}
@@ -32,10 +34,12 @@ fe8bea24d0204e00	1792542865	{"confidence":0.38,"kind":"Classify","label":"collap
 fe93d646acb2b2c1	1793942974	{"confidence":0.24,"kind":"Classify","label":"not_applicable","probabilities":{"agrees":0.44,"excludes":0.07,"not_applicable":0.49}}
 fe9aa31e3ea8d19e	1792252958	{"consistency":1,"kind":"Probability","probability":0.8466666666666666}
 fe9b30ecb787bbcf	1792252958	{"confidence":0.73,"kind":"Classify","label":"none","probabilities":{"choice":0.06,"none":0.82,"noul":0.12}}
+fe9bad35f644664c	1793943261	{"confidence":0.91,"kind":"Classify","label":"value","probabilities":{"meaning":0.06,"unclear":0,"value":0.94}}
 fe9c9fd9a42dc0b4	1793942973	{"confidence":0.74,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.83,"not_a_derivation":0.15,"reimplements":0.02}}
 fe9eb436a115e8b2	1793942974	{"consistency":0.6666666666666667,"kind":"Probability","probability":0.48666666666666664}
 fea31d8115275e60	1793942974	{"confidence":0.98,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0,"must_be_current":0.01,"not_a_projection":0.99}}
 fea9c07c9cc30aa4	1792252958	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
+feae99d99abd370d	1793943080	{"confidence":0.96,"kind":"Classify","label":"composes","probabilities":{"already_composed":0.03,"composes":0.97,"independent":0,"same_name_drift":0}}
 feb21bfcf162c52d	1792619054	{"confidence":0.79,"kind":"Classify","label":"component_or_feature","probabilities":{"already_there":0.02,"component_or_feature":0.84,"not_applicable":0.01,"route_or_handler":0.13}}
 febac270514c730a	1792535008	{"confidence":0.95,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.96,"infrastructure":0,"input_adaptation":0,"mechanical":0,"not_applicable":0.02,"orchestration":0.01,"rendering":0,"request_validation":0.01,"transport_concern":0}}
 febf296470a4d0b6	1793942974	{"confidence":0.82,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.05,"inferred":0.07,"not_applicable":0.88}}

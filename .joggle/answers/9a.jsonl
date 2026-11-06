@@ -43,6 +43,7 @@
 9ac30c81b0e6e3a6	1792535008	{"confidence":0.55,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.66,"component_or_feature":0.23,"not_applicable":0.09,"route_or_handler":0.02}}
 9ac5b47dc71799b4	1792252958	{"confidence":0.79,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.03,"name_meaning":0.03,"no_issue":0.1,"semantic_verdict":0.84}}
 9ac600bc7ed2375f	1792621702	{"confidence":0.99,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.01,"same_module":0,"same_package":0,"sibling_packages":0.99}}
+9ac6a4458720d6bc	1793943082	{"confidence":0.66,"kind":"Classify","label":"collapse","probabilities":{"collapse":0.77,"keep_variants":0.19,"no_issue":0.04}}
 9ad9974ff37755ee	1792618754	{"confidence":0.9,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.95,"member_1":0.05}}
 9ae56e8f98284c0c	1793942974	{"confidence":0.92,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.03,"inferred":0.02,"not_applicable":0.95}}
 9ae5fce96a72a45b	1792535007	{"confidence":0.29,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.47,"component_or_feature":0.2,"not_applicable":0.31,"route_or_handler":0.02}}

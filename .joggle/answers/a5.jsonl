@@ -3,11 +3,14 @@ a51ba6ac4a00f195	1792691059	{"confidence":0.31,"kind":"Classify","label":"no_iss
 a51e475c291c01c3	1793942974	{"confidence":0.94,"kind":"Classify","label":"neither","probabilities":{"fact":0.03,"neither":0.96,"recomputation":0.01}}
 a51f77a294c72c14	1793942973	{"confidence":0.44,"kind":"Classify","label":"collapse","probabilities":{"collapse":0.63,"keep_variants":0.32,"no_issue":0.05}}
 a522689830809df2	1792535008	{"confidence":0.97,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.98,"component_or_feature":0.01,"not_applicable":0.01,"route_or_handler":0}}
+a52c36b4c9207185	1793943262	{"consistency":1,"kind":"Probability","probability":0.2833333333333334}
 a536a65073e15316	1793942971	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0.01,"wrong_behavior":0.01,"wrong_contract":0}}
 a54530a3c94d00f9	1793942970	{"confidence":0.44,"kind":"Classify","label":"different_inputs","probabilities":{"coincidental":0.02,"different_inputs":0.58,"different_work":0.4,"same_orchestration":0}}
 a548679196c365f5	1793942971	{"confidence":0.6,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.2,"name_meaning":0.03,"no_issue":0.07,"semantic_verdict":0.7}}
 a54a3c9e2b7f7421	1792621702	{"confidence":0.25,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.36,"member_1":0.5,"member_2":0.14}}
+a54ee0421478c2b8	1793943083	{"confidence":0.63,"kind":"Classify","label":"framework_glue","probabilities":{"domain_concept":0.03,"framework_glue":0.72,"implementation_detail":0.22,"wire_contract":0.03}}
 a561368ae885a51e	1792684422	{"confidence":0.95,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.04,"same_module":0,"same_package":0,"sibling_packages":0.96}}
+a5616ef151598658	1793943080	{"confidence":0.4,"kind":"Classify","label":"unclear","probabilities":{"meaning":0.04,"unclear":0.6,"value":0.36}}
 a56bc03a2726c94f	1793942974	{"confidence":0.73,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.14,"inferred":0.04,"not_applicable":0.82}}
 a56bd0e2c6e64c36	1792269251	{"consistency":1,"kind":"Probability","probability":0.5233333333333333}
 a57231603ecef304	1792621702	{"confidence":0.33,"kind":"Classify","label":"not_a_derivation","probabilities":{"legitimate_local":0.45,"not_a_derivation":0.55,"reimplements":0}}

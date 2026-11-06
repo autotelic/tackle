@@ -11,6 +11,7 @@
 06422c9fdc6056a9	1792535008	{"confidence":1,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":1,"infrastructure":0,"input_adaptation":0,"mechanical":0,"not_applicable":0,"orchestration":0,"rendering":0,"request_validation":0,"transport_concern":0}}
 06495ce4287dc80d	1792535008	{"confidence":0.6,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.64,"infrastructure":0,"input_adaptation":0.05,"mechanical":0.04,"not_applicable":0.14,"orchestration":0.02,"rendering":0.1,"request_validation":0,"transport_concern":0.01}}
 065893c2e060c19c	1793942972	{"confidence":0.56,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.01,"framework_glue":0,"implementation_detail":0.67,"wire_contract":0.32}}
+0658a927ebde973b	1793943082	{"confidence":0.53,"kind":"Classify","label":"framework_glue","probabilities":{"domain_concept":0.22,"framework_glue":0.65,"implementation_detail":0.11,"wire_contract":0.02}}
 0659056c30990f05	1792252958	{"confidence":0.56,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.3,"framework_glue":0.02,"implementation_detail":0.67,"wire_contract":0.01}}
 065b08e6319ff387	1793942975	{"confidence":0.94,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0,"must_be_current":0.04,"not_a_projection":0.96}}
 065beb7bd806c8d2	1793942976	{"confidence":0.83,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.03,"not_an_invariant":0.89,"repair_path":0.08}}

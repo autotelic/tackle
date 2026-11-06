@@ -232,18 +232,20 @@ volume claim is made about the current set.
 
 ## What is left
 
-- **The re-measurement**, which is the first thing owed. `joggle calibrate` per
-  rule, then one `joggle check` across shakti-v2, with the expectation that the
-  Noul margin changes the band counts: the loud Nouls (`duplicate-implementation`'s
-  `redundant` was 189 acted of 206) should split across act and review instead of
-  acting on every yes.
+- **The re-measurement is done for the nine rules this change touched** (the
+  2026-11-05 round above), including the staged cascade and the first
+  `naming-drift` row. The rest of the earlier table still owes a pass: `--types`
+  is no longer opt-in for declaration facts, and the node space is wider, so
+  their candidate sets changed.
 - **`doc-matches-code` is the one broad question left.** Its verdict hides three
   judgements (`stale_reference`, `wrong_contract`, `wrong_behavior`) behind one
   probability, which the TypeSafe guide calls the most important thing not to do.
   It wants 2-3 atomic questions composed in code.
-- **A relevance Noul for the budget-trimmed rules.** `hoist-to-domain` left 493 of
-  1093 declarations unjudged; a cheap first-pass Noul would spend the budget on the
-  right end of the list.
+- **The relevance Noul is in place for `duplicate-meaning` and
+  `naming-drift`** (`rankSpeculative`), where the budget used to be a slice.
+  `compose-types`, `name-the-primitive` and `reversal` still take a
+  deterministic prefix, and `hoist-to-domain` still leaves 493 of 1,093
+  declarations unjudged.
 - **`hoist-to-domain` has never been calibrated per decision**; its `duty`/`home`
   split is the obvious probe.
 
@@ -289,3 +291,50 @@ findings; see [TUNING.md](../../../TUNING.md) for the caveats.
 | `duplicate-meaning` | weak | 33 | 5 | 0.34 |
 | `language-drift` | weak | 8 | 0 | 0.42 |
 | `dependency-fit` | weak | 5 | 0 | 0.50 |
+
+## Round: `tackle`, 2026-11-05 — the fact layer and the stages
+
+The census after `doppler run -p joggle -c dev -- pnpm joggle check --types`, on
+the re-judged corpus: **79 problems over 423 files and 2,734 declarations** — 1
+error, 40 warnings, 38 notices. The re-judgment that populated the corpus asked
+147 requests (145 answered, 0 unavailable); the final pass after the message and
+stage-name changes replayed all but 5.
+The re-judgment was needed because `decisionVersion` moved with the question set.
+
+| Rule#decision | States | Verdict | Fired | median |
+| --- | --: | --- | --: | --: |
+| `duplicate-meaning#redundant` | 84 | decisive | 13 | 0.28 |
+| `compose-types#verdict` | 28 | noisy | 25 | 0.93 |
+| `reversal#combine` | 26 | noisy | 19 | 0.86 |
+| `duplicate-implementation#redundant` | 17 | noisy | 11 | 0.61 |
+| `one-concept-one-type#verdict` | 16 | decisive | 8 | 0.81 |
+| `field-type-drift#verdict` | 14 | decisive | 0 | 0.65 |
+| `naming-drift#one_concept` | 12 | decisive | 0 | 0.14 |
+| `structural-collapse#verdict` | 9 | decisive | 1 | 0.57 |
+| `reversal#expand` | 1 | skipped | 1 | 0.86 |
+| `name-the-primitive#verdict` | 1 | skipped | 1 | 0.96 |
+
+What the rows say:
+
+- **The staged cascade is measurable now.** `reversal` is a plain rule that
+  answers its own questions, so it never reached the plan engine;
+  `decision.ts` gained an answer observer and `Rule.violations` declares the
+  labels. Its `combine` question is NOISY: 19 of 26 containment pairs were
+  answered "composes". Containment by field name over-produces — a whole can
+  contain a part by accident — so the next move is a tighter candidate filter or
+  a cheaper first-pass Noul, not a louder report. `expand` has one state in this
+  repository, which is a fact about the vocabulary, not evidence.
+- **`duplicate-meaning#redundant` is decisive and quiet** (median 0.28, 13 of 84
+  acted), the opposite of the loud Noul earlier rounds measured. The
+  resolved-type key and the ranked budget changed which pairs are asked about.
+- **`duplicate-implementation#redundant` is noisy** (11 of 17 at 0.61) and the
+  report carries 6: the Noul clears the floor more often than the report shouts,
+  which is what the band is for.
+- **`compose-types` is still noisy** (25 of 28 at 0.93), unchanged in character
+  from the earlier round. It is advice at notice severity, so the volume is
+  tolerable, but the question says yes to almost everything it is asked.
+- **`naming-drift` is measurable for the first time** (12 states, median 0.14,
+  none acted). The earlier "0 states" was a missing `violations` declaration,
+  not a quiet rule.
+- **`field-type-drift` is decisive and silent** (0 of 14 acted). Resolved member
+  types did not create findings; they removed false ones.

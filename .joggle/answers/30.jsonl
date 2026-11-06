@@ -25,6 +25,7 @@
 30a8aa6ef2574a25	1793942975	{"confidence":0.98,"kind":"Classify","label":"not_a_record","probabilities":{"mutable":0.01,"not_a_record":0.99,"supersede_only":0}}
 30af02ab1e28d104	1792542865	{"confidence":0.77,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.15,"names_a_caller":0,"shared_vocabulary":0.85}}
 30af9e3b5a252ecf	1792689876	{"consistency":1,"kind":"Probability","probability":0.5233333333333333}
+30b6b94d31057161	1793943080	{"confidence":0.91,"kind":"Classify","label":"composes","probabilities":{"already_composed":0,"composes":0.93,"independent":0.07,"same_name_drift":0}}
 30b75ee5be90b199	1793942975	{"confidence":0.83,"kind":"Classify","label":"not_a_record","probabilities":{"mutable":0.06,"not_a_record":0.89,"supersede_only":0.05}}
 30b9c299a1bc456a	1792252958	{"confidence":0.94,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.96,"not_a_derivation":0.04,"reimplements":0}}
 30bd6862a3b09d73	1792684421	{"confidence":0.7,"kind":"Classify","label":"drift","probabilities":{"compatible":0.12,"drift":0.8,"two_concepts":0.08}}

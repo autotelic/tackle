@@ -13,6 +13,7 @@
 4641c78b0d69c02b	1793941318	{"confidence":0.44,"kind":"Classify","label":"two_concepts","probabilities":{"intentional":0.28,"one_concept":0.09,"two_concepts":0.63}}
 464532717392268b	1792621702	{"confidence":0.75,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.18,"framework_glue":0,"implementation_detail":0.81,"wire_contract":0.01}}
 464c312eafca6de7	1792621702	{"confidence":0.89,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.08,"framework_glue":0,"implementation_detail":0.92,"wire_contract":0}}
+4651a5e1a29580d5	1793943082	{"confidence":0.52,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.24,"member_1":0.76}}
 4652a87d5a58c8ca	1792617317	{"confidence":0.56,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.09,"common_idiom":0.71,"shared_helper":0.2}}
 465359369ec1a6d4	1793942970	{"confidence":0.65,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.03,"name_meaning":0.05,"no_issue":0.18,"semantic_verdict":0.74}}
 4664e29b55c52b57	1792252958	{"confidence":0.3,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.35,"member_1":0.65}}
@@ -21,6 +22,7 @@
 466be0efdc466142	1792617317	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0}}
 4670d8ed802584da	1793942974	{"confidence":0.92,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.01,"internal_only":0.95,"unaccounted":0.04}}
 4676d111cd8637f2	1792252958	{"consistency":1,"kind":"Probability","probability":0.40666666666666673}
+467bd33525c6e89e	1793943082	{"confidence":0.96,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.03,"framework_glue":0,"implementation_detail":0.97,"wire_contract":0}}
 467f4f961551c8b9	1792252958	{"consistency":1,"kind":"Probability","probability":0.26333333333333336}
 46838ca7d0d4e80f	1792252958	{"consistency":1,"kind":"Probability","probability":0.6333333333333333}
 4683f319df0bdba5	1792621702	{"confidence":0.88,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.92,"not_a_derivation":0.06,"reimplements":0.02}}

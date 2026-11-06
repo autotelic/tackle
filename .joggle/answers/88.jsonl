@@ -14,6 +14,7 @@
 885daa61d7ec72fe	1793942974	{"confidence":0.62,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.75,"not_a_derivation":0.16,"reimplements":0.09}}
 885e85853bafd112	1793942975	{"confidence":0.86,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.04,"must_be_current":0.05,"not_a_projection":0.91}}
 886d5505e2846087	1793942973	{"confidence":0.66,"kind":"Classify","label":"value","probabilities":{"meaning":0.22,"unclear":0.01,"value":0.77}}
+887a2e63bc824544	1793943082	{"confidence":0.16,"kind":"Classify","label":"no_issue","probabilities":{"collapse":0.22,"keep_variants":0.34,"no_issue":0.44}}
 887a5b5ccb5c0a0c	1793942973	{"confidence":0.8,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.01,"keep_variants":0.87,"no_issue":0.12}}
 887a87e62731381e	1792689876	{"confidence":0.95,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.04,"same_module":0,"same_package":0,"sibling_packages":0.96}}
 887ef245336aff6d	1793942973	{"confidence":0.72,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.01,"keep_variants":0.81,"no_issue":0.18}}
@@ -28,6 +29,7 @@
 88b2f3f0ee034b90	1793942971	{"confidence":0.43,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.37,"no_issue":0.06,"semantic_verdict":0.57}}
 88b41ad0c896f8f4	1793942974	{"confidence":0.92,"kind":"Classify","label":"value","probabilities":{"meaning":0.04,"unclear":0.01,"value":0.95}}
 88b5398396cee4bc	1792265611	{"confidence":0.48,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.33,"inferred":0.02,"not_applicable":0.65}}
+88b8f5fa7e39e911	1793943262	{"confidence":0.95,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.03,"framework_glue":0,"implementation_detail":0.96,"wire_contract":0.01}}
 88b91902c0dd191f	1792252958	{"consistency":1,"kind":"Probability","probability":0.7666666666666666}
 88b9e598e4e2d301	1793942971	{"consistency":1,"kind":"Probability","probability":0.7466666666666666}
 88beda17bb55d02e	1793942973	{"confidence":0.56,"kind":"Classify","label":"no_issue","probabilities":{"merge":0.03,"move":0.26,"no_issue":0.71}}

@@ -1,5 +1,6 @@
 7309284a71afcd31	1792621702	{"confidence":0.62,"kind":"Classify","label":"collapse","probabilities":{"collapse":0.75,"keep_variants":0.21,"no_issue":0.04}}
 731494258ed72294	1792621702	{"confidence":0.31,"kind":"Classify","label":"no_issue","probabilities":{"merge":0.07,"move":0.39,"no_issue":0.54}}
+73186f5b161952f7	1793943081	{"confidence":0.42,"kind":"Classify","label":"move","probabilities":{"move":0.71,"no_issue":0.29}}
 7321b72ed954c111	1792689876	{"confidence":0.73,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.8,"stale_reference":0,"wrong_behavior":0.17,"wrong_contract":0.03}}
 7324ffaf17e41cd9	1792689876	{"confidence":0.16,"kind":"Classify","label":"collapse","probabilities":{"collapse":0.44,"keep_variants":0.44,"no_issue":0.12}}
 732875a2217d0abb	1792252958	{"confidence":0.8,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.01,"no_issue":0.14,"semantic_verdict":0.85}}
@@ -36,6 +37,7 @@
 73b6c7842a877f9b	1793942973	{"confidence":0.5,"kind":"Classify","label":"two_concepts","probabilities":{"intentional":0.23,"one_concept":0.1,"two_concepts":0.67}}
 73ba68e6c9aa28ec	1792252958	{"confidence":0.64,"kind":"Classify","label":"move","probabilities":{"merge":0.07,"move":0.76,"no_issue":0.17}}
 73bf5f1a627e4db8	1792535008	{"confidence":0.74,"kind":"Classify","label":"mechanical","probabilities":{"domain_logic":0.13,"infrastructure":0,"input_adaptation":0.09,"mechanical":0.77,"not_applicable":0,"orchestration":0,"rendering":0.01,"request_validation":0,"transport_concern":0}}
+73c942959d4da59d	1793943080	{"confidence":0.92,"kind":"Classify","label":"move","probabilities":{"move":0.96,"no_issue":0.04}}
 73ca859109b2321c	1792535008	{"confidence":0.73,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.8,"component_or_feature":0.08,"not_applicable":0.1,"route_or_handler":0.02}}
 73d317ae2ca8dfa4	1793942975	{"confidence":0.83,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.01,"must_be_current":0.1,"not_a_projection":0.89}}
 73d340377c55ea27	1793942974	{"confidence":0.31,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.54,"not_a_derivation":0.3,"reimplements":0.16}}

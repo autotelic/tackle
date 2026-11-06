@@ -91,7 +91,7 @@ it.effect("an exact copy stops at contract, and stages 2 and 3 are never asked",
 })
 
 it.effect("a whole that repeats a named part stops at combine, with the part named", () =>
-  run("combine", modelStub({ verdict: choice("composes", 0.95) })).pipe(
+  run("combine", modelStub({ combine: choice("composes", 0.95) })).pipe(
     Effect.map((result) => {
       expect(result.diagnostics.length).toBe(1)
       expect(result.diagnostics[0]?.stoppedAt).toBe("combine")
@@ -103,7 +103,7 @@ it.effect("a whole that repeats a named part stops at combine, with the part nam
 )
 
 it.effect("a repeated unnamed field set stops at expand", () =>
-  run("expand", modelStub({ verdict: choice("one_thing", 0.95) })).pipe(
+  run("expand", modelStub({ expand: choice("one_thing", 0.95) })).pipe(
     Effect.map((result) => {
       expect(result.diagnostics.length).toBe(1)
       expect(result.diagnostics[0]?.stoppedAt).toBe("expand")

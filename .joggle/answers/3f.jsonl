@@ -28,6 +28,7 @@
 3f97068d7c4c3673	1792252958	{"confidence":0.59,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.73,"unclear":0,"value":0.27}}
 3fa5501ffa2ecdcb	1793942974	{"confidence":0.89,"kind":"Classify","label":"neither","probabilities":{"fact":0.06,"neither":0.93,"recomputation":0.01}}
 3fa5983bb7e14695	1792621702	{"confidence":0.67,"kind":"Classify","label":"value","probabilities":{"meaning":0.21,"unclear":0.01,"value":0.78}}
+3fa78894f11eca4d	1793943082	{"confidence":0.25,"kind":"Classify","label":"move","probabilities":{"leave_it":0.1,"merge":0.09,"move":0.4,"share_a_contract":0.39,"split":0.02}}
 3faada3ac3604136	1792252958	{"confidence":0.4,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.4,"names_a_caller":0,"shared_vocabulary":0.6}}
 3faaf33521e69263	1793942974	{"consistency":1,"kind":"Probability","probability":0.16222222222222224}
 3fb716e69b8365e6	1792252958	{"confidence":0.22,"kind":"Classify","label":"none","probabilities":{"none":0.61,"settings":0.39}}

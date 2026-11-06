@@ -52,7 +52,7 @@ const ExpandPanel = Schema.Struct({
 const combineDefinition = Decision.make({
   input: stagedInput(CombinePanel),
   decisions: {
-    verdict: Decision.classify({
+    combine: Decision.classify({
       instructions: [
         "`panel.whole` lists every field of `panel.part` and adds `panel.added`.",
         "`earlier` is what the contract stage said: a copy would already have stopped there, so these are not identical duplicates.",
@@ -73,7 +73,7 @@ const combineDefinition = Decision.make({
 const expandDefinition = Decision.make({
   input: stagedInput(ExpandPanel),
   decisions: {
-    verdict: Decision.classify({
+    expand: Decision.classify({
       instructions: [
         "`panel.fields` appear together in `panel.occurrences` declarations and no declared type names them.",
         "`panel.fieldTypes` is each field's resolved type across those declarations.",
@@ -118,6 +118,9 @@ export const reversal: Rule = {
   description: "One site, one move: contract a copy, combine a named part, or expand the vocabulary.",
   judged: true,
   move: "contract",
+  // The two staged questions, declared for calibration: a plain rule has no
+  // plans, so the instrument reads its violating labels from here.
+  violations: { combine: ["composes"], expand: ["one_thing"] },
   messages: messages({
     stops_at_contract: "{{names}} are one declaration written {{count}} times: {{at}}.",
     stops_at_contract_help:
@@ -216,7 +219,7 @@ export const reversal: Rule = {
         combineOutcomes.set(siteKey(pair.whole), { stage: "combine", outcome: "unreadable" })
         continue
       }
-      const verdict = verdictOf(decided.success.answers["verdict"], ["composes"])
+      const verdict = verdictOf(decided.success.answers["combine"], ["composes"])
       combineOutcomes.set(siteKey(pair.whole), {
         stage: "combine",
         outcome: verdict === undefined || verdict.label === undefined ? "unreadable" : verdict.label,
@@ -321,7 +324,7 @@ export const reversal: Rule = {
         unjudged += 1
         continue
       }
-      const verdict = verdictOf(decided.success.answers["verdict"], ["one_thing"])
+      const verdict = verdictOf(decided.success.answers["expand"], ["one_thing"])
       if (verdict === undefined || verdict.label !== "one_thing") {
         drops.push({
           ruleId: RULE_ID,

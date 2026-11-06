@@ -1,14 +1,17 @@
 d3011a5c836783ac	1793942975	{"confidence":0.91,"kind":"Classify","label":"not_a_record","probabilities":{"mutable":0.05,"not_a_record":0.94,"supersede_only":0.01}}
 d301e44537c8bc32	1792684422	{"confidence":0.3,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.65,"member_1":0.35}}
 d305687ba85f4280	1792535008	{"confidence":0.82,"kind":"Classify","label":"infrastructure","probabilities":{"domain_logic":0.03,"infrastructure":0.84,"input_adaptation":0.03,"mechanical":0,"not_applicable":0,"orchestration":0.09,"rendering":0,"request_validation":0,"transport_concern":0.01}}
+d309ab862ad3c6b6	1793943082	{"confidence":0.34,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.56,"unclear":0.02,"value":0.42}}
 d310fe3b363c507b	1793941318	{"confidence":0.53,"kind":"Classify","label":"independent","probabilities":{"already_composed":0,"composes":0.35,"independent":0.65,"same_name_drift":0}}
 d311a06bc70405d6	1792543728	{"confidence":0.77,"kind":"Classify","label":"library_core","probabilities":{"domain_core":0.08,"infrastructure":0.01,"library_core":0.8,"not_applicable":0.03,"rendering_edge":0,"transport_edge":0.02,"utilities":0.06}}
 d3303b15136dddaf	1793942971	{"consistency":1,"kind":"Probability","probability":0.73}
 d332aa4761642600	1792542865	{"confidence":0.35,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.01,"common_idiom":0.57,"shared_helper":0.42}}
 d33600c97401ef64	1792252958	{"confidence":0.29,"kind":"Classify","label":"move","probabilities":{"leave_it":0.09,"merge":0.39,"move":0.43,"share_a_contract":0.05,"split":0.04}}
 d34186b04e0de1cc	1793942975	{"confidence":0.97,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.01,"not_an_invariant":0.98,"repair_path":0.01}}
+d3480c293e58887a	1793943080	{"confidence":0.82,"kind":"Classify","label":"compatible","probabilities":{"compatible":0.88,"drift":0.11,"two_concepts":0.01}}
 d3486381ca3b167a	1793942974	{"consistency":1,"kind":"Probability","probability":0.28}
 d34aceaaa188bfd5	1793942975	{"confidence":0.97,"kind":"Classify","label":"not_a_record","probabilities":{"mutable":0.01,"not_a_record":0.98,"supersede_only":0.01}}
+d34c51e6a6f11458	1793943080	{"consistency":1,"kind":"Probability","probability":0.3133333333333333}
 d350479cdacf0487	1792617317	{"confidence":0.92,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.04,"member_1":0.96}}
 d3513d9788197a20	1792252958	{"confidence":0.93,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0,"wrong_behavior":0.05,"wrong_contract":0}}
 d352529c8fb21965	1793942976	{"confidence":0.96,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.02,"not_an_invariant":0.97,"repair_path":0.01}}
@@ -30,6 +33,7 @@ d3b30fabee5f0638	1793942976	{"confidence":0.96,"kind":"Classify","label":"not_an
 d3b9b86af061c86d	1792252958	{"confidence":0.58,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.21,"member_1":0.79}}
 d3c4f68bcda52e8d	1793942973	{"confidence":0.92,"kind":"Classify","label":"domain_concept","probabilities":{"domain_concept":0.94,"framework_glue":0.02,"implementation_detail":0.03,"wire_contract":0.01}}
 d3c5c058a9cd45e3	1793942971	{"confidence":0.89,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.92,"stale_reference":0,"wrong_behavior":0.07,"wrong_contract":0.01}}
+d3c86a506bc59dad	1793943082	{"confidence":0.4,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.39,"framework_glue":0.01,"implementation_detail":0.55,"wire_contract":0.05}}
 d3cea8f3e482dc8b	1793942974	{"confidence":0.3,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.46,"names_a_caller":0.01,"shared_vocabulary":0.53}}
 d3cfab1cf8953ed3	1793942974	{"confidence":0.96,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.01,"must_be_current":0.02,"not_a_projection":0.97}}
 d3d31d711105447d	1792621702	{"confidence":0.64,"kind":"Classify","label":"value","probabilities":{"meaning":0.23,"unclear":0.01,"value":0.76}}

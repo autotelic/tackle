@@ -28,12 +28,14 @@ edc1134eb4738b3c	1793942974	{"confidence":0.08,"kind":"Rate","label":"meaningful
 edcb47fa1b1dcc99	1793942974	{"consistency":1,"kind":"Probability","probability":0.3033333333333334}
 edcd74cbf3f0d2e4	1792619451	{"confidence":0.91,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.94,"not_a_derivation":0.04,"reimplements":0.02}}
 edcfb38cfbf212f6	1793942973	{"confidence":0.74,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.83,"not_a_derivation":0.15,"reimplements":0.02}}
+edd79fbe7361f38c	1793943081	{"confidence":0.58,"kind":"Classify","label":"move","probabilities":{"move":0.79,"no_issue":0.21}}
 edd864b03e03c3e4	1792542864	{"confidence":0.92,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.94,"stale_reference":0,"wrong_behavior":0.06,"wrong_contract":0}}
 edddc9291ab31219	1792691059	{"confidence":0.74,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.15,"inferred":0.02,"not_applicable":0.83}}
 ede490b1d7d3c3a2	1793942973	{"confidence":0.5,"kind":"Classify","label":"move","probabilities":{"move":0.75,"no_issue":0.25}}
 ede566be918628cf	1793942973	{"confidence":0.58,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.72,"not_a_derivation":0.27,"reimplements":0.01}}
 ede5840f26653117	1793942975	{"confidence":0.92,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.04,"must_be_current":0.01,"not_a_projection":0.95}}
 edf0c7a3622d67ac	1792617317	{"consistency":1,"kind":"Probability","probability":0.13}
+edf12fa6fd214e23	1793943082	{"consistency":1,"kind":"Probability","probability":0.11444444444444445}
 edf54b1062b56354	1792684419	{"confidence":0.91,"kind":"Classify","label":"same_orchestration","probabilities":{"coincidental":0,"different_inputs":0.01,"different_work":0.06,"same_orchestration":0.93}}
 edf8edafb740255f	1792252958	{"confidence":0.93,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0.02}}
 edfd075649bb1d78	1793942974	{"confidence":0.27,"kind":"Classify","label":"merge","probabilities":{"leave_it":0,"merge":0.42,"move":0.14,"share_a_contract":0.21,"split":0.23}}

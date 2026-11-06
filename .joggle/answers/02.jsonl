@@ -5,14 +5,18 @@
 021993700f5bf778	1792252958	{"confidence":0.64,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.06,"no_issue":0.21,"semantic_verdict":0.73}}
 0219cb0e6ff500a4	1792617317	{"confidence":0.56,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.09,"common_idiom":0.71,"shared_helper":0.2}}
 021a0c13ae319a4f	1793942972	{"consistency":1,"kind":"Probability","probability":0.6211111111111111}
+022b3a15b5c70892	1793943080	{"confidence":0.64,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.66,"no_difference":0.02,"removes_a_hazard":0.15,"slightly_clearer":0.17},"rating":1.94}
 0247b73dc1d2a787	1793941307	{"confidence":0.36,"kind":"Classify","label":"two_concepts","probabilities":{"one_concept":0.32,"two_concepts":0.68}}
 0249d6f5ca992b25	1792535008	{"confidence":0.91,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.93,"stale_reference":0,"wrong_behavior":0.06,"wrong_contract":0.01}}
 025686e3c9a86e7f	1793942974	{"confidence":0.4,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.6,"unclear":0,"value":0.4}}
 02643b7bd100c945	1793942972	{"consistency":1,"kind":"Probability","probability":0.48222222222222216}
 02699f2b5d621832	1793942976	{"confidence":0.98,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0,"not_an_invariant":0.99,"repair_path":0.01}}
 026e90f3b877a8a6	1792253092	{"confidence":0.36,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.52,"different_order":0.01,"different_work":0.47,"same_operation":0}}
+027c21b96198a93b	1793943082	{"confidence":0.97,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0,"framework_glue":0.01,"implementation_detail":0.98,"wire_contract":0.01}}
 027cabc75717fe9d	1792269250	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
+027df3813e319873	1793943262	{"confidence":0.58,"kind":"Classify","label":"intentional","probabilities":{"intentional":0.72,"one_concept":0.02,"two_concepts":0.26}}
 027f9b6eb8f0a341	1792535008	{"confidence":0.8,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.82,"infrastructure":0,"input_adaptation":0,"mechanical":0.11,"not_applicable":0.04,"orchestration":0.03,"rendering":0,"request_validation":0,"transport_concern":0}}
+02856482a2557ec3	1793943081	{"confidence":0.58,"kind":"Classify","label":"move","probabilities":{"move":0.79,"no_issue":0.21}}
 02856cc0930f5b9b	1793942975	{"consistency":1,"kind":"Probability","probability":0.6366666666666667}
 0287280d318e7181	1793942974	{"confidence":0.92,"kind":"Classify","label":"neither","probabilities":{"fact":0.04,"neither":0.95,"recomputation":0.01}}
 02894fc8ba4b71a4	1792252958	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0.01}}
@@ -32,6 +36,7 @@
 02b0aa7a44c745aa	1792252958	{"confidence":0.69,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.21,"names_a_caller":0,"shared_vocabulary":0.79}}
 02b0de8d7fa6d785	1792617317	{"confidence":0.52,"kind":"Classify","label":"value","probabilities":{"meaning":0.31,"unclear":0.01,"value":0.68}}
 02b2f25b22891459	1793942970	{"consistency":1,"kind":"Probability","probability":0.9166666666666666}
+02b459e63244637d	1793943082	{"confidence":0.42,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.18,"keep_variants":0.61,"no_issue":0.21}}
 02b4b1ae1f054ae5	1792535008	{"confidence":0.95,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.96,"component_or_feature":0.01,"not_applicable":0.01,"route_or_handler":0.02}}
 02bc0b7b6af192f6	1793942973	{"confidence":0.72,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.81,"not_a_derivation":0.17,"reimplements":0.02}}
 02bf4795a74834ad	1792619055	{"confidence":0.57,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.62,"infrastructure":0,"input_adaptation":0.09,"mechanical":0.04,"not_applicable":0,"orchestration":0.18,"rendering":0.07,"request_validation":0,"transport_concern":0}}

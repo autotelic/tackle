@@ -23,10 +23,13 @@
 216f0b4ac188189d	1792535008	{"confidence":0.79,"kind":"Classify","label":"infrastructure","probabilities":{"domain_logic":0.1,"infrastructure":0.81,"input_adaptation":0,"mechanical":0.01,"not_applicable":0.02,"orchestration":0.06,"rendering":0,"request_validation":0,"transport_concern":0}}
 216f3ed05e16ca66	1792543728	{"confidence":0.33,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.55,"unclear":0.01,"value":0.44}}
 2171ba518b736522	1792535008	{"confidence":0.28,"kind":"Classify","label":"route_or_handler","probabilities":{"already_there":0.24,"component_or_feature":0.26,"not_applicable":0.04,"route_or_handler":0.46}}
+21740a4142d30218	1793943080	{"confidence":0.22,"kind":"Classify","label":"value","probabilities":{"meaning":0.07,"unclear":0.45,"value":0.48}}
 2180aae6a1ff6d8a	1793942971	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0}}
 21888e98f914b9c5	1792252958	{"confidence":0.83,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.89,"not_a_derivation":0.1,"reimplements":0.01}}
 2188b93e3a09edb2	1792621702	{"confidence":0.91,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.07,"framework_glue":0,"implementation_detail":0.93,"wire_contract":0}}
+2191d3947ed18242	1793943081	{"confidence":0.6,"kind":"Classify","label":"value","probabilities":{"meaning":0.27,"unclear":0,"value":0.73}}
 2192e642940c3478	1793942974	{"confidence":0.7,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.18,"independent":0.8,"meaning_switched":0.02}}
+21949c1bf845e3e1	1793943262	{"confidence":0.29,"kind":"Rate","label":"slightly_clearer","probabilities":{"meaningfully_better":0.32,"no_difference":0.17,"removes_a_hazard":0.11,"slightly_clearer":0.4},"rating":1.38}
 2194a7ca86f453ca	1792252958	{"confidence":0.49,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.01,"name_meaning":0.19,"no_issue":0.18,"semantic_verdict":0.62}}
 2194be0c56e2a50d	1792252958	{"consistency":1,"kind":"Probability","probability":0.11333333333333333}
 219c097000b77019	1792617317	{"confidence":0.37,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.25,"internal_only":0.58,"unaccounted":0.17}}

@@ -31,6 +31,7 @@
 859c6196a9c6548b	1792252958	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0.02}}
 859dbf4aa29d1773	1792252958	{"confidence":0.6,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.02,"no_issue":0.28,"semantic_verdict":0.7}}
 859e37c7565102c7	1792687043	{"confidence":0.28,"kind":"Classify","label":"no_issue","probabilities":{"magic_threshold":0.01,"name_meaning":0.32,"no_issue":0.46,"semantic_verdict":0.21}}
+85a5ea33ad6a8459	1793943423	{"confidence":0.44,"kind":"Classify","label":"neither","probabilities":{"deviation":0.01,"neither":0.63,"state":0.36}}
 85abc2fa83abea4b	1793942973	{"consistency":1,"kind":"Probability","probability":0.16444444444444442}
 85ae75a11fae6780	1792252958	{"confidence":0.38,"kind":"Classify","label":"value","probabilities":{"meaning":0.22,"unclear":0.19,"value":0.59}}
 85b23548c5dd35b4	1793942974	{"confidence":0.83,"kind":"Classify","label":"neither","probabilities":{"fact":0.08,"neither":0.89,"recomputation":0.03}}

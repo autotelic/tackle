@@ -26,8 +26,13 @@ written down.
   Choice margin and a confidence floor onto act / review / drop -- the docs' three
   ranges, with the thresholds in `src/policy.ts` and nowhere else.
 - **State as a panel.** The evidence is a named object (`declarations`, `files`,
-  `common_directory`, `identical`, `overlap`), which is the docs' "material you
-  would present to a panel of experts".
+  `common_directory`, `identical`, `overlap`, `relationship`), which is the docs'
+  "material you would present to a panel of experts".
+- **The answers travel with the finding.** Every judged finding can carry the
+  panel of questions, labels, probabilities, both operations and the agreement.
+- **The stages are a decision path, not three scanners.** `joggle/reversal`
+  stops at the first stage that answers, and each later stage's state includes
+  what the earlier ones said.
 - **The cache is on the wire.** `src/decision.ts` wraps the `TypeSafeClient`, so a
   replayed answer still runs through `DecisionModel`'s validation. The key is the
   encoded state plus the questions plus `policy.decisionVersion`.
@@ -69,12 +74,55 @@ stating rather than copying a pattern by name:
 `src/ask.ts` is where fan-out belongs, and it is used there: one state, one
 decision per candidate, one request.
 
+## The budget is ranked, not sliced
+
+A judged rule's candidate budget used to be a selection: sort by similarity, take
+the first N. That is how forty high-scoring pairs elsewhere in a tree spend the
+whole allowance and leave the eighteen copies of one helper unexamined. The
+candidate engine (`src/candidates.ts`) now builds every candidate the join can
+prove or guess, and when there are more than the budget `rankSpeculative` asks
+ONE cheap Noul about the top of a deterministic window: "would a reader fixing
+one of these need to look at the others?" The answer reorders; it never drops.
+A proof — identical shape, identical resolved type, identical call sequence — is
+never ranked, because a relevance answer cannot overrule the compiler.
+
+The request count is one per ranking, not one per candidate, and the answer is
+cached like any other.
+
+## The stages, and the state that carries them
+
+The contract → combine → expand taxonomy is the tool's thesis, and it used to be
+three scanners with three candidate generators. `joggle/reversal` walks one site
+through the stages and stops at the first that answers: a copy is a fact (no
+model), a named part plus more is asked, an unnamed repeated field set is asked.
+The finding carries `stoppedAt`.
+
+`src/stages.ts` puts the stage in the STATE: `{ stage, earlier, panel }`, where
+`earlier` is what the preceding stages said about this site. That is the
+TypeSafe decomposition in miniature — the second judgement is asked about the
+site the first one declined, not about every site at once — and because the
+answer cache keys on the state, a site that stopped at combine and one that fell
+through to expand can never share an answer.
+
+## The panel, so a finding explains itself
+
+"The model chose fraud_team" is not an explanation. A finding now carries an
+optional `panel`: every question's label and probability, the operation the
+model proposed, the one the table derived, and whether they agreed. The text
+format prints it under the finding; JSON carries it; `@autotelic/protocol`
+carries the same optional field so `jig`'s merged report does not lose it. A
+malformed panel is omitted, never the finding.
+
+This is also what makes a disagreement readable. `settle` reports the model and
+the table as peers; the panel is where a reader can see which one said what.
+
 ## All three primitives are now in use
 
 - **Noul** (`Decision.probability`) for a clean yes/no: `redundant`,
   `worth_fixing`, `fails_as_address`, `one_concept`.
 - **Choice** (`Decision.classify`) for a set with no order: `role`,
-  `relationship`, `verdict`, `canonical`.
+  `verdict`, `canonical`. The package relationship is no longer asked: the
+  nearest manifest answers it.
 - **Score** (`Decision.rate`) for a spectrum: `consequence` is now four ordered
   levels -- `no_difference`, `slightly_clearer`, `meaningfully_better`,
   `removes_a_hazard`. It was a Noul, and the docs are explicit that "would a
@@ -86,7 +134,9 @@ decision per candidate, one request.
 
 Changing the question bumped `policy.decisionVersion`, which invalidates every
 cached verdict for the collapse rule at once. That is the documented cost of
-changing a question, and it is why the version is one value in one file.
+changing a question, and it is why the version is one value in one file. The
+question set changed again when `relationship` left the collapse questionnaire
+(2026-11-05), and the corpus was re-judged with it.
 
 ## Shared atoms (implemented)
 

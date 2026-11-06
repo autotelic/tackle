@@ -151,6 +151,12 @@ export interface RunContext {
 export interface Rule extends ReportedRule {
   readonly description: string
   /**
+   * The decisions whose labels mark a violation, for a rule that answers its own
+   * questions. A planned rule declares this on each plan; a plain rule has no
+   * plans, so it declares it here and calibration reads the same keys.
+   */
+  readonly violations?: Readonly<Record<string, ReadonlyArray<string>>> | undefined
+  /**
    * The operations this rule can propose. Absent means it only warns.
    *
    * The model never sees this list. It is what the report groups by, and what

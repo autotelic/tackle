@@ -9,6 +9,7 @@
 6933ca9568b5c6c3	1792252958	{"confidence":0.67,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.01,"name_meaning":0,"no_issue":0.24,"semantic_verdict":0.75}}
 6937123e957a2efb	1792252958	{"confidence":0.44,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.72,"member_1":0.28}}
 6937750f5bcdfffa	1792619055	{"confidence":0.8,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.87,"not_a_derivation":0.02,"reimplements":0.11}}
+693ae1ee9aa3ec16	1793943082	{"consistency":1,"kind":"Probability","probability":0.16333333333333333}
 6941af180a98970c	1792689876	{"confidence":0.4,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.25,"keep_variants":0.6,"no_issue":0.15}}
 694530b0658843e4	1792252958	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
 69482d38b0014e6f	1793942972	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
@@ -39,6 +40,7 @@
 69d59656106c5a2c	1793942973	{"confidence":0.04,"kind":"Rate","label":"no_difference","probabilities":{"meaningfully_better":0.11,"no_difference":0.53,"removes_a_hazard":0.19,"slightly_clearer":0.17},"rating":0.97}
 69dacaee8399a92b	1793942971	{"consistency":1,"kind":"Probability","probability":0.7666666666666666}
 69dc0c728b9bd403	1793941318	{"confidence":0.93,"kind":"Classify","label":"same_name_drift","probabilities":{"already_composed":0,"composes":0.02,"independent":0.03,"same_name_drift":0.95}}
+69df47e4ebc0f519	1793943081	{"confidence":0.41,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.11,"merge":0.03,"move":0.32,"share_a_contract":0.53,"split":0.01}}
 69dfd1375a3664c6	1793942971	{"confidence":0.92,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.94,"stale_reference":0.01,"wrong_behavior":0.03,"wrong_contract":0.02}}
 69e42a6c8ae63ce5	1792689876	{"confidence":0.67,"kind":"Classify","label":"different_work","probabilities":{"different_inputs":0.25,"different_order":0,"different_work":0.75,"same_operation":0}}
 69ec6f85c5290024	1793942973	{"confidence":0.8,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.15,"framework_glue":0,"implementation_detail":0.85,"wire_contract":0}}
