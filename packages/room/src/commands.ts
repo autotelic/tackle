@@ -656,9 +656,38 @@ const launchRex = (input: {
   readonly name: string
   readonly dir: string
   readonly script: string
+  /** The session to add a tab to. Absent: a session of its own, addressed by session id. */
+  readonly session?: string | undefined
 }): Result.Result<string, string> => {
   const rex = Result.getOrUndefined(onPath("rex"))
   if (rex === undefined) return Result.fail("rex is not on PATH")
+  if (input.session !== undefined && input.session !== "") {
+    // A tab in the session a person is already watching, not a new window: the review shows up
+    // where the work is, and `--focus=false` keeps the launch from stealing the pane in use.
+    const created = run({
+      command: rex,
+      args: [
+        "window",
+        "new",
+        "-s",
+        input.session,
+        input.name,
+        "--focus=false",
+        "-c",
+        input.dir,
+        "--json",
+        "--",
+        "sh",
+        input.script,
+      ],
+    })
+    const decoded = Schema.decodeResult(
+      Schema.fromJsonString(Schema.Struct({ window_id: Schema.String })),
+    )(created.stdout)
+    return Result.isFailure(decoded)
+      ? Result.fail(created.stderr.trim() || created.failure || "rex did not return a window")
+      : Result.succeed(decoded.success.window_id)
+  }
   const created = run({
     command: rex,
     args: ["new", input.name, "-c", input.dir, "--json", "--", "sh", input.script],
@@ -731,6 +760,8 @@ export const startWorker = (input: {
   readonly kind: "fix" | "review"
   /** Overrides `worker.substrate` for this launch (`jig room work --substrate`). */
   readonly substrate?: Substrate | undefined
+  /** The Rex session to open as a tab (`--rex-session`), when the substrate is rex. */
+  readonly rexSession?: string | undefined
 }): Effect.Effect<
   {
     readonly name: string
@@ -883,9 +914,12 @@ export const startWorker = (input: {
         promptFile === undefined ? "exec pi" : `exec pi "$(cat '${promptFile}')"`,
       ],
     })
+    // The tab's home: the flag wins, then the room's committed choice, then the session this
+    // command runs inside (a person who launched it from a Rex pane is already in one).
+    const rexSession = input.rexSession ?? config.worker?.rex?.session ?? process.env.REX_SESSION
     const launchedPi =
       substrate === "rex"
-        ? launchRex({ name, dir, script: piScript })
+        ? launchRex({ name, dir, script: piScript, session: rexSession })
         : launchHc({ hc: hc ?? "", name, dir, script: piScript })
     if (Result.isFailure(launchedPi)) return yield* Effect.fail(launchedPi.failure)
     const address = launchedPi.success
@@ -992,9 +1026,13 @@ export const stopWorker = (input: {
         cwd: worker.worktree,
       })
     }
-    // The address names the substrate: an hc terminal, or a Rex session id. Stopping the one
-    // the worker actually got is the difference between a stopped worker and a vanished room entry.
-    if (worker.address.startsWith("session:")) {
+    // The address names the substrate: an hc terminal, a Rex session, or a tab in one.
+    // Stopping the one the worker actually got is the difference between a stopped worker and a
+    // vanished room entry.
+    if (worker.address.startsWith("window:")) {
+      const rex = Result.getOrUndefined(onPath("rex"))
+      if (rex !== undefined) run({ command: rex, args: ["window", "close", worker.address] })
+    } else if (worker.address.startsWith("session:")) {
       const rex = Result.getOrUndefined(onPath("rex"))
       if (rex !== undefined) run({ command: rex, args: ["kill", worker.address] })
     } else {
@@ -1032,6 +1070,16 @@ export const attachWorker = (input: {
     }).pipe(Effect.orElseSucceed((): WorkerList => ({ workers: [] })))
     const worker = workers.workers.find((entry) => entry.name === input.name)
     if (worker === undefined) return yield* Effect.fail(`no worker named ${input.name}`)
+    if (worker.address.startsWith("window:")) {
+      const rex = Result.getOrUndefined(onPath("rex"))
+      const focused =
+        rex === undefined
+          ? undefined
+          : run({ command: rex, args: ["window", "focus", worker.address] })
+      return focused?.code === 0
+        ? `rex tab ${worker.address} · focused`
+        : `rex tab ${worker.address} — focus it with: rex window focus ${worker.address}`
+    }
     // Rex has no "attach": a session id is shown by asking the app to select it.
     if (worker.address.startsWith("session:")) {
       return (

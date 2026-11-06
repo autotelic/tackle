@@ -863,6 +863,12 @@ const workCommand = Command.make(
       ),
       Flag.optional,
     ),
+    rexSession: Flag.String("rex-session").pipe(
+      Flag.withDescription(
+        "The Rex session to open each worker as a tab in. Default: worker.rex.session, else a session per worker.",
+      ),
+      Flag.optional,
+    ),
     reviewRequested: Flag.Boolean("review-requested").pipe(
       Flag.withDescription(
         "Start a worker for every open PR that asks for your review (gh pr list --search review-requested:@me).",
@@ -890,12 +896,14 @@ const workCommand = Command.make(
         return
       }
       const substrate = Option.getOrUndefined(options.substrate)
+      const rexSession = Option.getOrUndefined(options.rexSession)
       for (const pr of numbers) {
         const result = yield* startWorker({
           cwd: root,
           pr,
           kind: options.kind,
           substrate,
+          rexSession,
         }).pipe(Effect.result)
         if (Result.isFailure(result)) {
           yield* write(`room work: #${pr}: ${result.failure}`)
