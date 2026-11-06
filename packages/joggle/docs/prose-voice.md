@@ -206,11 +206,144 @@ files that carry the most of it:
 - Markdown: `FOREMAN.md`, `tools/foreman/journal.md`,
   `packages/joggle/docs/superpowers/plans/*`, `MIGRATION.md`
 
-## 10. Open decisions
+## 10. What was built
 
-1. One rule or two: a JSDoc rule and a prose rule, or one rule with two candidate
-   sources. They share a vocabulary and differ in what a reader needs.
-2. Plumb for the closed list, joggle for the open categories, or joggle only.
-3. Is Markdown in scope for the first cut, given it needs `Workspace.prose`?
-4. `error` from the start on the closed list, or `warn` everywhere until the
-   corpus is clean.
+One judged rule, `joggle/prose-voice`, with three candidate sources and one
+question. It is in `src/rules/prose-voice.ts`, and the deterministic half is what
+this section can state exactly.
+
+**Candidates**, all sentences:
+
+| source | where it comes from | why it is a candidate |
+| --- | --- | --- |
+| `jsdoc` | `unit.doc`, from the comment above a declaration, exported or not | a maintainer reads it while editing the file |
+| `markdown` | `Workspace.prose`, from discovery, or handed over by a caller | a document read on its own |
+| `string` | `file.facts.literals`, filtered by `readsAsProse` | a message, a flag description, a test name or a prompt read in a terminal |
+
+**`readsAsProse`** is one text test, not a guess at which call produced the
+literal: five words, a sentence terminator, no concatenated edge, an opening
+letter, and more letters than marks. It reaches a diagnostic, a prompt and a
+criteria-adjacent instruction with one rule, and it drops an identifier, a path, a
+selector, a separator and a fragment.
+
+Two prunes are facts rather than policy:
+
+- **No neighbour, no `restatement`.** A string literal has no preceding sentence,
+  so the criterion is not offered, and the instructions say so.
+- **A criteria label is not prose.** It is one of a question's options, and the
+  question is a field rather than a sentence. It is skipped by locating `criteria:`
+  between the enclosing call and the literal.
+
+**The question** (`Decision.classify`, one per candidate, nine labels):
+
+`riddle`, `verdict`, `antithesis`, `anthropomorphism`, `synonym_rotation`,
+`overgeneralisation`, `false_certainty`, `restatement`, `no_issue`.
+
+Each label is a definition with a test, and the two that carried the most noise
+were rewritten as tests rather than descriptions:
+
+- `verdict` was "grades the material instead of stating a fact", which caught every
+  honest judgement about a bound. It is now **delete the sentence and the reader
+  loses no fact**.
+- `restatement` was "repeats its neighbour or the declaration's name", which caught
+  every terse first line. It is now **states a fact the previous sentence already
+  states**, and it is only asked when there is a previous sentence.
+
+**Output** is `info` for a review-band answer and `warn` for an act-band one, with
+the label and the sentence in the message and the repair in the help. The
+severity stays below `error` until a labelled set says the labels are right.
+
+## 11. What the runs found
+
+The loop was: judge, read the findings, find the class of false positive, fix the
+fact or the question, judge again. Every number below is a real run over
+`packages/joggle/src` (97 files) with `dev_personal`.
+
+| run | change | findings |
+| --- | --- | --- |
+| 1 | first question, `messages({...})` candidates only | 36 |
+| 2 | fragment and terminator filters on literals | 34 |
+| 3 | `verdict` and `restatement` redefined | 28 |
+| 4 | enclosing call recorded on the atom | 31 |
+| 5 | `verdict` as a delete-test | 30 |
+| 6 | `restatement` pruned without a neighbour | 21 |
+| 7 | criteria labels and banners skipped | 18 |
+
+Roughly eleven of the last eighteen are findings worth acting on. The confirmed
+ones, with the label the judge chose:
+
+- `atoms.ts:16` "Content-addressed rather than positional, and that is the whole point." (verdict, 0.99)
+- `architecture.ts:18` "Most of what people call architecture is a judgement..." (verdict, 0.87)
+- `ask.ts:134` "Narrowing the paths remains the best answer..." (verdict, 0.88)
+- `doc-matches-code.ts:95` "Fix the doc to match the code, or the code to match the doc. The doc is the one artefact no checker reads, so it is the one that drifts." (false certainty, 0.86)
+- `main.ts:862` the package description: "deterministic where it can prove, System One where it has to judge" (riddle, 0.81)
+- `main.ts:811` "a store that only grows is not a cache" (verdict, 0.74)
+- `append-only-honoured.ts:37` "A query-builder call that rewrites a structure recording the past." (riddle, 0.59)
+
+The false positives that remain are one class: **a terse operational string that
+states a fact and reads as an opinion**. `answer-store.ts:28` "256 files is enough
+granularity." is the clearest. It is a real finding by the delete-test (deleting it
+loses the rationale for the number) and the judge called it `verdict`. A labelled
+set is what settles that, not another rewrite of the prompt.
+
+Cost: 243,831 input tokens for 320 judged sentences, across 5 API calls. The
+instructions are sent once per request, so the per-sentence cost falls as the
+batch grows.
+
+The budgets are the real limit. In that run, 1,131 of 1,251 documented sentences
+and 432 of 632 literals were past the cap, and the report says so:
+
+    note: joggle/prose-voice — 1131 of 1251 documented sentences were not judged (budget 120).
+
+A full-repository pass at these budgets measures a sixth of the corpus. The scoped
+run (`--since`, `--pr`) is the one that fits a budget, and it is the one a gate
+would use.
+
+## 12. Commit messages and pull request bodies
+
+These are read by people and are not files in the tree, so discovery cannot find
+them. A commit message has no extension at all. `check --prose` names them:
+
+    joggle check --cwd . --prose .git/COMMIT_EDITMSG --rule joggle/prose-voice \
+      --no-tsgo --format stylish
+
+Or, for a pull request body:
+
+    gh pr view 128 --json body -q .body > /tmp/pr-body.md
+    joggle check --prose /tmp/pr-body.md --rule joggle/prose-voice --no-tsgo
+
+The flag exists because the alternative is a second code path. A prose input
+reaches `Workspace.prose` through `WorkspaceInputs.prose`, judged by the same rule
+with the same gate and reported in the same shape. A run given only prose no
+longer trips the "no source files" guard, which existed to stop an empty run
+looking clean.
+
+Against a real commit message:
+
+    COMMIT_EDITMSG
+      1:1  warning  1.00  COMMIT_EDITMSG:1 reads as verdict: "joggle: the funnel is not decoration"
+      6:1  warning  0.90  COMMIT_EDITMSG:6 reads as verdict: "It is the difference between a partial analysis that looks complete and one that says so."
+      6:1  warning  0.88  COMMIT_EDITMSG:6 reads as verdict: "This is not a formatting change."
+
+The subject line, the antithesis and the closing flourish are all reported. The
+sentence between them, which states what changed, is declined.
+
+## 13. What is still wrong
+
+- **No labelled set.** Sixty sentences the author of this rule labels `bad`/`fine`
+  is the fixture and the calibration reference. Without it the precision figure
+  above is one person reading a list.
+- **The budget is a sixth of the corpus.** Scoping is the answer, and the run
+  cache makes a scoped run cheap.
+- **`docFor` reads a section banner as a declaration's doc.** A
+  `/* ---- Pruning ---- */` above an interface is that interface's doc block. The
+  rule filters the banner out by its text, but the fact is wrong for every rule
+  that reads `unit.doc`.
+- **A criteria map is found by scanning for `criteria:`.** A rule that builds its
+  criteria in a local first, as this one does, is missed.
+- **The closed tells are not a plumb rule yet.** "the whole point", "is not A. It
+  is B." and the anthropomorphic subject are decidable without a model, and
+  `docs/writing-rules.md` says a decidable predicate belongs in a linter. Until
+  then they cost a judgement each.
+- **`jig` does not run `--prose`.** The PR flow needs the body written to a file
+  and the rule to gate on the result; neither is wired.

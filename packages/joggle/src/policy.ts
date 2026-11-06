@@ -496,6 +496,24 @@ export const policy = {
   },
 
   /**
+   * Sentences the prose-voice rule may send for judgement, per source.
+   *
+   * Three budgets rather than one: a JSDoc sentence, a sentence in a Markdown
+   * document and a string literal are different corpora, and one shared cap would
+   * let the largest take every slot. `maxChars` bounds the atom; `minChars` and
+   * `minStringWords` drop a label or a fragment, which no judgement can use.
+   */
+  proseVoice: {
+    maxDocSentences: 120,
+    maxProseSentences: 120,
+    maxStringSentences: 200,
+    /** Words below which a literal is a token, a path or a selector, not prose. */
+    minStringWords: 5,
+    minChars: 30,
+    maxChars: 600,
+  },
+
+  /**
    * Declarations sent for judgement in one run.
    *
    * The candidate filter is structural and deliberately narrow -- an exported

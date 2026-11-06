@@ -71,6 +71,7 @@ it.effect("refuses to persist judgements for code outside the analysis root", ()
       "joggle/nullability-drift",
       "joggle/object-shape",
       "joggle/one-concept-one-type",
+      "joggle/prose-voice",
       "joggle/reimplemented-primitive",
       "joggle/reversal",
       "joggle/rule-judgment",
@@ -113,7 +114,7 @@ it.effect("runs the deterministic rules and reports judged rules as skipped", ()
     expect(report.files).toBe(2)
     // The built-in rules. The composition rules are a preset and are not in this
     // run at all, which is what makes them an opinion rather than an inheritance.
-    expect(report.rules).toBe(41)
+    expect(report.rules).toBe(42)
     // The fixture declares `User` identically in two files, so the staged reversal
     // stops at contract -- a fact, reported with no model. The other finding is a
     // rule that reached the judge before it was skipped; the reversal's copy is

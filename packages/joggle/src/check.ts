@@ -50,9 +50,47 @@ import {
 } from "./schema.ts"
 import { Service as Tsgo } from "./tsgo.ts"
 import { applyDeclarationTypes, discoverFiles, loadWorkspace, type Unit } from "./workspace.ts"
+import { sentencesOfMarkdown, type ProseFile } from "./prose.ts"
 import { contentMappersOf } from "./content-mappers.ts"
 import { looksLikeSource } from "./source.ts"
 import type { ImportGraph } from "./imports.ts"
+
+/**
+ * Read named files as prose, whatever their extension.
+ *
+ * The files a person writes outside a session -- a commit message, a pull
+ * request body -- are not in the tree discovery walks, and a commit message has
+ * no extension at all. Naming them is how they reach the same index as the
+ * documentation.
+ *
+ * @param root - the project root, so the reported path is repository-relative.
+ * @param paths - the files to read, relative to the root or absolute.
+ * @returns the documents, with their prose already split.
+ */
+const proseInputs = (
+  root: string,
+  paths: ReadonlyArray<string>,
+): Effect.Effect<ReadonlyArray<ProseFile>, WorkspaceError, FileSystem.FileSystem | Path.Path> =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const path = yield* Path.Path
+    const files: Array<ProseFile> = []
+    for (const input of paths) {
+      const absolute = path.isAbsolute(input) ? input : path.join(root, input)
+      const text = yield* fs.readFileString(absolute).pipe(
+        Effect.mapError(
+          (cause) =>
+            WorkspaceError.make({ path: absolute, operation: "readFileString", cause }),
+        ),
+      )
+      files.push({
+        path: path.relative(root, absolute),
+        text,
+        sentences: sentencesOfMarkdown(text),
+      })
+    }
+    return files
+  })
 
 export interface Options {
   readonly cwd: string
@@ -78,6 +116,14 @@ export interface Options {
   readonly maxInputTokens?: number | undefined
   /** Use tsgo for project discovery instead of walking directories. */
   readonly useTsgo: boolean
+  /**
+   * Files to read as prose whatever their extension.
+   *
+   * A commit message has no extension and a pull request body arrives from an
+   * API, so neither can be discovered. Named here, they are judged beside the
+   * documentation they belong with.
+   */
+  readonly prose?: ReadonlyArray<string> | undefined
   /**
    * Allow `tsc` to execute content-mapper packages declared in tsconfig.
    *
@@ -277,7 +323,10 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
   // exactly like success -- and that is how the architecture rules measured
   // nothing at all while appearing clean, when the tool was invoked with no path
   // argument and TypeScript discovery came back empty.
-  if (files.length === 0) {
+  // A run given prose to judge is not empty even when the tree has no source: a
+  // commit message is the whole input, and the guard below exists to stop a run
+  // reporting "0 problems" over an empty file set.
+  if (files.length === 0 && (options.prose ?? []).length === 0) {
     // Name the source of the emptiness. The old message blamed a missing path
     // argument even when one was given, and even when the real cause was tsgo
     // returning a list that did not survive the root comparison.
@@ -415,11 +464,13 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
   // The parse cache is a performance artifact, like the run cache and the wire
   // cache, so it lives in the machine cache and never in the repository.
   const parseCache = yield* loadParses({ cacheDir: runCache, tool: toolFingerprint })
+  const prose = yield* proseInputs(options.cwd, options.prose ?? [])
   const workspace = yield* loadWorkspace(options.cwd, options.paths, {
     discovered: files,
     contents,
     parses: parseCache.parses,
     types,
+    prose,
   })
   // Written after the load, and only when something was actually parsed.
   yield* parseCache.save

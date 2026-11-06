@@ -58,9 +58,10 @@ test("discovery reports what it did not parse", async () => {
     discoverFiles(fixtures, ["."], undefined).pipe(Effect.provide(NodeServices.layer)),
   )
   // Three source files are discovered; one of them then fails to parse, which is
-  // a different report. A non-source file is counted here instead.
+  // a different report. Markdown is prose now, so nothing here is skipped.
   expect(found.files.length).toBe(3)
-  expect(found.skippedExtensions).toEqual([{ extension: ".md", count: 1 }])
+  expect(found.prose.length).toBe(1)
+  expect(found.skippedExtensions).toEqual([])
   expect(found.truncated).toBe(false)
 })
 

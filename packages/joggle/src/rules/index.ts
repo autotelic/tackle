@@ -4,6 +4,7 @@ import { duplicateMeaning } from "./duplicate-meaning.ts"
 import { importArchitectureRules } from "./import-architecture.ts"
 import { dependencyFit } from "./dependency-fit.ts"
 import { docMatchesCode } from "./doc-matches-code.ts"
+import { proseVoice } from "./prose-voice.ts"
 import { fieldTypeDrift } from "./field-type-drift.ts"
 import { languageDrift } from "./language-drift.ts"
 import { callPattern } from "./call-pattern.ts"
@@ -66,6 +67,7 @@ export const allRules: ReadonlyArray<Rule | PlannedRule> = [
   temporalCoupling,
   dependencyFit,
   docMatchesCode,
+  proseVoice,
   fieldTypeDrift,
   hoistToDomain,
   languageDrift,

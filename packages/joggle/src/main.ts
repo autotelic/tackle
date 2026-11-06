@@ -138,6 +138,12 @@ const checkCommand = Command.make(
       Flag.withDescription("Scope to files changed since the stored run (machine-local)."),
       Flag.withDefault(false),
     ),
+    prose: Flag.String("prose").pipe(
+      Flag.withDescription(
+        "Read these files as prose whatever their extension: a commit message, a pull request body. Comma-separated.",
+      ),
+      Flag.optional,
+    ),
     since: Flag.String("since").pipe(
       Flag.withDescription("Scope to files changed since a git revision (for example origin/main)."),
       Flag.optional,
@@ -181,6 +187,13 @@ const checkCommand = Command.make(
       const cacheDir = yield* cacheDirFor(cwd, Option.getOrUndefined(config.cacheDir))
       const apiKey = yield* Config.option(Config.String("TYPESAFE_API_KEY"))
       const ruleFlag = Option.getOrUndefined(config.rule)
+      const proseInputs = (value: string | undefined): ReadonlyArray<string> | undefined =>
+        value === undefined
+          ? undefined
+          : value
+              .split(",")
+              .map((input) => input.trim())
+              .filter((input) => input.length > 0)
       const rules =
         ruleFlag === undefined
           ? undefined
@@ -232,6 +245,7 @@ const checkCommand = Command.make(
         paths: config.paths,
         rules,
         typecheck: config.typecheck,
+        prose: proseInputs(Option.getOrUndefined(config.prose)),
         types: config.types ? "trace" : "off",
         maxInputTokens: config.maxTokens,
         useTsgo: !config.noTsgo,
