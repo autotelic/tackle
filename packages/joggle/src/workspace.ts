@@ -2368,8 +2368,11 @@ export const loadWorkspace = (
         (yield* fs.readFileString(absolute).pipe(Effect.orElseSucceed(() => "")))
       // An unreadable prose file is skipped. It is a gap, and it fails no run.
       if (text === "") continue
+      // A document outside the analysed root keeps its own path: a commit message
+      // lives in .git, and "../.." is not a path a reader can use.
+      const relative = path.relative(path.resolve(root), absolute)
       prose.push({
-        path: path.relative(path.resolve(root), absolute),
+        path: relative.startsWith("..") ? absolute : relative,
         text,
         sentences: sentencesOfMarkdown(text),
       })

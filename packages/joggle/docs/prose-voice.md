@@ -312,15 +312,18 @@ would use.
 ## 12. Commit messages and pull request bodies
 
 These are read by people and are not files in the tree, so discovery cannot find
-them. A commit message has no extension at all. `check --prose` names them:
+them. A commit message has no extension at all. `joggle prose` judges them and
+nothing else: no walk, no parser, one rule, and a non-zero exit on a warning.
 
-    joggle check --cwd . --prose .git/COMMIT_EDITMSG --rule joggle/prose-voice \
-      --no-tsgo --format stylish
+    joggle prose .git/COMMIT_EDITMSG
 
 Or, for a pull request body:
 
     gh pr view 128 --json body -q .body > /tmp/pr-body.md
-    joggle check --prose /tmp/pr-body.md --rule joggle/prose-voice --no-tsgo
+    joggle prose /tmp/pr-body.md --format json
+
+`check --prose <path>` puts the same documents in the index beside a repository
+run, which is what a change that edits both a doc and a message wants.
 
 The flag exists because the alternative is a second code path. A prose input
 reaches `Workspace.prose` through `WorkspaceInputs.prose`, judged by the same rule
@@ -343,7 +346,7 @@ A `commit-msg` hook makes that every commit:
     #!/bin/sh
     # .git/hooks/commit-msg
     command -v joggle >/dev/null 2>&1 || exit 0
-    exec joggle check --prose "$1" --rule joggle/prose-voice --no-tsgo --format stylish
+    exec joggle prose "$1"
 
 The guard matters as much as the check: a contributor without the CLI must not
 have every commit fail. `jig init --hooks` writes the `pre-commit` hook with the
@@ -356,8 +359,8 @@ budget the rule judges 120 of them, and the report states the rest:
 
     note: joggle/prose-voice — 6199 of 6319 Markdown sentences were not judged (budget 120).
 
-Run on `FOREMAN.md` alone (`--prose FOREMAN.md`), 34 of its 120 judged sentences
-are reported, and they are the register this rule exists for:
+Run on `FOREMAN.md` alone (`joggle prose FOREMAN.md`), 32 of its 120 judged
+sentences are reported, and they are the register this rule exists for:
 
     FOREMAN.md:198  verdict           "It is the point of the whole machine."
     FOREMAN.md:131  verdict           "House style is not negotiable."

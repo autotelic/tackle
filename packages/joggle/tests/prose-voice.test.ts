@@ -163,3 +163,14 @@ it("a section banner is not words", () => {
   expect(hasWords("/* ---- Pruning ---- */")).toBe(false)
   expect(hasWords("256 files is enough granularity.")).toBe(true)
 })
+
+it.effect("a document outside the root keeps its own path", () =>
+  Effect.gen(function* () {
+    const workspace = yield* loadWorkspace("tests/fixtures/prose-voice-empty", [], {
+      proseFiles: ["tests/fixtures/prose-voice/doc.md"],
+    })
+    const document = workspace.prose[0]
+    expect(document?.path.startsWith("/")).toBe(true)
+    expect(document?.sentences.length).toBe(2)
+  }).pipe(Effect.provide(NodeServices.layer)),
+)

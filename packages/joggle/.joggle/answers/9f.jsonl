@@ -13,6 +13,7 @@
 9f4ef7b96cfaff42	1790631747	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0.01}}
 9f4fa1c3e82eccdb	1790631747	{"confidence":0.29,"kind":"Classify","label":"drift","probabilities":{"compatible":0.44,"drift":0.53,"two_concepts":0.03}}
 9f507b2bac903336	1790636522	{"confidence":0.52,"kind":"Classify","label":"same_operation","probabilities":{"different_inputs":0.23,"different_order":0.11,"different_work":0.02,"same_operation":0.64}}
+9f61aeacbdb7b98f	1793984434	{"confidence":0.48,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0,"antithesis":0.01,"false_certainty":0.01,"no_issue":0.54,"overgeneralisation":0,"restatement":0.01,"riddle":0.18,"synonym_rotation":0.01,"verdict":0.24}}
 9f650f5d22b91a51	1793983130	{"confidence":0.9,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0.03,"antithesis":0.02,"false_certainty":0,"no_issue":0.91,"overgeneralisation":0.02,"restatement":0,"riddle":0.01,"synonym_rotation":0.01,"verdict":0}}
 9f70c785bc44e00c	1793983130	{"confidence":0.42,"kind":"Classify","label":"riddle","probabilities":{"anthropomorphism":0.2,"antithesis":0,"false_certainty":0.01,"no_issue":0.27,"overgeneralisation":0.02,"restatement":0,"riddle":0.48,"synonym_rotation":0.01,"verdict":0.01}}
 9f98cb3718961f1f	1790634043	{"confidence":0.79,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.84,"component_or_feature":0.01,"not_applicable":0.13,"route_or_handler":0.02}}

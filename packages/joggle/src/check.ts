@@ -49,7 +49,13 @@ import {
   type Structure,
 } from "./schema.ts"
 import { Service as Tsgo } from "./tsgo.ts"
-import { applyDeclarationTypes, discoverFiles, loadWorkspace, type Unit } from "./workspace.ts"
+import {
+  applyDeclarationTypes,
+  discoverFiles,
+  loadWorkspace,
+  type Discovery,
+  type Unit,
+} from "./workspace.ts"
 import { contentMappersOf } from "./content-mappers.ts"
 import { looksLikeSource } from "./source.ts"
 import type { ImportGraph } from "./imports.ts"
@@ -86,6 +92,14 @@ export interface Options {
    * documentation they belong with.
    */
   readonly prose?: ReadonlyArray<string> | undefined
+  /**
+   * Judge the named documents and nothing else.
+   *
+   * A commit-msg hook runs on every commit, so the walk and the parser are a cost
+   * a gate cannot pay. With this set, discovery is skipped and only the named
+   * documents reach the workspace.
+   */
+  readonly proseOnly?: boolean | undefined
   /**
    * Allow `tsc` to execute content-mapper packages declared in tsconfig.
    *
@@ -272,12 +286,23 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
   const path = yield* Path.Path
 
   const discovered =
-    options.paths.length === 0 && options.useTsgo
+    options.proseOnly !== true && options.paths.length === 0 && options.useTsgo
       ? yield* (yield* Tsgo).listFiles(options.cwd).pipe(Effect.orElseSucceed(() => undefined))
       : undefined
 
   const discoverStarted = yield* Clock.currentTimeMillis
-  const discovery = yield* discoverFiles(options.cwd, options.paths, discovered)
+  // A prose-only run skips the walk and the parser: it happens on every commit.
+  const discovery: Discovery =
+    options.proseOnly === true
+      ? {
+          files: [],
+          prose: [],
+          skippedExtensions: [],
+          truncated: false,
+          ignored: 0,
+          ignoredDirectories: 0,
+        }
+      : yield* discoverFiles(options.cwd, options.paths, discovered)
   const files = discovery.files
 
   // A run that found no source files did not pass. Reporting "0 problems" for an
