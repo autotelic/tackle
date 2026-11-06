@@ -338,6 +338,17 @@ Against a real commit message:
 The subject line, the antithesis and the closing flourish are all reported. The
 sentence between them, which states what changed, is declined.
 
+A `commit-msg` hook makes that every commit:
+
+    #!/bin/sh
+    # .git/hooks/commit-msg
+    command -v joggle >/dev/null 2>&1 || exit 0
+    exec joggle check --prose "$1" --rule joggle/prose-voice --no-tsgo --format stylish
+
+The guard matters as much as the check: a contributor without the CLI must not
+have every commit fail. `jig init --hooks` writes the `pre-commit` hook with the
+same guard; writing this one there is the next step, not a separate tool.
+
 ## 12a. Markdown, measured
 
 Discovery finds 6,319 Markdown sentences in this repository. At the current
@@ -382,5 +393,7 @@ section 11: a terse operational string that states a fact.
   is B." and the anthropomorphic subject are decidable without a model, and
   `docs/writing-rules.md` says a decidable predicate belongs in a linter. Until
   then they cost a judgement each.
-- **`jig` does not run `--prose`.** The PR flow needs the body written to a file
-  and the rule to gate on the result; neither is wired.
+- **`jig` does not run `--prose`.** `jig init --hooks` writes the `pre-commit`
+  hook. A `commit-msg` hook and a PR-body gate need `jig` to pass `--prose` to the
+  joggle engine, which `argsFor` does not do yet; the `visual-pr` skill calls
+  `joggle check --prose` directly until then.
