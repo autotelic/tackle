@@ -769,9 +769,10 @@ const devCommand = Command.make(
         yield* exit(1)
         return
       }
-      // A room is up before it is useful: the committed config is the only thing that knows
-      // the actor, the watched label, and the batch hold, and nothing copied it into the
-      // ledger. An unseeded room accepts every webhook, queues nothing, and reads clean.
+      // A room is up before it is useful: the committed config is the only thing that
+      // records the actor, the watched label, and the batch hold, and nothing copied it
+      // into the ledger. An unseeded room accepts every webhook, queues nothing, and reads
+      // clean.
       const config = Result.getOrUndefined(yield* readConfig(findConfigPath(process.cwd())))
       if (config !== undefined) {
         // The address is not the name. A request to /r/<name>/… creates a second, unseeded

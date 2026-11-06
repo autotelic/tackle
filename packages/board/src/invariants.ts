@@ -61,8 +61,8 @@ export type AcquireResult =
 /**
  * Decide whether a host may take a chit.
  *
- * The holder wins while its claim is live. An expired claim is not a holder, but it still
- * counts toward the epoch, so the returning process can never out-write the new owner.
+ * The holder wins while its claim is live. An expired claim still counts toward the
+ * epoch, so the returning process can never out-write the new owner.
  *
  * @param input - The claims, the room's clock, and the host asking.
  * @returns The epoch granted, or the live holder that refused it.
