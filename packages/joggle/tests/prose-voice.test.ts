@@ -1,7 +1,7 @@
 import { expect, it } from "@effect/vitest"
 import { Effect } from "effect"
 import { NodeServices } from "@effect/platform-node"
-import { sentencesOfMarkdown } from "../src/prose.ts"
+import { hasWords, readsAsProse, sentencesOfMarkdown } from "../src/prose.ts"
 import { proseVoice } from "../src/rules/prose-voice.ts"
 import { plannedDiagnosticsOf } from "../src/testing.ts"
 import { discoverFiles, loadWorkspace } from "../src/workspace.ts"
@@ -134,4 +134,32 @@ it("a blockquote is one block and a list item opens its own", () => {
     "Then the ratchet.",
   ])
   expect(sentences.map((sentence) => sentence.paragraph)).toEqual([0, 0, 1, 2])
+})
+
+it("the candidate filter accepts every sentence the runs reported", () => {
+  // Sentences these runs reported, so a judge has to see them.
+  const reported = [
+    "A printed type cut to the length a finding's help can carry.",
+    "Content-addressed rather than positional, and that is the whole point.",
+    "It is the point of the whole machine.",
+    "256 files is enough granularity.",
+    "Run everything and print the census.",
+  ]
+  // An identifier, a path, a fragment, a field and a banner. None is a sentence.
+  const notProse = [
+    "no_issue",
+    "src/rules/prose-voice.ts",
+    "]\` relevant to the question in \`query\`?",
+    "a requirement the code does not meet",
+    " member list(s) were cut to the evidence budget",
+    "--------------------------------------------------------------------------",
+    "The printed type is longer than this and ends without a terminator",
+  ]
+  for (const sentence of reported) expect(readsAsProse(sentence)).toBe(true)
+  for (const text of notProse) expect(readsAsProse(text)).toBe(false)
+})
+
+it("a section banner is not words", () => {
+  expect(hasWords("/* ---- Pruning ---- */")).toBe(false)
+  expect(hasWords("256 files is enough granularity.")).toBe(true)
 })

@@ -3,7 +3,7 @@ import { Decision } from "effect/ai"
 import { Atoms } from "../atoms.ts"
 import { policy } from "../policy.ts"
 import { verdictsOf, type Plan } from "../plans.ts"
-import { sentencesOfDoc, type Sentence } from "../prose.ts"
+import { hasWords, readsAsProse, sentencesOfDoc, type Sentence } from "../prose.ts"
 import { locator, messages, reporter } from "../reporting.ts"
 import { verdictOf } from "../verdict.ts"
 import {
@@ -71,7 +71,7 @@ interface Candidate {
  */
 const voiceReview = (id: string, hasNeighbour: boolean) => {
   const base = {
-    riddle: "A reader cannot state the mechanism from the sentence.",
+    riddle: "The mechanism is replaced by its purpose or a metaphor.",
     verdict: "Deleting it loses no fact: it asserts the material matters.",
     antithesis: "The sentence corrects a belief the reader was never shown to have.",
     anthropomorphism: "A program is the subject of a mental verb.",
@@ -89,7 +89,7 @@ const voiceReview = (id: string, hasNeighbour: boolean) => {
       "The sentence was written by an agent for a reader who does not know the code.",
       "`atoms[" + id + "].source` says where it is read: `jsdoc` is a comment above a declaration, `markdown` is a document, `string` is program output, a test name or a prompt.",
       "`atoms[" + id + "].surface` is the call the string is written in, when the parser recorded one. A flag description or a command description is a label read in a terminal: report it only when it hides the mechanism.",
-      "- `riddle`: the mechanism is replaced by its purpose or by a metaphor. A reader cannot say what the code does. For a string clamp: \"A printed type cut to the length a finding's help can carry\".",
+      "- `riddle`: the mechanism is replaced by its purpose or by a metaphor, so a reader cannot say what the code does. For a string clamp: \"A printed type cut to the length a finding's help can carry\". A sentence that names the operation and its object is not a riddle, even when it uses the project's own vocabulary: \"Run everything and print the census.\"",
       "- `verdict`: delete the sentence and the reader loses no fact. It asserts that the material matters, is obvious or is correct: \"That is the whole point.\" \"The notes are not decoration.\" \"is this abstraction earning its keep.\" A sentence that states a bound, a default, a measurement or a consequence is not a verdict, even when it judges something.",
       "- `antithesis`: the sentence corrects a belief the reader was never shown to hold. \"This is not a cache. It is a memo.\"",
       "- `anthropomorphism`: a program is the subject of a mental verb. \"the rule knows\", \"the report wants\", \"the model refuses\".",
@@ -106,22 +106,6 @@ const voiceReview = (id: string, hasNeighbour: boolean) => {
   return hasNeighbour
     ? Decision.classify({ instructions, criteria: withRestatement })
     : Decision.classify({ instructions, criteria: base })
-}
-
-/**
- * Whether text is prose rather than a mark.
- *
- * A banner of dashes, a table row and a separator have few letters and many
- * marks. `docFor` takes the comment above a declaration, so a section banner
- * reaches the rule as a doc block. This drops it by its text.
- *
- * @param text - the sentence or literal.
- * @returns true when it is mostly words.
- */
-const hasWords = (text: string): boolean => {
-  const marks = text.replace(/\s+/g, "").length
-  const letters = text.replace(/[^A-Za-z]/g, "").length
-  return marks > 0 && letters * 2 >= marks
 }
 
 /** Whether a sentence is long enough to judge and short enough to bound. */
@@ -192,35 +176,6 @@ const proseCandidates = (workspace: Workspace): ReadonlyArray<Candidate> => {
 }
 
 const lineOf = (text: string, offset: number): number => lineAt(lineStarts(text), offset)
-
-/**
- * Whether a literal is written to be read.
- *
- * The parser already records every string literal with its offset, so the filter
- * is a property of the text, not a guess at which call produced it: five words,
- * a sentence terminator, and no concatenated edge. That reaches a diagnostic, a
- * flag description, a prompt instruction and a test name with one rule, and it
- * skips an identifier, a path, a format name and a selector, which have no
- * spaces.
- *
- * @param value - the literal as the parser read it.
- * @returns true when the text is prose a reader meets.
- */
-const readsAsProse = (value: string): boolean => {
-  if (value.length < policy.proseVoice.minChars) return false
-  // A leading or trailing space means a concatenated fragment, and half a
-  // sentence cannot be judged as prose.
-  if (value !== value.trim()) return false
-  // A sentence ends. A criterion label, a key and a template fragment do not,
-  // and they are terse because something else reads them as a field.
-  if (!/[.!?]$/.test(value)) return false
-  if (!value.includes(" ")) return false
-  // A sentence opens with a letter, a digit, a quote or a code span. A closing
-  // bracket or a bullet belongs to the fragment around it.
-  if (!/^[A-Z0-9"'([/`“]/u.test(value)) return false
-  if (!hasWords(value)) return false
-  return value.split(/\s+/).filter((word) => word !== "").length >= policy.proseVoice.minStringWords
-}
 
 /**
  * The innermost call a literal is an argument to.

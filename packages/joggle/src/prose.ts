@@ -1,4 +1,5 @@
 import type { Predicate } from "effect"
+import { policy } from "./policy.ts"
 
 /**
  * Whether a path is a Markdown document.
@@ -11,6 +12,22 @@ import type { Predicate } from "effect"
  * @returns true when the file ends in `.md`.
  */
 export const looksLikeProse: Predicate.Predicate<string> = (file) => file.endsWith(".md")
+
+/**
+ * Whether text is prose rather than a mark.
+ *
+ * A banner of dashes, a table row and a separator have few letters and many
+ * marks. `docFor` takes the comment above a declaration, so a section banner
+ * reaches a rule as a doc block, and this drops it by its text.
+ *
+ * @param text - the sentence or literal.
+ * @returns true when it is mostly words.
+ */
+export const hasWords: Predicate.Predicate<string> = (text) => {
+  const marks = text.replace(/\s+/g, "").length
+  const letters = text.replace(/[^A-Za-z]/g, "").length
+  return marks > 0 && letters * 2 >= marks
+}
 
 /** One sentence of prose, with where it starts and which block it belongs to. */
 export interface Sentence {
@@ -31,6 +48,34 @@ export interface ProseFile {
   readonly path: string
   readonly text: string
   readonly sentences: ReadonlyArray<Sentence>
+}
+
+/**
+ * Whether a string literal is written to be read.
+ *
+ * The parser records every literal with its offset, so the filter is a property
+ * of the text, not a guess at which call produced it: five words, a sentence
+ * terminator, no concatenated edge. That reaches a diagnostic, a flag
+ * description, a prompt instruction and a test name with one rule, and it skips
+ * an identifier, a path, a format name and a selector.
+ *
+ * @param value - the literal as the parser read it.
+ * @returns true when the text is prose a reader meets.
+ */
+export const readsAsProse: Predicate.Predicate<string> = (value) => {
+  if (value.length < policy.proseVoice.minChars) return false
+  // A leading or trailing space means a concatenated fragment, and half a
+  // sentence cannot be judged as prose.
+  if (value !== value.trim()) return false
+  // A sentence ends. A criterion label, a key and a template fragment do not,
+  // and they are terse because something else reads them as a field.
+  if (!/[.!?]$/.test(value)) return false
+  if (!value.includes(" ")) return false
+  // A sentence opens with a letter, a digit, a quote or a code span. A closing
+  // bracket or a bullet belongs to the fragment around it.
+  if (!/^[A-Z0-9"'([/`“]/u.test(value)) return false
+  if (!hasWords(value)) return false
+  return value.split(/\s+/).filter((word) => word !== "").length >= policy.proseVoice.minStringWords
 }
 
 /** One unwrapped line of prose text. */
