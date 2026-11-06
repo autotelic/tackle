@@ -2,7 +2,7 @@ import { jobOf, labelRoomOf, roomOf, stageOf, type Job } from "@autotelic/board"
 import { Clock, Effect, FileSystem, Option, Result, Schema } from "effect"
 import { homedir } from "node:os"
 import { join } from "node:path"
-import { chmodSync, existsSync, mkdirSync, writeFileSync } from "node:fs"
+import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { createServer } from "node:net"
 import { RoomClient, type Board } from "./client.ts"
 import { CONFIG_PATH, type RoomConfig, encodeConfig, readConfig } from "./config.ts"
@@ -16,12 +16,14 @@ import {
   legacyConfigPathOf,
   readIndex,
   recordRoom,
+  roomHome,
   roomsByActivity,
 } from "./paths.ts"
 import { onPath, run } from "./shell.ts"
 import { pullRequest } from "./gh.ts"
 import { renderDriver, type Driver } from "./driver.ts"
 import { runReview } from "./review.ts"
+import { planReviews, recordWorker, workerNameOf, type ReviewTarget } from "./personal.ts"
 import { jobsRoot, worktreeRoot } from "./paths.ts"
 
 /*
@@ -1149,6 +1151,266 @@ export const attachWorker = (input: {
     if (hc === undefined) return yield* Effect.fail("herdr-core is not installed (hc)")
     const result = yield* Effect.sync(() => run({ command: hc, args: ["attach", worker.address] }))
     return result.code === 0 ? worker.address : `attach exited ${result.code}`
+  })
+
+/**
+ * The open pull requests that ask this person to review, across every repository.
+ *
+ * GitHub's own search, not ours: it answers `review-requested:@me`, and it stops returning a
+ * pull request once a review is submitted. Drafts are excluded because a draft is not ready.
+ *
+ * @param input - How many rows to consider.
+ * @returns The targets, empty when `gh` could not answer.
+ */
+export const reviewTargets = (input: { readonly limit: number }): ReadonlyArray<ReviewTarget> => {
+  const listed = run({
+    command: "gh",
+    args: [
+      "search",
+      "prs",
+      "--review-requested=@me",
+      "--state=open",
+      "--json",
+      "number,repository,title,url,isDraft",
+      "--limit",
+      String(input.limit),
+    ],
+  })
+  const decoded = Schema.decodeResult(
+    Schema.fromJsonString(
+      Schema.Array(
+        Schema.Struct({
+          number: Schema.Finite,
+          repository: Schema.Struct({ nameWithOwner: Schema.String }),
+          title: Schema.String,
+          url: Schema.String,
+          isDraft: Schema.Boolean,
+        }),
+      ),
+    ),
+  )(listed.stdout)
+  return Result.isSuccess(decoded)
+    ? decoded.success
+        .filter((row) => !row.isDraft)
+        .map((row) => ({
+          repo: row.repository.nameWithOwner,
+          pr: row.number,
+          title: row.title,
+          url: row.url,
+        }))
+    : []
+}
+
+/** The workers Rex reports right now, by id and by label. */
+export const liveRexWorkers = (): {
+  readonly ids: ReadonlySet<string>
+  readonly byName: ReadonlyMap<string, string>
+} => {
+  const ids = new Set<string>()
+  const byName = new Map<string, string>()
+  const rex = Result.getOrUndefined(onPath("rex"))
+  if (rex === undefined) return { ids, byName }
+  const listed = run({ command: rex, args: ["ls", "--json"] })
+  const sessions = Schema.decodeResult(
+    Schema.fromJsonString(
+      Schema.Struct({
+        sessions: Schema.Array(Schema.Struct({ session_id: Schema.String, label: Schema.String })),
+      }),
+    ),
+  )(listed.stdout)
+  if (Result.isFailure(sessions)) return { ids, byName }
+  for (const entry of sessions.success.sessions) {
+    ids.add(entry.session_id)
+    byName.set(entry.label, entry.session_id)
+    const windows = run({
+      command: rex,
+      args: ["window", "ls", "-s", entry.session_id, "--json"],
+    })
+    const decoded = Schema.decodeResult(
+      Schema.fromJsonString(
+        Schema.Struct({
+          windows: Schema.Array(Schema.Struct({ window_id: Schema.String, label: Schema.String })),
+        }),
+      ),
+    )(windows.stdout)
+    if (Result.isSuccess(decoded)) {
+      for (const window of decoded.success.windows) {
+        ids.add(window.window_id)
+        byName.set(window.label, window.window_id)
+      }
+    }
+  }
+  return { ids, byName }
+}
+
+/** The standing instructions a personal review worker starts with. */
+const personalSkill = (): string => {
+  const file = new URL("../skills/review.md", import.meta.url)
+  return existsSync(file) ? readFileSync(file, "utf8") : ""
+}
+
+/**
+ * The prompt a personal review session starts with.
+ *
+ * It differs from the room's in the one way that matters: this worker **posts its own review**.
+ * The room's daemon owns the post because it owns the job; a personal worker IS the reviewer,
+ * and a review that stops at "here is what I found" is a review nobody submitted. The marker
+ * goes in the body so a later reconcile can recognize its own work on the PR.
+ *
+ * @param input - The target, the reviewer, the resolved head, and the worktree.
+ * @returns The prompt.
+ */
+export const personalPrompt = (input: {
+  readonly target: ReviewTarget
+  readonly login: string
+  readonly sha: string
+  readonly worktree: string
+}): string => {
+  const marker = `<!-- review:${input.login} sha:${input.sha.slice(0, 12)} -->`
+  const n = String(input.target.pr)
+  return [
+    personalSkill(),
+    "",
+    "## Pull request",
+    `${input.target.repo}#${n} — ${input.target.title}`,
+    input.target.url,
+    "",
+    "## Where",
+    `- worktree: ${input.worktree}`,
+    `- sha: ${input.sha}`,
+    "",
+    "## What to do",
+    "1. Read the change. The worktree is detached at the head; git diff and",
+    `   gh pr diff ${n} --repo ${input.target.repo} both work.`,
+    "2. If the change touches UI (components, pages, styles, templates), boot the app from the",
+    "   worktree with the repository's own dev command, and use the agent_browser tool to",
+    "   exercise the affected screens. Say what you saw. If the app cannot boot, say so and",
+    "   review the code statically instead.",
+    "3. Produce blockers only. Anchor each one to a file and line.",
+    "",
+    "## Post it",
+    "Post exactly one review, from this worktree, with the marker below verbatim at the end of",
+    "the body:",
+    "",
+    `  no blockers:  gh pr review ${n} --repo ${input.target.repo} --approve --body "<summary>\\n\\n${marker}"`,
+    `  blockers:     gh pr review ${n} --repo ${input.target.repo} --request-changes --body "<blockers>\\n\\n${marker}"`,
+    "",
+    `The marker line is: ${marker}`,
+    `Before posting, check gh pr view ${n} --repo ${input.target.repo} --json reviews for that`,
+    "marker on this head; if it is there, stop — the review is already posted.",
+    "",
+    "Do not edit the branch. Do not post more than one review.",
+  ].join("\n")
+}
+
+/**
+ * Start an isolated review worker for one personal review request.
+ *
+ * No room config: the repository is mirrored once into
+ * `~/.room/reviews/<owner>/<name>/repo.git` and every review is a detached worktree of that
+ * mirror at the PR's head. The mirror is shared by every worker of that repo (the objects are
+ * the expensive part); the worktree and the process are not.
+ *
+ * @param input - The target, the reviewer, where the terminal lives, and the instant.
+ * @returns The worker's name, address, worktree, and the head it was raised for.
+ */
+export const startPersonalWorker = (input: {
+  readonly target: ReviewTarget
+  readonly login: string
+  readonly substrate: Substrate
+  readonly rexSession?: string | undefined
+  readonly now: number
+}): Effect.Effect<
+  {
+    readonly worker: string
+    readonly address: string
+    readonly worktree: string
+    readonly sha: string
+  },
+  string,
+  FileSystem.FileSystem
+> =>
+  Effect.gen(function* () {
+    const [owner, name] = input.target.repo.split("/")
+    if (owner === undefined || name === undefined) {
+      return yield* Effect.fail(`not an owner/name repository: ${input.target.repo}`)
+    }
+    const n = String(input.target.pr)
+    const viewed = run({
+      command: "gh",
+      args: ["pr", "view", n, "--repo", input.target.repo, "--json", "headRefOid,isDraft"],
+    })
+    const pr = Schema.decodeResult(
+      Schema.fromJsonString(Schema.Struct({ headRefOid: Schema.String, isDraft: Schema.Boolean })),
+    )(viewed.stdout)
+    if (Result.isFailure(pr)) {
+      return yield* Effect.fail(viewed.stderr.trim() || `cannot read #${n}`)
+    }
+    if (pr.success.isDraft) return yield* Effect.fail("draft")
+    const sha = pr.success.headRefOid
+    const root = join(roomHome(), "reviews", owner, name)
+    const mirror = join(root, "repo.git")
+    const dir = join(root, "wt", `pr-${n}-${sha.slice(0, 8)}`)
+    if (!existsSync(mirror)) {
+      mkdirSync(root, { recursive: true })
+      const cloned = run({
+        command: "git",
+        args: [
+          "clone",
+          "--bare",
+          "--filter=blob:none",
+          `https://github.com/${input.target.repo}.git`,
+          mirror,
+        ],
+      })
+      if (cloned.code !== 0) {
+        return yield* Effect.fail(cloned.stderr.trim() || `cannot clone ${input.target.repo}`)
+      }
+    }
+    const fetched = run({
+      command: "git",
+      args: [
+        "--git-dir",
+        mirror,
+        "fetch",
+        "--prune",
+        "origin",
+        `+refs/pull/${n}/head:refs/pull/${n}/head`,
+      ],
+    })
+    if (fetched.code !== 0) {
+      return yield* Effect.fail(fetched.stderr.trim() || `cannot fetch #${n}`)
+    }
+    if (existsSync(dir)) {
+      run({ command: "git", args: ["--git-dir", mirror, "worktree", "remove", "--force", dir] })
+      rmSync(dir, { recursive: true, force: true })
+    }
+    const added = run({
+      command: "git",
+      args: ["--git-dir", mirror, "worktree", "add", "--detach", dir, sha],
+    })
+    if (added.code !== 0) {
+      return yield* Effect.fail(added.stderr.trim() || "cannot create worktree")
+    }
+    const jobs = join(root, "jobs", `pr-${n}-${sha.slice(0, 8)}`)
+    mkdirSync(jobs, { recursive: true })
+    const promptFile = join(jobs, "prompt.md")
+    writeFileSync(
+      promptFile,
+      personalPrompt({ target: input.target, login: input.login, sha, worktree: dir }),
+    )
+    const worker = workerNameOf(input.target)
+    const script = shellFile({
+      dir: jobs,
+      name: "pi",
+      lines: [`cd "${dir}"`, `exec pi "$(cat '${promptFile}')"`],
+    })
+    const launched =
+      input.substrate === "rex"
+        ? launchRex({ name: worker, dir, script, session: input.rexSession })
+        : launchHc({ hc: Option.getOrUndefined(hcOf()) ?? "", name: worker, dir, script })
+    if (Result.isFailure(launched)) return yield* Effect.fail(launched.failure)
+    return { worker, address: launched.success, worktree: dir, sha }
   })
 
 /** Re-exported for the picker. */

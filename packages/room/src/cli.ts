@@ -14,7 +14,10 @@ import {
   renderBoard,
   renderChecks,
   renderPlan,
+  liveRexWorkers,
   reviewRequests,
+  reviewTargets,
+  startPersonalWorker,
   startWorker,
   stopWorker,
   attachWorker,
@@ -32,7 +35,9 @@ import {
   roomSessionView,
   submitToRoom,
 } from "./session.ts"
-import { findConfigPath, readIndex, roomsByActivity, stateDir } from "./paths.ts"
+import { findConfigPath, readIndex, roomHome, roomsByActivity, stateDir } from "./paths.ts"
+import { decodeQueue, encodeQueue, planReviews, recordWorker } from "./personal.ts"
+import { authLogin } from "./gh.ts"
 import { topLevel } from "./git.ts"
 import {
   callerOf,
@@ -1166,6 +1171,120 @@ const webhookCommand = Command.make(
   Command.withShortDescription("Wire the room's webhooks."),
 )
 
+const reviewsCommand = Command.make(
+  "reviews",
+  {
+    login: Flag.String("login").pipe(
+      Flag.withDescription("The reviewer. Default: the gh token's login."),
+      Flag.optional,
+    ),
+    spawn: Flag.Boolean("spawn").pipe(
+      Flag.withDescription("Start an isolated review worker for everything outstanding."),
+      Flag.withDefault(false),
+    ),
+    substrate: Flag.Literals("substrate", ["hc", "rex"]).pipe(
+      Flag.withDescription("Where each review worker's terminal lives. Default: rex."),
+      Flag.optional,
+    ),
+    rexSession: Flag.String("rex-session").pipe(
+      Flag.withDescription("The Rex session to open each review as a tab in."),
+      Flag.optional,
+    ),
+    cooldownHours: Flag.Int("cooldown-hours").pipe(
+      Flag.withDescription(
+        "How long to wait before re-raising for a pull request whose worker is gone.",
+      ),
+      Flag.withDefault(6),
+    ),
+    limit: Flag.Int("limit").pipe(
+      Flag.withDescription("How many outstanding review requests to consider."),
+      Flag.withDefault(50),
+    ),
+    force: Flag.Boolean("force").pipe(
+      Flag.withDescription("Raise again even when a worker is still running."),
+      Flag.withDefault(false),
+    ),
+    json: jsonFlag,
+  },
+  (options) =>
+    Effect.gen(function* () {
+      const login = Option.getOrUndefined(options.login) ?? Result.getOrUndefined(authLogin())
+      if (login === undefined) {
+        yield* write("room reviews: gh is not authenticated")
+        yield* exit(1)
+        return
+      }
+      const targets = reviewTargets({ limit: options.limit })
+      const live = liveRexWorkers()
+      const fs = yield* FileSystem.FileSystem
+      const file = join(roomHome(), "reviews", `${login}.json`)
+      const text = yield* Effect.orElseSucceed(fs.readFileString(file), () => "")
+      const now = yield* Clock.currentTimeMillis
+      const plan = planReviews({
+        targets,
+        queue: decodeQueue(text),
+        now,
+        alive: live.ids,
+        aliveByName: live.byName,
+        cooldownMs: options.cooldownHours * 3_600_000,
+        force: options.force,
+      })
+      if (options.json && !options.spawn) {
+        yield* write(JSON.stringify(plan, null, 2))
+        return
+      }
+      const substrate = Option.getOrUndefined(options.substrate) ?? "rex"
+      const rexSession = Option.getOrUndefined(options.rexSession)
+      let next = plan.queue
+      for (const decision of plan.decisions) {
+        const where = `${decision.target.repo}#${String(decision.target.pr)}`
+        if (decision.kind === "skip" || !options.spawn) {
+          yield* write(
+            `${decision.kind === "skip" ? "skip " : "raise"} ${where} — ${decision.reason}`,
+          )
+          continue
+        }
+        const started = yield* startPersonalWorker({
+          target: decision.target,
+          login,
+          substrate,
+          rexSession,
+          now,
+        }).pipe(Effect.result)
+        if (Result.isFailure(started)) {
+          yield* write(`fail  ${where} — ${started.failure}`)
+          continue
+        }
+        next = recordWorker({
+          queue: next,
+          target: decision.target,
+          worker: started.success.worker,
+          sha: started.success.sha,
+          now,
+        })
+        yield* write(
+          [
+            `${started.success.worker} · ${started.success.address}`,
+            `  ${where} @ ${started.success.sha.slice(0, 8)}`,
+            `  worktree ${started.success.worktree}`,
+          ].join("\n"),
+        )
+      }
+      if (options.spawn) {
+        yield* Effect.orElseSucceed(
+          fs.makeDirectory(join(roomHome(), "reviews"), { recursive: true }),
+          () => undefined,
+        )
+        yield* Effect.orElseSucceed(fs.writeFileString(file, encodeQueue(next)), () => undefined)
+      }
+    }),
+).pipe(
+  Command.withDescription(
+    "The reviews waiting on you, in any repository: reconcile GitHub's review-requested list and start an isolated worker per pull request.",
+  ),
+  Command.withShortDescription("Your cross-repository review queue."),
+)
+
 const cli = Command.make("room").pipe(
   Command.withDescription(
     "A project ledger, its daemon, and the review job. One room per Linear project, one stage per machine.",
@@ -1179,6 +1298,7 @@ const cli = Command.make("room").pipe(
     stopCommand,
     doctorCommand,
     sessionCommand,
+    reviewsCommand,
     voidCommand,
     resumeCommand,
     listCommand,
