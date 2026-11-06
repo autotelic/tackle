@@ -31,6 +31,7 @@ afa074b787980ada	1793942975	{"consistency":1,"kind":"Probability","probability":
 afac9b752620bfa8	1793942976	{"confidence":0.97,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.01,"not_an_invariant":0.98,"repair_path":0.01}}
 afafaf4f8fd54430	1792617317	{"confidence":0.17,"kind":"Classify","label":"move","probabilities":{"leave_it":0.25,"merge":0.32,"move":0.33999999999999997,"share_a_contract":0.08,"split":0.01}}
 afb75288e5362b8c	1793943082	{"confidence":0.35,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.42,"no_difference":0.07,"removes_a_hazard":0.24,"slightly_clearer":0.27},"rating":1.83}
+afba5fc99f5d6720	1793943704	{"confidence":0.51,"kind":"Classify","label":"library_core","probabilities":{"domain_core":0.37,"infrastructure":0,"library_core":0.58,"not_applicable":0.01,"rendering_edge":0,"transport_edge":0.03,"utilities":0.01}}
 afbea65fbc551b34	1793942973	{"confidence":0.34,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.67,"member_1":0.33}}
 afbeb5379052a9d6	1793942975	{"confidence":0.98,"kind":"Classify","label":"not_a_record","probabilities":{"mutable":0.01,"not_a_record":0.99,"supersede_only":0}}
 afca2076ce105f8f	1792535008	{"confidence":0.33,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.5,"component_or_feature":0.21,"not_applicable":0.13,"route_or_handler":0.16}}
@@ -40,6 +41,7 @@ afd692755f7db5e5	1793942974	{"confidence":0.89,"kind":"Classify","label":"differ
 afd76d2d1227d7cd	1792684420	{"consistency":1,"kind":"Probability","probability":0.21}
 afda97e30a04e401	1793942971	{"consistency":1,"kind":"Probability","probability":0.8733333333333334}
 afdf1662f604747d	1792252958	{"confidence":0.99,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.01,"framework_glue":0,"implementation_detail":0.99,"wire_contract":0}}
+afea3082dfe60ed3	1793943705	{"confidence":0.46,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.64,"unclear":0.01,"value":0.35}}
 afeb696ab94fccd7	1793943081	{"confidence":0.86,"kind":"Classify","label":"move","probabilities":{"move":0.93,"no_issue":0.07}}
 afeb925ad1edddaa	1793943262	{"consistency":1,"kind":"Probability","probability":0.47}
 afebddb6271c4f1c	1793942975	{"consistency":1,"kind":"Probability","probability":0.8355555555555556}

@@ -295,17 +295,16 @@ findings; see [TUNING.md](../../../TUNING.md) for the caveats.
 ## Round: `tackle`, 2026-11-05 — the fact layer and the stages
 
 The census after `doppler run -p joggle -c dev -- pnpm joggle check --types`, on
-the re-judged corpus: **79 problems over 423 files and 2,734 declarations** — 1
-error, 40 warnings, 38 notices. The re-judgment that populated the corpus asked
-147 requests (145 answered, 0 unavailable); the final pass after the message and
-stage-name changes replayed all but 5.
+the re-judged corpus: **80 problems over 423 files and 2,734 declarations** — 1
+error, 36 warnings, 43 notices. The re-judgment that populated the corpus asked
+147 requests (145 answered, 0 unavailable); the final pass after the stage
+changes replayed all but 3.
 The re-judgment was needed because `decisionVersion` moved with the question set.
 
 | Rule#decision | States | Verdict | Fired | median |
 | --- | --: | --- | --: | --: |
 | `duplicate-meaning#redundant` | 84 | decisive | 13 | 0.28 |
 | `compose-types#verdict` | 28 | noisy | 25 | 0.93 |
-| `reversal#combine` | 26 | noisy | 19 | 0.86 |
 | `duplicate-implementation#redundant` | 17 | noisy | 11 | 0.61 |
 | `one-concept-one-type#verdict` | 16 | decisive | 8 | 0.81 |
 | `field-type-drift#verdict` | 14 | decisive | 0 | 0.65 |
@@ -319,11 +318,12 @@ What the rows say:
 - **The staged cascade is measurable now.** `reversal` is a plain rule that
   answers its own questions, so it never reached the plan engine;
   `decision.ts` gained an answer observer and `Rule.violations` declares the
-  labels. Its `combine` question is NOISY: 19 of 26 containment pairs were
-  answered "composes". Containment by field name over-produces — a whole can
-  contain a part by accident — so the next move is a tighter candidate filter or
-  a cheaper first-pass Noul, not a louder report. `expand` has one state in this
-  repository, which is a fact about the vocabulary, not evidence.
+  label. Its `combine` stage was ALREADY REMOVED from the instrument: the first
+  measurement answered "composes" for 19 of 26 containment pairs, because
+  containment is decidable from the two field sets and asking the model was
+  asking it to repeat the code's work. Stage 2 is deterministic, like stage 1.
+  Only `expand` is asked, and this repository has one state for it, which is a
+  fact about the vocabulary rather than evidence.
 - **`duplicate-meaning#redundant` is decisive and quiet** (median 0.28, 13 of 84
   acted), the opposite of the loud Noul earlier rounds measured. The
   resolved-type key and the ranked budget changed which pairs are asked about.

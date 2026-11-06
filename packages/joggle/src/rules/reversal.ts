@@ -7,7 +7,7 @@ import { budgetNote, outcome, qualityOf, type Rule, type Scope } from "../rule.t
 import { stagedInput, type StageOutcome } from "../stages.ts"
 import { verdictOf } from "../verdict.ts"
 import type { Diagnostic, Drop } from "../schema.ts"
-import { unitFields, type Unit, type Workspace } from "../workspace.ts"
+import { type Unit, type Workspace } from "../workspace.ts"
 
 const RULE_ID = "joggle/reversal"
 
@@ -22,23 +22,14 @@ const RULE_ID = "joggle/reversal"
 // This rule walks a site through the stages and stops at the first that answers:
 //
 //   1. contract  the declaration is a copy of one that exists. A fact; no model.
-//   2. combine   its fields are a named part plus more. Asked, because "is this
-//                genuinely that part" is not decidable from the field names.
+//   2. combine   its fields are a named part plus more. A fact: the containment
+//                is decidable from the two field sets.
 //   3. expand    a group of fields repeats and no declaration names it. Asked,
 //                because whether they are one idea is the question.
 //
 // The earlier stage's outcome is in the next stage's state, so a site that
 // stopped at combine and a site that fell through to expand never share a cached
 // answer.
-
-const CombinePanel = Schema.Struct({
-  whole: Schema.Struct({ name: Schema.String, file: Schema.String, line: Schema.Number }),
-  part: Schema.Struct({ name: Schema.String, file: Schema.String, line: Schema.Number }),
-  added: Schema.Array(Schema.String),
-  shared: Schema.Array(
-    Schema.Struct({ field: Schema.String, partType: Schema.String, wholeType: Schema.String }),
-  ),
-})
 
 const ExpandPanel = Schema.Struct({
   fields: Schema.Array(Schema.String),
@@ -47,27 +38,6 @@ const ExpandPanel = Schema.Struct({
   fieldTypes: Schema.Array(
     Schema.Struct({ field: Schema.String, types: Schema.Array(Schema.String) }),
   ),
-})
-
-const combineDefinition = Decision.make({
-  input: stagedInput(CombinePanel),
-  decisions: {
-    combine: Decision.classify({
-      instructions: [
-        "`panel.whole` lists every field of `panel.part` and adds `panel.added`.",
-        "`earlier` is what the contract stage said: a copy would already have stopped there, so these are not identical duplicates.",
-        "How do the two declarations relate?",
-        "Answer `composes` when the whole is genuinely the part plus more, so it should be written as the part intersected with the added fields.",
-        "Answer `independent` when the shared fields are a coincidence, or the two are different artefacts -- a wire payload and a domain shape.",
-        "Answer `already_composed` when the whole already states its composition, so there is nothing to change.",
-      ].join("\n"),
-      criteria: {
-        composes: "The whole is the part plus more. Write it as part & { the added fields }.",
-        independent: "Coincidental overlap, or two different artefacts. The two are unrelated.",
-        already_composed: "The composition is already written.",
-      },
-    }),
-  },
 })
 
 const expandDefinition = Decision.make({
@@ -96,18 +66,6 @@ const expandDefinition = Decision.make({
 const siteKey = (unit: Unit): string =>
   unit.file + "\u0000" + unit.name + "\u0000" + String(unit.start)
 
-/** A declaration's OWN fields, with the compiler's type where there is one. */
-const resolvedFieldsOf = (unit: Unit): ReadonlyMap<string, string> => {
-  const facts = unit.typeFacts
-  if (facts === undefined) return unit.fieldTypes
-  const resolved = new Map<string, string>()
-  for (const [field, annotation] of unit.fieldTypes) {
-    const member = facts.members.find((entry) => entry.name === field)
-    resolved.set(field, member === undefined ? annotation : member.type)
-  }
-  return resolved
-}
-
 /** The names of a group, in a stable order, capped for a message. */
 const namesOf = (units: ReadonlyArray<Unit>): ReadonlyArray<string> =>
   [...new Set(units.map((unit) => unit.name))].sort((left, right) => left.localeCompare(right))
@@ -118,9 +76,9 @@ export const reversal: Rule = {
   description: "One site, one move: contract a copy, combine a named part, or expand the vocabulary.",
   judged: true,
   move: "contract",
-  // The two staged questions, declared for calibration: a plain rule has no
-  // plans, so the instrument reads its violating labels from here.
-  violations: { combine: ["composes"], expand: ["one_thing"] },
+  // Stage 3's question, declared for calibration: a plain rule has no plans,
+  // so the instrument reads its violating label from here.
+  violations: { expand: ["one_thing"] },
   messages: messages({
     stops_at_contract: "{{names}} are one declaration written {{count}} times: {{at}}.",
     stops_at_contract_help:
@@ -181,8 +139,10 @@ export const reversal: Rule = {
       for (const unit of group.members) consumed.add(siteKey(unit))
     }
 
-    // Stage 2 -- combine. Asked, because "is this genuinely that part" is not a
-    // question the field names can answer.
+    // Stage 2 -- combine. The containment is a FACT: the whole's own field set is
+    // a proper superset of a named part's. Whether the two are genuinely one
+    // composition is the reader's call; the finding names the part and what was
+    // added, and the only judgement left in this cascade is stage 3's.
     const combineOutcomes = new Map<string, StageOutcome>()
     const contained = containmentPairs({
       units: workspace.units,
@@ -193,66 +153,7 @@ export const reversal: Rule = {
     }).filter((pair) => !consumed.has(siteKey(pair.whole)))
     const combineBudget = Math.min(contained.length, policy.reversal.maxSites)
     for (const pair of contained.slice(0, combineBudget)) {
-      const partFields = resolvedFieldsOf(pair.part)
-      const wholeFields = resolvedFieldsOf(pair.whole)
-      const earlier: ReadonlyArray<StageOutcome> = [{ stage: "contract", outcome: "none" }]
-      const decided = yield* Effect.result(
-        DecisionModel.decide(combineDefinition, {
-          input: {
-            stage: "combine",
-            earlier,
-            panel: {
-              whole: { name: pair.whole.name, file: pair.whole.file, line: pair.whole.location.line },
-              part: { name: pair.part.name, file: pair.part.file, line: pair.part.location.line },
-              added: pair.added,
-              shared: unitFields(pair.part).map((field) => ({
-                field,
-                partType: partFields.get(field) ?? "",
-                wholeType: wholeFields.get(field) ?? "",
-              })),
-            },
-          },
-        }),
-      )
-      if (Result.isFailure(decided)) {
-        unjudged += 1
-        combineOutcomes.set(siteKey(pair.whole), { stage: "combine", outcome: "unreadable" })
-        continue
-      }
-      const verdict = verdictOf(decided.success.answers["combine"], ["composes"])
-      combineOutcomes.set(siteKey(pair.whole), {
-        stage: "combine",
-        outcome: verdict === undefined || verdict.label === undefined ? "unreadable" : verdict.label,
-      })
-      if (verdict === undefined || verdict.label !== "composes") {
-        drops.push({
-          ruleId: RULE_ID,
-          subject: pair.whole.name + " (lists " + pair.part.name + ")",
-          stage: "declined",
-          reason:
-            verdict === undefined
-              ? "the answer could not be read"
-              : verdict.label === "already_composed"
-                ? "the composition is already stated"
-                : "the shared fields are a coincidence",
-        })
-        continue
-      }
-      const quality = qualityOf({
-        score: verdict.probability,
-        margin: verdict.margin,
-        confidence: verdict.confidence,
-      })
-      if (quality.quality === "drop") {
-        drops.push({
-          ruleId: RULE_ID,
-          subject: pair.whole.name + " (lists " + pair.part.name + ")",
-          stage: "gated",
-          reason: quality.reason,
-        })
-        continue
-      }
-      const review = quality.quality === "review"
+      combineOutcomes.set(siteKey(pair.whole), { stage: "combine", outcome: "contained" })
       diagnostics.push(
         report({
           about: pair.whole,
@@ -267,8 +168,8 @@ export const reversal: Rule = {
           },
           helpId: "stops_at_combine_help",
           identity: [RULE_ID, "combine", pair.whole.file, pair.whole.name, pair.part.name].join("\u0000"),
-          confidence: verdict.confidence,
-          severity: review ? "info" : "warn",
+          judged: false,
+          severity: "info",
           move: "combine",
           stoppedAt: "combine",
         }),

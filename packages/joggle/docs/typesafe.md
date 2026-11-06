@@ -93,9 +93,9 @@ cached like any other.
 
 The contract → combine → expand taxonomy is the tool's thesis, and it used to be
 three scanners with three candidate generators. `joggle/reversal` walks one site
-through the stages and stops at the first that answers: a copy is a fact (no
-model), a named part plus more is asked, an unnamed repeated field set is asked.
-The finding carries `stoppedAt`.
+through the stages and stops at the first that answers: a copy and a named-part
+containment are FACTS (no model call), and an unnamed repeated field set is the
+one question. The finding carries `stoppedAt`.
 
 `src/stages.ts` puts the stage in the STATE: `{ stage, earlier, panel }`, where
 `earlier` is what the preceding stages said about this site. That is the

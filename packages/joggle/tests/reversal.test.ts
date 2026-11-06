@@ -90,17 +90,20 @@ it.effect("an exact copy stops at contract, and stages 2 and 3 are never asked",
   )
 })
 
-it.effect("a whole that repeats a named part stops at combine, with the part named", () =>
-  run("combine", modelStub({ combine: choice("composes", 0.95) })).pipe(
+it.effect("a whole that repeats a named part stops at combine, with the part named, and asks nothing", () => {
+  const calls = { count: 0 }
+  return run("combine", refusing(calls)).pipe(
     Effect.map((result) => {
+      expect(calls.count).toBe(0)
       expect(result.diagnostics.length).toBe(1)
       expect(result.diagnostics[0]?.stoppedAt).toBe("combine")
+      expect(result.diagnostics[0]?.judged).toBe(false)
       expect(result.diagnostics[0]?.message).toContain("Whole")
       expect(result.diagnostics[0]?.message).toContain("Base")
       expect(result.diagnostics[0]?.message).toContain("extra")
     }),
-  ),
-)
+  )
+})
 
 it.effect("a repeated unnamed field set stops at expand", () =>
   run("expand", modelStub({ expand: choice("one_thing", 0.95) })).pipe(
@@ -118,18 +121,6 @@ it.effect("distinct declarations are silence", () => {
     Effect.map((result) => {
       expect(result.diagnostics.length).toBe(0)
       expect(calls.count).toBe(0)
-    }),
-  )
-})
-
-it.effect("the combine stage carries the contract stage's outcome in its state", () => {
-  const states: Array<string> = []
-  return run("combine", capturing(states)).pipe(
-    Effect.map(() => {
-      expect(states.length).toBe(1)
-      const state = JSON.parse(states[0] ?? "{}") as { stage?: unknown; earlier?: unknown }
-      expect(state.stage).toBe("combine")
-      expect(state.earlier).toEqual([{ stage: "contract", outcome: "none" }])
     }),
   )
 })
@@ -153,8 +144,8 @@ it.effect("a stage's state is the same on a repeat run, so its key is stable", (
   const first: Array<string> = []
   const second: Array<string> = []
   return Effect.gen(function* () {
-    yield* run("combine", capturing(first))
-    yield* run("combine", capturing(second))
+    yield* run("expand", capturing(first))
+    yield* run("expand", capturing(second))
     expect(second[0]).toBe(first[0])
   })
 })

@@ -25,6 +25,7 @@ b45ea61cbb7c27ac	1793942976	{"confidence":0.98,"kind":"Classify","label":"not_an
 b4621cd5851f8e31	1793942974	{"confidence":0.18,"kind":"Classify","label":"reimplements","probabilities":{"legitimate_local":0.19,"not_a_derivation":0.36,"reimplements":0.45}}
 b4651fa8e617fc87	1792252958	{"confidence":0.38,"kind":"Rate","label":"slightly_clearer","probabilities":{"meaningfully_better":0.26,"no_difference":0.16,"removes_a_hazard":0.1,"slightly_clearer":0.48},"rating":1.31}
 b4655bc3c9bf99e6	1792253160	{"confidence":0.51,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.07,"merge":0.61,"move":0.23,"share_a_contract":0.09,"split":0}}
+b466c097302c22d8	1793943705	{"confidence":0.54,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.23,"member_1":0.77}}
 b470435f8d194881	1793942976	{"confidence":0.92,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.02,"must_be_current":0.03,"not_a_projection":0.95}}
 b474f534ff37ba8a	1792252958	{"confidence":0.35,"kind":"Classify","label":"wire_contract","probabilities":{"domain_concept":0.12,"framework_glue":0,"implementation_detail":0.37,"wire_contract":0.51}}
 b48710da10a22f65	1793941319	{"confidence":0.7,"kind":"Classify","label":"two_concepts","probabilities":{"intentional":0.15,"one_concept":0.05,"two_concepts":0.8}}
