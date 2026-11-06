@@ -41,6 +41,7 @@ import type { RoomConfig } from "./config.ts"
 import {
   addressRefusal,
   doctor,
+  personalPrompt,
   initRefusal,
   initRoomConfig,
   keptFields,
@@ -239,6 +240,37 @@ describe("the review prompt", () => {
     })
     expect(checked).toContain("## Machine checks already run (do not repeat these)")
     expect(checked).toContain("jig: no findings on the changed files.")
+  })
+})
+
+describe("the personal review prompt", () => {
+  const prompt = () =>
+    personalPrompt({
+      target: {
+        repo: "autotelic/autotelic-geekbot",
+        pr: 9,
+        title: "Geekbot data dashboard",
+        url: "https://github.com/autotelic/autotelic-geekbot/pull/9",
+      },
+      login: "togmund",
+      sha: "861963163174a9ce3d11f04fbe0b7d6c1518e545",
+      worktree: "/w/pr-9-86196316",
+    })
+
+  it("submits its own review, and says so before it says anything else", () => {
+    expect(prompt()).toContain("submit the review yourself")
+    expect(prompt()).toContain("gh pr review 9 --repo autotelic/autotelic-geekbot --approve")
+    expect(prompt()).toContain("<!-- review:togmund sha:861963163174 -->")
+  })
+
+  it("forbids doing the review by executing the change, and forbids credentials", () => {
+    // The failure these guard: a worker read dashboard-lambda/.envrc to boot the app, and the
+    // file's AWS keys went into the transcript and to the model provider.
+    expect(prompt()).toContain("Review by reading")
+    expect(prompt()).toContain("Do not run the test suite")
+    expect(prompt()).toContain("Never read, print, copy, or quote a credential")
+    expect(prompt()).toContain(".envrc")
+    expect(prompt()).not.toContain("boot the app from the")
   })
 })
 

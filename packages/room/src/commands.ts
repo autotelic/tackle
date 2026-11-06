@@ -1338,10 +1338,9 @@ export const personalPrompt = (input: {
     "## What to do",
     "1. Read the change. The worktree is detached at the head; git diff and",
     `   gh pr diff ${n} --repo ${input.target.repo} both work.`,
-    "2. If the change touches UI (components, pages, styles, templates), boot the app from the",
-    "   worktree with the repository's own dev command, and use the agent_browser tool to",
-    "   exercise the affected screens. Say what you saw. If the app cannot boot, say so and",
-    "   review the code statically instead.",
+    "2. Review by reading. Do not run the test suite, start services, install dependencies,",
+    "   or modify the branch. Do not read, print, or quote credentials — see the boundary",
+    "   above; if a file contains one, say so and move on.",
     "3. Produce blockers only. Anchor each one to a file and line.",
     "",
     "## Post it",
@@ -1459,7 +1458,13 @@ export const startPersonalWorker = (input: {
     const script = shellFile({
       dir: jobs,
       name: "pi",
-      lines: [`cd "${dir}"`, `exec pi "$(cat '${promptFile}')"`],
+      lines: [
+        `cd "${dir}"`,
+        // The same surface the room's review runs with: reading tools and a shell, not the
+        // agent harness with code execution. The prompt forbids executing the change; this
+        // stops the worker from having a capability the prompt would have to talk it out of.
+        `exec pi --tools "read,grep,find,ls,bash" "$(cat '${promptFile}')"`,
+      ],
     })
     const launched =
       input.substrate === "rex"
