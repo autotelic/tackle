@@ -85,6 +85,15 @@ export const RoomConfig = Schema.Struct({
   worker: Schema.optionalKey(
     Schema.Struct({
       substrate: Schema.Literals(["hc", "rex"]),
+      /**
+       * Which Rex session a worker opens as a tab. Absent: a session of its own, which is the
+       * safe default — a tab in somebody else's session is a placement decision, not a launch.
+       */
+      rex: Schema.optionalKey(
+        Schema.Struct({
+          session: Schema.optionalKey(Schema.String),
+        }),
+      ),
       app: Schema.optionalKey(
         Schema.Struct({
           setup: Schema.optionalKey(Schema.String),
