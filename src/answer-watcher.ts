@@ -102,6 +102,7 @@ export function createIssueAnswerHandler(options: {
   config: LoopConfig
   postComment?: (issue: number, body: string) => Promise<void>
   relabel?: (issue: number, remove: string, add: string) => Promise<void>
+  readLabels?: (issue: number) => Promise<string[]>
 }): (watched: WatchedAnswer) => Promise<void> {
   const postComment =
     options.postComment ??
@@ -119,6 +120,16 @@ export function createIssueAnswerHandler(options: {
         { cwd: options.repoDir },
       )
     })
+  const readLabels =
+    options.readLabels ??
+    (async (issue: number): Promise<string[]> => {
+      const { stdout } = await execFileAsync(
+        'gh',
+        ['issue', 'view', String(issue), '--json', 'labels', '--jq', '[.labels[].name]'],
+        { cwd: options.repoDir },
+      )
+      return JSON.parse(stdout) as string[]
+    })
 
   return async ({ question, answer }) => {
     if (question.issue === undefined) return
@@ -126,6 +137,12 @@ export function createIssueAnswerHandler(options: {
       question.issue,
       `**Answer arrived** (via /treadle):\n\n> ${question.question}\n\n${answer.answer}`,
     )
-    await relabel(question.issue, options.config.issues.parked, options.config.issues.ready)
+    // Only a parked issue goes back to ready — the answer may arrive while
+    // the issue is already working again (a restart re-picked it), and
+    // labels are the truth (#8).
+    const labels = await readLabels(question.issue)
+    if (labels.includes(options.config.issues.parked)) {
+      await relabel(question.issue, options.config.issues.parked, options.config.issues.ready)
+    }
   }
 }

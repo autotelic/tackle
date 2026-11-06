@@ -117,26 +117,48 @@ describe('watchAnswers', () => {
 })
 
 describe('createIssueAnswerHandler', () => {
-  it('posts the answer and sends the issue back to ready', async () => {
+  const labels = {
+    issues: { ready: 'treadle:ready', working: 'treadle:working', parked: 'treadle:parked' },
+  } as LoopConfig
+
+  it('posts the answer and sends a parked issue back to ready', async () => {
     const posted: string[] = []
     const relabeled: string[] = []
     const handler = createIssueAnswerHandler({
       repoDir: '/x',
-      config: {
-        issues: { ready: 'treadle:ready', working: 'treadle:working', parked: 'treadle:parked' },
-      } as LoopConfig,
+      config: labels,
       postComment: async (issue, body) => {
         posted.push(`${issue}: ${body}`)
       },
       relabel: async (issue, remove, add) => {
         relabeled.push(`${issue}: ${remove} → ${add}`)
       },
+      readLabels: async () => ['treadle:parked'],
     })
     await handler({ question: question('q9'), answer: answer('q9') })
     expect(posted[0]).toContain('3: **Answer arrived**')
     expect(posted[0]).toContain('deploy to prod?')
     expect(posted[0]).toContain('yes')
     expect(relabeled).toEqual(['3: treadle:parked → treadle:ready'])
+  })
+
+  it('posts the answer but does not relabel an issue that is working again', async () => {
+    const posted: string[] = []
+    const relabeled: string[] = []
+    const handler = createIssueAnswerHandler({
+      repoDir: '/x',
+      config: labels,
+      postComment: async (issue, body) => {
+        posted.push(body)
+      },
+      relabel: async (issue, remove, add) => {
+        relabeled.push(add)
+      },
+      readLabels: async () => ['treadle:working'],
+    })
+    await handler({ question: question('q9'), answer: answer('q9') })
+    expect(posted).toHaveLength(1)
+    expect(relabeled).toHaveLength(0)
   })
 
   it('ignores answers with no issue context', async () => {
