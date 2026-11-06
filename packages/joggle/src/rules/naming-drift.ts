@@ -13,7 +13,7 @@ import {
   type PlannedRule,
   type Scope,
 } from "../rule.ts"
-import { planClusters, readClusters, type ClusterRule } from "./cluster-verdict.ts"
+import { panelFromAnswers, planClusters, readClusters, type ClusterRule } from "./cluster-verdict.ts"
 import { layersFrom } from "../architecture.ts"
 import { nameVocabulary } from "../vocabulary.ts"
 import type { Unit, Workspace } from "../workspace.ts"
@@ -109,8 +109,10 @@ const nameQuestionnaire: ClusterRule["questionnaire"] = ({
         (operationAnswer.label === "merge" || operationAnswer.label === "move")
           ? operationAnswer.label
           : undefined
+      const derived: "merge" | undefined =
+        score >= policy.decision.gates.probabilityFloor ? "merge" : undefined
       const settled = settle({
-        derived: score >= policy.decision.gates.probabilityFloor ? "merge" : undefined,
+        derived,
         proposed,
         margin: operationAnswer !== undefined && "label" in operationAnswer ? marginOfAnswer(operationAnswer) : 1,
         confidence:
@@ -126,6 +128,8 @@ const nameQuestionnaire: ClusterRule["questionnaire"] = ({
           score,
           redundancy: score,
           margin,
+          derived,
+          panel: panelFromAnswers(answers, { derived, agreement: "drop" }),
           operation: undefined,
           agreement: "drop" as const,
           settled: "the model said " + verdict.label,
@@ -139,6 +143,12 @@ const nameQuestionnaire: ClusterRule["questionnaire"] = ({
         // `one_concept` already asks.
         redundancy: score,
         margin,
+        derived,
+        panel: panelFromAnswers(answers, {
+          operation: settled.operation,
+          derived,
+          agreement: settled.quality,
+        }),
         operation: settled.operation,
         agreement: settled.quality,
         settled: settled.reason,

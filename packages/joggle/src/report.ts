@@ -333,6 +333,27 @@ const findingLine = (d: Diagnostic): string => {
   return `${file}:${line}:${column}: ${label(d.severity)} ${d.ruleId}${score}: ${d.message}${operationNote(d)}${help}`
 }
 
+/**
+ * The judgement behind a finding, indented under it.
+ *
+ * The one line per finding is the work order; this is why. A reader can see
+ * which question moved the outcome -- "redundant 0.90, verdict collapse 0.88" --
+ * instead of one confidence standing in for nine answers.
+ */
+const panelLines = (diagnostic: Diagnostic): ReadonlyArray<string> => {
+  const panel = diagnostic.panel
+  if (panel === undefined || panel.answers.length === 0) return []
+  const answers = panel.answers.map((answer) => {
+    const probability = answer.probability === undefined ? "" : " " + answer.probability.toFixed(2)
+    return answer.label === undefined
+      ? answer.question + probability
+      : answer.question + " " + answer.label + probability
+  })
+  const table = panel.derived === undefined ? "" : "; table " + panel.derived
+  const agreement = panel.agreement === undefined ? "" : " (" + panel.agreement + ")"
+  return ["    judged: " + answers.join(", ") + table + agreement]
+}
+
 const text = (report: Report): string => {
   const lines: Array<string> = []
   // Group the findings by the reversal they propose, in the ratchet order, when
@@ -344,16 +365,18 @@ const text = (report: Report): string => {
       if (findings.length === 0) continue
       lines.push("")
       lines.push(moveVocabulary[move].label + " — " + moveVocabulary[move].blurb)
-      lines.push(...findings.map(findingLine))
+      lines.push(...findings.flatMap((diagnostic) => [findingLine(diagnostic), ...panelLines(diagnostic)]))
     }
     const rest = report.diagnostics.filter((diagnostic) => diagnostic.move === undefined)
     if (rest.length > 0) {
       lines.push("")
       lines.push("correctness — a requirement the code does not meet")
-      lines.push(...rest.map(findingLine))
+      lines.push(...rest.flatMap((diagnostic) => [findingLine(diagnostic), ...panelLines(diagnostic)]))
     }
   } else {
-    lines.push(...report.diagnostics.map(findingLine))
+    lines.push(
+      ...report.diagnostics.flatMap((diagnostic) => [findingLine(diagnostic), ...panelLines(diagnostic)]),
+    )
   }
   if (lines.length > 0) lines.push("")
   lines.push(...moveCensus(report))

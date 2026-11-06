@@ -15,11 +15,12 @@ import {
   everyFile,
   marginOfAnswer,
   qualityOf,
+  type DecisionAnswers,
   type Quality,
   type Scope,
 } from "../rule.ts"
 import { duplicateVocabulary } from "../vocabulary.ts"
-import type { Diagnostic, Drop, DropStage, Operation, Severity } from "../schema.ts"
+import type { Diagnostic, Drop, DropStage, JudgementPanel, Operation, Severity } from "../schema.ts"
 import { namesOf, type Cluster } from "../cluster.ts"
 import type { ImportGraph } from "../imports.ts"
 import type { Unit, Workspace } from "../workspace.ts"
@@ -31,6 +32,15 @@ export interface ClusterVerdict {
   readonly confidence: number
   /** What the report sorts by: how much sharing these would change. */
   readonly score: number
+  /**
+   * The operation the TABLE derived, before the model was heard.
+   *
+   * Kept for the panel: a finding should say which of its two estimators said
+   * what, so a reader can tell a disagreement from a consensus.
+   */
+  readonly derived: Operation | undefined
+  /** The questions behind this verdict, for the finding's panel. */
+  readonly panel: JudgementPanel
   /**
    * What to do about it, decided in code from `role` and `relationship`.
    *
@@ -396,8 +406,9 @@ export const collapseQuestionnaire: ClusterRule["questionnaire"] = ({
         (operationAnswer.label === "merge" || operationAnswer.label === "move")
           ? operationAnswer.label
           : undefined
+      const derived = derivedOperation({ candidate: "duplicated", oneThing: redundancy, difference })
       const settled = settle({
-        derived: derivedOperation({ candidate: "duplicated", oneThing: redundancy, difference }),
+        derived,
         proposed,
         margin: operationAnswer !== undefined && "label" in operationAnswer ? marginOfAnswer(operationAnswer) : 1,
         confidence:
@@ -418,6 +429,8 @@ export const collapseQuestionnaire: ClusterRule["questionnaire"] = ({
           margin,
           prescription,
           prescriptionKind,
+          derived,
+          panel: panelFromAnswers(answers, { derived, agreement: "drop" }),
           operation: undefined,
           agreement: "drop" as const,
           settled: "the model said " + verdict.label,
@@ -436,6 +449,12 @@ export const collapseQuestionnaire: ClusterRule["questionnaire"] = ({
         margin,
         prescription,
         prescriptionKind,
+        derived,
+        panel: panelFromAnswers(answers, {
+          operation: settled.operation,
+          derived,
+          agreement: settled.quality,
+        }),
         operation: settled.operation,
         agreement: settled.quality,
         settled: settled.reason,
@@ -690,7 +709,65 @@ export interface Result {
   readonly drop?: Drop
 }
 
-/** Turn a cluster's verdict into a finding, or into silence. */
+/** The panel as it is being built, before its optional figures are added. */
+interface PanelInProgress {
+  readonly answers: ReadonlyArray<{ question: string; label?: string; probability?: number }>
+  operation?: string
+  derived?: string
+  agreement?: string
+}
+
+/**
+ * The questions behind one cluster's verdict, as the finding reports them.
+ *
+ * The panel is the observability the blog argues for: a reader can see which
+ * judgement moved the outcome, rather than one summary confidence standing in
+ * for nine answers. Absent when no answer map exists (an unverified finding).
+ */
+export const panelFromAnswers = (
+  answers: DecisionAnswers,
+  figures: {
+    readonly operation?: Operation | undefined
+    readonly derived?: Operation | undefined
+    readonly agreement?: string | undefined
+  },
+): JudgementPanel => {
+  const panel: PanelInProgress = {
+    answers: Object.entries(answers).map(([question, answer]) => {
+      // Rate first: it has probabilities too, and asking about `label` before it
+      // narrows a Rate answer to never.
+      if ("rating" in answer) {
+        const positions = Object.values(answer.probabilities)
+        return positions.length === 0
+          ? { question, label: String(answer.rating) }
+          : { question, label: String(answer.rating), probability: Math.max(...positions) }
+      }
+      if ("label" in answer) {
+        const probability = answer.probabilities[answer.label]
+        return probability === undefined
+          ? { question, label: answer.label }
+          : { question, label: answer.label, probability }
+      }
+      if ("probability" in answer) return { question, probability: answer.probability }
+      return { question }
+    }),
+  }
+  if (figures.operation !== undefined) panel.operation = figures.operation
+  if (figures.derived !== undefined) panel.derived = figures.derived
+  if (figures.agreement !== undefined) panel.agreement = figures.agreement
+  return panel
+}
+
+/**
+ * Turn a cluster's verdict into a finding, or into silence.
+ *
+ * @param input.rule - the rule, for its id, severity and messages.
+ * @param input.workspace - the loaded workspace, for repair cascades.
+ * @param input.cluster - the cluster being judged.
+ * @param input.verdict - the judgement, or undefined when none was available.
+ * @param input.layers - the declared layering, for the unverified fallback.
+ * @returns the finding, or the reason there is none.
+ */
 export const findingFor = ({
   rule,
   workspace,
@@ -788,6 +865,7 @@ export const findingFor = ({
       confidence: verdict.confidence,
       score: verdict.score,
       judged: true,
+      panel: verdict.panel,
       repair,
       severity:
         review || EXPECTED_DUPLICATION.has(verdict.prescriptionKind ?? "")

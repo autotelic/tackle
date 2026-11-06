@@ -140,6 +140,33 @@ describe("judged provenance", () => {
     expect(decodeDiagnostic({ ...at(), repair: { operation: "merge" } })).toBeUndefined()
   })
 
+  it("reads the judgement panel, and omits a malformed one instead of the finding", () => {
+    const decoded = decodeDiagnostic({
+      ...at(),
+      judged: true,
+      panel: {
+        answers: [
+          { question: "redundant", probability: 0.9 },
+          { question: "verdict", label: "collapse", probability: 0.88 },
+        ],
+        operation: "merge",
+        derived: "merge",
+        agreement: "act",
+      },
+    })
+    expect(decoded?.panel?.answers).toHaveLength(2)
+    expect(decoded?.panel?.answers[1]?.label).toBe("collapse")
+    expect(decoded?.panel?.operation).toBe("merge")
+    expect(decoded?.panel?.derived).toBe("merge")
+    expect(decoded?.panel?.agreement).toBe("act")
+
+    // The panel explains the finding; it does not outrank it. A bad panel is
+    // omitted, and the message and location still arrive.
+    const damaged = decodeDiagnostic({ ...at(), judged: true, panel: { answers: [{}] } })
+    expect(damaged).toBeDefined()
+    expect(damaged?.panel).toBeUndefined()
+  })
+
   it("refuses a move outside the closed set", () => {
     expect(decodeDiagnostic({ ...at(), move: "delete" })).toBeUndefined()
   })

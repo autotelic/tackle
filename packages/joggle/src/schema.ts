@@ -86,6 +86,34 @@ export const Structure = Schema.Struct({
 
 export interface Structure extends Schema.Schema.Type<typeof Structure> {}
 
+/** One question's answer, as the panel shows it. */
+export const PanelAnswer = Schema.Struct({
+  question: Schema.String,
+  label: Schema.optionalKey(Schema.String),
+  probability: Schema.optionalKey(Schema.Number),
+})
+
+export interface PanelAnswer extends Schema.Schema.Type<typeof PanelAnswer> {}
+
+/**
+ * The judgement behind one finding, carried through to the consumer.
+ *
+ * The blog's observability argument is that "the model chose fraud_team" is not
+ * an explanation -- "these six judgements, and the logic path that followed" is.
+ * A finding has always carried one confidence and a score; this carries every
+ * question that was asked, what it answered, the operation the model proposed,
+ * the one the table derived, and whether they agreed. Optional, so an old
+ * baseline or a committed answer still decodes.
+ */
+export const JudgementPanel = Schema.Struct({
+  answers: Schema.Array(PanelAnswer),
+  operation: Schema.optionalKey(Schema.String),
+  derived: Schema.optionalKey(Schema.String),
+  agreement: Schema.optionalKey(Schema.String),
+})
+
+export interface JudgementPanel extends Schema.Schema.Type<typeof JudgementPanel> {}
+
 /**
  * The only thing joggle produces. Everything else -- scanning, candidate
  * generation, judgement -- exists to manufacture one of these, in the same
@@ -128,6 +156,8 @@ export const Diagnostic = Schema.Struct({
    */
   identity: Schema.optionalKey(Schema.String),
   judged: Schema.Boolean,
+  /** The questions behind this finding, when a judgement produced it. */
+  panel: Schema.optionalKey(JudgementPanel),
   /**
    * The stage of the reversal a site stopped at.
    *

@@ -5,7 +5,7 @@ import { policy } from "./policy.ts"
 import type { JoggleConfig } from "./config.ts"
 import type * as AiError from "effect/ai/AiError"
 import type { Decision, DecisionModel } from "effect/ai"
-import type { Diagnostic, Drop, Operation, Repair, Severity, SourceLocation } from "./schema.ts"
+import type { Diagnostic, Drop, JudgementPanel, Operation, Repair, Severity, SourceLocation } from "./schema.ts"
 import type { ReportedRule } from "./reporting.ts"
 import type { Move } from "./moves.ts"
 import type { Workspace } from "./workspace.ts"
@@ -317,6 +317,8 @@ export const finding = (input: {
   readonly move?: Move | undefined
   /** The stage of the reversal this site stopped at, for a staged finding. */
   readonly stoppedAt?: "contract" | "combine" | "expand" | undefined
+  /** The questions behind this finding, when a judgement produced it. */
+  readonly panel?: JudgementPanel | undefined
 }): Diagnostic => {
   // Built field by field rather than with conditional spreads: an empty-object
   // spread hides the omission, and a reader has to reason about two shapes to
@@ -334,6 +336,7 @@ export const finding = (input: {
   if (input.identity !== undefined) diagnostic.identity = input.identity
   if (input.repair !== undefined) diagnostic.repair = input.repair
   if (input.stoppedAt !== undefined) diagnostic.stoppedAt = input.stoppedAt
+  if (input.panel !== undefined) diagnostic.panel = input.panel
   if (input.move !== undefined) diagnostic.move = input.move
   return diagnostic
 }

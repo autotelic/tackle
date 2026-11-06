@@ -38,6 +38,28 @@ export interface SourceLocation {
  */
 export type Move = "contract" | "combine" | "expand"
 
+/** One question a judgement asked, and what it answered. */
+export interface PanelAnswer {
+  readonly question: string
+  readonly label?: string
+  readonly probability?: number
+}
+
+/**
+ * The judgement behind a finding.
+ *
+ * "The model chose fraud_team" is not an explanation; "these six judgements, and the
+ * logic path that followed" is. A finding already carries one confidence and one score;
+ * the panel carries every question that was asked, the operation the model proposed, the
+ * one the rule's table derived, and whether the two agreed.
+ */
+export interface JudgementPanel {
+  readonly answers: ReadonlyArray<PanelAnswer>
+  readonly operation?: string
+  readonly derived?: string
+  readonly agreement?: string
+}
+
 /** The five operations a repair can propose. A decline is not one of them. */
 export type RepairOperation = "merge" | "split" | "move" | "replace" | "migrate"
 
@@ -107,6 +129,8 @@ export interface Diagnostic {
   readonly confidence?: number
   /** The smaller form the finding proposes, when the rule can propose one. */
   readonly repair?: Repair
+  /** The questions behind a judged finding, when the engine kept them. */
+  readonly panel?: JudgementPanel
 }
 
 /** Severities, ordered. The report sorts by this first. */
@@ -340,6 +364,47 @@ export const decodeLocation = (value: unknown): SourceLocation | undefined => {
   }
 }
 
+/** Read one answer in a panel, or `undefined` when it has no question. */
+const decodePanelAnswer = (value: unknown): PanelAnswer | undefined => {
+  if (!isRecord(value)) return undefined
+  const question = str(value.question)
+  if (question === undefined) return undefined
+  const label = str(value.label)
+  const probability = num(value.probability)
+  return {
+    question,
+    ...(label === undefined ? {} : { label }),
+    ...(probability === undefined ? {} : { probability }),
+  }
+}
+
+/**
+ * Read a judgement panel, or `undefined` when it is not one.
+ *
+ * A panel is explanatory, not actionable, so a malformed one is omitted rather than
+ * failing the finding: losing the explanation is a smaller loss than losing the work
+ * order it explains.
+ */
+export const decodePanel = (value: unknown): JudgementPanel | undefined => {
+  if (!isRecord(value)) return undefined
+  if (!Array.isArray(value.answers)) return undefined
+  const answers: Array<PanelAnswer> = []
+  for (const item of value.answers) {
+    const answer = decodePanelAnswer(item)
+    if (answer === undefined) return undefined
+    answers.push(answer)
+  }
+  const operation = str(value.operation)
+  const derived = str(value.derived)
+  const agreement = str(value.agreement)
+  return {
+    answers,
+    ...(operation === undefined ? {} : { operation }),
+    ...(derived === undefined ? {} : { derived }),
+    ...(agreement === undefined ? {} : { agreement }),
+  }
+}
+
 /** Read one diagnostic, or `undefined` when it is malformed. */
 export const decodeDiagnostic = (value: unknown): Diagnostic | undefined => {
   if (!isRecord(value)) return undefined
@@ -369,6 +434,7 @@ export const decodeDiagnostic = (value: unknown): Diagnostic | undefined => {
   // A `repair` that is present but unreadable fails the record: a half-read repair would
   // list fewer sites than the finding has, which is the repair lying about being complete.
   const repair = value.repair === undefined ? undefined : decodeRepair(value.repair)
+  const panel = value.panel === undefined ? undefined : decodePanel(value.panel)
   if (value.move !== undefined && move === undefined) return undefined
   if (value.repair !== undefined && repair === undefined) return undefined
   return {
@@ -387,6 +453,7 @@ export const decodeDiagnostic = (value: unknown): Diagnostic | undefined => {
     ...(score === undefined ? {} : { score }),
     ...(confidence === undefined ? {} : { confidence }),
     ...(repair === undefined ? {} : { repair }),
+    ...(panel === undefined ? {} : { panel }),
   }
 }
 

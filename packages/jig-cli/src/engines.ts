@@ -3,6 +3,7 @@ import { join } from "node:path"
 import { Effect } from "effect"
 import {
   countsOf,
+  decodePanel,
   decodeRepair,
   isRecord,
   str as stringOf,
@@ -200,6 +201,9 @@ export const normalize = (raw: unknown, context: ParseContext): Diagnostic | und
   // finding: the message is the part a reader can act on, and losing it to a bad cascade
   // would turn a real finding into silence.
   const repair = entry.repair === undefined ? undefined : decodeRepair(entry.repair)
+  // The panel is explanatory, so an unreadable one is omitted rather than dropping the
+  // finding: the message is the part a reader can act on.
+  const panel = entry.panel === undefined ? undefined : decodePanel(entry.panel)
   return {
     engine,
     ruleId: ruleIdOf({
@@ -218,6 +222,7 @@ export const normalize = (raw: unknown, context: ParseContext): Diagnostic | und
     ...(Number.isFinite(score) ? { score } : {}),
     ...(Number.isFinite(confidence) ? { confidence } : {}),
     ...(repair === undefined ? {} : { repair }),
+    ...(panel === undefined ? {} : { panel }),
   }
 }
 

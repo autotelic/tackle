@@ -1,4 +1,4 @@
-import type { Diagnostic, Repair, Severity, SourceLocation } from "./schema.ts"
+import type { Diagnostic, JudgementPanel, Repair, Severity, SourceLocation } from "./schema.ts"
 import type { Move } from "./moves.ts"
 import { RuleAuthoringError } from "./schema.ts"
 import { lineStarts, type SourceFile, type Unit, type Workspace } from "./workspace.ts"
@@ -113,6 +113,8 @@ export interface ReportInput {
   readonly repair?: Repair | undefined
   /** The stage of the reversal this site stopped at, for a staged finding. */
   readonly stoppedAt?: "contract" | "combine" | "expand" | undefined
+  /** The questions behind this finding, when a judgement produced it. */
+  readonly panel?: JudgementPanel | undefined
 }
 
 export type Report = (input: ReportInput) => Diagnostic
@@ -226,5 +228,6 @@ export const reporter = (rule: ReportedRule, locate: Locate): Report => (input) 
     repair: input.repair,
     move: input.move ?? rule.move,
     stoppedAt: input.stoppedAt,
+    panel: input.panel,
   })
 }
