@@ -112,6 +112,9 @@ export async function issueUrl(repoDir: string, issue: number): Promise<string |
  * Receipts from an issue's comments (#8): how budgets and stall history are
  * recovered after a restart.
  */
+/** Hidden marker the Retry escalation posts: budgets count from here (#9). */
+export const BUDGET_RESET_MARKER = '<!-- treadle:budget-reset -->'
+
 export async function readReceiptHistory(repoDir: string, issue: number): Promise<Receipt[]> {
   const result = await ghJson<{ comments: { body: string }[] }>(
     repoDir,
@@ -121,8 +124,14 @@ export async function readReceiptHistory(repoDir: string, issue: number): Promis
     '--json',
     'comments',
   )
+  // A Retry with a hint starts a fresh budget (#9): receipts before the
+  // latest reset marker are history, not budget.
+  let resetAt = -1
+  for (const [i, { body }] of result.comments.entries()) {
+    if (body.includes(BUDGET_RESET_MARKER)) resetAt = i
+  }
   const receipts: Receipt[] = []
-  for (const { body } of result.comments) {
+  for (const { body } of result.comments.slice(resetAt + 1)) {
     const receipt = parseReceipt(body)
     if (receipt) receipts.push(receipt)
   }

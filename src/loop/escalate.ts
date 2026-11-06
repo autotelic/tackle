@@ -41,7 +41,14 @@ export function makeEscalate(deps: {
         const hint = yield* tryP(() =>
           human.askHuman(`What hint should the retry of #${issue.number} get?`),
         )
-        yield* tryP(() => comment(repoDir, issue.number, `**Hint for the retry:**\n\n${hint}`))
+        // Fresh budget of 3 (#9): the marker truncates the Receipt history.
+        yield* tryP(() =>
+          comment(
+            repoDir,
+            issue.number,
+            `**Hint for the retry:**\n\n${hint}\n\n<!-- treadle:budget-reset -->`,
+          ),
+        )
         yield* tryP(() => appendQa(repoDir, issue.number, { question: 'Retry hint', answer: hint }))
         yield* tryP(() => relabel(repoDir, issue.number, config.issues.parked, config.issues.ready))
         yield* tryP(() => notify(`Issue #${issue.number} back to ready with your hint.`))

@@ -220,9 +220,7 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
       // A killed run leaves the worktree behind, branch checked out and all:
       // reuse it (#8's leftover work), don't add a fresh one.
       const worktrees = yield* tryP(() => git(repoDir, 'worktree', 'list', '--porcelain'))
-      const alreadyThere = worktrees
-        .split('\n')
-        .some((line) => line === `worktree ${worktreeDir}`)
+      const alreadyThere = worktrees.split('\n').some((line) => line === `worktree ${worktreeDir}`)
       if (!alreadyThere) {
         yield* tryP(() => git(repoDir, 'worktree', 'add', worktreeDir, branch))
       }
@@ -280,6 +278,15 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
     const tried: string[] = []
 
     for (;;) {
+      if (ruleContext.passesUsed >= budget) {
+        yield* tryP(() => parkWithSummary('budget'))
+        return {
+          kind: 'parked',
+          issue: issue.number,
+          passesUsed: ruleContext.passesUsed,
+          reason: 'budget',
+        }
+      }
       if (deps.passesTonight.value() >= nightlyCap) {
         yield* tryP(() => notify(`Nightly cap of ${nightlyCap} Passes reached. Treadle stopping.`))
         return { kind: 'stopped-cap', issue: issue.number, passesUsed: ruleContext.passesUsed }
