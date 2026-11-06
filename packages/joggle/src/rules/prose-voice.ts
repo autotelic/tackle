@@ -87,6 +87,7 @@ const voiceReview = (id: string, hasNeighbour: boolean) => {
   const instructions = [
       "Pick the defect that makes `atoms[" + id + "].sentence` cost a reader more than it gives, or choose `no_issue`.",
       "The sentence was written by an agent for a reader who does not know the code.",
+      "Judge `atoms[" + id + "].sentence` only. `before` and `after` are the sentences around it, for context: a defect in them is not a defect in this one, and a quoted example is not authored prose.",
       "`atoms[" + id + "].source` says where it is read: `jsdoc` is a comment above a declaration, `markdown` is a document, `string` is program output, a test name or a prompt.",
       "`atoms[" + id + "].surface` is the call the string is written in, when the parser recorded one. A flag description or a command description is a label read in a terminal: report it only when it hides the mechanism.",
       "- `riddle`: the mechanism is replaced by its purpose or by a metaphor, so a reader cannot say what the code does. For a string clamp: \"A printed type cut to the length a finding's help can carry\". A sentence that names the operation and its object is not a riddle, even when it uses the project's own vocabulary: \"Run everything and print the census.\"",

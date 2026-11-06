@@ -18,23 +18,23 @@ The function it documents, `shortType`, clamps a type string to
 says that in the tag two lines down: "the value, or its prefix and an ellipsis when
 it is too long."
 
-So the prose does not add information. It restates the tag as an image, and it
-withholds the one noun the reader needs: a length limit. "cut to the length a
+The prose carries no information the tag does not. It restates the tag as an image,
+and the one noun a reader needs is missing: a length limit. "cut to the length a
 finding's help can carry" describes the limit's *purpose* and never names the
 limit. A reader who does not already know the code cannot reconstruct the
 behaviour from the sentence. A reader who does know it learns nothing.
 
 Four moves produce that sentence. They recur across the corpus:
 
-1. **A noun phrase where a sentence belongs.** No subject, no finite verb. The
-   participle ("cut") carries the whole definition, so the reader has to supply
-   the sentence it belongs to.
-2. **The mechanism replaced by its justification.** "cut to the length X can
-   carry" states why the value is short. It does not state that the value is
-   truncated, at what size, or with what marker.
-3. **A metaphor where a parameter exists.** "carry" stands for a character
-   budget. The budget is a number in `policy`.
-4. **A claim about significance in place of the fact.** The same register closes
+1. **A noun phrase where a sentence belongs.** There is no subject and no finite
+   verb. The participle ("cut") carries the definition, so the reader supplies the
+   sentence it belongs to.
+2. **The mechanism is replaced by its justification.** "cut to the length X can
+   carry" states why the value is short. It leaves out that the value is truncated,
+   at what size, and with what marker.
+3. **A metaphor stands where a parameter exists.** "carry" means a character
+   budget, and the budget is a number in `policy`.
+4. **A claim about significance replaces the fact.** The same register closes
    paragraphs with verdicts: "That is the whole point." / "The notes are not
    decoration." / "That is the tool working."
 
@@ -68,8 +68,6 @@ before they can use it. That conversion is the cost the rule would measure.
 | "the model/report/tool says, knows, wants, refuses" | 27 | |
 | "earns its place", "no accident", "not decoration" | 5 | |
 | "the right instrument", "the honest X", "the one artefact" | 19 | |
-
-Two findings matter for design.
 
 - **The em dash lives in Markdown, not in JSDoc.** 984 against 8. JSDoc is
   written with `--`. A punctuation rule would only ever fire on docs.
@@ -121,7 +119,7 @@ A joggle rule therefore needs one more thing before it can be written: a
 deterministic **candidate generator that is not a classifier**. The defensible
 filters are structural. Sentences in a JSDoc prose paragraph (not a tag). Sentences
 in a Markdown paragraph (not a list, not code). Exported declarations only. Blocks
-over some token count. That is a fact about the file, and the verdict stays the
+over some token count. The filter is a fact about the file. The verdict is the
 model's.
 
 ## 6. Markdown has no owner today
@@ -143,11 +141,11 @@ Three ways, in order of cost:
 2. **A config-declared input list**: `joggle.config.json` gains `prose: ["docs/**"]`,
    and discovery resolves it separately. More knobs, and it makes prose
    opt-in, which means the tool is off by default.
-3. **A fourth engine**: correct in principle, and it re-implements paragraph
+3. **A fourth engine**: correct in principle, and it has to re-implement paragraph
    extraction and the report format.
 
-Option 1 is the one that matches the repository's stance that a partial analysis
-must not look complete.
+Option 1 keeps a partial analysis from looking complete, which is the repository's
+stated stance.
 
 ## 7. Rule shape
 
@@ -186,9 +184,9 @@ rewards "clarity" without defining it will pass it.
 Three defences, and the first one is the only one that is not guesswork:
 
 1. **Ground truth from the person who hates it.** Sixty sentences, labelled
-   `bad`/`fine`, drawn from section 9's list. This is the fixture test and the
-   calibration reference at once. A rule with no such reference is measuring its
-   own opinion.
+   `bad`/`fine`, drawn from section 9's list. The same sixty sentences serve as the
+   fixture and as the calibration reference. Without them the rule measures its
+   author's opinion.
 2. **Questions that are answerable rather than aesthetic.** "State the mechanism
    from the sentence" has a wrong answer. "Is this well written" does not.
 3. **Committed answers.** Judged rules replay recorded verdicts in CI. The
@@ -220,11 +218,11 @@ this section can state exactly.
 | `markdown` | `Workspace.prose`, from discovery, or handed over by a caller | a document read on its own |
 | `string` | `file.facts.literals`, filtered by `readsAsProse` | a message, a flag description, a test name or a prompt read in a terminal |
 
-**`readsAsProse`** is one text test, not a guess at which call produced the
-literal: five words, a sentence terminator, no concatenated edge, an opening
-letter, and more letters than marks. It reaches a diagnostic, a prompt and a
-criteria-adjacent instruction with one rule, and it drops an identifier, a path, a
-selector, a separator and a fragment.
+**`readsAsProse`** is one text test over the literal itself rather than over the
+call that produced it: five words, a sentence terminator, no concatenated edge, an
+opening letter, and more letters than marks. One test therefore covers a diagnostic, a flag
+description, a prompt instruction and a test name, and it drops an identifier, a
+path, a selector and a fragment.
 
 Two prunes are facts rather than policy:
 
@@ -243,8 +241,8 @@ Each label is a definition with a test, and the two that carried the most noise
 were rewritten as tests rather than descriptions:
 
 - `verdict` was "grades the material instead of stating a fact", which caught every
-  honest judgement about a bound. It is now **delete the sentence and the reader
-  loses no fact**.
+  honest judgement about a bound. The test is now **whether deleting the sentence
+  loses a fact**.
 - `restatement` was "repeats its neighbour or the declaration's name", which caught
   every terse first line. It is now **states a fact the previous sentence already
   states**, and it is only asked when there is a previous sentence.
@@ -268,11 +266,13 @@ fact or the question, judge again. Every number below is a real run over
 | 5 | `verdict` as a delete-test | 30 |
 | 6 | `restatement` pruned without a neighbour | 21 |
 | 7 | criteria labels and banners skipped | 18 |
+| 8 | `riddle` gains the jargon counterexample | 16 |
+| 9 | the judge is told the neighbours are context | 13 |
 
-Roughly eleven of the last eighteen are findings worth acting on. Two defects in
+Roughly nine of the last thirteen are findings worth acting on. Two defects in
 the index itself surfaced the same way, and both are fixed:
 
-- **Discovery found the Markdown and `check` dropped it.** `checkRepository` passed
+- **`check` dropped the Markdown that discovery had found.** `checkRepository` passed
   `discovery.files` to `loadWorkspace`, and a caller that passes `discovered`
   bypasses the walk that carries `prose`. `WorkspaceInputs.proseFiles` now takes
   both lists and the read happens in one place. The first whole-repository run
@@ -280,15 +280,26 @@ the index itself surfaced the same way, and both are fixed:
 - **Every blockquote line was its own block.** A `>` marker on each line made the
   splitter flush per line, so a quoted paragraph arrived as sentence fragments:
   "deeper-version question for each before dispatching it." The confirmed
-ones, with the label the judge chose:
+ones, with the label the judge chose. Exemplars sit in an indented block throughout
+this document: a quote is evidence, and a rule that reads prose cannot tell an
+authored sentence from one a document is discussing.
 
-- `atoms.ts:16` "Content-addressed rather than positional, and that is the whole point." (verdict, 0.99)
-- `architecture.ts:18` "Most of what people call architecture is a judgement..." (verdict, 0.87)
-- `ask.ts:134` "Narrowing the paths remains the best answer..." (verdict, 0.88)
-- `doc-matches-code.ts:95` "Fix the doc to match the code, or the code to match the doc. The doc is the one artefact no checker reads, so it is the one that drifts." (false certainty, 0.86)
-- `main.ts:862` the package description: "deterministic where it can prove, System One where it has to judge" (riddle, 0.81)
-- `main.ts:811` "a store that only grows is not a cache" (verdict, 0.74)
-- `append-only-honoured.ts:37` "A query-builder call that rewrites a structure recording the past." (riddle, 0.59)
+    atoms.ts:16                  verdict           "Content-addressed rather than positional, and that is the whole point."   0.99
+    architecture.ts:18           verdict           "Most of what people call architecture is a judgement"                    0.87
+    ask.ts:134                   verdict           "Narrowing the paths remains the best answer"                             0.88
+    doc-matches-code.ts:95       false certainty   "The doc is the one artefact no checker reads, so it is the one that drifts."  0.86
+    main.ts:862                  riddle            "deterministic where it can prove, System One where it has to judge"      0.81
+    main.ts:811                  verdict           "a store that only grows is not a cache"                                  0.74
+    append-only-honoured.ts:37   riddle            "A query-builder call that rewrites a structure recording the past."      0.59
+
+Run 9 was the largest single change, and it came from the rule failing on its own
+record. The atom carries `before` and `after` so a judge can see the neighbours a
+reader has, and the instructions never said the neighbours are not the target. In
+a document whose subject is bad prose, every neighbour is a specimen: a plainly
+factual sentence stayed flagged at 0.78 while its two neighbours were examples of
+the defect. One instruction line removed seven of the record's seventeen findings
+and four of `src`'s sixteen. The lesson generalises: a panel that shows a model
+context must say which field is the subject.
 
 The false positives that remain are one class: **a terse operational string that
 states a fact and reads as an opinion**. `answer-store.ts:28` "256 files is enough
@@ -300,8 +311,8 @@ Cost: 243,831 input tokens for 320 judged sentences, across 5 API calls. The
 instructions are sent once per request, so the per-sentence cost falls as the
 batch grows.
 
-The budgets are the real limit. In that run, 1,131 of 1,251 documented sentences
-and 432 of 632 literals were past the cap, and the report says so:
+In that run, 1,131 of 1,251 documented sentences and 432 of 632 literals were past
+the cap, and the report says so:
 
     note: joggle/prose-voice — 1131 of 1251 documented sentences were not judged (budget 120).
 
@@ -348,8 +359,8 @@ A `commit-msg` hook makes that every commit:
     command -v joggle >/dev/null 2>&1 || exit 0
     exec joggle prose "$1"
 
-The guard matters as much as the check: a contributor without the CLI must not
-have every commit fail. `jig init --hooks` writes the `pre-commit` hook with the
+Without the guard, every commit fails for a contributor who has not installed the
+CLI. `jig init --hooks` writes the `pre-commit` hook with the
 same guard; writing this one there is the next step, not a separate tool.
 
 ## 12a. Markdown, measured
@@ -359,7 +370,7 @@ budget the rule judges 120 of them, and the report states the rest:
 
     note: joggle/prose-voice — 6199 of 6319 Markdown sentences were not judged (budget 120).
 
-Run on `FOREMAN.md` alone (`joggle prose FOREMAN.md`), 32 of its 120 judged
+Run on `FOREMAN.md` alone (`joggle prose FOREMAN.md`), 31 of its 120 judged
 sentences are reported, and they are the register this rule exists for:
 
     FOREMAN.md:198  verdict           "It is the point of the whole machine."
@@ -376,6 +387,22 @@ sentences are reported, and they are the register this rule exists for:
 A command description ("Run everything and print the census.") is the kind of
 sentence this still reports and should not. It is the same false-positive class as
 section 11: a terse operational string that states a fact.
+
+## 12b. The record, judged by its own rule
+
+`joggle prose docs/prose-voice.md` reported 26 sentences in the first draft of
+this document and reports 10 now. Most of the ten are quoted evidence or an option
+description; three are sentences this document wrote about the register in the
+register ("The judge writes this register.").
+
+Two conventions make the difference for any document that discusses bad prose:
+
+- **Fence or indent the exemplars.** A quote in a bullet is a candidate, and the
+  rule cannot tell an authored sentence from one a document is discussing. Every
+  exemplar here sits in an indented block.
+- **Fix the tics the rule names, not the label.** A finding on a sentence about
+  prose voice is worth reading twice, because the subject matter primes both the
+  writer and the judge.
 
 ## 13. What is still wrong
 
