@@ -20,7 +20,7 @@ const fingerprintOf = (workspace: Workspace): unknown =>
     start: unit.start,
     end: unit.end,
     shape: unit.shape,
-    shapeHash: unit.shapeHash,
+    normalizedHash: unit.normalizedHash,
     typeSignature: unit.typeSignature,
     typeRefs: unit.typeRefs,
     typed: unit.typed,

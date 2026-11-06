@@ -2,6 +2,7 @@ import { Effect, Order } from "effect"
 import { Decision } from "effect/ai"
 import { Atoms } from "../atoms.ts"
 import { policy } from "../policy.ts"
+import { containmentPairs } from "../candidates.ts"
 import { type PlannedCandidate } from "../plans.ts"
 import { verdictsOf, type Plan } from "../plans.ts"
 import { locator, messages, reporter, type Report } from "../reporting.ts"
@@ -32,9 +33,6 @@ const VIOLATIONS = { verdict: ["composes", "same_name_drift"] } as const
 // proper subset means B is A plus something. Whether B is GENUINELY an A -- or two
 // declarations that happen to share field names, or the same name declared twice
 // with different fields -- is the judgement, and it used to be left to the reader.
-/** A field set as a comparable key, order-insensitive. */
-const signatureOf = (unit: Unit): string => [...unitFields(unit)].sort(Order.String).join("\u0000")
-
 /**
  * A declaration's OWN fields, with the compiler's type where there is one.
  *
@@ -97,35 +95,16 @@ export const composeTypes: PlannedRule = {
       }
     }
 
-    const bounded = all.slice(0, policy.composeTypes.maxTypes)
-    // One representative per distinct field set. A field set repeated twenty
-    // times is one candidate for composition, not twenty comparisons.
-    const parts = new Map<string, Unit>()
-    for (const unit of bounded) {
-      const signature = signatureOf(unit)
-      if (!parts.has(signature)) parts.set(signature, unit)
-    }
-
-    const candidates: Array<{ whole: Unit; part: Unit; added: ReadonlyArray<string> }> = []
-    for (const whole of bounded) {
-      if (scope.changed !== undefined && !scope.changed.has(whole.file)) continue
-      const wholeFields = new Set(unitFields(whole))
-      let best: Unit | undefined
-      for (const [signature, part] of parts) {
-        if (unitFields(part).length >= unitFields(whole).length) continue
-        if (best !== undefined && unitFields(part).length <= unitFields(best).length) continue
-        if (unitFields(whole).length - unitFields(part).length > unitFields(part).length) continue
-        // Field-NAME containment, which is a fact. Whether the two types are
-        // compatible is the question's business, not the generator's: the
-        // word-subset test that used to live here decided a type question in code
-        // (docs/rule-coupling.md).
-        const contained = signature.split("\u0000").every((field) => wholeFields.has(field))
-        if (contained) best = part
-      }
-      if (best === undefined) continue
-      const added = unitFields(whole).filter((field) => !unitFields(best).includes(field))
-      candidates.push({ whole, part: best, added })
-    }
+    // Containment lives in the candidate engine: one declaration's own field set
+    // is a proper subset of another's. Field-NAME containment is the fact; whether
+    // the two are genuinely one type composed of another is the question.
+    const candidates = containmentPairs({
+      units: workspace.units,
+      kinds: ["interface", "type"],
+      minFields: policy.composeTypes.minFields,
+      maxTypes: policy.composeTypes.maxTypes,
+      scope,
+    })
 
     if (candidates.length === 0) {
       return {
@@ -134,7 +113,7 @@ export const composeTypes: PlannedRule = {
           outcome([], [
             all.length +
               " type declaration(s) in " +
-              parts.size +
+              new Set(all.map((unit) => [...unitFields(unit)].sort(Order.String).join("\u0000"))).size +
               " distinct field set(s); none contains another as a proper subset",
           ]),
       }

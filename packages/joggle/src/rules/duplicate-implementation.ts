@@ -1,7 +1,8 @@
 import { Effect } from "effect"
 import { policy } from "../policy.ts"
+import { exactGroups } from "../candidates.ts"
 import { clusterOf, type Cluster } from "../cluster.ts"
-import { budgetNote, inScope, outcome, type PlannedRule, type Scope } from "../rule.ts"
+import { budgetNote, outcome, type PlannedRule, type Scope } from "../rule.ts"
 import {
   clusterReporter,
   collapseQuestionnaire,
@@ -11,7 +12,7 @@ import {
   type ClusterRule,
 } from "./cluster-verdict.ts"
 import { layersFrom } from "../architecture.ts"
-import type { Unit, Workspace } from "../workspace.ts"
+import type { Workspace } from "../workspace.ts"
 
 const spec: ClusterRule = {
   ruleId: "joggle/duplicate-implementation",
@@ -33,31 +34,15 @@ const spec: ClusterRule = {
  * same resolved type identity. Broad on purpose -- over-production is the
  * judge's problem, a missed copy is not.
  */
-const find = (workspace: Workspace, scope: Scope): ReadonlyArray<Cluster> => {
-  const groups = new Map<string, Array<Unit>>()
-  const { minTokens } = policy.duplicateImplementation
-  for (const unit of workspace.units) {
-    if (unit.tokens.length < minTokens) continue
-    // Resolved types are part of the key: two helpers that read identically but
-    // reference different declared types are not the same helper.
-    const key = `${unit.kind}:${unit.shapeHash}:${unit.typeSignature}`
-    const existing = groups.get(key)
-    if (existing === undefined) groups.set(key, [unit])
-    else existing.push(unit)
-  }
-
-  const clusters: Array<Cluster> = []
-  for (const group of groups.values()) {
-    if (new Set(group.map((unit) => unit.file)).size < 2) continue
-    // Test fixtures are compared only against each other.
-    if (group.every((unit) => unit.test)) continue
-    // A new duplicate always has at least one changed member: nothing else can
-    // have created it, so a group nobody touched cannot produce a new finding.
-    if (!group.some((unit) => inScope(scope, unit.file))) continue
-    clusters.push(clusterOf(group, true, 1))
-  }
-  return clusters
-}
+const find = (workspace: Workspace, scope: Scope): ReadonlyArray<Cluster> =>
+  exactGroups({
+    units: workspace.units,
+    kinds: ["shape"],
+    minTokens: policy.duplicateImplementation.minTokens,
+    distinctFiles: true,
+    separateTests: true,
+    scope,
+  }).map((group) => clusterOf(group.members, true, 1))
 
 /** Largest clusters first when a budget bites, so the note names what matters. */
 const largestOf = (clusters: ReadonlyArray<Cluster>): ReadonlyArray<string> =>

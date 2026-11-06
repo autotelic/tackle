@@ -80,7 +80,7 @@ export interface Unit {
    * already knew the answer to.
    */
   readonly shingles: ReadonlySet<string>
-  readonly shapeHash: string
+  readonly normalizedHash: string
   /** Type-position names this declaration mentions, before resolution. */
   readonly typeRefs: ReadonlyArray<string>
   /**
@@ -1874,7 +1874,7 @@ const sourceFileFrom = ({ file, text, parsed }: ParsedFileText): SourceFile => {
         shape,
         tokens,
         shingles: shinglesOf(tokens),
-        shapeHash: shortHash(shape),
+        normalizedHash: shortHash(shape),
         typeRefs,
         typed: typeRefs.length > 0,
         fieldTypes: site.fieldTypes,

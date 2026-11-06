@@ -83,7 +83,7 @@ export const callPattern: PlannedRule = {
       // Bodies that are ALSO identical are `duplicate-implementation`'s finding,
       // not this one: two declarations with the same shape and the same calls are
       // one declaration written twice.
-      .filter(([, units]) => new Set(units.map((unit) => unit.shapeHash)).size > 1)
+      .filter(([, units]) => new Set(units.map((unit) => unit.normalizedHash)).size > 1)
       .filter(([, units]) => units[0] !== undefined)
 
     if (candidates.length === 0) {

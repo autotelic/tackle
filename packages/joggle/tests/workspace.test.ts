@@ -33,7 +33,7 @@ it.effect("identical implementations share a shape hash", () =>
     const lookup = workspace.units.find((unit) => unit.name === "lookupUserById")
     expect(find).toBeDefined()
     expect(lookup).toBeDefined()
-    expect(find?.shapeHash).toBe(lookup?.shapeHash)
+    expect(find?.normalizedHash).toBe(lookup?.normalizedHash)
     expect(similarity({ left: find?.tokens ?? [], right: lookup?.tokens ?? [] })).toBe(1)
   }).pipe(Effect.provide(NodeServices.layer)),
 )

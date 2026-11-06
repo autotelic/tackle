@@ -1,7 +1,8 @@
-import { Effect, Order } from "effect"
+import { Effect } from "effect"
 import { Decision } from "effect/ai"
 import { Atoms, type CandidateSample } from "../atoms.ts"
 import { policy } from "../policy.ts"
+import { fieldGroups } from "../candidates.ts"
 import { verdictsOf, type Plan } from "../plans.ts"
 import { locator, messages, reporter, type Report } from "../reporting.ts"
 import { verdictOf } from "../verdict.ts"
@@ -14,7 +15,7 @@ import {
   type Scope,
 } from "../rule.ts"
 import type { Diagnostic, Drop } from "../schema.ts"
-import { typeUnits, unitFields, type Unit, type Workspace } from "../workspace.ts"
+import { typeUnits, type Unit, type Workspace } from "../workspace.ts"
 
 const RULE_ID = "joggle/name-the-primitive"
 
@@ -32,8 +33,6 @@ const VIOLATIONS = { verdict: ["one_thing"] } as const
 // of the declarations that carry a pair, gives GROUPS without mining every subset
 // of every declaration. What a person then decides -- is this genuinely one
 // thing? -- used to be left to the reader. It is now asked.
-const signatureOf = (fields: ReadonlyArray<string>): string => [...fields].sort(Order.String).join("\u0000")
-
 export const nameThePrimitive: PlannedRule = {
   id: RULE_ID,
   severity: "info",
@@ -50,7 +49,7 @@ export const nameThePrimitive: PlannedRule = {
   plan: Effect.fn("joggle/name-the-primitive")(function* (workspace: Workspace, scope: Scope) {
     const report = reporter(nameThePrimitive, locator(workspace))
     const { minFields, minOccurrences, maxFindings } = policy.nameThePrimitive
-    const types = workspace.units.filter(typeUnits(policy.nameThePrimitive.minFields))
+    const types = workspace.units.filter(typeUnits(minFields))
     if (types.length === 0) {
       return {
         plans: [],
@@ -63,63 +62,10 @@ export const nameThePrimitive: PlannedRule = {
       }
     }
 
-    // Every field set that already has a name, so a group that is one of them is
-    // not a candidate: that is `compose-types`' finding, and it is the better one.
-    const named = new Set(types.map((unit) => signatureOf(unitFields(unit))))
-
-    const pairOccurrences = new Map<string, Array<Unit>>()
-    for (const unit of types) {
-      const fields = [...new Set(unitFields(unit))]
-      for (let a = 0; a < fields.length; a += 1) {
-        for (let b = a + 1; b < fields.length; b += 1) {
-          const left = fields[a]
-          const right = fields[b]
-          if (left === undefined || right === undefined) continue
-          const key = signatureOf([left, right])
-          const existing = pairOccurrences.get(key)
-          if (existing === undefined) pairOccurrences.set(key, [unit])
-          else existing.push(unit)
-        }
-      }
-    }
-
-    const considered = [...pairOccurrences.entries()]
-      .filter(([, units]) => units.length >= minOccurrences)
-      .sort((left, right) => right[1].length - left[1].length || left[0].localeCompare(right[0]))
-
-    const groups: Array<{ units: ReadonlyArray<Unit>; fields: ReadonlyArray<string> }> = []
-    for (const [, units] of considered) {
-      const first = units[0]
-      if (first === undefined) continue
-      let group = new Set(unitFields(first))
-      for (const unit of units) {
-        const fields = new Set(unitFields(unit))
-        group = new Set([...group].filter((field) => fields.has(field)))
-      }
-      if (group.size < minFields) continue
-      if (named.has(signatureOf([...group]))) continue
-      groups.push({ units, fields: [...group].sort(Order.String) })
-    }
-    groups.sort(
-      (left, right) =>
-        right.fields.length - left.fields.length ||
-        right.units.length - left.units.length ||
-        left.fields.join(",").localeCompare(right.fields.join(",")),
-    )
-
-    // A group already reported in full makes this one redundant: reporting
-    // `{id, project, updated_at}` beside the five-field group that contains it is
-    // the same finding twice.
-    const kept: Array<ReadonlyArray<string>> = []
-    const candidates: Array<{ units: ReadonlyArray<Unit>; fields: ReadonlyArray<string> }> = []
-    for (const entry of groups) {
-      const first = entry.units[0]
-      if (first === undefined) continue
-      if (scope.changed !== undefined && !scope.changed.has(first.file)) continue
-      if (kept.some((seen) => entry.fields.every((field) => seen.includes(field)))) continue
-      kept.push(entry.fields)
-      candidates.push(entry)
-    }
+    // The mining lives in the candidate engine: pair co-occurrence, then the
+    // intersection of the declarations that carry a pair, which gives groups
+    // without mining every subset of every declaration.
+    const candidates = fieldGroups({ units: types, minFields, minOccurrences, scope })
 
     if (candidates.length === 0) {
       return {

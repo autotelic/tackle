@@ -45,7 +45,7 @@ import {
  * size, and the talk is honest about the overheads -- memory, and "global
  * algorithms harm incrementality" -- that such a system brings with it.
  */
-export const CACHE_VERSION = "12"
+export const CACHE_VERSION = "13"
 
 /** One parse's key: which file, and what it said. */
 export const keyOf = ({ file, text }: FileText): string =>
@@ -61,7 +61,7 @@ const encodeUnit = (unit: Unit): typeof EncodedUnit.Type => ({
   namePosition: unit.namePosition,
   exported: unit.exported,
   shape: unit.shape,
-  shapeHash: unit.shapeHash,
+  normalizedHash: unit.normalizedHash,
   typeRefs: unit.typeRefs,
   typed: unit.typed,
   variants: unit.variants,
@@ -104,7 +104,7 @@ const EncodedUnit = Schema.Struct({
   namePosition: Schema.optionalKey(Schema.Number),
   exported: Schema.Boolean,
   shape: Schema.String,
-  shapeHash: Schema.String,
+  normalizedHash: Schema.String,
   typeRefs: Schema.Array(Schema.String),
   typed: Schema.Boolean,
   // Absent in caches written before the node space was widened; the version bump
@@ -172,7 +172,7 @@ const unitFrom = (
     shape: entry.shape,
     tokens,
     shingles: shinglesOf(tokens),
-    shapeHash: entry.shapeHash,
+    normalizedHash: entry.normalizedHash,
     typeRefs: entry.typeRefs,
     typed: entry.typed,
     variants: entry.variants ?? [],

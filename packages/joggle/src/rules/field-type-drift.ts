@@ -15,7 +15,7 @@ import {
 } from "../rule.ts"
 import type { Diagnostic, Drop } from "../schema.ts"
 import type { Workspace } from "../workspace.ts"
-import { words } from "./naming-drift.ts"
+import { words } from "../candidates.ts"
 
 const RULE_ID = "joggle/field-type-drift"
 

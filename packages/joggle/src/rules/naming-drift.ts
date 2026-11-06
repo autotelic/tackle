@@ -1,13 +1,13 @@
-import { Effect, type Predicate } from "effect"
+import { Effect } from "effect"
 import { Decision } from "effect/ai"
 import { Atoms } from "../atoms.ts"
 import { describeOperation, permitted, settle } from "../operation.ts"
 import { policy } from "../policy.ts"
+import { expanded, namePairs, rankSpeculative } from "../candidates.ts"
 import { clusterOf, nameList, type Cluster } from "../cluster.ts"
 import {
   budgetNote,
   declined,
-  inScope,
   marginOfAnswer,
   outcome,
   type PlannedRule,
@@ -162,174 +162,25 @@ const spec: ClusterRule = {
 }
 
 /**
- * One spelling per concept.
+ * Pairs of names in one head-noun family, from the candidate engine.
  *
- * Names are addresses: an agent finds code by grepping a name, so two names for
- * one concept cost retrieval on every future change. This table is the only
- * hand-written knowledge in the rule, and it exists so the judgement sees
- * `orgId` and `organizationId` as the same phrase rather than as two strings.
- */
-const abbreviations: Readonly<Record<string, string>> = {
-  arg: "argument", auth: "authentication", cfg: "configuration", config: "configuration",
-  ctx: "context", db: "database", dir: "directory", doc: "document", env: "environment",
-  err: "error", fn: "function", id: "identifier", idx: "index", impl: "implementation",
-  info: "information", init: "initialize", msg: "message", num: "number",
-  org: "organization", param: "parameter", prev: "previous", repo: "repository",
-  req: "request", res: "response", spec: "specification", stat: "statistic",
-  str: "string", util: "utility", utils: "utility",
-}
-
-/** Split a name into words on its camelCase, snake_case and kebab-case seams. */
-export const words = (name: string): ReadonlyArray<string> =>
-  name
-    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-    .replace(/[_-]+/g, " ")
-    .toLowerCase()
-    .split(/\s+/)
-    .filter((word) => word.length > 0)
-
-/** Split a name into words and expand the abbreviations in the table. */
-export const expanded = (name: string): ReadonlyArray<string> =>
-  words(name).map((word) => abbreviations[word] ?? word)
-
-/** Two names compared for similarity: neither is privileged. */
-interface NamePair {
-  readonly one: string
-  readonly two: string
-}
-
-/**
- * Jaccard over expanded words, and nothing else.
- *
- * This used to add a quarter when the two names shared a head noun, to catch
- * `fetchUserProfile` against `getUserProfile`. The bonus also lifted every pair
- * of `*Modal`s over the line, which is how one category became a "concept".
- * Those two names already score 0.5 without it, which is the threshold.
- */
-const nameScore = ({ one, two }: NamePair): number => {
-  const a = new Set(expanded(one))
-  const b = new Set(expanded(two))
-  let intersection = 0
-  for (const word of a) if (b.has(word)) intersection += 1
-  const union = a.size + b.size - intersection
-  return union === 0 ? 0 : intersection / union
-}
-
-/**
- * Whether a pair of names is worth asking the model about.
- *
- * Exported so the filter can be tested as a rule of its own. It is the whole
- * difference between a rule that costs money and one that spends it.
- *
- * It no longer decides whether the extra word CARRIES meaning -- `get` in front
- * of a name versus `formatted` in the middle. That is the question this rule
- * exists to ask, and a hand-maintained list of "words that do not count" was
- * answering it (docs/rule-coupling.md). The filter keeps the structural part:
- * the two names are nested and differ by exactly one word.
- */
-export const worthJudging: Predicate.Predicate<NamePair> = ({ one, two }) => {
-  if (one === two) return false
-  const words = new Set(expanded(one))
-  const other = new Set(expanded(two))
-  let common = 0
-  for (const word of words) if (other.has(word)) common += 1
-  const differs = words.size - common + (other.size - common)
-  // Identical expanded words: the spellings differ and nothing else does.
-  if (differs === 0) return true
-  // One side inside the other, by exactly one word. Whether that word carries
-  // meaning is the QUESTION: a hand-maintained list of "words that do not count"
-  // used to decide it (docs/rule-coupling.md).
-  const nested = common === words.size || common === other.size
-  return nested && differs === 1
-}
-
-const sharedWords = ({ one, two }: NamePair): number => {
-  const a = new Set(expanded(one))
-  let shared = 0
-  for (const word of new Set(expanded(two))) if (a.has(word)) shared += 1
-  return shared
-}
-
-/**
- * Every pair of names in a head-noun family that is worth asking about, judged
- * pair by pair.
- *
- * There is no clustering here and no cap before the judging. Pairs were once
- * sorted globally by score and sliced, so a whole family could go unexamined
- * while another spent the budget, silently. Now every qualifying pair is
- * enumerated, ordered so a budget keeps the strongest, and whatever the budget
- * does not reach is named in the report.
+ * Exported names only, and the number is why: on one 2,456-file application
+ * removing this filter takes the candidate set from 23 to 77, three times the
+ * cost, and the recall it buys is unmeasured. The argument FOR removing it is
+ * real -- an agent greps a file-local name as readily as an exported one -- but
+ * the two duplications joggle found in a 110-file library were both file-local,
+ * and those were found by the near-duplicate rule, which has no such filter.
  */
 const find = (workspace: Workspace, scope: Scope): ReadonlyArray<Cluster> => {
   const { minScore, minSharedWords } = policy.namingDrift
-  const units = workspace.units
-  const byHead = new Map<string, Array<number>>()
-  units.forEach((unit, index) => {
-    // Exported names only, and the number is why: on one 2,456-file application
-    // removing this filter takes the candidate set from 23 to 77, three times the
-    // cost, and the recall it buys is unmeasured. The argument FOR removing it is
-    // real -- an agent greps a file-local name as readily as an exported one, and
-    // the two duplications joggle found in a 110-file library were both
-    // file-local -- but those were found by the near-duplicate rule, which has no
-    // such filter, so nothing is lost by leaving this one in place.
-    if (!unit.exported) return
-    const head = expanded(unit.name).at(-1)
-    if (head === undefined) return
-    const existing = byHead.get(head)
-    if (existing === undefined) byHead.set(head, [index])
-    else existing.push(index)
-  })
-
-  const pairs: Array<{ left: number; right: number; score: number }> = []
-  for (const group of byHead.values()) {
-    for (let a = 0; a < group.length; a += 1) {
-      for (let b = a + 1; b < group.length; b += 1) {
-        const left = group[a]
-        const right = group[b]
-        if (left === undefined || right === undefined) continue
-        const one = units[left]
-        const two = units[right]
-        if (one === undefined || two === undefined) continue
-        if (one.name === two.name) continue
-        if (one.file === two.file) continue
-        if (one.kind !== two.kind) continue
-        // Test fixtures are compared only against each other.
-        if (one.test && two.test) continue
-        if (sharedWords({ one: one.name, two: two.name }) < minSharedWords) continue
-        // A new pair of spellings has to include the spelling that changed.
-        if (!inScope(scope, one.file) && !inScope(scope, two.file)) continue
-        const score = nameScore({ one: one.name, two: two.name })
-        if (score < minScore) continue
-
-        // Shape of the pair, measured over 1,864 judged candidates:
-        //
-        //   identical words            7 judged    5 findings    71%
-        //   subset, one word differs 451 judged   11 findings   2.4%
-        //   neither of those        1,406 judged    1 finding   0.07%
-        //
-        // The dropped buckets cost 75% of the API spend for 6% of the findings.
-        // What separates them is the KIND of word that differs: `custom`,
-        // `review` and `multi` name different things, while case, word order and
-        // an accessor verb like `get` or `calculate` do not distinguish anything.
-        // That is a judgement the filter may make, because it is about shape
-        // rather than about which of two names is right.
-        if (!worthJudging({ one: one.name, two: two.name })) continue
-
-        pairs.push({ left, right, score })
-      }
-    }
-  }
-
-  return pairs
-    .sort((a, b) => b.score - a.score || a.left - b.left || a.right - b.right)
-    .flatMap((pair) => {
-      const one = units[pair.left]
-      const two = units[pair.right]
-      if (one === undefined || two === undefined) return []
-      return [clusterOf([one, two], false, pair.score)]
-    })
+  return namePairs({
+    units: workspace.units,
+    minScore,
+    minSharedWords,
+    scope,
+    exportedOnly: true,
+  }).map((pair) => clusterOf([pair.left, pair.right], false, pair.score))
 }
-
 export const namingDrift: PlannedRule = {
   id: spec.ruleId,
   severity: spec.severity,
@@ -345,9 +196,23 @@ export const namingDrift: PlannedRule = {
       }
     }
     const budget = policy.namingDrift.maxClusters
-    const phase = yield* planClusters(spec, clusters.slice(0, budget), scope, workspace)
+    // Name pairs are a guess, so the budget is filled by a relevance judgement
+    // over a deterministic window rather than by a global sort-and-slice.
+    const ordered = yield* rankSpeculative({
+      budget,
+      items: clusters.map((cluster) => ({
+        item: cluster,
+        strength: cluster.overlap,
+        evidence: {
+          names: cluster.members.slice(0, 2).map((member) => member.name),
+          files: [...new Set(cluster.members.map((member) => member.file))].slice(0, 4),
+          signal: Math.round(cluster.overlap * 100) + "% shared name words",
+        },
+      })),
+    })
+    const phase = yield* planClusters(spec, ordered.slice(0, budget), scope, workspace)
     const layers = layersFrom(context.config)
-    const unjudged = clusters.slice(budget)
+    const unjudged = ordered.slice(budget)
     const notes = budgetNote({
       unitKind: "pairs",
       judged: budget,
