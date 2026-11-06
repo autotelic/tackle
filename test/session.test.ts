@@ -59,6 +59,10 @@ class FakeSession implements SessionLike {
   getLastAssistantText() {
     return 'fake last text'
   }
+
+  getSessionStats() {
+    return { tokens: { total: 1000 }, cost: 0.01 }
+  }
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))

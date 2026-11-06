@@ -47,6 +47,8 @@ export type Budgets = {
   askHumanTimeoutMinutes: number
   passesPerNight: number
   stopAfterParkedInARow: number
+  /** Optional dollar cap per issue across its Passes (#16). */
+  maxCostPerIssueUsd?: number
 }
 
 export type LoopConfig = {
@@ -150,8 +152,10 @@ export function assertLoopConfig(
     fail(configPath, 'featureDone.requireNewTests must be a boolean')
 
   if (typeof c.budgets !== 'object' || c.budgets === null) fail(configPath, 'budgets is required')
-  for (const [key, value] of Object.entries(c.budgets as Record<string, unknown>))
+  for (const [key, value] of Object.entries(c.budgets as Record<string, unknown>)) {
+    if (key === 'maxCostPerIssueUsd' && value === undefined) continue
     assertNumber(value, `budgets.${key}`, configPath)
+  }
 
   if (c.rules !== undefined) {
     if (!Array.isArray(c.rules)) fail(configPath, 'rules must be an array')

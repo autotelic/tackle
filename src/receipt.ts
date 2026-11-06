@@ -13,6 +13,8 @@ export type Receipt = {
   terminal: string
   reason?: string
   turns: number
+  /** Dollar cost of the Session, when recorded (#16). */
+  costUsd?: number
   sessionLogPath: string
   /** The Checkpoint commit the Receipt names. */
   checkpoint: string
@@ -34,7 +36,8 @@ export function renderReceipt(receipt: Receipt): string {
   )
   lines.push('')
   const reason = receipt.reason ? ` — ${receipt.reason}` : ''
-  lines.push(`- Session: **${receipt.terminal}**${reason} (${receipt.turns} turns)`)
+  const cost = receipt.costUsd !== undefined ? `, $${receipt.costUsd.toFixed(2)}` : ''
+  lines.push(`- Session: **${receipt.terminal}**${reason} (${receipt.turns} turns${cost})`)
   if (receipt.checks === null) {
     lines.push('- Checks: not run (Session blocked-on-human)')
   } else if ('infrastructureFailure' in receipt.checks) {

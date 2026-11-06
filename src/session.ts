@@ -26,6 +26,9 @@ export type SessionOutcome = {
   durationMs: number
   logPath: string
   lastAssistantText: string | null
+  /** Dollar cost of the Session, per pi's own accounting (#16 cost caps). */
+  costUsd: number
+  tokens: number
 }
 
 /** Loop-level events the driver emits, including the ask_human tool's session.blocked. */
@@ -60,6 +63,7 @@ export type SessionLike = {
   dispose: () => void
   agent: { state: { errorMessage?: string } }
   getLastAssistantText: () => string | undefined
+  getSessionStats: () => { tokens: { total: number }; cost: number }
 }
 
 export type CreateSessionLike = (options: {
@@ -233,12 +237,15 @@ export async function runSession(
   }
 
   const errorMessage = session.agent.state.errorMessage
+  const stats = session.getSessionStats()
   let outcome: SessionOutcome
   const base = {
     turns,
     durationMs: Date.now() - startedAt,
     logPath: options.logPath,
     lastAssistantText: session.getLastAssistantText() ?? null,
+    costUsd: stats.cost,
+    tokens: stats.tokens.total,
   }
   if (abortReason !== null) {
     outcome = { ...base, terminal: 'failed', reason: abortReason }

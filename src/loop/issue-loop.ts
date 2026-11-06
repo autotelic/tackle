@@ -180,6 +180,7 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
       ),
     }
     let passSeq = history.length
+    let costSoFarUsd = history.reduce((sum, r) => sum + (r.costUsd ?? 0), 0)
 
     // ── Baseline Checks before spending budget (#13) ────────────────────
     const baseline = yield* checksWithPause({
@@ -220,6 +221,16 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
 
       const pass = ++passSeq
       const passNumber = ruleContext.passesUsed + 1
+      const costCap = config.budgets.maxCostPerIssueUsd
+      if (costCap !== undefined && costSoFarUsd >= costCap) {
+        yield* tryP(() => parkWithSummary('budget'))
+        return {
+          kind: 'parked',
+          issue: issue.number,
+          passesUsed: ruleContext.passesUsed,
+          reason: 'budget',
+        }
+      }
       deps.passesTonight.increment()
 
       // ── Session (seed rule 1: the fix prompt carries the check report) ──
@@ -252,6 +263,7 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
         }),
       )
       previousNote = outcome.lastAssistantText
+      costSoFarUsd += outcome.costUsd
       if (previousNote) {
         tried.push(`Pass ${passNumber}: ${outcome.terminal} — ${previousNote.slice(0, 300)}`)
       }
@@ -277,6 +289,7 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
             terminal: outcome.terminal,
             reason: outcome.reason,
             turns: outcome.turns,
+            costUsd: outcome.costUsd,
             sessionLogPath,
             checkpoint: sha,
             checks: null,
@@ -334,6 +347,7 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
           terminal: outcome.terminal,
           reason: outcome.reason,
           turns: outcome.turns,
+          costUsd: outcome.costUsd,
           sessionLogPath,
           checkpoint: reverted.length > 0 ? `${sha} (reverted ${reverted.join(', ')})` : sha,
           checks: {
@@ -488,6 +502,8 @@ async function revertProtected(worktreeDir: string, protectedPaths: string[]): P
 }
 
 async function checkpoint(worktreeDir: string, branch: string, message: string): Promise<string> {
+  // Guardrail (#16): the Loop only ever pushes loop/* branches.
+  if (!branch.startsWith('loop/')) throw new Error(`refusing to push non-loop branch: ${branch}`)
   await git(worktreeDir, 'add', '-A')
   const status = await git(worktreeDir, 'status', '--porcelain')
   if (status.length > 0) await git(worktreeDir, 'commit', '-m', message)
