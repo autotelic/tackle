@@ -1,0 +1,505 @@
+import { execFile } from 'node:child_process'
+import { appendFile, mkdir, readFile } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
+import { promisify } from 'node:util'
+import { Effect } from 'effect'
+import { runChecks } from '../checks.ts'
+import type { LoopConfig } from '../config.ts'
+import type { HumanChannel } from '../human-channel.ts'
+import { buildSessionPrompt } from '../prompt.ts'
+import { type Receipt, renderReceipt } from '../receipt.ts'
+import type { CheckReport, FailureSetEntry } from '../report.ts'
+import { runSession } from '../session.ts'
+import { isStalled, matchRule, type RuleContext } from './rules.ts'
+import {
+  comment,
+  gh,
+  git,
+  type Issue,
+  issueUrl,
+  listReadyIssues,
+  readReceiptHistory,
+  relabel,
+  workPresent,
+} from './tracker.ts'
+
+const execFileAsync = promisify(execFile)
+
+/**
+ * One issue's Pass loop as an Effect program (#15). The parent machine invokes
+ * this per issue; it owns budgets, stall detection, the rules table (#6), the
+ * Feature done guard, parking, and Pause/retry on infrastructure failures
+ * (#9). Re-entry after a restart recovers budgets and history from the
+ * issue's Receipts (#8). Escalation on park is the parent's job (it must
+ * outlive this program).
+ */
+
+export type IssueLoopResult =
+  | { kind: 'pr-ready'; issue: number; passesUsed: number }
+  | {
+      kind: 'parked'
+      issue: number
+      passesUsed: number
+      reason: 'budget' | 'stalled' | 'blocked' | 'no-rule'
+    }
+  | { kind: 'stopped-cap'; issue: number; passesUsed: number }
+
+export type IssueLoopDeps = {
+  repoDir: string
+  config: LoopConfig
+  issue: Issue
+  human: HumanChannel
+  /** Telegram notices to Ed (pause/resume, PR ready, baseline trouble). */
+  notify: (text: string) => Promise<void>
+  /** Loop-wide nightly Pass counter (#9). */
+  passesTonight: { increment: () => number; value: () => number }
+  /** Re-entering a working issue after a restart: the branch already exists. */
+  resume?: boolean
+  /** Injectable for tests. */
+  runSessionFn?: typeof runSession
+  runChecksFn?: typeof runChecks
+  sleepFn?: (ms: number) => Effect.Effect<void>
+}
+
+const INFRA_BACKOFF_MINUTES = [1, 5, 15]
+const PROBE_MINUTES = 15
+
+function qaPath(repoDir: string, issue: number): string {
+  return join(repoDir, '.treadle', 'qa', `issue-${issue}.jsonl`)
+}
+
+export async function appendQa(
+  repoDir: string,
+  issue: number,
+  entry: { question: string; answer?: string },
+): Promise<void> {
+  const path = qaPath(repoDir, issue)
+  await mkdir(dirname(path), { recursive: true })
+  await appendFile(path, `${JSON.stringify({ ...entry, at: new Date().toISOString() })}\n`)
+}
+
+async function readQa(
+  repoDir: string,
+  issue: number,
+): Promise<{ question: string; answer?: string }[]> {
+  try {
+    const text = await readFile(qaPath(repoDir, issue), 'utf8')
+    return text
+      .trim()
+      .split('\n')
+      .filter((l) => l.length > 0)
+      .map((l) => JSON.parse(l) as { question: string; answer?: string })
+  } catch {
+    return []
+  }
+}
+
+/** Retry Checks on infrastructure failure with backoff, then Pause and probe (#9). */
+function checksWithPause(args: {
+  run: () => Promise<CheckReport>
+  notify: (text: string) => Promise<void>
+  issue: number
+  sleepFn: (ms: number) => Effect.Effect<void>
+}): Effect.Effect<CheckReport, Error> {
+  const minute = 60_000
+  return Effect.gen(function* () {
+    let report = yield* Effect.tryPromise(() => args.run())
+    let attempt = 0
+    while (report.infrastructureFailure && attempt < INFRA_BACKOFF_MINUTES.length) {
+      const waitMinutes = INFRA_BACKOFF_MINUTES[attempt] as number
+      yield* Effect.tryPromise(() =>
+        args.notify(
+          `Infrastructure failure on issue #${args.issue} (${report.infrastructureFailure?.kind}). ` +
+            `Retrying in ${waitMinutes} min.`,
+        ),
+      )
+      yield* args.sleepFn(waitMinutes * minute)
+      report = yield* Effect.tryPromise(() => args.run())
+      attempt += 1
+    }
+    if (report.infrastructureFailure) {
+      yield* Effect.tryPromise(() =>
+        args.notify(
+          `Treadle PAUSED: ${report.infrastructureFailure?.detail}. ` +
+            `Probing every ${PROBE_MINUTES} min; no Passes until it recovers.`,
+        ),
+      )
+      while (report.infrastructureFailure) {
+        yield* args.sleepFn(PROBE_MINUTES * minute)
+        report = yield* Effect.tryPromise(() => args.run())
+      }
+      yield* Effect.tryPromise(() => args.notify('Treadle resumed: the harness is healthy again.'))
+    }
+    return report
+  })
+}
+
+export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult, Error> {
+  const { repoDir, config, issue, human, notify } = deps
+  const runChecksFn = deps.runChecksFn ?? runChecks
+  const runSessionFn = deps.runSessionFn ?? runSession
+  const sleepFn = deps.sleepFn ?? ((ms: number) => Effect.sleep(ms))
+  const budget = config.budgets.passesPerIssue
+  const nightlyCap = config.budgets.passesPerNight
+  const branch = `loop/${issue.number}`
+  const worktreeDir = join(repoDir, '.treadle', 'worktrees', String(issue.number))
+  const treadleDir = join(repoDir, '.treadle')
+
+  const tryP = <A>(f: () => Promise<A>) =>
+    Effect.tryPromise({ try: f, catch: (e) => (e instanceof Error ? e : new Error(String(e))) })
+
+  return Effect.gen(function* () {
+    // ── Claim and set up ────────────────────────────────────────────────
+    if (!deps.resume) {
+      yield* tryP(() => relabel(repoDir, issue.number, config.issues.ready, config.issues.working))
+    }
+    yield* tryP(() => git(repoDir, 'fetch', 'origin'))
+    const baseRef = yield* tryP(() => git(repoDir, 'rev-parse', '--verify', 'origin/main')).pipe(
+      Effect.orElseSucceed(() => 'main'),
+    )
+    if (deps.resume) {
+      yield* tryP(() => git(repoDir, 'worktree', 'add', worktreeDir, branch))
+    } else {
+      yield* tryP(() => git(repoDir, 'worktree', 'add', worktreeDir, '-b', branch, baseRef))
+    }
+    yield* tryP(() => installDeps(worktreeDir))
+    const vision = yield* tryP(() => readFile(join(worktreeDir, 'VISION.md'), 'utf8'))
+
+    // ── Budgets and history from Receipts (#8/#9) ───────────────────────
+    const history = yield* tryP(() => readReceiptHistory(repoDir, issue.number))
+    const counted = history.filter((r) => r.checks !== null && 'outcome' in r.checks)
+    const ruleContext: RuleContext = {
+      passesUsed: counted.length,
+      budget,
+      frontierHistory: counted.map((r) => (r.checks as { frontier: number }).frontier),
+      failureSets: counted.map((r) =>
+        (r.checks as { failureSet: FailureSetEntry[] }).failureSet.map(
+          (e) => `${e.check}${e.test ? ` › ${e.test}` : ''}`,
+        ),
+      ),
+    }
+    let passSeq = history.length
+
+    // ── Baseline Checks before spending budget (#13) ────────────────────
+    const baseline = yield* checksWithPause({
+      run: () =>
+        runChecksFn(config, {
+          repoDir: worktreeDir,
+          outDir: join(treadleDir, `checks-issue-${issue.number}-baseline-${stamp()}`),
+          issue: issue.number,
+          pass: 0,
+        }),
+      notify,
+      issue: issue.number,
+      sleepFn,
+    })
+    if (baseline.outcome !== 'checks.passed') {
+      yield* tryP(() =>
+        notify(
+          `Baseline checks failed on a fresh branch for #${issue.number} — the harness or base ` +
+            'branch is broken, not the issue. Back to ready without spending budget.',
+        ),
+      )
+      yield* tryP(() => git(repoDir, 'worktree', 'remove', worktreeDir, '--force'))
+      yield* tryP(() => relabel(repoDir, issue.number, config.issues.working, config.issues.ready))
+      return { kind: 'parked', issue: issue.number, passesUsed: 0, reason: 'no-rule' }
+    }
+
+    // ── The Pass loop ───────────────────────────────────────────────────
+    let previousNote: string | null = null
+    let lastReport: CheckReport | null = null
+    let lastReportDir: string | null = null
+    const tried: string[] = []
+
+    for (;;) {
+      if (deps.passesTonight.value() >= nightlyCap) {
+        yield* tryP(() => notify(`Nightly cap of ${nightlyCap} Passes reached. Treadle stopping.`))
+        return { kind: 'stopped-cap', issue: issue.number, passesUsed: ruleContext.passesUsed }
+      }
+
+      const pass = ++passSeq
+      const passNumber = ruleContext.passesUsed + 1
+      deps.passesTonight.increment()
+
+      // ── Session (seed rule 1: the fix prompt carries the check report) ──
+      const prompt = buildSessionPrompt({
+        vision,
+        issue,
+        progressNote: yield* tryP(() => readProgressNote(worktreeDir)),
+        lastReport,
+        lastReportDir,
+        previousSessionNote: previousNote,
+        pass: passNumber,
+        budget,
+        protectedPaths: config.protectedPaths,
+        qa: yield* tryP(() => readQa(repoDir, issue.number)),
+      })
+      const sessionLogPath = join(
+        treadleDir,
+        'sessions',
+        `issue-${issue.number}-pass-${pass}-${stamp()}.jsonl`,
+      )
+      const outcome = yield* tryP(() =>
+        runSessionFn({
+          cwd: worktreeDir,
+          prompt,
+          maxTurns: config.budgets.maxTurnsPerSession,
+          timeoutMs: config.budgets.sessionTimeoutMinutes * 60_000,
+          askHumanTimeoutMs: config.budgets.askHumanTimeoutMinutes * 60_000,
+          askHuman: human.askHuman,
+          logPath: sessionLogPath,
+        }),
+      )
+      previousNote = outcome.lastAssistantText
+      if (previousNote) {
+        tried.push(`Pass ${passNumber}: ${outcome.terminal} — ${previousNote.slice(0, 300)}`)
+      }
+
+      const reverted = yield* tryP(() => revertProtected(worktreeDir, config.protectedPaths))
+      const sha = yield* tryP(() =>
+        checkpoint(
+          worktreeDir,
+          branch,
+          `treadle: pass ${passNumber} checkpoint for #${issue.number} (${outcome.terminal})`,
+        ),
+      )
+
+      // ── Blocked-on-human: park; the answer watcher resumes (#8/#9) ────
+      if (outcome.terminal === 'blocked-on-human') {
+        const question = outcome.reason ?? '(no question recorded)'
+        yield* tryP(() => appendQa(repoDir, issue.number, { question }))
+        yield* tryP(() =>
+          postReceipt({
+            issue: issue.number,
+            pass,
+            budget,
+            terminal: outcome.terminal,
+            reason: outcome.reason,
+            turns: outcome.turns,
+            sessionLogPath,
+            checkpoint: sha,
+            checks: null,
+          }),
+        )
+        yield* tryP(() =>
+          comment(
+            repoDir,
+            issue.number,
+            `**Question from the Session:**\n\n${question}\n\n` +
+              'Answer with /treadle whenever you like — the question stays open, and the Loop ' +
+              'picks the issue back up when your answer lands.',
+          ),
+        )
+        yield* tryP(() => notify(`Treadle needs you on issue #${issue.number}: ${question}`))
+        yield* tryP(() =>
+          relabel(repoDir, issue.number, config.issues.working, config.issues.parked),
+        )
+        yield* tryP(() => git(repoDir, 'worktree', 'remove', worktreeDir, '--force'))
+        return {
+          kind: 'parked',
+          issue: issue.number,
+          passesUsed: ruleContext.passesUsed,
+          reason: 'blocked',
+        }
+      }
+
+      // ── Checks, with #9's Pause semantics ─────────────────────────────
+      const reportDir = join(treadleDir, `checks-issue-${issue.number}-pass-${pass}-${stamp()}`)
+      lastReportDir = reportDir
+      const report = yield* checksWithPause({
+        run: () =>
+          runChecksFn(config, {
+            repoDir: worktreeDir,
+            outDir: reportDir,
+            issue: issue.number,
+            pass,
+          }),
+        notify,
+        issue: issue.number,
+        sleepFn,
+      })
+      lastReport = report
+      ruleContext.passesUsed += 1
+      ruleContext.frontierHistory.push(report.frontier)
+      ruleContext.failureSets.push(
+        report.failureSet.map((e) => `${e.check}${e.test ? ` › ${e.test}` : ''}`),
+      )
+
+      yield* tryP(() =>
+        postReceipt({
+          issue: issue.number,
+          pass,
+          budget,
+          terminal: outcome.terminal,
+          reason: outcome.reason,
+          turns: outcome.turns,
+          sessionLogPath,
+          checkpoint: reverted.length > 0 ? `${sha} (reverted ${reverted.join(', ')})` : sha,
+          checks: {
+            outcome: report.outcome as 'checks.passed' | 'checks.failed',
+            frontier: report.frontier,
+            failureSet: report.failureSet,
+            reportDir,
+          },
+        }),
+      )
+
+      // ── Feature done (#9: checks.passed ∧ work present) ───────────────
+      if (report.outcome === 'checks.passed') {
+        const unitStep = config.checks.find((c) => c.report?.format === 'vitest-json')
+        const present = yield* tryP(() =>
+          workPresent({
+            repoDir,
+            worktreeDir,
+            baseRef,
+            changedPaths: config.featureDone.changedPaths,
+            requireNewTests: config.featureDone.requireNewTests,
+            unitReportPath: unitStep?.report?.path ?? '.treadle/reports/unit.json',
+          }),
+        )
+        if (present.present) {
+          yield* tryP(() => openPrIfNeeded())
+          const rule = matchRule(config.rules ?? [], 'feature.done', 'feature-check', ruleContext)
+          if (rule?.action.type === 'effect' && rule.action.effect === 'mark-ready-and-notify') {
+            yield* tryP(() => gh(repoDir, 'pr', 'ready', branch))
+            const url = (yield* tryP(() => issueUrl(repoDir, issue.number))) ?? `#${issue.number}`
+            yield* tryP(() =>
+              notify(
+                `PR ready for review: #${issue.number} "${issue.title}" (${present.detail}). ${url}`,
+              ),
+            )
+          } else {
+            yield* tryP(() =>
+              notify(
+                `Draft PR open for #${issue.number} "${issue.title}" (${present.detail}); ` +
+                  'no feature.done rule matched, leaving it a draft.',
+              ),
+            )
+          }
+          yield* tryP(() => git(repoDir, 'worktree', 'remove', worktreeDir, '--force'))
+          return { kind: 'pr-ready', issue: issue.number, passesUsed: ruleContext.passesUsed }
+        }
+        // Green checks with no work: the Pass counts as failed (#9).
+        previousNote =
+          `The Checks passed but the branch shows no work present (${present.detail}). ` +
+          'That Pass counted as failed. Implement the acceptance criteria for real, with the ' +
+          'tests the Vision demands.'
+        lastReport = null
+        lastReportDir = null
+        continue
+      }
+
+      // ── checks.failed: stalled, or the rules table decides (#6) ───────
+      if (isStalled(ruleContext)) {
+        yield* tryP(() => parkWithSummary('stalled'))
+        return {
+          kind: 'parked',
+          issue: issue.number,
+          passesUsed: ruleContext.passesUsed,
+          reason: 'stalled',
+        }
+      }
+      const fixRule = matchRule(config.rules ?? [], 'checks.failed', 'evaluating', ruleContext)
+      if (fixRule?.action.type === 'session' && fixRule.action.session === 'fix-checks') {
+        continue // seed rule 1: another Session with the check report
+      }
+      yield* tryP(() => parkWithSummary(ruleContext.passesUsed >= budget ? 'budget' : 'no-rule'))
+      return {
+        kind: 'parked',
+        issue: issue.number,
+        passesUsed: ruleContext.passesUsed,
+        reason: ruleContext.passesUsed >= budget ? 'budget' : 'no-rule',
+      }
+    }
+
+    // ── Helpers ─────────────────────────────────────────────────────────
+    async function postReceipt(receipt: Receipt): Promise<void> {
+      await comment(repoDir, issue.number, renderReceipt(receipt))
+    }
+
+    async function parkWithSummary(reason: 'budget' | 'stalled' | 'no-rule'): Promise<void> {
+      const why =
+        reason === 'budget'
+          ? `budget of ${budget} Passes used`
+          : reason === 'stalled'
+            ? 'stalled: the Failure set stopped shrinking'
+            : 'no rule matched checks.failed'
+      const summary =
+        `**Parked (${why}).**\n\n` +
+        (tried.length > 0
+          ? `What the Sessions tried:\n${tried.map((t) => `- ${t}`).join('\n')}\n\n`
+          : '') +
+        'The last Failure set is in the latest Receipt above.'
+      await comment(repoDir, issue.number, summary)
+      await relabel(repoDir, issue.number, config.issues.working, config.issues.parked)
+      await git(repoDir, 'worktree', 'remove', worktreeDir, '--force')
+    }
+
+    async function openPrIfNeeded(): Promise<void> {
+      const existing = await gh(repoDir, 'pr', 'list', '--head', branch, '--json', 'number')
+      if ((JSON.parse(existing) as unknown[]).length > 0) return
+      await gh(
+        repoDir,
+        'pr',
+        'create',
+        '--draft',
+        '--base',
+        'main',
+        '--head',
+        branch,
+        '--title',
+        `${issue.title} (#${issue.number})`,
+        '--body',
+        `Closes #${issue.number}\n\nBuilt by Treadle. Receipts (one per pass) are in the issue comments.`,
+      )
+    }
+  })
+}
+
+async function installDeps(worktreeDir: string): Promise<void> {
+  await execFileAsync('zsh', ['-lic', 'pnpm install --frozen-lockfile'], { cwd: worktreeDir })
+}
+
+function stamp(): string {
+  return new Date().toISOString().replaceAll(/[:.]/g, '-')
+}
+
+async function readProgressNote(worktreeDir: string): Promise<string | null> {
+  try {
+    return await readFile(join(worktreeDir, 'PROGRESS.md'), 'utf8')
+  } catch {
+    return null
+  }
+}
+
+async function revertProtected(worktreeDir: string, protectedPaths: string[]): Promise<string[]> {
+  if (protectedPaths.length === 0) return []
+  const status = await git(worktreeDir, 'status', '--porcelain', '--', ...protectedPaths)
+  const touched = status
+    .split('\n')
+    .filter((line) => line.length > 0)
+    .map((line) => line.slice(3))
+  if (touched.length === 0) return []
+  await git(worktreeDir, 'checkout', '--', ...touched)
+  return touched
+}
+
+async function checkpoint(worktreeDir: string, branch: string, message: string): Promise<string> {
+  await git(worktreeDir, 'add', '-A')
+  const status = await git(worktreeDir, 'status', '--porcelain')
+  if (status.length > 0) await git(worktreeDir, 'commit', '-m', message)
+  const sha = await git(worktreeDir, 'rev-parse', 'HEAD')
+  await git(worktreeDir, 'push', '-u', 'origin', branch)
+  return sha
+}
+
+/** Which issues are ready right now, answered-first (#9). */
+export async function pickNextIssue(
+  repoDir: string,
+  config: LoopConfig,
+  answeredFirst: (issue: number) => boolean,
+): Promise<Issue | null> {
+  const ready = await listReadyIssues(repoDir, config.issues.ready)
+  if (ready.length === 0) return null
+  return ready.find((issue) => answeredFirst(issue.number)) ?? (ready[0] as Issue)
+}

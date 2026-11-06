@@ -17,6 +17,8 @@ export type SessionPromptInput = {
   lastReportDir: string | null
   /** What the previous Session's last message said, trimmed. */
   previousSessionNote: string | null
+  /** Earlier questions to the human and their answers (#8). */
+  qa?: { question: string; answer?: string }[]
   pass: number
   budget: number
   protectedPaths: string[]
@@ -86,6 +88,18 @@ export function buildSessionPrompt(input: SessionPromptInput): string {
     )
   }
   sections.push(`# Where this Pass starts\n\n${reportLines.join('\n\n')}`)
+
+  if (input.qa && input.qa.length > 0) {
+    const qaLines = input.qa.map((pair) =>
+      pair.answer !== undefined
+        ? `- Q: ${pair.question}\n  A: ${pair.answer}`
+        : `- Q: ${pair.question}\n  (still unanswered)`,
+    )
+    sections.push(
+      `# Questions and answers so far\n\n${qaLines.join('\n')}\n\n` +
+        "Treat the latest answer as the human's current judgement; earlier ones may be stale.",
+    )
+  }
 
   const protectedList = input.protectedPaths.map((p) => `\`${p}\``).join(', ')
   sections.push(

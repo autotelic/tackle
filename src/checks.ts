@@ -129,7 +129,7 @@ async function isPortBusy(port: number, host: string): Promise<boolean> {
  * #8: before starting the app, kill a leftover from a previous run (recorded PID
  * file), then refuse to run the Checks if the port is still busy.
  */
-async function clearLeftoverApp(pidPath: string): Promise<void> {
+export async function clearLeftoverApp(pidPath: string): Promise<void> {
   let pid: number
   try {
     pid = Number.parseInt((await readFile(pidPath, 'utf8')).trim(), 10)

@@ -1,4 +1,5 @@
 import { pathToFileURL } from 'node:url'
+import type { Rule } from './loop/rules.ts'
 
 /** The pinned shape of a target repo's loop.config.ts (autotelic/project-loop#11). */
 
@@ -57,6 +58,8 @@ export type LoopConfig = {
   protectedPaths: string[]
   featureDone: FeatureDoneGuard
   budgets: Budgets
+  /** User rules (#6, #15): (event, state, guard?) → action, declaration order. */
+  rules?: Rule[]
 }
 
 function fail(configPath: string, what: string): never {
@@ -149,6 +152,35 @@ export function assertLoopConfig(
   if (typeof c.budgets !== 'object' || c.budgets === null) fail(configPath, 'budgets is required')
   for (const [key, value] of Object.entries(c.budgets as Record<string, unknown>))
     assertNumber(value, `budgets.${key}`, configPath)
+
+  if (c.rules !== undefined) {
+    if (!Array.isArray(c.rules)) fail(configPath, 'rules must be an array')
+    const events = new Set(['checks.failed', 'checks.passed', 'feature.done', 'session.blocked'])
+    const guards = new Set(['budget-left', 'not-stalled'])
+    for (const [i, rule] of c.rules.entries()) {
+      if (typeof rule !== 'object' || rule === null)
+        fail(configPath, `rules[${i}] must be an object`)
+      const r = rule as Record<string, unknown>
+      assertString(r.name, `rules[${i}].name`, configPath)
+      if (!events.has(r.on as string))
+        fail(configPath, `rules[${i}].on must be one of ${[...events].join(', ')}`)
+      if (r.in !== undefined) assertString(r.in, `rules[${i}].in`, configPath)
+      if (r.guard !== undefined && !guards.has(r.guard as string))
+        fail(configPath, `rules[${i}].guard must be one of ${[...guards].join(', ')}`)
+      if (typeof r.action !== 'object' || r.action === null)
+        fail(configPath, `rules[${i}].action is required`)
+      const a = r.action as Record<string, unknown>
+      if (a.type === 'session') {
+        if (a.session !== 'fix-checks' && a.session !== 'review')
+          fail(configPath, `rules[${i}].action.session must be fix-checks or review`)
+      } else if (a.type === 'effect') {
+        if (a.effect !== 'mark-ready-and-notify')
+          fail(configPath, `rules[${i}].action.effect must be mark-ready-and-notify`)
+      } else {
+        fail(configPath, `rules[${i}].action.type must be session or effect`)
+      }
+    }
+  }
 }
 
 /** Load and validate a loop.config.ts. Accepts an absolute path or one relative to the cwd. */

@@ -1,0 +1,153 @@
+import { execFile } from 'node:child_process'
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
+import { promisify } from 'node:util'
+import { parseReceipt, type Receipt } from '../receipt.ts'
+
+const execFileAsync = promisify(execFile)
+
+/** GitHub/git operations for the Loop — the state store (#8). */
+
+export async function git(cwd: string, ...args: string[]): Promise<string> {
+  const { stdout } = await execFileAsync('git', args, { cwd })
+  return stdout.trim()
+}
+
+export async function gh(cwd: string, ...args: string[]): Promise<string> {
+  const { stdout } = await execFileAsync('gh', args, { cwd })
+  return stdout.trim()
+}
+
+export async function ghJson<T>(cwd: string, ...args: string[]): Promise<T> {
+  return JSON.parse(await gh(cwd, ...args)) as T
+}
+
+export type Issue = { number: number; title: string; body: string }
+
+/** The queue: open ready issues, lowest number first. */
+export async function listReadyIssues(repoDir: string, readyLabel: string): Promise<Issue[]> {
+  const issues = await ghJson<Issue[]>(
+    repoDir,
+    'issue',
+    'list',
+    '--state',
+    'open',
+    '--label',
+    readyLabel,
+    '--json',
+    'number,title,body',
+    '--limit',
+    '50',
+  )
+  return issues.sort((a, b) => a.number - b.number)
+}
+
+export async function listWorkingIssues(repoDir: string, workingLabel: string): Promise<Issue[]> {
+  return ghJson<Issue[]>(
+    repoDir,
+    'issue',
+    'list',
+    '--state',
+    'open',
+    '--label',
+    workingLabel,
+    '--json',
+    'number,title,body',
+    '--limit',
+    '50',
+  )
+}
+
+export async function relabel(
+  repoDir: string,
+  issue: number,
+  remove: string,
+  add: string,
+): Promise<void> {
+  await gh(repoDir, 'issue', 'edit', String(issue), '--remove-label', remove, '--add-label', add)
+}
+
+export async function comment(repoDir: string, issue: number, body: string): Promise<void> {
+  await gh(repoDir, 'issue', 'comment', String(issue), '--body', body)
+}
+
+export async function issueUrl(repoDir: string, issue: number): Promise<string | null> {
+  const nwo = await gh(
+    repoDir,
+    'repo',
+    'view',
+    '--json',
+    'nameWithOwner',
+    '--jq',
+    '.nameWithOwner',
+  ).then(
+    (s) => s.trim(),
+    () => null,
+  )
+  return nwo ? `https://github.com/${nwo}/issues/${issue}` : null
+}
+
+/**
+ * Receipts from an issue's comments (#8): how budgets and stall history are
+ * recovered after a restart.
+ */
+export async function readReceiptHistory(repoDir: string, issue: number): Promise<Receipt[]> {
+  const comments = await ghJson<{ body: string }[]>(
+    repoDir,
+    'issue',
+    'view',
+    String(issue),
+    '--json',
+    'comments',
+  )
+  const receipts: Receipt[] = []
+  for (const { body } of comments) {
+    const receipt = parseReceipt(body)
+    if (receipt) receipts.push(receipt)
+  }
+  return receipts.sort((a, b) => a.pass - b.pass)
+}
+
+/**
+ * Work present (#9's Feature done guard): the branch changes code in
+ * featureDone.changedPaths and (when requireNewTests) the unit test report
+ * counts more tests than the base branch's.
+ */
+export async function workPresent(options: {
+  repoDir: string
+  worktreeDir: string
+  baseRef: string
+  changedPaths: string[]
+  requireNewTests: boolean
+  unitReportPath: string
+}): Promise<{ present: boolean; detail: string }> {
+  const diff = await git(
+    options.worktreeDir,
+    'diff',
+    '--name-only',
+    `${options.baseRef}...HEAD`,
+    '--',
+    ...options.changedPaths,
+  )
+  if (diff.length === 0) {
+    return { present: false, detail: `no changes in ${options.changedPaths.join(', ')}` }
+  }
+  if (!options.requireNewTests) return { present: true, detail: 'code changes present' }
+
+  const current = await countTests(join(options.worktreeDir, options.unitReportPath))
+  const base = await countTests(join(options.repoDir, options.unitReportPath))
+  if (current === null) return { present: false, detail: 'no unit test report on the branch' }
+  if (base !== null && current <= base) {
+    return { present: false, detail: `test count did not grow (${base} → ${current})` }
+  }
+  return { present: true, detail: `code changes + tests grew (${base ?? '?'} → ${current})` }
+}
+
+async function countTests(reportPath: string): Promise<number | null> {
+  try {
+    const report = JSON.parse(await readFile(reportPath, 'utf8')) as { numTotalTests?: number }
+    return typeof report.numTotalTests === 'number' ? report.numTotalTests : null
+  } catch {
+    return null
+  }
+}
