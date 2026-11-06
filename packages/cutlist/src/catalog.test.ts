@@ -1,13 +1,20 @@
 import fc from "fast-check"
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { NodeServices } from "@effect/platform-node"
+import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import type { CatalogComponent, PartRole } from "@autotelic/protocol"
 import {
+  buildCatalog,
   duplicateCandidates,
   duplicateClusters,
   healthOf,
   idOfModule,
   importerGraph,
 } from "./catalog.ts"
+import { defaultConfig } from "./config.ts"
 import { parseModule, type SourceModule } from "./crawl.ts"
 import { ownerOf } from "./owners.ts"
 import { skeletonOf } from "./signature.ts"
@@ -33,6 +40,46 @@ export function Combobox({ items, label }: { items: string[]; label: string }) {
   )
 }
 `
+
+describe("buildCatalog", () => {
+  const tree = (dir: string): void => {
+    mkdirSync(join(dir, "app/components/ui"), { recursive: true })
+    mkdirSync(join(dir, "app/routes"), { recursive: true })
+    writeFileSync(
+      join(dir, "app/components/ui/Button.tsx"),
+      "export function Button() { return <button /> }\n",
+    )
+    writeFileSync(
+      join(dir, "app/routes/home.tsx"),
+      'import { Button } from "../components/ui/Button"\nexport default function Home() { return <Button /> }\n',
+    )
+  }
+
+  const build = (dir: string) =>
+    Effect.runPromise(buildCatalog(dir, defaultConfig).pipe(Effect.provide(NodeServices.layer)))
+
+  it("writes a repo-relative catalog, identical from any checkout", async () => {
+    // The property a --check gate promises: the artifact is a function of the tree, not of
+    // where the tree happens to sit. It used to embed the absolute build path, so two clones
+    // produced two hashes and only the build machine could pass the gate.
+    const left = mkdtempSync(join(tmpdir(), "cutlist-left-"))
+    const right = mkdtempSync(join(tmpdir(), "cutlist-right-"))
+    try {
+      tree(left)
+      tree(right)
+      const fromLeft = await build(left)
+      const fromRight = await build(right)
+      expect(fromLeft.root).toBe(".")
+      expect(fromLeft.hash).toBe(fromRight.hash)
+      expect(fromLeft.components.map((component) => component.path)).toEqual(
+        fromRight.components.map((component) => component.path),
+      )
+    } finally {
+      rmSync(left, { recursive: true, force: true })
+      rmSync(right, { recursive: true, force: true })
+    }
+  })
+})
 
 describe("parseModule", () => {
   const module = parseModule({ filename: "app/components/Combobox.tsx", text: COMBOBOX })
