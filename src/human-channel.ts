@@ -21,6 +21,7 @@ export type HumanChannel = {
 export async function createHumanChannel(
   kind: 'terminal' | 'telepi' | undefined,
   context?: () => QuestionContext,
+  extras?: { liveIds?: Set<string> },
 ): Promise<HumanChannel> {
   const resolved = kind ?? ((await telePiConfigExists()) ? 'telepi' : 'terminal')
   if (resolved === 'telepi') {
@@ -30,6 +31,7 @@ export async function createHumanChannel(
       questionsDir: join(homedir(), '.treadle', 'questions'),
       answersDir: join(homedir(), '.treadle', 'answers'),
       ...(context ? { context } : {}),
+      ...(extras?.liveIds ? { liveIds: extras.liveIds } : {}),
     })
     return { ...channel, close: () => {} }
   }

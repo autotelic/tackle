@@ -61,7 +61,10 @@ if (startup.kind === 're-enter') {
 }
 
 // ── Human channel, notifications, the answer watcher ────────────────────
-const human: HumanChannel = await createHumanChannel(args.channel)
+const liveQuestionIds = new Set<string>()
+const human: HumanChannel = await createHumanChannel(args.channel, undefined, {
+  liveIds: liveQuestionIds,
+})
 const notify = async (text: string) => {
   console.log(`[notify] ${text}`)
   try {
@@ -81,6 +84,7 @@ const postAndRelabel = createIssueAnswerHandler({ repoDir, config })
 const watcher = watchAnswers({
   questionsDir,
   answersDir,
+  isLive: (id) => liveQuestionIds.has(id),
   onAnswer: async ({ question, answer }) => {
     await postAndRelabel({ question, answer })
     if (question.issue !== undefined) {

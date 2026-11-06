@@ -111,6 +111,11 @@ export type TelePiChannelOptions = {
   pollMs?: number
   /** Context carried by each question/message; evaluated per question. */
   context?: () => QuestionContext
+  /**
+   * Shared registry of ids a live ask is waiting on. The Loop's answer
+   * watcher skips these, so a live Session's answer is never eaten (#14).
+   */
+  liveIds?: Set<string>
   /** Injectable for tests; defaults to the real Bot API call. */
   send?: (text: string) => Promise<void>
 }
@@ -138,31 +143,37 @@ export function createTelePiHumanChannel(options: TelePiChannelOptions): TelePiH
     }
     const questionPath = join(options.questionsDir, `${id}.json`)
     await writeFile(questionPath, JSON.stringify(file, null, 2))
+    options.liveIds?.add(id)
     try {
       await send(formatQuestionMessage(file))
     } catch (error) {
+      options.liveIds?.delete(id)
       await rm(questionPath, { force: true })
       throw new Error(`failed to deliver question to Telegram: ${String(error)}`)
     }
 
     const answerPath = join(options.answersDir, `${id}.json`)
-    for (;;) {
-      // A cancelled wait (the Session's ask_human timed out or was aborted)
-      // stops polling but LEAVES the question file: the question stays
-      // answerable via /treadle, and the Loop's answer watcher picks the
-      // late answer up and resumes the issue (#8/#9 park-and-resume).
-      if (signal?.aborted) throw new Error('wait cancelled')
-      try {
-        const answer = JSON.parse(await readFile(answerPath, 'utf8')) as AnswerFile
-        if (answer.id === id && typeof answer.answer === 'string') {
-          await rm(answerPath, { force: true })
-          await rm(questionPath, { force: true })
-          return answer.answer
+    try {
+      for (;;) {
+        // A cancelled wait (the Session's ask_human timed out or was aborted)
+        // stops polling but LEAVES the question file: the question stays
+        // answerable via /treadle, and the Loop's answer watcher picks the
+        // late answer up and resumes the issue (#8/#9 park-and-resume).
+        if (signal?.aborted) throw new Error('wait cancelled')
+        try {
+          const answer = JSON.parse(await readFile(answerPath, 'utf8')) as AnswerFile
+          if (answer.id === id && typeof answer.answer === 'string') {
+            await rm(answerPath, { force: true })
+            await rm(questionPath, { force: true })
+            return answer.answer
+          }
+        } catch {
+          // Not there yet, or partially written; look again in a moment.
         }
-      } catch {
-        // Not there yet, or partially written; look again in a moment.
+        await new Promise((resolve) => setTimeout(resolve, pollMs))
       }
-      await new Promise((resolve) => setTimeout(resolve, pollMs))
+    } finally {
+      options.liveIds?.delete(id)
     }
   }
 
