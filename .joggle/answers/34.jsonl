@@ -19,6 +19,7 @@
 343c97c327a819d6	1792617317	{"confidence":0.62,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.12,"common_idiom":0.75,"shared_helper":0.13}}
 3446449afc89f055	1792269251	{"confidence":0.28,"kind":"Classify","label":"not_a_derivation","probabilities":{"legitimate_local":0.47,"not_a_derivation":0.52,"reimplements":0.01}}
 344924f5f62bbb59	1793942973	{"consistency":1,"kind":"Probability","probability":0.6244444444444445}
+345a3b4446605f66	1793981704	{"confidence":0.12,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.44,"member_1":0.56}}
 345c05ccab1fda8d	1793943081	{"confidence":0.13,"kind":"Classify","label":"value","probabilities":{"meaning":0.21,"unclear":0.37,"value":0.42}}
 345da15f167e76b3	1793942975	{"confidence":0.82,"kind":"Classify","label":"not_a_record","probabilities":{"mutable":0.1,"not_a_record":0.88,"supersede_only":0.02}}
 345e630e21ffcd97	1793942975	{"consistency":1,"kind":"Probability","probability":0.7133333333333334}

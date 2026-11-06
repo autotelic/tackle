@@ -47,3 +47,4 @@
 9ad9974ff37755ee	1792618754	{"confidence":0.9,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.95,"member_1":0.05}}
 9ae56e8f98284c0c	1793942974	{"confidence":0.92,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.03,"inferred":0.02,"not_applicable":0.95}}
 9ae5fce96a72a45b	1792535007	{"confidence":0.29,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.47,"component_or_feature":0.2,"not_applicable":0.31,"route_or_handler":0.02}}
+9af0cef8e9de86c0	1793981703	{"confidence":0.77,"kind":"Classify","label":"composes","probabilities":{"already_composed":0.01,"composes":0.83,"independent":0.16,"same_name_drift":0}}

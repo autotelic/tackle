@@ -36,3 +36,4 @@
 38c0ed0f5ef0703b	1792617317	{"confidence":0.88,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.08,"independent":0.92,"meaning_switched":0}}
 38c3123ed0e17076	1793942972	{"confidence":0.68,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.79,"unclear":0.01,"value":0.2}}
 38cf3e106d0817e4	1792619412	{"confidence":0.69,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.79,"not_a_derivation":0.04,"reimplements":0.17}}
+38fbf972885f701b	1793981703	{"confidence":0.64,"kind":"Classify","label":"compatible","probabilities":{"compatible":0.76,"drift":0.14,"two_concepts":0.1}}

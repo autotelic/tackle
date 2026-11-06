@@ -3,7 +3,7 @@ import { Decision } from "effect/ai"
 import { Atoms } from "../atoms.ts"
 import { policy } from "../policy.ts"
 import { verdictsOf, type Plan } from "../plans.ts"
-import { locator, messages, reporter, type Report } from "../reporting.ts"
+import { locator, messages, reporter, type Reporter } from "../reporting.ts"
 import { verdictOf } from "../verdict.ts"
 import {
   budgetNote,
@@ -121,7 +121,7 @@ const replacementLabel = (names: ReadonlyArray<string>): string =>
  * that picks one repair cannot make the rule print the other.
  */
 const findingsFor = (
-  report: Report,
+  report: Reporter,
   candidate: Deprecation,
   mode: "migrate" | "fix_tag" | "unjudged",
   provenance: { readonly judged: boolean; readonly review: boolean },

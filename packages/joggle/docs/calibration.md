@@ -338,3 +338,14 @@ What the rows say:
   not a quiet rule.
 - **`field-type-drift` is decisive and silent** (0 of 14 acted). Resolved member
   types did not create findings; they removed false ones.
+
+**The report's own first pass changed it.** Running it and fixing what it found
+brought the next run from 80 problems to 59: same-site findings are folded (6 in
+the second run), `typed` now means "writes a type" so the shape-only caveat
+stopped lying about annotated one-liners (12 of 12 clusters before, 4 of 10
+after), and the collapses it named in joggle were made real (`Move`/`Stage`,
+`Report`/`Reporter`, `Span`/`Region`, `short`, `Declaration`,
+`Candidate`, `IgnoreRule`, `Skipped`, `loadedFrom`). Two remain and are
+honest: `Diagnostic`/`MutableDiagnostic` is a deliberate mutable view, and
+`CachedFacts`/`CachedIndex` still blur because a const's referenced local name
+is erased before the shape comparison.

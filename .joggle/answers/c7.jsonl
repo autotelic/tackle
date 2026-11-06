@@ -18,6 +18,7 @@ c74f8660ebb5ecfa	1793942971	{"confidence":0.77,"kind":"Classify","label":"semant
 c74f93328d214f26	1792684421	{"confidence":0.59,"kind":"Classify","label":"drift","probabilities":{"compatible":0.22,"drift":0.73,"two_concepts":0.05}}
 c75064feabd22d94	1792252958	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0}}
 c750f4663bc76d5f	1793942975	{"confidence":0.37,"kind":"Classify","label":"state","probabilities":{"deviation":0.01,"neither":0.41,"state":0.58}}
+c759af2b788e246f	1793981703	{"confidence":0.93,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0,"wrong_behavior":0.05,"wrong_contract":0}}
 c75ac032a1ea88ac	1792252958	{"confidence":0.1,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.55,"member_1":0.45}}
 c77152141ef38d3c	1792252958	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0.01}}
 c77728af4a4633a5	1793942973	{"confidence":0.3,"kind":"Classify","label":"no_issue","probabilities":{"move":0.35,"no_issue":0.65}}

@@ -49,7 +49,7 @@ const methodOf = (resolved: string): string => {
   return dot === -1 ? name : name.slice(dot + 1)
 }
 
-interface Candidate {
+interface PairCandidate {
   readonly unit: Unit
   readonly present: string
   readonly missing: string
@@ -78,8 +78,8 @@ const temporalReview = (id: string) => ({
   }),
 })
 
-const candidatesIn = (workspace: Workspace, scope: Scope): ReadonlyArray<Candidate> => {
-  const found: Array<Candidate> = []
+const candidatesIn = (workspace: Workspace, scope: Scope): ReadonlyArray<PairCandidate> => {
+  const found: Array<PairCandidate> = []
   for (const file of workspace.files) {
     if (scope.changed !== undefined && !scope.changed.has(file.path)) continue
     for (const unit of file.units) {
@@ -116,10 +116,10 @@ export const temporalCoupling: PlannedRule = {
     }
     const budget = policy.temporalCoupling.maxDeclarations
     const judged = candidates.slice(0, budget)
-    const label = (candidate: Candidate): string =>
+    const label = (candidate: PairCandidate): string =>
       candidate.unit.name + " (" + candidate.unit.file + ")"
     const atoms = yield* Atoms
-    const planned: Array<{ readonly candidate: Candidate; readonly plan: Plan<DecisionAnswers> }> = []
+    const planned: Array<{ readonly candidate: PairCandidate; readonly plan: Plan<DecisionAnswers> }> = []
     for (const candidate of judged) {
       const id = yield* atoms.add({
         declaration: {

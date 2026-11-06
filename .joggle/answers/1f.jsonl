@@ -1,6 +1,7 @@
 1f00acb89408faa9	1792543161	{"confidence":0.35,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.09,"merge":0.48,"move":0.38,"share_a_contract":0.02,"split":0.03}}
 1f10d65735a757d3	1793942975	{"confidence":0.83,"kind":"Classify","label":"not_a_record","probabilities":{"mutable":0.09,"not_a_record":0.89,"supersede_only":0.02}}
 1f13d0bf5be6c721	1792621702	{"confidence":0.77,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.16,"framework_glue":0,"implementation_detail":0.83,"wire_contract":0.01}}
+1f17f8fb16d5b96e	1793981569	{"confidence":0.76,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.84,"not_a_derivation":0.14,"reimplements":0.02}}
 1f217ef555eb90b3	1792542865	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0.01}}
 1f28942cffca1c5c	1792621702	{"confidence":0.24,"kind":"Classify","label":"move","probabilities":{"leave_it":0.1,"merge":0.32,"move":0.39,"share_a_contract":0.18,"split":0.01}}
 1f2a229ab622c433	1793942975	{"consistency":1,"kind":"Probability","probability":0.5866666666666668}
@@ -29,6 +30,7 @@
 1f95ea43db94a26c	1793942973	{"confidence":0.15,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.05,"merge":0.32,"move":0.26,"share_a_contract":0.27,"split":0.1}}
 1f99e690aeb70f16	1793942974	{"consistency":1,"kind":"Probability","probability":0.12333333333333334}
 1f9b3a3416d95737	1793942974	{"confidence":0.86,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.02,"must_be_current":0.07,"not_a_projection":0.91}}
+1fa0526229ee1031	1793981569	{"confidence":0.46,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.54,"member_1":0.03,"member_2":0.23,"member_3":0.02,"member_4":0.13,"member_5":0.04,"member_6":0.01}}
 1fa89784a740356b	1793942971	{"consistency":1,"kind":"Probability","probability":0.8255555555555555}
 1faf457667422147	1793942972	{"confidence":0.72,"kind":"Classify","label":"component_or_feature","probabilities":{"already_there":0.06,"component_or_feature":0.79,"not_applicable":0.02,"route_or_handler":0.13}}
 1fb3431cec58af7a	1792689876	{"confidence":0.28,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.03,"common_idiom":0.52,"shared_helper":0.45}}

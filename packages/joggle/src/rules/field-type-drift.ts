@@ -3,7 +3,7 @@ import { Decision } from "effect/ai"
 import { Atoms } from "../atoms.ts"
 import { policy } from "../policy.ts"
 import { verdictsOf, type Plan } from "../plans.ts"
-import { locator, messages, reporter, type Report } from "../reporting.ts"
+import { locator, messages, reporter, type Reporter } from "../reporting.ts"
 import { verdictOf } from "../verdict.ts"
 import {
   budgetNote,
@@ -49,8 +49,8 @@ const related = ({
   reachable,
   isTest,
 }: {
-  readonly one: Declaration
-  readonly two: Declaration
+  readonly one: FieldDeclaration
+  readonly two: FieldDeclaration
   readonly workspace: Workspace
   readonly reachable: ReadonlySet<string>
   readonly isTest: (file: string) => boolean
@@ -67,7 +67,7 @@ const related = ({
   return leftPackage !== "" && leftPackage === packageOf(two.file)
 }
 
-interface Declaration {
+interface FieldDeclaration {
   readonly type: string
   /** The exact values the field allows, when the checker proved them literal. */
   readonly variants: ReadonlyArray<string>
@@ -79,8 +79,8 @@ interface Declaration {
 /** One field whose two declarations disagree. */
 interface Drift {
   readonly field: string
-  readonly oneDecl: Declaration
-  readonly twoDecl: Declaration
+  readonly oneDecl: FieldDeclaration
+  readonly twoDecl: FieldDeclaration
 }
 
 export const fieldTypeDrift: PlannedRule = {
@@ -104,7 +104,7 @@ export const fieldTypeDrift: PlannedRule = {
   }),
   plan: Effect.fn("joggle/field-type-drift")(function* (workspace: Workspace, scope: Scope) {
     const report = reporter(fieldTypeDrift, locator(workspace))
-    const byField = new Map<string, Map<string, Array<Declaration>>>()
+    const byField = new Map<string, Map<string, Array<FieldDeclaration>>>()
     for (const unit of workspace.units) {
       if (unit.kind !== "interface" && unit.kind !== "type") continue
       // The field LIST is the declaration's own; the field's TYPE is the
@@ -120,7 +120,7 @@ export const fieldTypeDrift: PlannedRule = {
             ? annotation.replace(/^\s*:\s*/, "").replace(/\s+/g, " ").trim()
             : member.type
         if (type === "" || type === field) continue
-        const types = byField.get(field) ?? new Map<string, Array<Declaration>>()
+        const types = byField.get(field) ?? new Map<string, Array<FieldDeclaration>>()
         const declarations = types.get(type) ?? []
         declarations.push({
           type,
@@ -173,8 +173,8 @@ export const fieldTypeDrift: PlannedRule = {
       if (words(field).length < minWords) continue
       const entries = [...types.values()]
         .map((declarations) => declarations[0])
-        .filter((declaration): declaration is Declaration => declaration !== undefined)
-      let chosen: readonly [Declaration, Declaration] | undefined
+        .filter((declaration): declaration is FieldDeclaration => declaration !== undefined)
+      let chosen: readonly [FieldDeclaration, FieldDeclaration] | undefined
       for (let left = 0; left < entries.length && chosen === undefined; left += 1) {
         for (let right = left + 1; right < entries.length; right += 1) {
           const one = entries[left]
@@ -371,7 +371,7 @@ const findingFor = ({
   renamed = false,
   review = false,
 }: {
-  readonly report: Report
+  readonly report: Reporter
   readonly group: {
     readonly file: string
     readonly line: number

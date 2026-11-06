@@ -27,7 +27,7 @@ import {
 import { policy } from "./policy.ts"
 import { Rules } from "./rules/index.ts"
 import type { Loaded } from "./plugins.ts"
-import { funnelNotes, rankDiagnostics, type Report, type Skipped } from "./report.ts"
+import { foldSiteDuplicates, funnelNotes, rankDiagnostics, type Report } from "./report.ts"
 import {
   countUnjudged,
   everyFile,
@@ -46,10 +46,12 @@ import {
   type Drop,
   type Diagnostic,
   type DecisionTotals,
+  type Note,
   type Structure,
 } from "./schema.ts"
 import { Service as Tsgo } from "./tsgo.ts"
 import { applyDeclarationTypes, discoverFiles, loadWorkspace, type Unit } from "./workspace.ts"
+import type { ChangedSet } from "./git.ts"
 import { contentMappersOf } from "./content-mappers.ts"
 import { looksLikeSource } from "./source.ts"
 import type { ImportGraph } from "./imports.ts"
@@ -164,12 +166,7 @@ const typecheckFindings = (output: ReadonlyArray<{ readonly file: string; readon
  * declaration. Splitting it out is the same distinction the git scope makes, so
  * `--changed` and `--pr` answer a move the same way.
  */
-interface SinceStored {
-  readonly changed: ReadonlyArray<string>
-  readonly renamed: ReadonlyArray<string>
-}
-
-const changedSince = (stored: StoredRun, hashOf: ReadonlyMap<string, string>): SinceStored => {
+const changedSince = (stored: StoredRun, hashOf: ReadonlyMap<string, string>): ChangedSet => {
   const before = new Map(stored.sources.map((source) => [source.path, source.hash]))
   const byHash = new Map<string, Array<string>>()
   for (const [path, hash] of before) {
@@ -337,7 +334,7 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
   const finish = (report: Report): Effect.Effect<Report> =>
     Effect.gen(function* () {
       let diagnostics = report.diagnostics
-      let note: Skipped | undefined
+      let note: Note | undefined
       if (options.baselinePath !== undefined) {
         const known = yield* readBaseline(fs, path, baselinePath(path, options.baselinePath))
         if (known !== undefined) {
@@ -444,7 +441,7 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
     for (const issue of declarations.issues) typeIssues.push(issue)
     declarationFacts = {
       applied: applyDeclarationTypes(workspace, declarations.index),
-      from: declarations.loadedFrom,
+      from: declarations.resolvedFrom,
       truncated: declarations.truncated,
       unresolved: declarations.unresolved,
     }
@@ -470,8 +467,8 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
   ]
 
   const diagnostics: Array<Diagnostic> = []
-  const skipped: Array<Skipped> = []
-  const notes: Array<Skipped> = []
+  const skipped: Array<Note> = []
+  const notes: Array<Note> = []
   for (const issue of typeIssues) notes.push({ ruleId: "joggle", reason: issue })
   // A project can declare content mappers for formats joggle cannot parse. The
   // compiler may check them (when the run opted in), but the rule report does
@@ -1015,6 +1012,19 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
     // this file. A finding, not a rule, is what gets scoped.
     .filter((entry) => appliesAt({ config: options.config, ruleId: entry.ruleId, path: entry.location.file }))
 
+  // One site, one move. `reversal` proves what the judged rules also report --
+  // a copy, a containment -- and the same location carrying both is one thing
+  // counted twice. The richer finding survives; the fact-only one is counted.
+  const folded = foldSiteDuplicates(configured)
+  if (folded.folded > 0) {
+    notes.push({
+      ruleId: "joggle",
+      reason:
+        folded.folded +
+        " finding(s) reported a site another rule already reported with more evidence, and were folded into it",
+    })
+  }
+
   // The workspace's own phases, alongside the per-rule timings. A run that says
   // "workspace 4.4s" and nothing else is a run nobody can make faster.
   timings.push(...workspace.phases)
@@ -1047,7 +1057,7 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
   const decisionTotals: DecisionTotals = yield* decisionStats.read
   const elapsedMs = (yield* Clock.currentTimeMillis) - started
   const report: Report = {
-    diagnostics: rankDiagnostics(configured),
+    diagnostics: rankDiagnostics(folded.diagnostics),
     files: workspace.files.length,
     rules: effective.length,
     structure,

@@ -4,7 +4,13 @@ import { Atoms } from "../atoms.ts"
 import { policy } from "../policy.ts"
 import { type PlannedCandidate } from "../plans.ts"
 import { verdictsOf, type Plan } from "../plans.ts"
-import { locator, messages, reporter, type CandidateFindingInput } from "../reporting.ts"
+import {
+  locator,
+  messages,
+  reporter,
+  shortType,
+  type CandidateFindingInput,
+} from "../reporting.ts"
 import { verdictOf } from "../verdict.ts"
 import {
   budgetNote,
@@ -122,8 +128,8 @@ export const oneConceptOneType: PlannedRule = {
           file: entry.unit.file,
           line: entry.unit.location.line,
           kind: entry.unit.kind,
-          display: short(entry.fact.display),
-          structural: short(entry.fact.structural),
+          display: shortType(entry.fact.display),
+          structural: shortType(entry.fact.structural),
         }))
         const id = yield* atoms.add({
           name: candidate.name,
@@ -265,8 +271,8 @@ const findingFor = ({
         : "One name should mean one type. ",
       resolved: candidate.entries
         .map((entry) => {
-          const display = short(entry.fact.display)
-          const structural = short(entry.fact.structural)
+          const display = shortType(entry.fact.display)
+          const structural = shortType(entry.fact.structural)
           const proof = structural === "" || structural === display ? "" : " (" + structural + ")"
           return (
             entry.unit.file +
@@ -290,8 +296,3 @@ const findingFor = ({
   })
 }
 
-/** A resolved type, cut to the length a finding's help can carry. */
-const short = (value: string): string =>
-  value.length <= policy.oneConceptOneType.maxTypeChars
-    ? value
-    : value.slice(0, policy.oneConceptOneType.maxTypeChars) + "..."

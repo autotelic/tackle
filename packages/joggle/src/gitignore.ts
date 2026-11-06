@@ -22,7 +22,7 @@ import { globSource } from "./glob.ts"
  * here; a pattern this cannot parse is skipped rather than misread, and the
  * files it would have matched stay in the analysis, which is the safe direction.
  */
-export interface IgnoreRule {
+export interface IgnorePattern {
   /** The directory holding the .gitignore this came from. */
   readonly base: string
   readonly regex: RegExp
@@ -63,8 +63,8 @@ interface GitignoreText {
 }
 
 /** Parse gitignore lines into rules, relative to the file's directory. */
-export const parseGitignore = ({ text, base, depth }: GitignoreText): ReadonlyArray<IgnoreRule> => {
-  const rules: Array<IgnoreRule> = []
+export const parseGitignore = ({ text, base, depth }: GitignoreText): ReadonlyArray<IgnorePattern> => {
+  const rules: Array<IgnorePattern> = []
   for (const raw of text.split("\n")) {
     const line = raw.replace(/\s+$/, "")
     if (line === "" || line.startsWith("#")) continue
@@ -76,12 +76,12 @@ export const parseGitignore = ({ text, base, depth }: GitignoreText): ReadonlyAr
 }
 
 /** Shallowest first, so a deeper .gitignore overrides a higher one. */
-export const orderRules = (rules: ReadonlyArray<IgnoreRule>): ReadonlyArray<IgnoreRule> =>
+export const orderRules = (rules: ReadonlyArray<IgnorePattern>): ReadonlyArray<IgnorePattern> =>
   [...rules].sort((left, right) => left.depth - right.depth)
 
 /** Whether a path is ignored: the last matching rule wins, as git decides it. */
 export const isIgnored = (
-  rules: ReadonlyArray<IgnoreRule>,
+  rules: ReadonlyArray<IgnorePattern>,
   absolute: string,
   path: Path.Path,
 ): boolean => {
@@ -99,7 +99,7 @@ export const isIgnored = (
 export const rulesAt = (
   directory: string,
   depth: number,
-): Effect.Effect<ReadonlyArray<IgnoreRule>, never, FileSystem.FileSystem | Path.Path> =>
+): Effect.Effect<ReadonlyArray<IgnorePattern>, never, FileSystem.FileSystem | Path.Path> =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path

@@ -8,6 +8,7 @@
 3315dd1a1f4ac7d5	1792252958	{"confidence":0.89,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.05,"name_meaning":0,"no_issue":0.03,"semantic_verdict":0.92}}
 331a7e4999494d0f	1792684422	{"confidence":0.76,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.1,"keep_variants":0.84,"no_issue":0.06}}
 331af17d6112fb35	1793942974	{"confidence":0.33,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.38,"no_difference":0.05,"removes_a_hazard":0.34,"slightly_clearer":0.23},"rating":2}
+3320be1a810e50ce	1793981569	{"confidence":0.47,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.05,"merge":0.58,"move":0.24,"share_a_contract":0.11,"split":0.02}}
 332295e66c11f4fa	1792621702	{"consistency":1,"kind":"Probability","probability":0.3}
 33269379649073ea	1792684423	{"confidence":0.83,"kind":"Classify","label":"general","probabilities":{"general":0.89,"names_a_caller":0,"shared_vocabulary":0.11}}
 33282b1c59efba4d	1793943705	{"confidence":0.33,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.43,"no_difference":0.1,"removes_a_hazard":0.07,"slightly_clearer":0.4},"rating":1.47}
@@ -48,6 +49,7 @@
 33ed78e3848f834b	1793942974	{"confidence":0.91,"kind":"Classify","label":"neither","probabilities":{"fact":0.03,"neither":0.94,"recomputation":0.03}}
 33f187f671d35aa6	1792269251	{"confidence":0.88,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.92,"not_a_derivation":0.08,"reimplements":0}}
 33f436628be44695	1793942974	{"confidence":0.67,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.78,"not_a_derivation":0.17,"reimplements":0.05}}
+33f892df14ce2ec6	1793981704	{"consistency":1,"kind":"Probability","probability":0.91}
 33fbb192e3725eb0	1792252958	{"confidence":0.94,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.96,"not_a_derivation":0.04,"reimplements":0}}
 33fdea6107cb5d8a	1792252958	{"confidence":0.72,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.79,"stale_reference":0.03,"wrong_behavior":0.17,"wrong_contract":0.01}}
 33fe0755f6e6f4a3	1793942976	{"confidence":1,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0,"must_be_current":0,"not_a_projection":1}}

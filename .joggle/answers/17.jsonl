@@ -15,6 +15,7 @@
 17614e2394848523	1792252958	{"confidence":0.15,"kind":"Classify","label":"leave_it","probabilities":{"leave_it":0.32,"merge":0.28,"move":0.3,"share_a_contract":0.05,"split":0.05}}
 1763708e7a356c3c	1793942970	{"confidence":0.79,"kind":"Classify","label":"coincidental","probabilities":{"already_named":0.07,"coincidental":0.86,"one_concept":0.07}}
 176a414705430ed4	1792535008	{"confidence":0.98,"kind":"Classify","label":"orchestration","probabilities":{"domain_logic":0.01,"infrastructure":0.01,"input_adaptation":0,"mechanical":0,"not_applicable":0,"orchestration":0.98,"rendering":0,"request_validation":0,"transport_concern":0}}
+176b201b5eea30ff	1793981704	{"confidence":0.37,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.36,"keep_variants":0.58,"no_issue":0.06}}
 17760522f1f90ba5	1793942973	{"confidence":0.76,"kind":"Classify","label":"value","probabilities":{"meaning":0.15,"unclear":0.01,"value":0.84}}
 17762b15fa00868d	1792252958	{"consistency":1,"kind":"Probability","probability":0.8855555555555555}
 177873e38644cb39	1793942975	{"consistency":1,"kind":"Probability","probability":0.9233333333333333}
@@ -40,6 +41,7 @@
 17c78e646d077234	1792543161	{"confidence":0.3,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.65,"member_1":0.35}}
 17c8e587fea3ba80	1792621702	{"confidence":0.85,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.02,"keep_variants":0.9,"no_issue":0.08}}
 17d092b8a925e100	1792621702	{"confidence":0.4,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.3,"member_1":0.7}}
+17da3e2214cedf3c	1793981703	{"confidence":0.64,"kind":"Classify","label":"compatible","probabilities":{"compatible":0.76,"drift":0.14,"two_concepts":0.1}}
 17e13efa7b10daf8	1792542865	{"consistency":1,"kind":"Probability","probability":0.58}
 17e6940c059677c7	1792252958	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
 17e6e9690fe87511	1792252958	{"confidence":0.91,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.93,"stale_reference":0,"wrong_behavior":0.06,"wrong_contract":0.01}}

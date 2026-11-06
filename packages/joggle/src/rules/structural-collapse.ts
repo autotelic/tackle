@@ -3,7 +3,7 @@ import { Decision } from "effect/ai"
 import { Atoms } from "../atoms.ts"
 import { policy } from "../policy.ts"
 import { verdictsOf, type Plan } from "../plans.ts"
-import { locator, messages, reporter, type Report } from "../reporting.ts"
+import { locator, messages, reporter, shortType, type Reporter } from "../reporting.ts"
 import { verdictOf } from "../verdict.ts"
 import {
   budgetNote,
@@ -44,11 +44,6 @@ const namesOf = (units: ReadonlyArray<Unit>): ReadonlyArray<string> =>
   [...new Set(units.map((unit) => unit.name))].sort((left, right) => left.localeCompare(right))
 
 /** A resolved type, cut to the length a finding's help can carry. */
-const short = (value: string): string =>
-  value.length <= policy.oneConceptOneType.maxTypeChars
-    ? value
-    : value.slice(0, policy.oneConceptOneType.maxTypeChars) + "..."
-
 export const structuralCollapse: PlannedRule = {
   id: RULE_ID,
   severity: "info",
@@ -111,7 +106,7 @@ export const structuralCollapse: PlannedRule = {
         const structural = first?.typeFacts?.structural ?? ""
         const id = yield* atoms.add({
           names,
-          structural: short(structural),
+          structural: shortType(structural),
           count: group.length,
           files: [...new Set(group.map((unit) => unit.file))].slice(
             0,
@@ -122,7 +117,7 @@ export const structuralCollapse: PlannedRule = {
             kind: unit.kind,
             file: unit.file,
             line: unit.location.line,
-            display: short(unit.typeFacts?.display ?? ""),
+            display: shortType(unit.typeFacts?.display ?? ""),
           })),
         })
         const plan: Plan<DecisionAnswers> = {
@@ -219,7 +214,7 @@ const findingFor = ({
   unverified,
   review = false,
 }: {
-  readonly report: Report
+  readonly report: Reporter
   readonly group: ReadonlyArray<Unit>
   readonly confidence: number | undefined
   readonly unverified: string | undefined
@@ -240,7 +235,7 @@ const findingFor = ({
     messageId: "same_type",
     data: {
       names: names.map((name) => "`" + name + "`").join(", "),
-      structural: short(structural),
+      structural: shortType(structural),
       tail,
       unverified: unverified === undefined ? "" : " Not verified: " + unverified + ".",
     },

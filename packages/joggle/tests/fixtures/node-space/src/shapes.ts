@@ -35,3 +35,6 @@ export type Variants =
 export type Flags = { [K in "a" | "b"]: boolean }
 
 export type Conditional<T> = T extends string ? "yes" : "no"
+
+export const trimmed = (value: string): string => value.trim()
+export const passThrough = (value) => value

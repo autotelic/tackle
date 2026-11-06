@@ -11,7 +11,7 @@ import {
 import { Atoms } from "../atoms.ts"
 import { type PlannedCandidate } from "../plans.ts"
 import { verdictsOf, type Plan } from "../plans.ts"
-import { locator, messages, reporter, type Report } from "../reporting.ts"
+import { locator, messages, reporter, type Reporter } from "../reporting.ts"
 import { verdictOf } from "../verdict.ts"
 import {
   bundleNote,
@@ -193,7 +193,7 @@ const findingFor = ({
   unverifiedReason,
   review = false,
 }: {
-  readonly report: Report
+  readonly report: Reporter
   readonly spec: Spec
   readonly bundle: Bundle
   readonly problems: ReadonlyArray<string>

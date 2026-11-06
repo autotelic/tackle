@@ -5,7 +5,7 @@ import { policy } from "../policy.ts"
 import { containmentPairs } from "../candidates.ts"
 import { type PlannedCandidate } from "../plans.ts"
 import { verdictsOf, type Plan } from "../plans.ts"
-import { locator, messages, reporter, type Report } from "../reporting.ts"
+import { locator, messages, reporter, type Reporter } from "../reporting.ts"
 import { verdictOf } from "../verdict.ts"
 import {
   outcome,
@@ -259,7 +259,7 @@ const findingFor = ({
   label,
   review,
 }: {
-  readonly report: Report
+  readonly report: Reporter
   readonly candidate: {
     readonly whole: Unit
     readonly part: Unit

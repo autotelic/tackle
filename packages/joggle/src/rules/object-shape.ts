@@ -3,7 +3,7 @@ import { Decision } from "effect/ai"
 import { Atoms } from "../atoms.ts"
 import { policy } from "../policy.ts"
 import { verdictsOf, type Plan } from "../plans.ts"
-import { locator, messages, reporter, type Report } from "../reporting.ts"
+import { locator, messages, reporter, type Reporter } from "../reporting.ts"
 import { verdictOf } from "../verdict.ts"
 import {
   budgetNote,
@@ -289,7 +289,7 @@ const findingFor = ({
   unverifiedReason,
   notice = true,
 }: {
-  readonly report: Report
+  readonly report: Reporter
   readonly entry: {
     readonly keys: ReadonlyArray<string>
     readonly sites: ReadonlyArray<{ readonly file: string; readonly start: number }>

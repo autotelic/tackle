@@ -23,6 +23,7 @@ f27dbf1423865f48	1792252958	{"confidence":0.69,"kind":"Classify","label":"legiti
 f2838a9c85b1d2e0	1793943081	{"confidence":0.52,"kind":"Classify","label":"move","probabilities":{"merge":0.13,"move":0.68,"no_issue":0.19}}
 f28657dd3c4b99d9	1793942972	{"confidence":0.36,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.45,"no_difference":0.09,"removes_a_hazard":0.09,"slightly_clearer":0.37},"rating":1.53}
 f28aebf3942a4877	1792621702	{"confidence":0.2,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.4,"member_1":0.6}}
+f28b57136ef50a21	1793981704	{"confidence":0.34,"kind":"Classify","label":"move","probabilities":{"merge":0.05,"move":0.56,"no_issue":0.39}}
 f290141f264c7af2	1793942974	{"consistency":1,"kind":"Probability","probability":0.6766666666666666}
 f2983c24a8695131	1793942975	{"confidence":0.44,"kind":"Classify","label":"allowed","probabilities":{"allowed":0.63,"must_be_current":0.04,"not_a_projection":0.33}}
 f29e0ea629143f9e	1793942976	{"confidence":0.96,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.01,"not_an_invariant":0.97,"repair_path":0.02}}
@@ -32,6 +33,7 @@ f2a6b516e0fc93cc	1792269251	{"confidence":0.84,"kind":"Classify","label":"member
 f2a6cd415f792670	1793942974	{"consistency":1,"kind":"Probability","probability":0.15}
 f2acceeb4313da34	1792621702	{"confidence":0.67,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.78,"unclear":0,"value":0.22}}
 f2b2cafc8fdd3ba0	1793941318	{"confidence":0.8,"kind":"Classify","label":"two_concepts","probabilities":{"intentional":0.11,"one_concept":0.02,"two_concepts":0.87}}
+f2bbc2d7a6a8ea1c	1793981569	{"confidence":0.31,"kind":"Classify","label":"merge","probabilities":{"merge":0.54,"move":0.41,"no_issue":0.05}}
 f2bf1bdea7bb2ffa	1793942973	{"confidence":0.48,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.65,"not_a_derivation":0.12,"reimplements":0.23}}
 f2c0de387204e722	1793942976	{"confidence":0.49,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.25,"not_an_invariant":0.66,"repair_path":0.09}}
 f2c504c490963d42	1792253160	{"confidence":0.58,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.72,"not_a_derivation":0.06,"reimplements":0.22}}

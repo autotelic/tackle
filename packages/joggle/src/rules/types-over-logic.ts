@@ -3,7 +3,7 @@ import { Decision } from "effect/ai"
 import { Atoms } from "../atoms.ts"
 import { policy } from "../policy.ts"
 import { verdictsOf, type Plan } from "../plans.ts"
-import { locator, messages, reporter, type Report } from "../reporting.ts"
+import { locator, messages, reporter, type Reporter } from "../reporting.ts"
 import {
   budgetNote,
   inScope,
@@ -67,7 +67,7 @@ const typeOf = ({
   return found === undefined ? Option.none() : Option.some(found)
 }
 
-interface Candidate {
+interface GuardCandidate {
   readonly unit: Unit
   readonly file: string
   readonly guard: GuardSite
@@ -100,7 +100,7 @@ export const typesOverLogic: PlannedRule = {
       }
     }
 
-    const candidates: Array<Candidate> = []
+    const candidates: Array<GuardCandidate> = []
     for (const file of workspace.files) {
       if (scope.changed !== undefined && !inScope(scope, file.path)) continue
       for (const guard of file.facts.guards) {
@@ -232,8 +232,8 @@ export const typesOverLogic: PlannedRule = {
 }
 
 const findingFor = (
-  report: Report,
-  candidate: Candidate,
+  report: Reporter,
+  candidate: GuardCandidate,
   confidence: number | undefined,
   unverifiedReason: string | undefined,
 ): Diagnostic =>

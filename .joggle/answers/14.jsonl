@@ -10,6 +10,7 @@
 1440bc286962173d	1793942971	{"confidence":0.87,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.9,"stale_reference":0.04,"wrong_behavior":0.03,"wrong_contract":0.03}}
 1447c2b07ba1dfc7	1792542865	{"consistency":1,"kind":"Probability","probability":0.47000000000000003}
 1449da1ad1a05671	1793942974	{"consistency":1,"kind":"Probability","probability":0.29777777777777775}
+144d2a1a4c1f3f52	1793981704	{"confidence":0.64,"kind":"Classify","label":"no_issue","probabilities":{"collapse":0,"keep_variants":0.24,"no_issue":0.76}}
 144f8e8e17666bfd	1792543728	{"confidence":0.84,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.07,"framework_glue":0,"implementation_detail":0.88,"wire_contract":0.05}}
 14562cdb20394400	1793943081	{"consistency":1,"kind":"Probability","probability":0.27666666666666667}
 145880e5c9d9b04b	1793943082	{"confidence":0.37,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.01,"merge":0.5,"move":0.32,"share_a_contract":0.14,"split":0.03}}
@@ -41,6 +42,7 @@
 14c4259924ef1c32	1792252958	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
 14c6c2b684aee8fa	1793942976	{"consistency":1,"kind":"Probability","probability":0.9555555555555554}
 14d416a455962cb1	1792252958	{"confidence":0.55,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.25,"no_issue":0.09,"semantic_verdict":0.66}}
+14d44935f5d2a2fe	1793981704	{"confidence":0.41,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.45,"no_difference":0.04,"removes_a_hazard":0.35,"slightly_clearer":0.16},"rating":2.11}
 14d964e6c80b0c8e	1793942975	{"confidence":0.64,"kind":"Classify","label":"neither","probabilities":{"deviation":0.01,"neither":0.76,"state":0.23}}
 14daea0f0e7735a5	1793942972	{"confidence":0.4,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.49,"no_difference":0.09,"removes_a_hazard":0.18,"slightly_clearer":0.24},"rating":1.76}
 14db029ce64c7be2	1792684423	{"confidence":0.31,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.45,"names_a_caller":0.01,"shared_vocabulary":0.54}}

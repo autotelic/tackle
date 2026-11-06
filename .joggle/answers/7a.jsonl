@@ -2,6 +2,7 @@
 7a0d4364bd21a63d	1793942972	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0}}
 7a160b91c6cf3e7e	1792621702	{"confidence":0.75,"kind":"Classify","label":"wire_contract","probabilities":{"domain_concept":0.15,"framework_glue":0.02,"implementation_detail":0.02,"wire_contract":0.81}}
 7a1bdd42d11e7ec1	1792542865	{"confidence":0.91,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.9299999999999999,"different_order":0.04,"different_work":0.03,"same_operation":0}}
+7a1d6c7349d73841	1793981704	{"confidence":0.16,"kind":"Rate","label":"no_difference","probabilities":{"meaningfully_better":0.16,"no_difference":0.58,"removes_a_hazard":0.13,"slightly_clearer":0.13},"rating":0.84}
 7a2041b3a8873716	1792621702	{"confidence":0.18,"kind":"Classify","label":"move","probabilities":{"move":0.59,"no_issue":0.41}}
 7a23811c8faa18a9	1793942972	{"confidence":0.58,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.79,"member_1":0.21}}
 7a2a59d036e414ff	1793942973	{"confidence":0.26,"kind":"Classify","label":"move","probabilities":{"merge":0.35,"move":0.51,"no_issue":0.14}}
@@ -21,6 +22,7 @@
 7a6b027f8b5eec61	1793942974	{"confidence":0.73,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.82,"not_a_derivation":0.16,"reimplements":0.02}}
 7a717b468d844995	1792535008	{"confidence":0.58,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.63,"infrastructure":0,"input_adaptation":0,"mechanical":0.3,"not_applicable":0.07,"orchestration":0,"rendering":0,"request_validation":0,"transport_concern":0}}
 7a74be5bfb61b02c	1792269251	{"confidence":0.84,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.08,"member_1":0.92}}
+7a78619887249684	1793981569	{"confidence":0.96,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.01,"must_be_current":0.02,"not_a_projection":0.97}}
 7a7ced4958254c3e	1792617317	{"confidence":0.28,"kind":"Classify","label":"move","probabilities":{"merge":0.39,"move":0.52,"no_issue":0.09}}
 7a7cf90c861925de	1793942974	{"confidence":0.8,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.13,"independent":0.87,"meaning_switched":0}}
 7a85a80c9636a64e	1793942974	{"confidence":0.83,"kind":"Classify","label":"general","probabilities":{"general":0.89,"names_a_caller":0.01,"shared_vocabulary":0.1}}

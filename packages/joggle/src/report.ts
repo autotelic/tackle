@@ -52,7 +52,6 @@ export type Format = "text" | "stylish" | "unix" | "json" | "github"
 
 /** A skip or a bound: a rule id and a reason. Defined in schema so a stored run
  *  can be decoded with it. */
-export type Skipped = Note
 
 export interface Report {
   readonly diagnostics: ReadonlyArray<Diagnostic>
@@ -60,13 +59,13 @@ export interface Report {
   readonly rules: number
   /** The shape of the codebase, for the backpressure line. */
   readonly structure: Structure
-  readonly skipped: ReadonlyArray<Skipped>
+  readonly skipped: ReadonlyArray<Note>
   /**
    * Bounds the rules hit, in their own words. A note is not a failure: it is
    * something the rule chose not to look at, and it belongs next to the findings
    * so that a reader can tell "nothing there" from "we stopped looking".
    */
-  readonly notes: ReadonlyArray<Skipped>
+  readonly notes: ReadonlyArray<Note>
   /**
    * Candidates the rules considered and did not report, with the reason.
    *
@@ -109,10 +108,82 @@ export const sortDiagnostics = (
   )
 
 /**
- * The report is a ranked list, not a file listing. A probability decision per candidate gives
- * every finding a comparable score -- see the re-ranking cookbook -- so the
- * most likely real duplication is read first. File order is the tiebreak, which
- * keeps runs deterministic.
+ * Fold findings that report the same site and the same move into one.
+ *
+ * `reversal` proves a copy and `duplicate-implementation` judges it, and both
+ * anchor at the same declaration; `compose-types` and `reversal` do the same for
+ * a containment. Two findings for one thing is not more evidence -- it is one
+ * thing counted twice, and it made the report say a site was a `contract` and a
+ * `combine` at once.
+ *
+ * The richer finding wins: a repair is a work order, a panel is an explanation,
+ * a judgement has looked. The fact-only duplicate is still counted in the note,
+ * so the report says what it folded rather than pretending it never existed.
+ *
+ * @param diagnostics - the configured findings, in rule order.
+ * @returns the survivors, in their original order, and how many were folded.
+ */
+export const foldSiteDuplicates = (
+  diagnostics: ReadonlyArray<Diagnostic>,
+): { readonly diagnostics: ReadonlyArray<Diagnostic>; readonly folded: number } => {
+  const siteOf = (entry: Diagnostic): string =>
+    [
+      entry.move ?? "requirement",
+      entry.location.file,
+      String(entry.location.line),
+      String(entry.location.column),
+    ].join("\u0000")
+  const strength = (entry: Diagnostic): number =>
+    (entry.repair === undefined ? 0 : 4) +
+    (entry.panel === undefined ? 0 : 2) +
+    (entry.judged ? 1 : 0)
+  const loudness = (entry: Diagnostic): number =>
+    Match.value(entry.severity).pipe(
+      Match.when("error", () => 2),
+      Match.when("warn", () => 1),
+      Match.orElse(() => 0),
+    )
+  const better = (left: Diagnostic, right: Diagnostic): Diagnostic => {
+    const richer = strength(right) - strength(left)
+    if (richer !== 0) return richer > 0 ? right : left
+    const louder = loudness(right) - loudness(left)
+    if (louder !== 0) return louder > 0 ? right : left
+    return right.ruleId.localeCompare(left.ruleId) < 0 ? right : left
+  }
+
+  const order = new Map<string, number>()
+  diagnostics.forEach((entry, index) => {
+    const site = siteOf(entry)
+    if (!order.has(site)) order.set(site, index)
+  })
+  const bySite = new Map<string, Diagnostic>()
+  let folded = 0
+  for (const entry of diagnostics) {
+    const site = siteOf(entry)
+    const existing = bySite.get(site)
+    if (existing === undefined) {
+      bySite.set(site, entry)
+      continue
+    }
+    folded += 1
+    bySite.set(site, better(existing, entry))
+  }
+  // A site keeps the position of its FIRST appearance, even when a later,
+  // richer finding is the one that survives.
+  const survivors = [...bySite.entries()]
+    .sort((left, right) => (order.get(left[0]) ?? 0) - (order.get(right[0]) ?? 0))
+    .map(([, entry]) => entry)
+  return { diagnostics: survivors, folded }
+}
+
+/**
+ * The report is a ranked list, not a file listing. A probability decision per
+ * candidate gives every finding a comparable score -- see the re-ranking cookbook
+ * -- so the most likely real duplication is read first. File order is the
+ * tiebreak, which keeps runs deterministic.
+ *
+ * @param diagnostics - the findings to order.
+ * @returns the findings, most likely first.
  */
 export const rankDiagnostics = (
   diagnostics: ReadonlyArray<Diagnostic>,

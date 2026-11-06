@@ -1,4 +1,5 @@
 import type { Diagnostic, JudgementPanel, Repair, Severity, SourceLocation } from "./schema.ts"
+import { policy } from "./policy.ts"
 import type { Move } from "./moves.ts"
 import { RuleAuthoringError } from "./schema.ts"
 import { lineStarts, type SourceFile, type Unit, type Workspace } from "./workspace.ts"
@@ -117,7 +118,7 @@ export interface ReportInput {
   readonly panel?: JudgementPanel | undefined
 }
 
-export type Report = (input: ReportInput) => Diagnostic
+export type Reporter = (input: ReportInput) => Diagnostic
 
 /**
  * The common fields of a rule's finding helper: the report, the candidate, and its
@@ -125,7 +126,7 @@ export type Report = (input: ReportInput) => Diagnostic
  * shape has one name instead of one copy per rule.
  */
 export interface FindingInput<Entry> {
-  readonly report: Report
+  readonly report: Reporter
   readonly entry: Entry
   readonly confidence: number | undefined
   readonly unverifiedReason: string | undefined
@@ -134,7 +135,7 @@ export interface FindingInput<Entry> {
 
 /** The same shape for a helper that names its candidate `candidate` rather than `entry`. */
 export interface CandidateFindingInput<Candidate> {
-  readonly report: Report
+  readonly report: Reporter
   readonly candidate: Candidate
   readonly confidence: number | undefined
   readonly unverifiedReason: string | undefined
@@ -201,6 +202,17 @@ const templateFor = (input: {
 }
 
 /**
+ * A printed type cut to the length a finding's help can carry.
+ *
+ * @param value - the type as the checker printed it.
+ * @returns the value, or its prefix and an ellipsis when it is too long.
+ */
+export const shortType = (value: string): string => {
+  const max = policy.oneConceptOneType.maxTypeChars
+  return value.length <= max ? value : value.slice(0, max) + "..."
+}
+
+/**
  * Bind a rule to its messages and a locator, giving the report function a rule
  * calls.
  *
@@ -209,7 +221,7 @@ const templateFor = (input: {
  * @param locate - how a subject becomes a location, from {@link locator}.
  * @returns the report function.
  */
-export const reporter = (rule: ReportedRule, locate: Locate): Report => (input) => {
+export const reporter = (rule: ReportedRule, locate: Locate): Reporter => (input) => {
   const message = templateFor({ rule, messageId: input.messageId, data: input.data })
   const help =
     input.helpId === undefined

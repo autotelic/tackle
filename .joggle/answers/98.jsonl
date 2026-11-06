@@ -23,8 +23,10 @@
 98813d91e2d93620	1793942971	{"confidence":0.95,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.96,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0.01}}
 98858094c70d645e	1793942970	{"confidence":0.68,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.76,"stale_reference":0.01,"wrong_behavior":0.13,"wrong_contract":0.1}}
 9886f1cc0b9775b4	1793942972	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
+9888bf657ae70e29	1793981704	{"confidence":0.46,"kind":"Classify","label":"no_issue","probabilities":{"collapse":0.01,"keep_variants":0.35,"no_issue":0.64}}
 988d07ff1ffac696	1793942971	{"confidence":0.68,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.76,"stale_reference":0.01,"wrong_behavior":0.18,"wrong_contract":0.05}}
 98901b413480a715	1793942974	{"confidence":0.59,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.29,"framework_glue":0.02,"implementation_detail":0.69,"wire_contract":0}}
+9896bdfab131e740	1793981569	{"confidence":0.13,"kind":"Classify","label":"framework_glue","probabilities":{"domain_concept":0.26,"framework_glue":0.35,"implementation_detail":0.2,"wire_contract":0.19}}
 989a8473f33aad8b	1792689876	{"confidence":0.79,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.01,"internal_only":0.86,"unaccounted":0.13}}
 989a8f3e0937a429	1793942972	{"confidence":0.85,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.89,"stale_reference":0.01,"wrong_behavior":0.08,"wrong_contract":0.02}}
 989ac4224ac6e765	1793942972	{"confidence":0.91,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.93,"stale_reference":0,"wrong_behavior":0.06,"wrong_contract":0.01}}

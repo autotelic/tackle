@@ -5,7 +5,7 @@ import { Decision } from "effect/ai"
 import { Atoms } from "../atoms.ts"
 import { policy } from "../policy.ts"
 import { verdictsOf, type Plan } from "../plans.ts"
-import { locator, messages, reporter, type Report } from "../reporting.ts"
+import { locator, messages, reporter, type Reporter } from "../reporting.ts"
 import {
   budgetNote,
   declined,
@@ -308,7 +308,7 @@ const describe = (outage: Outage): string =>
     ? "when `" + outage.trigger + "` is empty"
     : "when reading the row fails"
 
-const findingFor = (report: Report, outage: Outage, unverified: string | undefined): Diagnostic =>
+const findingFor = (report: Reporter, outage: Outage, unverified: string | undefined): Diagnostic =>
   report({
     about: { file: outage.file, line: outage.line, column: 1 },
     messageId: "outage",
