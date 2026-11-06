@@ -216,16 +216,21 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
     const baseRef = yield* tryP(() => git(repoDir, 'rev-parse', '--verify', 'origin/main')).pipe(
       Effect.orElseSucceed(() => 'main'),
     )
-    if (deps.resume) {
-      // A killed run leaves the worktree behind, branch checked out and all:
-      // reuse it (#8's leftover work), don't add a fresh one.
-      const worktrees = yield* tryP(() => git(repoDir, 'worktree', 'list', '--porcelain'))
-      const alreadyThere = worktrees.split('\n').some((line) => line === `worktree ${worktreeDir}`)
-      if (!alreadyThere) {
+    // A parked issue keeps its loop/<n> branch; re-picking it continues the
+    // branch (its Checkpoint) rather than starting over from main. Likewise,
+    // a killed run leaves the worktree behind — reuse it (#8's leftovers).
+    const branchExists = yield* tryP(() => git(repoDir, 'rev-parse', '--verify', branch)).pipe(
+      Effect.orElseSucceed(() => ''),
+    )
+    const resumeLike = deps.resume || branchExists !== ''
+    const worktrees = yield* tryP(() => git(repoDir, 'worktree', 'list', '--porcelain'))
+    const alreadyThere = worktrees.split('\n').some((line) => line === `worktree ${worktreeDir}`)
+    if (!alreadyThere) {
+      if (resumeLike) {
         yield* tryP(() => git(repoDir, 'worktree', 'add', worktreeDir, branch))
+      } else {
+        yield* tryP(() => git(repoDir, 'worktree', 'add', worktreeDir, '-b', branch, baseRef))
       }
-    } else {
-      yield* tryP(() => git(repoDir, 'worktree', 'add', worktreeDir, '-b', branch, baseRef))
     }
     yield* tryP(() => installDeps(worktreeDir))
     const vision = yield* tryP(() => readFile(join(worktreeDir, 'VISION.md'), 'utf8'))
