@@ -320,6 +320,42 @@ A full-repository pass at these budgets measures a sixth of the corpus. The scop
 run (`--since`, `--pr`) is the one that fits a budget, and it is the one a gate
 would use.
 
+## 11b. The corpus, at full budget
+
+Raising the three budgets for one pass answers the question the default run cannot:
+how much of this repository reads in the register. The answer, with
+`packages/joggle/docs/reference/**` ignored:
+
+| measure | count |
+| --- | --- |
+| findings | 685 |
+| warnings (act band) | 179 |
+| notices (review band) | 506 |
+| in Markdown | 381 |
+| in TypeScript (JSDoc and string literals) | 304 |
+
+By label: `verdict` 338, `riddle` 214, `anthropomorphism` 98, `false_certainty` 16,
+`antithesis` 9, `restatement` 8, `overgeneralisation` 2, `synonym_rotation` 0.
+
+The files with the most findings are the ones a reader meets first:
+`FOREMAN.md` 54, `tools/foreman/journal.md` 33,
+`packages/cutlist/docs/artifact.md` 28, `docs/compression.md` 20,
+`src/rules/cluster-verdict.ts` 16, `JOGGLE.md` 16, this document 15.
+
+Three things follow from the distribution.
+
+- **`verdict` absorbs the other labels.** This repository contains far more
+  antithesis than the 9 the judge labelled as such: "X is not A. It is B." appears
+  21 times in a grep, and most of those came back as `verdict`. The labels are not
+  exclusive, and a judge prefers the one that describes the effect.
+- **`synonym_rotation` never fires.** Either it does not occur here or the
+  definition needs a sharper test. It stays in the question until a labelled set
+  says which.
+- **`docs/reference/` had to be ignored.** The first pass reported 343 findings in
+  pasted external texts, 193 of them in one book. The ignore is recorded in
+  `joggle.config.json` with its reason, the way every other ignore in this
+  repository is.
+
 ## 12. Commit messages and pull request bodies
 
 These are read by people and are not files in the tree, so discovery cannot find

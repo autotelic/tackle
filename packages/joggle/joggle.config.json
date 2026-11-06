@@ -22,6 +22,11 @@
       "reason": "the composition fixtures are deliberately broken in both directions: `bad/` violates the pattern so a test can assert it is caught, and `good/` follows it so a test can assert it is silent. Reporting them is the tool reporting its own test data"
     },
     {
+      "rule": "joggle/prose-voice",
+      "path": "packages/joggle/docs/reference/**",
+      "reason": "pasted external texts (a book, published articles) kept as reference. This rule reports the repository's own voice, and a physicist's prose is not a finding anyone here can act on"
+    },
+    {
       "rule": "joggle/dependency-fit",
       "path": "tests/fixtures/**",
       "reason": "a fixture imports react to give a bundle something to be a bundle of, and declares no manifest; the question this rule asks is about a package's own dependencies, and a fixture has no package"
