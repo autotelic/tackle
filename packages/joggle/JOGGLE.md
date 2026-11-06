@@ -2,8 +2,8 @@
 
 > Cross-file patterns and idioms for TypeScript, enforced like a linter.
 
-`tsc` checks one program. `oxlint` checks one file. Neither can tell you that
-two functions in different modules are the same concept, that a name means
+`tsc` checks one program. `oxlint` checks one file. Neither answers whether
+two functions in different modules are the same concept, whether a name means
 something different here than it does there, or that a module is not shaped
 like the other twelve modules of its kind.
 
@@ -189,8 +189,7 @@ output should be and its decisions are worth copying:
 
 A hand-rolled code frame was removed in favour of the compact default. On a
 1,870-file codebase the frames made the report 8,083 lines; oxlint's shape
-prints 343. A linter's output is read on a terminal and scrolled in CI, and
-those two want different things.
+prints 343. A terminal and a CI log need different shapes.
 
 | Flag | Meaning |
 | --- | --- |
@@ -275,8 +274,8 @@ Two properties make this safe to live with:
 * `.joggle/judgements.json` holds questions, evidence and answers. It never
   holds the key, so it is safe to commit and review.
 * Because the cache is the replay path, **the judged run can be done by a
-  person and the result handed to CI or to an agent**. Neither of them ever
-  needs the credential; they work from the committed verdicts.
+  person and the result handed to CI or to an agent**. Neither reads the
+  credential; both work from the committed verdicts.
 
 If the key is ever pasted into a file, into chat, or into a shell that gets
 logged, rotate it in the TypeSafe console. This repository is private, so
@@ -313,8 +312,8 @@ difference -- you do not rewrite a prompt.
 
 ### What the judge is actually for
 
-Code finds; the model verifies. This is the opposite of how joggle started, and
-the first real measurements are what corrected it.
+Code finds; the model verifies. That reverses how joggle started, and the first
+real measurements corrected it.
 
 Findings were being produced two ways: exact shape equality (a fact, but
 reported unverified) and a hand-tuned near-duplicate search that asked the model
@@ -327,8 +326,8 @@ could not have done better, because two of the four were constants:
 * `merge_changes_behavior` -- "would replacing one with the other change
   behaviour for some caller?" -- was made a hard veto at 0.4. Across 49
   judgements it never once fell below 0.4 (mean 0.64). Asked without any call
-  sites in the state, the model always answers "probably yes". A question whose
-  answer is fixed in advance is not a judgement.
+  sites in the state, the model answers "probably yes" every time. A question whose
+  answer is fixed in advance measures nothing.
 
 Both are gone. Behaviour is now asked about only where it is genuinely open,
 and only in the band where the text actually differs.
@@ -336,8 +335,8 @@ and only in the band where the text actually differs.
 The judge's job is intent, not behaviour. When two declarations are
 syntactically identical, equivalence is already an AST fact; the only open
 question is whether the repetition is redundancy or two things that merely look
-alike. That is a perceptual question about names and purpose, which is what a
-calibrated model is good at, and code decides what to do with the answer.
+alike. A perceptual question about names and purpose is what a calibrated model
+answers; code decides what to do with the answer.
 
 One policy rule has since been deleted for the same reason. It suppressed a
 finding when the two declarations sat in different areas and neither was a
@@ -383,8 +382,7 @@ judged by text similarity. That is the wrong instrument, and the material in
   **type resolution data**, and text analysis. joggle has the first, part of
   the second, and none of the third.
 
-Types are also the only layer where the answer is *provable* rather than
-similar. Measured on that same codebase with `tsgo --generateTrace` -- 11.5s
+Types are the only layer whose answers are *provable*. Measured on that same codebase with `tsgo --generateTrace` -- 11.5s
 and 301MB of type facts for 1,870 files:
 
 ```
@@ -392,8 +390,8 @@ User: 46 resolved entries across 24 declaring files, 3 distinct resolved shapes
       Object (x38), Any (x4), TypeParameter (x4)
 ```
 
-One name, three meanings, four of them `any`. Text hashing cannot see that. The
-checker knows it exactly.
+One name, three meanings, and four of them are `any`. Text hashing cannot see
+that. The checker resolves it exactly.
 
 So the direction is: keep the AST as the index and the source of spans, and
 move the *judgements* to the type graph.

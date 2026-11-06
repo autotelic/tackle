@@ -232,6 +232,11 @@ Two prunes are facts rather than policy:
   question is a field rather than a sentence. It is skipped by locating `criteria:`
   between the enclosing call and the literal.
 
+The atom carries the sentence, its neighbours, the surface name and the
+declaration name, and no path: two identical sentences in two files are one
+question. A path in the atom made the verdict depend on how the file was named, so
+a per-file run and a repository run disagreed about the same sentence.
+
 **The question** (`Decision.classify`, one per candidate, nine labels):
 
 `riddle`, `verdict`, `antithesis`, `anthropomorphism`, `synonym_rotation`,
@@ -320,6 +325,24 @@ A full-repository pass at these budgets measures a sixth of the corpus. The scop
 run (`--since`, `--pr`) is the one that fits a budget, and it is the one a gate
 would use.
 
+## 11a. The closed half is a linter
+
+Three of the eight labels name a phrase, and a phrase is decidable without a model.
+They are `plumb` rules now, at `error` in the root, joggle and plumb configs:
+
+    no-prose-verdict       "that is the whole point", "is not decoration", "earns its keep"
+    no-antithesis-clause   "X is not A. It is B.", "not A, but B"
+    no-anthropomorphic-program  "the rule knows", "the report wants", "the model refuses"
+
+They read comment and string-literal prose through one shared layer
+(`plumb/src/shared/prose-sites.ts`): comment markers stripped and lines joined, so
+a phrase wrapped across a line still matches, and a literal with no space skipped,
+because it is a token. Spec files are exempt, and the three rule sources carry a
+documented override, because a definition has to quote what it defines.
+
+They found 52 places in this repository, all fixed, and they cannot see Markdown:
+that is what joggle is for.
+
 ## 11b. The corpus, at full budget
 
 Raising the three budgets for one pass answers the question the default run cannot:
@@ -341,6 +364,12 @@ The files with the most findings are the ones a reader meets first:
 `FOREMAN.md` 54, `tools/foreman/journal.md` 33,
 `packages/cutlist/docs/artifact.md` 28, `docs/compression.md` 20,
 `src/rules/cluster-verdict.ts` 16, `JOGGLE.md` 16, this document 15.
+
+A pass with the plumb rules and five Markdown files (FOREMAN.md, the foreman
+journal, cutlist's `artifact.md` and `compression.md`, and JOGGLE.md) fixed about
+90 of them. Re-judging the corpus afterwards reports 630, and the same corpus
+re-judged twice moves by ten percent: the count is a sample, not a measurement.
+The labelled set is what turns it into one.
 
 Three things follow from the distribution.
 

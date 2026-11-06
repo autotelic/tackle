@@ -11,4 +11,5 @@
 62b3b4d5a6c8d0d9	1790631748	{"confidence":0.47,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.03,"keep_variants":0.65,"no_issue":0.32}}
 62c017fde398f892	1790624340	{"confidence":0.85,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.89,"stale_reference":0.01,"wrong_behavior":0.02,"wrong_contract":0.08}}
 62cb24ac8991d55c	1790631747	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
+62cb4aded7302249	1793986112	{"confidence":0.79,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0.06,"antithesis":0,"false_certainty":0,"no_issue":0.82,"overgeneralisation":0.02,"riddle":0.06,"synonym_rotation":0.04,"verdict":0}}
 62e9bf51dd178046	1790633007	{"consistency":1,"kind":"Probability","probability":0.6366666666666667}

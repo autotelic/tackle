@@ -17,7 +17,7 @@ export const CORRECTIONS: ReadonlyArray<RegExp> = [
 /** A sentence that corrects a belief the reader was never shown to hold. */
 export const noAntithesisClauseRule = defineRule({
 	meta: {
-		type: "suggestion",
+		type: "problem",
 		docs: {
 			description:
 				"Disallow antithesis framing in prose ('this is not a cache, it is a memo'; 'not X, but Y'). State the second half: a correction of a belief nobody held makes the reader hold it first.",

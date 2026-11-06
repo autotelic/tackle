@@ -27,7 +27,7 @@ export const ANTHROPOMORPHIC: ReadonlyArray<RegExp> = [
 /** A sentence that makes a program the subject of a mental verb. */
 export const noAnthropomorphicProgramRule = defineRule({
 	meta: {
-		type: "suggestion",
+		type: "problem",
 		docs: {
 			description:
 				"Disallow prose that gives a program a mind ('the rule knows', 'the report wants', 'the model refuses'). Name the value and where it comes from: the reader needs the mechanism, not the intention.",

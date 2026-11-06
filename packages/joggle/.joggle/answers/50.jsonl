@@ -13,3 +13,5 @@
 50cbd72f7719fc18	1790631747	{"confidence":0.56,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.67,"component_or_feature":0,"not_applicable":0.32,"route_or_handler":0.01}}
 50d1fb102239137b	1790635870	{"confidence":0.37,"kind":"Classify","label":"drift","probabilities":{"compatible":0.07,"drift":0.57,"two_concepts":0.36}}
 50ddeaa71129823e	1790624340	{"confidence":0.27,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.02,"keep_variants":0.51,"no_issue":0.47}}
+50ef6a2a2462c681	1793986112	{"confidence":0.76,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0.02,"antithesis":0.01,"false_certainty":0.01,"no_issue":0.79,"overgeneralisation":0.03,"restatement":0.06,"riddle":0.02,"synonym_rotation":0.02,"verdict":0.04}}
+50f4a0f11fb1ed47	1793986050	{"confidence":0.37,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0,"antithesis":0.08,"false_certainty":0,"no_issue":0.44,"overgeneralisation":0,"restatement":0.06,"riddle":0.34,"synonym_rotation":0.01,"verdict":0.07}}

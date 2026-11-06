@@ -1,5 +1,7 @@
 08204e2e6657a8b4	1790632045	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"merge":0,"move":0.02,"no_issue":0.98}}
 08285fbc6228583a	1790635870	{"confidence":0.74,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.81,"component_or_feature":0.03,"not_applicable":0.14,"route_or_handler":0.02}}
+0840a0193d60e9a6	1793986035	{"confidence":0.51,"kind":"Classify","label":"verdict","probabilities":{"anthropomorphism":0,"antithesis":0,"false_certainty":0.01,"no_issue":0.13,"overgeneralisation":0.03,"restatement":0.13,"riddle":0.13,"synonym_rotation":0.01,"verdict":0.56}}
+0843808d397831d7	1793986107	{"confidence":0.87,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0,"antithesis":0.01,"false_certainty":0.02,"no_issue":0.89,"overgeneralisation":0.04,"riddle":0.03,"synonym_rotation":0.01,"verdict":0}}
 085b97fe49a779d7	1790631747	{"confidence":0.95,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0.02}}
 086096655613e50b	1790624340	{"kind":"Probability","probability":0.62}
 0865143c4c13de8a	1790631747	{"confidence":0.61,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.71,"component_or_feature":0,"not_applicable":0.29,"route_or_handler":0}}
@@ -8,5 +10,6 @@
 08beca7af509a266	1790631747	{"confidence":0.86,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.9,"not_a_derivation":0.01,"reimplements":0.09}}
 08c0a3a89a36f639	1790631748	{"confidence":0.65,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.76,"not_a_derivation":0.22,"reimplements":0.02}}
 08db1854a0259938	1790624340	{"confidence":0.92,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.94,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0.03}}
+08e2506efece0943	1793985989	{"confidence":0.84,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0.01,"antithesis":0,"false_certainty":0,"no_issue":0.86,"overgeneralisation":0,"restatement":0,"riddle":0.13,"synonym_rotation":0,"verdict":0}}
 08e5ac58a9b12b1b	1790636522	{"confidence":0.45,"kind":"Classify","label":"belongs","probabilities":{"belongs":0.63,"framework_expected":0.07,"violates":0.3}}
 08f2033adadad168	1790631747	{"confidence":0.71,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.78,"component_or_feature":0.01,"not_applicable":0.2,"route_or_handler":0.01}}

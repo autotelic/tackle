@@ -1,7 +1,11 @@
 f503c735425951ac	1790635161	{"confidence":0.7,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.78,"component_or_feature":0.03,"not_applicable":0.16,"route_or_handler":0.03}}
 f53264ba8965bb58	1790631747	{"confidence":0.44,"kind":"Classify","label":"one_concept","probabilities":{"already_named":0.1,"coincidental":0.27,"one_concept":0.63}}
+f538c5b60ac3f7a8	1793986050	{"confidence":0.68,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0,"antithesis":0.16,"false_certainty":0.01,"no_issue":0.72,"overgeneralisation":0.05,"riddle":0.03,"synonym_rotation":0.01,"verdict":0.02}}
 f55ff0afecc4166e	1790631747	{"confidence":0.96,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.97,"not_a_derivation":0.02,"reimplements":0.01}}
+f574f01c1d26acb7	1793985989	{"confidence":0.53,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0.01,"antithesis":0,"false_certainty":0.01,"no_issue":0.58,"overgeneralisation":0.09,"restatement":0.07,"riddle":0.05,"synonym_rotation":0.01,"verdict":0.18}}
 f5907a4e9f84808b	1790624340	{"kind":"Probability","probability":0.38}
+f598b720e3a8f356	1793986137	{"confidence":0.9,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0.01,"antithesis":0,"false_certainty":0.01,"no_issue":0.91,"overgeneralisation":0.01,"restatement":0.03,"riddle":0.02,"synonym_rotation":0,"verdict":0.01}}
+f5a2a02c19b61dba	1793985989	{"confidence":0.89,"kind":"Classify","label":"verdict","probabilities":{"anthropomorphism":0,"antithesis":0,"false_certainty":0,"no_issue":0.04,"overgeneralisation":0,"restatement":0.05,"riddle":0.01,"synonym_rotation":0,"verdict":0.9}}
 f5d67ba0332e0e2b	1790624340	{"confidence":0.42,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.47,"no_difference":0.05,"removes_a_hazard":0.26,"slightly_clearer":0.22},"rating":1.93}
 f5dc0820108c208e	1790624340	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0}}
 f5e5d923ded3e3a3	1790632140	{"confidence":0.15,"kind":"Classify","label":"two_concepts","probabilities":{"compatible":0.19,"drift":0.37,"two_concepts":0.44}}

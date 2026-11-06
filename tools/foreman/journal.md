@@ -19,8 +19,8 @@ Make `pnpm jig check` at the workspace root a **real gate**: it must run `plumb`
 and `cutlist` against this repository, report honestly (a missing engine is a note, never
 "clean"), and accept what it finds into a root `.jig-baseline.json` by identity.
 
-The outcome, not the findings: after Round 1 the root is a live specimen the tools can see,
-and the ratchet (`plumb` and `joggle` rules to `error`, baseline to empty) has somewhere to
+After Round 1 the root is a live specimen the tools measure, and the ratchet (`plumb` and
+`joggle` rules to `error`, baseline to empty) has somewhere to
 stand. Everything below is scoped to that. From Round 2 the goal is Phase B, the ratchet.
 
 ## Budget
@@ -562,7 +562,7 @@ exit=0
 
 ### 1.13 Ad hoc probes (the census that the census implies)
 
-Run because the instruments above pointed at them; each is a primary source, not a summary.
+Run because the instruments above pointed at them; each is a primary source.
 
 `joggle` **resolves to a global binary, not the workspace source.** `which joggle` answers
 `/Users/togmund/.local/bin/joggle`; `which cutlist` and `which jig` answer not-found. So the
@@ -740,8 +740,7 @@ finding. **Not this round** — the exemplar is a client, and this is its own it
 **Evidence:** 1.7, and `grep` for `lint:errors:changed`/`.oxlint-errors.json` finds only the
 exemplar's data file. §5's rung 2 ("Touched") and FOREMAN §4 both assume a
 `pnpm lint:errors:changed` reading `.oxlint-errors.json`. Nothing in this repository implements
-it. **Move: expand** (a missing primitive). **Learn queue** — this is the kind of gap the whole
-machine exists to name.
+it. **Move: expand** (a missing primitive). **Learn queue.**
 
 ### F8 — the root ledger runs before it can be trusted
 
@@ -775,8 +774,8 @@ must not reject an old record).
 
 **Deviation, recorded.** §10 asks one worktree per workstream. Round 1's benches work in the
 trunk tree on disjoint files, because each fresh worktree pays a full `pnpm install` and the
-two benches here are the root seam itself. The independence that matters for this round — the
-witness and the red team — is bought with **separate conversations and raw instruments**, and
+two benches here are the root seam itself. For this round, independence between the witness
+and the red team comes from **separate conversations and raw instruments**, and
 those members are dispatched as such. If a later round's benches touch overlapping files, they
 get real worktrees.
 
@@ -838,8 +837,7 @@ cutlist             process         cutlist        project
 ```
 
 The exemplar links `cutlist` and `jig-cli` and nothing else, so `cutlist` resolves from its own
-`node_modules/.bin` and `plumb`/`joggle` fall through to PATH. That is the honest answer, and
-the column now says which one.
+`node_modules/.bin` and `plumb`/`joggle` fall through to PATH. The column now says which one.
 
 ### 5.3 `pnpm jig check --format json` — all three engines ran
 
@@ -906,11 +904,11 @@ The root `.jig-baseline.json` is now a property of the code: 149 identities, acc
   `error` without putting the whole repo red at once — so it is a **prerequisite of Phase B**,
   and the single most valuable new primitive this round surfaced. It is `expand`; it needs an
   approval and a home (most likely a `jig` subcommand, since `jig` owns the baseline idea).
-- **The census can lie about itself.** The "on PATH" column was hydraulic: it answered a fact
+- **The census measured the wrong thing.** The "on PATH" column was hydraulic: it answered a fact
   about the caller's shell, not the project, and `joggle` resolved to a **global**
-  `/Users/togmund/.local/bin/joggle`, not the workspace source. W1 removes the class: the
-  project's own install wins, and the column says which. This is the kind of finding that is
-  worthless to fix once and valuable to fix by rule.
+  `/Users/togmund/.local/bin/joggle`, not the workspace source. W1 fixes the class: the
+  project's own install wins, and the column says which. Fixing this once is worthless; a rule
+  that catches the class is the fix.
 - **`plumb`'s rule-test check is advisory by design.** `scripts/check-rule-tests.mjs` reports
   75 missing suites and exits 0 unless handed `--strict`; `plumb`'s `check` does not pass it.
   Whether a co-located suite is required is a judgement (§7 `expand`), not a Phase A item.

@@ -296,10 +296,13 @@ export const proseVoice: PlannedRule = {
     const atoms = yield* Atoms
     const planned: Array<{ readonly candidate: Candidate; readonly plan: Plan<DecisionAnswers> }> = []
     for (const candidate of judged) {
+      // No path in the atom: the question is about the sentence, and two identical
+      // sentences in two files are one question. A path here also made the answer
+      // depend on how the file was named, so a per-file run and a repository run
+      // disagreed about the same sentence.
       const id = yield* atoms.add({
         source: candidate.source,
         surface: candidate.surface.slice(0, 80),
-        file: candidate.file,
         sentence: candidate.sentence.slice(0, policy.proseVoice.maxChars),
         before: candidate.before.slice(0, policy.evidence.maxDocChars),
         after: candidate.after.slice(0, policy.evidence.maxDocChars),

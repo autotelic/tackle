@@ -20,7 +20,7 @@ export const CLOSERS: ReadonlyArray<RegExp> = [
 /** A comment or a message that asserts its own importance instead of stating a fact. */
 export const noProseVerdictRule = defineRule({
 	meta: {
-		type: "suggestion",
+		type: "problem",
 		docs: {
 			description:
 				"Disallow prose that grades the material instead of stating a fact ('that is the whole point', 'the notes are not decoration', 'earns its keep'). Deleting such a sentence loses no information, so it costs a reader a conversion with nothing to show for it.",
