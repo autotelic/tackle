@@ -748,6 +748,46 @@ const rexWorker = (input: {
     : undefined
 }
 
+/**
+ * Which session holds a Rex window.
+ *
+ * `rex window close` and `rex window focus` take a window id but still want `-s <session>`;
+ * without it they answer "not found" for a window that is right there. The worker row stores
+ * only the window id, so this finds the parent by scanning the sessions Rex reports.
+ *
+ * @param rex - The rex binary.
+ * @param window - The window id.
+ * @returns The session id, or undefined when no session holds it.
+ */
+const sessionOfWindow = (rex: string, window: string): string | undefined => {
+  const listed = run({ command: rex, args: ["ls", "--json"] })
+  const sessions = Schema.decodeResult(
+    Schema.fromJsonString(
+      Schema.Struct({
+        sessions: Schema.Array(Schema.Struct({ session_id: Schema.String, label: Schema.String })),
+      }),
+    ),
+  )(listed.stdout)
+  if (Result.isFailure(sessions)) return undefined
+  for (const entry of sessions.success.sessions) {
+    const windows = run({
+      command: rex,
+      args: ["window", "ls", "-s", entry.session_id, "--json"],
+    })
+    const decoded = Schema.decodeResult(
+      Schema.fromJsonString(
+        Schema.Struct({
+          windows: Schema.Array(Schema.Struct({ window_id: Schema.String, label: Schema.String })),
+        }),
+      ),
+    )(windows.stdout)
+    if (Result.isSuccess(decoded) && decoded.success.windows.some((w) => w.window_id === window)) {
+      return entry.session_id
+    }
+  }
+  return undefined
+}
+
 /** The herdr-core binary, if this machine has it. */
 const hcOf = (): Option.Option<string> => {
   const global = valueOf(onPath("hc"))
@@ -1092,7 +1132,12 @@ export const stopWorker = (input: {
     // vanished room entry.
     if (worker.address.startsWith("window:")) {
       const rex = Result.getOrUndefined(onPath("rex"))
-      if (rex !== undefined) run({ command: rex, args: ["window", "close", worker.address] })
+      // A window lives inside a session, and Rex wants the session named: a bare window id is
+      // "not found" however global it looks. Find which session holds it.
+      const session = rex === undefined ? undefined : sessionOfWindow(rex, worker.address)
+      if (rex !== undefined && session !== undefined) {
+        run({ command: rex, args: ["window", "close", "-s", session, worker.address] })
+      }
     } else if (worker.address.startsWith("session:")) {
       const rex = Result.getOrUndefined(onPath("rex"))
       if (rex !== undefined) run({ command: rex, args: ["kill", worker.address] })
@@ -1133,13 +1178,17 @@ export const attachWorker = (input: {
     if (worker === undefined) return yield* Effect.fail(`no worker named ${input.name}`)
     if (worker.address.startsWith("window:")) {
       const rex = Result.getOrUndefined(onPath("rex"))
-      const focused =
-        rex === undefined
-          ? undefined
-          : run({ command: rex, args: ["window", "focus", worker.address] })
-      return focused?.code === 0
+      const session = rex === undefined ? undefined : sessionOfWindow(rex, worker.address)
+      if (rex === undefined || session === undefined) {
+        return `rex tab ${worker.address} — its session is gone`
+      }
+      const focused = run({
+        command: rex,
+        args: ["window", "focus", "-s", session, worker.address],
+      })
+      return focused.code === 0
         ? `rex tab ${worker.address} · focused`
-        : `rex tab ${worker.address} — focus it with: rex window focus ${worker.address}`
+        : `rex tab ${worker.address} — focus it with: rex window focus -s ${session} ${worker.address}`
     }
     // Rex has no "attach": a session id is shown by asking the app to select it.
     if (worker.address.startsWith("session:")) {
@@ -1243,9 +1292,16 @@ export const liveRexWorkers = (): {
   return { ids, byName }
 }
 
-/** The standing instructions a personal review worker starts with. */
+/**
+ * The standing instructions a personal review worker starts with.
+ *
+ * Deliberately not `skills/review.md`: that file's contract is the room's, and its last line is
+ * "do not approve, request changes, or comment — the daemon posts". A personal worker has no
+ * daemon behind it, so inheriting that sentence produced exactly the failure it describes: a
+ * review written, and nothing submitted.
+ */
 const personalSkill = (): string => {
-  const file = new URL("../skills/review.md", import.meta.url)
+  const file = new URL("../skills/personal-review.md", import.meta.url)
   return existsSync(file) ? readFileSync(file, "utf8") : ""
 }
 
