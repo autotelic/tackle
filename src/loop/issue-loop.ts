@@ -20,6 +20,7 @@ import {
   listReadyIssues,
   readReceiptHistory,
   relabel,
+  removeLabel,
   workPresent,
 } from './tracker.ts'
 
@@ -376,6 +377,8 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
               ),
             )
           }
+          // The open PR is the done marker (#5); the issue keeps no label.
+          yield* tryP(() => removeLabel(repoDir, issue.number, config.issues.working))
           yield* tryP(() => git(repoDir, 'worktree', 'remove', worktreeDir, '--force'))
           return { kind: 'pr-ready', issue: issue.number, passesUsed: ruleContext.passesUsed }
         }

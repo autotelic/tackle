@@ -67,6 +67,10 @@ export async function relabel(
   await gh(repoDir, 'issue', 'edit', String(issue), '--remove-label', remove, '--add-label', add)
 }
 
+export async function removeLabel(repoDir: string, issue: number, label: string): Promise<void> {
+  await gh(repoDir, 'issue', 'edit', String(issue), '--remove-label', label)
+}
+
 export async function comment(repoDir: string, issue: number, body: string): Promise<void> {
   await gh(repoDir, 'issue', 'comment', String(issue), '--body', body)
 }
