@@ -3,7 +3,40 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { workPresent } from '../src/loop/tracker.ts'
+import { hasOpenBlocker, type Issue, workPresent } from '../src/loop/tracker.ts'
+
+describe('hasOpenBlocker', () => {
+  const issue = (blockedBy?: Issue['blockedBy']): Issue => ({
+    number: 1,
+    title: 't',
+    body: '',
+    ...(blockedBy ? { blockedBy } : {}),
+  })
+
+  it('is unblocked with no edges or only closed blockers', () => {
+    expect(hasOpenBlocker(issue())).toBe(false)
+    expect(hasOpenBlocker(issue({ nodes: [], totalCount: 0 }))).toBe(false)
+    expect(hasOpenBlocker(issue({ nodes: [{ number: 2, state: 'CLOSED' }], totalCount: 1 }))).toBe(
+      false,
+    )
+  })
+
+  it('is blocked while any blocker is open', () => {
+    expect(
+      hasOpenBlocker(
+        issue({
+          nodes: [
+            { number: 2, state: 'CLOSED' },
+            { number: 3, state: 'OPEN' },
+          ],
+          totalCount: 2,
+        }),
+      ),
+    ).toBe(true)
+    // No nodes returned (truncated/permission): trust the count.
+    expect(hasOpenBlocker(issue({ nodes: [], totalCount: 2 }))).toBe(true)
+  })
+})
 
 let dir: string | null = null
 

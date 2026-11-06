@@ -9,7 +9,8 @@ import type { HumanChannel } from '../human-channel.ts'
 import { buildSessionPrompt } from '../prompt.ts'
 import { type Receipt, renderReceipt } from '../receipt.ts'
 import type { CheckReport, FailureSetEntry } from '../report.ts'
-import { runSession } from '../session.ts'
+import { runSession, type SessionOutcome } from '../session.ts'
+import { isProviderFailure } from './provider.ts'
 import { isStalled, matchRule, type RuleContext } from './rules.ts'
 import {
   comment,
@@ -135,6 +136,63 @@ function checksWithPause(args: {
   })
 }
 
+/**
+ * Sessions get the same #9 treatment as Checks: a provider failure retries
+ * the Pass with backoff (1, 5, 15 min), then the Loop Pauses — no Passes,
+ * a cheap probe Session every 15 minutes, a message on pause and resume.
+ * Only a non-provider outcome reaches the caller, so infra never burns
+ * the issue budget or the nightly cap.
+ */
+function sessionWithPause(args: {
+  run: () => Promise<SessionOutcome>
+  probe: () => Promise<boolean>
+  notify: (text: string) => Promise<void>
+  issue: number
+  sleepFn: (ms: number) => Effect.Effect<void>
+}): Effect.Effect<SessionOutcome, Error> {
+  const minute = 60_000
+  return Effect.gen(function* () {
+    let outcome = yield* Effect.tryPromise(() => args.run())
+    let retries = 0
+    let paused = false
+    while (isProviderFailure(outcome.reason)) {
+      if (retries < INFRA_BACKOFF_MINUTES.length) {
+        const waitMinutes = INFRA_BACKOFF_MINUTES[retries] as number
+        yield* Effect.tryPromise(() =>
+          args.notify(
+            `Provider failure on issue #${args.issue} (${outcome.reason?.slice(0, 120)}). ` +
+              `Retrying the Pass in ${waitMinutes} min.`,
+          ),
+        )
+        retries += 1
+        yield* args.sleepFn(waitMinutes * minute)
+      } else {
+        if (!paused) {
+          yield* Effect.tryPromise(() =>
+            args.notify(
+              `Treadle PAUSED: the provider keeps failing (${outcome.reason?.slice(0, 120)}). ` +
+                `Probing every ${PROBE_MINUTES} min; no budget is being spent.`,
+            ),
+          )
+          paused = true
+        }
+        yield* args.sleepFn(PROBE_MINUTES * minute)
+        const healthy = yield* Effect.tryPromise(() => args.probe()).pipe(
+          Effect.orElseSucceed(() => false),
+        )
+        if (!healthy) continue
+        yield* Effect.tryPromise(() =>
+          args.notify('Treadle resumed: the provider is answering again.'),
+        )
+        paused = false
+        retries = 0
+      }
+      outcome = yield* Effect.tryPromise(() => args.run())
+    }
+    return outcome
+  })
+}
+
 export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult, Error> {
   const { repoDir, config, issue, human, notify } = deps
   const runChecksFn = deps.runChecksFn ?? runChecks
@@ -231,8 +289,6 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
           reason: 'budget',
         }
       }
-      deps.passesTonight.increment()
-
       // ── Session (seed rule 1: the fix prompt carries the check report) ──
       const prompt = buildSessionPrompt({
         vision,
@@ -251,17 +307,37 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
         'sessions',
         `issue-${issue.number}-pass-${pass}-${stamp()}.jsonl`,
       )
-      const outcome = yield* tryP(() =>
-        runSessionFn({
-          cwd: worktreeDir,
-          prompt,
-          maxTurns: config.budgets.maxTurnsPerSession,
-          timeoutMs: config.budgets.sessionTimeoutMinutes * 60_000,
-          askHumanTimeoutMs: config.budgets.askHumanTimeoutMinutes * 60_000,
-          askHuman: human.askHuman,
-          logPath: sessionLogPath,
-        }),
-      )
+      // #9: provider failures Pause, they don't burn the Pass. The wrapper
+      // retries with backoff, then Pauses and probes until the provider is
+      // back, and only a non-provider outcome reaches the budget below.
+      const outcome = yield* sessionWithPause({
+        run: () =>
+          runSessionFn({
+            cwd: worktreeDir,
+            prompt,
+            maxTurns: config.budgets.maxTurnsPerSession,
+            timeoutMs: config.budgets.sessionTimeoutMinutes * 60_000,
+            askHumanTimeoutMs: config.budgets.askHumanTimeoutMinutes * 60_000,
+            askHuman: human.askHuman,
+            logPath: sessionLogPath,
+          }),
+        probe: async () => {
+          const probe = await runSessionFn({
+            cwd: worktreeDir,
+            prompt: 'Reply with exactly: ok',
+            maxTurns: 2,
+            timeoutMs: 120_000,
+            askHumanTimeoutMs: 60_000,
+            askHuman: async () => '',
+            logPath: join(treadleDir, 'sessions', `issue-${issue.number}-probe-${stamp()}.jsonl`),
+          })
+          return probe.terminal === 'completed'
+        },
+        notify,
+        issue: issue.number,
+        sleepFn,
+      })
+      deps.passesTonight.increment()
       previousNote = outcome.lastAssistantText
       costSoFarUsd += outcome.costUsd
       if (previousNote) {

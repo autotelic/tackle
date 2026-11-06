@@ -22,9 +22,26 @@ export async function ghJson<T>(cwd: string, ...args: string[]): Promise<T> {
   return JSON.parse(await gh(cwd, ...args)) as T
 }
 
-export type Issue = { number: number; title: string; body: string }
+export type Issue = {
+  number: number
+  title: string
+  body: string
+  blockedBy?: { nodes: { number: number; state: string }[]; totalCount: number }
+}
 
-/** The queue: open ready issues, lowest number first. */
+/**
+ * GitHub's native blocking edges (#9's "no open blockers"): an issue is
+ * blocked while any issue that blocks it is still open. Treadle depends on
+ * the GitHub primitive only — whoever declared the edge.
+ */
+export function hasOpenBlocker(issue: Issue): boolean {
+  const blockedBy = issue.blockedBy
+  if (!blockedBy) return false
+  if (blockedBy.nodes.length > 0) return blockedBy.nodes.some((node) => node.state === 'OPEN')
+  return blockedBy.totalCount > 0
+}
+
+/** The queue: open ready issues with no open blockers, lowest number first. */
 export async function listReadyIssues(repoDir: string, readyLabel: string): Promise<Issue[]> {
   const issues = await ghJson<Issue[]>(
     repoDir,
@@ -35,11 +52,11 @@ export async function listReadyIssues(repoDir: string, readyLabel: string): Prom
     '--label',
     readyLabel,
     '--json',
-    'number,title,body',
+    'number,title,body,blockedBy',
     '--limit',
     '50',
   )
-  return issues.sort((a, b) => a.number - b.number)
+  return issues.filter((issue) => !hasOpenBlocker(issue)).sort((a, b) => a.number - b.number)
 }
 
 export async function listWorkingIssues(repoDir: string, workingLabel: string): Promise<Issue[]> {
