@@ -700,6 +700,52 @@ const launchRex = (input: {
     : Result.succeed(decoded.success.session_id)
 }
 
+/**
+ * An already-running Rex worker with this name, if there is one.
+ *
+ * `--review-requested` is a bulk command, and a bulk command that re-launches work already in
+ * flight is worse than one that skips: the second worker re-prepares the same worktree (deleting
+ * the first one's checkout under it) and reviews the same head twice. The name is the identity,
+ * because it is the only thing the tab carries.
+ *
+ * @param input - The worker name and the session it would be opened in, when there is one.
+ * @returns The existing session or window id, or undefined when none is running.
+ */
+const rexWorker = (input: {
+  readonly name: string
+  readonly session: string | undefined
+}): string | undefined => {
+  const rex = Result.getOrUndefined(onPath("rex"))
+  if (rex === undefined) return undefined
+  // Both shapes: a worker launched before a tab target was configured is a session of its own,
+  // and a guard that only looks in the target session misses exactly the worker it must not
+  // re-launch.
+  const sessions = run({ command: rex, args: ["ls", "--json"] })
+  const decodedSessions = Schema.decodeResult(
+    Schema.fromJsonString(
+      Schema.Struct({
+        sessions: Schema.Array(Schema.Struct({ session_id: Schema.String, label: Schema.String })),
+      }),
+    ),
+  )(sessions.stdout)
+  const own = Result.isSuccess(decodedSessions)
+    ? decodedSessions.success.sessions.find((session) => session.label === input.name)
+    : undefined
+  if (own !== undefined) return own.session_id
+  if (input.session === undefined || input.session === "") return undefined
+  const windows = run({ command: rex, args: ["window", "ls", "-s", input.session, "--json"] })
+  const decodedWindows = Schema.decodeResult(
+    Schema.fromJsonString(
+      Schema.Struct({
+        windows: Schema.Array(Schema.Struct({ window_id: Schema.String, label: Schema.String })),
+      }),
+    ),
+  )(windows.stdout)
+  return Result.isSuccess(decodedWindows)
+    ? decodedWindows.success.windows.find((window) => window.label === input.name)?.window_id
+    : undefined
+}
+
 /** The herdr-core binary, if this machine has it. */
 const hcOf = (): Option.Option<string> => {
   const global = valueOf(onPath("hc"))
@@ -768,6 +814,8 @@ export const startWorker = (input: {
     readonly address: string
     readonly worktree: string
     readonly url?: string
+    /** True when a worker with this name was already running and nothing was launched. */
+    readonly reused?: boolean
   },
   string,
   FileSystem.FileSystem
@@ -788,6 +836,18 @@ export const startWorker = (input: {
       return yield* Effect.fail(
         "the app block is only implemented under hc; a rex worker starts the review session",
       )
+    }
+    // The tab's home: the flag wins, then the room's committed choice. Deliberately *not*
+    // `$REX_SESSION`: that names the pane the command was launched from, which for an agent is
+    // its own session — so a review would land beside the orchestrator instead of where a person
+    // watches reviews. No answer means a session of the worker's own.
+    const rexSession = input.rexSession ?? config.worker?.rex?.session
+    const workerName = `room-${input.pr}-${input.kind}`
+    if (substrate === "rex") {
+      const running = rexWorker({ name: workerName, session: rexSession })
+      if (running !== undefined) {
+        return { name: workerName, address: running, worktree: "", reused: true }
+      }
     }
     // A review worker starts from the same handoff `--prepare` produces: the worktree is at the
     // reviewed sha and the prompt is written, so the session's first turn is `cd`, not
@@ -916,7 +976,6 @@ export const startWorker = (input: {
     })
     // The tab's home: the flag wins, then the room's committed choice, then the session this
     // command runs inside (a person who launched it from a Rex pane is already in one).
-    const rexSession = input.rexSession ?? config.worker?.rex?.session ?? process.env.REX_SESSION
     const launchedPi =
       substrate === "rex"
         ? launchRex({ name, dir, script: piScript, session: rexSession })

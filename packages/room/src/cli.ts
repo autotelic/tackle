@@ -910,11 +910,16 @@ const workCommand = Command.make(
           continue
         }
         yield* write(
-          [
-            `worker ${result.success.name} · ${result.success.address}`,
-            `  worktree ${result.success.worktree}`,
-            `  attach: jig room attach --name ${result.success.name}`,
-          ].join("\n"),
+          result.success.reused === true
+            ? [
+                `worker ${result.success.name} · ${result.success.address}`,
+                "  already running; nothing launched",
+              ].join("\n")
+            : [
+                `worker ${result.success.name} · ${result.success.address}`,
+                `  worktree ${result.success.worktree}`,
+                `  attach: jig room attach --name ${result.success.name}`,
+              ].join("\n"),
         )
       }
     }),
