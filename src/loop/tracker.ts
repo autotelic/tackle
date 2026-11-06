@@ -92,7 +92,7 @@ export async function issueUrl(repoDir: string, issue: number): Promise<string |
  * recovered after a restart.
  */
 export async function readReceiptHistory(repoDir: string, issue: number): Promise<Receipt[]> {
-  const comments = await ghJson<{ body: string }[]>(
+  const result = await ghJson<{ comments: { body: string }[] }>(
     repoDir,
     'issue',
     'view',
@@ -101,7 +101,7 @@ export async function readReceiptHistory(repoDir: string, issue: number): Promis
     'comments',
   )
   const receipts: Receipt[] = []
-  for (const { body } of comments) {
+  for (const { body } of result.comments) {
     const receipt = parseReceipt(body)
     if (receipt) receipts.push(receipt)
   }
