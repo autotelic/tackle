@@ -50,47 +50,9 @@ import {
 } from "./schema.ts"
 import { Service as Tsgo } from "./tsgo.ts"
 import { applyDeclarationTypes, discoverFiles, loadWorkspace, type Unit } from "./workspace.ts"
-import { sentencesOfMarkdown, type ProseFile } from "./prose.ts"
 import { contentMappersOf } from "./content-mappers.ts"
 import { looksLikeSource } from "./source.ts"
 import type { ImportGraph } from "./imports.ts"
-
-/**
- * Read named files as prose, whatever their extension.
- *
- * The files a person writes outside a session -- a commit message, a pull
- * request body -- are not in the tree discovery walks, and a commit message has
- * no extension at all. Naming them is how they reach the same index as the
- * documentation.
- *
- * @param root - the project root, so the reported path is repository-relative.
- * @param paths - the files to read, relative to the root or absolute.
- * @returns the documents, with their prose already split.
- */
-const proseInputs = (
-  root: string,
-  paths: ReadonlyArray<string>,
-): Effect.Effect<ReadonlyArray<ProseFile>, WorkspaceError, FileSystem.FileSystem | Path.Path> =>
-  Effect.gen(function* () {
-    const fs = yield* FileSystem.FileSystem
-    const path = yield* Path.Path
-    const files: Array<ProseFile> = []
-    for (const input of paths) {
-      const absolute = path.isAbsolute(input) ? input : path.join(root, input)
-      const text = yield* fs.readFileString(absolute).pipe(
-        Effect.mapError(
-          (cause) =>
-            WorkspaceError.make({ path: absolute, operation: "readFileString", cause }),
-        ),
-      )
-      files.push({
-        path: path.relative(root, absolute),
-        text,
-        sentences: sentencesOfMarkdown(text),
-      })
-    }
-    return files
-  })
 
 export interface Options {
   readonly cwd: string
@@ -464,13 +426,18 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
   // The parse cache is a performance artifact, like the run cache and the wire
   // cache, so it lives in the machine cache and never in the repository.
   const parseCache = yield* loadParses({ cacheDir: runCache, tool: toolFingerprint })
-  const prose = yield* proseInputs(options.cwd, options.prose ?? [])
   const workspace = yield* loadWorkspace(options.cwd, options.paths, {
     discovered: files,
     contents,
     parses: parseCache.parses,
     types,
-    prose,
+    // Discovery's Markdown and the caller's named files read in one place. The
+    // walk's own list is passed here because a caller that supplies `discovered`
+    // skips the walk that would have carried it.
+    proseFiles: [
+      ...discovery.prose,
+      ...(options.prose ?? []).map((file) => path.resolve(options.cwd, file)),
+    ],
   })
   // Written after the load, and only when something was actually parsed.
   yield* parseCache.save

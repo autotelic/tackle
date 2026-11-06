@@ -1,5 +1,6 @@
 8b07506dd0bfa006	1793942974	{"confidence":0.88,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.06,"inferred":0.02,"not_applicable":0.92}}
 8b0d33370db9611d	1792689876	{"confidence":0.8,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.85,"stale_reference":0.01,"wrong_behavior":0.13,"wrong_contract":0.01}}
+8b17c520f17e336c	1793983843	{"confidence":0.9,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0,"antithesis":0,"false_certainty":0,"no_issue":0.91,"overgeneralisation":0.01,"riddle":0.03,"synonym_rotation":0.05,"verdict":0}}
 8b1b5282c84943a5	1793942976	{"confidence":0.98,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.01,"not_an_invariant":0.99,"repair_path":0}}
 8b1ced2786baf87a	1792619412	{"confidence":0.48,"kind":"Classify","label":"rendering_edge","probabilities":{"domain_core":0.03,"infrastructure":0,"library_core":0.39,"not_applicable":0,"rendering_edge":0.55,"transport_edge":0,"utilities":0.03}}
 8b21c9c763ce9d98	1793942973	{"confidence":0,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.5,"member_1":0.5}}
@@ -19,6 +20,7 @@
 8b94259bff7f53c3	1793942974	{"confidence":0.77,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.01,"must_be_current":0.14,"not_a_projection":0.85}}
 8b984e4030bb46ab	1792617317	{"confidence":0.51,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.21,"keep_variants":0.67,"no_issue":0.12}}
 8b9da34ce2ef7ab2	1793942970	{"consistency":1,"kind":"Probability","probability":0.86}
+8ba7cec13b2de231	1793983952	{"confidence":0.53,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0.02,"antithesis":0,"false_certainty":0.09,"no_issue":0.59,"overgeneralisation":0.02,"riddle":0.05,"synonym_rotation":0.02,"verdict":0.21}}
 8ba8e8136764aa7c	1792617317	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
 8bb15979703bbe4e	1792684421	{"confidence":1,"kind":"Classify","label":"rendering_edge","probabilities":{"domain_core":0,"infrastructure":0,"library_core":0,"not_applicable":0,"rendering_edge":1,"transport_edge":0,"utilities":0}}
 8bb2917f1fbc174a	1792265611	{"confidence":0.18,"kind":"Classify","label":"none","probabilities":{"lab":0.41,"none":0.59}}

@@ -8,6 +8,7 @@
 022b3a15b5c70892	1793943080	{"confidence":0.64,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.66,"no_difference":0.02,"removes_a_hazard":0.15,"slightly_clearer":0.17},"rating":1.94}
 0247b73dc1d2a787	1793941307	{"confidence":0.36,"kind":"Classify","label":"two_concepts","probabilities":{"one_concept":0.32,"two_concepts":0.68}}
 0249d6f5ca992b25	1792535008	{"confidence":0.91,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.93,"stale_reference":0,"wrong_behavior":0.06,"wrong_contract":0.01}}
+02518b0e970ceb46	1793983843	{"confidence":0.83,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0.01,"antithesis":0,"false_certainty":0,"no_issue":0.85,"overgeneralisation":0.02,"riddle":0.08,"synonym_rotation":0.03,"verdict":0.01}}
 025686e3c9a86e7f	1793942974	{"confidence":0.4,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.6,"unclear":0,"value":0.4}}
 02643b7bd100c945	1793942972	{"consistency":1,"kind":"Probability","probability":0.48222222222222216}
 02699f2b5d621832	1793942976	{"confidence":0.98,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0,"not_an_invariant":0.99,"repair_path":0.01}}

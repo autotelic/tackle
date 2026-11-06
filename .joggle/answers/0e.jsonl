@@ -25,10 +25,12 @@
 0e82fdc9ab6e0909	1793942972	{"confidence":0.32,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.34,"member_1":0.66}}
 0e874f2b5087a807	1792252958	{"confidence":0.92,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.95,"not_a_derivation":0.04,"reimplements":0.01}}
 0e89401d0b1e85e4	1793942974	{"confidence":0.46,"kind":"Classify","label":"general","probabilities":{"general":0.64,"names_a_caller":0.04,"shared_vocabulary":0.32}}
+0e90e0d225204126	1793983843	{"confidence":0.78,"kind":"Classify","label":"riddle","probabilities":{"anthropomorphism":0.01,"antithesis":0,"false_certainty":0,"no_issue":0.16,"overgeneralisation":0,"riddle":0.81,"synonym_rotation":0.01,"verdict":0.01}}
 0e98af9c400f5b98	1792621702	{"confidence":0.97,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.98,"not_a_derivation":0.01,"reimplements":0.01}}
 0eb5c72aa90dd287	1792619451	{"confidence":0.34,"kind":"Classify","label":"no_concept","probabilities":{"no_concept":0.67,"open":0.33}}
 0eb6548c161b84e7	1792252958	{"consistency":1,"kind":"Probability","probability":0.43777777777777777}
 0eb7a3ee1416ef54	1793942975	{"confidence":0.96,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.01,"must_be_current":0.02,"not_a_projection":0.97}}
+0eb8ba44b47cc6e4	1793983843	{"confidence":0.81,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0,"antithesis":0,"false_certainty":0,"no_issue":0.83,"overgeneralisation":0,"riddle":0.02,"synonym_rotation":0.14,"verdict":0.01}}
 0ebb19004b66dc45	1793942970	{"confidence":0.75,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.08,"no_issue":0.11,"semantic_verdict":0.81}}
 0ebe2114eee18b9b	1792592274	{"confidence":0.37,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.04,"merge":0.2,"move":0.25,"share_a_contract":0.5,"split":0.01}}
 0ecaba895d71db1f	1792689876	{"confidence":0.93,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0,"wrong_behavior":0.04,"wrong_contract":0.01}}

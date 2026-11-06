@@ -73,6 +73,8 @@ const blocksOfMarkdown = (text: string): ReadonlyArray<ReadonlyArray<Piece>> => 
   }
   let fence = false
   let comment = false
+  // Every line of a blockquote carries its marker, so a run of them is one block.
+  let quotedBefore = false
   for (let index = from; index < lines.length; index += 1) {
     const raw = lines[index] ?? ""
     if (FENCE.test(raw)) {
@@ -98,11 +100,14 @@ const blocksOfMarkdown = (text: string): ReadonlyArray<ReadonlyArray<Piece>> => 
       flush()
       continue
     }
+    const quoted = /^\s*>/.test(raw)
     const item = LIST_OR_QUOTE.test(raw)
     const body = stripped(raw.replace(LIST_OR_QUOTE, ""))
     if (body === "") continue
-    // A list item opens a block; a wrapped continuation line joins it.
-    if (item) flush()
+    // A list item opens a block, and a quoted line opens one unless the line
+    // before it was quoted too. A wrapped continuation line joins either.
+    if ((item || quoted) && !(quoted && quotedBefore)) flush()
+    quotedBefore = quoted
     current.push({ text: body, line: index + 1 })
   }
   flush()

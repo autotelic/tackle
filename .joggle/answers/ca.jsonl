@@ -17,6 +17,7 @@ ca621288189b9420	1793942974	{"confidence":0.82,"kind":"Classify","label":"neithe
 ca6590c7a366d3c2	1793942975	{"confidence":0.91,"kind":"Classify","label":"not_a_record","probabilities":{"mutable":0.04,"not_a_record":0.94,"supersede_only":0.02}}
 ca6b66f837845373	1793942970	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
 ca752e764d4451bc	1793941307	{"confidence":0.24,"kind":"Classify","label":"one_concept","probabilities":{"one_concept":0.62,"two_concepts":0.38}}
+ca7be22bfbd7c6c2	1793983842	{"confidence":0.47,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0.01,"antithesis":0.01,"false_certainty":0.06,"no_issue":0.53,"overgeneralisation":0.03,"restatement":0.17,"riddle":0.07,"synonym_rotation":0.01,"verdict":0.11}}
 ca802de83829e15b	1792617317	{"confidence":0.52,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.32,"names_a_caller":0,"shared_vocabulary":0.68}}
 ca87121c13ddefe3	1793942972	{"confidence":0.85,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.89,"stale_reference":0,"wrong_behavior":0.08,"wrong_contract":0.03}}
 ca89293fa7c96974	1793942971	{"confidence":0.87,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.9,"stale_reference":0.01,"wrong_behavior":0.08,"wrong_contract":0.01}}
@@ -25,11 +26,14 @@ ca8f348f96736107	1793942973	{"confidence":0.14,"kind":"Classify","label":"member
 ca96035014bd9079	1793942972	{"confidence":0.66,"kind":"Classify","label":"no_concept","probabilities":{"choice":0.08,"no_concept":0.77,"noul":0.15}}
 ca9f39d5f5cc9b36	1793942974	{"confidence":0.56,"kind":"Classify","label":"general","probabilities":{"general":0.71,"names_a_caller":0.02,"shared_vocabulary":0.27}}
 caadaf227d8383c2	1793942975	{"confidence":0.13,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.25,"must_be_current":0.33,"not_a_projection":0.42}}
+cab7ad281660008d	1793983843	{"confidence":0.86,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0.03,"antithesis":0.01,"false_certainty":0,"no_issue":0.88,"overgeneralisation":0.01,"riddle":0,"synonym_rotation":0.04,"verdict":0.03}}
 cabb8a5f25703865	1792617317	{"confidence":0.3,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.11,"merge":0.13,"move":0.32,"share_a_contract":0.44,"split":0}}
+cabd79a1db1680ed	1793983952	{"confidence":0.82,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0.03,"antithesis":0.05,"false_certainty":0,"no_issue":0.84,"overgeneralisation":0.02,"restatement":0.03,"riddle":0.01,"synonym_rotation":0.01,"verdict":0.01}}
 cabf140c8421a1e2	1793942974	{"confidence":0.42,"kind":"Classify","label":"reimplements","probabilities":{"legitimate_local":0.34,"not_a_derivation":0.05,"reimplements":0.61}}
 cac12142f0fcab81	1793942970	{"confidence":0.69,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.77,"stale_reference":0.01,"wrong_behavior":0.19,"wrong_contract":0.03}}
 cac1aee8840ae3e1	1792252958	{"confidence":0.69,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.21,"names_a_caller":0,"shared_vocabulary":0.79}}
 cac3d5ea305e1cd6	1792252958	{"consistency":1,"kind":"Probability","probability":0.10222222222222223}
+cac914e2445fa115	1793983843	{"confidence":0.33,"kind":"Classify","label":"riddle","probabilities":{"anthropomorphism":0.09,"antithesis":0.02,"false_certainty":0.01,"no_issue":0.22,"overgeneralisation":0.01,"riddle":0.41,"synonym_rotation":0.02,"verdict":0.22}}
 cad333fe988cd0b3	1793942973	{"confidence":0.47,"kind":"Rate","label":"removes_a_hazard","probabilities":{"meaningfully_better":0.2,"no_difference":0.03,"removes_a_hazard":0.65,"slightly_clearer":0.12},"rating":2.46}
 cae788387f8b1a9b	1792252958	{"confidence":0.98,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.01,"inferred":0,"not_applicable":0.99}}
 caeb21547a5ee5ae	1793942975	{"consistency":1,"kind":"Probability","probability":0.5733333333333333}

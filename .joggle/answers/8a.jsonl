@@ -1,6 +1,7 @@
 8a03d7642f2419f2	1793942974	{"confidence":0.89,"kind":"Classify","label":"neither","probabilities":{"fact":0.06,"neither":0.93,"recomputation":0.01}}
 8a11eaff7a1aece0	1793942970	{"consistency":1,"kind":"Probability","probability":0.27666666666666667}
 8a1d33bdeaf4e93a	1793942976	{"confidence":0.82,"kind":"Classify","label":"detect_only","probabilities":{"detect_only":0.88,"not_an_invariant":0.1,"repair_path":0.02}}
+8a2d9f18bc733ff7	1793983843	{"confidence":0.82,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0,"antithesis":0.01,"false_certainty":0.01,"no_issue":0.84,"overgeneralisation":0.11,"riddle":0.01,"synonym_rotation":0,"verdict":0.02}}
 8a318e82d8b249ac	1793942976	{"consistency":1,"kind":"Probability","probability":0.8733333333333334}
 8a32b8ba4a5ab301	1793942972	{"confidence":0.82,"kind":"Classify","label":"collapse","probabilities":{"collapse":0.88,"keep_variants":0.07,"no_issue":0.05}}
 8a378497ba83d11a	1793943082	{"confidence":0.2,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.6,"member_1":0.4}}
@@ -8,6 +9,7 @@
 8a37e7ab0c970a00	1793942971	{"confidence":0.88,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.91,"stale_reference":0,"wrong_behavior":0.08,"wrong_contract":0.01}}
 8a39d97c05673921	1792252958	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
 8a4052ab58b56fc5	1792252958	{"confidence":0.44,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.03,"no_issue":0.39,"semantic_verdict":0.58}}
+8a40bacf76398db8	1793983952	{"confidence":0.77,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0.12,"antithesis":0,"false_certainty":0,"no_issue":0.8,"overgeneralisation":0.02,"riddle":0.04,"synonym_rotation":0.02,"verdict":0}}
 8a465d2a41216257	1793942976	{"confidence":0.24,"kind":"Classify","label":"detect_only","probabilities":{"detect_only":0.49,"not_an_invariant":0.47,"repair_path":0.04}}
 8a47406a34db2c24	1792684422	{"confidence":0.96,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.03,"same_module":0,"same_package":0,"sibling_packages":0.97}}
 8a57751025c1c0be	1792252958	{"confidence":0.89,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.93,"not_a_derivation":0.04,"reimplements":0.03}}

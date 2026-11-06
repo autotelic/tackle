@@ -1,3 +1,4 @@
+2e00d3b911660d2d	1793983952	{"confidence":0.81,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0.02,"antithesis":0.01,"false_certainty":0.01,"no_issue":0.83,"overgeneralisation":0.04,"riddle":0.05,"synonym_rotation":0.02,"verdict":0.02}}
 2e042a4aebf29d4d	1793942975	{"consistency":1,"kind":"Probability","probability":0.9233333333333333}
 2e066bf5f52f8558	1793942974	{"confidence":0.67,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.78,"not_a_derivation":0.2,"reimplements":0.02}}
 2e06aab337bdf93c	1792252958	{"confidence":0.91,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.93,"stale_reference":0,"wrong_behavior":0.05,"wrong_contract":0.02}}
@@ -17,7 +18,9 @@
 2e48a594c4577c4f	1793942974	{"confidence":0.92,"kind":"Classify","label":"neither","probabilities":{"fact":0.04,"neither":0.95,"recomputation":0.01}}
 2e4f79e7e4477572	1792252958	{"confidence":0.16,"kind":"Classify","label":"move","probabilities":{"move":0.58,"no_issue":0.42}}
 2e58e78d44783b2d	1792542865	{"confidence":0.59,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.6900000000000001,"different_order":0,"different_work":0.31,"same_operation":0}}
+2e59ab6e4f785296	1793983951	{"confidence":0.67,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0.1,"antithesis":0,"false_certainty":0.01,"no_issue":0.71,"overgeneralisation":0.02,"riddle":0.11,"synonym_rotation":0.02,"verdict":0.03}}
 2e61be036c553779	1792621702	{"confidence":0.32,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.66,"member_1":0.34}}
+2e62c2cc6e89f8dd	1793983843	{"confidence":0.62,"kind":"Classify","label":"anthropomorphism","probabilities":{"anthropomorphism":0.67,"antithesis":0,"false_certainty":0,"no_issue":0.2,"overgeneralisation":0.01,"riddle":0.11,"synonym_rotation":0.01,"verdict":0}}
 2e689a33054761a5	1793942974	{"confidence":0.98,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0,"must_be_current":0.01,"not_a_projection":0.99}}
 2e729f6a00529214	1793942974	{"confidence":0.44,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.37,"names_a_caller":0,"shared_vocabulary":0.63}}
 2e7b4809e35ff595	1792252958	{"confidence":0.72,"kind":"Classify","label":"wire_contract","probabilities":{"domain_concept":0.19,"framework_glue":0.01,"implementation_detail":0.01,"wire_contract":0.79}}
@@ -37,6 +40,8 @@
 2eb898dada566e8b	1793942974	{"consistency":1,"kind":"Probability","probability":0.19666666666666666}
 2eb991631b7667f8	1793943082	{"confidence":0.19,"kind":"Rate","label":"slightly_clearer","probabilities":{"meaningfully_better":0.34,"no_difference":0.11,"removes_a_hazard":0.18,"slightly_clearer":0.37},"rating":1.59}
 2ebc47d961584798	1793942973	{"confidence":0.25,"kind":"Classify","label":"not_a_derivation","probabilities":{"legitimate_local":0.32,"not_a_derivation":0.5,"reimplements":0.18}}
+2ebe23aa49c45268	1793983843	{"confidence":0.51,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0.28,"antithesis":0,"false_certainty":0,"no_issue":0.57,"overgeneralisation":0.01,"riddle":0.1,"synonym_rotation":0,"verdict":0.04}}
+2ec2d1eda2c6311f	1793983843	{"confidence":0.83,"kind":"Classify","label":"verdict","probabilities":{"anthropomorphism":0.06,"antithesis":0.02,"false_certainty":0.01,"no_issue":0.03,"overgeneralisation":0,"restatement":0.02,"riddle":0.01,"synonym_rotation":0,"verdict":0.85}}
 2ecd1f8674f552c8	1792252958	{"confidence":0.67,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.75,"different_order":0,"different_work":0.24,"same_operation":0.01}}
 2edd0db37dc048dd	1792252958	{"confidence":0.37,"kind":"Rate","label":"slightly_clearer","probabilities":{"meaningfully_better":0.36,"no_difference":0.07,"removes_a_hazard":0.1,"slightly_clearer":0.47},"rating":1.5}
 2edfcdda646ac0b5	1792691059	{"confidence":0.51,"kind":"Classify","label":"domain_core","probabilities":{"domain_core":0.58,"infrastructure":0.03,"library_core":0.35,"not_applicable":0,"rendering_edge":0.01,"transport_edge":0.02,"utilities":0.01}}

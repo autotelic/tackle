@@ -1,4 +1,5 @@
 4c0054c2f8786a8d	1792621702	{"confidence":0.37,"kind":"Classify","label":"collapse","probabilities":{"collapse":0.58,"keep_variants":0.39,"no_issue":0.03}}
+4c012074dda83a29	1793983843	{"confidence":0.87,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0.01,"antithesis":0,"false_certainty":0,"no_issue":0.89,"overgeneralisation":0.03,"riddle":0.04,"synonym_rotation":0.02,"verdict":0.01}}
 4c0126508354662b	1792684420	{"confidence":0.75,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.81,"stale_reference":0.05,"wrong_behavior":0.12,"wrong_contract":0.02}}
 4c1429faa514e5cf	1792621702	{"confidence":0.4,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.06,"merge":0.52,"move":0.37,"share_a_contract":0.01,"split":0.04}}
 4c17264cc7fe20d6	1793942972	{"confidence":0.75,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.81,"stale_reference":0.01,"wrong_behavior":0.16,"wrong_contract":0.02}}
@@ -17,6 +18,7 @@
 4c2f698c4fc118b0	1793942971	{"confidence":0.61,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.01,"name_meaning":0.04,"no_issue":0.24,"semantic_verdict":0.71}}
 4c2fb343b0b137a5	1793943082	{"confidence":0.44,"kind":"Classify","label":"move","probabilities":{"merge":0.27,"move":0.63,"no_issue":0.1}}
 4c3ed19b54aef20e	1792252958	{"confidence":0.76,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.13,"internal_only":0.84,"unaccounted":0.03}}
+4c405d620edbe632	1793983843	{"confidence":0.85,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0.02,"antithesis":0,"false_certainty":0,"no_issue":0.87,"overgeneralisation":0.02,"riddle":0.01,"synonym_rotation":0.04,"verdict":0.04}}
 4c49c45115fa64c2	1792252958	{"confidence":0.51,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.12,"internal_only":0.67,"unaccounted":0.21}}
 4c4e164b9b397ba2	1792689876	{"confidence":0.76,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.07,"keep_variants":0.84,"no_issue":0.09}}
 4c5090bfe8d16c7c	1792252958	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}

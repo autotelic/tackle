@@ -4,6 +4,7 @@
 0a08eb345dd7ac52	1793942973	{"confidence":0.43,"kind":"Classify","label":"value","probabilities":{"meaning":0.37,"unclear":0.01,"value":0.62}}
 0a1e70908e1f9dcc	1792252958	{"consistency":1,"kind":"Probability","probability":0.7111111111111111}
 0a2495a4322e8076	1793942973	{"consistency":1,"kind":"Probability","probability":0.63}
+0a275415f37de153	1793983952	{"confidence":0.68,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0.15,"antithesis":0.04,"false_certainty":0,"no_issue":0.72,"overgeneralisation":0.02,"riddle":0.02,"synonym_rotation":0.03,"verdict":0.02}}
 0a2afe0a736539f7	1793942974	{"confidence":0.4,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.43,"no_difference":0.03,"removes_a_hazard":0.38,"slightly_clearer":0.16},"rating":2.17}
 0a2f547f1b03453a	1793942975	{"consistency":1,"kind":"Probability","probability":0.6699999999999999}
 0a38db68596a74d1	1792617317	{"confidence":0.92,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.94,"member_1":0.02,"member_2":0.02,"member_3":0.02}}

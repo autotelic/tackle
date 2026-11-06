@@ -269,7 +269,17 @@ fact or the question, judge again. Every number below is a real run over
 | 6 | `restatement` pruned without a neighbour | 21 |
 | 7 | criteria labels and banners skipped | 18 |
 
-Roughly eleven of the last eighteen are findings worth acting on. The confirmed
+Roughly eleven of the last eighteen are findings worth acting on. Two defects in
+the index itself surfaced the same way, and both are fixed:
+
+- **Discovery found the Markdown and `check` dropped it.** `checkRepository` passed
+  `discovery.files` to `loadWorkspace`, and a caller that passes `discovered`
+  bypasses the walk that carries `prose`. `WorkspaceInputs.proseFiles` now takes
+  both lists and the read happens in one place. The first whole-repository run
+  reported zero Markdown sentences, which is how it was found.
+- **Every blockquote line was its own block.** A `>` marker on each line made the
+  splitter flush per line, so a quoted paragraph arrived as sentence fragments:
+  "deeper-version question for each before dispatching it." The confirmed
 ones, with the label the judge chose:
 
 - `atoms.ts:16` "Content-addressed rather than positional, and that is the whole point." (verdict, 0.99)
@@ -328,13 +338,40 @@ Against a real commit message:
 The subject line, the antithesis and the closing flourish are all reported. The
 sentence between them, which states what changed, is declined.
 
+## 12a. Markdown, measured
+
+Discovery finds 6,319 Markdown sentences in this repository. At the current
+budget the rule judges 120 of them, and the report states the rest:
+
+    note: joggle/prose-voice — 6199 of 6319 Markdown sentences were not judged (budget 120).
+
+Run on `FOREMAN.md` alone (`--prose FOREMAN.md`), 34 of its 120 judged sentences
+are reported, and they are the register this rule exists for:
+
+    FOREMAN.md:198  verdict           "It is the point of the whole machine."
+    FOREMAN.md:131  verdict           "House style is not negotiable."
+    FOREMAN.md:29   verdict           "Everything else is in service of that."
+    FOREMAN.md:205  riddle            "Ratcheting down is paying it off."
+    FOREMAN.md:119  riddle            "A source change without a rebuild is a lie."
+    FOREMAN.md:49   riddle            "You hold the four tools while they cut this repository,
+                                        and you hold this repository while it cuts them."
+    FOREMAN.md:3    antithesis        "The goal beyond the goal is not "fix the findings.""
+    FOREMAN.md:177  riddle            "Do not summarize yet — the summary is where the lie enters."
+    FOREMAN.md:126  riddle            "Your own harness credentials are the same law."
+
+A command description ("Run everything and print the census.") is the kind of
+sentence this still reports and should not. It is the same false-positive class as
+section 11: a terse operational string that states a fact.
+
 ## 13. What is still wrong
 
 - **No labelled set.** Sixty sentences the author of this rule labels `bad`/`fine`
   is the fixture and the calibration reference. Without it the precision figure
   above is one person reading a list.
-- **The budget is a sixth of the corpus.** Scoping is the answer, and the run
-  cache makes a scoped run cheap.
+- **The budget is a fifth of the corpus at best.** 120 of 1,251 documented
+  sentences, 120 of 6,319 Markdown sentences. Scoping is the answer for a gate, and
+  the run cache makes a scoped run cheap; a full pass needs a larger budget than
+  the default.
 - **`docFor` reads a section banner as a declaration's doc.** A
   `/* ---- Pruning ---- */` above an interface is that interface's doc block. The
   rule filters the banner out by its text, but the fact is wrong for every rule

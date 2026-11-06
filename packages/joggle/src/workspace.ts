@@ -2288,6 +2288,15 @@ export interface WorkspaceInputs {
    * reads them and hands them over in the shape a Markdown file would arrive in.
    */
   readonly prose?: ReadonlyArray<ProseFile>
+  /**
+   * Paths to read as prose, whatever their extension.
+   *
+   * Discovery's own Markdown arrives here, and so does a file a caller named: a
+   * commit message has no extension at all. Both are read in one place, because a
+   * caller that passes `discovered` bypasses the walk that would have found the
+   * Markdown, and that is how prose went missing once already.
+   */
+  readonly proseFiles?: ReadonlyArray<string>
 }
 
 /**
@@ -2348,7 +2357,11 @@ export const loadWorkspace = (
     }
     clock = mark("read+parse", clock, yield* Clock.currentTimeMillis)
     const prose: Array<ProseFile> = [...(input.prose ?? [])]
-    for (const absolute of resolved?.prose ?? []) {
+    for (const file of [...(resolved?.prose ?? []), ...(input.proseFiles ?? [])]) {
+      // Absolute at the boundary: discovery reports the path it walked, and a
+      // caller reports one relative to the root, so the two disagree about what a
+      // relative path means.
+      const absolute = path.isAbsolute(file) ? file : path.resolve(file)
       const preloaded = input.contents?.get(absolute)
       const text =
         preloaded ??
@@ -2356,11 +2369,13 @@ export const loadWorkspace = (
       // An unreadable prose file is skipped. It is a gap, and it fails no run.
       if (text === "") continue
       prose.push({
-        path: path.relative(root, absolute),
+        path: path.relative(path.resolve(root), absolute),
         text,
         sentences: sentencesOfMarkdown(text),
       })
     }
+    // A path can arrive twice: once from discovery and once from a caller.
+    const documents = [...new Map(prose.map((file) => [file.path, file])).values()]
     const graph = buildImportGraph(parsed, path)
     clock = mark("import-graph", clock, yield* Clock.currentTimeMillis)
     // Resolution happens here, not at parse time, because it needs the whole
@@ -2465,7 +2480,7 @@ export const loadWorkspace = (
     return {
       root,
       files: parsed,
-      prose,
+      prose: documents,
       units,
       byName,
       imports: graph,

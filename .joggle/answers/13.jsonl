@@ -14,8 +14,10 @@
 13541349f9c793ab	1792621702	{"confidence":0.96,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.03,"same_module":0,"same_package":0,"sibling_packages":0.97}}
 1355f95ce2474ce0	1793942971	{"confidence":0.85,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.89,"stale_reference":0,"wrong_behavior":0.07,"wrong_contract":0.04}}
 135ebf3513cc3e13	1792619055	{"confidence":0.86,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.91,"not_a_derivation":0.03,"reimplements":0.06}}
+13651a2508b485b2	1793983843	{"confidence":0.79,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0.01,"antithesis":0.08,"false_certainty":0.01,"no_issue":0.82,"overgeneralisation":0.01,"riddle":0.04,"synonym_rotation":0.02,"verdict":0.01}}
 1365a25380d24fa7	1793942971	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0.01}}
 1368601b8575719f	1792593149	{"confidence":0.75,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.81,"different_order":0.01,"different_work":0.18,"same_operation":0}}
+136ac11b0d363b40	1793983952	{"confidence":0.81,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0,"antithesis":0.05,"false_certainty":0,"no_issue":0.83,"overgeneralisation":0.02,"riddle":0.07,"synonym_rotation":0.01,"verdict":0.02}}
 136c61182fd8c062	1792252958	{"confidence":0.95,"kind":"Classify","label":"related_helpers","probabilities":{"facade":0.03,"no_issue":0.01,"related_helpers":0.96,"type_surface":0}}
 13752f4515956f55	1792252958	{"confidence":0.77,"kind":"Classify","label":"shared_helper","probabilities":{"coincidental":0.01,"common_idiom":0.14,"shared_helper":0.85}}
 137895bc361b5b8a	1793942973	{"confidence":0.17,"kind":"Rate","label":"removes_a_hazard","probabilities":{"meaningfully_better":0.31,"no_difference":0.06,"removes_a_hazard":0.46,"slightly_clearer":0.17},"rating":2.18}

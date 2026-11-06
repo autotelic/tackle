@@ -31,8 +31,10 @@ c890a1e4eac32de2	1793942976	{"consistency":1,"kind":"Probability","probability":
 c8986a105a406fad	1793942974	{"confidence":0.74,"kind":"Classify","label":"neither","probabilities":{"fact":0.06,"neither":0.83,"recomputation":0.11}}
 c89adc2d4eab0124	1792535008	{"confidence":0.48,"kind":"Classify","label":"input_adaptation","probabilities":{"domain_logic":0.01,"infrastructure":0,"input_adaptation":0.54,"mechanical":0.41,"not_applicable":0,"orchestration":0.03,"rendering":0,"request_validation":0,"transport_concern":0.01}}
 c8a017290a97df43	1793942971	{"confidence":0.91,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0,"no_issue":0.07,"semantic_verdict":0.93}}
+c8adc4788ebac94e	1793983952	{"confidence":0.79,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0,"antithesis":0,"false_certainty":0,"no_issue":0.82,"overgeneralisation":0,"riddle":0.15,"synonym_rotation":0,"verdict":0.03}}
 c8b1cc8df3df2a16	1792535008	{"confidence":0.46,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.52,"infrastructure":0,"input_adaptation":0.01,"mechanical":0.02,"not_applicable":0.4,"orchestration":0,"rendering":0,"request_validation":0.04,"transport_concern":0.01}}
 c8b3d5533608ce60	1792252958	{"confidence":0.18,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.29,"merge":0.34,"move":0.34,"share_a_contract":0.02,"split":0.01}}
+c8b652bd32985bd2	1793983843	{"confidence":0.65,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0.02,"antithesis":0.16,"false_certainty":0,"no_issue":0.69,"overgeneralisation":0,"riddle":0.01,"synonym_rotation":0.03,"verdict":0.09}}
 c8be2f384960cc1b	1793943080	{"confidence":0.3,"kind":"Classify","label":"unclear","probabilities":{"meaning":0.05,"unclear":0.53,"value":0.42}}
 c8c9821986dabc00	1792252958	{"consistency":1,"kind":"Probability","probability":0.5466666666666667}
 c8cbb9617a9d98f9	1793942974	{"confidence":0.8,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.07,"inferred":0.06,"not_applicable":0.87}}

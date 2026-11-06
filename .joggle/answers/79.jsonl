@@ -22,10 +22,12 @@
 79509518db023cad	1792252958	{"confidence":0.66,"kind":"Classify","label":"move","probabilities":{"move":0.83,"no_issue":0.17}}
 79539305c36c75e1	1793942974	{"confidence":0.55,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.13,"internal_only":0.7,"unaccounted":0.17}}
 795efa0a7538f6b2	1793943082	{"confidence":0.65,"kind":"Classify","label":"wire_contract","probabilities":{"domain_concept":0.25,"framework_glue":0,"implementation_detail":0.01,"wire_contract":0.74}}
+7964a0ea34f504ff	1793983843	{"confidence":0.83,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0.01,"antithesis":0.02,"false_certainty":0,"no_issue":0.85,"overgeneralisation":0.01,"restatement":0.05,"riddle":0.03,"synonym_rotation":0.02,"verdict":0.01}}
 79652407e1ef485b	1793942972	{"confidence":0.93,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0.02,"wrong_behavior":0.02,"wrong_contract":0.01}}
 7967a5985b99002f	1793942973	{"confidence":0.96,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.03,"framework_glue":0,"implementation_detail":0.97,"wire_contract":0}}
 7975da01dbdbc9fb	1792252958	{"confidence":0.8,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.07,"no_issue":0.08,"semantic_verdict":0.85}}
 798d8a62873dba02	1793942974	{"confidence":0.56,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.71,"not_a_derivation":0.07,"reimplements":0.22}}
+799862bcf19734b1	1793983843	{"confidence":0.85,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0,"antithesis":0,"false_certainty":0,"no_issue":0.87,"overgeneralisation":0.03,"riddle":0.04,"synonym_rotation":0.05,"verdict":0.01}}
 79a6366ca59bf169	1793942972	{"consistency":1,"kind":"Probability","probability":0.7333333333333333}
 79a6d7a7b1d934a4	1793942975	{"confidence":0.97,"kind":"Classify","label":"not_a_record","probabilities":{"mutable":0.02,"not_a_record":0.98,"supersede_only":0}}
 79abd31c7d1f5193	1792617317	{"confidence":0.61,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.06,"common_idiom":0.74,"shared_helper":0.2}}

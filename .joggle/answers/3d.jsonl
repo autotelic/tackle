@@ -9,6 +9,7 @@
 3d396201abcd1235	1793942975	{"confidence":0.74,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.04,"must_be_current":0.13,"not_a_projection":0.83}}
 3d3a499a2d1591ec	1792617316	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0.02}}
 3d41f6a190a27bb2	1792535008	{"confidence":0.91,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.07,"same_module":0,"same_package":0,"sibling_packages":0.93}}
+3d4247a537da4960	1793983843	{"confidence":0.75,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0.05,"antithesis":0,"false_certainty":0,"no_issue":0.78,"overgeneralisation":0,"riddle":0.06,"synonym_rotation":0.1,"verdict":0.01}}
 3d472b4adfe0f4f4	1792684419	{"confidence":0.93,"kind":"Classify","label":"composes","probabilities":{"already_composed":0.04,"composes":0.95,"independent":0.01,"same_name_drift":0}}
 3d498242a612298a	1792269251	{"confidence":0.15,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.06,"merge":0.29,"move":0.32,"share_a_contract":0.32,"split":0.01}}
 3d4c6216ad204ff7	1792265611	{"confidence":0.95,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.04,"same_module":0,"same_package":0,"sibling_packages":0.96}}
@@ -23,12 +24,15 @@
 3d8860f8c3991bea	1792252958	{"confidence":0.95,"kind":"Classify","label":"related_helpers","probabilities":{"facade":0.03,"no_issue":0.01,"related_helpers":0.96,"type_surface":0}}
 3d8da3974eda6187	1793942971	{"confidence":0.59,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.02,"name_meaning":0.02,"no_issue":0.27,"semantic_verdict":0.69}}
 3d9153b73a93754a	1793942972	{"confidence":0.52,"kind":"Classify","label":"value","probabilities":{"meaning":0.31,"unclear":0.01,"value":0.68}}
+3d97db8879e8a267	1793983843	{"confidence":0.73,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0.02,"antithesis":0.05,"false_certainty":0,"no_issue":0.76,"overgeneralisation":0.08,"riddle":0.06,"synonym_rotation":0.02,"verdict":0.01}}
 3d99a47a4a53cf27	1793942974	{"confidence":0.96,"kind":"Classify","label":"neither","probabilities":{"fact":0.03,"neither":0.97,"recomputation":0}}
 3d9a4baf4c1a242d	1793942975	{"confidence":0.43,"kind":"Classify","label":"state","probabilities":{"deviation":0,"neither":0.38,"state":0.62}}
 3da0cae6d2d0e11c	1793942974	{"confidence":0.26,"kind":"Classify","label":"appropriate","probabilities":{"appropriate":0.51,"independent":0.48,"meaning_switched":0.01}}
 3da2af7eac99dbaf	1792252958	{"confidence":0.66,"kind":"Classify","label":"no_issue","probabilities":{"merge":0.01,"move":0.22,"no_issue":0.77}}
 3dab3a18f2202429	1793942974	{"confidence":0.28,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.48,"names_a_caller":0,"shared_vocabulary":0.52}}
+3daf3870825ffa05	1793983843	{"confidence":0.31,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0,"antithesis":0,"false_certainty":0.1,"no_issue":0.39,"overgeneralisation":0.09,"restatement":0.08,"riddle":0.19,"synonym_rotation":0.01,"verdict":0.14}}
 3daf50632ac19d2a	1792621702	{"confidence":0.45,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.51,"no_difference":0.06,"removes_a_hazard":0.26,"slightly_clearer":0.17},"rating":1.96}
+3db48e170fa0a2a1	1793983843	{"confidence":0.74,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0.07,"antithesis":0,"false_certainty":0,"no_issue":0.77,"overgeneralisation":0.01,"riddle":0.02,"synonym_rotation":0.13,"verdict":0}}
 3db722c46d543f92	1793942970	{"confidence":0.93,"kind":"Classify","label":"related_helpers","probabilities":{"facade":0.04,"no_issue":0.01,"related_helpers":0.95,"type_surface":0}}
 3db876ea3220c788	1792535008	{"confidence":0.58,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.63,"infrastructure":0,"input_adaptation":0.16,"mechanical":0.19,"not_applicable":0.01,"orchestration":0,"rendering":0,"request_validation":0,"transport_concern":0.01}}
 3dbc108d67006c80	1793943261	{"confidence":0.91,"kind":"Classify","label":"value","probabilities":{"meaning":0.06,"unclear":0,"value":0.94}}

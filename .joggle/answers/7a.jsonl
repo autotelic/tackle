@@ -23,6 +23,7 @@
 7a74be5bfb61b02c	1792269251	{"confidence":0.84,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.08,"member_1":0.92}}
 7a7ced4958254c3e	1792617317	{"confidence":0.28,"kind":"Classify","label":"move","probabilities":{"merge":0.39,"move":0.52,"no_issue":0.09}}
 7a7cf90c861925de	1793942974	{"confidence":0.8,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.13,"independent":0.87,"meaning_switched":0}}
+7a8432b278668e3b	1793983843	{"confidence":0.75,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0.01,"antithesis":0,"false_certainty":0,"no_issue":0.78,"overgeneralisation":0.07,"riddle":0.03,"synonym_rotation":0.04,"verdict":0.07}}
 7a85a80c9636a64e	1793942974	{"confidence":0.83,"kind":"Classify","label":"general","probabilities":{"general":0.89,"names_a_caller":0.01,"shared_vocabulary":0.1}}
 7a868b1ff0fa4ffb	1793942974	{"confidence":0.67,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.78,"not_a_derivation":0.17,"reimplements":0.05}}
 7a883f85e60bdd41	1793942975	{"confidence":0.89,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.05,"not_an_invariant":0.93,"repair_path":0.02}}
@@ -47,3 +48,4 @@
 7af111d7f6399f6d	1792535008	{"confidence":0.6,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.7,"component_or_feature":0.23,"not_applicable":0.04,"route_or_handler":0.03}}
 7af59c83f733b89e	1792535008	{"confidence":0.96,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.97,"component_or_feature":0.02,"not_applicable":0.01,"route_or_handler":0}}
 7af8b9ad1bb39eed	1793942975	{"confidence":0.92,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.02,"must_be_current":0.03,"not_a_projection":0.95}}
+7afd83196c88e0dc	1793983843	{"confidence":0.6,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0.15,"antithesis":0,"false_certainty":0,"no_issue":0.65,"overgeneralisation":0.01,"riddle":0.09,"synonym_rotation":0.07,"verdict":0.03}}

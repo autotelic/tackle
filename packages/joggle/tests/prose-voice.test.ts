@@ -4,7 +4,7 @@ import { NodeServices } from "@effect/platform-node"
 import { sentencesOfMarkdown } from "../src/prose.ts"
 import { proseVoice } from "../src/rules/prose-voice.ts"
 import { plannedDiagnosticsOf } from "../src/testing.ts"
-import { loadWorkspace } from "../src/workspace.ts"
+import { discoverFiles, loadWorkspace } from "../src/workspace.ts"
 import { choice, modelStub } from "./support.ts"
 
 const fixture = () => loadWorkspace("tests/fixtures/prose-voice", ["."])
@@ -107,3 +107,31 @@ it.effect("a caller hands over a document discovery cannot find", () =>
     Effect.provide(NodeServices.layer),
   ),
 )
+
+it.effect("discovery and the load agree about Markdown", () =>
+  Effect.gen(function* () {
+    const found = yield* discoverFiles("tests/fixtures/prose-voice", ["."], undefined)
+    expect(found.prose.length).toBe(1)
+    const workspace = yield* loadWorkspace("tests/fixtures/prose-voice", ["."], {
+      discovered: found.files,
+      proseFiles: found.prose,
+    })
+    expect(workspace.prose.map((file) => file.path)).toEqual(["doc.md"])
+  }).pipe(Effect.provide(NodeServices.layer)),
+)
+
+it("a blockquote is one block and a list item opens its own", () => {
+  const document = `> The goal beyond the goal is not "fix the findings." It is that the
+> proving ground proves itself, and the tools get better for having done it.
+
+- The census first, every round.
+- Then the ratchet.`
+  const sentences = sentencesOfMarkdown(document)
+  expect(sentences.map((sentence) => sentence.text)).toEqual([
+    'The goal beyond the goal is not "fix the findings."',
+    "It is that the proving ground proves itself, and the tools get better for having done it.",
+    "The census first, every round.",
+    "Then the ratchet.",
+  ])
+  expect(sentences.map((sentence) => sentence.paragraph)).toEqual([0, 0, 1, 2])
+})

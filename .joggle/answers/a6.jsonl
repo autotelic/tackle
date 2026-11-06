@@ -4,6 +4,7 @@ a61fadca6633fc64	1793942976	{"consistency":1,"kind":"Probability","probability":
 a623e271e9fb126b	1792252958	{"confidence":0.69,"kind":"Classify","label":"value","probabilities":{"meaning":0.21,"unclear":0,"value":0.79}}
 a624c8d568e24fe3	1793942972	{"confidence":0.95,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.96,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0.01}}
 a62d05ba7fdee8c5	1793942972	{"confidence":0.22,"kind":"Classify","label":"milliseconds","probabilities":{"milliseconds":0.61,"no_concept":0.39}}
+a62ef10c57e573d6	1793983842	{"confidence":0.68,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0.02,"antithesis":0.01,"false_certainty":0.05,"no_issue":0.72,"overgeneralisation":0.02,"restatement":0.03,"riddle":0.07,"synonym_rotation":0.02,"verdict":0.06}}
 a637b6a2f8e7536c	1793942974	{"confidence":0.77,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.14,"independent":0.85,"meaning_switched":0.01}}
 a6396bcac51822a1	1793942974	{"confidence":0.44,"kind":"Classify","label":"move","probabilities":{"merge":0.11,"move":0.63,"no_issue":0.26}}
 a64b01cc34da855d	1793942973	{"confidence":0.72,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.81,"not_a_derivation":0.17,"reimplements":0.02}}
@@ -11,6 +12,7 @@ a6518c75edfb1426	1792252958	{"consistency":1,"kind":"Probability","probability":
 a655f4e947074ca2	1792593149	{"confidence":0.58,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.72,"unclear":0,"value":0.28}}
 a65a4d4747b40344	1793942972	{"confidence":0.61,"kind":"Classify","label":"move","probabilities":{"merge":0.05,"move":0.74,"no_issue":0.21}}
 a65fa47e75a16701	1792252958	{"consistency":1,"kind":"Probability","probability":0.38999999999999996}
+a662a98a26d501ee	1793983843	{"confidence":0.86,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0.01,"antithesis":0.07,"false_certainty":0.01,"no_issue":0.88,"overgeneralisation":0.02,"riddle":0,"synonym_rotation":0.01,"verdict":0}}
 a66b0e6fa14284d6	1792542865	{"confidence":0.31,"kind":"Classify","label":"move","probabilities":{"merge":0.22,"move":0.54,"no_issue":0.24}}
 a67306538bd7ad11	1792535008	{"confidence":0.48,"kind":"Classify","label":"component_or_feature","probabilities":{"already_there":0.29,"component_or_feature":0.61,"not_applicable":0.06,"route_or_handler":0.04}}
 a6765dc2f560994e	1792535008	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
@@ -22,6 +24,7 @@ a6965b0cff91972f	1792535008	{"confidence":0.02,"kind":"Classify","label":"move",
 a69942573b0b9f97	1793942970	{"confidence":0.95,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.96,"stale_reference":0.01,"wrong_behavior":0.02,"wrong_contract":0.01}}
 a699881cc8587d08	1793942971	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
 a69cec58ee430abd	1793942973	{"confidence":0.92,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.94,"different_order":0.04,"different_work":0.02,"same_operation":0}}
+a6a10f74e3632f2c	1793983952	{"confidence":0.79,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0.01,"antithesis":0,"false_certainty":0,"no_issue":0.81,"overgeneralisation":0.07,"restatement":0.08,"riddle":0.01,"synonym_rotation":0.01,"verdict":0.01}}
 a6aaee8d98c2b1b7	1792252958	{"confidence":0.44,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.58,"different_order":0,"different_work":0.42,"same_operation":0}}
 a6ac9006ed2a54e2	1793943082	{"confidence":0.25,"kind":"Rate","label":"removes_a_hazard","probabilities":{"meaningfully_better":0.36,"no_difference":0.05,"removes_a_hazard":0.47,"slightly_clearer":0.12},"rating":2.25}
 a6b065d003741180	1793942974	{"confidence":0.77,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.14,"independent":0.85,"meaning_switched":0.01}}
