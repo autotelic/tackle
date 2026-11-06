@@ -18,6 +18,9 @@
   },
   "dependencies": {
     "@earendil-works/pi-coding-agent": "^1.5.0",
-    "typebox": "^1.4.4"
+    "@xstate/effect": "1.0.0-alpha.12",
+    "effect": "^4.1.2",
+    "typebox": "^1.4.4",
+    "xstate": "6.0.0-alpha.73"
   }
 }

@@ -41,7 +41,13 @@ describe('watchAnswers', () => {
     await writeFile(join(answersDir, 'q1.json'), JSON.stringify(answer('q1')))
 
     const seen: WatchedAnswer[] = []
-    const watcher = watchAnswers({ questionsDir, answersDir, onAnswer: (w) => seen.push(w) })
+    const watcher = watchAnswers({
+      questionsDir,
+      answersDir,
+      onAnswer: (w) => {
+        seen.push(w)
+      },
+    })
     await watcher.pollOnce()
     watcher.stop()
 
@@ -62,7 +68,9 @@ describe('watchAnswers', () => {
       questionsDir,
       answersDir,
       isLive: (id) => id === 'q2',
-      onAnswer: (w) => seen.push(w),
+      onAnswer: (w) => {
+        seen.push(w)
+      },
     })
     await watcher.pollOnce()
     watcher.stop()
@@ -76,7 +84,13 @@ describe('watchAnswers', () => {
     await writeFile(join(answersDir, 'q3.json'), JSON.stringify(answer('q3')))
 
     const seen: WatchedAnswer[] = []
-    const watcher = watchAnswers({ questionsDir, answersDir, onAnswer: (w) => seen.push(w) })
+    const watcher = watchAnswers({
+      questionsDir,
+      answersDir,
+      onAnswer: (w) => {
+        seen.push(w)
+      },
+    })
     await watcher.pollOnce()
     watcher.stop()
 
@@ -89,7 +103,13 @@ describe('watchAnswers', () => {
     await writeFile(join(answersDir, 'q4.json'), JSON.stringify(answer('q4')))
     // Question arrives one cycle later (slow writer).
     const seen: WatchedAnswer[] = []
-    const watcher = watchAnswers({ questionsDir, answersDir, onAnswer: (w) => seen.push(w) })
+    const watcher = watchAnswers({
+      questionsDir,
+      answersDir,
+      onAnswer: (w) => {
+        seen.push(w)
+      },
+    })
     await watcher.pollOnce() // drops it as an orphan — documents current behavior
     watcher.stop()
     expect(seen).toHaveLength(0)

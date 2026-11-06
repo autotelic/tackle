@@ -11,9 +11,18 @@ importers:
       '@earendil-works/pi-coding-agent':
         specifier: ^1.5.0
         version: 1.5.0(@aws-sdk/credential-provider-node@3.972.93)(@smithy/signature-v4@5.7.5)(ws@8.22.1)
+      '@xstate/effect':
+        specifier: 1.0.0-alpha.12
+        version: 1.0.0-alpha.12(effect@4.1.2)(xstate@6.0.0-alpha.73)
+      effect:
+        specifier: ^4.1.2
+        version: 4.1.2
       typebox:
         specifier: ^1.4.4
         version: 1.4.4
+      xstate:
+        specifier: 6.0.0-alpha.73
+        version: 6.0.0-alpha.73
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.6.5
@@ -560,6 +569,16 @@ packages:
   '@vitest/spy@5.1.0':
     resolution: {integrity: sha512-2DPO5OMHWKrBngC+fCmTQqemNF0gidRhp3lxbBmRhW+M1XJrfgPpqNqWVevXtn2f2ufD5ZaR1B6B641aAlcX5A==}
 
+  '@xstate/effect@1.0.0-alpha.12':
+    resolution: {integrity: sha512-D72whH2VWGnvMefc3CrylVwgqu2Ph2jfA861RG3gbLOk0mkXH8ZUn9h+IZO//xRKaCPFfKMXkXnqy4aIED1THg==}
+    peerDependencies:
+      '@oxlint/plugins': ^1.76.0
+      effect: ^4.0.0
+      xstate: ^6.0.0-alpha.73
+    peerDependenciesMeta:
+      '@oxlint/plugins':
+        optional: true
+
   agent-base@7.1.4:
     resolution: {integrity: sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==}
     engines: {node: '>= 14'}
@@ -627,6 +646,9 @@ packages:
 
   ecdsa-sig-formatter@1.0.11:
     resolution: {integrity: sha512-nagl3RYrbNv6kQkeJIpt6NJZy8twLB/2vtz6yN9Z4vRKHN4/QZJIEbqohALSgwKdnksuY3k5Addp5lg8sVoVcQ==}
+
+  effect@4.1.2:
+    resolution: {integrity: sha512-d3Oah1WyKxFLFh19yWheS5IXIVaITzxZ71JkE1rkUozq/6EcJSU5nPk5bF2QrSygZ3SQoiNQB8TsxFriyMeMaQ==}
 
   es-module-lexer@2.3.2:
     resolution: {integrity: sha512-poHGpORABojJJucnV9KbOavETW8lBVnphkW77ER5/BQ5Fz7oXSoCNek7IH3vR5nRjdsEz926ibFYX8KtLQmdyw==}
@@ -1108,6 +1130,10 @@ packages:
         optional: true
       utf-8-validate:
         optional: true
+
+  xstate@6.0.0-alpha.73:
+    resolution: {integrity: sha512-Ru3g082hzyn2h1TspciGFgHplK35jZl6Sl808cspInc0xx/RsALM8sc3AoQpg2KusApD2HPlX7liaVnSxlMyHw==}
+    hasBin: true
 
   yaml@2.9.0:
     resolution: {integrity: sha512-2AvhNX3mb8zd6Zy7INTtSpl1F15HW6Wnqj0srWlkKLcpYl/gMIMJiyuGq2KeI2YFxUPjdlB+3Lc10seMLtL4cA==}
@@ -1664,6 +1690,11 @@ snapshots:
 
   '@vitest/spy@5.1.0': {}
 
+  '@xstate/effect@1.0.0-alpha.12(effect@4.1.2)(xstate@6.0.0-alpha.73)':
+    dependencies:
+      effect: 4.1.2
+      xstate: 6.0.0-alpha.73
+
   agent-base@7.1.4: {}
 
   agent-base@9.0.0: {}
@@ -1707,6 +1738,8 @@ snapshots:
   ecdsa-sig-formatter@1.0.11:
     dependencies:
       safe-buffer: 5.2.1
+
+  effect@4.1.2: {}
 
   es-module-lexer@2.3.2: {}
 
@@ -2093,5 +2126,7 @@ snapshots:
   why-is-node-running@3.2.1: {}
 
   ws@8.22.1: {}
+
+  xstate@6.0.0-alpha.73: {}
 
   yaml@2.9.0: {}
