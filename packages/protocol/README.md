@@ -100,7 +100,7 @@ The rule is checked, not documented:
   wired into the root gate (`pnpm lexicon:compat`, part of `pnpm check`).
 - `src/compat.ts` adds a best-effort structural pre-check (`schemaBreakingChanges`): newly
   required fields, removed properties, narrowed types, removed enum values, closed
-  `additionalProperties`. The corpus is the guarantee; this is the early warning.
+  `additionalProperties`. The corpus enforces the rule; the pre-check warns earlier.
 
 The one migration the rule carries forward: a record written before per-lexicon versioning
 carries `protocolVersion: "0.1.0"` and no `lexicon`. Every decoder still accepts it, and
@@ -167,17 +167,17 @@ schema, so the lexicons table above does not list it.
 - No runtime dependency, no imports, no `effect`, no I/O, no rendering, no CLI.
 - No policy: severity ceilings, gate modes, and ownership rules belong to the tools. This
   package names their vocabulary and nothing more.
-- No engine's private need leaked into a shared format. If `plumb` wants a field, it
-  teaches its _own_ reader first.
+- No engine's private need leaked into a shared format. A field `plumb` needs is one
+  `plumb`'s own reader parses first.
 - No line numbers as identity; no ordering as contract beyond a documented total order; no
   behavior beyond pure functions that are genuinely part of the format's semantics.
 
 ## Why a format and not a shared package
 
 A shared _runtime dependency_ couples releases: bump `protocol` and every engine must
-re-release together. A shared _format_ does not — the tools agree on JSON and TypeScript
-shapes, and each decodes defensively on its own terms. That is what keeps four tools
-independently adoptable while still feeling like one product.
+re-release together. A shared _format_ does not: the tools agree on JSON and TypeScript
+shapes, and each decodes defensively on its own terms. Four tools stay independently
+adoptable and still read as one product.
 
 `plumb` is the proof: it does not depend on this package. It reads the manifest defensively
 (a stale catalog degrades to silence, never to false findings) and tolerates fields it does

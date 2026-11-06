@@ -1,8 +1,10 @@
 fe03c2de49c37c88	1790631747	{"confidence":0.95,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.97,"not_a_derivation":0.02,"reimplements":0.01}}
 fe04d412e827bafd	1790631748	{"confidence":0.91,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.92,"infrastructure":0,"input_adaptation":0,"mechanical":0.01,"not_applicable":0.07,"orchestration":0,"rendering":0,"request_validation":0,"transport_concern":0}}
 fe08eeec7a7d96e8	1790632140	{"confidence":0.3,"kind":"Classify","label":"drift","probabilities":{"compatible":0.13,"drift":0.54,"two_concepts":0.33}}
+fe19e536042549d5	1793986411	{"confidence":0.58,"kind":"Classify","label":"anthropomorphism","probabilities":{"anthropomorphism":0.63,"antithesis":0,"false_certainty":0.01,"no_issue":0.2,"overgeneralisation":0.04,"restatement":0.07,"riddle":0.02,"synonym_rotation":0.01,"verdict":0.02}}
 fe3579383cfb223f	1790631747	{"confidence":0.59,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.22,"keep_variants":0.72,"no_issue":0.06}}
 fe3a9dc589c83ef0	1790624340	{"kind":"Probability","probability":0.48}
+fe3c21c8deac8e99	1793986409	{"confidence":0.79,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0.01,"antithesis":0.06,"false_certainty":0.01,"no_issue":0.81,"overgeneralisation":0.02,"restatement":0.05,"riddle":0,"synonym_rotation":0.01,"verdict":0.03}}
 fe3da474512c5cf4	1793986107	{"confidence":0.83,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0,"antithesis":0.06,"false_certainty":0,"no_issue":0.85,"overgeneralisation":0.01,"riddle":0.01,"synonym_rotation":0.04,"verdict":0.03}}
 fe516898216a51a9	1790631748	{"confidence":0.48,"kind":"Classify","label":"not_applicable","probabilities":{"already_there":0.29,"component_or_feature":0.08,"not_applicable":0.61,"route_or_handler":0.02}}
 fe579ac9cddd567a	1790631747	{"confidence":0.87,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.91,"not_a_derivation":0.04,"reimplements":0.05}}

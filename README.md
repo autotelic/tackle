@@ -3,10 +3,9 @@
 One pnpm workspace over four independent conformance tools, and the leaf protocol
 they agree on.
 
-The cohesion is not that the programs were merged. It is **one config, one report
-shape, one baseline, one agent document** — the four seams — over engines that are
-each useful alone. That is the Vite+/VoidZero move: keep the engines separate, ship
-one surface, make onboarding a prompt.
+The cohesion is **one config, one report shape, one baseline, one agent document** —
+the four seams — over engines that are each useful alone. The shape is
+Vite+/VoidZero's: separate engines, one surface, and onboarding as a prompt.
 
 ## Onboard a repository
 
@@ -131,8 +130,8 @@ when a judgement is going to be made.
 `pnpm judged` is the same run with joggle's key in the environment
 (`doppler run -p joggle -c dev -- pnpm jig check`). With the key, every candidate is judged and
 the census says so; without it, joggle replays the verdicts committed under `.joggle/answers/`
-and the report marks the engine `replayed`. The two runs can never be mistaken for each other —
-that difference is the whole point of the census.
+and the report marks the engine `replayed`. The census exists to keep the two runs
+apart.
 
 `jig check` exits with a code a CI can branch on, the same contract whether a person, a
 pipeline, or an agent triggered the run:

@@ -1,14 +1,14 @@
 # Strata
 
-A domain migration is not one move. It is four strata, one arrow, and four
-questions no single-file rule can ask.
+A domain migration is four strata and one arrow, and it raises four questions that
+no single-file rule can ask.
 
 **What it settles:** which stratum a value belongs to, and therefore which engine
 can hold the rule — `plumb` where one file can see it, `joggle` where it takes two.
 
 This was written against a real migration: a monetised forestry system moving its
 rules out of 1469 `knex` call sites and 474 hand-written row types into one domain
-package. The counts are the argument, not the subject. Nothing here depends on that
+package. The counts are the evidence. Nothing here depends on that
 repository, and a repository with no such migration should enable none of it.
 
 ## The four strata
@@ -44,8 +44,8 @@ writes:
 | record | facts | stratum 2 | decisions get mutated instead of superseded |
 | report | derivations | stratum 3 | staleness becomes an opinion |
 
-Collapsing *decide* and *report* into "logic" is exactly how business logic comes to
-live in a query. That is not a style problem; it is the missing verb.
+Collapsing *decide* and *report* into "logic" is how business logic comes to live in a
+query. The missing verb is the defect.
 
 ## The four hard parts
 
@@ -174,8 +174,8 @@ queries path, from the declared values path.
 
 **Why plumb.** One import statement.
 
-**Message.** The domain depends on nothing internal. This is the law as a failure
-instead of a sentence in a README.
+**Message.** The domain depends on nothing internal. Here the law is a finding rather
+than a sentence in a README.
 
 ### `plumb/no-string-instant`
 
@@ -228,8 +228,8 @@ whether the bound is declared. An `allowed` with no declaration is the finding:
 the answer lives in someone's head.
 
 **Expected ignore.** A projection whose staleness is declared in a scheduler the
-reader never imports. The ignore should name where it is declared, and that naming is
-the documentation.
+reader never imports. The ignore has to name where the staleness is declared, since
+that name is the documentation.
 
 ### `joggle/append-only-honoured`
 
@@ -257,10 +257,10 @@ list does not decide that `_override` is a deviation and `ended_at` is not.
 
 **Question.** Is this a decision that contradicts a rule, or a state of the world?
 
-**Labels.** `deviation` · `state` · `neither`. Where plumb reports the shape, this
-reports that the concept is missing: a deviation needs an authority, an instant, a
+**Labels.** `deviation` · `state` · `neither`. plumb reports the shape; this reports a
+missing concept: a deviation needs an authority, an instant, a
 reason, and a link to what it contradicted. A cluster of nullable columns is a
-deviation that decided not to be one.
+deviation whose reason was never declared.
 
 ### `joggle/invariant-has-a-reconciler`
 
@@ -276,8 +276,8 @@ finding: the system can tell you the books do not balance and can do nothing abo
 which is a local guarantee reported as a global one.
 
 **Expected ignore.** A validation that must remain detect-only because repair needs a
-human decision. Naming that is the correct outcome, and the rule should treat it as
-satisfied rather than suppressed — a deviation with an authority, again.
+human decision. The rule should treat a named one as satisfied, since the name is the
+authority the deviation needs.
 
 ## Vocabulary debt
 
@@ -312,7 +312,7 @@ the strata supply the answer split.
   finding about the repository, and it belongs in the report rather than in a
   backlog item.
 
-The honest exit: these rules exist to make a migration's *shape* visible while it is
-in progress. Once the strata are where they belong, the findings should approach
-zero without ignores — and the rules that remain are the ones holding the two laws,
+These rules exist to make a migration's *shape* visible while it is in progress. Once
+the strata are where they belong, the findings should approach zero without ignores,
+and the rules that remain are the ones holding the two laws,
 not the ones describing the journey.
