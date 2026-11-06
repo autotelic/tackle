@@ -8,6 +8,7 @@
 5019551c885931a9	1792269251	{"confidence":0.54,"kind":"Classify","label":"move","probabilities":{"move":0.77,"no_issue":0.23}}
 5020cb41e0a59278	1792269251	{"consistency":1,"kind":"Probability","probability":0.44777777777777783}
 5024b5d6191cde26	1793942975	{"consistency":1,"kind":"Probability","probability":0.7566666666666667}
+50473636d64446f9	1793981569	{"confidence":0.76,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.82,"stale_reference":0.03,"wrong_behavior":0.13,"wrong_contract":0.02}}
 50482fc09e9654fa	1793942974	{"confidence":0.74,"kind":"Classify","label":"move","probabilities":{"move":0.87,"no_issue":0.13}}
 504add777bc8b27b	1793942972	{"confidence":0.77,"kind":"Classify","label":"value","probabilities":{"meaning":0.14,"unclear":0.01,"value":0.85}}
 504b79656735a7b4	1792252958	{"confidence":0.4,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.38,"no_issue":0.07,"semantic_verdict":0.55}}

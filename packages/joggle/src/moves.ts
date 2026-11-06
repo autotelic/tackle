@@ -20,7 +20,9 @@ import { Schema } from "effect"
  * requirement (a cycle, a layering, a contract) rather than asking what the code
  * could be rebuilt from.
  */
-export const Move = Schema.Literals(["contract", "combine", "expand"])
+export const moveValues = ["contract", "combine", "expand"] as const
+
+export const Move = Schema.Literals(moveValues)
 
 export type Move = typeof Move.Type
 

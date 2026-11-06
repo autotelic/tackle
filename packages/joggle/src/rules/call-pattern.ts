@@ -3,7 +3,7 @@ import { Decision } from "effect/ai"
 import { Atoms, type CandidateSample } from "../atoms.ts"
 import { policy } from "../policy.ts"
 import { verdictsOf, type Plan } from "../plans.ts"
-import { locator, messages, reporter, type Report } from "../reporting.ts"
+import { locator, messages, reporter, type Reporter } from "../reporting.ts"
 import { verdictOf } from "../verdict.ts"
 import {
   budgetNote,
@@ -211,7 +211,7 @@ export const callPattern: PlannedRule = {
 }
 
 const findingFor = (
-  report: Report,
+  report: Reporter,
   value: {
     readonly units: ReadonlyArray<Unit>
     readonly first: Unit

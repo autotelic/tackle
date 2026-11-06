@@ -503,7 +503,7 @@ export const resolveDeclarations = async (input: DeclarationQuery): Promise<Decl
 /** Bumped when the shape of a fact changes: an old entry is not a hit. */
 const DECLARATION_TYPES_VERSION = "2"
 
-const CachedEntry = Schema.Struct({
+const CachedDeclaration = Schema.Struct({
   file: Schema.String,
   position: Schema.Number,
   facts: ResolvedType,
@@ -513,7 +513,7 @@ const CachedFacts = Schema.Struct({
   version: Schema.String,
   tool: Schema.String,
   manifest: Schema.String,
-  entries: Schema.Array(CachedEntry),
+  entries: Schema.Array(CachedDeclaration),
 })
 
 const decodeCache = SchemaParser.decodeUnknownResult(Schema.fromJsonString(CachedFacts))
@@ -536,7 +536,7 @@ export interface DeclarationTypesRequest {
 
 export interface LoadedDeclarations {
   readonly index: ReadonlyMap<string, ResolvedType>
-  readonly loadedFrom: "cache" | "checker" | "none"
+  readonly resolvedFrom: "cache" | "checker" | "none"
   readonly unresolved: number
   readonly truncated: number
   /** Why the checker or the cache could not be used. Reported, not hidden. */
@@ -545,7 +545,7 @@ export interface LoadedDeclarations {
 
 const emptyDeclarations = (issues: ReadonlyArray<string>): LoadedDeclarations => ({
   index: new Map(),
-  loadedFrom: "none",
+  resolvedFrom: "none",
   unresolved: 0,
   truncated: 0,
   issues,
@@ -591,7 +591,7 @@ export const loadDeclarationTypes = (
         for (const entry of decoded.success.entries) {
           index.set(declarationKey(entry.file, entry.position), entry.facts)
         }
-        return { index, loadedFrom: "cache", unresolved: 0, truncated: 0, issues: [] }
+        return { index, resolvedFrom: "cache", unresolved: 0, truncated: 0, issues: [] }
       }
     }
 
@@ -634,7 +634,7 @@ export const loadDeclarationTypes = (
     }
     return {
       index,
-      loadedFrom: "checker",
+      resolvedFrom: "checker",
       unresolved: ran.result.unresolved,
       truncated: ran.result.truncated,
       issues: [],

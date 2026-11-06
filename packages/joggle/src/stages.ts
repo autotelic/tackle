@@ -1,6 +1,7 @@
 import { Schema } from "effect"
+import { Move } from "./moves.ts"
 
-/**
+/*
  * The reversal, as a sequence of stages rather than separate scanners.
  *
  * `contract` is a copy of a primitive that already exists; `combine` is a
@@ -13,13 +14,10 @@ import { Schema } from "effect"
  * finding it gets. That is what makes the report a decision path rather than
  * three rules disagreeing about the same declaration.
  */
-export const Stage = Schema.Literals(["contract", "combine", "expand"])
-
-export type Stage = typeof Stage.Type
 
 /** What one earlier stage said about this site. It is part of the next state. */
 export const StageOutcome = Schema.Struct({
-  stage: Stage,
+  stage: Move,
   outcome: Schema.String,
 })
 
@@ -41,7 +39,7 @@ export interface StageOutcome extends Schema.Schema.Type<typeof StageOutcome> {}
  */
 export const stagedInput = <Fields extends Schema.Struct.Fields>(panel: Schema.Struct<Fields>) =>
   Schema.Struct({
-    stage: Stage,
+    stage: Move,
     earlier: Schema.Array(StageOutcome),
     panel,
   })

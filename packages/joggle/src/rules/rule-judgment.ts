@@ -75,7 +75,7 @@ const ruleReview = (id: string) => ({
   }),
 })
 
-interface Candidate {
+interface RuleCandidate {
   readonly source: SourceFile
   readonly id: string
   readonly judged: boolean
@@ -118,8 +118,8 @@ const messageLiterals = (source: string): ReadonlyArray<string> => {
 }
 
 /** One candidate per `defineRule` call: one call is one rule. */
-const candidatesIn = (workspace: Workspace, scope: Scope): ReadonlyArray<Candidate> => {
-  const found: Array<Candidate> = []
+const candidatesIn = (workspace: Workspace, scope: Scope): ReadonlyArray<RuleCandidate> => {
+  const found: Array<RuleCandidate> = []
   for (const file of workspace.files) {
     if (scope.changed !== undefined && !scope.changed.has(file.path)) continue
     const sites = file.facts.callSites.filter((site) => site.name === "defineRule")
@@ -171,7 +171,7 @@ export const ruleJudgment: PlannedRule = {
     const budget = policy.ruleJudgment.maxRules
     const judged = candidates.slice(0, budget)
     const atoms = yield* Atoms
-    const planned: Array<{ readonly candidate: Candidate; readonly plan: Plan<DecisionAnswers> }> = []
+    const planned: Array<{ readonly candidate: RuleCandidate; readonly plan: Plan<DecisionAnswers> }> = []
     for (const candidate of judged) {
       const id = yield* atoms.add({
         rule: {

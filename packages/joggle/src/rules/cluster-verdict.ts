@@ -13,7 +13,7 @@ import {
   type PackageRelationship,
 } from "../operation.ts"
 import { answerPlans, PlanAnswers, type Plan, type Questionnaire } from "../plans.ts"
-import { locator, messages, reporter, type Report } from "../reporting.ts"
+import { locator, messages, reporter, type Reporter } from "../reporting.ts"
 import type { Move } from "../moves.ts"
 import { policy } from "../policy.ts"
 import { canImport, sharedLayerFor, type Layer } from "../architecture.ts"
@@ -582,7 +582,7 @@ const CLUSTER_MESSAGES = messages({
 })
 
 /** Bind a cluster rule's messages to a workspace's locator. */
-export const clusterReporter = (rule: ClusterRule, workspace: Workspace): Report =>
+export const clusterReporter = (rule: ClusterRule, workspace: Workspace): Reporter =>
   reporter(
     { id: rule.ruleId, severity: rule.severity, judged: true, messages: CLUSTER_MESSAGES, move: rule.move },
     locator(workspace),
@@ -590,7 +590,7 @@ export const clusterReporter = (rule: ClusterRule, workspace: Workspace): Report
 
 /** No judgement available: report the fact, say so, and never guess a canonical. */
 export interface UnverifiedFindingInput {
-  readonly report: Report
+  readonly report: Reporter
   readonly rule: ClusterRule
   readonly cluster: Cluster
   readonly reason?: string

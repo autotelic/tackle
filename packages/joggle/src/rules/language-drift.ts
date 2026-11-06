@@ -74,7 +74,7 @@ const termsOf = (doc: string): ReadonlyArray<string> => {
   return terms
 }
 
-interface Candidate {
+interface DriftCandidate {
   readonly source: SourceFile
   readonly words: ReadonlyArray<string>
   readonly docs: ReadonlyArray<string>
@@ -99,7 +99,7 @@ const languageReview = (id: string, words: ReadonlyArray<string>) => {
   }
 }
 
-const candidatesIn = (workspace: Workspace, scope: Scope): ReadonlyArray<Candidate> => {
+const candidatesIn = (workspace: Workspace, scope: Scope): ReadonlyArray<DriftCandidate> => {
   const identifiers = new Set<string>()
   for (const unit of workspace.units) {
     for (const word of wordsOf(unit.name)) identifiers.add(word)
@@ -111,7 +111,7 @@ const candidatesIn = (workspace: Workspace, scope: Scope): ReadonlyArray<Candida
     }
   }
 
-  const found: Array<Candidate> = []
+  const found: Array<DriftCandidate> = []
   for (const file of workspace.files) {
     if (scope.changed !== undefined && !scope.changed.has(file.path)) continue
     const counts = new Map<string, number>()
@@ -158,7 +158,7 @@ export const languageDrift: PlannedRule = {
     const budget = policy.languageDrift.maxFiles
     const judged = candidates.slice(0, budget)
     const atoms = yield* Atoms
-    const planned: Array<{ readonly candidate: Candidate; readonly plan: Plan<DecisionAnswers> }> = []
+    const planned: Array<{ readonly candidate: DriftCandidate; readonly plan: Plan<DecisionAnswers> }> = []
     for (const candidate of judged) {
       const id = yield* atoms.add({
         file: {

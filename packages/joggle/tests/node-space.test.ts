@@ -45,5 +45,13 @@ it.effect("a schema, a vocabulary, an enum, a class and a union are all units", 
     expect(byName("Flags")?.variants.length).toBe(2)
     // A conditional alias is still a unit, even with no field set.
     expect(byName("Conditional")?.kind).toBe("type")
+
+    // "typed" means the declaration WRITES a type, including a keyword type. The
+    // old flag was "mentions a named type", so a fully annotated one-liner read
+    // as untyped and the shape-only caveat was wrong about it.
+    expect(byName("trimmed")?.typed).toBe(true)
+    expect(byName("passThrough")?.typed).toBe(false)
+    expect(byName("Person.greet")?.typed).toBe(true)
+    expect(byName("ROLES")?.typed).toBe(true)
   }).pipe(Effect.provide(NodeServices.layer)),
 )

@@ -8,7 +8,7 @@ import {
   type ImportGraph,
   type ParsedImport,
 } from "./imports.ts"
-import { isIgnored, orderRules, rulesAt, type IgnoreRule } from "./gitignore.ts"
+import { isIgnored, orderRules, rulesAt, type IgnorePattern } from "./gitignore.ts"
 import { shortHash } from "./state.ts"
 import { blockingErrors, componentName, isAstro, parseInputOf, type Region } from "./astro.ts"
 import { tsconfigScope } from "./tsconfig-scope.ts"
@@ -162,19 +162,6 @@ export interface Unit {
   readonly doc: string | undefined
 }
 
-/*
- * Structure a JSX codebase reveals through names rather than shapes.
- *
- * A composition pattern is a convention about how components are organised --
- * a context, a provider, blocks, and a dot-notation export -- and every part of
- * that convention is spelled somewhere in the source. These three lists are
- * enough to check it without a renderer, a bundler or a runtime.
- *
- * Declared as a Schema because it is written to the parse cache. Deriving the
- * type from the decoder rather than declaring it beside one keeps a single source
- * of truth: the cache file is external -- it can be truncated or edited by hand --
- * so it is worth decoding, and the type follows from what the decoder accepts.
- */
 /** One object literal: what it holds, and where it is. */
 export const ObjectSite = Schema.Struct({
   keys: Schema.Array(Schema.String),
@@ -333,6 +320,19 @@ export const ComparisonSite = Schema.Struct({
 
 export interface ComparisonSite extends Schema.Schema.Type<typeof ComparisonSite> {}
 
+/*
+ * Structure a JSX codebase reveals through names rather than shapes.
+ *
+ * A composition pattern is a convention about how components are organised --
+ * a context, a provider, blocks, and a dot-notation export -- and every part of
+ * that convention is spelled somewhere in the source. These three lists are
+ * enough to check it without a renderer, a bundler or a runtime.
+ *
+ * Declared as a Schema because it is written to the parse cache. Deriving the
+ * type from the decoder rather than declaring it beside one keeps a single source
+ * of truth: the cache file is external -- it can be truncated or edited by hand --
+ * so it is worth decoding, and the type follows from what the decoder accepts.
+ */
 export const StructureFacts = Schema.Struct({
   /**
    * Every call site in the file, in order.
@@ -609,9 +609,6 @@ const collectIdentifiers = (root: unknown): ReadonlyArray<IdentifierSite> => {
   }))
 }
 
-/** The file span type is `Region`, declared once in `astro.ts`; this is the local name. */
-type Span = Region
-
 /**
  * Replace identifier names (and comments) with `_` / whitespace so that two
  * declarations with the same structure but different vocabulary compare equal.
@@ -621,9 +618,9 @@ type Span = Region
  */
 const normalize = (
   text: string,
-  span: Span,
+  span: Region,
   identifiers: ReadonlyArray<IdentifierSite>,
-  comments: ReadonlyArray<Span>,
+  comments: ReadonlyArray<Region>,
 ): string => {
   interface Edit {
     readonly start: number
@@ -727,12 +724,21 @@ const langOf = (file: string): Lang => {
   }
 }
 
-interface DeclarationSite extends Span {
+interface DeclarationSite extends Region {
   readonly kind: UnitKind
   readonly name: string
   /** The offset of the name itself, where the checker answers a hover. */
   readonly namePosition: number
   readonly exported: boolean
+  /**
+   * True when the declaration WRITES a type: a parameter or return annotation, a
+   * type parameter, an interface/alias/class/enum, or an `as` assertion.
+   *
+   * Distinct from "mentions a named type": `(value: string): string => …` writes
+   * a type and names none, and the shape-only caveat read the old flag and told a
+   * reader there was no annotation on a fully typed function.
+   */
+  readonly typed: boolean
   readonly allParamsOptional: boolean
   readonly fieldTypes: ReadonlyMap<string, string>
   /** The types this declaration composes, before resolution. */
@@ -1039,6 +1045,64 @@ interface SiteFacts {
   readonly variants: ReadonlyArray<string>
 }
 
+/** Declaration kinds that are a type by construction. */
+const TYPE_DECLARATIONS: ReadonlySet<string> = new Set([
+  "TSInterfaceDeclaration",
+  "TSTypeAliasDeclaration",
+  "ClassDeclaration",
+  "TSEnumDeclaration",
+])
+
+/** Field names on a node that hold a type rather than a value. */
+const TYPE_SURFACE: ReadonlyArray<string> = [
+  "typeAnnotation",
+  "returnType",
+  "typeParameters",
+  "typeArguments",
+  "superTypeParameters",
+]
+
+const isTypeDeclaration = (kind: unknown): boolean =>
+  Predicate.isString(kind) && TYPE_DECLARATIONS.has(kind)
+
+/** A type written on the declaration itself. */
+const writesSurfaceType = (node: Record<string, unknown>): boolean =>
+  TYPE_SURFACE.some((field) => isRecord(node[field]))
+
+/** A parameter's own annotation, including the left side of a defaulted one. */
+const hasTypedParameter = (params: unknown): boolean =>
+  Array.isArray(params) &&
+  params.some((param) => {
+    if (!isRecord(param)) return false
+    if (isRecord(param["typeAnnotation"])) return true
+    return (
+      param["type"] === "AssignmentPattern" &&
+      isRecord(param["left"]) &&
+      isRecord(param["left"]["typeAnnotation"])
+    )
+  })
+
+/** An initializer that writes a type: `as const`, `satisfies`, or a type argument. */
+const hasTypedInitializer = (init: unknown): boolean =>
+  isRecord(init) &&
+  (init["type"] === "TSAsExpression" ||
+    init["type"] === "TSSatisfiesExpression" ||
+    isRecord(init["typeArguments"]))
+
+/**
+ * True when a declaration writes a type, including a keyword type.
+ *
+ * The shallow fields are enough: annotations live on the declaration's params and
+ * return, not inside the body. A full walk would double the extraction cost to
+ * answer a question the surface already answers.
+ */
+const hasTypeSyntax = (node: unknown): boolean =>
+  isRecord(node) &&
+  (isTypeDeclaration(node["type"]) ||
+    writesSurfaceType(node) ||
+    hasTypedParameter(node["params"]) ||
+    hasTypedInitializer(node["init"]))
+
 const sitesIn = (program: Record<string, unknown>, text: string): ReadonlyArray<DeclarationSite> => {
   const body = program["body"]
   if (!Array.isArray(body)) return []
@@ -1059,6 +1123,7 @@ const sitesIn = (program: Record<string, unknown>, text: string): ReadonlyArray<
     const end = node["end"]
     if (typeof start !== "number" || typeof end !== "number") return
     const fieldSet = fieldsOf(node, text)
+    const typed = hasTypeSyntax(node)
     const variants = more === undefined ? variantTextsOf(node, text) : more.variants
     const values =
       more === undefined
@@ -1073,6 +1138,7 @@ const sitesIn = (program: Record<string, unknown>, text: string): ReadonlyArray<
       end,
       namePosition: nameStart ?? start,
       exported,
+      typed,
       allParamsOptional: paramsAllOptional(node),
       fieldTypes: fieldSet.declarations,
       bases: fieldSet.bases,
@@ -1221,6 +1287,7 @@ const sitesIn = (program: Record<string, unknown>, text: string): ReadonlyArray<
               end: value["end"],
               namePosition: keyStart ?? value["start"],
               exported,
+              typed: hasTypeSyntax(value),
               allParamsOptional: paramsAllOptional(value),
               fieldTypes: new Map(),
               bases: [],
@@ -1261,6 +1328,7 @@ const sitesIn = (program: Record<string, unknown>, text: string): ReadonlyArray<
     if (!isRecord(statement)) continue
     switch (statement["type"]) {
       case "ExportNamedDeclaration":
+
       case "ExportDefaultDeclaration":
         // The doc sits above the `export`, so the lookup starts at the statement.
         fromDeclaration(
@@ -1884,7 +1952,7 @@ const sourceFileFrom = ({ file, text, parsed }: ParsedFileText): SourceFile => {
         shingles: shinglesOf(tokens),
         normalizedHash: shortHash(shape),
         typeRefs,
-        typed: typeRefs.length > 0,
+        typed: site.typed,
         fieldTypes: site.fieldTypes,
         composed: site.bases.map((name) => ({ name, resolvedTo: "" })),
         calls: [],
@@ -2041,7 +2109,7 @@ const depthOf = ({ root, dir, path }: WalkPosition): number =>
 interface WalkRequest {
   readonly dir: string
   readonly root: string
-  readonly inherited?: ReadonlyArray<IgnoreRule>
+  readonly inherited?: ReadonlyArray<IgnorePattern>
 }
 
 /**
@@ -2059,7 +2127,7 @@ const walk = ({ dir, root, inherited = [] }: WalkRequest): Effect.Effect<Discove
     const found: Array<string> = []
     const prose: Array<string> = []
     const skipped = new Map<string, number>()
-    let rules: ReadonlyArray<IgnoreRule> = inherited
+    let rules: ReadonlyArray<IgnorePattern> = inherited
     let ignoredCount = 0
     let ignoredDirs = 0
     const stack: Array<string> = []
@@ -2154,7 +2222,7 @@ const resolveInputs = (
       // A .gitignore above the walked directory still applies to it, so the
       // chain from the root down to (but not including) the input is loaded
       // first.
-      const chain: Array<IgnoreRule> = [...(yield* rulesAt(root, 0))]
+      const chain: Array<IgnorePattern> = [...(yield* rulesAt(root, 0))]
       const segments = path
         .relative(root, absolute)
         .split(path.sep)

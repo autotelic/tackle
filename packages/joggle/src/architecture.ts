@@ -46,7 +46,7 @@ export const layerOf = (
 ): Layer | undefined => layers.find((layer) => layer.include.some((glob) => matchesGlob({ glob, subject: file })))
 
 /** The declared layers and the two files an import would connect. */
-interface ImportEdge {
+interface LayeredEdge {
   readonly layers: ReadonlyArray<Layer>
   readonly importer: string
   readonly to: string
@@ -59,7 +59,7 @@ interface ImportEdge {
  * describes what someone wrote down, and inventing a rule for the rest would be
  * reporting an architecture nobody declared.
  */
-export const canImport: Predicate.Predicate<ImportEdge> = ({ layers, importer, to }) => {
+export const canImport: Predicate.Predicate<LayeredEdge> = ({ layers, importer, to }) => {
   const source = layerOf(layers, importer)
   const target = layerOf(layers, to)
   if (source === undefined || target === undefined) return true

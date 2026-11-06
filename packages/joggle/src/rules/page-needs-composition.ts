@@ -1,7 +1,7 @@
 import { Effect, Option, Schema } from "effect"
 import { Decision, DecisionModel } from "effect/ai"
 import { policy } from "../policy.ts"
-import { locator, messages, reporter, type Report } from "../reporting.ts"
+import { locator, messages, reporter, type Reporter } from "../reporting.ts"
 import {
   declined,
   defineRule,
@@ -110,7 +110,7 @@ const PageRole = Decision.make({
   decisions: { role: pageDecisions.role },
 })
 
-const findingFor = (report: Report, page: Page, answers: DecisionAnswers): Result => {
+const findingFor = (report: Reporter, page: Page, answers: DecisionAnswers): Result => {
   const dropOf = (stage: DropStage, reason: string): Result => ({
     drop: { ruleId: RULE_ID, subject: page.source.path, stage, reason },
   })

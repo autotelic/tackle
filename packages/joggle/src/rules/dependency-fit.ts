@@ -75,7 +75,7 @@ const moduleOf = (file: string): string => file.split("/").slice(0, 2).join("/")
  */
 const BUILTINS = new Set([...builtinModules, ...builtinModules.map((name) => "node:" + name)])
 
-interface Candidates {
+interface DependencyCandidates {
   readonly dependencies: ReadonlyArray<Dependency>
   /** Imports the package declares for itself: answered, not asked. */
   readonly declared: ReadonlyArray<{ dependency: Dependency; specifier: string }>
@@ -109,7 +109,7 @@ const isInternalPath = (specifier: string, internal: ReadonlySet<string>): boole
   return specifier.split("/").some((segment) => internal.has(segment))
 }
 
-const dependenciesIn = (workspace: Workspace): Candidates => {
+const dependenciesIn = (workspace: Workspace): DependencyCandidates => {
   const internal = internalNames(workspace)
   const grouped = new Map<
     string,

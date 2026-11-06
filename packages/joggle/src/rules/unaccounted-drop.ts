@@ -3,7 +3,7 @@ import { Decision } from "effect/ai"
 import { Atoms } from "../atoms.ts"
 import { policy } from "../policy.ts"
 import { verdictsOf, type Plan } from "../plans.ts"
-import { locator, messages, reporter, type Report } from "../reporting.ts"
+import { locator, messages, reporter, type Reporter } from "../reporting.ts"
 import {
   budgetNote,
   inScope,
@@ -210,7 +210,7 @@ const findingFor = ({
   unverifiedReason,
   review = false,
 }: {
-  readonly report: Report
+  readonly report: Reporter
   readonly unit: Unit
   readonly confidence: number | undefined
   readonly unverifiedReason: string | undefined

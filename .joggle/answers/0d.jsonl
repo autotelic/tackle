@@ -11,6 +11,7 @@
 0d2bdd896bda2d17	1793942970	{"consistency":1,"kind":"Probability","probability":0.6522222222222221}
 0d30aafb6e62c595	1793942969	{"confidence":0.6,"kind":"Classify","label":"library_core","probabilities":{"domain_core":0.06,"infrastructure":0.01,"library_core":0.66,"not_applicable":0.19,"rendering_edge":0,"transport_edge":0,"utilities":0.08}}
 0d382d4b4a9ce922	1793942973	{"confidence":0.37,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.01,"merge":0.5,"move":0.19,"share_a_contract":0.15,"split":0.15}}
+0d3e26c4764420f7	1793981704	{"confidence":0.04,"kind":"Classify","label":"framework_glue","probabilities":{"domain_concept":0.22,"framework_glue":0.28,"implementation_detail":0.26,"wire_contract":0.24}}
 0d422d99ac908797	1792252958	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0.02}}
 0d42fec6269e5f64	1792619451	{"confidence":0.97,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.01,"same_module":0,"same_package":0.01,"sibling_packages":0.98}}
 0d45d044c0dda5c8	1793942970	{"confidence":0.69,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.77,"stale_reference":0.01,"wrong_behavior":0.19,"wrong_contract":0.03}}
@@ -33,6 +34,7 @@
 0d8043276f5c87dc	1792252958	{"confidence":0.83,"kind":"Classify","label":"value","probabilities":{"meaning":0.1,"unclear":0.01,"value":0.89}}
 0d8720e01e4d567f	1792252958	{"confidence":0.34,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.56,"member_1":0.23,"member_2":0.21}}
 0d8b5706e991ef60	1792542865	{"confidence":0.34,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.33,"member_1":0.67}}
+0d9069c39b32e1d6	1793981569	{"confidence":0.76,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.13,"independent":0.84,"meaning_switched":0.03}}
 0d95d966b9385e37	1793942974	{"consistency":1,"kind":"Probability","probability":0.6288888888888889}
 0d9c57190f005bd7	1793943705	{"consistency":1,"kind":"Probability","probability":0.3088888888888888}
 0da0205da55a1998	1793942971	{"confidence":0.53,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.33,"name_meaning":0,"no_issue":0.02,"semantic_verdict":0.65}}

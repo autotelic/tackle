@@ -32,6 +32,7 @@
 81bcb3fb325b01be	1792252958	{"consistency":1,"kind":"Probability","probability":0.4844444444444444}
 81bdef024b8217d1	1792543161	{"confidence":0.41,"kind":"Classify","label":"collapse","probabilities":{"collapse":0.61,"keep_variants":0.31,"no_issue":0.08}}
 81c22776de9d0ce6	1793942975	{"confidence":0.82,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.01,"must_be_current":0.11,"not_a_projection":0.88}}
+81c2cda537c5d513	1793981569	{"confidence":0.48,"kind":"Classify","label":"two_concepts","probabilities":{"intentional":0.08,"one_concept":0.27,"two_concepts":0.65}}
 81cea976318f9fa1	1792621702	{"confidence":0.34,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.02,"merge":0.47,"move":0.42,"share_a_contract":0.07,"split":0.02}}
 81d2a0f18eee7e4e	1793942974	{"confidence":0.42,"kind":"Classify","label":"agrees","probabilities":{"agrees":0.61,"excludes":0.08,"not_applicable":0.31}}
 81d34c5a8cbba6f7	1793942976	{"confidence":0.92,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.01,"not_an_invariant":0.95,"repair_path":0.04}}
@@ -39,6 +40,7 @@
 81d687df6093ca61	1793942974	{"confidence":0.74,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.83,"not_a_derivation":0.09,"reimplements":0.08}}
 81d8e2427ad03091	1793942971	{"consistency":1,"kind":"Probability","probability":0.6366666666666666}
 81dacaef3d31da23	1792621503	{"confidence":0.53,"kind":"Classify","label":"member_4","probabilities":{"member_0":0.05,"member_1":0.02,"member_2":0.01,"member_3":0.01,"member_4":0.61,"member_5":0.3}}
+81dc5956ece7cf8c	1793981569	{"confidence":0.66,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.2,"inferred":0.03,"not_applicable":0.77}}
 81e97b90d9ead2e2	1792252958	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0.01}}
 81ee449705173a5c	1793942974	{"confidence":0.82,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.01,"must_be_current":0.11,"not_a_projection":0.88}}
 81f22d8c2d08eda0	1793943080	{"consistency":1,"kind":"Probability","probability":0.8088888888888889}

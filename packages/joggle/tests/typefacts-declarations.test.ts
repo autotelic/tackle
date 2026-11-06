@@ -139,15 +139,15 @@ describe("the declaration fact layer", () => {
           maxStrings: 12000,
         } as const
         const first = yield* loadDeclarationTypes(input)
-        expect(first.loadedFrom).toBe("checker")
+        expect(first.resolvedFrom).toBe("checker")
         expect(first.index.size).toBe(1)
         const second = yield* loadDeclarationTypes(input)
-        expect(second.loadedFrom).toBe("cache")
+        expect(second.resolvedFrom).toBe("cache")
         expect(second.index.size).toBe(1)
 
         // A different manifest is a different program: the cache is not borrowed.
         const third = yield* loadDeclarationTypes({ ...input, manifest: "manifest-b" })
-        expect(third.loadedFrom).toBe("checker")
+        expect(third.resolvedFrom).toBe("checker")
       }).pipe(Effect.provide(NodeServices.layer)),
     120000,
   )

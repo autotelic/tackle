@@ -3,6 +3,7 @@
 280f20747a548613	1792543728	{"confidence":0.95,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.03,"framework_glue":0,"implementation_detail":0.96,"wire_contract":0.01}}
 281fef4e8b38fb54	1792252958	{"confidence":0.77,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.02,"internal_only":0.85,"unaccounted":0.13}}
 282ec031b6d65549	1793942974	{"consistency":1,"kind":"Probability","probability":0.6366666666666666}
+28328637312f543a	1793981569	{"confidence":0.61,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.18,"inferred":0.08,"not_applicable":0.74}}
 283406608e4f5849	1793943080	{"confidence":0.74,"kind":"Classify","label":"collapse","probabilities":{"collapse":0.83,"keep_variants":0.15,"no_issue":0.02}}
 283521a395367584	1792617316	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0.01}}
 28387578847f563c	1792621702	{"confidence":0.19,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.46,"not_a_derivation":0.33,"reimplements":0.21}}
@@ -23,6 +24,7 @@
 288634f19928f722	1792252958	{"consistency":1,"kind":"Probability","probability":0.7833333333333333}
 2899dd8c02c2f38a	1793942973	{"confidence":0.48,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.65,"unclear":0,"value":0.35}}
 289b57976f28992a	1793942974	{"confidence":0.37,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.42,"names_a_caller":0,"shared_vocabulary":0.58}}
+28a596a8b56dd894	1793981704	{"confidence":0.22,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.1,"merge":0.11,"move":0.3,"share_a_contract":0.38,"split":0.11}}
 28b2181424cb504c	1793942975	{"consistency":1,"kind":"Probability","probability":0.9488888888888888}
 28b75a222f028d85	1793942976	{"consistency":1,"kind":"Probability","probability":0.8366666666666666}
 28c7062794228d7b	1792684422	{"confidence":0.46,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.49,"no_difference":0.03,"removes_a_hazard":0.3,"slightly_clearer":0.18},"rating":2.05}

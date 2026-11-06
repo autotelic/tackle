@@ -35,6 +35,7 @@
 9daad6469850dadb	1793942972	{"confidence":0.69,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.77,"stale_reference":0,"wrong_behavior":0.16,"wrong_contract":0.07}}
 9dad1bffb9d3f3c5	1793942973	{"confidence":0.96,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.03,"framework_glue":0,"implementation_detail":0.97,"wire_contract":0}}
 9db0928e749986e1	1792252958	{"confidence":0.92,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.04,"inferred":0.01,"not_applicable":0.95}}
+9db52c76a17b36c2	1793981703	{"confidence":0.87,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.9,"stale_reference":0.06,"wrong_behavior":0.02,"wrong_contract":0.02}}
 9dba82aba2ff69c5	1793942971	{"confidence":0.84,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0,"no_issue":0.12,"semantic_verdict":0.88}}
 9dc00bd7f17e2482	1793942971	{"confidence":0.68,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.76,"stale_reference":0.01,"wrong_behavior":0.18,"wrong_contract":0.05}}
 9dcb780fd98377a2	1793942975	{"consistency":1,"kind":"Probability","probability":0.6966666666666667}

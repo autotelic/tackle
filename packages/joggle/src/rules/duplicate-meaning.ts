@@ -29,14 +29,14 @@ const spec: ClusterRule = {
  * bound left is on how many clusters are judged -- and that bound is ranked
  * rather than sliced.
  */
-interface Candidates {
+interface MeaningCandidates {
   readonly clusters: ReadonlyArray<Cluster>
   readonly oversized: ReadonlyArray<Cluster>
   /** Members left out because their group was a chain rather than a family. */
   readonly chained: number
 }
 
-const find = (workspace: Workspace, scope: Scope): Candidates => {
+const find = (workspace: Workspace, scope: Scope): MeaningCandidates => {
   const { minSimilarity, maxSimilarity, minTokens } = policy.duplicateMeaning
   const pairs = similarPairs({
     units: workspace.units,

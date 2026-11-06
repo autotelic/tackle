@@ -4,7 +4,7 @@ import { Atoms } from "../atoms.ts"
 import { lineAt } from "../cascade.ts"
 import { policy } from "../policy.ts"
 import { verdictsOf, type Plan } from "../plans.ts"
-import { locator, messages, reporter, type Report } from "../reporting.ts"
+import { locator, messages, reporter, type Reporter } from "../reporting.ts"
 import {
   inScope,
   marginOfAnswer,
@@ -279,7 +279,7 @@ const callGraphEvidence = (unit: Unit, workspace: Workspace): Schema.Json => {
 
 /** The finding for one candidate: verified, or the fact with the reason it is not. */
 const findingFor = (
-  report: Report,
+  report: Reporter,
   pair: { readonly unit: Unit; readonly helper: Unit; readonly start: number; readonly length: number },
   workspace: Workspace,
   unverifiedReason: string | undefined,
