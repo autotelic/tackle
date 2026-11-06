@@ -1,6 +1,7 @@
 520231370df7b4b6	1793992254	{"confidence":0.79,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0.01,"antithesis":0,"false_certainty":0.02,"no_issue":0.82,"overgeneralisation":0.01,"riddle":0.09,"synonym_rotation":0.01,"verdict":0.04}}
 5202ea3b4bb3cc12	1793992282	{"confidence":0.35,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0.01,"antithesis":0,"false_certainty":0.02,"no_issue":0.42,"overgeneralisation":0.03,"restatement":0.02,"riddle":0.11,"synonym_rotation":0.02,"verdict":0.37}}
 5205756a8859e364	1793992286	{"confidence":0.35,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0.15,"antithesis":0.02,"false_certainty":0,"no_issue":0.42,"overgeneralisation":0.01,"restatement":0.02,"riddle":0.03,"synonym_rotation":0.01,"verdict":0.34}}
+520876893a25f777	1793992483	{"confidence":0.53,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0,"antithesis":0.13,"false_certainty":0.04,"no_issue":0.58,"overgeneralisation":0.12,"restatement":0,"riddle":0.01,"synonym_rotation":0.02,"verdict":0.1}}
 5208ee928161a8f8	1793942976	{"confidence":0.97,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.01,"not_an_invariant":0.98,"repair_path":0.01}}
 5209482365db6839	1792252958	{"consistency":1,"kind":"Probability","probability":0.26333333333333336}
 520e120502cedd51	1792684422	{"confidence":0.97,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.01,"same_module":0,"same_package":0.01,"sibling_packages":0.98}}

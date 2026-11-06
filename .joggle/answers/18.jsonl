@@ -35,6 +35,7 @@
 183b83754d25de7e	1793992243	{"confidence":0.67,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0.08,"antithesis":0.01,"false_certainty":0,"no_issue":0.71,"overgeneralisation":0.01,"restatement":0.03,"riddle":0.14,"synonym_rotation":0.02,"verdict":0}}
 183c104af7e2d164	1792535008	{"confidence":0.45,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.03,"common_idiom":0.63,"shared_helper":0.34}}
 183d9395170bc11c	1793942976	{"confidence":0.83,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.09,"not_an_invariant":0.89,"repair_path":0.02}}
+18402f0a934b6ab0	1793992483	{"confidence":0.66,"kind":"Classify","label":"anthropomorphism","probabilities":{"anthropomorphism":0.7,"antithesis":0.09,"false_certainty":0.01,"no_issue":0.17,"overgeneralisation":0.01,"riddle":0.02,"synonym_rotation":0,"verdict":0}}
 1844b49213b8b4fe	1792621702	{"confidence":0.77,"kind":"Classify","label":"framework_glue","probabilities":{"domain_concept":0.05,"framework_glue":0.83,"implementation_detail":0.09,"wire_contract":0.03}}
 184808074cf066a6	1793942973	{"confidence":0.82,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.02,"keep_variants":0.88,"no_issue":0.1}}
 184874f6730f847d	1793942975	{"confidence":0.97,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0,"must_be_current":0.02,"not_a_projection":0.98}}

@@ -122,3 +122,4 @@ ebf19a8f4120dbd2	1793992279	{"confidence":0.8,"kind":"Classify","label":"no_issu
 ebf9fe7f1268fd29	1793943082	{"confidence":0.06,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.53,"member_1":0.47}}
 ebfa1182cd8b693f	1793992272	{"confidence":0.73,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0,"antithesis":0,"false_certainty":0,"no_issue":0.76,"overgeneralisation":0,"restatement":0.12,"riddle":0.01,"synonym_rotation":0.01,"verdict":0.1}}
 ebfb95e5d25fe3e4	1792252958	{"confidence":0.91,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.06,"inferred":0,"not_applicable":0.94}}
+ebfcd29222b9e71f	1793992479	{"confidence":0.67,"kind":"Classify","label":"no_issue","probabilities":{"anthropomorphism":0.01,"antithesis":0,"false_certainty":0.01,"no_issue":0.71,"overgeneralisation":0.01,"restatement":0.04,"riddle":0.17,"synonym_rotation":0.04,"verdict":0.01}}

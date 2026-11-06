@@ -504,9 +504,9 @@ export const policy = {
    * `minStringWords` drop a label or a fragment, which no judgement can use.
    */
   proseVoice: {
-    maxDocSentences: 3000,
-    maxProseSentences: 7000,
-    maxStringSentences: 2000,
+    maxDocSentences: 120,
+    maxProseSentences: 120,
+    maxStringSentences: 200,
     /** Words below which a literal is a token, a path or a selector, not prose. */
     minStringWords: 5,
     minChars: 30,
