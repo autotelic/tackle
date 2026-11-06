@@ -18,8 +18,8 @@ structure. The file format is JSON under the `protocol` lexicons; the ambition i
 Call the bundle a **plan set**: the parts list, the assembly, and the drawings in one
 directory. A plan set is what you hand someone who has to build; it is not the building.
 
-The artifact is a **memory of the vocabulary, not a fence around it**. It records what the
-codebase has already discovered; it does not decide what may be built next. A walk that
+The artifact is a **memory of the vocabulary**: it records what the codebase has already
+discovered, and it does not decide what may be built next. A walk that
 ignores it and builds a second `Combobox` is doing the exploration half of the work, and the
 duplicate is the measurement that follows — see [compression.md](./compression.md) for the
 loop that collects it.
@@ -61,16 +61,16 @@ which changed, which are gone. It is an operation over the artifact and not a se
 definition of "changed"; [the change set](../../protocol/docs/scoping.md) says which
 revisions to compare, and the comparison itself is by `id`, never by position.
 
-This is the reason the id is load-bearing rather than tidy. Without it, "this part was
-rebuilt" is indistinguishable from "this part was renamed" and from "this part was deleted
+The id is load-bearing: without it, "this part was rebuilt" is indistinguishable from "this
+part was renamed" and from "this part was deleted
 and another added" — and the compression loop's whole input is the first of those. A pure
 rename must also stay distinguishable from a content change, which the change set already
 does by keeping `renamed` apart.
 
 ## Storage and cost
 
-**The artifact is committed, and that is measured rather than assumed.** A generated file
-earns its place in git when something reads it without running the generator: here,
+**The artifact is committed, and the reason is measurable.** A generated file earns its
+place in git when something reads it without running the generator: here,
 `plumb-ui` reads the manifest at lint time and an agent reads `MENU.md` through `jig menu`.
 Ignoring the artifact like `dist` would mean attaching a build to every reader — and the
 reader that matters (`plumb-ui`) fails **open** when the manifest is missing, so a forgotten
@@ -177,13 +177,13 @@ lookup structure, not a semantic hierarchy. The taxonomy stays a graph.
 
 ## The graph, drawn
 
-The inventory is a graph, and a graph is worth seeing. `cutlist build` emits a `diagrams/`
+The inventory is a graph. `cutlist build` emits a `diagrams/`
 projection: Mermaid source beside the SVG `pele` drew from it. Three viewpoints from the
 same edges — the composition of each part, the inverse hook view (hook → its callers), and
 ownership (owner → its parts) — each drawn at the largest scope that reads.
 
-A whole-app graph is a hairball at any size, and `pele` refuses a source over 50,000
-characters or 5,000 edges anyway. So the drawing is Tufte's small multiples: a view too
+A whole-app graph is a hairball at any size, and `pele` draws nothing for a source over
+50,000 characters or 5,000 edges. So the drawing is Tufte's small multiples: a view too
 large to read is contracted to one node per owner first (the overview: how the scopes
 compose each other), then drawn per owner and per page, each panel titled with its scope
 and counts. Tier is carried in grayscale rather than three hues, and the one accent is a
@@ -199,9 +199,9 @@ source is committed beside the picture when it is on, because a diff of the sour
 readable and a diff of the SVG is not, and `--check` compares both bytes.
 `diagrams/README.md` is the generated index — one row per panel, then the atlas — so the
 macro reading does not require opening a picture. The proposed `graph/*.json` is the data
-half of the same edges, for an agent that would rather traverse them than look.
+half of the same edges, for an agent that traverses them instead of looking.
 
-Scope is deliberate: these draw what the catalog already knows. The per-route tree
+These draw only what the catalog already knows. The per-route tree
 (`trees/<owner>`) and the monorepo matrix wait on their records — the tree on `graph/`, the
 matrix on the `workspace` dimension — so the diagrams never get ahead of the model.
 
@@ -278,13 +278,13 @@ on collision. The id is the address everywhere:
 - the lint finding: `button` (never a line number)
 
 The `@hash` form pins the artifact version. A scene or a ticket can cite
-`button@5aad97ef`; a later `showroom check` can tell whether the part moved underneath it.
-That is the cheapest defence against the showroom rotting.
+`button@5aad97ef`; a later `showroom check` can tell whether the part moved underneath it,
+for the cost of one hash per part.
 
 The id survives the moves that matter: `local → shared` changes the tier and the path, not
 the name. That is why intent keys by id and not by path — promotion must not lose the
 sentence someone wrote about the part. A rename is a new id; treat it as a delete plus an
-add. The duplicate graph will show the pair, which is the honest signal.
+add. The duplicate graph shows the pair.
 
 ## The agent's path
 
@@ -299,8 +299,8 @@ infer it:
 
 The inventory is a **closed world for reference and an open one for creation**. If a part
 is not in the menu, it does not exist for the purposes of _assembly_ — do not cite it, do
-not pretend it is there. That is the contract that makes the menu useful, and the reason
-the missing-intent flag belongs in lint rather than in a convention.
+not pretend it is there. The missing-intent flag belongs in lint for the same reason: a
+convention no tool checks is not a contract.
 
 It does not follow that the part may not be _built_. The walk is allowed to ignore this
 document, and a part it builds that the menu did not have is how the vocabulary grows: the
@@ -310,11 +310,10 @@ failure the closed world prevents is a hallucinated citation, not a new idea.
 
 ### Budget
 
-An artifact an agent cannot afford to read is not an agent artifact. `plan.json` reports
+An agent that cannot afford to read an artifact gains nothing from it. `plan.json` reports
 the cost of each level (bytes, and an estimated token count); `MENU.md` is the budgeted
 view and must fit a configured budget. If it does not, it groups by owner with counts and
-points at `index/` rather than growing without bound. The budget is checked in `--check`,
-because a budget that is not enforced is a wish.
+points at `index/` rather than growing without bound. `--check` enforces the budget.
 
 ### Determinism
 
@@ -324,8 +323,8 @@ The artifact must be byte-identical for the same tree and config, or `--check` i
   same tree measured through `--cwd /var/…` and through `process.cwd()`
   (`/private/var/…`) produced two model hashes, `e5e14a63…` and `2b081cab…`, so `jig check`
   reported a catalog it had just built as stale. Resolve the root once, store it relative to
-  the repository, and hash the relative form. Until then the staleness gate and the snapshot
-  diff are both noise.
+  the repository, and hash the relative form. Until that fix, both the staleness gate and the
+  snapshot diff are unreliable.
 - No timestamps, hostnames, or run ids.
 - Every array sorted by a stated key; every map emitted in a stated order.
 - A hash over the model and a per-file hash in `plan.json`, so a stale `atlas/` is caught,
