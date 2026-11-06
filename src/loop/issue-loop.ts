@@ -217,7 +217,15 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
       Effect.orElseSucceed(() => 'main'),
     )
     if (deps.resume) {
-      yield* tryP(() => git(repoDir, 'worktree', 'add', worktreeDir, branch))
+      // A killed run leaves the worktree behind, branch checked out and all:
+      // reuse it (#8's leftover work), don't add a fresh one.
+      const worktrees = yield* tryP(() => git(repoDir, 'worktree', 'list', '--porcelain'))
+      const alreadyThere = worktrees
+        .split('\n')
+        .some((line) => line === `worktree ${worktreeDir}`)
+      if (!alreadyThere) {
+        yield* tryP(() => git(repoDir, 'worktree', 'add', worktreeDir, branch))
+      }
     } else {
       yield* tryP(() => git(repoDir, 'worktree', 'add', worktreeDir, '-b', branch, baseRef))
     }
