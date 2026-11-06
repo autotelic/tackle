@@ -129,6 +129,15 @@ export const Diagnostic = Schema.Struct({
   identity: Schema.optionalKey(Schema.String),
   judged: Schema.Boolean,
   /**
+   * The stage of the reversal a site stopped at.
+   *
+   * `contract` is a copy of a primitive, `combine` is a combination never
+   * written, `expand` is vocabulary that has to grow. Present only for a staged
+   * finding: the moves are a sequence, and the first stage that answers is the
+   * one a reader should act on.
+   */
+  stoppedAt: Schema.optionalKey(Schema.Literals(["contract", "combine", "expand"])),
+  /**
    * The smaller form this finding proposes, when the rule can propose one.
    *
    * Absent means the finding is an observation: a rule that only warns, or a

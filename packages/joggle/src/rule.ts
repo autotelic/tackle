@@ -315,6 +315,8 @@ export const finding = (input: {
   readonly repair?: Repair | undefined
   /** Overrides the rule's own move, for a rule that proposes more than one. */
   readonly move?: Move | undefined
+  /** The stage of the reversal this site stopped at, for a staged finding. */
+  readonly stoppedAt?: "contract" | "combine" | "expand" | undefined
 }): Diagnostic => {
   // Built field by field rather than with conditional spreads: an empty-object
   // spread hides the omission, and a reader has to reason about two shapes to
@@ -331,6 +333,7 @@ export const finding = (input: {
   if (input.score !== undefined) diagnostic.score = input.score
   if (input.identity !== undefined) diagnostic.identity = input.identity
   if (input.repair !== undefined) diagnostic.repair = input.repair
+  if (input.stoppedAt !== undefined) diagnostic.stoppedAt = input.stoppedAt
   if (input.move !== undefined) diagnostic.move = input.move
   return diagnostic
 }

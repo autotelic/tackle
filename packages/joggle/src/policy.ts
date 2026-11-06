@@ -570,6 +570,18 @@ export const policy = {
   },
 
   /**
+   * The staged reversal: contract, then combine, then expand.
+   *
+   * `minTokens` is the floor below which a declaration is too small to be a copy
+   * of anything. `maxSites` bounds the judged stages; the contract stage is a
+   * proof and is never truncated.
+   */
+  reversal: {
+    minTokens: 8,
+    maxSites: 200,
+  },
+
+  /**
    * Groups of differently named declarations the compiler proves are one type.
    *
    * A search bound, not a threshold: the proof is the checker's, so the only

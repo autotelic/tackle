@@ -111,6 +111,8 @@ export interface ReportInput {
   readonly score?: number | undefined
   readonly identity?: string | undefined
   readonly repair?: Repair | undefined
+  /** The stage of the reversal this site stopped at, for a staged finding. */
+  readonly stoppedAt?: "contract" | "combine" | "expand" | undefined
 }
 
 export type Report = (input: ReportInput) => Diagnostic
@@ -223,5 +225,6 @@ export const reporter = (rule: ReportedRule, locate: Locate): Report => (input) 
     identity: input.identity,
     repair: input.repair,
     move: input.move ?? rule.move,
+    stoppedAt: input.stoppedAt,
   })
 }
