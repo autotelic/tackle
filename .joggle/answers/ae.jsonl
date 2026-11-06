@@ -20,5 +20,6 @@ aec9fa98e2427122	1792542865	{"consistency":1,"kind":"Probability","probability":
 aecf99b94ed7b11f	1792252958	{"consistency":1,"kind":"Probability","probability":0.5733333333333333}
 aee553b57c379d0b	1792542865	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
 aeeec98a3feb381c	1792535008	{"confidence":0.51,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.63,"component_or_feature":0.11,"not_applicable":0.16,"route_or_handler":0.1}}
+aef127031b0cc4a5	1793941318	{"confidence":0.43,"kind":"Classify","label":"drift","probabilities":{"compatible":0.3,"drift":0.62,"two_concepts":0.08}}
 aef615eb3b13ba12	1792252958	{"consistency":1,"kind":"Probability","probability":0.4466666666666666}
 aefbc43a3b51fcfb	1792617317	{"confidence":0.44,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.52,"no_difference":0.08,"removes_a_hazard":0.22,"slightly_clearer":0.18},"rating":1.88}

@@ -45,7 +45,7 @@ import {
  * size, and the talk is honest about the overheads -- memory, and "global
  * algorithms harm incrementality" -- that such a system brings with it.
  */
-export const CACHE_VERSION = "10"
+export const CACHE_VERSION = "12"
 
 /** One parse's key: which file, and what it said. */
 export const keyOf = ({ file, text }: FileText): string =>
@@ -58,11 +58,14 @@ const encodeUnit = (unit: Unit): typeof EncodedUnit.Type => ({
   start: unit.start,
   end: unit.end,
   location: unit.location,
+  namePosition: unit.namePosition,
   exported: unit.exported,
   shape: unit.shape,
   shapeHash: unit.shapeHash,
   typeRefs: unit.typeRefs,
   typed: unit.typed,
+  variants: unit.variants,
+  values: unit.values,
   fieldTypes: Object.fromEntries(unit.fieldTypes),
   bases: unit.composed.map((base) => base.name),
   test: unit.test,
@@ -96,11 +99,18 @@ const EncodedUnit = Schema.Struct({
   start: Schema.Number,
   end: Schema.Number,
   location: SourceLocation,
+  // Absent in caches written before the checker facts keyed on it; the version
+  // bump rebuilds them, and the fallback keeps a stale entry decodable.
+  namePosition: Schema.optionalKey(Schema.Number),
   exported: Schema.Boolean,
   shape: Schema.String,
   shapeHash: Schema.String,
   typeRefs: Schema.Array(Schema.String),
   typed: Schema.Boolean,
+  // Absent in caches written before the node space was widened; the version bump
+  // rebuilds them, and an old entry decodes as "no variants, no values".
+  variants: Schema.optionalKey(Schema.Array(Schema.String)),
+  values: Schema.optionalKey(Schema.Array(Schema.String)),
   fieldTypes: Schema.Record(Schema.String, Schema.String),
   // Absent in caches written before composition was recorded; the version bump
   // rebuilds them, and this keeps a stale entry decodable rather than an issue.
@@ -156,6 +166,7 @@ const unitFrom = (
     start: entry.start,
     end: entry.end,
     location: entry.location,
+    namePosition: entry.namePosition ?? entry.start,
     exported: entry.exported,
     text: text.slice(entry.start, entry.end),
     shape: entry.shape,
@@ -164,6 +175,8 @@ const unitFrom = (
     shapeHash: entry.shapeHash,
     typeRefs: entry.typeRefs,
     typed: entry.typed,
+    variants: entry.variants ?? [],
+    values: entry.values ?? [],
     fieldTypes: new Map(Object.entries(entry.fieldTypes)),
     composed: (entry.bases ?? []).map((name) => ({ name, resolvedTo: "" })),
     test: entry.test,

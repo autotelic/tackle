@@ -5,7 +5,13 @@ import { layer as atomsLayer, type Atoms } from "./atoms.ts"
 import { isUnreachable, DecisionStats } from "./decision.ts"
 import { answerPlans, chunkPlans, type Plan, type PlanAnswers, type PlanChunk } from "./plans.ts"
 import { emptyTypeIndex, loadTypeFacts, type TypeFactRequest, type TypeIndex } from "./typetrace.ts"
-import { indexOfNodeTypes, typesAtPositions, type NodeTypeIndex, type NodeTypeQuery } from "./typefacts.ts"
+import {
+  indexOfNodeTypes,
+  loadDeclarationTypes,
+  typesAtPositions,
+  type NodeTypeIndex,
+  type NodeTypeQuery,
+} from "./typefacts.ts"
 import { shortHash } from "./state.ts"
 import { canonical } from "./canonical.ts"
 import { sourceFingerprint } from "./fingerprint.ts"
@@ -43,7 +49,7 @@ import {
   type Structure,
 } from "./schema.ts"
 import { Service as Tsgo } from "./tsgo.ts"
-import { discoverFiles, loadWorkspace, type Unit } from "./workspace.ts"
+import { applyDeclarationTypes, discoverFiles, loadWorkspace, type Unit } from "./workspace.ts"
 import { contentMappersOf } from "./content-mappers.ts"
 import { looksLikeSource } from "./source.ts"
 import type { ImportGraph } from "./imports.ts"
@@ -417,6 +423,32 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
   })
   // Written after the load, and only when something was actually parsed.
   yield* parseCache.save
+
+  // What each declaration IS, according to the compiler. On by default and
+  // separate from the trace: the trace is a whole-program side channel for the
+  // facts a guard needs, while this is the per-declaration answer every type
+  // rule reads. It needs tsgo, so a run that declined the compiler declines
+  // this too -- and says so, rather than resolving nothing silently.
+  let declarationFacts: { readonly applied: number; readonly from: string; readonly truncated: number; readonly unresolved: number } | undefined
+  if (options.useTsgo && workspace.units.length > 0) {
+    const declarations = yield* loadDeclarationTypes({
+      root: options.cwd,
+      tsconfig: policy.typeFacts.tsconfig,
+      cacheDir: runCache,
+      tool: toolFingerprint,
+      manifest,
+      maxMembers: policy.typeFacts.maxMembers,
+      maxStrings: policy.typeFacts.maxStrings,
+      requests: workspace.units.map((unit) => ({ file: unit.file, position: unit.namePosition })),
+    })
+    for (const issue of declarations.issues) typeIssues.push(issue)
+    declarationFacts = {
+      applied: applyDeclarationTypes(workspace, declarations.index),
+      from: declarations.loadedFrom,
+      truncated: declarations.truncated,
+      unresolved: declarations.unresolved,
+    }
+  }
 
   // The checker's type at the nodes a rule asks about, by offset. One program,
   // a bounded request list, and only with `--types`: it costs what the trace
@@ -854,18 +886,39 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
   // How many declarations the compiler could speak about. A trace that resolved
   // nothing is a run whose type-aware rules must stay silent, and the two look
   // identical in a report unless this says which happened.
-  if (options.types === "trace") {
-    const joined = workspace.units.filter((unit) => unit.typeFacts !== undefined).length
+  if (declarationFacts === undefined) {
+    if (workspace.units.length > 0) {
+      notes.push({
+        ruleId: "joggle",
+        reason:
+          "no declaration types were resolved: it needs the compiler, and this run declined it (--no-tsgo)",
+      })
+    }
+  } else {
+    const cut =
+      declarationFacts.truncated === 0
+        ? ""
+        : "; " + declarationFacts.truncated + " member list(s) were cut to the evidence budget"
+    const missed =
+      declarationFacts.unresolved === 0 ? "" : "; " + declarationFacts.unresolved + " had no project"
     notes.push({
       ruleId: "joggle",
       reason:
         "resolved " +
-        joined +
+        declarationFacts.applied +
         " of " +
         workspace.units.length +
         " declaration(s) to a type (" +
-        typesFrom +
-        ")",
+        declarationFacts.from +
+        ")" +
+        cut +
+        missed,
+    })
+  }
+  if (options.types === "trace") {
+    notes.push({
+      ruleId: "joggle",
+      reason: "declaration trace available (" + typesFrom + ") for the rules that read a guard's type",
     })
   }
   const parsedFromCache = workspace.parses.hits()

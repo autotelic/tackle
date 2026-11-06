@@ -38,12 +38,18 @@ test("a merge cascade lists the imports, the call site and the type name", async
   const calls = edits.filter((edit) => edit.instruction.startsWith("call"))
   expect(calls.map((edit) => edit.file + ":" + edit.line)).toEqual(["src/b.ts:9"])
 
-  // 3. The type names: the one in b.ts, and the dropped file's own use of it.
+  // 3. The type names: the one in b.ts, the dropped file's own use of it, and
+  // the const's annotation -- a const is a declaration now, and its type
+  // reference is a site the merge has to follow.
   const types = edits.filter((edit) => edit.instruction.includes("now resolves"))
-  expect(types.map((edit) => edit.file + ":" + edit.line)).toEqual(["src/b.ts:4", "src/dup.ts:7"])
+  expect(types.map((edit) => edit.file + ":" + edit.line)).toEqual([
+    "src/b.ts:4",
+    "src/dup.ts:5",
+    "src/dup.ts:7",
+  ])
 
   // The order is the order a person would make the edits, per survivor.
-  expect(edits.length).toBe(5)
+  expect(edits.length).toBe(6)
 })
 
 test("a declaration nothing refers to has an empty cascade", async () => {

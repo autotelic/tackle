@@ -4,6 +4,7 @@ f536c99f037b5ab3	1792252958	{"confidence":0.46,"kind":"Classify","label":"keep_v
 f55846065d8cd17f	1792252958	{"confidence":0.85,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.89,"stale_reference":0.02,"wrong_behavior":0.04,"wrong_contract":0.05}}
 f56995a76ba4cda4	1792252958	{"confidence":0.93,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.01,"name_meaning":0,"no_issue":0.04,"semantic_verdict":0.95}}
 f57055c7c886cc54	1792621702	{"confidence":0.7,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.8,"unclear":0,"value":0.2}}
+f571aa9d8865c6c2	1793941318	{"confidence":0.44,"kind":"Classify","label":"composes","probabilities":{"already_composed":0,"composes":0.58,"independent":0.42,"same_name_drift":0}}
 f5740b0f882a1468	1792593149	{"confidence":0.57,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.68,"different_order":0,"different_work":0.32,"same_operation":0}}
 f579c2b9b827700b	1792621702	{"consistency":1,"kind":"Probability","probability":0.21333333333333335}
 f57dd66f35ca2c7b	1792252958	{"confidence":0.41,"kind":"Classify","label":"move","probabilities":{"merge":0.26,"move":0.61,"no_issue":0.13}}

@@ -19,6 +19,7 @@ import { hoistToDomain } from "./hoist-to-domain.ts"
 import { namingDrift } from "./naming-drift.ts"
 import { reimplementedPrimitive } from "./reimplemented-primitive.ts"
 import { oneConceptOneType } from "./one-concept-one-type.ts"
+import { structuralCollapse } from "./structural-collapse.ts"
 import { nullabilityDrift } from "./nullability-drift.ts"
 import { dataErrorAsOutage } from "./data-error-as-outage.ts"
 import { typesOverLogic } from "./types-over-logic.ts"
@@ -73,6 +74,7 @@ export const allRules: ReadonlyArray<Rule | PlannedRule> = [
   namingDrift,
   reimplementedPrimitive,
   oneConceptOneType,
+  structuralCollapse,
   nullabilityDrift,
   dataErrorAsOutage,
   typesOverLogic,

@@ -570,6 +570,16 @@ export const policy = {
   },
 
   /**
+   * Groups of differently named declarations the compiler proves are one type.
+   *
+   * A search bound, not a threshold: the proof is the checker's, so the only
+   * question is how many findings one report carries.
+   */
+  structuralCollapse: {
+    maxFindings: 200,
+  },
+
+  /**
    * One name, several resolved types.
    *
    * Deterministic, because the compiler already decided: two declarations of one
@@ -596,6 +606,20 @@ export const policy = {
   dataError: {
     /** Handlers judged before the rest are counted and not asked about. */
     maxHandlers: 40,
+  },
+
+  /**
+   * The compiler's per-declaration facts.
+   *
+   * `maxMembers` bounds how much of a type is printed: past it the structural
+   * fingerprint is partial, so the type gets no identicalGroup rather than a wrong
+   * one. `maxStrings` is the whole-run budget for the expensive call, and both are
+   * reported when they bite.
+   */
+  typeFacts: {
+    tsconfig: "tsconfig.json",
+    maxMembers: 64,
+    maxStrings: 12000,
   },
 
   /**

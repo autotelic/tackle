@@ -12,3 +12,4 @@ d4abd1047966255a	1792689876	{"confidence":0.93,"kind":"Classify","label":"no_iss
 d4e407a6b31faa57	1792269251	{"confidence":0.54,"kind":"Classify","label":"move","probabilities":{"move":0.77,"no_issue":0.23}}
 d4f6cc78ee0556e7	1792252958	{"confidence":0.41,"kind":"Classify","label":"move","probabilities":{"leave_it":0.04,"merge":0.36,"move":0.53,"share_a_contract":0.05,"split":0.02}}
 d4f810996eb0eaa0	1792619451	{"consistency":1,"kind":"Probability","probability":0.5533333333333333}
+d4fbe3648e6d5462	1793941318	{"confidence":0.84,"kind":"Classify","label":"same_name_drift","probabilities":{"already_composed":0,"composes":0.02,"independent":0.1,"same_name_drift":0.88}}

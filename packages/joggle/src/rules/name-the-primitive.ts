@@ -157,8 +157,24 @@ export const nameThePrimitive: PlannedRule = {
             line: unit.location.line,
             source: unit.text.slice(0, policy.evidence.maxSourceChars > 200 ? 200 : policy.evidence.maxSourceChars),
           }))
+          // Each field's resolved type across the declarations, so a field that
+          // only shares a NAME is visible as two meanings rather than one shape.
+          const fieldTypes = entry.fields.map((field) => ({
+            field,
+            types: [
+              ...new Set(
+                entry.units
+                  .map((unit) => {
+                    const member = unit.typeFacts?.members.find((item) => item.name === field)
+                    return member === undefined ? unit.fieldTypes.get(field) : member.type
+                  })
+                  .filter((type): type is string => type !== undefined),
+              ),
+            ].slice(0, 4),
+          }))
           const id = yield* atoms.add({
             fields: entry.fields,
+            fieldTypes,
             occurrences: entry.units.length,
             declarations,
           })
@@ -172,6 +188,7 @@ export const nameThePrimitive: PlannedRule = {
               verdict: Decision.classify({
                 instructions: [
                   `\`atoms[${id}].fields\` are ${entry.fields.length} field names that appear together in ${entry.units.length} declarations: ${entry.units.slice(0, 6).map((unit) => unit.name).join(", ")}. \`atoms[${id}].declarations\` shows a few of them.`,
+                  "`atoms[" + id + "].fieldTypes` is each field's resolved type across the declarations. A field that means two different things is not one concept, whatever its name.",
                   "The fields appearing together in every one of those declarations is the signal: a set that always travels together is a shape, and each new declaration copies it from memory.",
                   "Is that set of fields ONE THING -- a primitive that deserves a name and should be composed everywhere it appears -- or do those declarations reuse the same field names for different reasons?",
                   "Answer `one_thing` when the fields always travel together as one concept, so one named type would replace all of them.",

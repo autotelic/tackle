@@ -14,7 +14,7 @@ import { layer as gitLayer, Service as Git } from "./git.ts"
 import { loadPlugins, withDefaults } from "./plugins.ts"
 import { policy } from "./policy.ts"
 import { exitCodeFor, render } from "./report.ts"
-import { isRecord, loadWorkspace } from "./workspace.ts"
+import { applyDeclarationTypes, isRecord, loadWorkspace } from "./workspace.ts"
 import { answerPlansRaw, chunkPlans, type Plan, type PlanAnswers } from "./plans.ts"
 import { layer as atomsLayer, type Atoms } from "./atoms.ts"
 import { summarizeCalibration, type CalibrationState, type CalibrationSummary } from "./calibration.ts"
@@ -23,7 +23,13 @@ import { everyFile, qualityOf, type DecisionAnswers, type PlannedRule } from "./
 import { allRules, builtIn, Rules } from "./rules/index.ts"
 import { layerFromConfig as tsgoLayer } from "./tsgo.ts"
 import { emptyTypeIndex, loadTypeFacts, type TypeFactRequest, type TypeIndex } from "./typetrace.ts"
-import { indexOfNodeTypes, typesAtPositions, type NodeTypeIndex, type NodeTypeQuery } from "./typefacts.ts"
+import {
+  indexOfNodeTypes,
+  loadDeclarationTypes,
+  typesAtPositions,
+  type NodeTypeIndex,
+  type NodeTypeQuery,
+} from "./typefacts.ts"
 import { manifestOf } from "./run-cache.ts"
 import { sourceFingerprint } from "./fingerprint.ts"
 
@@ -492,6 +498,34 @@ const calibrateCommand = Command.make(
           types = loaded.index
         }
         const workspace = yield* loadWorkspace(cwd, inputs, { types })
+        // The checker's per-declaration facts, always: a calibration that could
+        // not see the members a rule reads would measure the old rule, not this
+        // one. Cheap after the first run -- the manifest keys the cache.
+        {
+          const tool = yield* sourceFingerprint(policy.analysisVersion)
+          const factsManifest = manifestOf({
+            root: cwd,
+            files: [],
+            contents: new Map(),
+            ruleIds: rules.map((rule) => rule.id),
+            tool,
+            settings: shortHash(canonical({ config: ruleSet.effective, types: "declarations" })),
+          })
+          const declarations = yield* loadDeclarationTypes({
+            root: cwd,
+            tsconfig: policy.typeFacts.tsconfig,
+            // The machine cache, not the committed one: the facts are a function of
+            // the whole program, so they are a performance artifact and never a
+            // decision a repository should carry in its diff.
+            cacheDir: yield* runCacheDirFor(cwd),
+            tool,
+            manifest: factsManifest,
+            maxMembers: policy.typeFacts.maxMembers,
+            maxStrings: policy.typeFacts.maxStrings,
+            requests: workspace.units.map((unit) => ({ file: unit.file, position: unit.namePosition })),
+          })
+          applyDeclarationTypes(workspace, declarations.index)
+        }
         let nodeTypes: NodeTypeIndex | undefined
         if (config.types) {
           const requests = workspace.files

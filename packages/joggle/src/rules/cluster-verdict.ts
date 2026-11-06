@@ -162,11 +162,16 @@ const declarationEvidence = (member: Unit): Schema.Json => {
     ...evidence,
     resolved: {
       display: facts.display,
-      symbol: facts.symbol,
+      // The fingerprint and the group are the two fields a judge can compare
+      // without reading source: same structural, two names for one type.
+      structural: facts.structural,
       flags: facts.flags,
-      arguments: facts.arguments,
-      members: facts.members,
-      origin: facts.origin,
+      alias: facts.alias,
+      members: facts.members.slice(0, policy.evidence.maxMembers),
+      variants: facts.variants.slice(0, policy.evidence.maxMembers),
+      bases: facts.bases.slice(0, 8),
+      value: facts.value,
+      identicalGroup: facts.identicalGroup,
     },
   }
 }
@@ -190,7 +195,7 @@ const describedNote = (cluster: Cluster, described: ReadonlyArray<Unit>): string
  */
 const resolvedNote = (described: ReadonlyArray<Unit>): string =>
   described.some((member) => member.typeFacts !== undefined)
-    ? "The compiler resolved each declaration's type; each entry of `atoms` carries it on `resolved.display`. Two identical resolved types are one type written twice; two different ones are two types that only read alike."
+    ? "The compiler resolved each declaration's type; each entry of `atoms` carries it on `resolved`. `resolved.structural` is the member-sorted fingerprint, and a non-null `resolved.identicalGroup` is the compiler proving two declarations are mutually assignable and structurally identical. Two identical resolved types are one type written twice; two different ones are two types that only read alike."
     : ""
 
 /**

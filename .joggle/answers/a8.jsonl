@@ -1,4 +1,5 @@
 a8011af069007886	1792269251	{"confidence":0.74,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.83,"not_a_derivation":0.17,"reimplements":0}}
+a8043e71f489ec15	1793941318	{"confidence":0.52,"kind":"Classify","label":"compatible","probabilities":{"compatible":0.68,"drift":0.29,"two_concepts":0.03}}
 a813634f3dd09f4d	1792252958	{"confidence":0.35,"kind":"Classify","label":"value","probabilities":{"meaning":0.42,"unclear":0.01,"value":0.57}}
 a81ab04bb0e5189a	1792535008	{"confidence":0.85,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.89,"component_or_feature":0.06,"not_applicable":0.03,"route_or_handler":0.02}}
 a82ef5c2905a8392	1792689876	{"confidence":0.88,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.91,"stale_reference":0.01,"wrong_behavior":0.07,"wrong_contract":0.01}}

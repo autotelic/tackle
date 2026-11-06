@@ -10,20 +10,33 @@ const run = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
   Effect.runPromise(effect as Effect.Effect<A, E, never>)
 
 /** A declaration with only the fields this rule reads. */
-const declared = (name: string, file: string, line: number, display: string, exported = true): Unit =>
+const declared = (
+  name: string,
+  file: string,
+  line: number,
+  display: string,
+  exported = true,
+  kind: "interface" | "type" | "class" | "enum" = "interface",
+): Unit =>
   ({
-    kind: "interface",
+    kind,
     name,
     file,
     exported,
     location: { file, line, column: 1 },
     typeFacts: {
       display,
-      symbol: name,
+      // The rule keys on the structure, so the helper says what the compiler
+      // would: the member-sorted fingerprint. Here it is the display itself.
+      structural: display,
       flags: ["Object"],
-      arguments: [],
       members: [],
-      origin: { file, line },
+      variants: [],
+      bases: [],
+      alias: null,
+      value: null,
+      identicalGroup: null,
+      truncated: false,
     },
   }) as unknown as Unit
 
@@ -60,24 +73,36 @@ test("one name written identically twice is not a finding", async () => {
   expect(result.diagnostics.length).toBe(0)
 })
 
-test("a file-local name is not a contract", async () => {
+test("a file-local name is compared too", async () => {
   const result = await run(
     review([
       declared("Row", "src/api.ts", 3, "{ id: String }", false),
       declared("Row", "src/ui.ts", 5, "{ name: String }", false),
     ]),
   )
-  expect(result.diagnostics.length).toBe(0)
+  expect(result.diagnostics.length).toBe(1)
 })
 
-test("one name in one file is not a finding", async () => {
+test("one name in one file is compared too", async () => {
   const result = await run(
     review([
       declared("User", "src/api.ts", 3, "{ id: String }"),
       declared("User", "src/api.ts", 9, "{ name: String }"),
     ]),
   )
-  expect(result.diagnostics.length).toBe(0)
+  expect(result.diagnostics.length).toBe(1)
+})
+
+test("an interface and a type alias under one name are compared", async () => {
+  const result = await run(
+    review([
+      declared("User", "src/api.ts", 3, "{ id: String }", true, "interface"),
+      declared("User", "src/ui.ts", 5, "{ name: String }", true, "type"),
+    ]),
+  )
+  expect(result.diagnostics.length).toBe(1)
+  expect(result.diagnostics[0]?.help).toContain("interface")
+  expect(result.diagnostics[0]?.help).toContain("type")
 })
 
 test("a run without a trace says so rather than reporting agreement", async () => {

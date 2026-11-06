@@ -16,7 +16,7 @@ import {
   type Scope,
 } from "../rule.ts"
 import type { Diagnostic, Drop } from "../schema.ts"
-import type { TypeFact } from "../typetrace.ts"
+import type { ResolvedType } from "../typefacts.ts"
 import type { Unit, Workspace } from "../workspace.ts"
 
 const RULE_ID = "joggle/one-concept-one-type"
@@ -37,24 +37,27 @@ const VIOLATIONS = { verdict: ["one_concept", "two_concepts"] } as const
 export const oneConceptOneType: PlannedRule = {
   id: RULE_ID,
   severity: "warn",
-  description: "One declared name resolving to different types in different files.",
+  description: "One declared name resolving to different types.",
   judged: true,
   move: "contract",
   onUnavailable: "report",
   messages: messages({
     one_name_many_types:
-      "`{{name}}` resolves to {{meanings}} different types across {{files}} file(s).",
+      "`{{name}}` resolves to {{meanings}} different types in {{places}} declaration(s) across {{files}} file(s).",
     one_name_many_types_help:
       "{{lead}}The compiler resolved it to: {{resolved}}. Share one declaration, or give the two concepts two names.{{unverified}}",
   }),
   plan: Effect.fn("joggle/one-concept-one-type")(function* (workspace: Workspace, scope: Scope) {
     const report = reporter(oneConceptOneType, locator(workspace))
-    const byName = new Map<string, Array<{ readonly unit: Unit; readonly fact: TypeFact }>>()
+    const byName = new Map<string, Array<{ readonly unit: Unit; readonly fact: ResolvedType }>>()
     for (const unit of workspace.units) {
-      // Functions are already compared as names and as call sequences.
-      if (unit.kind === "function") continue
-      // An exported name is a contract other modules import.
-      if (!unit.exported) continue
+      // Functions are already compared as names and as call sequences, and a const
+      // beside a type of the same name is the schema idiom (`const S = Schema…`,
+      // `type S = typeof S.Type`), which is ONE declaration pair, not drift.
+      if (unit.kind === "function" || unit.kind === "const") continue
+      // A file-local name is a contract too: two declarations of one name in one
+      // module still compile against whichever one a reader imported, and the
+      // compiler is the only thing that can see they differ.
       const fact = unit.typeFacts
       if (fact === undefined || fact.display === "") continue
       const list = byName.get(unit.name) ?? []
@@ -69,17 +72,22 @@ export const oneConceptOneType: PlannedRule = {
           outcome([], [
             workspace.types.sites === 0
               ? "no resolved types were available: run with --types to ask the compiler"
-              : "no exported type declaration carried a resolved type to compare",
+              : "no type declaration carried a resolved type to compare",
           ]),
       }
     }
 
-    const candidates: Array<{ name: string; entries: Array<{ unit: Unit; fact: TypeFact }>; meanings: number; files: number }> = []
+    const candidates: Array<{ name: string; entries: Array<{ unit: Unit; fact: ResolvedType }>; meanings: number; files: number }> = []
     let divergent = 0
     for (const [name, entries] of byName) {
       const files = new Set(entries.map((entry) => entry.unit.file))
-      const meanings = new Set(entries.map((entry) => entry.fact.display))
-      if (files.size < 2 || meanings.size < 2) continue
+      // The STRUCTURE is the meaning. Two aliases that print differently and
+      // resolve alike are one type; two that print alike and resolve differently
+      // are two. The display was the string, and this is the proof.
+      const meanings = new Set(
+        entries.map((entry) => entry.fact.structural || entry.fact.display),
+      )
+      if (meanings.size < 2) continue
       if (!entries.some((entry) => inScope(scope, entry.unit.file))) continue
       divergent += 1
       candidates.push({ name, entries, meanings: meanings.size, files: files.size })
@@ -113,7 +121,9 @@ export const oneConceptOneType: PlannedRule = {
         const meanings = candidate.entries.slice(0, 6).map((entry) => ({
           file: entry.unit.file,
           line: entry.unit.location.line,
+          kind: entry.unit.kind,
           display: short(entry.fact.display),
+          structural: short(entry.fact.structural),
         }))
         const id = yield* atoms.add({
           name: candidate.name,
@@ -239,7 +249,7 @@ const findingFor = ({
   readonly name: string
   readonly meanings: number
   readonly files: number
-  readonly entries: ReadonlyArray<{ readonly unit: Unit; readonly fact: TypeFact }>
+  readonly entries: ReadonlyArray<{ readonly unit: Unit; readonly fact: ResolvedType }>
 }>): Diagnostic => {
   const first = candidate.entries[0]
   return report({
@@ -248,15 +258,27 @@ const findingFor = ({
     data: {
       name: candidate.name,
       meanings: candidate.meanings,
+      places: candidate.entries.length,
       files: candidate.files,
       lead: renamed
         ? "One name, different things. Give one of them its own name. "
         : "One name should mean one type. ",
       resolved: candidate.entries
-        .map(
-          (entry) =>
-            entry.unit.file + ":" + String(entry.unit.location.line) + " -> " + short(entry.fact.display),
-        )
+        .map((entry) => {
+          const display = short(entry.fact.display)
+          const structural = short(entry.fact.structural)
+          const proof = structural === "" || structural === display ? "" : " (" + structural + ")"
+          return (
+            entry.unit.file +
+            ":" +
+            String(entry.unit.location.line) +
+            " " +
+            entry.unit.kind +
+            " -> " +
+            display +
+            proof
+          )
+        })
         .join("; "),
       unverified: unverifiedReason === undefined ? "" : " Not verified: " + unverifiedReason + ".",
     },

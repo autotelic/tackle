@@ -26,3 +26,4 @@
 3ae68088b15f88b2	1792687043	{"confidence":0.28,"kind":"Classify","label":"no_issue","probabilities":{"magic_threshold":0.01,"name_meaning":0.32,"no_issue":0.46,"semantic_verdict":0.21}}
 3af067aec4c56497	1792621702	{"confidence":0.68,"kind":"Classify","label":"move","probabilities":{"move":0.84,"no_issue":0.16}}
 3af5b4034f819c44	1792535008	{"confidence":0.36,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.52,"component_or_feature":0.19,"not_applicable":0.24,"route_or_handler":0.05}}
+3afec844b62fa8be	1793941319	{"confidence":0.8,"kind":"Classify","label":"two_concepts","probabilities":{"intentional":0.11,"one_concept":0.02,"two_concepts":0.87}}

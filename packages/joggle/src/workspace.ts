@@ -1,4 +1,4 @@
-import { Clock, Effect, FileSystem, Order, Path, Schema } from "effect"
+import { Clock, Effect, FileSystem, Order, Path, Predicate, Schema } from "effect"
 import { parseSync } from "oxc-parser"
 import { policy } from "./policy.ts"
 import {
@@ -19,14 +19,15 @@ export type { PackageManifest } from "./manifest.ts"
 
 import { shinglesOf } from "./similarity.ts"
 import { WorkspaceError, type SourceLocation } from "./schema.ts"
-import { emptyTypeIndex, type TypeFact, type TypeIndex } from "./typetrace.ts"
+import { emptyTypeIndex, type TypeIndex } from "./typetrace.ts"
+import type { ResolvedType } from "./typefacts.ts"
 
 /* -------------------------------------------------------------------------- */
 /* Vocabulary                                                                  */
 /* -------------------------------------------------------------------------- */
 
 /** What a declaration is. A Schema, so the cache decoder can be exact about it. */
-export const UnitKind = Schema.Literals(["function", "interface", "type"])
+export const UnitKind = Schema.Literals(["function", "interface", "type", "const", "enum", "class"])
 
 export type UnitKind = typeof UnitKind.Type
 
@@ -41,9 +42,34 @@ export interface Unit {
   readonly start: number
   readonly end: number
   readonly location: SourceLocation
+  /**
+   * The byte offset of the declaration's NAME, which is what the checker resolves
+   * on hover. `start` cannot serve: for `const f = () => …` the span is the
+   * arrow, and for a class or object member it is the body, so the name is not
+   * even inside the span.
+   */
+  readonly namePosition: number
   readonly exported: boolean
   /** The declaration exactly as written. */
   readonly text: string
+  /**
+   * The alternatives a union (or the keys a mapped type ranges over) names.
+   *
+   * A discriminated union used to have an EMPTY field set, so every type rule
+   * skipped it -- and a union is where this style of code keeps its vocabulary.
+   * Variants are the AST-level fact; the resolved one is on `typeFacts`.
+   */
+  readonly variants: ReadonlyArray<string>
+  /**
+   * The literal values a declaration names, when it is a vocabulary.
+   *
+   * A `const ROLES = ["admin", "owner"] as const` is not a unit for its shape; it
+   * is a unit because its VALUES are the vocabulary, and two tables with the same
+   * name path and different values are the drift a text comparison cannot see.
+   * Empty when any element is not a literal: a half-read vocabulary is worse than
+   * none, because it makes two different sets look alike.
+   */
+  readonly values: ReadonlyArray<string>
   /** The declaration with every identifier replaced by `_`. */
   readonly shape: string
   readonly tokens: ReadonlyArray<string>
@@ -130,7 +156,7 @@ export interface Unit {
    * and `origin` is where the checker attributes the type, which is not always
    * this declaration when an alias is involved.
    */
-  typeFacts: TypeFact | undefined
+  typeFacts: ResolvedType | undefined
   /** The comment directly above the declaration, if there is one. */
   readonly doc: string | undefined
 }
@@ -696,11 +722,17 @@ const langOf = (file: string): Lang => {
 interface DeclarationSite extends Span {
   readonly kind: UnitKind
   readonly name: string
+  /** The offset of the name itself, where the checker answers a hover. */
+  readonly namePosition: number
   readonly exported: boolean
   readonly allParamsOptional: boolean
   readonly fieldTypes: ReadonlyMap<string, string>
   /** The types this declaration composes, before resolution. */
   readonly bases: ReadonlyArray<string>
+  /** Union alternatives, or the keys a mapped type ranges over. */
+  readonly variants: ReadonlyArray<string>
+  /** Literal values named by the declaration, when they are all literals. */
+  readonly values: ReadonlyArray<string>
   /**
    * Where the declaration's own statement starts, for the doc lookup.
    *
@@ -758,7 +790,23 @@ export interface ComposedBase {
 const fieldsOf = (node: Record<string, unknown>, text: string): FieldSet => {
   const memberLists: Array<unknown> = []
   const bases: Array<string> = []
-  if (node["type"] === "TSInterfaceDeclaration") {
+  // A class contributes its TYPED properties and its inheritance. Its methods are
+  // their own units; a method name in a field map is not a field.
+  let typedMembersOnly = false
+  if (node["type"] === "ClassDeclaration" || node["type"] === "ClassExpression") {
+    const body = node["body"]
+    if (isRecord(body)) memberLists.push(body["body"])
+    typedMembersOnly = true
+    const superClass = referenceName(node["superClass"])
+    if (superClass !== undefined) bases.push(superClass)
+    const implemented = node["implements"]
+    if (Array.isArray(implemented)) {
+      for (const entry of implemented) {
+        const name = referenceName(entry)
+        if (name !== undefined) bases.push(name)
+      }
+    }
+  } else if (node["type"] === "TSInterfaceDeclaration") {
     const body = node["body"]
     if (isRecord(body)) memberLists.push(body["body"])
     const heritage = node["extends"]
@@ -809,11 +857,15 @@ const fieldsOf = (node: Record<string, unknown>, text: string): FieldSet => {
       // A different TYPE is a different matter: "x: string" against "x: number"
       // intersects to never, and there the fields genuinely disagree.
       const annotation = member["typeAnnotation"]
+      if (typedMembersOnly && !isRecord(annotation)) continue
       const start = isRecord(annotation) ? annotation["start"] : undefined
       const end = isRecord(annotation) ? annotation["end"] : undefined
+      // A class property's `typeAnnotation` node starts at the colon; an
+      // interface member's does not. One normal form, so two declarations of the
+      // same field compare equal whatever they are declared inside.
       const declaration =
         typeof start === "number" && typeof end === "number"
-          ? text.slice(start, end).replace(/\s+/g, " ").trim()
+          ? text.slice(start, end).replace(/^\s*:\s*/, "").replace(/\s+/g, " ").trim()
           : name
       names.push(name)
       declarations.set(name, declaration)
@@ -853,6 +905,132 @@ const paramsAllOptional = (node: unknown): boolean => {
   })
 }
 
+/** The initializer with any `as const` / `satisfies` wrapper removed. */
+const unwrappedExpression = (node: unknown): Record<string, unknown> | undefined => {
+  let current: unknown = node
+  // Bounded rather than recursive: a wrapper stack deeper than this is a parser
+  // oddity, not a declaration, and the fallback is "not an initializer we read".
+  for (let depth = 0; depth < 8; depth += 1) {
+    if (!isRecord(current)) return undefined
+    const type = current["type"]
+    if (
+      type === "TSAsExpression" ||
+      type === "TSSatisfiesExpression" ||
+      type === "TSTypeAssertion" ||
+      type === "ParenthesizedExpression"
+    ) {
+      current = current["expression"]
+      continue
+    }
+    return current
+  }
+  return undefined
+}
+
+/** A literal's value as text, or undefined when the node is not a literal. */
+const literalTextOf = (node: unknown): string | undefined => {
+  if (!isRecord(node) || node["type"] !== "Literal") return undefined
+  const value = node["value"]
+  if (Predicate.isString(value) || Predicate.isNumber(value) || Predicate.isBoolean(value)) {
+    return String(value)
+  }
+  return undefined
+}
+
+/**
+ * The literal values a declaration names, when EVERY one is a literal.
+ *
+ * A half-read vocabulary is worse than none: if one element is an expression, two
+ * different sets would look alike. So one non-literal empties the list.
+ */
+const initializerValues = (node: unknown): ReadonlyArray<string> => {
+  const init = unwrappedExpression(node)
+  if (init === undefined) return []
+  if (init["type"] === "ArrayExpression") {
+    const elements = init["elements"]
+    if (!Array.isArray(elements)) return []
+    const values: Array<string> = []
+    for (const element of elements) {
+      const value = literalTextOf(unwrappedExpression(element))
+      if (value === undefined) return []
+      values.push(value)
+    }
+    return values
+  }
+  if (init["type"] === "ObjectExpression") {
+    const properties = init["properties"]
+    if (!Array.isArray(properties)) return []
+    const values: Array<string> = []
+    for (const property of properties) {
+      if (!isRecord(property) || property["type"] !== "Property") return []
+      const value = literalTextOf(unwrappedExpression(property["value"]))
+      if (value === undefined) return []
+      values.push(value)
+    }
+    return values
+  }
+  const single = literalTextOf(init)
+  return single === undefined ? [] : [single]
+}
+
+/** An enum's member values, initializer first and the member name as fallback. */
+const enumValues = (node: Record<string, unknown>): ReadonlyArray<string> => {
+  // Oxc nests the members under `body`, not on the declaration.
+  const body = node["body"]
+  const members = isRecord(body) ? body["members"] : undefined
+  if (!Array.isArray(members)) return []
+  const values: Array<string> = []
+  for (const member of members) {
+    if (!isRecord(member)) continue
+    const id = member["id"]
+    const name = isRecord(id) && Predicate.isString(id["name"]) ? id["name"] : undefined
+    const value = literalTextOf(member["initializer"]) ?? name
+    if (value !== undefined) values.push(value)
+  }
+  return values
+}
+
+/** The alternatives a union names, or the keys a mapped type ranges over. */
+const variantTextsOf = (node: Record<string, unknown>, text: string): ReadonlyArray<string> => {
+  if (node["type"] !== "TSTypeAliasDeclaration") return []
+  const annotation = node["typeAnnotation"]
+  if (!isRecord(annotation)) return []
+  const spanText = (part: unknown): string | undefined => {
+    if (!isRecord(part)) return undefined
+    const start = part["start"]
+    const end = part["end"]
+    if (!Predicate.isNumber(start) || !Predicate.isNumber(end)) return undefined
+    return text.slice(start, end).replace(/\s+/g, " ").trim()
+  }
+  const unionTexts = (part: unknown): ReadonlyArray<string> => {
+    if (!isRecord(part) || part["type"] !== "TSUnionType") return []
+    const types = part["types"]
+    if (!Array.isArray(types)) return []
+    return types.map(spanText).filter((value): value is string => value !== undefined)
+  }
+  if (annotation["type"] === "TSUnionType") return unionTexts(annotation)
+  if (annotation["type"] === "TSMappedType") {
+    // Oxc puts the constraint beside `key`; the estree shape nests it under
+    // `typeParameter`. Read both, so the fact does not depend on the parser.
+    let constraint: unknown = annotation["constraint"]
+    if (constraint === undefined) {
+      const typeParameter = annotation["typeParameter"]
+      constraint = isRecord(typeParameter) ? typeParameter["constraint"] : undefined
+    }
+    const keys = unionTexts(constraint)
+    if (keys.length > 0) return keys
+    const single = spanText(constraint)
+    return single === undefined ? [] : [single]
+  }
+  return []
+}
+
+/** The facts a call site knows that the node alone does not. */
+interface SiteFacts {
+  readonly values: ReadonlyArray<string>
+  readonly variants: ReadonlyArray<string>
+}
+
 const sitesIn = (program: Record<string, unknown>, text: string): ReadonlyArray<DeclarationSite> => {
   const body = program["body"]
   if (!Array.isArray(body)) return []
@@ -864,6 +1042,8 @@ const sitesIn = (program: Record<string, unknown>, text: string): ReadonlyArray<
     name: unknown,
     exported: boolean,
     docStart: number | undefined,
+    nameStart: number | undefined,
+    more: SiteFacts | undefined,
   ): void => {
     if (!isRecord(node)) return
     if (typeof name !== "string") return
@@ -871,15 +1051,25 @@ const sitesIn = (program: Record<string, unknown>, text: string): ReadonlyArray<
     const end = node["end"]
     if (typeof start !== "number" || typeof end !== "number") return
     const fieldSet = fieldsOf(node, text)
+    const variants = more === undefined ? variantTextsOf(node, text) : more.variants
+    const values =
+      more === undefined
+        ? node["type"] === "TSEnumDeclaration"
+          ? enumValues(node)
+          : []
+        : more.values
     sites.push({
       kind,
       name,
       start,
       end,
+      namePosition: nameStart ?? start,
       exported,
       allParamsOptional: paramsAllOptional(node),
       fieldTypes: fieldSet.declarations,
       bases: fieldSet.bases,
+      variants,
+      values,
       docStart: docStart ?? start,
     })
   }
@@ -893,17 +1083,41 @@ const sitesIn = (program: Record<string, unknown>, text: string): ReadonlyArray<
     switch (declaration["type"]) {
       case "FunctionDeclaration": {
         const id = declaration["id"]
-        push(declaration, "function", isRecord(id) ? id["name"] : undefined, exported, docStart)
+        push(
+          declaration,
+          "function",
+          isRecord(id) ? id["name"] : undefined,
+          exported,
+          docStart,
+          isRecord(id) && typeof id["start"] === "number" ? id["start"] : undefined,
+          undefined,
+        )
         return
       }
       case "TSInterfaceDeclaration": {
         const id = declaration["id"]
-        push(declaration, "interface", isRecord(id) ? id["name"] : undefined, exported, docStart)
+        push(
+          declaration,
+          "interface",
+          isRecord(id) ? id["name"] : undefined,
+          exported,
+          docStart,
+          isRecord(id) && typeof id["start"] === "number" ? id["start"] : undefined,
+          undefined,
+        )
         return
       }
       case "TSTypeAliasDeclaration": {
         const id = declaration["id"]
-        push(declaration, "type", isRecord(id) ? id["name"] : undefined, exported, docStart)
+        push(
+          declaration,
+          "type",
+          isRecord(id) ? id["name"] : undefined,
+          exported,
+          docStart,
+          isRecord(id) && typeof id["start"] === "number" ? id["start"] : undefined,
+          undefined,
+        )
         return
       }
       case "VariableDeclaration": {
@@ -913,15 +1127,49 @@ const sitesIn = (program: Record<string, unknown>, text: string): ReadonlyArray<
           if (!isRecord(declarator)) continue
           const id = declarator["id"]
           const init = declarator["init"]
-          if (!isRecord(init)) continue
-          const initType = init["type"]
-          if (initType === "ObjectExpression") {
-            fromDeclaration(init, exported, docStart)
+          const name = isRecord(id) ? id["name"] : undefined
+          const nameStart = isRecord(id) && typeof id["start"] === "number" ? id["start"] : undefined
+          // A declarator with no initializer is still a declaration when it is
+          // typed (`declare const X: T`), and it has a name rules can ask about.
+          if (!isRecord(init)) {
+            push(declarator, "const", name, exported, docStart, nameStart, { values: [], variants: [] })
             continue
           }
-          if (initType !== "ArrowFunctionExpression" && initType !== "FunctionExpression") continue
-          push(init, "function", isRecord(id) ? id["name"] : undefined, exported, docStart)
+          const initType = unwrappedExpression(init)?.["type"]
+          if (initType === "ObjectExpression") {
+            // The methods are their own units; the object is a vocabulary or a
+            // config, and its keys and values are what a rule compares.
+            fromDeclaration(init, exported, docStart)
+            push(declarator, "const", name, exported, docStart, nameStart, {
+              values: initializerValues(init),
+              variants: [],
+            })
+            continue
+          }
+          if (initType === "ArrowFunctionExpression" || initType === "FunctionExpression") {
+            push(init, "function", name, exported, docStart, nameStart, undefined)
+            continue
+          }
+          // Every other initializer -- a schema call, a table, a literal, a new
+          // expression -- is a declaration whose VALUES and resolved type matter.
+          push(declarator, "const", name, exported, docStart, nameStart, {
+            values: initializerValues(init),
+            variants: [],
+          })
         }
+        return
+      }
+      case "TSEnumDeclaration": {
+        const id = declaration["id"]
+        push(
+          declaration,
+          "enum",
+          isRecord(id) ? id["name"] : undefined,
+          exported,
+          docStart,
+          isRecord(id) && typeof id["start"] === "number" ? id["start"] : undefined,
+          undefined,
+        )
         return
       }
       // Class methods and object-literal methods were invisible: only top-level
@@ -933,6 +1181,17 @@ const sitesIn = (program: Record<string, unknown>, text: string): ReadonlyArray<
         const classId = declaration["id"]
         const className =
           isRecord(classId) && typeof classId["name"] === "string" ? classId["name"] : undefined
+        // The class is a declaration of its own: its properties are the shape, its
+        // methods are separate units, and inheritance is a base.
+        push(
+          declaration,
+          "class",
+          className,
+          exported,
+          docStart,
+          isRecord(classId) && typeof classId["start"] === "number" ? classId["start"] : undefined,
+          undefined,
+        )
         const body = declaration["body"]
         if (!isRecord(body)) return
         const members = body["body"]
@@ -942,6 +1201,8 @@ const sitesIn = (program: Record<string, unknown>, text: string): ReadonlyArray<
           const key = member["key"]
           const keyName = isRecord(key) && typeof key["name"] === "string" ? key["name"] : undefined
           if (keyName === undefined) continue
+          const keyStart =
+            isRecord(key) && typeof key["start"] === "number" ? key["start"] : undefined
           const name = className === undefined ? keyName : `${className}.${keyName}`
           const value = member["value"]
           if (isRecord(value) && typeof value["start"] === "number" && typeof value["end"] === "number") {
@@ -950,14 +1211,17 @@ const sitesIn = (program: Record<string, unknown>, text: string): ReadonlyArray<
               name,
               start: value["start"],
               end: value["end"],
+              namePosition: keyStart ?? value["start"],
               exported,
               allParamsOptional: paramsAllOptional(value),
               fieldTypes: new Map(),
               bases: [],
+              variants: [],
+              values: [],
               docStart: typeof member["start"] === "number" ? member["start"] : value["start"],
             })
           } else {
-            push(member, "function", name, exported, undefined)
+            push(member, "function", name, exported, undefined, keyStart, undefined)
           }
         }
         return
@@ -970,11 +1234,13 @@ const sitesIn = (program: Record<string, unknown>, text: string): ReadonlyArray<
           const key = property["key"]
           const keyName = isRecord(key) && typeof key["name"] === "string" ? key["name"] : undefined
           if (keyName === undefined) continue
+          const keyStart =
+            isRecord(key) && typeof key["start"] === "number" ? key["start"] : undefined
           const value = property["value"]
           if (!isRecord(value)) continue
           const valueType = value["type"]
           if (valueType !== "ArrowFunctionExpression" && valueType !== "FunctionExpression") continue
-          push(value, "function", keyName, exported, undefined)
+          push(value, "function", keyName, exported, undefined, keyStart, undefined)
         }
         return
       }
@@ -999,6 +1265,8 @@ const sitesIn = (program: Record<string, unknown>, text: string): ReadonlyArray<
       case "TSInterfaceDeclaration":
       case "TSTypeAliasDeclaration":
       case "VariableDeclaration":
+      case "ClassDeclaration":
+      case "TSEnumDeclaration":
         fromDeclaration(
           statement,
           false,
@@ -1597,7 +1865,10 @@ const sourceFileFrom = ({ file, text, parsed }: ParsedFileText): SourceFile => {
         file,
         start: site.start,
         end: site.end,
+        variants: site.variants,
+        values: site.values,
         location: { file, line: from.line, column: from.column, endLine: to.line, endColumn: to.column },
+        namePosition: site.namePosition,
         exported: site.exported,
         text: text.slice(site.start, site.end),
         shape,
@@ -1940,7 +2211,31 @@ export const noParses = (): Parses => ({
   misses: () => 0,
 })
 
-/** Optional inputs a caller can hand the workspace loader. */
+/**
+ * Attach the checker's answer to each declaration, by name offset.
+ *
+ * Separate from {@link loadWorkspace} because the request list is built from the
+ * units, and the answer needs a program: load, ask, apply. Mutating the units is
+ * the same shape the resolution pass above already uses, and it keeps every rule
+ * reading one object instead of a parallel index.
+ *
+ * @param workspace - the loaded workspace.
+ * @param facts - resolved types keyed by {@link declarationKey}.
+ * @returns how many declarations got a type.
+ */
+export const applyDeclarationTypes = (
+  workspace: Workspace,
+  facts: ReadonlyMap<string, ResolvedType>,
+): number => {
+  let applied = 0
+  for (const unit of workspace.units) {
+    const found = facts.get(unit.file + "\u0000" + String(unit.namePosition))
+    unit.typeFacts = found
+    if (found !== undefined) applied += 1
+  }
+  return applied
+}
+
 export interface WorkspaceInputs {
   /** Files discovery already found; absent means discover them instead. */
   readonly discovered?: ReadonlyArray<string>
@@ -2060,10 +2355,8 @@ export const loadWorkspace = (
           .map((name) => resolveRef(file.path, name))
           .sort(Order.String)
           .join("|")
-        // The compiler's answer, keyed by the declaration's own line, with the
-        // name as the fallback for the `const X` / `type X` pairs a trace puts
-        // on one declaration and joggle's unit on the other.
-        unit.typeFacts = types.at(unit.file, unit.location.line, unit.name)
+        // `typeFacts` is filled by the checker pass, after this one: it is a
+        // lookup per declaration NAME, and the name offset is on the unit.
       })
     })
     // Declarations from test files and from transpiler helpers are excluded

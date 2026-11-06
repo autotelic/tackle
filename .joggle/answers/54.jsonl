@@ -1,6 +1,7 @@
 5400567ed86e8c92	1792621702	{"confidence":0.56,"kind":"Classify","label":"move","probabilities":{"merge":0.04,"move":0.71,"no_issue":0.25}}
 5401f4fce9a263dd	1792542865	{"confidence":0.67,"kind":"Classify","label":"value","probabilities":{"meaning":0.22,"unclear":0,"value":0.78}}
 540207033028f7d8	1792542865	{"confidence":0.62,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.75,"unclear":0.01,"value":0.24}}
+54118f0bdc9f3e6d	1793941318	{"confidence":0.76,"kind":"Classify","label":"two_concepts","probabilities":{"intentional":0.11,"one_concept":0.05,"two_concepts":0.84}}
 5422d12a53830e4f	1792684422	{"confidence":0.52,"kind":"Classify","label":"move","probabilities":{"move":0.76,"no_issue":0.24}}
 5423a4be8fb7f2eb	1792252958	{"confidence":0.43,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.38,"names_a_caller":0,"shared_vocabulary":0.62}}
 544f8d019ab1a65f	1792619451	{"consistency":1,"kind":"Probability","probability":0.5333333333333333}

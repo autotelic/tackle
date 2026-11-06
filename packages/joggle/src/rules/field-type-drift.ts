@@ -69,6 +69,8 @@ const related = ({
 
 interface Declaration {
   readonly type: string
+  /** The exact values the field allows, when the checker proved them literal. */
+  readonly variants: ReadonlyArray<string>
   readonly unitName: string
   readonly file: string
   readonly line: number
@@ -94,6 +96,10 @@ export const fieldTypeDrift: PlannedRule = {
       "`{{field}}` is `{{leftType}}` in {{leftUnit}} and `{{rightType}}` in {{rightUnit}}.",
     many_drifts:
       "{{count}} field(s) of {{unit}} disagree with another declaration: {{fields}}.",
+    value_drift:
+      "`{{field}}` allows {{leftValues}} in {{leftUnit}} and {{rightValues}} in {{rightUnit}}.",
+    value_drift_help:
+      "{{lead}}The value sets differ, so a value that is valid in one declaration is not valid in the other.{{unverified}}",
     drift_help: "{{lead}}{{where}}.{{unverified}}",
   }),
   plan: Effect.fn("joggle/field-type-drift")(function* (workspace: Workspace, scope: Scope) {
@@ -101,12 +107,28 @@ export const fieldTypeDrift: PlannedRule = {
     const byField = new Map<string, Map<string, Array<Declaration>>>()
     for (const unit of workspace.units) {
       if (unit.kind !== "interface" && unit.kind !== "type") continue
+      // The field LIST is the declaration's own; the field's TYPE is the
+      // compiler's when there is one. An annotation is what the author promised,
+      // and the resolved member is what the compiler enforces -- indexed access,
+      // local aliases and imported re-exports all collapse to one printed type,
+      // which is the comparison this rule has always been trying to make.
+      const resolved = unit.typeFacts
       for (const [field, annotation] of unit.fieldTypes) {
-        const type = annotation.replace(/^\s*:\s*/, "").replace(/\s+/g, " ").trim()
+        const member = resolved?.members.find((entry) => entry.name === field)
+        const type =
+          member === undefined
+            ? annotation.replace(/^\s*:\s*/, "").replace(/\s+/g, " ").trim()
+            : member.type
         if (type === "" || type === field) continue
         const types = byField.get(field) ?? new Map<string, Array<Declaration>>()
         const declarations = types.get(type) ?? []
-        declarations.push({ type, unitName: unit.name, file: unit.file, line: unit.location.line })
+        declarations.push({
+          type,
+          variants: member === undefined ? [] : member.variants,
+          unitName: unit.name,
+          file: unit.file,
+          line: unit.location.line,
+        })
         types.set(type, declarations)
         byField.set(field, types)
       }
@@ -211,8 +233,20 @@ export const fieldTypeDrift: PlannedRule = {
         // declarations and the resolved types, which is what the question needs.
         const drifts = group.drifts.slice(0, 5).map((drift) => ({
           field: drift.field,
-          left: { unit: drift.oneDecl.unitName, file: drift.oneDecl.file, line: drift.oneDecl.line, type: drift.oneDecl.type },
-          right: { unit: drift.twoDecl.unitName, file: drift.twoDecl.file, line: drift.twoDecl.line, type: drift.twoDecl.type },
+          left: {
+            unit: drift.oneDecl.unitName,
+            file: drift.oneDecl.file,
+            line: drift.oneDecl.line,
+            type: drift.oneDecl.type,
+            values: drift.oneDecl.variants,
+          },
+          right: {
+            unit: drift.twoDecl.unitName,
+            file: drift.twoDecl.file,
+            line: drift.twoDecl.line,
+            type: drift.twoDecl.type,
+            values: drift.twoDecl.variants,
+          },
         }))
         const id = yield* atoms.add({ declaration: { unit: group.unitName, file: group.file, line: group.line }, drifts })
         const plan: Plan<DecisionAnswers> = {
@@ -229,6 +263,7 @@ export const fieldTypeDrift: PlannedRule = {
                 "Answer `drift` when the same concept is written with two incompatible types, so code that moves between the declarations breaks.",
                 "Answer `two_concepts` when one name has been reused for two different things, so one of them should be renamed.",
                 "Answer `compatible` when the difference is deliberate and nothing breaks -- a raw or unparsed mirror, a wider or partial variant, a type that only reads differently.",
+                "When a side has a non-empty `values` list, that is the exact set the declaration allows. Two sets where one contains the other are one vocabulary written incompletely; two disjoint sets are two vocabularies sharing a field name.",
               ].join("\n"),
               criteria: {
                 drift: "One concept, two incompatible types. Share one declaration of it.",
@@ -377,9 +412,16 @@ const findingFor = ({
       .map((drift) => "`" + drift.field + "` (`" + drift.oneDecl.type + "` vs `" + drift.twoDecl.type + "`)")
       .join(", ") +
     (group.drifts.length > 3 ? ", and " + String(group.drifts.length - 3) + " more" : "")
+  // A value set is a stronger sentence than a type: when both sides were proven
+  // literal, the finding names the values, because that is what a reader has to
+  // reconcile and what a type comparison cannot see.
+  const provenValues =
+    first.oneDecl.variants.length > 0 &&
+    first.twoDecl.variants.length > 0 &&
+    group.drifts.length === 1
   return report({
     about: { file: group.file, line: group.line, column: 1 },
-    messageId: group.drifts.length === 1 ? "single_drift" : "many_drifts",
+    messageId: provenValues ? "value_drift" : group.drifts.length === 1 ? "single_drift" : "many_drifts",
     data: {
       unit: group.unitName,
       count: group.drifts.length,
@@ -389,13 +431,15 @@ const findingFor = ({
       leftUnit: first.oneDecl.unitName,
       rightType: first.twoDecl.type,
       rightUnit: first.twoDecl.unitName,
+      leftValues: first.oneDecl.variants.join(" | "),
+      rightValues: first.twoDecl.variants.join(" | "),
       lead: renamed
         ? "One name, two different things. Rename one of them so each field name means one thing. "
         : "One field name, two incompatible types. If they are one concept, share one declaration of it; if they are two concepts, give them two names. ",
       where,
       unverified: unverifiedReason === undefined ? "" : " Not verified: " + unverifiedReason + ".",
     },
-    helpId: "drift_help",
+    helpId: provenValues ? "value_drift_help" : "drift_help",
     identity: [
       RULE_ID,
       group.file,

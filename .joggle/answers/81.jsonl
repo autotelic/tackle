@@ -3,10 +3,12 @@
 81134740c39d475f	1792618754	{"consistency":1,"kind":"Probability","probability":0.3577777777777778}
 8119e2616bbb3d54	1792621702	{"confidence":0.93,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.05,"same_module":0,"same_package":0,"sibling_packages":0.95}}
 812230dd0da048f7	1792252958	{"confidence":0.83,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.11,"independent":0.89,"meaning_switched":0}}
+81272c323f7efbd6	1793941307	{"confidence":0.14,"kind":"Classify","label":"two_concepts","probabilities":{"one_concept":0.43,"two_concepts":0.57}}
 8139df764a24e2cc	1792535008	{"confidence":0.75,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.81,"component_or_feature":0.07,"not_applicable":0.1,"route_or_handler":0.02}}
 815667d8634e4800	1792252958	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
 815a5b2006a0e520	1792621702	{"confidence":0.37,"kind":"Rate","label":"slightly_clearer","probabilities":{"meaningfully_better":0.41,"no_difference":0.12,"removes_a_hazard":0.05,"slightly_clearer":0.42},"rating":1.38}
 8166323c3395b99d	1792618754	{"confidence":0.94,"kind":"Classify","label":"not_a_derivation","probabilities":{"legitimate_local":0.04,"not_a_derivation":0.96,"reimplements":0}}
+816893eebe90d73e	1793941318	{"confidence":0.92,"kind":"Classify","label":"composes","probabilities":{"already_composed":0.05,"composes":0.94,"independent":0.01,"same_name_drift":0}}
 817e71ae30e6f48f	1792621702	{"confidence":0.95,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.02,"framework_glue":0.01,"implementation_detail":0.96,"wire_contract":0.01}}
 81889da79862846f	1792252958	{"confidence":0.76,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.05,"internal_only":0.84,"unaccounted":0.11}}
 8196844396219fc2	1792535007	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}

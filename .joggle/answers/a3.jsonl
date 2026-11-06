@@ -18,9 +18,11 @@ a3833812261ee326	1792618754	{"confidence":0.96,"kind":"Classify","label":"no_iss
 a389dbd58c2371c9	1792619055	{"confidence":0.91,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.94,"not_a_derivation":0.06,"reimplements":0}}
 a38e48b838b6142b	1792252958	{"confidence":0.22,"kind":"Classify","label":"not_a_derivation","probabilities":{"legitimate_local":0.47,"not_a_derivation":0.48,"reimplements":0.05}}
 a3987863e61aa5a8	1792252958	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
+a39c62f4e7ab1df2	1793941318	{"confidence":0.2,"kind":"Classify","label":"drift","probabilities":{"compatible":0.43,"drift":0.47,"two_concepts":0.1}}
 a3a37f4ccf739906	1792252958	{"confidence":0.81,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.01,"name_meaning":0,"no_issue":0.13,"semantic_verdict":0.86}}
 a3b497deec9c8e5b	1792535008	{"confidence":0.88,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.03,"internal_only":0.92,"unaccounted":0.05}}
 a3c8430c0fdffbaa	1792535008	{"confidence":0.79,"kind":"Classify","label":"infrastructure","probabilities":{"domain_logic":0.1,"infrastructure":0.81,"input_adaptation":0,"mechanical":0.01,"not_applicable":0.02,"orchestration":0.06,"rendering":0,"request_validation":0,"transport_concern":0}}
+a3ddcb3e9cb8e4d7	1793941318	{"confidence":0.91,"kind":"Classify","label":"composes","probabilities":{"already_composed":0,"composes":0.93,"independent":0.07,"same_name_drift":0}}
 a3de76260baf9efe	1792269250	{"confidence":0.92,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.94,"stale_reference":0.02,"wrong_behavior":0.01,"wrong_contract":0.03}}
 a3ec704f9f233cd2	1792252958	{"confidence":0.3,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.01,"common_idiom":0.53,"shared_helper":0.46}}
 a3ecf193a60df730	1792535007	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0.01,"wrong_behavior":0.01,"wrong_contract":0}}

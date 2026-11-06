@@ -36,6 +36,26 @@ const VIOLATIONS = { verdict: ["composes", "same_name_drift"] } as const
 const signatureOf = (unit: Unit): string => [...unitFields(unit)].sort(Order.String).join("\u0000")
 
 /**
+ * A declaration's OWN fields, with the compiler's type where there is one.
+ *
+ * The field list stays the declaration's (an inherited field is already part of
+ * the type it extends, and flattening inheritance would make every subclass look
+ * like a copy of its base). The TYPE is the checker's: an annotation is what the
+ * author promised, and two fields whose annotations read alike can resolve to
+ * different things.
+ */
+const resolvedFieldsOf = (unit: Unit): ReadonlyMap<string, string> => {
+  const facts = unit.typeFacts
+  if (facts === undefined) return unit.fieldTypes
+  const resolved = new Map<string, string>()
+  for (const [field, annotation] of unit.fieldTypes) {
+    const member = facts.members.find((entry) => entry.name === field)
+    resolved.set(field, member === undefined ? annotation : member.type)
+  }
+  return resolved
+}
+
+/**
  * Whether two declarations of one field can compose.
  *
  * Equality is too strict: this rule missed a genuine finding because two of four
@@ -127,10 +147,12 @@ export const composeTypes: PlannedRule = {
         const sameName = whole.name === part.name
         // The state is the pair and the fields they share, with the declared type
         // of each shared field, so the question can weigh "is B genuinely an A".
+        const partFields = resolvedFieldsOf(part)
+        const wholeFields = resolvedFieldsOf(whole)
         const shared = unitFields(part).map((field) => ({
           field,
-          partType: part.fieldTypes.get(field) ?? null,
-          wholeType: whole.fieldTypes.get(field) ?? null,
+          partType: partFields.get(field) ?? null,
+          wholeType: wholeFields.get(field) ?? null,
         }))
         const id = yield* atoms.add({
           whole: { name: whole.name, file: whole.file, line: whole.location.line },
