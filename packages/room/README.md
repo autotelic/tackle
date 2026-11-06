@@ -1,7 +1,7 @@
 # @autotelic/room
 
-One ledger per Linear project, a daemon on each machine, and a review job that runs `jig`, a
-Pi, and one fenced post.
+One ledger per Linear project — or per GitHub label, when the workstream has no project — a
+daemon on each machine, and a review job that runs `jig`, a Pi, and one fenced post.
 
 ```
 jig room plan        read the repo, the token, and the rooms; print the init it would run
@@ -12,6 +12,7 @@ jig room doctor      prove the loop: config, identity, celld, forward, room
 jig room webhook     print the `gh webhook forward` command for this room
 jig room daemon      claim jobs, run reviews, deliver into the durable session
 jig room session     the durable conversation: --json, --say <text>, --note <kind>, --watch
+                     and the claim on it: --attach, --status, --release, --take-over
 jig room review      run one review by hand
 jig room list        rooms, most recently active first
 ```
@@ -118,6 +119,37 @@ jig room webhook | sh                             # gh webhook forward
 jig room daemon                                   # the hands
 ```
 
+Building this workspace: `pnpm build` at the root builds every package in dependency order.
+`pnpm --filter <one package>... build` does not cover `room`: `jig` shells out to it rather than
+depending on it, so a filtered jig build leaves a stale `packages/room/dist`, and a stale `dist`
+of `@autotelic/board` fails at import with a missing export that looks like a source bug.
+
+A workstream addressed by a GitHub label and with no Linear project is a room too; the label is
+then the address as well as the label a PR carries:
+
+```sh
+jig room init --room platform-upgrade --label maintenance
+```
+
+`--linear-project` and `--linear-name` go together, and a room needs one address or the other:
+neither is `a room needs an address`, one of the pair is `go together`. A label room writes
+`project.kind: "github"` and `ingress.linear: "none"` — there is no project to read, and a poller
+pointed at some other one would pull unrelated issues into this ledger.
+
+`celld dev` already watches: it rebuilds the Worker bundle when a file in the room changes, so
+`src/api.ts`, `ingest.ts`, and `policy.ts` are live without a restart (`--no-watch` turns it
+off). The daemon and the extension need a word to do the same:
+
+```sh
+jig room daemon --watch                            # node --watch: restarts on an imported source change
+ROOM_DEV_WATCH=1 pi -e packages/room/extensions/pi.ts   # save pi.ts, the extension reloads itself
+```
+
+A daemon restart interrupts a job in flight; its claim expires and the queue takes it again. The
+extension switch exists because `/reload` only re-reads auto-discovered extensions, and the room
+extension is loaded with `-e` in development — and because a shipped extension must never restart
+somebody's session on its own.
+
 `celld dev` keeps its state in `packages/room/.celld/dev` and needs `esbuild` on PATH;
 both are local-only. That store **is the ledger** — jobs, receipts, claims — and celld derives it
 from the directory holding `wrangler.json`, with no flag or environment variable to relocate it.
@@ -125,8 +157,9 @@ So a `git clean -fdx` in this checkout deletes the room's board, and a second `c
 the same directory fights it for the store's lease (`node-lease CAS ambiguous`). A probe or a
 second instance belongs in its own directory: copy `wrangler.json`, symlink `worker/` and
 `node_modules/`, and run `celld dev <that dir>`. `jig room dev` prints the store path it uses, and
-`--clean` is the only thing that deletes one. A room is addressed by `linear:<projectId>@<stage>`; `local/<login>`
-is the stage until the room is shared. That address is the room's identity in every URL
+`--clean` is the only thing that deletes one. A room is addressed by `linear:<projectId>@<stage>`, or by
+`github:<label>@<stage>` for a label-addressed room; `local/<login>` is the stage until the room
+is shared. The prefix is the kind, so a label and a project id of the same string are two rooms. That address is the room's identity in every URL
 (`/r/<address>/ingest`, `/r/<address>/board`) and it is what the CLI sends. The friendly `name` is a
 label, never an address: a request to `/r/<name>/…` creates a second, unseeded ledger that accepts
 events and queues nothing — a broken-looking room, not a typo the room can report. `room dev` prints
@@ -134,17 +167,60 @@ the address, and `room board --json` carries it as `address`.
 
 The review is triggered by either address:
 
-- a **review request** naming the room's actor, or
+- a **review request** naming the room's actor, carrying the room's `--label` when one is set, or
 - a **labeled PR** carrying the room's `--label`, authored by someone else.
+
+A review request names a person, not a project. Without the label check every request in the
+organisation landed in whichever room watched that person, so triage arrived inside a session that
+might be mid-rebase; with `--label` set, a request for another workstream is counted, not queued.
+`board` prints `unrouted N review event(s) were not this room's label` when any were — a filter
+that dropped in silence would read exactly like an ingress that never arrived.
 
 A push is not a request. The daemon checks the PR's reviews for its marker before posting,
 so a re-delivered webhook cannot post twice, and a re-request after a push runs again.
 
+## Who is driving
+
+The durable conversation outlives every session, and until it was claimed, nothing on the board
+said which session was on it: `here togmund@macbook-pro.local` is the daemon's presence, not the
+Pi session doing the work.
+
+```sh
+jig room session --attach      # record this session and worktree as the room's driver
+jig room session --status      # who is driving, and whether a run is working (reads only)
+jig room session --release     # stop driving
+```
+
+The worktree recorded is the caller's, not the room's: git's top level from the directory the
+command ran in, so two sessions in two linked worktrees of one repository read as two claims
+rather than one. `--worktree <path>` overrides it, which is the case when the command runs from
+the room's checkout while the work is in a sibling worktree.
+
+`board` prints `driving 01a18442 · seed-stack · 2h ago` above `here`, and `board --json` and
+`session --json` carry the same claim as `driver`. `--say` from a session that is not the driver
+is refused, naming the one word that overrides it: `--take-over` (which also claims the room, so
+the next sentence is yours). Notes and reads are not gated — a second session recording a fact or
+reading the transcript is what the ledger is for.
+
+The claim is a file, not a heartbeat: a session id cannot be probed for existence, so a liveness
+guess would be wrong exactly when the process was killed. A stale claim costs one `--take-over`.
+
 ## Pi
 
-`extensions/pi.ts` is the terminal surface: a widget above the editor, a `/room` picker, and a
-`room_board` tool. It shells out to the CLI, so it renders the same bytes a person sees. Load
-it with `pi -e packages/room/extensions/pi.ts`, or install this package as a Pi package.
+`extensions/pi.ts` is the terminal surface: a badge in the editor's top border, a `/room` picker,
+and a `room_board` tool. It shells out to the CLI, so it renders the same bytes a person sees.
+Load it with `pi -e packages/room/extensions/pi.ts`, or install this package as a Pi package.
+
+`/room` with no argument opens the machine's rooms: type to filter (`dmv` finds
+`data-migration-v1`), up/down to move, enter to pick, esc to cancel. Picking one sets the badge,
+the tools' default room and the message stream together; `/room use <name>` does the same
+without the picker.
+
+The surface is rendered, so it is checked in a terminal, not in a unit test.
+`pnpm --filter @autotelic/room tui` boots Pi in tmux over a fixture room home and prints the
+screen; `scripts/tui-repl.sh` documents the keys it can send. `ctx.ui.custom()` returns
+`undefined` in RPC mode, so the picker is invisible over the wire and tmux is the cheapest
+honest terminal.
 
 ## End to end, locally
 

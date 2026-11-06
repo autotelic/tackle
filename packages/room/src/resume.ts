@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { Result, Schema } from "effect"
+import { Option, pipe, Result, Schema } from "effect"
 
 /*
  * Resuming a room after the machine was off.
@@ -36,6 +36,13 @@ export const PrCursor = Schema.Struct({
   lastCommentId: Schema.Finite,
   seenSha: Schema.String,
   seenAt: Schema.Finite,
+  /**
+   * The head sha this machine has already reported as waiting on a re-request.
+   *
+   * The fact ("changes requested at an older commit, head moved, nobody re-asked") is a state,
+   * not news, so without this it would be reported on every resume forever.
+   */
+  reRequestedSha: Schema.optionalKey(Schema.String),
   /** The tail: id -> what it said and meant when seen. Capped, oldest dropped first. */
   recent: Schema.optionalKey(Schema.Record(Schema.String, Remembered)),
 })
@@ -111,6 +118,65 @@ const markOf = (state: string): string => {
 
 const short = (sha: string): string => (sha === "" ? "unknown" : sha.slice(0, 8))
 
+/**
+ * The latest review: `submittedAt` orders them, and the id breaks a tie on one instant.
+ *
+ * An `Option`, not `Review | undefined`: a PR with no reviews and a PR whose reviews could not
+ * be read are the same absence here, and the plumb rule that caught this the first time is right
+ * that absence is not a value.
+ */
+const latestReview = (reviews: ReadonlyArray<Review>): Option.Option<Review> =>
+  Option.fromUndefinedOr(
+    [...reviews]
+      .sort((left, right) =>
+        left.submittedAt === right.submittedAt
+          ? right.id - left.id
+          : left.submittedAt.localeCompare(right.submittedAt),
+      )
+      .at(-1),
+  )
+
+/** The review state that asks for another pass. */
+const asksForChanges = (review: Review): boolean => markOf(review.state) === "changes requested"
+
+/** A review written at a commit the head has since left. */
+const reviewedBefore =
+  (head: string) =>
+  (review: Review): boolean =>
+    review.commitId !== "" && review.commitId !== head
+
+/** This head has not already been reported as waiting on a re-request. */
+const notReported = (previous: PrCursor | undefined, head: string) => (): boolean =>
+  previous?.reRequestedSha !== head
+
+/**
+ * The review that is owed a re-request, or none.
+ *
+ * GitHub does not ask again when the head moves: a `synchronize` hook covers a push that emits
+ * the event, and nothing covers the head changing without one (an amended push from another
+ * machine, a recreated branch, a review left on an older sha). The state is right there in the
+ * API -- the latest review asks for changes at a commit that is not the head -- so resume can
+ * name it instead of leaving the author to remember.
+ *
+ * Reported once per head: the fact does not change until someone re-requests or reviews, and a
+ * card that repeats forever is one people learn to skip.
+ *
+ * @param input - The observation and the cursor for this PR.
+ * @returns The review to re-request from, when that obligation is outstanding and unreported.
+ */
+const owedReRequest = (input: {
+  readonly observation: Observation
+  readonly previous: PrCursor | undefined
+}): Option.Option<Review> => {
+  const head = input.observation.headSha
+  return pipe(
+    latestReview(input.observation.reviews),
+    Option.filter(asksForChanges),
+    Option.filter(reviewedBefore(head)),
+    Option.filter(notReported(input.previous, head)),
+  )
+}
+
 /** What folding one observation produced. A named contract, not an anonymous shape. */
 export interface Folded {
   readonly card: ResumeCard | undefined
@@ -137,6 +203,8 @@ export const foldObservation = (input: {
   readonly now: number
 }): Folded => {
   const { observation, previous, now } = input
+  const owed = owedReRequest({ observation, previous })
+  const pending = Option.isSome(owed)
   const recent = remember(previous)
   const lastReviewId = previous?.lastReviewId ?? 0
   const lastCommentId = previous?.lastCommentId ?? 0
@@ -168,7 +236,7 @@ export const foldObservation = (input: {
   const tail = Object.fromEntries(
     [...recent.entries()].sort(([left], [right]) => byNewest(left, right)).slice(0, TAIL),
   )
-  const next: PrCursor = {
+  const watermark: PrCursor = {
     lastReviewId: observation.reviews.reduce(
       (high, review) => Math.max(high, review.id),
       lastReviewId,
@@ -181,30 +249,33 @@ export const foldObservation = (input: {
     seenAt: now,
     recent: tail,
   }
+  // Reported-per-head is the difference between a state and news: without it, "pushed and
+  // nobody re-asked" would be a card on every resume until the review changes.
+  const next: PrCursor = pending ? { ...watermark, reRequestedSha: observation.headSha } : watermark
   // A cold start has no delta to report, so reporting every review a PR ever had is not news a
   // person can act on (5 reviews and 42 notes on one PR). It reports the *current* round instead:
   // the latest review, its state and sha, and the notes written after it.
   if (previous === undefined) {
-    const latest = [...observation.reviews].sort((left, right) =>
-      left.submittedAt === right.submittedAt
-        ? right.id - left.id
-        : left.submittedAt.localeCompare(right.submittedAt),
-    )[observation.reviews.length - 1]
-    const after = observation.comments.filter(
-      (comment) => latest === undefined || comment.createdAt >= latest.submittedAt,
-    ).length
-    if (latest === undefined) return { card: undefined, next }
+    const latest = latestReview(observation.reviews)
+    const after = Option.match(latest, {
+      onNone: () => observation.comments.length,
+      onSome: (review) =>
+        observation.comments.filter((comment) => comment.createdAt >= review.submittedAt).length,
+    })
+    if (Option.isNone(latest)) return { card: undefined, next }
+    const review = latest.value
     const text =
       "#" +
       String(observation.pr) +
       " · cursor lost · latest: " +
-      markOf(latest.state) +
+      markOf(review.state) +
       " at " +
-      short(latest.commitId) +
+      short(review.commitId) +
       " (head " +
       short(observation.headSha) +
       ")" +
-      (after === 0 ? "" : " · " + String(after) + " inline note(s) after it")
+      (after === 0 ? "" : " · " + String(after) + " inline note(s) after it") +
+      (pending ? " · no re-request since the push" : "")
     return {
       card: {
         id: "resume:" + String(observation.pr) + ":first:" + String(next.lastReviewId),
@@ -214,7 +285,29 @@ export const foldObservation = (input: {
       next,
     }
   }
-  if (reviewNews.length === 0 && commentNews.length === 0) return { card: undefined, next }
+  if (reviewNews.length === 0 && commentNews.length === 0) {
+    // Silence is the failure this exists for: nothing new to say, the author believes the
+    // reviewer is looking, and GitHub will not ask again on its own.
+    if (!pending) return { card: undefined, next }
+    return {
+      card: {
+        id: "resume:" + String(observation.pr) + ":rerequest:" + short(observation.headSha),
+        pr: observation.pr,
+        text:
+          "#" +
+          String(observation.pr) +
+          " · changes requested at " +
+          Option.match(owed, {
+            onNone: () => "",
+            onSome: (review) => short(review.commitId),
+          }) +
+          ", head is now " +
+          short(observation.headSha) +
+          " · no re-request since the push",
+      },
+      next,
+    }
+  }
 
   const parts: Array<string> = []
   if (reviewNews.length > 0) {
@@ -246,6 +339,7 @@ export const foldObservation = (input: {
     parts.join(" · ") +
     stale +
     moved +
+    (pending ? " · no re-request since the push" : "") +
     (ids === "" ? "" : " · " + ids)
   return {
     card: {

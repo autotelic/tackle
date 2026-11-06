@@ -51,6 +51,11 @@ export const Board = Schema.Struct({
       }),
     ),
   ),
+  /**
+   * Review-shaped deliveries the room's label scoped away. Without it, a filtered room and a
+   * dead forwarder render identically.
+   */
+  unrouted: Schema.optionalKey(Schema.Finite),
   /** Delivered and not yet acknowledged: the counts an empty board used to hide. */
   inbox: Schema.optionalKey(
     Schema.Struct({

@@ -266,34 +266,70 @@ export const recentEntries = async (input: {
     .reverse()
 }
 
+/** How many entries a follower re-reads when it looks for what another client committed. */
+const FOLLOW_PAGE = 50
+
+/** How often a follower looks, by default. */
+const FOLLOW_POLL_MS = 1000
+
 /**
  * Follow the conversation: the entries at attachment, then each commit that adds more.
  *
  * This is what makes the room multiplayer without a second registry: every surface attaches to
  * the same committed state, and the library decides who runs.
  *
- * @param input - The session, and what to do with each batch of entries.
+ * @param input - The session, what to do with each batch of entries, and whether the entries
+ *   already committed count as a batch.
  * @returns A function that stops the follow.
  */
 export const followRoomSession = async (input: {
   readonly session: RoomSession
   readonly onEntries: (entries: ReadonlyArray<SessionEntry>) => void
-  /** Start from here instead of the window's first value. */
-  readonly from?: string | undefined
+  /**
+   * Whether the conversation as it stands at attach is delivered as the first batch. Default
+   * true: a person who opens a watch wants the page, not only the future.
+   *
+   * A surface that turns each batch into a message passes false. Its injected entries are
+   * persisted, so a replay is not a catch-up there -- it is the same history appended to the
+   * transcript again on every resume. Those surfaces read history on demand instead
+   * (`recentEntries`, or the conversation view a badge and the tools already ask for).
+   */
+  readonly replay?: boolean | undefined
+  /** How often to look for entries another client committed. Default 1000ms. */
+  readonly pollMs?: number | undefined
 }): Promise<() => Promise<void>> => {
   const watch = await input.session.root.watch(BACKGROUND_CONTEXT)
   const seen = new Set<string>()
-  const emit = (value: ConversationView): void => {
-    const fresh = viewOf(value).filter((entry) => !seen.has(entry.id))
+  const deliver = (entries: ReadonlyArray<SessionEntry>): void => {
+    const fresh = entries.filter((entry) => !seen.has(entry.id))
     for (const entry of fresh) seen.add(entry.id)
     if (fresh.length > 0) input.onEntries(fresh)
   }
-  emit(watch.value)
+  const emit = (value: ConversationView): void => deliver(viewOf(value))
+  if (input.replay === false) {
+    // Seed the ids and deliver nothing: the head is where this client joined, so everything
+    // before it is history it can ask for rather than history it is handed.
+    for (const entry of viewOf(watch.value)) seen.add(entry.id)
+  } else {
+    emit(watch.value)
+  }
   watch.start(async (call) => {
     if (call.kind !== "value") return
     emit(call.value)
   })
+  // The library's watch publishes the commits of *this* storage client, and the storage has no
+  // change feed across processes. A room has many clients -- a Pi surface, the daemon, another
+  // person's terminal -- so a follower that only listened would deliver its own writes and
+  // nothing else, which is not multiplayer. Re-reading a page is the cheapest honest way to see
+  // the rest; ids dedupe against the watch, so a client's own commits still arrive at once.
+  const poll = setInterval(() => {
+    void recentEntries({ session: input.session, limit: FOLLOW_PAGE, includeTelemetry: true })
+      .then(deliver)
+      .catch(() => undefined)
+  }, input.pollMs ?? FOLLOW_POLL_MS)
+  poll.unref?.()
   return async () => {
+    clearInterval(poll)
     await watch.stop()
   }
 }

@@ -94,6 +94,8 @@ export type RoomEvent =
       readonly author: string
       readonly title: string
       readonly draft: boolean
+      /** The PR's labels, so a review request can be scoped to the room's workstream. */
+      readonly labels: ReadonlyArray<string>
     }
   | {
       readonly kind: "pr.ready"
@@ -199,6 +201,7 @@ export const fromGithub = ({
       author,
       title: pr?.title ?? "",
       draft: pr?.draft === true,
+      labels: [...new Set((pr?.labels ?? []).map((entry) => entry.name))],
     }
   }
   if (

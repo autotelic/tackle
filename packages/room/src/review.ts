@@ -25,8 +25,27 @@ import { onPath, run } from "./shell.ts"
 /** What a review job decided. */
 export interface ReviewResult {
   readonly ok: boolean
-  readonly state: "posted" | "skipped" | "failed"
+  readonly state: "posted" | "skipped" | "prepared" | "failed"
   readonly note: string
+  /** The worktree and prompt a `--prepare` produced; the caller owns them from here. */
+  readonly handoff?: ReviewHandoff
+}
+
+/**
+ * A prepared review, handed to whoever will do it.
+ *
+ * The daemon does not use this: it prepares the worktree and runs Pi in one breath. A live
+ * session does, because a wake that arrives with a worktree already at the reviewed sha and the
+ * prompt already written starts the reviewer at `cd`, not at `git fetch` and a contract
+ * reconstruction. The marker travels too: the review has to carry it to be recognized as the
+ * room's own on a later pass.
+ */
+export interface ReviewHandoff {
+  readonly pr: number
+  readonly sha: string
+  readonly worktree: string
+  readonly promptFile: string
+  readonly marker: string
 }
 
 const DEFAULT_SKILL = "Review the diff for correctness, data-model mismatches, and missing cases."
@@ -91,12 +110,22 @@ const jigFindings = (root: string) => {
     command,
     args: [...args, "check", "--cwd", root, "--format", "json"],
     cwd: root,
+    // A whole-workspace report is megabytes. The default buffer turned a real report into
+    // "did not run", and the prompt then told the reviewer to skip checks that never happened.
+    maxBuffer: 64 * 1024 * 1024,
   })
   const decoded = Schema.decodeResult(Schema.fromJsonString(JigReport))(result.stdout)
   if (Result.isFailure(decoded)) {
+    const why =
+      result.failure === undefined
+        ? `exit ${result.code}`
+        : `${result.failure}, exit ${result.code}`
     return {
       findings: [],
-      note: `jig did not produce a report (exit ${result.code}): ${result.stderr.trim()}`,
+      note: `jig did not run (${why}): ${result.stderr.trim()}`,
+      // Named separately from the text: "no findings" and "did not look" must never be the same
+      // shape, which is exactly the confusion that produced the prompt below.
+      ran: false,
     }
   }
   const findings = decoded.success.diagnostics.flatMap((entry): ReadonlyArray<Diagnostic> => {
@@ -111,7 +140,7 @@ const jigFindings = (root: string) => {
       },
     ]
   })
-  return { findings, note: "" }
+  return { findings, note: "", ran: true }
 }
 
 /** Keep the findings a reviewer can act on here: the files this PR changed. */
@@ -120,22 +149,28 @@ const onChanged = (findings: ReadonlyArray<Diagnostic>, files: ReadonlyArray<str
   return findings.filter((finding) => scope.has(finding.file))
 }
 
-const promptOf = ({
+export const promptOf = ({
   pr,
   files,
   findings,
   jigNote,
+  jigRan,
+  worktree,
+  sha,
 }: {
   readonly pr: PullRequest
   readonly files: ReadonlyArray<string>
   readonly findings: ReadonlyArray<Diagnostic>
   readonly jigNote: string
+  /** Whether the machine check actually ran. "Did not look" must not read as "found nothing". */
+  readonly jigRan: boolean
+  readonly worktree: string
+  readonly sha: string
 }): string => {
-  const checks =
-    findings.length === 0
-      ? jigNote === ""
-        ? "jig: no findings on the changed files."
-        : `jig: ${jigNote}`
+  const checks = !jigRan
+    ? `jig: did not run — ${jigNote}\nDo not assume anything was checked; read the diff yourself.`
+    : findings.length === 0
+      ? "jig: no findings on the changed files."
       : findings
           .map(
             (finding) =>
@@ -153,7 +188,13 @@ const promptOf = ({
     "## Changed files",
     files.map((file) => `- ${file}`).join("\n"),
     "",
-    "## Machine checks already run (do not repeat these)",
+    "## Where",
+    `- worktree: ${worktree}`,
+    `- sha: ${sha}`,
+    "",
+    // An inverted header when the check failed: the previous wording told the reviewer to skip
+    // work that had not been done, which is worse than saying nothing.
+    `## Machine checks ${jigRan ? "already run (do not repeat these)" : "that did not run"}`,
     checks,
     "",
     "Give blockers only. If you find none, say 'No blockers found.'",
@@ -337,11 +378,14 @@ export const runReview = async ({
   config,
   job,
   dryRun,
+  prepare,
   log,
 }: {
   readonly config: RoomConfig
   readonly job: Job
   readonly dryRun: boolean
+  /** Stop after the worktree and prompt, and leave both for the caller. */
+  readonly prepare: boolean
   readonly log: (line: string) => void
 }): Promise<ReviewResult> => {
   const pr = Result.getOrUndefined(pullRequest({ number: job.pr, cwd: config.repo.root }))
@@ -369,6 +413,8 @@ export const runReview = async ({
     return { ok: false, state: "failed", note: `cannot create worktree at ${sha.slice(0, 8)}` }
   }
 
+  // A handoff transfers ownership: the worktree stays for the session that will review in it.
+  let handedOff = false
   // SAFETY: the worktree must be removed even when a step throws. This is cleanup, not
   // control flow; the failure itself still travels to the caller as a ReviewResult.
   try {
@@ -384,7 +430,15 @@ export const runReview = async ({
 
     const jig = jigFindings(dir)
     const findings = onChanged(jig.findings, pr.files)
-    const prompt = promptOf({ pr, files: pr.files, findings, jigNote: jig.note })
+    const prompt = promptOf({
+      pr,
+      files: pr.files,
+      findings,
+      jigNote: jig.note,
+      jigRan: jig.ran,
+      worktree: dir,
+      sha,
+    })
     const model = `${config.review.provider}/${config.review.model}`
 
     if (dryRun) {
@@ -393,6 +447,22 @@ export const runReview = async ({
       )
       log(prompt.slice(0, 1_200))
       return { ok: true, state: "skipped", note: "dry run" }
+    }
+
+    if (prepare) {
+      // The prompt is written here rather than by a Pi session that will not run: the wake
+      // carries the path, and the reviewer reads the same contract the daemon would have used.
+      const sessionDir = join(jobsRoot(config), `pr-${pr.number}-${sha.slice(0, 8)}`)
+      mkdirSync(sessionDir, { recursive: true })
+      const promptFile = join(sessionDir, "prompt.md")
+      writeFileSync(promptFile, prompt)
+      handedOff = true
+      return {
+        ok: true,
+        state: "prepared",
+        note: `#${pr.number} @ ${sha.slice(0, 8)} · ${dir}`,
+        handoff: { pr: pr.number, sha, worktree: dir, promptFile, marker },
+      }
     }
 
     const sessionDir = join(jobsRoot(config), `pr-${pr.number}-${sha.slice(0, 8)}`)
@@ -451,6 +521,6 @@ export const runReview = async ({
       ? { ok: true, state: "posted", note: `${pr.number} @ ${sha.slice(0, 8)}` }
       : { ok: false, state: "failed", note: posted.message }
   } finally {
-    removeWorktree({ root: config.repo.root, dir })
+    if (!handedOff) removeWorktree({ root: config.repo.root, dir })
   }
 }

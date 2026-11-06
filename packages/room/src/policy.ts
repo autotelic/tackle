@@ -10,6 +10,12 @@ import type { RoomEvent } from "./ingest.ts"
  * acts, whether or not anyone clicked "request review". The author check keeps the room from
  * reviewing its own actor's work.
  *
+ * A review request is the one address that names a person rather than a project, so when the
+ * room watches a label the request has to carry it too. Without that, one room per project and
+ * one reviewer in common meant every request in the organisation landed in whichever room
+ * watched that person -- triage moved inside a session that may be mid-rebase, which is the
+ * flood a room is supposed to prevent.
+ *
  * `synchronize` is deliberately absent: a push is not a request for another review. A person
  * or a thread decides when the next pass happens.
  */
@@ -42,7 +48,12 @@ export const shouldReview: Predicate.Predicate<{
   readonly trigger?: ReviewTrigger | undefined
 }> = ({ event, actor, label, trigger }) => {
   if (event.kind === "review.requested") {
-    return !event.draft && event.reviewer !== "" && actorOf(event.reviewer) === actor
+    return (
+      !event.draft &&
+      event.reviewer !== "" &&
+      actorOf(event.reviewer) === actor &&
+      labelsMatch({ labels: event.labels, label })
+    )
   }
   if (event.kind === "pr.ready") {
     return (
@@ -83,6 +94,35 @@ const labelsMatch = (input: {
   readonly labels: ReadonlyArray<string>
   readonly label?: string | undefined
 }): boolean => input.label === undefined || input.label === "" || input.labels.includes(input.label)
+
+/**
+ * Whether a review-shaped event belongs to another workstream: the room watches a label and the
+ * PR does not carry it.
+ *
+ * These are counted rather than queued, and named on the board. A filter that drops events in
+ * silence reads exactly like an ingress that never arrived, and the difference is the one thing
+ * whoever starts the forwarder needs to know.
+ *
+ * @param input - The event, the room's watched label, and whether the room answered it.
+ * @returns True when the event was someone else's work.
+ */
+export const unaddressed = (input: {
+  readonly event: RoomEvent
+  readonly label: string | undefined
+  readonly queued: boolean
+}): boolean => {
+  const label = input.label
+  if (input.queued || label === undefined || label === "") return false
+  if (
+    input.event.kind !== "review.requested" &&
+    input.event.kind !== "pr.ready" &&
+    input.event.kind !== "review.submitted" &&
+    input.event.kind !== "thread.created"
+  ) {
+    return false
+  }
+  return !input.event.labels.includes(label)
+}
 
 /**
  * The job a review event creates.

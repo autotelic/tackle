@@ -14,13 +14,19 @@ export interface Outcome {
   readonly code: number
   readonly stdout: string
   readonly stderr: string
+  /**
+   * Why there is no exit code: a missing binary (`ENOENT`), a buffer overflow (`ENOBUFS`), a
+   * timeout. A spawn failure used to be reported as exit 127, which sends the reader hunting for
+   * a missing command that is right there.
+   */
+  readonly failure?: string
 }
 
 /**
  * Run a command and collect its streams and exit code.
  *
- * @param input - The binary, its args, and optional cwd, environment, and timeout.
- * @returns The exit code and both streams.
+ * @param input - The binary, its args, and optional cwd, environment, timeout, and buffer.
+ * @returns The exit code, both streams, and why there was no exit code when there was none.
  */
 export const run = (input: {
   readonly command: string
@@ -28,19 +34,24 @@ export const run = (input: {
   readonly cwd?: string
   readonly env?: NodeJS.ProcessEnv
   readonly timeoutMs?: number
+  /** Bytes of output to hold. A report too big to hold is a report that never arrived. */
+  readonly maxBuffer?: number
 }): Outcome => {
   const options = Object.assign(
-    { encoding: "utf8" as const },
+    { encoding: "utf8" as const, maxBuffer: input.maxBuffer ?? 32 * 1024 * 1024 },
     input.cwd === undefined ? {} : { cwd: input.cwd },
     input.env === undefined ? {} : { env: { ...process.env, ...input.env } },
     input.timeoutMs === undefined ? {} : { timeout: input.timeoutMs },
   )
   const result = spawnSync(input.command, [...input.args], options)
-  return {
-    code: result.status ?? (result.error === undefined ? 1 : 127),
+  const outcome: Outcome = {
+    code: result.status ?? 1,
     stdout: result.stdout?.toString() ?? "",
     stderr: result.stderr?.toString() || result.error?.message || "",
   }
+  if (result.error === undefined) return outcome
+  const failure = (result.error as NodeJS.ErrnoException).code ?? result.error.message
+  return { ...outcome, failure }
 }
 
 /**

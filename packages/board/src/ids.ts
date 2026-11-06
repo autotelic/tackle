@@ -5,6 +5,7 @@
  * compute the same one without asking each other:
  *
  *   room   linear:<projectId>@<stage>      the project is Linear's; the stage is where it runs
+ *   room   github:<label>@<stage>          ...unless the workstream is a label and has no project
  *   actor  github:<login>                  the token that will post, not `git config`
  *   host   <login>@<hostname>              one daemon instance
  *   job    pr:<number>:<headSha>           exactly-once by identity, not by retry
@@ -60,6 +61,20 @@ export const hostOf = (input: { readonly login: string; readonly hostname: strin
  */
 export const roomOf = (input: { readonly projectId: string; readonly stage: string }): RoomId =>
   `linear:${input.projectId.trim()}@${input.stage}`
+
+/**
+ * A room whose workstream is addressed by a GitHub label, with no Linear project behind it.
+ *
+ * The prefix is the address's kind, not decoration: a room named after a label and a room named
+ * after a project must not collide in the machine's index, and whoever reads an id needs to know
+ * which provider it came from. The label is lowercased because GitHub's labels are
+ * case-insensitive, so `Maintenance` and `maintenance` are one room here too.
+ *
+ * @param input - The label and the stage.
+ * @returns `github:<label>@<stage>`.
+ */
+export const labelRoomOf = (input: { readonly label: string; readonly stage: string }): RoomId =>
+  `github:${bare(input.label)}@${input.stage}`
 
 /**
  * The stable key a review job is deduplicated by.

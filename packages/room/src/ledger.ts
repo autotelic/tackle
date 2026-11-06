@@ -794,6 +794,21 @@ export class Ledger {
       .map((row) => ({ state: String(row.state), count: Number(row.n) }))
   }
 
+  /**
+   * Review-shaped deliveries the room did not answer because they were not its workstream.
+   *
+   * A label filter that drops silence is indistinguishable from an ingress that never arrived,
+   * so the drops are receipts and the board names them.
+   *
+   * @returns How many were counted.
+   */
+  unrouted(): number {
+    const row = this.#sql.get<SqlRow>(
+      "SELECT COUNT(*) AS n FROM receipts WHERE kind = 'review.unrouted'",
+    )
+    return row === undefined ? 0 : Number(row.n)
+  }
+
   counts() {
     const count = (row: SqlRow | undefined): number => (row === undefined ? 0 : Number(row.n))
     const chits = this.#sql.get<SqlRow>("SELECT COUNT(*) AS n FROM chits")

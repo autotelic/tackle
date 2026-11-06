@@ -1,4 +1,14 @@
-export { actorOf, buildChitOf, chitOf, hostOf, jobOf, markerOf, roomOf, stageOf } from "./ids.ts"
+export {
+  actorOf,
+  buildChitOf,
+  chitOf,
+  hostOf,
+  jobOf,
+  labelRoomOf,
+  markerOf,
+  roomOf,
+  stageOf,
+} from "./ids.ts"
 export type { ActorId, ChitId, HostId, JobId, RoomId } from "./ids.ts"
 
 export {
