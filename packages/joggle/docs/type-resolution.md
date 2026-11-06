@@ -78,7 +78,7 @@ and any host that calls the checker directly needs its own copy.
 
 ### 3. Identify a type by a marker, not by a name
 
-`internal/typeparser/effect_type.go` is the heart of it. An `Effect<A, E, R>` is
+`internal/typeparser/effect_type.go` carries the mechanism. An `Effect<A, E, R>` is
 recognised and its three parameters extracted **structurally**:
 
 - Effect v4 encodes the channels in a variance struct under the property
@@ -274,7 +274,7 @@ Three probes against `tsgo 7.0.0-dev.20260707.2`, in `T/trace-probe*`:
    trace entry with `flags: ["Object"]`, a `symbolName`, and **no `display` and no
    property list**. Only anonymous object types print their members:
    `__object @ { treesPlanted: Count; name: string }` appears for a literal, not
-   for the interface. So a named type's fields are not in the trace.
+   for the interface. A named type's fields are therefore not in the trace.
 2. `type ProjectRole = (typeof PROJECT_ROLES)[number]` and
    `type ProjectCrewRole = Schema["_output"]["type"]` produced **no entry
    attributed to either name** — the alias declarations are absent entirely.
@@ -320,8 +320,8 @@ calibration problem; it is a state problem, and it is circular: `ProjectRole` an
 `ProjectCrewRoles` are two vocabularies, and telling them apart means comparing
 their **values** -- which is exactly the resolved type the trace does not carry,
 and which was the whole reason this note exists. Asked "do these mean the same
-thing?" with no values in the state, the model does what anyone would: it reads
-`projectRole` twice and says yes.
+thing?" with no values in the state, the model reads `projectRole` twice and says
+yes.
 
 The lesson is the earlier one, twice over: a question cannot recover a fact that
 is missing from its state. `same_type` could never be answered either, because

@@ -72,8 +72,8 @@ This is not a mandate to get the report to zero. "This project does not compile
 to the spec of an Autotelic project" is the wrong question — it treats every
 finding as a defect, and turns a live codebase's record of exploration into a
 failure. The right question is the one above: *which of the three is this, and
-what does it tell me to do next?* The ratchet tightens when you are ready; the
-report stays full on purpose.
+what does it tell me to do next?* The ratchet tightens when you are ready, and the
+report stays full.
 
 The deeper version of this — the harness, the patterns, the feedback loop from an
 assessment back into "this is a new rule" — is in

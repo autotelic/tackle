@@ -345,7 +345,7 @@ including a type named `GhostProjectSummary` declared once in the API and once
 in the UI, where the model itself answered `sameName 0.97` and "keep left". The
 gate inverted a correct judgement. **Locality is not intent**, and
 `docs/reference/names.md` is the argument: one concept should have one name and one
-declaration. The model may now override the deterministic fact only when it
+declaration. The model may override the deterministic fact only when it
 judges the two names to mean different things, or says confidently that both
 should stay.
 

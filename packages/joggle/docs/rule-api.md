@@ -1,8 +1,8 @@
 # The rule API, against oxlint's
 
 `plumb` (the sibling linter) is built on `@oxlint/plugins`. joggle publishes its
-own rule API. Reading the two side by side is worth doing, because the difference
-is not the shape of a rule -- it is who the API is shaped *for*.
+own rule API. The difference is not the shape of a rule; it is who the API is
+shaped *for*.
 
 ## Side by side
 

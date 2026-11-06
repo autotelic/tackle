@@ -70,10 +70,10 @@ Two pairs do not merely overlap; they pull opposite ways.
   `missing-effect-error`, `missing-layer-context`, `floating-effect`,
   `leaking-requirements`, `unsafe-effect-type-assertion`, `any-unknown-in-error-context`.
   plumb has no equivalent, and these are the rules most specific to Effect.
-- **Only effect-tsgo prefers the Effect-native API**: console, date, fetch,
+- **Only effect-tsgo covers the Effect-native API**: console, date, fetch,
   random, timers, `process.env`, `node:` builtins, promises, async functions,
   `Schema` over JSON, `instanceof` over `Schema.is`.
-- **Only effect-tsgo knows the Effect idioms** — the ~50 `catch-*`, `flat-map-*`,
+- **Only effect-tsgo covers the Effect idioms** — the ~50 `catch-*`, `flat-map-*`,
   `match-*`, `effect-map-*`, `map-some-*`, `unnecessary-*` refactors.
 - **Only plumb reaches shape and ownership**: `no-object-parameters`,
   `no-multiple-function-params`, `no-boolean-field-signals`,

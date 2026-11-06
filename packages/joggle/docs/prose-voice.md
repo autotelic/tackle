@@ -176,8 +176,7 @@ does" is actionable. "has a bad tone" is not.
 
 ## 8. The calibration hazard
 
-The judge writes this register. Every model asked to grade this prose is being
-asked to grade its own defaults, and the likely failure is not a miss but
+Every model asked to grade this prose is being asked to grade its own defaults, and the likely failure is not a miss but
 flattery: the riddle sentence reads as confident and compact, so a judge that
 rewards "clarity" without defining it will pass it.
 

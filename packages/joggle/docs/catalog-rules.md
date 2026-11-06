@@ -31,8 +31,8 @@ opinion. Three consequences follow, and each is a rule an author has to obey.
 - **Optional.** A repository that does not use cutlist has no catalog. A rule that requires one
   only runs for some repositories, and must say so rather than go quiet.
 
-The union is what is more correct than either alone. The AST knows the order of the hooks, the
-prop spreads, the nesting depth. The catalog knows a `Button` from a `div` button, which tier a
+The union is more correct than either alone. The AST holds the order of the hooks, the
+prop spreads, the nesting depth. The catalog tells a `Button` from a `div` button, which tier a
 component belongs to, and which two components are the same concept.
 
 ## The split: deterministic to plumb, judged to joggle

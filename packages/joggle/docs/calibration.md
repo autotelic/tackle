@@ -112,8 +112,8 @@ being noise removed (`object-shape` -71, `compose-types` -140).
 | `data-error-as-outage` | 1 | 1 |
 
 The concept question in `field-type-drift` declined 22 and the band flagged 92, so
-114 of 130 disagreements are recorded rather than printed. That settles the worry
-in `docs/type-resolution.md`: a concept question here does work, as long as the
+114 of 130 disagreements are recorded rather than printed, which answers the worry
+in `docs/type-resolution.md`: a concept question here does work as long as the
 uncertain answers are flagged.
 
 ## Round three: bands, not drops
@@ -140,8 +140,8 @@ the model's `prescription` now sets the severity: `leave_it` and
 warnings. **139 = 46 warnings + 93 notices.**
 
 Across shakti-v2 the report is now **459 problems: 162 warnings, 297 notices**
-(down from 508, all of it `duplicate-implementation`). The loud block is small and
-the expected-duplication record stays visible, which is what the bands are for.
+(down from 508, all of it `duplicate-implementation`). The loud block is small, and
+the expected-duplication record stays visible.
 
 ## Round four: a band is not a reason to discard an answer
 
@@ -161,8 +161,8 @@ The warnings did not move at all; the notices are the review band that used to b
 thrown away. `field-type-drift` alone went 15 warnings + 1 notice to 15 + 89,
 `object-shape` 104 + 0 to 131, `types-over-logic` 41 to 67.
 
-That is the honest shape of the report: 162 things a person should change, 511
-things an unsure model pointed at, and nothing silently discarded.
+The report now holds 162 things a person should change, 511 things an unsure model
+pointed at, and nothing silently discarded.
 
 ## Round five: the band decides the severity, and the boundary in the question
 
@@ -240,7 +240,7 @@ volume claim is made about the current set.
 - **`doc-matches-code` is the one broad question left.** Its verdict hides three
   judgements (`stale_reference`, `wrong_contract`, `wrong_behavior`) behind one
   probability, which the TypeSafe guide calls the most important thing not to do.
-  It wants 2-3 atomic questions composed in code.
+  The guide asks for 2-3 atomic questions composed in code.
 - **The relevance Noul is in place for `duplicate-meaning` and
   `naming-drift`** (`rankSpeculative`), where the budget used to be a slice.
   `compose-types`, `name-the-primitive` and `reversal` still take a

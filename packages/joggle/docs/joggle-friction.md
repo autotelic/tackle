@@ -141,8 +141,8 @@ had `--max-tokens`; `ask` had no budget and no fallback.
   candidate -- the same degradation `check` uses for its chunks.
 - A typed failure prints one sentence, not a stack trace.
 
-Narrowing the paths remains the best answer, and the per-directory ask that
-worked before still works.
+Narrowing the paths still works, and so does the per-directory ask that worked
+before.
 
 ### 7. `joggle_check` output was unbounded
 
@@ -270,8 +270,8 @@ committed cache is the point) or visited (where it is litter).
 ## Operator errors, not joggle's
 
 - `timeout` does not exist on macOS by default.
-- Piping the 50k-character tool payloads into a model's context twice -- which is
-  itself the argument for the `limit` in #7.
+- Piping the 50k-character tool payloads into a model's context twice, which is
+  the argument for the `limit` in #7.
 
 ## Round four: PR #1572
 
@@ -404,7 +404,7 @@ under `src/`, server-rendered, no islands. Before `.astro` support joggle read t
   no type. Real.
 - `duplicate-meaning` (notice, margin 0.18): `hrefWith` in `Filters.astro` and
   `pageHref` in `InsightList.astro` both copy the query string, edit one
-  parameter and rebuild a link. A fair thing to put in front of a reviewer.
+  parameter and rebuild a link. A reviewer can act on that.
 - `duplicate-implementation` (printed, though its question answered no at 0.39):
   three cards share the `Props` shape `{ entry: any }`. The model is right that
   they are not one concept; what they share is that none of them uses the

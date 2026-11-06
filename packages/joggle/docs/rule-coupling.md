@@ -7,7 +7,7 @@ only two of them are allowed:
 1. **Collect a fact.** The AST says a call site exists; the type trace says an
    expression's resolved type; the import graph says who imports whom. Facts are
    cheap, exact, and do not care what the code is *called*.
-2. **Ask a question.** Jev decides what a fact means.
+2. **Ask a question.** Jev answers what a fact means.
 3. **Recognise a pattern.** A regular expression over the source, a list of names,
    a hand-ranked score -- deciding meaning in code, and then asking the model to
    confirm it.
