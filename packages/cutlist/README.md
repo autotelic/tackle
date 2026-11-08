@@ -141,6 +141,7 @@ cutlist ask --page …     # what a page renders, direct and through its childre
 cutlist ask --part …     # where a part appears on screen
 cutlist ask --similar …  # what already exists like this, by name and skeleton
 cutlist ask --file …     # compare a sketch per declaration, before it is committed
+cutlist palette --file … # import a palette as a v4 @theme block (stdout or --out)
 ```
 
 `build` and `--check` iterate one table (`src/outputs.ts`), so a file cannot be written and

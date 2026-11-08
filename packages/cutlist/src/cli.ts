@@ -17,6 +17,7 @@ import { loadConfig, outputOf } from "./config.ts"
 import { parseModule } from "./crawl.ts"
 import { readIntent, validateIntent } from "./intent.ts"
 import { compareOutput, outputsOf, type Renderings } from "./outputs.ts"
+import { paletteToTheme } from "./palette.ts"
 import { patternsOf } from "./patterns.ts"
 import { renderCatalog } from "./render/catalog.ts"
 import { renderDiagramIndex, renderDiagrams } from "./render/diagram.ts"
@@ -494,11 +495,68 @@ const askCommand = Command.make(
   ]),
 )
 
+/**
+ * `palette` — an external palette file becomes a v4 `@theme` block.
+ *
+ * The token set has to exist before the vocabulary can publish it or the lint rules can
+ * enforce it; this is the bridge from a vendor's JSON (comments, `050` shades) to the
+ * stylesheet `cutlist build` already reads. Rendering is deterministic, so the output
+ * is safe to commit and diff.
+ */
+const paletteCommand = Command.make(
+  "palette",
+  {
+    file: Flag.String("file").pipe(
+      Flag.withDescription("The palette file to convert (JSON with // comments)."),
+    ),
+    out: Flag.String("out").pipe(
+      Flag.withDescription("Write the theme here instead of stdout."),
+      Flag.optional,
+    ),
+  },
+  (config) =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem
+      const input = yield* Effect.option(fs.readFileString(config.file))
+      if (Option.isNone(input)) {
+        yield* write(`cutlist palette: cannot read ${config.file}`)
+        yield* Effect.sync(() => {
+          process.exitCode = 1
+        })
+        return
+      }
+      const render = paletteToTheme({ input: input.value })
+      if (!render.ok) {
+        yield* write(`cutlist palette: ${render.reason}`)
+        yield* Effect.sync(() => {
+          process.exitCode = 1
+        })
+        return
+      }
+      if (Option.isSome(config.out)) {
+        yield* fs.writeFileString(config.out.value, render.css)
+        yield* write(`cutlist palette: wrote ${render.colors.length} colors to ${config.out.value}`)
+        return
+      }
+      yield* write(render.css)
+    }),
+).pipe(
+  Command.withDescription(
+    "Convert a palette file into a Tailwind v4 @theme block (stdout or --out).",
+  ),
+  Command.withExamples([
+    {
+      command: "cutlist palette --file palette-01.json --out src/styles/palette.css",
+      description: "Import a palette as the theme the token pass already reads.",
+    },
+  ]),
+)
+
 const cli = Command.make("cutlist").pipe(
   Command.withDescription(
     "The vocabulary: crawl a UI codebase into a deterministic catalog, a lint manifest, and a menu.",
   ),
-  Command.withSubcommands([buildCommand, askCommand]),
+  Command.withSubcommands([buildCommand, askCommand, paletteCommand]),
 )
 
 const program = Command.run(cli, { version: "0.0.0" }).pipe(Effect.provide(NodeServices.layer))
