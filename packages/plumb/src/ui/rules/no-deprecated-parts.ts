@@ -123,14 +123,12 @@ function localOf(specifier: ESTree.ImportDeclaration["specifiers"][number]): str
 /**
  * The deprecated part an import site reaches, if any.
  *
- * @param {UiManifest} manifest - The decoded manifest.
+ * @param {ReadonlyArray<UiPart>} deprecated - The manifest's deprecated parts.
  * @param {ImportRef} ref - The import's specifier and imported binding.
  * @returns {UiPart | undefined} The deprecated part, or `undefined` when the import is clean.
  */
-function deprecatedPartFor(manifest: UiManifest, ref: ImportRef): UiPart | undefined {
-	return manifest.components.find(
-		(part) => part.status === "deprecated" && namesPart(ref, part),
-	);
+function deprecatedPartFor(deprecated: ReadonlyArray<UiPart>, ref: ImportRef): UiPart | undefined {
+	return deprecated.find((part) => namesPart(ref, part));
 }
 
 export const noDeprecatedPartsRule = defineRule({
@@ -160,22 +158,34 @@ export const noDeprecatedPartsRule = defineRule({
 		defaultOptions: [{ manifest: "tools/ui-catalog/plumb-ui.config.json" }],
 	},
 	createOnce(context) {
-		const option = firstOptionRecord(context.options);
-		const manifest = manifestFrom(option.manifest);
-		if (manifest === undefined) return {};
-		const deprecated = manifest.components.filter((part) => part.status === "deprecated");
-		if (deprecated.length === 0) return {};
+		/*
+		 * Oxlint populates `context.options` per file, not per run: at createOnce time it
+		 * is null. The manifest is therefore resolved in `before()`, where the options are
+		 * real; `manifestFrom` caches by path, so a per-file lookup is a per-run read.
+		 */
+		let deprecated: ReadonlyArray<UiPart> = [];
+		let active = false;
 
 		return {
 			before() {
-				if (TEST_FILE.test(context.filename.replaceAll("\\", "/"))) return false;
+				if (TEST_FILE.test(context.filename.replaceAll("\\", "/"))) {
+					active = false;
+					return false;
+				}
+				const option = firstOptionRecord(context.options);
+				const manifest = manifestFrom(option.manifest);
+				deprecated =
+					manifest?.components.filter((part) => part.status === "deprecated") ?? [];
+				active = deprecated.length > 0;
+				if (!active) return false;
 			},
 			ImportDeclaration(node) {
+				if (!active) return;
 				const source = node.source.value;
 				if (typeof source !== "string") return;
 				for (const specifier of node.specifiers) {
 					const imported = importedOf(specifier);
-					const part = deprecatedPartFor(manifest, { source, imported });
+					const part = deprecatedPartFor(deprecated, { source, imported });
 					if (part === undefined) continue;
 					const useInstead = part.useInstead ?? [];
 					context.report({

@@ -116,12 +116,13 @@ export default defineConfig({
         "src/shared/structural.ts",
         "src/shared/rule-options.ts",
         "src/shared/ancestors.ts",
-        // The ui manifest and the deprecation rule are the same crossing: raw catalog
+        // The ui manifest and the rules reading it are the same crossing: raw catalog
         // JSON and raw part records in, typed values out. `manifest.ts` decodes the
-        // catalog a host wrote, and `no-deprecated-parts.ts` reads a part's declaration
-        // out of that payload; representation checks and broad parameters are their job.
+        // catalog a host wrote, and the ui rules read declarations out of that payload;
+        // representation checks and broad parameters are their job.
         "src/ui/manifest.ts",
         "src/ui/rules/no-deprecated-parts.ts",
+        "src/ui/rules/no-off-token-color.ts",
       ],
       rules: {
         // plumb:allow-off: typed bridge over raw payloads; casts JSDoc-documented

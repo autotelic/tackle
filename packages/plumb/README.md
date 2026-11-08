@@ -7,7 +7,7 @@ Opinionated [Oxlint](https://oxc.rs) rules that keep TypeScript *true*: a plumb 
 - **`plumb`**: generic rules that reject low-evidence and low-signal implementation patterns (49 rules).
 - **`plumb-effect`**: opt-in rules for Effect service and Layer architecture (26 rules). Enable only in repos that depend on `effect`.
 - **`plumb-react`**: opt-in React composition rules (4 rules). Enable only in React repos.
-- **`plumb-ui`**: opt-in catalog rules (1 rule). Reads cutlist's generated manifest; `no-deprecated-parts` reports an import of a part whose authored intent marks it `deprecated`, naming the recorded replacement. Fails open when the manifest is missing or malformed; `cutlist build --check` is the gate that keeps it current.
+- **`plumb-ui`**: opt-in catalog rules (2 rules). Reads cutlist's generated manifest; `no-deprecated-parts` reports an import of a part whose authored intent marks it `deprecated`, naming the recorded replacement, and `no-off-token-color` reports a color that is not one of the manifest's declared token colors — an off-palette class (`text-red-500`), a hard-coded value (`bg-[#334e68]`), an undeclared variable, an SVG paint literal, or an inline style color. Both fail open when the manifest is missing or malformed; `cutlist build --check` is the gate that keeps it current.
 - **`plumb/configs`**: shared rule sets (`plumbRecommendedRules`, `plumbEffectRecommendedRules`, `plumbReactRecommendedRules`) that enable every rule in a plugin at `error`, for either linter.
 - **`plumb/testing`**: RuleTester lifecycle adapter (`testableRule`, `wireRuleTester`, `createTester`) so `createOnce` rules with `before`/`after` hooks test correctly under the ESLint-compatible `create` path.
 
@@ -81,10 +81,16 @@ rules: {
     "error",
     { manifest: "tools/ui-catalog/plumb-ui.config.json" },
   ],
+  "plumb-ui/no-off-token-color": [
+    "error",
+    { manifest: "tools/ui-catalog/plumb-ui.config.json" },
+  ],
 },
 ```
 
 The manifest option is a path or an already-decoded manifest object; it defaults to `tools/ui-catalog/plumb-ui.config.json`. A part is a promise: the catalog records `status: deprecated` and `useInstead`, and the rule makes an unmigrated import visible at the call site. If the manifest cannot be read, the rule reports nothing rather than inventing a migration.
+
+`no-off-token-color` applies the same lookup to the manifest's top-level `colors`, the closed set cutlist extracts from the theme config and color variables. A color-utility class must name a member of that set (with the usual non-color readings excluded: `text-sm` is a size, `border-2` a width, `divide-x` an axis). Hard-coded values are reported as hard-coded: the fix is a declared shade, or growing the set in the token source — where `cutlist palette` can import one. When the set has a scale's root (`red`), any of its shades passes; the manifest's flat keys cannot tell a real shade from an invented one, and shade completeness is cutlist's job.
 
 
 ## Using Plumb with ESLint
