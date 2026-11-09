@@ -214,10 +214,15 @@ export async function maintenance(options: {
       if (!(await branchExists(repoDir, branch)))
         await git(repoDir, 'branch', branch, `origin/${branch}`)
       const before = await git(repoDir, 'rev-parse', branch)
+      // The rebase runs in a throwaway worktree: the main checkout's state
+      // (a modified config, a checked-out branch) must never matter to it.
+      const tmpWorktree = join(repoDir, '.treadle', 'maintenance-worktrees', String(issue))
+      await git(repoDir, 'worktree', 'remove', tmpWorktree, '--force').catch(() => undefined)
       try {
-        await git(repoDir, 'rebase', '--onto', newBase, upstream, branch)
+        await git(repoDir, 'worktree', 'add', tmpWorktree, branch)
+        await git(tmpWorktree, 'rebase', '--onto', newBase, upstream)
       } catch {
-        await git(repoDir, 'rebase', '--abort').catch(() => undefined)
+        await git(tmpWorktree, 'rebase', '--abort').catch(() => undefined)
         conflicted.add(issue)
         report.conflicts.push(branch)
         await notify(
@@ -225,6 +230,8 @@ export async function maintenance(options: {
             'The branch is untouched — a person needs to rebase it by hand.',
         )
         return
+      } finally {
+        await git(repoDir, 'worktree', 'remove', tmpWorktree, '--force').catch(() => undefined)
       }
       if ((await git(repoDir, 'rev-parse', branch)) !== before) {
         const expected = await git(repoDir, 'rev-parse', `origin/${branch}`)
@@ -303,20 +310,35 @@ export async function maintenance(options: {
         for (const child of await dependentsOf(repoDir, config, pr.issue, deps)) {
           await rebaseDependent(child, pr.issue, defaultBase.ref, true)
         }
-        // Guard: never delete a branch that has a live PR on it (a new PR
-        // opened on the branch after the merge — the smoke run lost one).
-        const openPrs = await deps.ghJsonFn<{ number: number }[]>(
-          repoDir,
-          'pr',
-          'list',
-          '--state',
-          'open',
-          '--head',
-          pr.headRefName,
-          '--json',
-          'number',
-        )
-        if (openPrs.length === 0) {
+        // Guard: never delete a branch that has a live PR on it, as head
+        // (a new PR opened on it after the merge) or as base (deleting a
+        // base branch auto-closes the PRs targeting it — the smoke run
+        // lost one each way).
+        const [headPrs, basePrs] = await Promise.all([
+          deps.ghJsonFn<{ number: number }[]>(
+            repoDir,
+            'pr',
+            'list',
+            '--state',
+            'open',
+            '--head',
+            pr.headRefName,
+            '--json',
+            'number',
+          ),
+          deps.ghJsonFn<{ number: number }[]>(
+            repoDir,
+            'pr',
+            'list',
+            '--state',
+            'open',
+            '--base',
+            pr.headRefName,
+            '--json',
+            'number',
+          ),
+        ])
+        if (headPrs.length === 0 && basePrs.length === 0) {
           if (await branchExists(repoDir, `origin/${pr.headRefName}`)) {
             await git(repoDir, 'push', 'origin', '--delete', pr.headRefName)
             report.deletedBranches.push(pr.headRefName)

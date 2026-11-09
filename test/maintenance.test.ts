@@ -371,15 +371,49 @@ describe('maintenance', () => {
     expect(git(repoDir, 'rev-parse', 'origin/loop/3')).not.toBe('') // untouched era
   })
 
-  it('never deletes a merged branch that has a live PR on it', async () => {
+  it('never deletes a merged branch that has a live PR on it, as head or base', async () => {
     const { repoDir, trackerDir } = await makeWorld()
     await writeIssue(trackerDir, '001-a.md', '')
-    const { deps } = fakeGh({
+    const handlers = (head: unknown[], base: unknown[]) => ({
       'pr list --state merged': [
         { number: 11, headRefName: 'loop/1', baseRefName: 'develop', mergedAt: nowIso() },
       ],
       'pr list --state closed': [],
-      'pr list --state open --head loop/1': [{ number: 99 }],
+      'pr list --state open --head loop/1': head,
+      'pr list --state open --base loop/1': base,
+    })
+
+    const asHead = await maintenance({
+      repoDir,
+      config: config(trackerDir),
+      withLock: false,
+      deps: fakeGh(handlers([{ number: 99 }], [])).deps,
+      notify,
+    })
+    expect(asHead.deletedBranches).toEqual([])
+
+    const asBase = await maintenance({
+      repoDir,
+      config: config(trackerDir),
+      withLock: false,
+      deps: fakeGh(handlers([], [{ number: 98 }])).deps,
+      notify,
+    })
+    expect(asBase.deletedBranches).toEqual([])
+    expect(git(repoDir, 'rev-parse', 'origin/loop/1')).not.toBe('')
+  })
+
+  it('rebases cleanly even with a dirty main checkout', async () => {
+    const { repoDir, trackerDir } = await makeWorld()
+    await writeFile(join(repoDir, 'app.txt'), 'dirty edit\n') // tracked file, unstaged
+    await writeIssue(trackerDir, '001-a.md', '')
+    await writeIssue(trackerDir, '002-b.md', 'base: 1')
+    const { deps, ghCalls } = fakeGh({
+      'pr list --state merged': [
+        { number: 11, headRefName: 'loop/1', baseRefName: 'develop', mergedAt: nowIso() },
+      ],
+      'pr list --state closed': [],
+      'pr list --state open --head loop/2': [{ number: 12, baseRefName: 'loop/1' }],
     })
     const report = await maintenance({
       repoDir,
@@ -389,8 +423,10 @@ describe('maintenance', () => {
       notify,
     })
 
-    expect(report.deletedBranches).toEqual([])
-    expect(git(repoDir, 'rev-parse', 'origin/loop/1')).not.toBe('')
+    expect(report.conflicts).toEqual([])
+    expect(report.rebased).toEqual([2])
+    expect(ghCalls).toContain('pr edit 12 --base develop')
+    expect(await readFile(join(repoDir, 'app.txt'), 'utf8')).toBe('dirty edit\n')
   })
 
   it('collects per-PR errors and keeps going', async () => {
