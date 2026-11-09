@@ -20,6 +20,7 @@ import { appendQa, pickNextIssue, runIssueLoop } from './loop/issue-loop.ts'
 import { buildLoopMachine, type LoopMachineDeps } from './loop/machine.ts'
 import { reconcile } from './loop/reconcile.ts'
 import { lintRules } from './loop/rules.ts'
+import { maintenance } from './maintenance.ts'
 import { loadTelePiConfig, sendTelegramMessage } from './telepi.ts'
 
 function parseArgs(argv: string[]): { repo: string; channel?: 'terminal' | 'telepi' } {
@@ -73,6 +74,27 @@ const notify = async (text: string) => {
   } catch (error) {
     console.warn(`telegram notify failed: ${String(error)}`)
   }
+}
+
+// Stack maintenance on startup (#17): merges land at human pace; catch up
+// on marking done, rebasing stacked branches and retargeting PRs before
+// picking. The Loop already holds the lock.
+try {
+  const report = await maintenance({ repoDir, config, notify, withLock: false })
+  const actions =
+    report.markedDone.length +
+    report.rebased.length +
+    report.retargeted.length +
+    report.parked.length
+  if (actions > 0 || report.conflicts.length > 0) {
+    console.log(
+      `maintenance: done [${report.markedDone.join(', ')}] · rebased [${report.rebased.join(', ')}] · ` +
+        `retargeted [${report.retargeted.join(', ')}] · parked [${report.parked.join(', ')}] · ` +
+        `conflicts [${report.conflicts.join(', ')}]`,
+    )
+  }
+} catch (error) {
+  console.warn(`maintenance failed, continuing to the queue: ${String(error)}`)
 }
 
 const answeredFirst = new Set<number>()

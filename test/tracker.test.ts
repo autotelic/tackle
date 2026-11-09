@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import {
   hasOpenBlocker,
   type Issue,
+  normalizeBase,
   parseBaseFromBody,
   resolveBaseRef,
   workPresent,
@@ -68,6 +69,20 @@ describe('parseBaseFromBody', () => {
     expect(parseBaseFromBody('The base: develop branch is where this lands.')).toBeUndefined()
     expect(parseBaseFromBody('Base: develop (stacked)')).toBeUndefined()
     expect(parseBaseFromBody('No base line at all.')).toBeUndefined()
+  })
+})
+
+describe('normalizeBase', () => {
+  it('drops a numeric base whose issue is closed', () => {
+    const issue: Issue = { number: 2, title: 't', body: '', base: 1 }
+    expect(normalizeBase(issue, new Set([1]))).toEqual({ number: 2, title: 't', body: '' })
+  })
+
+  it('keeps an open numeric base and any named base', () => {
+    expect(normalizeBase({ number: 2, title: 't', body: '', base: 1 }, new Set()).base).toBe(1)
+    expect(
+      normalizeBase({ number: 2, title: 't', body: '', base: 'develop' }, new Set([1])).base,
+    ).toBe('develop')
   })
 })
 

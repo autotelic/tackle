@@ -185,6 +185,17 @@ describe('markdownListReady / markdownListWorking', () => {
     expect(after.map((i) => i.number)).toEqual([3, 4])
     expect(after[1]?.base).toBe(3)
   })
+
+  it('drops the stacking gate and the base when the base issue is done', async () => {
+    const dir = await makeTracker()
+    await writeIssue(dir, '001-a.md', '---\nstate: done\n---\nA\n')
+    await writeIssue(dir, '002-b.md', '---\nstate: ready\nbase: 1\n---\nB\n')
+    // No branches anywhere: a merged base needs no loop/<n> to start from.
+    const repoDir = await makeDir('treadle-md-repo-')
+    const ready = await markdownListReady(repoDir, dir, 'ready')
+    expect(ready.map((i) => i.number)).toEqual([2])
+    expect(ready[0]?.base).toBeUndefined()
+  })
 })
 
 describe('markdownRelabel / markdownRemoveLabel / markdownReadLabels', () => {

@@ -9,7 +9,7 @@
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { BUDGET_RESET_MARKER, parseReceipt, type Receipt } from '../receipt.ts'
-import { git } from './git-exec.ts'
+import { branchExists, git } from './git-exec.ts'
 import type { Issue } from './tracker.ts'
 
 type FrontmatterValue = string | number | Array<string | number>
@@ -152,18 +152,6 @@ function toIssue(file: IssueFile, byNumber: Map<number, IssueFile>): Issue {
   }
 }
 
-async function branchExists(repoDir: string, branch: string): Promise<boolean> {
-  const local = await git(repoDir, 'rev-parse', '--verify', branch).then(
-    () => true,
-    () => false,
-  )
-  if (local) return true
-  return await git(repoDir, 'rev-parse', '--verify', `origin/${branch}`).then(
-    () => true,
-    () => false,
-  )
-}
-
 /** The queue: `state: ready`, no open blockers, lowest number first. */
 export async function markdownListReady(
   repoDir: string,
@@ -177,11 +165,19 @@ export async function markdownListReady(
   for (const file of files) {
     if (file.state !== readyLabel) continue
     if (file.blockedBy.some((n) => byNumber.get(n)?.state !== 'done')) continue
+    const issue = toIssue(file, byNumber)
+    const baseNumber = baseAsIssueNumber(file.base)
+    if (baseNumber !== undefined && byNumber.get(baseNumber)?.state === 'done') {
+      // The base issue is merged (done): the stack has landed below this
+      // issue, so it branches from the default branch — no gate.
+      delete issue.base
+      ready.push(issue)
+      continue
+    }
     // Stacking gate (#17): a numeric base branches from that issue's
     // loop/<n> branch, so the issue can't start until the base issue has.
-    const baseNumber = baseAsIssueNumber(file.base)
     if (baseNumber !== undefined && !(await branchExists(repoDir, `loop/${baseNumber}`))) continue
-    ready.push(toIssue(file, byNumber))
+    ready.push(issue)
   }
   return ready.sort((a, b) => a.number - b.number)
 }

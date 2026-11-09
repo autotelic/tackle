@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { LoopConfig } from '../config.ts'
 import { BUDGET_RESET_MARKER, parseReceipt, type Receipt } from '../receipt.ts'
-import { gh, ghJson, git } from './git-exec.ts'
+import { branchExists, gh, ghJson, git } from './git-exec.ts'
 import {
   markdownComment,
   markdownIssueUrl,
@@ -67,6 +67,19 @@ function withParsedBase(issue: Issue): Issue {
   return base === undefined ? issue : { ...issue, base }
 }
 
+/**
+ * Normalize an issue's declared base against what's actually merged (#17):
+ * a numeric base whose issue is closed (merged/done) means the stack below
+ * has landed — the issue branches from the default branch instead.
+ */
+export function normalizeBase(issue: Issue, closedNumbers: Set<number>): Issue {
+  if (typeof issue.base === 'number' && closedNumbers.has(issue.base)) {
+    const { base: _base, ...rest } = issue
+    return rest
+  }
+  return issue
+}
+
 // ── GitHub implementation ───────────────────────────────────────────────
 
 async function githubListReady(repoDir: string, readyLabel: string): Promise<Issue[]> {
@@ -83,10 +96,35 @@ async function githubListReady(repoDir: string, readyLabel: string): Promise<Iss
     '--limit',
     '50',
   )
-  return issues
-    .map(withParsedBase)
-    .filter((issue) => !hasOpenBlocker(issue))
-    .sort((a, b) => a.number - b.number)
+  const withBases = issues.map(withParsedBase)
+  // One extra call, only when a ready issue declares a numeric base.
+  const closedNumbers = withBases.some((issue) => typeof issue.base === 'number')
+    ? new Set(
+        (
+          await ghJson<{ number: number }[]>(
+            repoDir,
+            'issue',
+            'list',
+            '--state',
+            'closed',
+            '--json',
+            'number',
+            '--limit',
+            '100',
+          )
+        ).map((issue) => issue.number),
+      )
+    : new Set<number>()
+  const ready: Issue[] = []
+  for (const issue of withBases.map((i) => normalizeBase(i, closedNumbers))) {
+    if (hasOpenBlocker(issue)) continue
+    // Stacking gate (#17): a numeric base branches from that issue's
+    // loop/<n> branch, so the issue can't start until the base issue has.
+    if (typeof issue.base === 'number' && !(await branchExists(repoDir, `loop/${issue.base}`)))
+      continue
+    ready.push(issue)
+  }
+  return ready.sort((a, b) => a.number - b.number)
 }
 
 async function githubListWorking(repoDir: string, workingLabel: string): Promise<Issue[]> {

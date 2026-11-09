@@ -23,7 +23,8 @@ function isAlive(pid: number): boolean {
   }
 }
 
-async function takeLock(repoDir: string): Promise<() => Promise<void>> {
+/** The Loop's single-runner lock; also taken by stack maintenance (#17). */
+export async function takeLock(repoDir: string): Promise<() => Promise<void>> {
   const dir = join(homedir(), '.treadle', repoDir.replaceAll('/', '-'))
   await mkdir(dir, { recursive: true })
   const lockPath = join(dir, 'lock')
