@@ -429,6 +429,30 @@ describe('maintenance', () => {
     expect(await readFile(join(repoDir, 'app.txt'), 'utf8')).toBe('dirty edit\n')
   })
 
+  it('does not rebase a dependent whose own PR also merged', async () => {
+    const { repoDir, trackerDir } = await makeWorld()
+    await writeIssue(trackerDir, '001-a.md', '')
+    await writeIssue(trackerDir, '002-b.md', 'base: 1')
+    const { deps } = fakeGh({
+      'pr list --state merged': [
+        { number: 11, headRefName: 'loop/1', baseRefName: 'develop', mergedAt: nowIso() },
+        { number: 12, headRefName: 'loop/2', baseRefName: 'loop/1', mergedAt: nowIso() },
+      ],
+      'pr list --state closed': [],
+    })
+    const report = await maintenance({
+      repoDir,
+      config: config(trackerDir),
+      withLock: false,
+      deps,
+      notify,
+    })
+
+    expect(report.rebased).toEqual([])
+    expect(report.markedDone.sort()).toEqual([1, 2])
+    expect(report.deletedBranches.sort()).toEqual(['loop/1', 'loop/2'])
+  })
+
   it('collects per-PR errors and keeps going', async () => {
     const { repoDir, trackerDir } = await makeWorld()
     await writeIssue(trackerDir, '001-a.md', '')

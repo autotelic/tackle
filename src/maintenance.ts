@@ -188,6 +188,9 @@ export async function maintenance(options: {
     await git(repoDir, 'fetch', 'origin', '--prune')
 
     const conflicted = new Set<number>()
+    // Issues whose own PR merged this pass: their branches collapse with
+    // their base and get deleted below — never rebase them.
+    const mergedIssues = new Set<number>()
 
     const rebaseDependent = async (
       issue: number,
@@ -195,7 +198,7 @@ export async function maintenance(options: {
       newBase: string,
       retarget: boolean,
     ): Promise<void> => {
-      if (conflicted.has(parent)) return
+      if (conflicted.has(parent) || mergedIssues.has(issue)) return
       const branch = `loop/${issue}`
       const state = await issueState(repoDir, config, issue, deps)
       if (state === config.issues.working) {
@@ -292,6 +295,7 @@ export async function maintenance(options: {
       .filter((pr): pr is MergedPr & { issue: number } => pr.issue !== null)
       .filter((pr) => watermark !== null && new Date(pr.mergedAt) > watermark)
       .sort((a, b) => a.issue - b.issue)
+    for (const pr of merged) mergedIssues.add(pr.issue)
 
     for (const pr of merged) {
       try {
