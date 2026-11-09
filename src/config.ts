@@ -61,6 +61,8 @@ export type Budgets = {
   stopAfterParkedInARow: number
   /** Optional dollar cap per issue across its Passes (#16). */
   maxCostPerIssueUsd?: number
+  /** Optional dollar cap per day across the whole Loop (#18). */
+  maxCostPerNightUsd?: number
 }
 
 export type LoopConfig = {
@@ -178,7 +180,8 @@ export function assertLoopConfig(
 
   if (typeof c.budgets !== 'object' || c.budgets === null) fail(configPath, 'budgets is required')
   for (const [key, value] of Object.entries(c.budgets as Record<string, unknown>)) {
-    if (key === 'maxCostPerIssueUsd' && value === undefined) continue
+    if ((key === 'maxCostPerIssueUsd' || key === 'maxCostPerNightUsd') && value === undefined)
+      continue
     assertNumber(value, `budgets.${key}`, configPath)
   }
 

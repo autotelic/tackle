@@ -20,6 +20,7 @@ import { createHumanChannel, type HumanChannel } from './human-channel.ts'
 import { makeEscalate } from './loop/escalate.ts'
 import { appendQa, pickNextIssue, runIssueLoop } from './loop/issue-loop.ts'
 import { buildLoopMachine, type LoopMachineDeps } from './loop/machine.ts'
+import { createNightlyBudget } from './loop/nightly.ts'
 import { reconcile } from './loop/reconcile.ts'
 import { lintRules } from './loop/rules.ts'
 import { maintenance } from './maintenance.ts'
@@ -123,15 +124,9 @@ const watcher = watchAnswers({
 })
 
 // ── Machine deps ────────────────────────────────────────────────────────
-const nightly = {
-  n: 0,
-  increment() {
-    return ++this.n
-  },
-  value() {
-    return this.n
-  },
-}
+// The durable nightly budget (#18): passes + dollars per day, persisted
+// per Pass so a restart can't reset it.
+const nightly = await createNightlyBudget({ config, repoDir })
 
 // A re-entered working issue goes first (#8): the machine's initial state
 // is 'picking', so the queue poll must return it ahead of everything else.

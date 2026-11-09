@@ -10,6 +10,7 @@ import { buildSessionPrompt } from '../prompt.ts'
 import { type Receipt, renderReceipt } from '../receipt.ts'
 import type { CheckReport, FailureSetEntry } from '../report.ts'
 import { runSession, type SessionOutcome } from '../session.ts'
+import type { NightlyBudget } from './nightly.ts'
 import { isProviderFailure } from './provider.ts'
 import { isStalled, matchRule, type RuleContext } from './rules.ts'
 import {
@@ -54,8 +55,8 @@ export type IssueLoopDeps = {
   human: HumanChannel
   /** Telegram notices to Ed (pause/resume, PR ready, baseline trouble). */
   notify: (text: string) => Promise<void>
-  /** Loop-wide nightly Pass counter (#9). */
-  passesTonight: { increment: () => number; value: () => number }
+  /** Loop-wide nightly budget (#9 counts Passes; #18 makes it durable and adds dollars). */
+  passesTonight: NightlyBudget
   /** Re-entering a working issue after a restart: the branch already exists. */
   resume?: boolean
   /** Injectable for tests. */
@@ -298,8 +299,24 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
           reason: 'budget',
         }
       }
-      if (deps.passesTonight.value() >= nightlyCap) {
-        yield* tryP(() => notify(`Nightly cap of ${nightlyCap} Passes reached. Treadle stopping.`))
+      if (deps.passesTonight.passes() >= nightlyCap) {
+        yield* tryP(() =>
+          notify(
+            `Nightly cap of ${nightlyCap} Passes reached ` +
+              `($${deps.passesTonight.costUsd().toFixed(2)} today). Treadle stopping.`,
+          ),
+        )
+        return { kind: 'stopped-cap', issue: issue.number, passesUsed: ruleContext.passesUsed }
+      }
+      const nightlyCostCap = config.budgets.maxCostPerNightUsd
+      if (nightlyCostCap !== undefined && deps.passesTonight.costUsd() >= nightlyCostCap) {
+        yield* tryP(() =>
+          notify(
+            `Nightly dollar cap of $${nightlyCostCap} reached ` +
+              `($${deps.passesTonight.costUsd().toFixed(2)} across ${deps.passesTonight.passes()} Passes). ` +
+              'Treadle stopping.',
+          ),
+        )
         return { kind: 'stopped-cap', issue: issue.number, passesUsed: ruleContext.passesUsed }
       }
 
@@ -363,7 +380,7 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
         issue: issue.number,
         sleepFn,
       })
-      deps.passesTonight.increment()
+      yield* tryP(() => deps.passesTonight.recordPass(outcome.costUsd))
       previousNote = outcome.lastAssistantText
       costSoFarUsd += outcome.costUsd
       if (previousNote) {
