@@ -5,8 +5,10 @@
  *
  * Usage: node src/run-loop.ts --repo <path> [--channel terminal|telepi]
  *
- * Exit code: 0 = stopped cleanly (nothing left, cap, Stop, or circuit breaker),
- * 1 = startup reconciliation failed.
+ * An empty queue doesn't stop the Loop: it waits, polling every 60s, and
+ * runs stack maintenance at most hourly as merges land (which can unblock
+ * the queue). Exit code: 0 = stopped cleanly (nightly cap, Stop answer,
+ * circuit breaker), 1 = startup reconciliation failed.
  */
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -135,14 +137,29 @@ const nightly = {
 // is 'picking', so the queue poll must return it ahead of everything else.
 let reenterIssue = startup.kind === 're-enter' ? startup.issue : null
 
+// Idle maintenance runs at most hourly (#17); the startup pass just ran, so
+// the clock starts now.
+let lastMaintenanceAt = Date.now()
+
 const machineDeps: LoopMachineDeps = {
-  pickIssue: () => {
+  pickIssue: async () => {
     if (reenterIssue) {
       const issue = reenterIssue
       reenterIssue = null
-      return Promise.resolve(issue)
+      return issue
     }
-    return pickNextIssue(repoDir, config, (issue) => answeredFirst.has(issue))
+    const issue = await pickNextIssue(repoDir, config, (n) => answeredFirst.has(n))
+    if (issue) return issue
+    // Idle poll: keep the stacks maintained as merges land at human pace
+    // (#17), at most hourly. Maintenance can mark issues done and unblock
+    // the queue, which the next poll then sees.
+    if (Date.now() - lastMaintenanceAt > 3600_000) {
+      lastMaintenanceAt = Date.now()
+      await maintenance({ repoDir, config, notify, withLock: false }).catch((error: unknown) => {
+        console.warn(`idle maintenance failed (next poll retries): ${String(error)}`)
+      })
+    }
+    return null
   },
   makeIssueLoop: (issue) =>
     runIssueLoop({
