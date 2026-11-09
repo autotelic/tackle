@@ -9,7 +9,7 @@ const sandboxConfig = fileURLToPath(
 describe('loadConfig', () => {
   it('loads and validates the sandbox loop.config.ts', async () => {
     const config = await loadConfig(sandboxConfig)
-    expect(config.app.healthUrl).toBe('http://127.0.0.1:4317/health')
+    expect(config.app?.healthUrl).toBe('http://127.0.0.1:4317/health')
     expect(config.checks.map((c) => c.name)).toEqual(['typecheck', 'lint', 'unit', 'e2e'])
     expect(config.checks[3]?.needsApp).toBe(true)
     expect(config.checks[2]?.report).toEqual({
@@ -73,5 +73,22 @@ describe('loadConfig', () => {
     const unknownTracker = structuredClone(base)
     Object.assign(unknownTracker.issues, { tracker: 'linear' })
     expect(() => assertLoopConfig(unknownTracker, 'x')).toThrow(/issues.tracker/)
+  })
+
+  it('allows an app-less config unless a check needsApp', () => {
+    const base = {
+      issues: { ready: 'a', working: 'b', parked: 'c' },
+      install: 'true',
+      checks: [{ name: 't', run: 'true', timeoutSeconds: 5 }],
+      protectedPaths: [],
+      featureDone: { changedPaths: [], requireNewTests: true },
+      budgets: { passesPerIssue: 3 },
+    }
+    assertLoopConfig(base, 'x')
+    expect(base.app).toBeUndefined()
+
+    const needsApp = structuredClone(base)
+    needsApp.checks = [{ name: 't', run: 'true', timeoutSeconds: 5, needsApp: true }]
+    expect(() => assertLoopConfig(needsApp, 'x')).toThrow(/needsApp but no app/)
   })
 })

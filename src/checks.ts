@@ -221,7 +221,14 @@ export async function runChecks(
   const pidPath = join(treadleDir, 'app.pid')
   const needsApp = config.checks.some((step) => step.needsApp)
 
-  if (!infrastructureFailure && needsApp) {
+  if (!infrastructureFailure && needsApp && config.app === undefined) {
+    infrastructureFailure = {
+      kind: 'app-not-healthy',
+      detail: 'a check has needsApp but no app is configured',
+    }
+  }
+
+  if (!infrastructureFailure && needsApp && config.app) {
     await mkdir(treadleDir, { recursive: true })
     await clearLeftoverApp(pidPath)
 

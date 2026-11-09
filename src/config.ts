@@ -67,7 +67,8 @@ export type LoopConfig = {
   issues: IssueLabels
   /** Shell command that installs dependencies, run before the Checks. */
   install: string
-  app: AppConfig
+  /** How to start the app. Optional until a check has needsApp: true. */
+  app?: AppConfig
   checks: CheckStep[]
   protectedPaths: string[]
   featureDone: FeatureDoneGuard
@@ -129,12 +130,15 @@ export function assertLoopConfig(
 
   assertString(c.install, 'install', configPath)
 
-  if (typeof c.app !== 'object' || c.app === null) fail(configPath, 'app is required')
-  const app = c.app as Record<string, unknown>
-  assertString(app.start, 'app.start', configPath)
-  assertString(app.healthUrl, 'app.healthUrl', configPath)
-  assertNumber(app.readyTimeoutSeconds, 'app.readyTimeoutSeconds', configPath)
-  assertEnv(app.env, 'app.env', configPath)
+  if (c.app !== undefined) {
+    if (typeof c.app !== 'object' || c.app === null)
+      fail(configPath, 'app must be an object when present')
+    const app = c.app as Record<string, unknown>
+    assertString(app.start, 'app.start', configPath)
+    assertString(app.healthUrl, 'app.healthUrl', configPath)
+    assertNumber(app.readyTimeoutSeconds, 'app.readyTimeoutSeconds', configPath)
+    assertEnv(app.env, 'app.env', configPath)
+  }
 
   if (!Array.isArray(c.checks) || c.checks.length === 0)
     fail(configPath, 'checks must be a non-empty array')
@@ -151,6 +155,8 @@ export function assertLoopConfig(
     assertEnv(s.env, `checks[${i}].env`, configPath)
     if (s.needsApp !== undefined && typeof s.needsApp !== 'boolean')
       fail(configPath, `checks[${i}].needsApp must be a boolean`)
+    if (s.needsApp === true && c.app === undefined)
+      fail(configPath, `checks[${i}] has needsApp but no app is configured`)
     if (s.report !== undefined) {
       if (typeof s.report !== 'object' || s.report === null)
         fail(configPath, `checks[${i}].report must be an object`)

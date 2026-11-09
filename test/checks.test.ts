@@ -146,6 +146,7 @@ describe('runChecks', () => {
   it('treats an app that never becomes healthy as an infrastructure failure', async () => {
     repoDir = await makeFixtureRepo([fixtureSteps.ping])
     const config = await loadConfig(join(repoDir, 'loop.config.ts'))
+    if (!config.app) throw new Error('fixture config must have an app')
     const broken = {
       ...config,
       app: { ...config.app, start: 'node -e "process.exit(1)"', readyTimeoutSeconds: 3 },
