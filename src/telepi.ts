@@ -92,7 +92,9 @@ export function formatQuestionMessage(question: QuestionFile): string {
 }
 
 export async function sendTelegramMessage(config: TelePiConfig, text: string): Promise<void> {
+  // A hung Telegram socket must never freeze the Loop (#16): cap every send.
   const response = await fetch(`https://api.telegram.org/bot${config.botToken}/sendMessage`, {
+    signal: AbortSignal.timeout(15_000),
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ chat_id: config.chatId, text }),

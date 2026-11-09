@@ -19,10 +19,11 @@
  *
  * Exit code 0 always: conflicts and skips are reported, not process failures.
  */
-import { resolve } from 'node:path'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { join, resolve } from 'node:path'
 import { type LoopConfig, loadConfig } from './config.ts'
 import { branchExists, gh, ghJson, git } from './loop/git-exec.ts'
-import { readIssueFiles } from './loop/markdown-tracker.ts'
+import { commitAndPush, readIssueFiles } from './loop/markdown-tracker.ts'
 import { takeLock } from './loop/reconcile.ts'
 import { type Issue, parseBaseFromBody, relabel, resolveBaseRef } from './loop/tracker.ts'
 import { loadTelePiConfig, sendTelegramMessage } from './telepi.ts'
@@ -34,7 +35,9 @@ export type MaintenanceReport = {
   deletedBranches: string[]
   parked: number[]
   skippedWorking: number[]
+  skippedMissing: number[]
   conflicts: string[]
+  errors: string[]
 }
 
 function emptyReport(): MaintenanceReport {
@@ -45,7 +48,9 @@ function emptyReport(): MaintenanceReport {
     deletedBranches: [],
     parked: [],
     skippedWorking: [],
+    skippedMissing: [],
     conflicts: [],
+    errors: [],
   }
 }
 
@@ -55,7 +60,42 @@ export type MaintenanceDeps = {
   ghJsonFn: typeof ghJson
 }
 
-type MergedPr = { number: number; headRefName: string; baseRefName: string }
+type MergedPr = { number: number; headRefName: string; baseRefName: string; mergedAt: string }
+
+/**
+ * The watermark: maintenance never acts on PR history from before its own
+ * first run against this repo+tracker. Without it, a repo with pre-existing
+ * loop/* PRs (from another tracker, another numbering, or another era) gets
+ * its old merges mapped onto unrelated issues — marking them done and
+ * deleting branches out from under live PRs (the smoke run did exactly
+ * this). A lost watermark re-initializes to "skip history", which is the
+ * safe default. Markdown: a file in the synced tracker repo. GitHub: a
+ * clone-local file under .treadle/.
+ */
+async function readWatermark(repoDir: string, config: LoopConfig): Promise<Date | null> {
+  try {
+    const text = await readFile(watermarkPath(repoDir, config), 'utf8')
+    const date = new Date(text.trim())
+    return Number.isNaN(date.getTime()) ? null : date
+  } catch {
+    return null
+  }
+}
+
+async function writeWatermark(repoDir: string, config: LoopConfig, when: Date): Promise<void> {
+  const path = watermarkPath(repoDir, config)
+  await mkdir(join(path, '..'), { recursive: true })
+  await writeFile(path, `${when.toISOString()}\n`)
+  if (config.issues.tracker === 'markdown') {
+    await commitAndPush(config.issues.dir as string, 'treadle: maintenance watermark')
+  }
+}
+
+function watermarkPath(repoDir: string, config: LoopConfig): string {
+  return config.issues.tracker === 'markdown'
+    ? join(config.issues.dir as string, '.treadle-maintenance-watermark')
+    : join(repoDir, '.treadle', 'maintenance-watermark')
+}
 
 function loopIssueNumber(headRefName: string): number | null {
   const match = headRefName.match(/^loop\/(\d+)$/)
@@ -216,71 +256,122 @@ export async function maintenance(options: {
       }
     }
 
-    // ── Merged loop PRs ─────────────────────────────────────────────────
-    const merged = (
-      await deps.ghJsonFn<MergedPr[]>(
-        repoDir,
-        'pr',
-        'list',
-        '--state',
-        'merged',
-        '--json',
-        'number,headRefName,baseRefName',
-        '--limit',
-        '50',
-      )
+    // ── Merged loop PRs (only those after the watermark) ───────────────
+    const watermark = await readWatermark(repoDir, config)
+    const knownIssues =
+      config.issues.tracker === 'markdown'
+        ? new Set((await readIssueFiles(config.issues.dir as string)).map((f) => f.number))
+        : null
+    const mergedRaw = await deps.ghJsonFn<MergedPr[]>(
+      repoDir,
+      'pr',
+      'list',
+      '--state',
+      'merged',
+      '--json',
+      'number,headRefName,baseRefName,mergedAt',
+      '--limit',
+      '50',
     )
+    const latestMerge = mergedRaw
+      .map((pr) => new Date(pr.mergedAt).getTime())
+      .reduce((a, b) => Math.max(a, b), 0)
+    if (watermark === null) {
+      // First ever run: record the line and act on nothing before it.
+      await writeWatermark(repoDir, config, new Date(Math.max(latestMerge, Date.now())))
+    }
+    const merged = mergedRaw
       .map((pr) => ({ ...pr, issue: loopIssueNumber(pr.headRefName) }))
       .filter((pr): pr is MergedPr & { issue: number } => pr.issue !== null)
+      .filter((pr) => watermark !== null && new Date(pr.mergedAt) > watermark)
       .sort((a, b) => a.issue - b.issue)
 
     for (const pr of merged) {
-      if (config.issues.tracker === 'markdown') {
-        const state = await issueState(repoDir, config, pr.issue, deps)
-        if (state !== 'done') {
-          await relabel(repoDir, config, pr.issue, state ?? '', 'done')
-          report.markedDone.push(pr.issue)
+      try {
+        if (knownIssues !== null && !knownIssues.has(pr.issue)) {
+          // A merged loop/<n> the tracker doesn't know: another era's branch.
+          report.skippedMissing.push(pr.issue)
+          continue
         }
-      }
-      for (const child of await dependentsOf(repoDir, config, pr.issue, deps)) {
-        await rebaseDependent(child, pr.issue, defaultBase.ref, true)
-      }
-      if (await branchExists(repoDir, `origin/${pr.headRefName}`)) {
-        await git(repoDir, 'push', 'origin', '--delete', pr.headRefName)
-        report.deletedBranches.push(pr.headRefName)
-      }
-      if (await branchExists(repoDir, pr.headRefName)) {
-        await git(repoDir, 'branch', '-D', pr.headRefName).catch(() => undefined)
+        if (config.issues.tracker === 'markdown') {
+          const state = await issueState(repoDir, config, pr.issue, deps)
+          if (state !== 'done') {
+            await relabel(repoDir, config, pr.issue, state ?? '', 'done')
+            report.markedDone.push(pr.issue)
+          }
+        }
+        for (const child of await dependentsOf(repoDir, config, pr.issue, deps)) {
+          await rebaseDependent(child, pr.issue, defaultBase.ref, true)
+        }
+        // Guard: never delete a branch that has a live PR on it (a new PR
+        // opened on the branch after the merge — the smoke run lost one).
+        const openPrs = await deps.ghJsonFn<{ number: number }[]>(
+          repoDir,
+          'pr',
+          'list',
+          '--state',
+          'open',
+          '--head',
+          pr.headRefName,
+          '--json',
+          'number',
+        )
+        if (openPrs.length === 0) {
+          if (await branchExists(repoDir, `origin/${pr.headRefName}`)) {
+            await git(repoDir, 'push', 'origin', '--delete', pr.headRefName)
+            report.deletedBranches.push(pr.headRefName)
+          }
+          if (await branchExists(repoDir, pr.headRefName)) {
+            await git(repoDir, 'branch', '-D', pr.headRefName).catch(() => undefined)
+          }
+        }
+      } catch (error) {
+        // One bad PR never aborts the pass.
+        report.errors.push(
+          `${pr.headRefName}: ${error instanceof Error ? error.message : String(error)}`,
+        )
       }
     }
 
     // ── Closed-unmerged loop PRs on unsteered issues ────────────────────
     const closed = (
-      await deps.ghJsonFn<{ number: number; headRefName: string }[]>(
+      await deps.ghJsonFn<{ number: number; headRefName: string; closedAt: string }[]>(
         repoDir,
         'pr',
         'list',
         '--state',
         'closed',
         '--json',
-        'number,headRefName',
+        'number,headRefName,closedAt',
         '--limit',
         '50',
       )
     )
       .map((pr) => ({ ...pr, issue: loopIssueNumber(pr.headRefName) }))
       .filter(
-        (pr): pr is { number: number; headRefName: string; issue: number } => pr.issue !== null,
+        (pr): pr is { number: number; headRefName: string; closedAt: string; issue: number } =>
+          pr.issue !== null,
       )
+      .filter((pr) => watermark !== null && new Date(pr.closedAt) > watermark)
     for (const pr of closed) {
-      const state = await issueState(repoDir, config, pr.issue, deps)
-      if (state !== null) continue // a person (or the Loop) is already steering it
-      await relabel(repoDir, config, pr.issue, '', config.issues.parked)
-      report.parked.push(pr.issue)
-      await notify(
-        `Stack maintenance: PR for ${pr.headRefName} was closed without merging and nobody ` +
-          `is steering issue #${pr.issue} — parked it for a human decision.`,
-      )
+      try {
+        if (knownIssues !== null && !knownIssues.has(pr.issue)) {
+          report.skippedMissing.push(pr.issue)
+          continue
+        }
+        const state = await issueState(repoDir, config, pr.issue, deps)
+        if (state !== null) continue // a person (or the Loop) is already steering it
+        await relabel(repoDir, config, pr.issue, '', config.issues.parked)
+        report.parked.push(pr.issue)
+        await notify(
+          `Stack maintenance: PR for ${pr.headRefName} was closed without merging and nobody ` +
+            `is steering issue #${pr.issue} — parked it for a human decision.`,
+        )
+      } catch (error) {
+        report.errors.push(
+          `${pr.headRefName}: ${error instanceof Error ? error.message : String(error)}`,
+        )
+      }
     }
   } finally {
     await unlock()
@@ -315,14 +406,17 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     `deleted: [${report.deletedBranches.join(', ')}]`,
     `parked: [${report.parked.join(', ')}]`,
     `skipped working: [${report.skippedWorking.join(', ')}]`,
+    `skipped missing: [${report.skippedMissing.join(', ')}]`,
     `conflicts: [${report.conflicts.join(', ')}]`,
+    `errors: [${report.errors.join(' | ')}]`,
   ]
   console.log(`maintenance: ${summary.join(' · ')}`)
   if (
     report.markedDone.length > 0 ||
     report.rebased.length > 0 ||
     report.parked.length > 0 ||
-    report.conflicts.length > 0
+    report.conflicts.length > 0 ||
+    report.errors.length > 0
   ) {
     await notify(`Stack maintenance (${repoDir.split('/').pop()}): ${summary.join(' · ')}`)
   }

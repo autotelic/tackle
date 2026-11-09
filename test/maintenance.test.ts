@@ -26,7 +26,7 @@ async function makeDir(prefix: string): Promise<string> {
  * A bare origin with develop, a working clone, and loop/1 → loop/2 → loop/3
  * stacked branches, with loop/1 already merged into develop (fast-forward).
  */
-async function makeWorld(options?: { loop1Merged: boolean }) {
+async function makeWorld(options?: { loop1Merged?: boolean; watermark?: boolean }) {
   const originDir = await makeDir('treadle-mt-origin-')
   git(originDir, 'init', '--bare', '-b', 'develop')
   const repoDir = await makeDir('treadle-mt-repo-')
@@ -71,6 +71,13 @@ async function makeWorld(options?: { loop1Merged: boolean }) {
   git(trackerDir, 'init', '-b', 'main')
   git(trackerDir, 'config', 'user.email', 't@t')
   git(trackerDir, 'config', 'user.name', 't')
+  if (options?.watermark !== false) {
+    // Yesterday: everything the tests do is after the watermark.
+    const yesterday = `${new Date(Date.now() - 86_400_000).toISOString()}\n`
+    await writeFile(join(trackerDir, '.treadle-maintenance-watermark'), yesterday)
+    await mkdir(join(repoDir, '.treadle'), { recursive: true })
+    await writeFile(join(repoDir, '.treadle', 'maintenance-watermark'), yesterday)
+  }
   return { repoDir, originDir, trackerDir }
 }
 
@@ -96,6 +103,8 @@ function fakeGh(handlers: Record<string, unknown>): {
   ghCalls: string[]
 } {
   const ghCalls: string[] = []
+  const table = { 'pr list --state open': [], ...handlers }
+  const prefixes = Object.keys(table).sort((a, b) => b.length - a.length)
   const deps: MaintenanceDeps = {
     ghFn: (async (_repoDir: string, ...args: string[]) => {
       ghCalls.push(args.join(' '))
@@ -103,14 +112,16 @@ function fakeGh(handlers: Record<string, unknown>): {
     }) as MaintenanceDeps['ghFn'],
     ghJsonFn: (async (_repoDir: string, ...args: string[]) => {
       const key = args.join(' ')
-      for (const [prefix, value] of Object.entries(handlers)) {
-        if (key.startsWith(prefix)) return value
+      for (const prefix of prefixes) {
+        if (key.startsWith(prefix)) return table[prefix as keyof typeof table]
       }
       throw new Error(`unexpected ghJson call: ${key}`)
     }) as MaintenanceDeps['ghJsonFn'],
   }
   return { deps, ghCalls }
 }
+
+const nowIso = () => new Date().toISOString()
 
 const notifyMessages: string[] = []
 const notify = async (text: string) => {
@@ -126,7 +137,9 @@ describe('maintenance', () => {
     await writeIssue(trackerDir, '003-c.md', 'base: 2')
 
     const { deps, ghCalls } = fakeGh({
-      'pr list --state merged': [{ number: 11, headRefName: 'loop/1', baseRefName: 'develop' }],
+      'pr list --state merged': [
+        { number: 11, headRefName: 'loop/1', baseRefName: 'develop', mergedAt: nowIso() },
+      ],
       'pr list --state closed': [],
       'pr list --state open --head loop/2': [{ number: 12, baseRefName: 'loop/1' }],
       'pr list --state open --head loop/3': [{ number: 13, baseRefName: 'loop/2' }],
@@ -188,7 +201,9 @@ describe('maintenance', () => {
     await writeIssue(trackerDir, '002-b.md', 'base: 1')
 
     const { deps, ghCalls } = fakeGh({
-      'pr list --state merged': [{ number: 11, headRefName: 'loop/1', baseRefName: 'develop' }],
+      'pr list --state merged': [
+        { number: 11, headRefName: 'loop/1', baseRefName: 'develop', mergedAt: nowIso() },
+      ],
       'pr list --state closed': [],
       'pr list --state open --head loop/2': [{ number: 12, baseRefName: 'loop/1' }],
     })
@@ -217,7 +232,9 @@ describe('maintenance', () => {
     await writeIssue(trackerDir, '003-c.md', 'base: 2')
 
     const { deps } = fakeGh({
-      'pr list --state merged': [{ number: 11, headRefName: 'loop/1', baseRefName: 'develop' }],
+      'pr list --state merged': [
+        { number: 11, headRefName: 'loop/1', baseRefName: 'develop', mergedAt: nowIso() },
+      ],
       'pr list --state closed': [],
       'pr list --state open --head loop/2': [],
     })
@@ -246,7 +263,7 @@ describe('maintenance', () => {
     await writeIssue(trackerDir, '005-e.md', '')
     const { deps } = fakeGh({
       'pr list --state merged': [],
-      'pr list --state closed': [{ number: 50, headRefName: 'loop/5' }],
+      'pr list --state closed': [{ number: 50, headRefName: 'loop/5', closedAt: nowIso() }],
     })
     const report = await maintenance({
       repoDir,
@@ -266,7 +283,9 @@ describe('maintenance', () => {
   it('github tracker: rebases and retargets without touching issue labels', async () => {
     const { repoDir, originDir, trackerDir } = await makeWorld()
     const { deps, ghCalls } = fakeGh({
-      'pr list --state merged': [{ number: 11, headRefName: 'loop/1', baseRefName: 'develop' }],
+      'pr list --state merged': [
+        { number: 11, headRefName: 'loop/1', baseRefName: 'develop', mergedAt: nowIso() },
+      ],
       'pr list --state closed': [],
       'pr list --state open --head loop/2': [{ number: 12, baseRefName: 'loop/1' }],
       'issue view 2 --json labels': { labels: [] },
@@ -285,5 +304,123 @@ describe('maintenance', () => {
     expect(report.rebased).toEqual([2])
     expect(ghCalls).toContain('pr edit 12 --base develop')
     expect(() => git(originDir, 'rev-parse', '--verify', 'loop/1')).toThrow()
+  })
+
+  it('acts on nothing before its first-ever watermark, then processes new merges', async () => {
+    const { repoDir, trackerDir } = await makeWorld({ watermark: false })
+    await writeIssue(trackerDir, '001-a.md', '')
+    await writeIssue(trackerDir, '002-b.md', 'base: 1')
+
+    const handlers = (mergedAt: string) => ({
+      'pr list --state merged': [
+        { number: 11, headRefName: 'loop/1', baseRefName: 'develop', mergedAt },
+      ],
+      'pr list --state closed': [],
+      'pr list --state open --head loop/2': [{ number: 12, baseRefName: 'loop/1' }],
+    })
+
+    const first = await maintenance({
+      repoDir,
+      config: config(trackerDir),
+      withLock: false,
+      deps: fakeGh(handlers(nowIso())).deps,
+      notify,
+    })
+    expect(first.markedDone).toEqual([])
+    expect(first.rebased).toEqual([])
+    expect(await readFile(join(trackerDir, 'issues', '001-a.md'), 'utf8')).not.toContain(
+      'state: done',
+    )
+    expect(git(repoDir, 'rev-parse', 'origin/loop/1')).not.toBe('')
+
+    // A merge after the watermark is processed on the next run.
+    const second = await maintenance({
+      repoDir,
+      config: config(trackerDir),
+      withLock: false,
+      deps: fakeGh(handlers(new Date(Date.now() + 60_000).toISOString())).deps,
+      notify,
+    })
+    expect(second.markedDone).toEqual([1])
+    expect(second.rebased).toEqual([2])
+    expect(second.deletedBranches).toEqual(['loop/1'])
+  })
+
+  it('skips merged branches the tracker does not know, without deleting them', async () => {
+    const { repoDir, trackerDir } = await makeWorld()
+    await writeIssue(trackerDir, '001-a.md', '')
+    const { deps } = fakeGh({
+      'pr list --state merged': [
+        { number: 11, headRefName: 'loop/1', baseRefName: 'develop', mergedAt: nowIso() },
+        { number: 19, headRefName: 'loop/9', baseRefName: 'develop', mergedAt: nowIso() },
+      ],
+      'pr list --state closed': [],
+    })
+    const report = await maintenance({
+      repoDir,
+      config: config(trackerDir),
+      withLock: false,
+      deps,
+      notify,
+    })
+
+    expect(report.skippedMissing).toEqual([9])
+    expect(report.errors).toEqual([])
+    expect(report.markedDone).toEqual([1])
+    expect(report.deletedBranches).toEqual(['loop/1']) // the known merge is processed
+    expect(git(repoDir, 'rev-parse', 'origin/loop/3')).not.toBe('') // untouched era
+  })
+
+  it('never deletes a merged branch that has a live PR on it', async () => {
+    const { repoDir, trackerDir } = await makeWorld()
+    await writeIssue(trackerDir, '001-a.md', '')
+    const { deps } = fakeGh({
+      'pr list --state merged': [
+        { number: 11, headRefName: 'loop/1', baseRefName: 'develop', mergedAt: nowIso() },
+      ],
+      'pr list --state closed': [],
+      'pr list --state open --head loop/1': [{ number: 99 }],
+    })
+    const report = await maintenance({
+      repoDir,
+      config: config(trackerDir),
+      withLock: false,
+      deps,
+      notify,
+    })
+
+    expect(report.deletedBranches).toEqual([])
+    expect(git(repoDir, 'rev-parse', 'origin/loop/1')).not.toBe('')
+  })
+
+  it('collects per-PR errors and keeps going', async () => {
+    const { repoDir, trackerDir } = await makeWorld()
+    await writeIssue(trackerDir, '001-a.md', '')
+    await writeIssue(trackerDir, '002-b.md', 'base: 1')
+    const { deps } = fakeGh({
+      'pr list --state merged': [
+        { number: 11, headRefName: 'loop/1', baseRefName: 'develop', mergedAt: nowIso() },
+      ],
+      'pr list --state closed': [],
+    })
+    const original = deps.ghJsonFn
+    deps.ghJsonFn = (async (repoDir2: string, ...args: string[]) => {
+      const key = args.join(' ')
+      if (key.startsWith('pr list --state open --head loop/2')) throw new Error('gh exploded')
+      return original(repoDir2, ...args)
+    }) as MaintenanceDeps['ghJsonFn']
+    // The retarget of loop/2 throws mid-iteration; the pass reports it and
+    // finishes instead of aborting.
+    const report = await maintenance({
+      repoDir,
+      config: config(trackerDir),
+      withLock: false,
+      deps,
+      notify,
+    })
+    expect(report.errors).toHaveLength(1)
+    expect(report.errors[0]).toContain('loop/1')
+    expect(report.errors[0]).toContain('gh exploded')
+    expect(report.markedDone).toEqual([1])
   })
 })
