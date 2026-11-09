@@ -22,6 +22,7 @@ import {
   readReceiptHistory,
   relabel,
   removeLabel,
+  resolveBaseRef,
   workPresent,
 } from './tracker.ts'
 
@@ -210,12 +211,15 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
   return Effect.gen(function* () {
     // ── Claim and set up ────────────────────────────────────────────────
     if (!deps.resume) {
-      yield* tryP(() => relabel(repoDir, issue.number, config.issues.ready, config.issues.working))
+      yield* tryP(() =>
+        relabel(repoDir, config, issue.number, config.issues.ready, config.issues.working),
+      )
     }
     yield* tryP(() => git(repoDir, 'fetch', 'origin'))
-    const baseRef = yield* tryP(() => git(repoDir, 'rev-parse', '--verify', 'origin/main')).pipe(
-      Effect.orElseSucceed(() => 'main'),
-    )
+    // Stacked PRs (#17): the issue's base decides what the branch starts
+    // from — the repo's default branch, another issue's loop/<n> branch, or
+    // a named ref.
+    const base = yield* tryP(() => resolveBaseRef(repoDir, issue))
     // A parked issue keeps its loop/<n> branch; re-picking it continues the
     // branch (its Checkpoint) rather than starting over from main. Likewise,
     // a killed run leaves the worktree behind — reuse it (#8's leftovers).
@@ -229,14 +233,14 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
       if (resumeLike) {
         yield* tryP(() => git(repoDir, 'worktree', 'add', worktreeDir, branch))
       } else {
-        yield* tryP(() => git(repoDir, 'worktree', 'add', worktreeDir, '-b', branch, baseRef))
+        yield* tryP(() => git(repoDir, 'worktree', 'add', worktreeDir, '-b', branch, base.ref))
       }
     }
     yield* tryP(() => installDeps(worktreeDir))
     const vision = yield* tryP(() => readFile(join(worktreeDir, 'VISION.md'), 'utf8'))
 
     // ── Budgets and history from Receipts (#8/#9) ───────────────────────
-    const history = yield* tryP(() => readReceiptHistory(repoDir, issue.number))
+    const history = yield* tryP(() => readReceiptHistory(repoDir, config, issue.number))
     const counted = history.filter((r) => r.checks !== null && 'outcome' in r.checks)
     const ruleContext: RuleContext = {
       passesUsed: counted.length,
@@ -272,7 +276,9 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
         ),
       )
       yield* tryP(() => git(repoDir, 'worktree', 'remove', worktreeDir, '--force'))
-      yield* tryP(() => relabel(repoDir, issue.number, config.issues.working, config.issues.ready))
+      yield* tryP(() =>
+        relabel(repoDir, config, issue.number, config.issues.working, config.issues.ready),
+      )
       return { kind: 'parked', issue: issue.number, passesUsed: 0, reason: 'no-rule' }
     }
 
@@ -394,6 +400,7 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
         yield* tryP(() =>
           comment(
             repoDir,
+            config,
             issue.number,
             `**Question from the Session:**\n\n${question}\n\n` +
               'Answer with /treadle whenever you like — the question stays open, and the Loop ' +
@@ -402,7 +409,7 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
         )
         yield* tryP(() => notify(`Treadle needs you on issue #${issue.number}: ${question}`))
         yield* tryP(() =>
-          relabel(repoDir, issue.number, config.issues.working, config.issues.parked),
+          relabel(repoDir, config, issue.number, config.issues.working, config.issues.parked),
         )
         yield* tryP(() => git(repoDir, 'worktree', 'remove', worktreeDir, '--force'))
         return {
@@ -462,7 +469,7 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
           workPresent({
             repoDir,
             worktreeDir,
-            baseRef,
+            baseRef: base.ref,
             changedPaths: config.featureDone.changedPaths,
             requireNewTests: config.featureDone.requireNewTests,
             unitReportPath: unitStep?.report?.path ?? '.treadle/reports/unit.json',
@@ -473,7 +480,8 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
           const rule = matchRule(config.rules ?? [], 'feature.done', 'feature-check', ruleContext)
           if (rule?.action.type === 'effect' && rule.action.effect === 'mark-ready-and-notify') {
             yield* tryP(() => gh(repoDir, 'pr', 'ready', branch))
-            const url = (yield* tryP(() => issueUrl(repoDir, issue.number))) ?? `#${issue.number}`
+            const url =
+              (yield* tryP(() => issueUrl(repoDir, config, issue.number))) ?? `#${issue.number}`
             yield* tryP(() =>
               notify(
                 `PR ready for review: #${issue.number} "${issue.title}" (${present.detail}). ${url}`,
@@ -488,7 +496,7 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
             )
           }
           // The open PR is the done marker (#5); the issue keeps no label.
-          yield* tryP(() => removeLabel(repoDir, issue.number, config.issues.working))
+          yield* tryP(() => removeLabel(repoDir, config, issue.number, config.issues.working))
           yield* tryP(() => git(repoDir, 'worktree', 'remove', worktreeDir, '--force'))
           return { kind: 'pr-ready', issue: issue.number, passesUsed: ruleContext.passesUsed }
         }
@@ -527,7 +535,7 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
 
     // ── Helpers ─────────────────────────────────────────────────────────
     async function postReceipt(receipt: Receipt): Promise<void> {
-      await comment(repoDir, issue.number, renderReceipt(receipt))
+      await comment(repoDir, config, issue.number, renderReceipt(receipt))
     }
 
     async function parkWithSummary(reason: 'budget' | 'stalled' | 'no-rule'): Promise<void> {
@@ -543,27 +551,32 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
           ? `What the Sessions tried:\n${tried.map((t) => `- ${t}`).join('\n')}\n\n`
           : '') +
         'The last Failure set is in the latest Receipt above.'
-      await comment(repoDir, issue.number, summary)
-      await relabel(repoDir, issue.number, config.issues.working, config.issues.parked)
+      await comment(repoDir, config, issue.number, summary)
+      await relabel(repoDir, config, issue.number, config.issues.working, config.issues.parked)
       await git(repoDir, 'worktree', 'remove', worktreeDir, '--force')
     }
 
     async function openPrIfNeeded(): Promise<void> {
       const existing = await gh(repoDir, 'pr', 'list', '--head', branch, '--json', 'number')
       if ((JSON.parse(existing) as unknown[]).length > 0) return
+      const body =
+        config.issues.tracker === 'markdown'
+          ? `Built by Treadle from markdown issue ${String(issue.number).padStart(3, '0')} "${issue.title}". ` +
+            `Receipts (one per Pass) are in the tracker repo under log/${String(issue.number).padStart(3, '0')}/.`
+          : `Closes #${issue.number}\n\nBuilt by Treadle. Receipts (one per pass) are in the issue comments.`
       await gh(
         repoDir,
         'pr',
         'create',
         '--draft',
         '--base',
-        'main',
+        base.name,
         '--head',
         branch,
         '--title',
         `${issue.title} (#${issue.number})`,
         '--body',
-        `Closes #${issue.number}\n\nBuilt by Treadle. Receipts (one per pass) are in the issue comments.`,
+        body,
       )
     }
   })
@@ -617,7 +630,7 @@ export async function pickNextIssue(
   config: LoopConfig,
   answeredFirst: (issue: number) => boolean,
 ): Promise<Issue | null> {
-  const ready = await listReadyIssues(repoDir, config.issues.ready)
+  const ready = await listReadyIssues(repoDir, config)
   if (ready.length === 0) return null
   return ready.find((issue) => answeredFirst(issue.number)) ?? (ready[0] as Issue)
 }

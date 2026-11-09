@@ -1,31 +1,44 @@
-import { execFile } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { promisify } from 'node:util'
-import { parseReceipt, type Receipt } from '../receipt.ts'
+import type { LoopConfig } from '../config.ts'
+import { BUDGET_RESET_MARKER, parseReceipt, type Receipt } from '../receipt.ts'
+import { gh, ghJson, git } from './git-exec.ts'
+import {
+  markdownComment,
+  markdownIssueUrl,
+  markdownListReady,
+  markdownListWorking,
+  markdownReadLabels,
+  markdownReadReceiptHistory,
+  markdownRelabel,
+  markdownRemoveLabel,
+} from './markdown-tracker.ts'
 
-const execFileAsync = promisify(execFile)
+export { BUDGET_RESET_MARKER } from '../receipt.ts'
+export { gh, ghJson, git } from './git-exec.ts'
 
-/** GitHub/git operations for the Loop — the state store (#8). */
-
-export async function git(cwd: string, ...args: string[]): Promise<string> {
-  const { stdout } = await execFileAsync('git', args, { cwd })
-  return stdout.trim()
-}
-
-export async function gh(cwd: string, ...args: string[]): Promise<string> {
-  const { stdout } = await execFileAsync('gh', args, { cwd })
-  return stdout.trim()
-}
-
-export async function ghJson<T>(cwd: string, ...args: string[]): Promise<T> {
-  return JSON.parse(await gh(cwd, ...args)) as T
-}
+/**
+ * The issue-tracker surface (#17, ADR-0002). The Loop's tracker is selected
+ * by `issues.tracker` in loop.config.ts: `github` (default; issues, labels
+ * and comments via the gh CLI) or `markdown` (issues as markdown files in a
+ * synced git repo — see docs/markdown-issues.md). Every function below
+ * dispatches on the config; the two implementations agree on semantics, with
+ * GitHub's shapes (labels, blockedBy nodes, open/closed states) as the
+ * common vocabulary.
+ */
 
 export type Issue = {
   number: number
   title: string
   body: string
+  /**
+   * Stacked-PR base (#17): which ref/issue this issue branches from.
+   * undefined → the repo's default branch; a number (or numeric string) →
+   * that issue's loop/<n> branch; any other string → a git ref ('develop',
+   * 'origin/x'). GitHub issues declare it with a `Base: <ref>` body line,
+   * markdown issues with `base:` frontmatter.
+   */
+  base?: number | string
   blockedBy?: { nodes: { number: number; state: string }[]; totalCount: number }
 }
 
@@ -41,8 +54,22 @@ export function hasOpenBlocker(issue: Issue): boolean {
   return blockedBy.totalCount > 0
 }
 
-/** The queue: open ready issues with no open blockers, lowest number first. */
-export async function listReadyIssues(repoDir: string, readyLabel: string): Promise<Issue[]> {
+/** Parse a `Base: <ref>` line out of an issue body (#17). */
+export function parseBaseFromBody(body: string): number | string | undefined {
+  const value = body.match(/^base:\s*(\S+)\s*$/im)?.[1]
+  if (value === undefined) return undefined
+  if (/^\d+$/.test(value)) return Number.parseInt(value, 10)
+  return value
+}
+
+function withParsedBase(issue: Issue): Issue {
+  const base = parseBaseFromBody(issue.body)
+  return base === undefined ? issue : { ...issue, base }
+}
+
+// ── GitHub implementation ───────────────────────────────────────────────
+
+async function githubListReady(repoDir: string, readyLabel: string): Promise<Issue[]> {
   const issues = await ghJson<Issue[]>(
     repoDir,
     'issue',
@@ -56,11 +83,14 @@ export async function listReadyIssues(repoDir: string, readyLabel: string): Prom
     '--limit',
     '50',
   )
-  return issues.filter((issue) => !hasOpenBlocker(issue)).sort((a, b) => a.number - b.number)
+  return issues
+    .map(withParsedBase)
+    .filter((issue) => !hasOpenBlocker(issue))
+    .sort((a, b) => a.number - b.number)
 }
 
-export async function listWorkingIssues(repoDir: string, workingLabel: string): Promise<Issue[]> {
-  return ghJson<Issue[]>(
+async function githubListWorking(repoDir: string, workingLabel: string): Promise<Issue[]> {
+  const issues = await ghJson<Issue[]>(
     repoDir,
     'issue',
     'list',
@@ -73,9 +103,10 @@ export async function listWorkingIssues(repoDir: string, workingLabel: string): 
     '--limit',
     '50',
   )
+  return issues.map(withParsedBase)
 }
 
-export async function relabel(
+async function githubRelabel(
   repoDir: string,
   issue: number,
   remove: string,
@@ -84,15 +115,15 @@ export async function relabel(
   await gh(repoDir, 'issue', 'edit', String(issue), '--remove-label', remove, '--add-label', add)
 }
 
-export async function removeLabel(repoDir: string, issue: number, label: string): Promise<void> {
+async function githubRemoveLabel(repoDir: string, issue: number, label: string): Promise<void> {
   await gh(repoDir, 'issue', 'edit', String(issue), '--remove-label', label)
 }
 
-export async function comment(repoDir: string, issue: number, body: string): Promise<void> {
+async function githubComment(repoDir: string, issue: number, body: string): Promise<void> {
   await gh(repoDir, 'issue', 'comment', String(issue), '--body', body)
 }
 
-export async function issueUrl(repoDir: string, issue: number): Promise<string | null> {
+async function githubIssueUrl(repoDir: string, issue: number): Promise<string | null> {
   const nwo = await gh(
     repoDir,
     'repo',
@@ -108,14 +139,25 @@ export async function issueUrl(repoDir: string, issue: number): Promise<string |
   return nwo ? `https://github.com/${nwo}/issues/${issue}` : null
 }
 
+async function githubReadLabels(repoDir: string, issue: number): Promise<string[]> {
+  return ghJson<string[]>(
+    repoDir,
+    'issue',
+    'view',
+    String(issue),
+    '--json',
+    'labels',
+    '--jq',
+    '[.labels[].name]',
+  )
+}
+
 /**
  * Receipts from an issue's comments (#8): how budgets and stall history are
- * recovered after a restart.
+ * recovered after a restart. A Retry with a hint starts a fresh budget (#9):
+ * receipts before the latest reset marker are history, not budget.
  */
-/** Hidden marker the Retry escalation posts: budgets count from here (#9). */
-export const BUDGET_RESET_MARKER = '<!-- treadle:budget-reset -->'
-
-export async function readReceiptHistory(repoDir: string, issue: number): Promise<Receipt[]> {
+async function githubReadReceiptHistory(repoDir: string, issue: number): Promise<Receipt[]> {
   const result = await ghJson<{ comments: { body: string }[] }>(
     repoDir,
     'issue',
@@ -124,8 +166,6 @@ export async function readReceiptHistory(repoDir: string, issue: number): Promis
     '--json',
     'comments',
   )
-  // A Retry with a hint starts a fresh budget (#9): receipts before the
-  // latest reset marker are history, not budget.
   let resetAt = -1
   for (const [i, { body }] of result.comments.entries()) {
     if (body.includes(BUDGET_RESET_MARKER)) resetAt = i
@@ -137,6 +177,144 @@ export async function readReceiptHistory(repoDir: string, issue: number): Promis
   }
   return receipts.sort((a, b) => a.pass - b.pass)
 }
+
+// ── Dispatch ────────────────────────────────────────────────────────────
+
+function markdownDir(config: LoopConfig): string {
+  const dir = config.issues.dir
+  if (!dir) throw new Error('markdown tracker selected but issues.dir is not set')
+  return dir
+}
+
+/** The queue: open ready issues with no open blockers, lowest number first. */
+export async function listReadyIssues(repoDir: string, config: LoopConfig): Promise<Issue[]> {
+  if (config.issues.tracker === 'markdown')
+    return markdownListReady(repoDir, markdownDir(config), config.issues.ready)
+  return githubListReady(repoDir, config.issues.ready)
+}
+
+export async function listWorkingIssues(repoDir: string, config: LoopConfig): Promise<Issue[]> {
+  if (config.issues.tracker === 'markdown')
+    return markdownListWorking(markdownDir(config), config.issues.working)
+  return githubListWorking(repoDir, config.issues.working)
+}
+
+export async function relabel(
+  repoDir: string,
+  config: LoopConfig,
+  issue: number,
+  remove: string,
+  add: string,
+): Promise<void> {
+  if (config.issues.tracker === 'markdown')
+    return markdownRelabel(markdownDir(config), issue, remove, add)
+  return githubRelabel(repoDir, issue, remove, add)
+}
+
+export async function removeLabel(
+  repoDir: string,
+  config: LoopConfig,
+  issue: number,
+  label: string,
+): Promise<void> {
+  if (config.issues.tracker === 'markdown')
+    return markdownRemoveLabel(markdownDir(config), issue, label)
+  return githubRemoveLabel(repoDir, issue, label)
+}
+
+export async function comment(
+  repoDir: string,
+  config: LoopConfig,
+  issue: number,
+  body: string,
+): Promise<void> {
+  if (config.issues.tracker === 'markdown') return markdownComment(markdownDir(config), issue, body)
+  return githubComment(repoDir, issue, body)
+}
+
+export async function issueUrl(
+  repoDir: string,
+  config: LoopConfig,
+  issue: number,
+): Promise<string | null> {
+  if (config.issues.tracker === 'markdown') return markdownIssueUrl(markdownDir(config), issue)
+  return githubIssueUrl(repoDir, issue)
+}
+
+export async function readLabels(
+  repoDir: string,
+  config: LoopConfig,
+  issue: number,
+): Promise<string[]> {
+  if (config.issues.tracker === 'markdown') return markdownReadLabels(markdownDir(config), issue)
+  return githubReadLabels(repoDir, issue)
+}
+
+/** Receipts from the issue's history (#8): comments on GitHub, log files on markdown. */
+export async function readReceiptHistory(
+  repoDir: string,
+  config: LoopConfig,
+  issue: number,
+): Promise<Receipt[]> {
+  if (config.issues.tracker === 'markdown')
+    return markdownReadReceiptHistory(markdownDir(config), issue)
+  return githubReadReceiptHistory(repoDir, issue)
+}
+
+// ── Base resolution (#17, stacked PRs) ──────────────────────────────────
+
+export type BaseRef = {
+  /** Ref to branch the worktree from and diff against (e.g. origin/develop, loop/3). */
+  ref: string
+  /** Branch name for `gh pr create --base` (e.g. develop, loop/3). */
+  name: string
+}
+
+/**
+ * What the issue's branch starts from: an explicit `base` (a number or
+ * numeric string → that issue's loop/<n> branch; anything else → the ref as
+ * given), or the repo's own default branch (origin/HEAD, falling back to
+ * origin/main, then main).
+ */
+export async function resolveBaseRef(repoDir: string, issue: Issue): Promise<BaseRef> {
+  if (issue.base !== undefined) {
+    const issueNumber =
+      typeof issue.base === 'number'
+        ? issue.base
+        : /^\d+$/.test(issue.base.trim())
+          ? Number.parseInt(issue.base.trim(), 10)
+          : undefined
+    if (issueNumber !== undefined)
+      return { ref: `loop/${issueNumber}`, name: `loop/${issueNumber}` }
+    const base = String(issue.base)
+    return { ref: base, name: base.replace(/^origin\//, '') }
+  }
+  const head = await git(
+    repoDir,
+    'symbolic-ref',
+    '--quiet',
+    '--short',
+    'refs/remotes/origin/HEAD',
+  ).then(
+    (value) => value,
+    () => '',
+  )
+  if (head) return { ref: head, name: head.replace(/^origin\//, '') }
+  // origin/HEAD unset (a fresh or fetch-only clone): ask the remote itself.
+  const lsRemote = await git(repoDir, 'ls-remote', '--symref', 'origin', 'HEAD').then(
+    (value) => value,
+    () => '',
+  )
+  const remoteBranch = lsRemote.match(/^ref: refs\/heads\/(\S+)\s+HEAD$/m)?.[1]
+  if (remoteBranch) return { ref: `origin/${remoteBranch}`, name: remoteBranch }
+  const hasMain = await git(repoDir, 'rev-parse', '--verify', 'origin/main').then(
+    () => true,
+    () => false,
+  )
+  return hasMain ? { ref: 'origin/main', name: 'main' } : { ref: 'main', name: 'main' }
+}
+
+// ── The work-present guard (#9's Feature done) ──────────────────────────
 
 /**
  * Work present (#9's Feature done guard): the branch changes code in

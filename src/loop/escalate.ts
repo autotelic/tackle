@@ -24,7 +24,7 @@ export function makeEscalate(deps: {
 
   return (issue, reason) =>
     Effect.gen(function* () {
-      const url = yield* tryP(() => issueUrl(repoDir, issue.number))
+      const url = yield* tryP(() => issueUrl(repoDir, config, issue.number))
       const choice = yield* tryP(() =>
         human.askWithOptions(
           `Treadle parked issue #${issue.number} "${issue.title}" (${reason}).` +
@@ -45,12 +45,15 @@ export function makeEscalate(deps: {
         yield* tryP(() =>
           comment(
             repoDir,
+            config,
             issue.number,
             `**Hint for the retry:**\n\n${hint}\n\n<!-- treadle:budget-reset -->`,
           ),
         )
         yield* tryP(() => appendQa(repoDir, issue.number, { question: 'Retry hint', answer: hint }))
-        yield* tryP(() => relabel(repoDir, issue.number, config.issues.parked, config.issues.ready))
+        yield* tryP(() =>
+          relabel(repoDir, config, issue.number, config.issues.parked, config.issues.ready),
+        )
         yield* tryP(() => notify(`Issue #${issue.number} back to ready with your hint.`))
         return
       }

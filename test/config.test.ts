@@ -46,4 +46,32 @@ describe('loadConfig', () => {
     ] as unknown as typeof base.checks
     expect(() => assertLoopConfig(badReport, 'x')).toThrow(/vitest-json/)
   })
+
+  it('accepts the markdown tracker with a directory, and requires the pair', () => {
+    const base = {
+      issues: { ready: 'ready', working: 'working', parked: 'parked' },
+      install: 'true',
+      app: { start: 'node s.js', healthUrl: 'http://127.0.0.1:1/health', readyTimeoutSeconds: 5 },
+      checks: [{ name: 't', run: 'true', timeoutSeconds: 5 }],
+      protectedPaths: [],
+      featureDone: { changedPaths: [], requireNewTests: true },
+      budgets: { passesPerIssue: 3 },
+    }
+    const markdown = structuredClone(base)
+    Object.assign(markdown.issues, { tracker: 'markdown', dir: '/tmp/issues' })
+    assertLoopConfig(markdown, 'x')
+    expect(markdown.issues.tracker).toBe('markdown')
+
+    const noDir = structuredClone(base)
+    Object.assign(noDir.issues, { tracker: 'markdown' })
+    expect(() => assertLoopConfig(noDir, 'x')).toThrow(/issues.dir/)
+
+    const dirWithoutMarkdown = structuredClone(base)
+    Object.assign(dirWithoutMarkdown.issues, { dir: '/tmp/issues' })
+    expect(() => assertLoopConfig(dirWithoutMarkdown, 'x')).toThrow(/issues.dir/)
+
+    const unknownTracker = structuredClone(base)
+    Object.assign(unknownTracker.issues, { tracker: 'linear' })
+    expect(() => assertLoopConfig(unknownTracker, 'x')).toThrow(/issues.tracker/)
+  })
 })

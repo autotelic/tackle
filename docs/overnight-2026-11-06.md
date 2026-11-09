@@ -34,8 +34,8 @@ over error text. It will drift. Watch its false negatives.
 
 ### 2. Your impossible spec (#23) got the designed answer
 
-Issue #23 demanded 200 *and* 404 for the same request. The agent noticed the
-contradiction *and* that existing tests pinned 200, and asked a structured
+Issue #23 demanded 200 _and_ 404 for the same request. The agent noticed the
+contradiction _and_ that existing tests pinned 200, and asked a structured
 A/B/C question via `ask_human`. You answered "1" (keep 200, criterion 2 was a
 mistake). It strengthened the tests (no behavior change, no weakened tests) and
 shipped PR #26, tests-only. **The ask → park → resume → complete cycle works.**
@@ -50,7 +50,7 @@ upstream (Wayfinder) or a review Session (seed rule 2), not the machine.
 
 ### 4. The stacked-PR problem (the run's biggest finding)
 
-Six overnight branches were each created from the *same* unmerged main, so the
+Six overnight branches were each created from the _same_ unmerged main, so the
 six PRs conflict with each other at merge time. Same shape as the #9/#10
 closures earlier: loop/4 and loop/5 re-implemented the foundations of a main
 that didn't have them yet, because their base never gained the earlier work.

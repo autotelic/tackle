@@ -3,7 +3,13 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { hasOpenBlocker, type Issue, workPresent } from '../src/loop/tracker.ts'
+import {
+  hasOpenBlocker,
+  type Issue,
+  parseBaseFromBody,
+  resolveBaseRef,
+  workPresent,
+} from '../src/loop/tracker.ts'
 
 describe('hasOpenBlocker', () => {
   const issue = (blockedBy?: Issue['blockedBy']): Issue => ({
@@ -46,6 +52,89 @@ afterEach(async () => {
 })
 
 const git = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd })
+
+describe('parseBaseFromBody', () => {
+  it('parses a numeric base as an issue number', () => {
+    expect(parseBaseFromBody('Spec here\n\nBase: 3\n')).toBe(3)
+    expect(parseBaseFromBody('base: 12')).toBe(12)
+  })
+
+  it('parses a named base as a ref', () => {
+    expect(parseBaseFromBody('Base: develop\n')).toBe('develop')
+    expect(parseBaseFromBody('Base: origin/feature-x\n')).toBe('origin/feature-x')
+  })
+
+  it('ignores prose that only mentions a base', () => {
+    expect(parseBaseFromBody('The base: develop branch is where this lands.')).toBeUndefined()
+    expect(parseBaseFromBody('Base: develop (stacked)')).toBeUndefined()
+    expect(parseBaseFromBody('No base line at all.')).toBeUndefined()
+  })
+})
+
+describe('resolveBaseRef', () => {
+  const issue = (base?: number | string): Issue => ({
+    number: 4,
+    title: 't',
+    body: '',
+    ...(base !== undefined ? { base } : {}),
+  })
+
+  it('maps a numeric base to the base issue’s loop/<n> branch', async () => {
+    expect(await resolveBaseRef('unused', issue(3))).toEqual({ ref: 'loop/3', name: 'loop/3' })
+    expect(await resolveBaseRef('unused', issue('3'))).toEqual({ ref: 'loop/3', name: 'loop/3' })
+  })
+
+  it('passes a named base through, stripping origin/ for the PR base name', async () => {
+    expect(await resolveBaseRef('unused', issue('develop'))).toEqual({
+      ref: 'develop',
+      name: 'develop',
+    })
+    expect(await resolveBaseRef('unused', issue('origin/feature-x'))).toEqual({
+      ref: 'origin/feature-x',
+      name: 'feature-x',
+    })
+  })
+
+  it('defaults to the repo’s own default branch (origin/HEAD)', async () => {
+    dir = await mkdtemp(join(tmpdir(), 'treadle-base-'))
+    const bare = join(dir, 'bare')
+    const clone = join(dir, 'clone')
+    await mkdir(bare, { recursive: true })
+    git(bare, 'init', '--bare', '-b', 'develop')
+    git(dir, 'clone', bare, 'clone')
+    git(clone, 'config', 'user.email', 't@t')
+    git(clone, 'config', 'user.name', 't')
+    await writeFile(join(clone, 'f'), 'x\n')
+    git(clone, 'add', '-A')
+    git(clone, 'commit', '-m', 'init')
+    git(clone, 'push', 'origin', 'develop')
+    expect(await resolveBaseRef(clone, issue())).toEqual({
+      ref: 'origin/develop',
+      name: 'develop',
+    })
+  })
+
+  it('falls back to origin/main, then main, without origin/HEAD', async () => {
+    dir = await mkdtemp(join(tmpdir(), 'treadle-base-'))
+    const repo = join(dir, 'repo')
+    const bare = join(dir, 'bare')
+    await mkdir(repo, { recursive: true })
+    await mkdir(bare, { recursive: true })
+    git(bare, 'init', '--bare', '-b', 'main')
+    git(repo, 'init', '-b', 'main')
+    git(repo, 'config', 'user.email', 't@t')
+    git(repo, 'config', 'user.name', 't')
+    await writeFile(join(repo, 'f'), 'x\n')
+    git(repo, 'add', '-A')
+    git(repo, 'commit', '-m', 'init')
+    expect(await resolveBaseRef(repo, issue())).toEqual({ ref: 'main', name: 'main' })
+    // A fetched remote without origin/HEAD: origin/main wins.
+    git(repo, 'remote', 'add', 'origin', bare)
+    git(repo, 'push', 'origin', 'main')
+    git(repo, 'fetch', 'origin')
+    expect(await resolveBaseRef(repo, issue())).toEqual({ ref: 'origin/main', name: 'main' })
+  })
+})
 
 /**
  * A main repo (base) plus a branch worktree with changes: the layout

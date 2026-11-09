@@ -47,7 +47,7 @@ export async function reconcile(repoDir: string, config: LoopConfig): Promise<Re
   // run if the port is still busy after this.
   await clearLeftoverApp(join(repoDir, '.treadle', 'app.pid'))
 
-  const working = await listWorkingIssues(repoDir, config.issues.working)
+  const working = await listWorkingIssues(repoDir, config)
   if (working.length > 1) {
     await unlock()
     throw new Error(

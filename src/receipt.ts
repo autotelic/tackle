@@ -1,5 +1,8 @@
 import type { FailureSetEntry } from './report.ts'
 
+/** Hidden marker the Retry escalation posts: budgets count from here (#9). */
+export const BUDGET_RESET_MARKER = '<!-- treadle:budget-reset -->'
+
 /**
  * A Receipt: the Loop's record of one Pass, written as an issue comment (#8).
  * Readable text plus a hidden JSON block the Loop parses after a restart.

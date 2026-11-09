@@ -32,6 +32,18 @@ export type IssueLabels = {
   ready: string
   working: string
   parked: string
+  /**
+   * Issue tracker selection (#17, ADR-0002): GitHub issues (default) or
+   * markdown files in a directory (docs/markdown-issues.md). The ready /
+   * working / parked values are GitHub label names on the GitHub tracker
+   * and `state:` frontmatter values on the markdown tracker.
+   */
+  tracker?: 'github' | 'markdown'
+  /**
+   * markdown tracker: directory holding issues/ and log/, normally a git
+   * repo the Loop pulls before reading and pushes after writing.
+   */
+  dir?: string
 }
 
 export type FeatureDoneGuard = {
@@ -107,6 +119,13 @@ export function assertLoopConfig(
   if (typeof c.issues !== 'object' || c.issues === null) fail(configPath, 'issues is required')
   for (const key of ['ready', 'working', 'parked'] as const)
     assertString((c.issues as Record<string, unknown>)[key], `issues.${key}`, configPath)
+  const tracker = (c.issues as Record<string, unknown>).tracker
+  if (tracker !== undefined && tracker !== 'github' && tracker !== 'markdown')
+    fail(configPath, "issues.tracker must be 'github' or 'markdown'")
+  const issuesDir = (c.issues as Record<string, unknown>).dir
+  if (tracker === 'markdown') assertString(issuesDir, 'issues.dir', configPath)
+  if (issuesDir !== undefined && tracker !== 'markdown')
+    fail(configPath, "issues.dir only applies with issues.tracker: 'markdown'")
 
   assertString(c.install, 'install', configPath)
 

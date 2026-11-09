@@ -1,11 +1,8 @@
-import { execFile } from 'node:child_process'
 import { readdir, readFile, rm } from 'node:fs/promises'
 import { join } from 'node:path'
-import { promisify } from 'node:util'
 import type { LoopConfig } from './config.ts'
+import { comment, readLabels, relabel } from './loop/tracker.ts'
 import type { AnswerFile, QuestionFile } from './telepi.ts'
-
-const execFileAsync = promisify(execFile)
 
 /**
  * The Loop's watcher for late human answers (#8/#9 park-and-resume, #14).
@@ -104,31 +101,22 @@ export function createIssueAnswerHandler(options: {
   relabel?: (issue: number, remove: string, add: string) => Promise<void>
   readLabels?: (issue: number) => Promise<string[]>
 }): (watched: WatchedAnswer) => Promise<void> {
+  // The tracker is selected by the repo's loop.config.ts (#17, ADR-0002):
+  // GitHub comments/labels or markdown log files/frontmatter state.
   const postComment =
     options.postComment ??
     (async (issue: number, body: string) => {
-      await execFileAsync('gh', ['issue', 'comment', String(issue), '--body', body], {
-        cwd: options.repoDir,
-      })
+      await comment(options.repoDir, options.config, issue, body)
     })
-  const relabel =
+  const relabelFn =
     options.relabel ??
     (async (issue: number, remove: string, add: string) => {
-      await execFileAsync(
-        'gh',
-        ['issue', 'edit', String(issue), '--remove-label', remove, '--add-label', add],
-        { cwd: options.repoDir },
-      )
+      await relabel(options.repoDir, options.config, issue, remove, add)
     })
-  const readLabels =
+  const readLabelsFn =
     options.readLabels ??
     (async (issue: number): Promise<string[]> => {
-      const { stdout } = await execFileAsync(
-        'gh',
-        ['issue', 'view', String(issue), '--json', 'labels', '--jq', '[.labels[].name]'],
-        { cwd: options.repoDir },
-      )
-      return JSON.parse(stdout) as string[]
+      return await readLabels(options.repoDir, options.config, issue)
     })
 
   return async ({ question, answer }) => {
@@ -140,9 +128,9 @@ export function createIssueAnswerHandler(options: {
     // Only a parked issue goes back to ready — the answer may arrive while
     // the issue is already working again (a restart re-picked it), and
     // labels are the truth (#8).
-    const labels = await readLabels(question.issue)
+    const labels = await readLabelsFn(question.issue)
     if (labels.includes(options.config.issues.parked)) {
-      await relabel(question.issue, options.config.issues.parked, options.config.issues.ready)
+      await relabelFn(question.issue, options.config.issues.parked, options.config.issues.ready)
     }
   }
 }
