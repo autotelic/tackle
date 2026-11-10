@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process'
-import { appendFile, mkdir, readFile } from 'node:fs/promises'
+import { appendFile, mkdir, readdir, readFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { promisify } from 'node:util'
 import { Effect } from 'effect'
@@ -81,6 +81,19 @@ export async function appendQa(
   const path = qaPath(repoDir, issue)
   await mkdir(dirname(path), { recursive: true })
   await appendFile(path, `${JSON.stringify({ ...entry, at: new Date().toISOString() })}\n`)
+}
+
+/** The latest pass log for an issue (re-entry distillation); probes excluded. */
+export async function latestSessionLog(treadleDir: string, issue: number): Promise<string | null> {
+  try {
+    const names = await readdir(join(treadleDir, 'sessions'))
+    const mine = names
+      .filter((name) => name.startsWith(`issue-${issue}-pass-`) && !name.includes('probe'))
+      .sort()
+    return mine.length > 0 ? join(treadleDir, 'sessions', mine[mine.length - 1] as string) : null
+  } catch {
+    return null
+  }
 }
 
 async function readQa(
@@ -285,7 +298,24 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
     }
 
     // ── The Pass loop ───────────────────────────────────────────────────
+    // Seconda volta on re-entry: an interrupted Session (killed by a
+    // restart) left its log behind — distil the handoff for its
+    // continuation, or the next Session re-explores from zero.
     let previousNote: string | null = null
+    if (deps.resume) {
+      const leftover = yield* tryP(() => latestSessionLog(treadleDir, issue.number))
+      if (leftover !== null) {
+        previousNote = yield* tryP(() =>
+          extractHandoff({
+            worktreeDir,
+            baseRef: base.ref,
+            sessionLogPath: leftover,
+            terminal: 'failed',
+            reason: 'interrupted by a restart',
+          }),
+        )
+      }
+    }
     let lastReport: CheckReport | null = null
     let lastReportDir: string | null = null
     const tried: string[] = []

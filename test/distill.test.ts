@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { extractHandoff } from '../src/loop/distill.ts'
+import { latestSessionLog } from '../src/loop/issue-loop.ts'
 
 const git = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd })
 
@@ -92,6 +93,18 @@ describe('extractHandoff', () => {
     })
     expect(handoff).toContain('No PROGRESS.md exists.')
     expect(handoff).not.toContain('last substantive thinking')
+  })
+
+  it('latestSessionLog picks the newest pass log and skips probes', async () => {
+    const dir = await makeWorktree()
+    const sessions = join(dir, 'sessions')
+    await mkdir(sessions, { recursive: true })
+    await writeFile(join(sessions, 'issue-1-pass-1-2026-01-01.jsonl'), '')
+    await writeFile(join(sessions, 'issue-1-pass-2-2026-01-02.jsonl'), '')
+    await writeFile(join(sessions, 'issue-1-pass-1-probe-2026-01-03.jsonl'), '')
+    await writeFile(join(sessions, 'issue-2-pass-1-2026-01-04.jsonl'), '')
+    expect(await latestSessionLog(dir, 1)).toBe(join(sessions, 'issue-1-pass-2-2026-01-02.jsonl'))
+    expect(await latestSessionLog(join(dir, 'nope'), 1)).toBeNull()
   })
 
   it('truncates the thinking tail, end-weighted', async () => {
