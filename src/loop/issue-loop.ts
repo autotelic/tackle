@@ -392,6 +392,7 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
           runSessionFn({
             cwd: worktreeDir,
             prompt,
+            ...(config.model ? { model: config.model } : {}),
             maxTurns: config.budgets.maxTurnsPerSession,
             timeoutMs: config.budgets.sessionTimeoutMinutes * 60_000,
             askHumanTimeoutMs: config.budgets.askHumanTimeoutMinutes * 60_000,

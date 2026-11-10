@@ -5,6 +5,7 @@ import {
   type AgentSessionEvent,
   createAgentSession,
   defineTool,
+  ModelRuntime,
   SessionManager,
   type ToolDefinition,
 } from '@earendil-works/pi-coding-agent'
@@ -33,7 +34,7 @@ export type SessionOutcome = {
 
 /** Loop-level events the driver emits, including the ask_human tool's session.blocked. */
 export type SessionDriverEvent =
-  | { type: 'session.started' }
+  | { type: 'session.started'; model?: { readonly provider: string; readonly id: string } }
   | { type: 'session.blocked'; question: string }
   | { type: 'session.unblocked' }
   | { type: 'session.nudge'; turns: number; text: string }
@@ -51,6 +52,8 @@ export type RunSessionOptions = {
   askHumanTimeoutMs: number
   /** The human channel (terminal or TelePi, #14). */
   askHuman: (question: string, signal?: AbortSignal) => Promise<string>
+  /** The model for this and every Session; resolved against the agent's catalog. */
+  model?: { readonly provider: string; readonly id: string }
   /** Per-Session JSONL event log. */
   logPath: string
   onEvent?: (event: SessionDriverEvent) => void
@@ -71,11 +74,16 @@ export type CreateSessionLike = (options: {
   cwd: string
   sessionManager: unknown
   customTools: ToolDefinition[]
+  /** Resolved by runSession against the agent's catalog; unchanged when unset. */
+  modelRuntime?: ModelRuntime
+  model?: ReturnType<ModelRuntime['getModel']>
 }) => Promise<{ session: SessionLike }>
 
 const defaultCreateSession: CreateSessionLike = async (options) => {
   const { session } = await createAgentSession({
     cwd: options.cwd,
+    ...(options.modelRuntime ? { modelRuntime: options.modelRuntime } : {}),
+    ...(options.model ? { model: options.model, thinkingLevel: 'high' as const } : {}),
     sessionManager: options.sessionManager as SessionManager,
     customTools: options.customTools,
   })
@@ -236,11 +244,41 @@ export async function runSession(
     },
   })
 
+  // Loop-scoped model selection (#17 extension): resolve against the
+  // agent's catalog (bundled + cached overlay, offline-safe) and pin the
+  // same runtime on the session, so its auth and catalog are the ones the
+  // model resolved from. Absent: pi's default, untouched.
+  let modelRuntime: ModelRuntime | undefined
+  let model: ReturnType<ModelRuntime['getModel']> | undefined
+  if (options.model) {
+    modelRuntime = await ModelRuntime.create()
+    model = modelRuntime.getModel(options.model.provider, options.model.id)
+    if (!model) {
+      // Refused before any session exists: the config names a model this
+      // catalog has never heard of.
+      const missingModel = `model not in catalog: ${options.model.provider}/${options.model.id}`
+      const missingOutcome: SessionOutcome = {
+        terminal: 'failed',
+        reason: missingModel,
+        turns: 0,
+        durationMs: Date.now() - startedAt,
+        logPath: options.logPath,
+        lastAssistantText: null,
+        costUsd: 0,
+        tokens: 0,
+      }
+      emit({ type: 'session.terminal', outcome: missingOutcome })
+      return missingOutcome
+    }
+  }
+
   const createSession = deps.createSession ?? defaultCreateSession
   const { session } = await createSession({
     cwd: options.cwd,
     sessionManager: SessionManager.inMemory(),
     customTools: [askHumanTool],
+    ...(modelRuntime ? { modelRuntime } : {}),
+    ...(model ? { model } : {}),
   })
 
   const unsubscribe = session.subscribe((event) => {
@@ -262,7 +300,7 @@ export async function runSession(
     }
   }, options.timeoutMs)
 
-  emit({ type: 'session.started' })
+  emit({ type: 'session.started', ...(options.model ? { model: options.model } : {}) })
   let promptError: unknown = null
   try {
     await session.prompt(options.prompt)

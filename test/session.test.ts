@@ -197,6 +197,33 @@ describe('runSession', () => {
     expect(outcome.terminal).toBe('completed')
   })
 
+  it('rejects a model that is not in the catalog, up front', async () => {
+    const result = await run(
+      async () => {
+        throw new Error('session must never start')
+      },
+      { model: { provider: 'opencode-go', id: 'not-a-real-model' } },
+    )
+    expect(result.outcome.terminal).toBe('failed')
+    expect(result.outcome.reason).toContain('not-a-real-model')
+    expect(result.outcome.reason).toContain('catalog')
+  })
+
+  it('resolves a configured model and reports it in the stream metadata (glm-5.3-flash on opencode-go)', async () => {
+    const { outcome, events } = await run(
+      async (_f, emit) => {
+        emit(ev({ type: 'agent_start' }))
+        emit(ev({ type: 'turn_start' }))
+        settle(emit)
+      },
+      { model: { provider: 'opencode-go', id: 'glm-5.3-flash' } },
+    )
+    expect(outcome.terminal).toBe('completed')
+    // The driver's own record of the model it ran on.
+    const started = JSON.stringify(events.find((e) => e.type === 'session.started'))
+    expect(started).toContain('glm-5.3-flash')
+  })
+
   it('reports failed when the session ends with an error message', async () => {
     const { outcome } = await run((fake, emit) => {
       settle(emit)

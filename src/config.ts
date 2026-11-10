@@ -71,6 +71,11 @@ export type LoopConfig = {
   install: string
   /** How to start the app. Optional until a check has needsApp: true. */
   app?: AppConfig
+  /**
+   * The model Sessions run on (#17 extension), resolved against the agent's
+   * own catalog. Absent = pi's default (settings.json defaultModel).
+   */
+  model?: { provider: string; id: string }
   checks: CheckStep[]
   protectedPaths: string[]
   featureDone: FeatureDoneGuard
@@ -131,6 +136,13 @@ export function assertLoopConfig(
     fail(configPath, "issues.dir only applies with issues.tracker: 'markdown'")
 
   assertString(c.install, 'install', configPath)
+
+  if (c.model !== undefined) {
+    if (typeof c.model !== 'object' || c.model === null)
+      fail(configPath, 'model must be an object when present')
+    assertString((c.model as Record<string, unknown>).provider, 'model.provider', configPath)
+    assertString((c.model as Record<string, unknown>).id, 'model.id', configPath)
+  }
 
   if (c.app !== undefined) {
     if (typeof c.app !== 'object' || c.app === null)
