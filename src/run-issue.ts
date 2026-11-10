@@ -122,7 +122,8 @@ async function revertProtected(worktreeDir: string, protectedPaths: string[]): P
 async function checkpoint(worktreeDir: string, branch: string, message: string): Promise<string> {
   await git(worktreeDir, 'add', '-A')
   const status = await git(worktreeDir, 'status', '--porcelain')
-  if (status.length > 0) await git(worktreeDir, 'commit', '-m', message)
+  // --no-verify: bookkeeping, not agent work (see issue-loop.ts checkpoint).
+  if (status.length > 0) await git(worktreeDir, 'commit', '-m', message, '--no-verify')
   const sha = await git(worktreeDir, 'rev-parse', 'HEAD')
   await git(worktreeDir, 'push', '-u', 'origin', branch)
   return sha

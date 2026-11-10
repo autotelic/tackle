@@ -635,7 +635,11 @@ async function checkpoint(worktreeDir: string, branch: string, message: string):
   if (!branch.startsWith('loop/')) throw new Error(`refusing to push non-loop branch: ${branch}`)
   await git(worktreeDir, 'add', '-A')
   const status = await git(worktreeDir, 'status', '--porcelain')
-  if (status.length > 0) await git(worktreeDir, 'commit', '-m', message)
+  // --no-verify: the Checkpoint is the Loop's bookkeeping, not agent work —
+  // the repo's pre-commit hooks (husky/lint-staged) must not gate it. The
+  // agent's own commits inside the Session still run the hooks, as they
+  // should.
+  if (status.length > 0) await git(worktreeDir, 'commit', '-m', message, '--no-verify')
   const sha = await git(worktreeDir, 'rev-parse', 'HEAD')
   await git(worktreeDir, 'push', '-u', 'origin', branch)
   return sha
