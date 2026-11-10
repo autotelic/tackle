@@ -274,30 +274,36 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
     let costSoFarUsd = history.reduce((sum, r) => sum + (r.costUsd ?? 0), 0)
 
     // ── Baseline Checks before spending budget (#13) ────────────────────
-    const baseline = yield* checksWithPause({
-      run: () =>
-        runChecksFn(config, {
-          repoDir: worktreeDir,
-          outDir: join(treadleDir, `checks-issue-${issue.number}-baseline-${stamp()}`),
-          issue: issue.number,
-          pass: 0,
-        }),
-      notify,
-      issue: issue.number,
-      sleepFn,
-    })
-    if (baseline.outcome !== 'checks.passed') {
+    // The baseline guards the HARNESS, not the issue: it bounces only on a
+    // fresh branch (nothing the agent did can be failing yet). A resumed
+    // branch carries in-progress work — known-failing checks are the
+    // issue's state, and bouncing would ping-pong forever.
+    if (!resumeLike) {
+      const baseline = yield* checksWithPause({
+        run: () =>
+          runChecksFn(config, {
+            repoDir: worktreeDir,
+            outDir: join(treadleDir, `checks-issue-${issue.number}-baseline-${stamp()}`),
+            issue: issue.number,
+            pass: 0,
+          }),
+        notify,
+        issue: issue.number,
+        sleepFn,
+      })
+      if (baseline.outcome !== 'checks.passed') {
       yield* tryP(() =>
         notify(
           `Baseline checks failed on a fresh branch for #${issue.number} — the harness or base ` +
             'branch is broken, not the issue. Back to ready without spending budget.',
         ),
       )
-      yield* tryP(() => git(repoDir, 'worktree', 'remove', worktreeDir, '--force'))
-      yield* tryP(() =>
-        relabel(repoDir, config, issue.number, config.issues.working, config.issues.ready),
-      )
-      return { kind: 'parked', issue: issue.number, passesUsed: 0, reason: 'no-rule' }
+        yield* tryP(() => git(repoDir, 'worktree', 'remove', worktreeDir, '--force'))
+        yield* tryP(() =>
+          relabel(repoDir, config, issue.number, config.issues.working, config.issues.ready),
+        )
+        return { kind: 'parked', issue: issue.number, passesUsed: 0, reason: 'no-rule' }
+      }
     }
 
     // ── The Pass loop ───────────────────────────────────────────────────
