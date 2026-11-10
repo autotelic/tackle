@@ -74,6 +74,42 @@ describe('loop machine', () => {
     expect(escalated).toEqual(['1', '2'])
   })
 
+  it('answer.arrived re-polls the queue but never cancels a working Session', async () => {
+    const worked: number[] = []
+    let picks = 0
+    let snapshot: { value: unknown; context: { lastResult: IssueLoopResult | null } } | undefined
+    const program = Effect.gen(function* () {
+      const actor = yield* createEffectActor(buildLoopMachine(), {
+        input: {
+          deps: makeDeps({
+            pickIssue: async () => (++picks === 1 ? issue : null),
+            makeIssueLoop: (i) =>
+              Effect.gen(function* () {
+                worked.push(i.number)
+                // While the Session is mid-flight, an answer lands.
+                yield* Effect.sleep(100)
+                return prReady
+              }),
+          }),
+        },
+      })
+      yield* Effect.sleep(50)
+      expect(actor.getSnapshot().value).toBe('working')
+      actor.send({ type: 'answer.arrived' } as never)
+      yield* Effect.sleep(200)
+      // The working Session ran to completion — an unguarded transition
+      // would have cancelled it (lastResult never set) and re-targeted
+      // picking mid-flight.
+      const final = actor.getSnapshot()
+      snapshot = final
+      expect(worked).toEqual([1])
+      expect(final.context.lastResult?.kind).toBe('pr-ready')
+      expect(final.value).toBe('waiting')
+    })
+    await Effect.runPromise(Effect.scoped(program))
+    expect(snapshot).toBeDefined()
+  })
+
   it('stops on stop.requested', async () => {
     const program = Effect.gen(function* () {
       const actor = yield* createEffectActor(buildLoopMachine(), {

@@ -62,11 +62,24 @@ export function watchAnswers(options: AnswerWatcherOptions): AnswerWatcher {
           await readFile(join(options.questionsDir, name), 'utf8'),
         ) as QuestionFile
       } catch {
-        // No matching question (already consumed, or withdrawn): drop the orphan.
+        // No matching question: drop the orphan — but never silently, an
+        // answer disappearing without trace is how park-and-resume breaks.
+        console.warn(
+          `answer watcher: answer ${id} has no matching question file; dropping it. ` +
+            'If this answer should have reached an issue, re-answer via /treadle.',
+        )
         await rm(join(options.answersDir, name), { force: true })
         continue
       }
-      await options.onAnswer({ question, answer })
+      try {
+        await options.onAnswer({ question, answer })
+      } catch (error) {
+        // Keep the pair; the next cycle retries the answer. Loud, not silent.
+        console.warn(
+          `answer watcher: handling answer ${id} failed, will retry (${error instanceof Error ? error.message : String(error)})`,
+        )
+        continue
+      }
       await rm(join(options.answersDir, name), { force: true })
       await rm(join(options.questionsDir, name), { force: true })
     }
@@ -74,7 +87,15 @@ export function watchAnswers(options: AnswerWatcherOptions): AnswerWatcher {
 
   const tick = async () => {
     if (stopped) return
-    await pollOnce()
+    // One bad cycle must not kill the watcher: answers keep landing while
+    // the Loop works, and a dead watcher eats every later answer silently.
+    try {
+      await pollOnce()
+    } catch (error) {
+      console.warn(
+        `answer watcher poll failed (${error instanceof Error ? error.message : String(error)})`,
+      )
+    }
     if (!stopped) timer = setTimeout(() => void tick(), pollMs)
   }
   timer = setTimeout(() => void tick(), pollMs)

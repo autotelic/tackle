@@ -89,8 +89,11 @@ export function buildLoopMachine() {
         target: '.stopped',
         context: { stopReason: stopReasonFrom(event, 'stop requested') },
       }),
-      // A parked question got answered: re-poll the queue promptly.
-      'answer.arrived': () => ({ target: '.picking' }),
+      // A parked question got answered: re-poll the queue promptly — but
+      // never out of 'working': a mid-Pass answer belongs to the next pick,
+      // and retargeting here would cancel the working issue's Session.
+      'answer.arrived': ({ context }) =>
+        asContext(context).issue ? undefined : { target: '.picking' },
     },
     states: {
       picking: {

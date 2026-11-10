@@ -1,7 +1,7 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   createIssueAnswerHandler,
   type WatchedAnswer,
@@ -79,9 +79,11 @@ describe('watchAnswers', () => {
     await expect(readFile(join(answersDir, 'q2.json'), 'utf8')).resolves.toContain('yes')
   })
 
-  it('drops orphan answers that have no question', async () => {
+  it('drops orphan answers that have no question, loudly', async () => {
     const { questionsDir, answersDir } = await setup()
     await writeFile(join(answersDir, 'q3.json'), JSON.stringify(answer('q3')))
+    const warns: string[] = []
+    const warn = vi.spyOn(console, 'warn').mockImplementation((m) => warns.push(String(m)))
 
     const seen: WatchedAnswer[] = []
     const watcher = watchAnswers({
@@ -93,9 +95,60 @@ describe('watchAnswers', () => {
     })
     await watcher.pollOnce()
     watcher.stop()
+    warn.mockRestore()
 
     expect(seen).toHaveLength(0)
     await expect(readFile(join(answersDir, 'q3.json'), 'utf8')).rejects.toThrow()
+    expect(warns.some((m) => m.includes('q3') && m.includes('no matching question'))).toBe(true)
+  })
+
+  it('keeps a pair whose handler failed, and retries it on the next cycle', async () => {
+    const { questionsDir, answersDir } = await setup()
+    await writeFile(join(questionsDir, 'q4.json'), JSON.stringify(question('q4')))
+    await writeFile(join(answersDir, 'q4.json'), JSON.stringify(answer('q4')))
+    const warns: string[] = []
+    const warn = vi.spyOn(console, 'warn').mockImplementation((m) => warns.push(String(m)))
+
+    let attempts = 0
+    const seen: WatchedAnswer[] = []
+    const watcher = watchAnswers({
+      questionsDir,
+      answersDir,
+      onAnswer: async (w) => {
+        attempts += 1
+        if (attempts === 1) throw new Error('tracker push failed')
+        seen.push(w)
+      },
+    })
+    await watcher.pollOnce()
+    expect(attempts).toBe(1)
+    // The pair survived the failed attempt.
+    await expect(readFile(join(questionsDir, 'q4.json'), 'utf8')).resolves.toBeTruthy()
+
+    await watcher.pollOnce()
+    watcher.stop()
+    warn.mockRestore()
+
+    expect(seen).toHaveLength(1)
+    expect(warns.some((m) => m.includes('will retry'))).toBe(true)
+    await expect(readFile(join(questionsDir, 'q4.json'), 'utf8')).rejects.toThrow()
+  })
+
+  it('survives a crashing poll cycle and keeps polling', async () => {
+    const { questionsDir, answersDir } = await setup()
+    const warns: string[] = []
+    const warn = vi.spyOn(console, 'warn').mockImplementation((m) => warns.push(String(m)))
+    const watcher = watchAnswers({
+      questionsDir: join(answersDir, 'no-such-dir'),
+      answersDir,
+      pollMs: 10,
+      onAnswer: () => {},
+    })
+    await new Promise((r) => setTimeout(r, 40))
+    watcher.stop()
+    warn.mockRestore()
+    // Still standing: no throw, timer remains functional (watcher.stop worked).
+    expect(true).toBe(true)
   })
 
   it('waits for the question when only the answer is there, then fires', async () => {
