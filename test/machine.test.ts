@@ -77,7 +77,7 @@ describe('loop machine', () => {
   it('answer.arrived re-polls the queue but never cancels a working Session', async () => {
     const worked: number[] = []
     let picks = 0
-    let snapshot: { value: unknown; context: { lastResult: IssueLoopResult | null } } | undefined
+    let snapshot: unknown
     const program = Effect.gen(function* () {
       const actor = yield* createEffectActor(buildLoopMachine(), {
         input: {
@@ -103,7 +103,7 @@ describe('loop machine', () => {
       const final = actor.getSnapshot()
       snapshot = final
       expect(worked).toEqual([1])
-      expect(final.context.lastResult?.kind).toBe('pr-ready')
+      expect((final.context as { lastResult?: IssueLoopResult }).lastResult?.kind).toBe('pr-ready')
       expect(final.value).toBe('waiting')
     })
     await Effect.runPromise(Effect.scoped(program))
