@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process'
-import { appendFile, mkdir, readdir, readFile } from 'node:fs/promises'
+import { appendFile, mkdir, readdir, readFile, rm } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { promisify } from 'node:util'
 import { Effect } from 'effect'
@@ -249,6 +249,9 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
         yield* tryP(() => git(repoDir, 'worktree', 'add', worktreeDir, branch))
       } else {
         yield* tryP(() => git(repoDir, 'worktree', 'add', worktreeDir, '-b', branch, base.ref))
+        // A fresh branch inherits the base's PROGRESS.md in a stack, but
+        // the note is per-issue memory — the new issue starts it clean.
+        yield* tryP(() => rm(join(worktreeDir, 'PROGRESS.md'), { force: true }))
       }
     }
     yield* tryP(() => installDeps(worktreeDir))
