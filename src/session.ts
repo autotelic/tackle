@@ -36,6 +36,7 @@ export type SessionDriverEvent =
   | { type: 'session.started' }
   | { type: 'session.blocked'; question: string }
   | { type: 'session.unblocked' }
+  | { type: 'session.nudge'; turns: number; text: string }
   | { type: 'session.terminal'; outcome: SessionOutcome }
 
 export type RunSessionOptions = {
@@ -174,6 +175,18 @@ function createAskHumanTool(hooks: {
   })
 }
 
+function nudgeText(fraction: 'half' | 'four-fifths', turns: number, maxTurns: number): string {
+  return fraction === 'half'
+    ? `Budget note from the harness (not the user): this session is ${turns} of ${maxTurns} turns in. ` +
+        'Start converging now: decide the smallest landable increment of your issue and what it still ' +
+        'needs, then write the code and the tests before you explore further, and bring PROGRESS.md up ' +
+        'to date. Exploration you cannot land is exploration the next session pays for again.'
+    : `Budget note from the harness (not the user): ${turns} of ${maxTurns} turns are gone. ` +
+        'Stop exploring and land it: get the code and tests written and PROGRESS.md current. If the ' +
+        "issue can't fully land in the remaining turns, leave the branch passing its checks and write " +
+        'exactly what is left into PROGRESS.md so the next session starts from the truth.'
+}
+
 export async function runSession(
   options: RunSessionOptions,
   deps: RunSessionDeps = {},
@@ -189,6 +202,29 @@ export async function runSession(
   let turns = 0
   let abortReason: string | null = null
   let blockedQuestion: string | null = null
+
+  // Budget pressure (Volta, the nudge action): at half and four-fifths of
+  // the turn budget, push the session toward landing an increment instead
+  // of dying mid-exploration at the cap. Injected as a user-role message,
+  // marked so the agent knows it is the harness, not the person.
+  const nudgedAt = new Set<number>()
+  const maybeNudge = () => {
+    const half = Math.floor(options.maxTurns / 2)
+    const fourFifths = Math.floor((options.maxTurns * 4) / 5)
+    const fraction = turns === half ? 'half' : turns === fourFifths ? 'four-fifths' : null
+    if (fraction === null || nudgedAt.has(turns)) return
+    nudgedAt.add(turns)
+    const text = nudgeText(fraction, turns, options.maxTurns)
+    emit({ type: 'session.nudge', turns, text })
+    void session.prompt(text).catch((error: unknown) => {
+      log.write(
+        jsonl({
+          ts: new Date().toISOString(),
+          driver: { type: 'session.nudge-failed', detail: String(error) },
+        }),
+      )
+    })
+  }
 
   const askHumanTool = createAskHumanTool({
     askHuman: options.askHuman,
@@ -211,6 +247,7 @@ export async function runSession(
     log.write(jsonl({ ts: new Date().toISOString(), event }))
     if (event.type === 'turn_end') {
       turns += 1
+      maybeNudge()
       if (turns >= options.maxTurns && abortReason === null) {
         abortReason = `turn cap ${options.maxTurns} reached`
         void session.abort()

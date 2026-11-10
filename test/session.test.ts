@@ -24,6 +24,7 @@ class FakeSession implements SessionLike {
   aborted = false
   disposed = false
   toolResult: ToolResult | null = null
+  prompts: string[] = []
   private listeners: Emit[] = []
   private script: Script
 
@@ -45,6 +46,7 @@ class FakeSession implements SessionLike {
   getTools: () => ToolDefinition[] = () => []
 
   async prompt(_text: string) {
+    this.prompts.push(_text)
     await this.script(this, (event) => this.emit(event), this.getTools)
   }
 
@@ -154,6 +156,45 @@ describe('runSession', () => {
     expect(eventTypes).toContain('turn_end')
     expect(eventTypes).toContain('session.started')
     expect(eventTypes.at(-1)).toBe('session.terminal')
+  })
+
+  it('nudges at half and four-fifths of the turn budget', async () => {
+    const { fake, events } = await run(
+      async (f, emit) => {
+        if (f.prompts.length === 1) {
+          for (let i = 0; i < 99; i++) emit(turnEnd) // settle() adds the 100th
+          settle(emit)
+        }
+      },
+      { maxTurns: 100 },
+    )
+    expect(fake.prompts).toHaveLength(3)
+    expect(fake.prompts[1]).toContain('50 of 100 turns')
+    expect(fake.prompts[1]).toContain('Start converging now')
+    expect(fake.prompts[2]).toContain('80 of 100 turns')
+    expect(fake.prompts[2]).toContain('Stop exploring')
+    const nudges = events.filter((e) => e.type === 'session.nudge')
+    expect(nudges).toHaveLength(2)
+  })
+
+  it('survives a nudge the session rejects, and nudges only at the budget fractions', async () => {
+    const { fake, events, outcome } = await run(
+      async (f, emit) => {
+        if (f.prompts.length === 1) {
+          for (let i = 0; i < 8; i++) emit(turnEnd) // settle() adds the 9th
+          settle(emit)
+        } else {
+          throw new Error('prompt exploded')
+        }
+      },
+      { maxTurns: 10 },
+    )
+    // Nudges at turns 5 and 8, never on other turns; both rejected, the
+    // session still reaches its own terminal state rather than failing on
+    // the harness's message.
+    expect(events.filter((e) => e.type === 'session.nudge').map((e) => e.turns)).toEqual([5, 8])
+    expect(fake.prompts).toHaveLength(3)
+    expect(outcome.terminal).toBe('completed')
   })
 
   it('reports failed when the session ends with an error message', async () => {
