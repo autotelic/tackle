@@ -110,9 +110,11 @@ export function buildSessionPrompt(input: SessionPromptInput): string {
       `- Never touch the protected paths: ${protectedList}. The loop reverts them before it commits.\n` +
       "- Don't weaken or delete an existing test to make the Checks pass; if a test looks " +
       'wrong, call ask_human.\n' +
-      '- Run the Checks yourself as you go (see AGENTS.md); finish with them green if you can. ' +
-      'If you start the app to run the e2e tests, stop it before you finish — the loop ' +
-      'refuses to run its own Checks while the app port is busy.',
+      '- Deterministic checks run in loop code, not inside your turns: the loop runs the ' +
+      'full Check suites after your session and feeds the results into your next pass. Narrow ' +
+      'checks on the files you touched are fine (one test file, one lint or typecheck pass). ' +
+      'If you start the app to run e2e tests, stop it before you finish — the loop refuses ' +
+      'to run its own Checks while the app port is busy.',
   )
 
   return `${sections.join('\n\n')}\n`

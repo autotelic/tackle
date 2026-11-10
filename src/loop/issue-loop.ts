@@ -10,6 +10,7 @@ import { buildSessionPrompt } from '../prompt.ts'
 import { type Receipt, renderReceipt } from '../receipt.ts'
 import type { CheckReport, FailureSetEntry } from '../report.ts'
 import { runSession, type SessionOutcome } from '../session.ts'
+import { extractHandoff } from './distill.ts'
 import type { NightlyBudget } from './nightly.ts'
 import { isProviderFailure } from './provider.ts'
 import { isStalled, matchRule, type RuleContext } from './rules.ts'
@@ -381,7 +382,22 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
         sleepFn,
       })
       yield* tryP(() => deps.passesTonight.recordPass(outcome.costUsd))
-      previousNote = outcome.lastAssistantText
+      // Seconda volta: a failed Session usually leaves no note, and the
+      // retry must not re-pay for its exploration — distil the handoff
+      // deterministically from what it left behind.
+      if (outcome.lastAssistantText !== null) {
+        previousNote = outcome.lastAssistantText
+      } else {
+        previousNote = yield* tryP(() =>
+          extractHandoff({
+            worktreeDir,
+            baseRef: base.ref,
+            sessionLogPath,
+            terminal: outcome.terminal,
+            ...(outcome.reason !== undefined ? { reason: outcome.reason } : {}),
+          }),
+        )
+      }
       costSoFarUsd += outcome.costUsd
       if (previousNote) {
         tried.push(`Pass ${passNumber}: ${outcome.terminal} — ${previousNote.slice(0, 300)}`)
