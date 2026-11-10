@@ -634,9 +634,10 @@ async function checkpoint(worktreeDir: string, branch: string, message: string):
   // Guardrail (#16): the Loop only ever pushes loop/* branches.
   if (!branch.startsWith('loop/')) throw new Error(`refusing to push non-loop branch: ${branch}`)
   await git(worktreeDir, 'add', '-A')
-  // The worktree's own scratch dir (check reports) never belongs in the PR,
-  // whatever the repo's .gitignore says.
-  await git(worktreeDir, 'reset', '--', '.treadle').catch(() => undefined)
+  // Scratch dirs (check reports) never belong in the PR, wherever in the
+  // tree they live (suites report from package dirs) and whatever the
+  // repo's .gitignore says.
+  await git(worktreeDir, 'reset', '--', ':(glob)**/.treadle/').catch(() => undefined)
   const status = await git(worktreeDir, 'status', '--porcelain')
   // --no-verify: the Checkpoint is the Loop's bookkeeping, not agent work —
   // the repo's pre-commit hooks (husky/lint-staged) must not gate it. The
