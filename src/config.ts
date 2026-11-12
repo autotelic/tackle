@@ -63,6 +63,12 @@ export type Budgets = {
   maxCostPerIssueUsd?: number
   /** Optional dollar cap per day across the whole Loop (#18). */
   maxCostPerNightUsd?: number
+  /**
+   * Stop picking while this many loop/* PRs await review (#17 wave rule):
+   * the Loop works the queue faster than a person merges, and an unbounded
+   * PR pile turns review debt into rebase risk. 0/absent = unbounded.
+   */
+  maxOpenLoopPrs?: number
 }
 
 export type LoopConfig = {
@@ -192,7 +198,10 @@ export function assertLoopConfig(
 
   if (typeof c.budgets !== 'object' || c.budgets === null) fail(configPath, 'budgets is required')
   for (const [key, value] of Object.entries(c.budgets as Record<string, unknown>)) {
-    if ((key === 'maxCostPerIssueUsd' || key === 'maxCostPerNightUsd') && value === undefined)
+    if (
+      (key === 'maxCostPerIssueUsd' || key === 'maxCostPerNightUsd' || key === 'maxOpenLoopPrs') &&
+      value === undefined
+    )
       continue
     assertNumber(value, `budgets.${key}`, configPath)
   }

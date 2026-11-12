@@ -17,6 +17,7 @@ import { isStalled, matchRule, type RuleContext } from './rules.ts'
 import {
   comment,
   gh,
+  ghJson,
   git,
   type Issue,
   issueUrl,
@@ -292,12 +293,12 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
         sleepFn,
       })
       if (baseline.outcome !== 'checks.passed') {
-      yield* tryP(() =>
-        notify(
-          `Baseline checks failed on a fresh branch for #${issue.number} — the harness or base ` +
-            'branch is broken, not the issue. Back to ready without spending budget.',
-        ),
-      )
+        yield* tryP(() =>
+          notify(
+            `Baseline checks failed on a fresh branch for #${issue.number} — the harness or base ` +
+              'branch is broken, not the issue. Back to ready without spending budget.',
+          ),
+        )
         yield* tryP(() => git(repoDir, 'worktree', 'remove', worktreeDir, '--force'))
         yield* tryP(() =>
           relabel(repoDir, config, issue.number, config.issues.working, config.issues.ready),
@@ -710,7 +711,30 @@ export async function pickNextIssue(
   repoDir: string,
   config: LoopConfig,
   answeredFirst: (issue: number) => boolean,
+  /** Injectable for tests. */
+  countOpenPrsFn?: (repoDir: string) => Promise<number>,
 ): Promise<Issue | null> {
+  const cap = config.budgets.maxOpenLoopPrs
+  if (cap !== undefined && cap > 0) {
+    const countOpenPrs =
+      countOpenPrsFn ??
+      (async (dir: string) => {
+        const prs = await ghJson<{ headRefName: string }[]>(
+          dir,
+          'pr',
+          'list',
+          '--state',
+          'open',
+          '--json',
+          'headRefName',
+          '--limit',
+          '100',
+        )
+        return prs.filter((pr) => pr.headRefName.startsWith('loop/')).length
+      })
+    const open = await countOpenPrs(repoDir).catch(() => 0)
+    if (open >= cap) return null
+  }
   const ready = await listReadyIssues(repoDir, config)
   if (ready.length === 0) return null
   return ready.find((issue) => answeredFirst(issue.number)) ?? (ready[0] as Issue)
