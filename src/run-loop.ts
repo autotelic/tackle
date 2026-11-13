@@ -147,10 +147,13 @@ const machineDeps: LoopMachineDeps = {
     }
     const issue = await pickNextIssue(repoDir, config, (n) => answeredFirst.has(n))
     if (issue) return issue
-    // Idle poll: keep the stacks maintained as merges land at human pace
-    // (#17), at most hourly. Maintenance can mark issues done and unblock
-    // the queue, which the next poll then sees.
-    if (Date.now() - lastMaintenanceAt > 3600_000) {
+    // Idle poll: keep the stacks maintained as merges land. Without an
+    // integration branch, merges land at human pace (#17) — hourly is fine.
+    // With one (ADR-0003) the Loop is the merger and merges unblock the
+    // queue, so it runs every poll; a pass is a fetch + one PR list call
+    // when nothing is eligible.
+    const idleEveryMs = config.integrationBranch ? 60_000 : 3_600_000
+    if (Date.now() - lastMaintenanceAt > idleEveryMs) {
       lastMaintenanceAt = Date.now()
       await maintenance({ repoDir, config, notify, withLock: false }).catch((error: unknown) => {
         console.warn(`idle maintenance failed (next poll retries): ${String(error)}`)

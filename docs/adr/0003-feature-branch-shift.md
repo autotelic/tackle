@@ -39,11 +39,15 @@ repo's full CI as the backstop.
 
 ## Consequences
 
+- With an integration branch, idle maintenance runs every poll (60s) instead
+  of hourly: the Loop is the merger, and its merges unblock the queue. A
+  pass that finds nothing eligible costs one fetch + one PR list call.
 - A stack lands one maintenance pass per level when children were green
   before their parent (their PRs get rebased + retargeted, then CI re-runs);
-  green siblings merge in the same pass. Conflicts never touch a branch:
-  they page a person once per conflict episode (a persisted conflict-state
-  file dedupes the hourly nags).
+  green siblings merge in the same pass. Done-marking runs after the
+  auto-merge step, so a child whose parent merged this pass goes on the
+  next pass. Conflicts never touch a branch: they page a person once per
+  conflict episode (a persisted conflict-state file dedupes the nags).
 - Per-PR review moves to the end: errors surface later but in one place, and
   the review PR live-updates, so it can be reviewed incrementally anytime.
 - The integration branch must not have branch protection requiring review —
