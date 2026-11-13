@@ -108,6 +108,23 @@ convenience on top, never the foundation.
 - **No secret in any config file.** `.jig.config.json`, `joggle.config.json`, and
   `opencode.json` name the _variable_, never the value.
 
+## The agent tools spawn jig; they do not judge
+
+`jig_check` and `jig.check` run `jig` in the environment the host gave the surface, and
+`pi.exec` takes no `env` argument. So a run that needs a key the host was not started with
+cannot be produced from the tool surface: the engine sees no key and reports "not judged".
+That is the contract working, not a bug. To judge:
+
+1. Start the host under the manager (the recipes above), and
+2. run the judged command in a shell.
+
+The tools accept `args` for jig's own flags, and each result names the launcher it used
+(`details.launcher` for pi, `metadata.launcher` for OpenCode) — the project's pinned
+`node_modules/.bin/jig` first, then `PATH`, then the package's build — so a report can be
+traced to the code that produced it. Engine-only flags (`--rule`, `--max-tokens`,
+`--update-baseline`) are also shell-only: `jig` does not forward them, and a baseline written
+without judgement is the thing `--allow-unjudged-baseline` exists to make explicit.
+
 ## In the report
 
 A missing key is never silence. `joggle` reports the unjudged candidates as `not judged`, and

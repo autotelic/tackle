@@ -127,7 +127,7 @@
 
   - **joggle gets its correctness flags, not just its name.** `init` writes
     `config: "joggle.config.json"` and `args: ["--types", "--no-replay", "--baseline
-.joggle-baseline.json"]` on a TypeScript repo. A replay is not a look, and an untyped check
+    .joggle-baseline.json"]` on a TypeScript repo. A replay is not a look, and an untyped check
     misses the Effect rules; `--typecheck` stays off until joggle's tsgo run reads each
     package's `tsconfig` (it reports ~22k false errors on a real monorepo).
   - **The ratchet is born accepted.** When the effective config references an engine ledger and

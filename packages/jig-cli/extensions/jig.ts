@@ -7,6 +7,7 @@
  *
  *   jig_check     run every engine and return the findings
  *   jig_engines   list what is configured, and whether it is on PATH
+ *   jig_baseline  accept the current findings, after a human has read them
  *   jig_onboard   read the setup plan and prompt without writing anything
  *   jig_init      apply that plan after a human approves it
  *   /jig          run a check from the prompt line
@@ -53,27 +54,38 @@ const repairEnvironment = (): void => {
 
 repairEnvironment()
 
-/** How to launch jig: a command and its leading args. */
+/** How to launch jig: a command, its leading args, and where the choice came from. */
 interface Launcher {
   readonly command: string
   readonly args: ReadonlyArray<string>
+  readonly kind: "override" | "project" | "path" | "build" | "source"
 }
 
 /**
- * How to invoke jig: a `jig` on PATH first (so pi and the shell get the same result),
- * then this checkout's build, then the source through the `development` condition.
- * `JIG_BIN` overrides all of it.
+ * How to invoke jig, for one repository. The result's `details.launcher` says which
+ * arm answered, so a report can be traced to the code that produced it.
+ *
+ * The PROJECT's own install wins, then `PATH`, then this checkout's build and source.
+ * A repository that pins `@autotelic/jig-cli` as a devDependency is saying which code its
+ * CI runs; on this machine a global `jig` on PATH was a newer version, so the agent
+ * surface and CI ran different code and nothing in the report said so. `JIG_BIN`
+ * overrides all of it.
  */
-const cli = (): Launcher => {
+const cli = (cwd: string): Launcher => {
   const override = process.env.JIG_BIN
-  if (override !== undefined && override !== "") return { command: override, args: [] }
+  if (override !== undefined && override !== "") {
+    return { command: override, args: [], kind: "override" }
+  }
+  const local = join(cwd, "node_modules", ".bin", "jig")
+  if (existsSync(local)) return { command: local, args: [], kind: "project" }
   const global = onPath("jig")
-  if (global !== undefined) return { command: global, args: [] }
+  if (global !== undefined) return { command: global, args: [], kind: "path" }
   const built = join(root, "dist", "cli.js")
-  if (existsSync(built)) return { command: process.execPath, args: [built] }
+  if (existsSync(built)) return { command: process.execPath, args: [built], kind: "build" }
   return {
     command: process.execPath,
     args: ["--conditions=development", join(root, "src", "cli.ts")],
+    kind: "source",
   }
 }
 
@@ -81,6 +93,7 @@ interface ExecOutcome {
   readonly stdout: string
   readonly stderr: string
   readonly code: number
+  readonly launcher: Launcher
 }
 
 const run = async (
@@ -90,13 +103,14 @@ const run = async (
   signal: AbortSignal | undefined,
 ): Promise<ExecOutcome> => {
   repairEnvironment()
-  const { command, args: prefix } = cli()
+  const launcher = cli(cwd)
+  const { command, args: prefix } = launcher
   const result = await pi.exec(command, [...prefix, ...args], {
     cwd,
     ...(signal === undefined ? {} : { signal }),
     timeout: 180_000,
   })
-  return { stdout: result.stdout, stderr: result.stderr, code: result.code }
+  return { stdout: result.stdout, stderr: result.stderr, code: result.code, launcher }
 }
 
 /*
@@ -136,11 +150,18 @@ const checkParameters = Type.Object({
   limit: Type.Optional(
     Type.Number({ description: "Maximum findings to return. 0 returns all of them. Default 50." }),
   ),
+  args: Type.Optional(
+    Type.Array(Type.String(), {
+      description:
+        "Extra flags for `jig check` (`--config`, `--limit`, `--format`, …). Judged work that needs an engine flag or an environment variable is shell-only: the tools spawn jig without an environment of their own.",
+    }),
+  ),
 })
 
 interface CheckParameters {
   readonly cwd?: string
   readonly limit?: number
+  readonly args?: ReadonlyArray<string>
 }
 
 /**
@@ -165,7 +186,7 @@ export default function (pi: ExtensionAPI): void {
     name: "jig_check",
     label: "jig Check",
     description:
-      "Run every conformance engine configured for this repository (plumb, joggle, cutlist, …) and return one merged report of errors, warnings and notices, plus a note for any engine that could not run — and whether an engine replayed a cache or skipped a rule, because a note means 'not looked at', never 'clean'. Returns at most 50 findings; pass `limit` to change that (`0` returns all).",
+      "Run every conformance engine configured for this repository (plumb, joggle, cutlist, …) and return one merged report of errors, warnings and notices, plus a note for any engine that could not run — and whether an engine replayed a cache or skipped a rule, because a note means 'not looked at', never 'clean'. Returns at most 50 findings; pass `limit` to change that (`0` returns all), and `args` to pass jig flags through. Judging (a model key, engine-only flags such as `--rule`/`--max-tokens`) needs the host started under the secret manager and a shell call: this tool spawns jig without an environment of its own.",
     promptSnippet: "Run every conformance engine in one pass with jig",
     promptGuidelines: [
       "Use jig_check after a batch of edits to see everything the repository enforces at once — lint, cross-file, and vocabulary findings in one report.",
@@ -185,7 +206,16 @@ export default function (pi: ExtensionAPI): void {
         const result = await run(
           pi,
           target,
-          ["check", "--cwd", target, "--format", "text", "--limit", String(limit)],
+          [
+            "check",
+            "--cwd",
+            target,
+            "--format",
+            "text",
+            "--limit",
+            String(limit),
+            ...(params.args ?? []),
+          ],
           signal,
         )
         // A non-zero exit is a result, not an error: `jig check` exits non-zero on
@@ -194,9 +224,13 @@ export default function (pi: ExtensionAPI): void {
         return ok(text === "" ? `jig check exited ${result.code}` : text, {
           code: result.code,
           cwd: target,
+          launcher: result.launcher,
         })
       } catch (error) {
-        return failed(`jig could not run: ${reason(error)}`, { command: "jig check" })
+        return failed(`jig could not run: ${reason(error)}`, {
+          command: "jig check",
+          launcher: cli(targetFor(params.cwd, ctx)),
+        })
       }
     },
   })
@@ -224,10 +258,18 @@ export default function (pi: ExtensionAPI): void {
         const result = await run(pi, target, ["engines", "--cwd", target], signal)
         const text = (result.stdout.trim() === "" ? result.stderr : result.stdout).trim()
         if (result.code !== 0)
-          return failed(`jig engines failed (exit ${result.code}): ${text}`, {})
-        return ok(text === "" ? "no engines configured" : text, { cwd: target })
+          return failed(`jig engines failed (exit ${result.code}): ${text}`, {
+            launcher: result.launcher,
+          })
+        return ok(text === "" ? "no engines configured" : text, {
+          cwd: target,
+          launcher: result.launcher,
+        })
       } catch (error) {
-        return failed(`jig could not run: ${reason(error)}`, { command: "jig engines" })
+        return failed(`jig could not run: ${reason(error)}`, {
+          command: "jig engines",
+          launcher: cli(targetFor(params.cwd, ctx)),
+        })
       }
     },
   })
@@ -291,10 +333,18 @@ export default function (pi: ExtensionAPI): void {
         )
         const text = (result.stdout.trim() === "" ? result.stderr : result.stdout).trim()
         if (result.code !== 0)
-          return failed(`jig onboard failed (exit ${result.code}): ${text}`, {})
-        return ok(text === "" ? "jig onboard printed nothing" : text, { cwd: target })
+          return failed(`jig onboard failed (exit ${result.code}): ${text}`, {
+            launcher: result.launcher,
+          })
+        return ok(text === "" ? "jig onboard printed nothing" : text, {
+          cwd: target,
+          launcher: result.launcher,
+        })
       } catch (error) {
-        return failed(`jig could not run: ${reason(error)}`, { command: "jig onboard" })
+        return failed(`jig could not run: ${reason(error)}`, {
+          command: "jig onboard",
+          launcher: cli(targetFor(params.cwd, ctx)),
+        })
       }
     },
   })
@@ -355,10 +405,19 @@ export default function (pi: ExtensionAPI): void {
           signal,
         )
         const text = (result.stdout.trim() === "" ? result.stderr : result.stdout).trim()
-        if (result.code !== 0) return failed(`jig init failed (exit ${result.code}): ${text}`, {})
-        return ok(text === "" ? "jig init wrote nothing" : text, { cwd: target })
+        if (result.code !== 0)
+          return failed(`jig init failed (exit ${result.code}): ${text}`, {
+            launcher: result.launcher,
+          })
+        return ok(text === "" ? "jig init wrote nothing" : text, {
+          cwd: target,
+          launcher: result.launcher,
+        })
       } catch (error) {
-        return failed(`jig could not run: ${reason(error)}`, { command: "jig init" })
+        return failed(`jig could not run: ${reason(error)}`, {
+          command: "jig init",
+          launcher: cli(targetFor(params.cwd, ctx)),
+        })
       }
     },
   })
@@ -437,9 +496,58 @@ export default function (pi: ExtensionAPI): void {
         return ok(text === "" ? `jig menu exited ${result.code}` : text, {
           code: result.code,
           cwd: target,
+          launcher: result.launcher,
         })
       } catch (error) {
-        return failed(`jig could not read the menu: ${reason(error)}`, { command: "jig menu" })
+        return failed(`jig could not read the menu: ${reason(error)}`, {
+          command: "jig menu",
+          launcher: cli(targetFor(params.cwd, ctx)),
+        })
+      }
+    },
+  })
+
+  pi.registerTool({
+    name: "jig_baseline",
+    label: "jig Baseline",
+    description:
+      "Accept the current findings into the ledger (`jig baseline`). This WRITES the baseline, so a human decides it, not a tool call: run it only after they have read the report. It does not judge anything; judging needs a model key in the host's environment and is shell-only.",
+    promptSnippet: "Accept the current findings into the jig ledger",
+    promptGuidelines: [
+      "Do not run jig_baseline to make a run green without reading what it accepts.",
+      "A baseline records reviewed findings; if the report says candidates were not judged, say so instead of baselining.",
+    ],
+    parameters: Type.Object({
+      cwd: Type.Optional(
+        Type.String({
+          description: "Repository whose baseline to accept. Default: pi's working directory.",
+        }),
+      ),
+    }),
+    async execute(
+      _toolCallId: string,
+      params: { readonly cwd?: string },
+      signal: AbortSignal | undefined,
+      _onUpdate: unknown,
+      ctx: ExtensionContext,
+    ): Promise<ToolResult> {
+      try {
+        const target = targetFor(params.cwd, ctx)
+        const result = await run(pi, target, ["baseline", "--cwd", target], signal)
+        const text = (result.stdout.trim() === "" ? result.stderr : result.stdout).trim()
+        if (result.code !== 0)
+          return failed(`jig baseline failed (exit ${result.code}): ${text}`, {
+            launcher: result.launcher,
+          })
+        return ok(text === "" ? "jig baseline wrote nothing" : text, {
+          cwd: target,
+          launcher: result.launcher,
+        })
+      } catch (error) {
+        return failed(`jig could not run: ${reason(error)}`, {
+          command: "jig baseline",
+          launcher: cli(targetFor(params.cwd, ctx)),
+        })
       }
     },
   })

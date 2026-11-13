@@ -102,8 +102,10 @@ tokens".
 
 ## The versions
 
-`pnpm run version` consumes `.changeset/` and rewrites every `workspace:*` to the version that
-will be published. Commit the result; the release job then publishes exactly that.
+`pnpm run version` consumes `.changeset/`, rewrites every `workspace:*` to the version that
+will be published, and formats the generated changelogs: the changesets bot does not emit
+oxfmt-stable Markdown, so a version PR that skips that step fails `format:check` on main.
+Commit the result; the release job then publishes exactly that.
 
 ```sh
 pnpm run version

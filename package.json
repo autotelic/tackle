@@ -22,7 +22,7 @@
     "judged": "doppler run -p joggle -c dev -- pnpm jig check",
     "foreman": "node tools/foreman/src/main.ts",
     "changeset": "changeset",
-    "version": "changeset version",
+    "version": "changeset version && oxfmt --write packages/*/CHANGELOG.md",
     "release": "node --conditions=development scripts/release.ts"
   },
   "devDependencies": {
