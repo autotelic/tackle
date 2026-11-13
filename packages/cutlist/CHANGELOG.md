@@ -1,5 +1,12 @@
 # @autotelic/cutlist
 
+## 0.0.2
+
+### Patch Changes
+
+- Updated dependencies [c7c94bf]
+  - @autotelic/protocol@0.1.1
+
 ## 0.0.1
 
 ### Patch Changes
