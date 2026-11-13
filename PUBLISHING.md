@@ -45,6 +45,11 @@ Three things that were learned by hitting them:
 - **A fresh package can 404 for a minute.** `npm view` is not proof that a publish failed. The
   staged path also leaves a `0.0.0-stage` placeholder version behind; `latest` still points at
   the real one, and the placeholder can be unpublished.
+- **"Published successfully" can mean staged.** pnpm's staged path answers 2xx and prints success
+  while the version is only staged; the next run then fails with `409 Cannot publish over
+  previously staged version`, and a rerun finishes it. So after a release, check the registry
+  (`npm view <pkg> version`, or the tarball URL) rather than the run's colour — and if a version
+  is missing while a stage is not, re-run the workflow.
 
 The first versions therefore carry no provenance attestation, which is the price of npm's
 ordering and the only version that pays it.
