@@ -42,7 +42,9 @@ jobs:
       #     --repo autotelic/tackle --file release.yml --allow-publish
       #
       # That grant is a browser challenge, not a token, so it never belongs in this file,
-      # in Doppler, or in a secret store. PUBLISHING.md records the order and the fallback.
+      # in Doppler, or in a secret store. It also cannot come first: `npm trust` refuses a
+      # package the registry has not seen, so a new package's first version is published with
+      # a token once and every version after it comes from here. PUBLISHING.md has the order.
       - uses: changesets/action@v1
         with:
           # `pnpm run`, not `pnpm version`: pnpm has its own `version` command — a semver

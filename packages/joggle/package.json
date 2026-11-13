@@ -1,6 +1,6 @@
 {
   "name": "@autotelic/joggle",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "Cross-file patterns and idioms for TypeScript — the layer above the linter and the typechecker.",
   "license": "MIT",

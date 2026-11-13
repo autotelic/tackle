@@ -1,8 +1,8 @@
 # Publishing
 
-> The registry is fed by OIDC from GitHub Actions. No token — on any machine, in any store — is
-> part of the path that publishes a release, and nothing here depends on a maintainer happening
-> to be `npm login`ed.
+> The registry is fed by OIDC from GitHub Actions. A token appears exactly once per package —
+> to create it — and is gone before the next release. Nothing depends on a maintainer being
+> `npm login`ed.
 
 ## What publishes
 
@@ -15,68 +15,83 @@ published.
 graph nobody can install, and neither tool bundles its dependencies. Publishing is the only
 consistent answer, which is why `board` also grew a `files` list: `dist` and nothing else.
 
-## Who authenticates
+## The first publish of a package npm has never seen
 
-npm Trusted Publishing over OIDC. `release.yml` carries `id-token: write` and no secret: npm
-exchanges the runner's identity for a credential that dies with the job, and attaches provenance
-automatically — public package, public repository, `repository.url` matching the GitHub
-repository, which every manifest now carries.
+`npm trust` cannot go first. Its man page is explicit:
 
-The check that keeps this honest: if a publish ever needs a credential on a maintainer's machine,
-the design has regressed.
+> Package must exist: The package you're configuring must already exist on the npm registry.
+
+So each new package's first version is published with a token, once, and every later version
+comes from OIDC. The token lives in Doppler, project `tackle`, config `dev`, and reaches npm
+as configuration rather than a file — with a clean user config, no token gives `ENEEDAUTH` and
+this variable gives `E401`, which is how you know it was sent:
+
+```sh
+doppler run --project tackle --config dev -- sh -c '
+  exec env "npm_config_//registry.npmjs.org/:_authToken=$NPM_TOKEN" pnpm run release'
+```
+
+`pnpm run release`, not `pnpm release`: pnpm owns several bare words, and `pnpm version` is its
+own semver bump. The first versions therefore carry no provenance attestation, which is the
+price of npm's ordering and the only version that pays it.
 
 ## The one human act
 
-A trusted publisher is granted per package, with 2FA, as a browser challenge:
+Once a package exists, a trusted publisher is granted per package, with 2FA, as a browser
+challenge:
 
 ```sh
-npm trust github @autotelic/<name> \
-  --repo autotelic/tackle --file release.yml --allow-publish
-npm trust list @autotelic/<name>
+for p in plumb joggle protocol cutlist jig-cli room board; do
+  npm trust github "@autotelic/$p" \
+    --repo autotelic/tackle --file release.yml --allow-publish
+done
 ```
-
-Seven packages: the six new ones plus `plumb`, which this repository now owns.
 
 - It is account governance, so a token cannot perform it and it cannot be automated. That is the
   point: one human decision that a repository may publish, after which no human is in the loop.
-- The grant expires if its first publish does not happen within two days. Grant and push in the
-  same sitting.
+- The registry currently allows **one** configuration per package. To change one, `npm trust
+  revoke` it first.
+- A new grant expires if its first publish does not happen within two days.
+- `--allow-publish` publishes directly. `--allow-stage-publish` stages instead and waits for a
+  maintainer with 2FA to approve (`npm stage approve`) — stronger, and no longer automatic.
 
-`--allow-publish` publishes directly. `--allow-stage-publish` stages instead and waits for a
-maintainer with 2FA to approve (`npm stage approve`) — stronger, and no longer automatic.
+## What the organization covers, and what it does not
+
+The `@autotelic` org can require 2FA of its **members** (organization settings → Members →
+Enable 2FA Enforcement). That is all it covers. npm has no organization-level trusted publisher
+and no organization-level publishing-access policy: both are per package. Seven grants, seven
+settings — there is no seven-for-one button.
+
+## Closing the token door
+
+There is no supported CLI for "Require two-factor authentication and disallow tokens"; it is the
+package's Settings → Publishing access. (`npm access set mfa=` exists in the synopsis, but the
+man page documents it as access control for private packages and nothing reads the setting back,
+so it is not a substitute.) `npm access get status` returns visibility only.
+
+That setting does not affect trusted publishers — they use OIDC, not tokens — so turning it on
+is what makes OIDC the only way in:
+
+```sh
+doppler secrets delete NPM_TOKEN --project tackle --config dev
+```
+
+per package: Settings → Publishing access → "Require two-factor authentication and disallow
+tokens".
 
 ## The versions
 
-`pnpm version` consumes `.changeset/` and rewrites every `workspace:*` to the version that will
-be published. Commit the result; the release job then publishes exactly that.
+`pnpm run version` consumes `.changeset/` and rewrites every `workspace:*` to the version that
+will be published. Commit the result; the release job then publishes exactly that.
 
 ```sh
-pnpm version
+pnpm run version
 git add -A && git commit -m "chore: version packages"
 git push
 ```
 
 Push with pending changesets and the job opens the "version packages" PR; push without them and
-it publishes whatever npm does not have. The first publish is that same path — there is no
-special bootstrap.
-
-## If npm refuses a trusted publisher for a never-published package
-
-`npm trust` accepts the arguments for a package npm has never seen and goes straight to the 2FA
-challenge, which is evidence but not proof. If the grant is rejected, the fallback is one token
-publish, done from a machine, and then deleted:
-
-```sh
-doppler secrets set NPM_TOKEN --project tackle --config dev
-doppler run --project tackle --config dev -- sh -c '
-  exec env "npm_config_//registry.npmjs.org/:_authToken=$NPM_TOKEN" pnpm release'
-```
-
-The environment variable is how the credential reaches npm without an `.npmrc` naming it; a
-clean user config plus this variable yields `E401` rather than `ENEEDAUTH`, which is how you
-know it was sent. Afterwards: grant the trusted publisher, then
-`doppler secrets delete NPM_TOKEN --project tackle --config dev`. The token's whole life is that
-interval, and nothing downstream may depend on it.
+it publishes whatever npm does not have.
 
 ## Deliberately not done
 
