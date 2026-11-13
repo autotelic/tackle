@@ -40,11 +40,32 @@ const singleFile = (path: Path.Path, dir: string): string => path.join(dir, "ans
  *
  * Git reads a `.gitattributes` in a subdirectory and applies its patterns
  * relative to that directory, so joggle can own the treatment of its own files
- * without touching the repository's top-level file. `-diff` keeps the shards out
- * of a diff (they are generated), `linguist-generated` keeps them out of GitHub
- * language stats, and `merge=joggle-answers` names the merge driver.
+ * without touching the repository's top-level file.
+ *
+ * `merge=union` rather than a custom driver: git cannot ship a merge driver in
+ * `.gitattributes`, so `merge=joggle-answers` only works on a machine where
+ * somebody registered it by hand -- and a fresh clone silently got the default
+ * merge instead. Union needs no registration and is correct for an append-only,
+ * key-sorted JSONL. `joggle merge-answers` remains available for repositories
+ * that want newer-timestamp-wins on a same-key collision, but the committed
+ * shape no longer depends on it.
+ *
+ * No `-diff` and no `linguist-generated`: the ledger's justification is that a
+ * maintainer reviewed the verdicts, and those attributes made it a binary blob
+ * that GitHub collapses. A verdict change should be one visible line.
  */
 const ATTRIBUTES =
+  "answers/*.jsonl merge=union\n" +
+  "answers.json merge=union\n"
+
+/**
+ * The banner earlier versions wrote.
+ *
+ * Rewritten in place because it is byte-identical to what joggle generated, so
+ * this is a migration rather than an edit of a file a person may have changed.
+ * A file with any other content is left alone.
+ */
+const LEGACY_ATTRIBUTES =
   "answers/*.jsonl merge=joggle-answers linguist-generated -diff\n" +
   "answers.json linguist-generated -diff\n"
 
@@ -256,6 +277,11 @@ export const make = (fs: FileSystem.FileSystem, path: Path.Path, dir: string): E
         const attributes = path.join(dir, ".gitattributes")
         if (!(yield* exists(fs, attributes))) {
           yield* fs.writeFileString(attributes, ATTRIBUTES).pipe(Effect.orElseSucceed(() => undefined))
+        } else {
+          const current = yield* readText(fs, attributes)
+          if (current === LEGACY_ATTRIBUTES) {
+            yield* fs.writeFileString(attributes, ATTRIBUTES).pipe(Effect.orElseSucceed(() => undefined))
+          }
         }
         for (const shard of targets) {
           const entries = current.get(shard)
@@ -317,6 +343,87 @@ export interface PruneResult {
 }
 
 const sizeOf = (entry: Entry): number => renderEntry(entry).length + 1
+
+/** What the committed ledger says, rendered for a reader rather than replayed. */
+export interface Census {
+  readonly entries: number
+  readonly shards: number
+  readonly bytes: number
+  readonly skippedLines: number
+  /** Entries by stored answer kind: Rate, Classify, Probability. */
+  readonly kinds: ReadonlyArray<{ readonly kind: string; readonly count: number }>
+  /** For Probability answers: the yes/no split at 0.5. */
+  readonly verdicts: { readonly yes: number; readonly no: number }
+  /** For Classify/Rate answers: the labels, most common first. */
+  readonly labels: ReadonlyArray<{ readonly label: string; readonly count: number }>
+  readonly oldest: number | undefined
+  readonly newest: number | undefined
+}
+
+/**
+ * Read every shard and count what is in it.
+ *
+ * The keys are content hashes, so there is no rule name to group by: a verdict
+ * cannot be attributed to a question after the fact. What IS visible is the
+ * verdict distribution and the labels a classified answer chose, which is what a
+ * reviewer opening a batch of new lines actually wants.
+ */
+export const census = (
+  fs: FileSystem.FileSystem,
+  path: Path.Path,
+  dir: string,
+): Effect.Effect<Census> =>
+  Effect.gen(function* () {
+    const target = answersDir(path, dir)
+    const names = yield* fs.readDirectory(target).pipe(Effect.orElseSucceed(() => []))
+    const kinds = new Map<string, number>()
+    const labels = new Map<string, number>()
+    let entries = 0
+    let shards = 0
+    let bytes = 0
+    let skippedLines = 0
+    let yes = 0
+    let no = 0
+    let oldest: number | undefined
+    let newest: number | undefined
+    for (const name of names) {
+      if (!name.endsWith(".jsonl")) continue
+      const file = path.join(target, name)
+      const text = yield* readText(fs, file)
+      const parsed = parseLines(text)
+      shards += 1
+      bytes += new TextEncoder().encode(text).length
+      skippedLines += parsed.skippedLines
+      for (const entry of parsed.entries) {
+        entries += 1
+        oldest = oldest === undefined ? entry.writtenAt : Math.min(oldest, entry.writtenAt)
+        newest = newest === undefined ? entry.writtenAt : Math.max(newest, entry.writtenAt)
+        kinds.set(entry.answer.kind, (kinds.get(entry.answer.kind) ?? 0) + 1)
+        if (entry.answer.kind === "Probability") {
+          if (entry.answer.probability >= 0.5) yes += 1
+          else no += 1
+        } else {
+          labels.set(entry.answer.label, (labels.get(entry.answer.label) ?? 0) + 1)
+        }
+      }
+    }
+    return {
+      entries,
+      shards,
+      bytes,
+      skippedLines,
+      kinds: [...kinds.entries()]
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([kind, count]) => ({ kind, count })),
+      verdicts: { yes, no },
+      labels: [...labels.entries()]
+        .sort(([left, leftCount], [right, rightCount]) => rightCount - leftCount || left.localeCompare(right))
+        .map(([label, count]) => ({ label, count })),
+      oldest,
+      newest,
+    }
+  })
+
 
 /**
  * Drop cache entries and rewrite only the shards that changed.

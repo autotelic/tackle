@@ -75,6 +75,12 @@ overrides:
   "@effect/platform-node-shared": "4.0.5"
   "@effect/opentelemetry": "4.0.5"
 
+# Hold a brand-new release for a day before it can be installed. The exclude list
+# below was inert without this line: pnpm has nothing to exempt when no age floor is set.
+# Twenty-four hours is enough for a compromised publish to be yanked; the packages that
+# need to move at once are named in `minimumReleaseAgeExclude`.
+minimumReleaseAge: 1440
+
 minimumReleaseAgeExclude:
   - "@effect/tsgo-darwin-arm64@0.56.0"
   - "@effect/tsgo-darwin-x64@0.56.0"

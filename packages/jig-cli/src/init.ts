@@ -873,10 +873,21 @@ export const inspectRepo = (
     const notes: Array<string> = []
     // A kept config is the effective config: do not show a gate the applied file does not
     // have. Only `--force` rewrites it, so only `--force` may change the gate here.
+    //
+    // `all` is the default because `touched-files` measures against HEAD. On a clean CI
+    // checkout the touched set is empty, so the gate passes whatever is in the tree: the
+    // shipped config gated nothing, and only the opt-in pre-commit hook made the mode
+    // useful. A scaffold that looks like a gate and is not one is worse than no scaffold.
+    const defaultsToAll = options.gateMode === undefined && existing === undefined
     const gateMode =
       existing !== undefined && options.force !== true
         ? existing.gate.mode
-        : (options.gateMode ?? existing?.gate.mode ?? "touched-files")
+        : (options.gateMode ?? existing?.gate.mode ?? "all")
+    if (defaultsToAll) {
+      notes.push(
+        "gate is `all`: every finding in the tree is measured, so CI on a clean checkout sees the same repo a developer does. `--gate touched-files` measures only the change in front of you and is what the pre-commit hook (`init --hooks`) uses; it gates nothing on a fresh clone",
+      )
+    }
     if (
       existing !== undefined &&
       options.force !== true &&
@@ -935,6 +946,18 @@ export const inspectRepo = (
       files.includes(file),
     )
     const typescript = yield* hasTypeScript(fs, path, root, files)
+    // A repo that ignores `.joggle/` wholesale makes the replay cache machine-local, so
+    // every machine re-asks the model -- the opposite of "judge once, replay everywhere".
+    // joggle cannot edit the file for them, but the exact narrowed block is knowable here.
+    const gitignoreText = yield* Effect.orElseSucceed(
+      fs.readFileString(path.join(root, ".gitignore")),
+      () => "",
+    )
+    if (/^\s*\/?\.joggle\/?\s*$/mu.test(gitignoreText)) {
+      notes.push(
+        ".gitignore hides .joggle/ wholesale, which makes the judgement replay cache machine-local: every machine re-asks the model. Narrow it to .joggle/* with negations for .gitattributes, answers/, baseline/, answers.json and baseline.json (packages/joggle/.gitignore is the exact block)",
+      )
+    }
     const ci = yield* Effect.orElseSucceed(
       fs.exists(path.join(root, ".github", "workflows")),
       () => false,
@@ -1301,7 +1324,7 @@ ${profile.summary === "" ? "" : "\n" + profile.summary + "\n"}
 | \`${profile.jig} engines\` | what is configured, and whether each command resolves |
 | \`${profile.jig} baseline\` | accept the current findings; the ledger only shrinks after that |
 | \`${profile.jig} explain <rule>\` | everything jig knows about one rule, here, now |
-${profile.facts.has("room") ? "| `" + profile.jig + " room board` | the room: jobs, chits, and presence |\n" : ""}${profile.engines.some((engine) => engine.id === "cutlist") ? "| `" + profile.jig + " menu` | the component catalog cutlist built |\n" : ""}${profile.commands.length === 0 ? "" : "\n## The repo's own commands\n\n" + profile.commands.map((command) => "- `" + command.command + "` — the repo's " + command.name + " script").join("\n") + "\n"}
+${profile.facts.has("room") ? "| `" + profile.jig + " room board` | the room: jobs, chits, and presence |\n" : ""}${profile.engines.some((engine) => engine.id === "cutlist") ? "| `" + profile.jig + " menu` | the component catalog cutlist built |\n\nEditing one component can mark several generated catalog files stale: `cutlist build --check` compares the whole catalog, so run `" + invocationOf({ profile, tool: "cutlist", args: "build" }) + "` after a UI edit, or wire it into lint-staged.\n" : ""}${profile.commands.length === 0 ? "" : "\n## The repo's own commands\n\n" + profile.commands.map((command) => "- `" + command.command + "` — the repo's " + command.name + " script").join("\n") + "\n"}
 
 ## What runs
 
@@ -1317,9 +1340,19 @@ ${roomSection(profile)}${
         " baseline`, or switch the gate to `touched-files`."
   }
 
-${profile.facts.has("ci") ? "## CI\n\nRun `" + profile.jig + " check --format github` in the pull-request workflow. The gate holds new identities only, so the first run explains the debt instead of failing on it. For machine output (`--format json`, `sarif`, `github`), use `" + profile.run + " exec jig`: `" + profile.run + " jig` prepends the package manager's own engine warning to stdout and corrupts the document.\n\n" : ""}## Judgement
+${profile.facts.has("ci") ? "## CI\n\nRun `" + profile.jig + " check --format github` in the pull-request workflow. The gate holds new identities only, so the first run explains the debt instead of failing on it. For machine output (`--format json`, `sarif`, `github`), use `" + profile.run + " exec jig`, or `" + profile.run + " -s jig` when you type the repo's own script: a bare `" + profile.run + " jig` prints the script banner first and corrupts the document.\n\n" : ""}## Judgement
 
 joggle judges candidates with the TypeSafe model. ${profile.facts.has("live-judgement") ? "A TYPESAFE_API_KEY is present in this environment, so a run can judge." : "No TYPESAFE_API_KEY is present in this environment, so unjudged candidates are counted, not printed. Set the key to judge, or keep the count in CI."}
+
+Judging does not only shrink the report. A verdict drops the candidates the model declined
+AND adds findings that only a judged shape can produce (a reversal, a meaning switch), so a
+freshly judged run can move the ledger UP: 481 accepted identities became 531 on the first
+adopter, with 49 new \`expand\` ones. Read the new number before concluding the run found
+little; re-baseline only after reading what the new identities are.
+
+A baseline is refused while any candidate was not judged (\`unreadable\`, \`no_evidence\`, or
+past the budget), because accepting those consequences is accepting something nobody looked
+at. \`--allow-unjudged-baseline\` is the explicit override.
 
 ## Reading a finding
 
@@ -1423,7 +1456,7 @@ export const onboardingFor = (profile: RepoProfile): string => {
       ? ""
       : `The same run drafts \`architecture.layers\` in \`joggle.config.json\` from this workspace: includes only, in directory order, with \`layer-direction\`/\`layer-purity\` off, because neither the order nor the \`forbid\` sets can be inferred from a tree. A UI root is split into \`support\` (\`utils\`/\`lib\`/\`models\`/\`hooks\`/\`types\`), primitives, shared components and routes, in that order: a route may import support and so may a primitive, which is what keeps a routes split from reading as 731 upward imports. The splits come before the root they belong to, and each root stays last as the catch-all. Order the rest by what depends on what, add \`forbid\` where it is true, and check every \`forbid\` against the manifest of the layer that forbids it -- forbidding a dependency a package is built on reports that package's own imports as violations -- then turn those two rules on. Until then a clean architecture report means nothing looked.`,
     `Then \`${profile.jig} check --limit 20\`: read the census before the findings. An engine marked \`skipped\`, \`replayed\`, or "candidates not judged" did not look, and a note is never a pass.`,
-    "Secrets are the environment and the host owns them: if a run needs a key this session was not started with, say so and stop. Never add a loader, and never nest a second `doppler run` from this directory -- it resolves the project from the working directory's `doppler.yaml`, so the layer you think you added is not the one that wins.",
+    "Secrets are the environment and the host owns them: if a run needs a key this session was not started with, say so and stop. Never add a loader. A second `doppler run` must be ENTERED from its own root: it resolves the project from the working directory's `doppler.yaml`, and that beats `-p`, so `doppler run -p joggle` from a repo root loses with \"Could not find requested project\". Two mechanisms work: scope the login so the layers cannot shadow each other (`doppler login --scope ~` for the personal workplace, `doppler login --scope <repo>` for the company one), or nest with an explicit `cd` (`cd ~/personal && doppler run -p personal -c dev -- sh -c 'cd \"$1\" && exec doppler run -p tackle -c dev -- pi' _ <repo>`). `pi.exec` takes no env, so a launcher that cd's out, runs doppler, cd's back and execs is the least-bad wrapper on pi; SECRETS.md has the table.",
   ]
     .filter((line) => line !== "")
     .join("\n\n")
@@ -2158,7 +2191,16 @@ export const initialise = (
         const outcome = yield* Effect.orElseSucceed(
           exec({
             binary: resolveEngineCommand({ root, command: "joggle" }),
-            args: ["check", ...(joggle.args ?? []), "--update-baseline", JOGGLE_BASELINE],
+            // Init births the ledger before anyone has reviewed it. An unjudged
+            // candidate is expected here -- a fresh clone has no key -- so the refusal
+            // that protects a maintainer's re-baseline is exactly what init must lift.
+            args: [
+              "check",
+              ...(joggle.args ?? []),
+              "--allow-unjudged-baseline",
+              "--update-baseline",
+              JOGGLE_BASELINE,
+            ],
             cwd: root,
           }),
           () => undefined,

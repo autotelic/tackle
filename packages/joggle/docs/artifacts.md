@@ -66,14 +66,21 @@ diff means a change, and a merge driver for the residual collision.
 ### The residual collision, and the driver
 
 Sorting makes a conflict rare, not impossible: two branches can still insert
-adjacent lines in the same shard. For that case joggle ships a merge driver,
-exactly as Bazel ships `bazel-lockfile-merge` for `MODULE.bazel.lock`:
+adjacent lines in the same shard. The committed shape uses git's built-in
+`merge=union`, which needs no setup and keeps both sides' lines:
 
 ```gitattributes
-answers/*.jsonl merge=joggle-answers
+answers/*.jsonl merge=union
 ```
 
-Registered once per machine:
+Union is correct here because the file is append-only and keyed: two branches
+add different keys, and a key's content is what its hash addresses. A
+same-key/different-content collision cannot happen unless the model answered the
+same question twice.
+
+joggle also ships `joggle merge-answers` for repositories that want a
+newer-timestamp-wins dedupe. Git cannot ship a merge driver in a
+`.gitattributes` file, so using it means registering it once per machine:
 
 ```sh
 git config merge.joggle-answers.name "joggle answer cache"
@@ -81,14 +88,23 @@ git config merge.joggle-answers.driver "joggle merge-answers %O %A %B"
 ```
 
 The driver reads the three shard versions, unions them by key (the newer
-timestamp wins a genuine disagreement, which cannot happen for a
-content-addressed key unless the model answered twice), sorts, and writes the
-result. A driver that cannot parse a non-empty side exits non-zero and lets git
-fall back to a normal conflict instead of silently dropping data.
+timestamp wins a genuine disagreement), sorts, and writes the result. A driver
+that cannot parse a non-empty side exits non-zero and lets git fall back to a
+normal conflict instead of silently dropping data.
 
-joggle writes these attributes into `.joggle/.gitattributes` itself, so a
-repository that opts into committing the cache gets the hiding and the merge
-driver without having to know they exist.
+**The committed shape does not depend on that driver**, because a fresh clone...
+would not have it. joggle writes the union attributes into
+`.joggle/.gitattributes` itself, and rewrites the older custom-driver banner in
+place so an existing repository migrates on its next write.
+
+### Reviewing the ledger
+
+No `-diff` and no `linguist-generated`: the ledger is the artifact a maintainer
+is supposed to have read, and those attributes made it a collapsed binary blob.
+A verdict change is one visible line. `joggle cache report` renders what the
+store holds without replaying it -- entry and shard counts, verdict
+distribution, labels, and the date range -- so a reviewer has a summary beside
+the diff. The summary is not the artifact: it cannot be replayed.
 
 ## Why the baseline is fragments
 

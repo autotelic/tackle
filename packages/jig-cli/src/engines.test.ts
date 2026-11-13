@@ -8,6 +8,7 @@ import {
   argsFor,
   engineDiagnostics,
   engineProvenance,
+  engineStatus,
   normalize,
   parseEngineOutput,
   resolveEngineCommand,
@@ -290,6 +291,22 @@ describe("engineProvenance", () => {
       }),
     )
     expect(provenance.note).toContain("content mappers")
+  })
+
+  it("calls an unreadable engine errored even when its provenance says ran", () => {
+    // engineProvenance answers `ran` for anything without a readable summary, so the
+    // unreadable case has to come first or an engine that died is reported as looked-at.
+    const diagnostics = engineDiagnostics({
+      id: "joggle",
+      output: { code: 1, stdout: "", stderr: "boom: no tsconfig in sight" },
+      root: "/repo",
+    })
+    expect(engineStatus("joggle", diagnostics, { status: "ran" })).toBe("errored")
+  })
+
+  it("keeps a replay and a skip as what the engine said they were", () => {
+    expect(engineStatus("joggle", [], { status: "replayed" })).toBe("replayed")
+    expect(engineStatus("joggle", [], { status: "skipped" })).toBe("skipped")
   })
 
   it("keeps the skipped-rule note when there is no coverage note", () => {

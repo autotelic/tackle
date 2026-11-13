@@ -447,6 +447,12 @@ joggle check                                       # nothing changed: the previo
 joggle cache prune --max-age 90                    # the cache is regenerable; keep it small
 ```
 
+`--update-baseline` refuses while any candidate was not judged
+(`unreadable`, `no_evidence`, or past a budget): a baseline is the record of
+what a person reviewed, and one written over unjudged candidates ratifies what
+nobody looked at. `--allow-unjudged-baseline` is the explicit override; `jig
+init` passes it, because a ledger born on day one has no review to protect yet.
+
 The baseline is by identity, not by line: rule, kept symbol and cluster
 membership. Code moves constantly, and a baseline that reports every edit as a
 new finding is a baseline nobody reads. A rename or a new member does change the

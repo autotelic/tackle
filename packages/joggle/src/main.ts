@@ -5,7 +5,12 @@ import * as FetchHttpClient from "effect/http/FetchHttpClient"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { checkRepository } from "./check.ts"
 import { layer as decisionLayer } from "./decision.ts"
-import { make as makeAnswerStore, mergeShardText, prune as pruneAnswers } from "./answer-store.ts"
+import {
+  census as censusAnswers,
+  make as makeAnswerStore,
+  mergeShardText,
+  prune as pruneAnswers,
+} from "./answer-store.ts"
 import { ask } from "./ask.ts"
 import { cacheDirFor, runCacheDirFor, shortHash } from "./state.ts"
 import { canonical } from "./canonical.ts"
@@ -113,8 +118,10 @@ const checkCommand = Command.make(
       Flag.withDefault(false),
     ),
     maxTokens: Flag.Int("max-tokens").pipe(
-      Flag.withDescription("Input-token budget for judgement in this run."),
-      Flag.withDefault(policy.decision.maxInputTokens),
+      Flag.withDescription(
+        "Input-token budget for judgement in this run (overrides decision.maxInputTokens).",
+      ),
+      Flag.optional,
     ),
     offline: Flag.Boolean("offline").pipe(
       Flag.withDescription("Answer only from the committed judgement cache; never call the model."),
@@ -157,6 +164,12 @@ const checkCommand = Command.make(
     updateBaseline: Flag.String("update-baseline").pipe(
       Flag.withDescription("Write the current findings to this file as the accepted baseline."),
       Flag.optional,
+    ),
+    allowUnjudgedBaseline: Flag.Boolean("allow-unjudged-baseline").pipe(
+      Flag.withDescription(
+        "Write the baseline even though some candidates were not judged. A baseline is what was reviewed; this is the explicit way to accept that some of it was not.",
+      ),
+      Flag.withDefault(false),
     ),
     cacheDir: Flag.String("cache-dir").pipe(
       Flag.withDescription("Where the answer cache lives: <cwd>/.joggle when it exists (an onboarded repository), otherwise the machine cache."),
@@ -233,7 +246,8 @@ const checkCommand = Command.make(
         rules,
         typecheck: config.typecheck,
         types: config.types ? "trace" : "off",
-        maxInputTokens: config.maxTokens,
+        maxInputTokens:
+          Option.getOrUndefined(config.maxTokens) ?? effective.decision?.maxInputTokens,
         useTsgo: !config.noTsgo,
         runExternalCode: config.runExternalCode || effective.runExternalCode === true,
         cacheDirExplicit: Option.isSome(config.cacheDir),
@@ -251,6 +265,7 @@ const checkCommand = Command.make(
         changedBase,
         baselinePath: Option.getOrUndefined(config.baseline),
         updateBaselinePath: Option.getOrUndefined(config.updateBaseline),
+        allowUnjudgedBaseline: config.allowUnjudgedBaseline,
       }).pipe(
         Effect.provide(
           Layer.mergeAll(
@@ -820,6 +835,53 @@ const cachePrune = Command.make(
   ]),
 )
 
+const cacheReport = Command.make(
+  "report",
+  {
+    cwd: Flag.String("cwd").pipe(
+      Flag.withDescription("Project root whose cache to report (default: the current directory)."),
+      Flag.optional,
+    ),
+    cacheDir: Flag.String("cache-dir").pipe(
+      Flag.withDescription("Where the answer cache lives: <cwd>/.joggle when it exists, otherwise the machine cache."),
+      Flag.optional,
+    ),
+  },
+  (config) =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem
+      const path = yield* Path.Path
+      const cwd = path.resolve(Option.getOrUndefined(config.cwd) ?? process.cwd())
+      const dir = yield* cacheDirFor(cwd, Option.getOrUndefined(config.cacheDir))
+      const found = yield* censusAnswers(fs, path, dir)
+      const date = (seconds: number | undefined): string =>
+        seconds === undefined ? "never" : new Date(seconds * 1000).toISOString().slice(0, 10)
+      const kinds = found.kinds.map((entry) => entry.kind + " " + String(entry.count)).join(", ")
+      const labels = found.labels
+        .slice(0, 8)
+        .map((entry) => entry.label + " " + String(entry.count))
+        .join(", ")
+      yield* write(
+        [
+          "joggle: " + found.entries + " entries in " + found.shards + " shard(s), " + found.bytes + " bytes",
+          "  kinds     " + (kinds === "" ? "none" : kinds),
+          "  verdicts  Probability " + found.verdicts.yes + " yes / " + found.verdicts.no + " no",
+          "  labels    " + (labels === "" ? "none" : labels),
+          "  written   " + date(found.oldest) + " .. " + date(found.newest),
+          ...(found.skippedLines === 0 ? [] : ["  skipped   " + found.skippedLines + " unreadable line(s)"]),
+        ].join("\n"),
+      )
+    }),
+).pipe(
+  Command.withDescription(
+    "Render the committed answer ledger for a reader: entry and shard counts, verdict distribution, labels, and the date range. A summary cannot be replayed; this is what to read when reviewing the diff.",
+  ),
+  Command.withShortDescription("Report on the answer cache."),
+  Command.withExamples([
+    { command: "joggle cache report", description: "Count what the committed ledger holds." },
+  ]),
+)
+
 const cacheMigrate = Command.make(
   "migrate",
   {
@@ -854,7 +916,7 @@ const cacheCommand = Command.make("cache", {}, () =>
 ).pipe(
   Command.withDescription("Work on the answer cache itself: prune it, migrate it, and see how it is laid out."),
   Command.withShortDescription("Prune the answer cache."),
-  Command.withSubcommands([cachePrune, cacheMigrate]),
+  Command.withSubcommands([cachePrune, cacheMigrate, cacheReport]),
 )
 
 const cli = Command.make("joggle").pipe(

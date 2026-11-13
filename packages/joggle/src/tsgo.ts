@@ -1,7 +1,8 @@
-import { Context, Effect, FileSystem, Layer, Order, Path, Stream } from "effect"
+import { Context, Effect, FileSystem, Layer, Option, Order, Path, Stream } from "effect"
 import { ChildProcess } from "effect/process"
 import type { ChildProcessSpawner } from "effect/process/ChildProcessSpawner"
-import { resolve, sep } from "node:path"
+import { realpathSync } from "node:fs"
+import { relative, resolve, sep } from "node:path"
 import { TsgoError } from "./schema.ts"
 import { looksLikeSource } from "./source.ts"
 
@@ -95,17 +96,36 @@ interface RootedFile {
   readonly file: string
 }
 
+/** A path with every symlink in it resolved, or the lexical path when it does not exist. */
+const realPathOf = (file: string): string => {
+  // SAFETY: `realpathSync` is the only API that resolves symlinks, and it throws for a
+  // path that does not exist yet. The lexical path is the right fallback there: the file is
+  // absent either way, so `inRoot` rejects it on the same comparison.
+  try {
+    return realpathSync(file)
+  } catch {
+    return resolve(file)
+  }
+}
+
 /**
- * Whether the compiler's absolute path is inside the analysed root.
+ * The compiler's file, expressed under the caller's root, or undefined when it is outside.
  *
- * Resolved on both sides: the root can be relative (it was, at the CLI
- * boundary, before it was normalized), and `startsWith` on raw strings also
- * accepts a sibling whose name merely begins with the root.
+ * The comparison happens on REAL paths because the compiler prints the path it resolved:
+ * invoked with a cwd of `/tmp/x`, where `/tmp` is a symlink to `/private/tmp`, tsgo lists
+ * `/private/tmp/x/src/a.ts`. A lexical `startsWith` on the caller's `/tmp/x` rejected every
+ * file, so the run reported "tsgo listed no source files" and analysed nothing -- silently,
+ * for anyone whose checkout lives under a symlinked path.
+ *
+ * The path handed back is in the caller's namespace (`resolve(cwd, relative(realRoot, file))`)
+ * so every later comparison -- git's changed files, `path.relative`, the report's locations --
+ * keeps using one spelling of the tree.
  */
-const underRoot = ({ cwd, file }: RootedFile): boolean => {
-  const root = resolve(cwd)
-  const candidate = resolve(file)
-  return candidate === root || candidate.startsWith(root + sep)
+const inRoot = ({ cwd, file }: RootedFile): Option.Option<string> => {
+  const root = realPathOf(cwd)
+  const candidate = realPathOf(file)
+  if (candidate === root || !candidate.startsWith(root + sep)) return Option.none()
+  return Option.some(resolve(cwd, relative(root, candidate)))
 }
 
 const parseDiagnostics = (output: string): ReadonlyArray<TsgoDiagnostic> => {
@@ -153,15 +173,16 @@ export const compilerArgs = (
   runExternalCode: boolean,
 ): ReadonlyArray<string> => (runExternalCode ? ["--runExternalCode", ...args] : args)
 
-const make = (binary: string, path: Path.Path, runExternalCode: boolean): Interface => {
+const make = (binary: string, runExternalCode: boolean): Interface => {
   const listFiles = Effect.fn("Tsgo.listFiles")(function* (cwd: string) {
     const result = yield* run({ binary, args: compilerArgs(["--listFilesOnly"], runExternalCode), cwd })
     const files = new Set<string>()
     for (const raw of result.stdout.split(/\r?\n/)) {
       const file = raw.trim()
       if (!looksLikeSource(file)) continue
-      if (!underRoot({ cwd, file })) continue
-      files.add(path.resolve(file))
+      const rooted = inRoot({ cwd, file })
+      if (Option.isNone(rooted)) continue
+      files.add(rooted.value)
     }
     return [...files].sort(Order.String)
   })
@@ -197,7 +218,7 @@ export const layer = (
 ): Layer.Layer<Service, never, Path.Path> =>
   Layer.effect(
     Service,
-    Effect.map(Path.Path, (path) => make(binary, path, options.runExternalCode ?? false)),
+    Effect.map(Path.Path, () => make(binary, options.runExternalCode ?? false)),
   )
 
 /** Resolve the project's own compiler, falling back to PATH. */
@@ -212,6 +233,6 @@ export const layerFromConfig = (
       const path = yield* Path.Path
       const local = path.join(root, "node_modules", ".bin", "tsc")
       const resolved = (yield* Effect.orElseSucceed(fs.exists(local), () => false)) ? local : "tsc"
-      return make(resolved, path, options.runExternalCode ?? false)
+      return make(resolved, options.runExternalCode ?? false)
     }),
   )

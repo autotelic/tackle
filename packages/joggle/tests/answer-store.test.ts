@@ -76,11 +76,13 @@ it.effect("writes one shard, and a fresh store replays it", () =>
     const reopened = yield* make(fs, path, dir)
     expect(Option.getOrUndefined(yield* reopened.get(key))).toEqual(probability(0.42))
 
-    // The cache owns the treatment of its own files: hidden from diffs, merged
-    // by the shipped driver.
+    // The cache owns the treatment of its own files: text-diffable (it is the
+    // reviewed ledger) and merged by git's built-in union, which needs no
+    // per-machine driver registration.
     const attributes = yield* fs.readFileString(join(dir, ".gitattributes"))
-    expect(attributes).toContain("answers/*.jsonl merge=joggle-answers")
-    expect(attributes).toContain("-diff")
+    expect(attributes).toContain("answers/*.jsonl merge=union")
+    expect(attributes).not.toContain("-diff")
+    expect(attributes).not.toContain("linguist-generated")
   }).pipe(Effect.provide(nodeLayer)),
 )
 

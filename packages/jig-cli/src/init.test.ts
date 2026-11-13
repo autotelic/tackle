@@ -133,7 +133,8 @@ describe("inspectRepo", () => {
       expect(profile.engines.map((engine) => engine.id)).toEqual(["plumb", "joggle"])
       expect(profile.engines[0]?.config).toBe(".oxlint-errors.json")
       expect(profile.engines[0]?.args).toEqual(["."])
-      expect(profile.gateMode).toBe("touched-files")
+      // `all` by default: a touched-files gate measured nothing on a clean CI checkout.
+      expect(profile.gateMode).toBe("all")
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
@@ -1000,7 +1001,7 @@ describe("initialise", () => {
         ]),
       )
       const config = JSON.parse(readFileSync(join(root, "jig.config.json"), "utf8"))
-      expect(config.gate.mode).toBe("touched-files")
+      expect(config.gate.mode).toBe("all")
       expect(config.engines.map((engine: { id: string }) => engine.id)).toEqual(["plumb", "joggle"])
       const joggle = JSON.parse(readFileSync(join(root, "joggle.config.json"), "utf8"))
       expect(joggle.unavailable).toBe("count")

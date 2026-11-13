@@ -56,6 +56,15 @@ import { contentMappersOf } from "./content-mappers.ts"
 import { looksLikeSource } from "./source.ts"
 import type { ImportGraph } from "./imports.ts"
 
+/**
+ * The drop stages that mean nobody judged the candidate.
+ *
+ * `declined` is the model looking and saying no; `gated` is a judgement below the
+ * threshold. Both are answers. These three are not, and a baseline that lists their
+ * consequences is a record of something that never happened.
+ */
+const UNJUDGED_STAGES: ReadonlySet<string> = new Set(["unreadable", "no_evidence", "budget"])
+
 export interface Options {
   readonly cwd: string
   /** Explicit inputs. Empty means "whatever tsgo says the project is". */
@@ -139,6 +148,14 @@ export interface Options {
   readonly baselinePath: string | undefined
   /** Write the current findings as the accepted baseline. */
   readonly updateBaselinePath: string | undefined
+  /**
+   * Write the baseline even though some candidates were not judged.
+   *
+   * A baseline is the record of what was reviewed, and an unjudged candidate was
+   * not reviewed: writing one accepts a finding (or misses one) nobody looked at.
+   * The refusal is the default, and this is the explicit way past it.
+   */
+  readonly allowUnjudgedBaseline?: boolean | undefined
 }
 
 const reasonOf = (error: AiError.AiError): string => error.message
@@ -331,10 +348,10 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
     files.map((file) => [path.relative(options.cwd, file), shortHash(contents.get(file) ?? "")]),
   )
 
-  const finish = (report: Report): Effect.Effect<Report> =>
+  const finish = (report: Report): Effect.Effect<Report, WorkspaceError> =>
     Effect.gen(function* () {
       let diagnostics = report.diagnostics
-      let note: Note | undefined
+      const notes: Array<Note> = []
       if (options.baselinePath !== undefined) {
         const known = yield* readBaseline(fs, path, baselinePath(path, options.baselinePath))
         if (known !== undefined) {
@@ -342,19 +359,41 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
           diagnostics = diagnostics.filter(
             (entry) => entry.identity === undefined || !known.has(entry.identity),
           )
-          note = {
+          notes.push({
             ruleId: "joggle",
             reason: `${before - diagnostics.length} finding(s) already in the baseline were not reported`,
-          }
+          })
         }
       }
+      // The census line the budget used to lack: a run that stopped judging says HOW MANY
+      // candidates nobody looked at, so it is one number to read rather than a count per
+      // rule to add up. `declined` is an answer and is not in here.
+      const unjudged = report.drops.filter((drop) => UNJUDGED_STAGES.has(drop.stage)).length
+      if (unjudged > 0) {
+        notes.push({
+          ruleId: "joggle",
+          reason: `${unjudged} candidate(s) were not judged (unreadable, no evidence, or past the budget); a baseline written now would ratify what nobody looked at`,
+        })
+      }
       if (options.updateBaselinePath !== undefined) {
+        if (unjudged > 0 && options.allowUnjudgedBaseline !== true) {
+          return yield* WorkspaceError.make({
+            path: options.updateBaselinePath,
+            operation: "baseline",
+            cause: new Error(
+              `refusing to write ${options.updateBaselinePath}: ${unjudged} candidate(s) were not judged. ` +
+                "Pass --allow-unjudged-baseline to accept that, or judge the run first.",
+            ),
+          })
+        }
         const identities = report.diagnostics
           .map((entry) => entry.identity)
           .filter((identity): identity is string => identity !== undefined)
         yield* writeBaseline(fs, path, baselinePath(path, options.updateBaselinePath), identities)
       }
-      return note === undefined ? { ...report, diagnostics } : { ...report, diagnostics, notes: [...report.notes, note] }
+      return notes.length === 0
+        ? { ...report, diagnostics }
+        : { ...report, diagnostics, notes: [...report.notes, ...notes] }
     })
 
   const runCache = options.runCacheDir ?? options.cacheDir
