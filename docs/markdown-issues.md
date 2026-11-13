@@ -92,8 +92,11 @@ the state it has — the local clone is the truth until the machines meet again.
 - A named base (`base: develop`) skips the branch-existence gate and fails at
   branch creation if the ref is wrong — a loud, one-time error you fix in the
   file.
-- With no `base:`, the base is the repo's own default branch (`origin/HEAD`,
-  asking the remote when that is unset), not hard-coded `main`.
+- With no `base:`, the base is the repo's configured `integrationBranch`
+  (ADR-0003: the Loop merges its own green PRs into it, humans review it into
+  the default branch once at the end) — or, without one, the repo's own
+  default branch (`origin/HEAD`, asking the remote when that is unset), not
+  hard-coded `main`.
 
 ## GitHub issues can stack too
 
