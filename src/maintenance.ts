@@ -392,16 +392,69 @@ export async function maintenance(options: {
           const file = issueFiles.find((f) => f.number === issue)
           return file === undefined ? 'missing' : (file.state ?? null)
         }
+        // A stacked child (numeric base:) may auto-merge only after its
+        // parent's PR has merged (parent state done): the child's diff
+        // contains the parent's work, so merging the child first would land
+        // the parent's changes under the child's PR and leave the parent's
+        // PR an empty diff nobody merges.
+        const parentDone = async (issue: number): Promise<boolean> => {
+          if (config.issues.tracker === 'markdown') {
+            issueFiles ??= await readIssueFiles(config.issues.dir as string)
+            const file = issueFiles.find((f) => f.number === issue)
+            if (file === undefined) return false
+            const raw = file.base
+            const parent =
+              typeof raw === 'number'
+                ? raw
+                : typeof raw === 'string' && /^\d+$/.test(raw.trim())
+                  ? Number.parseInt(raw.trim(), 10)
+                  : undefined
+            if (parent === undefined) return true
+            return issueFiles.find((f) => f.number === parent)?.state === 'done'
+          }
+          const view = await deps
+            .ghJsonFn<{ body: string }>(repoDir, 'issue', 'view', String(issue), '--json', 'body')
+            .catch(() => null)
+          if (view === null) return false
+          const base = parseBaseFromBody(view.body)
+          const parent =
+            typeof base === 'number'
+              ? base
+              : typeof base === 'string' && /^\d+$/.test(base)
+                ? Number.parseInt(base, 10)
+                : undefined
+          if (parent === undefined) return true
+          const state = await deps
+            .ghJsonFn<{ state: string }>(
+              repoDir,
+              'issue',
+              'view',
+              String(parent),
+              '--json',
+              'state',
+            )
+            .then((i) => i.state)
+            .catch(() => null)
+          return state === 'CLOSED'
+        }
         const green: { pr: OpenPr; issue: number }[] = []
         for (const { pr, issue } of candidates) {
-          if (
-            pr.isDraft !== false ||
-            pr.mergeable !== 'MERGEABLE' ||
-            pr.mergeStateStatus !== 'CLEAN'
-          )
-            continue
-          if ((await stateOf(issue)) !== null) continue
-          green.push({ pr, issue })
+          try {
+            if (
+              pr.isDraft !== false ||
+              pr.mergeable !== 'MERGEABLE' ||
+              pr.mergeStateStatus !== 'CLEAN'
+            )
+              continue
+            if ((await stateOf(issue)) !== null) continue
+            if (!(await parentDone(issue))) continue
+            green.push({ pr, issue })
+          } catch (error) {
+            report.errors.push(
+              `auto-merge eligibility ${pr.headRefName}: ` +
+                (error instanceof Error ? error.message : String(error)),
+            )
+          }
         }
         green.sort((a, b) => a.issue - b.issue)
         let mergedCount = 0

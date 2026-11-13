@@ -584,6 +584,73 @@ describe('maintenance', () => {
     git(repoDir, 'merge-base', '--is-ancestor', 'origin/feature/x', 'loop/2')
   })
 
+  it('auto-merge: a stacked child waits for its parent to merge, then lands', async () => {
+    const { repoDir, trackerDir } = await makeShiftWorld()
+    await writeIssue(trackerDir, '001-a.md', '')
+    await writeIssue(trackerDir, '002-b.md', 'base: 1')
+    // Both PRs already target the integration branch (as a migrated stack
+    // would): the child is green, the parent is not.
+    const pass1 = fakeGh({
+      'pr list --state open': [
+        loopPr(11, 'loop/1', 'feature/x'),
+        loopPr(12, 'loop/2', 'feature/x'),
+      ],
+      'pr list --state merged': [],
+      'pr list --state closed': [],
+      'pr list --state all --head feature/x': [],
+    })
+    const first = await maintenance({
+      repoDir,
+      config: shiftConfig(trackerDir),
+      withLock: false,
+      deps: pass1.deps,
+      notify,
+    })
+    expect(first.autoMerged).toEqual([1])
+    expect(pass1.ghCalls.some((c) => c.startsWith('pr merge 12'))).toBe(false)
+
+    // Pass 2: GitHub reports the parent merged. Done-marking happens in the
+    // merged-processing step, which runs after auto-merge — so the child is
+    // still blocked this pass (its parent reads stateless at step time).
+    const pass2 = fakeGh({
+      'pr list --state open': [loopPr(12, 'loop/2', 'feature/x')],
+      'pr list --state merged': [
+        { number: 11, headRefName: 'loop/1', baseRefName: 'feature/x', mergedAt: nowIso() },
+      ],
+      'pr list --state closed': [],
+      'pr list --state open --head loop/1': [],
+      'pr list --state open --base loop/1': [],
+      'pr list --state open --head loop/2': [{ number: 12, baseRefName: 'feature/x' }],
+      'pr list --state all --head feature/x': [{ number: 99 }],
+    })
+    const second = await maintenance({
+      repoDir,
+      config: shiftConfig(trackerDir),
+      withLock: false,
+      deps: pass2.deps,
+      notify,
+    })
+    expect(second.markedDone).toEqual([1])
+    expect(second.autoMerged).toEqual([])
+    expect(await readFile(join(trackerDir, 'issues', '001-a.md'), 'utf8')).toContain('state: done')
+
+    // Pass 3: the parent is done in the tracker; the child may go now.
+    const pass3 = fakeGh({
+      'pr list --state open': [loopPr(12, 'loop/2', 'feature/x')],
+      'pr list --state merged': [],
+      'pr list --state closed': [],
+      'pr list --state all --head feature/x': [{ number: 99 }],
+    })
+    const third = await maintenance({
+      repoDir,
+      config: shiftConfig(trackerDir),
+      withLock: false,
+      deps: pass3.deps,
+      notify,
+    })
+    expect(third.autoMerged).toEqual([2])
+  })
+
   it('auto-merge: merges green PRs lowest issue number first', async () => {
     const { repoDir, trackerDir } = await makeShiftWorld()
     await writeIssue(trackerDir, '001-a.md', '')
