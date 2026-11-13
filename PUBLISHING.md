@@ -46,10 +46,12 @@ Three things that were learned by hitting them:
   staged path also leaves a `0.0.0-stage` placeholder version behind; `latest` still points at
   the real one, and the placeholder can be unpublished.
 - **"Published successfully" can mean staged.** pnpm's staged path answers 2xx and prints success
-  while the version is only staged; the next run then fails with `409 Cannot publish over
-  previously staged version`, and a rerun finishes it. So after a release, check the registry
-  (`npm view <pkg> version`, or the tarball URL) rather than the run's colour — and if a version
-  is missing while a stage is not, re-run the workflow.
+  while the version is only staged; the next run then either finishes it or fails with `403
+  cannot publish over the previously published versions`. `scripts/release.ts` is why the
+  workflow no longer reports either state as the release: it builds, publishes, then reads the
+  registry for each local version, retries once when a version is still absent, and fails only
+  when it stays absent. `pnpm run release -- --check` answers the same question without
+  publishing.
 
 The first versions therefore carry no provenance attestation, which is the price of npm's
 ordering and the only version that pays it.
@@ -121,3 +123,5 @@ it publishes whatever npm does not have.
 - **No release tool besides changesets.** A change lands with its bump, `changeset version`
   collects them into one PR, and `changeset publish` publishes what the registry does not have.
   npm's own `dist-tag` moves `latest`; nothing here invents a second tag owner.
+  `scripts/release.ts` is a verifier around that command, not a second publisher: it exists
+  because the publish command's exit code is not the registry's answer.

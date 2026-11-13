@@ -187,6 +187,9 @@ importers:
       '@changesets/cli':
         specifier: ^2.29.0
         version: 2.31.1(@types/node@24.13.5)
+      '@effect/platform-node':
+        specifier: 4.0.5
+        version: 4.0.5(effect@4.0.5)(redis@6.3.0(@opentelemetry/api@1.9.0))
       '@effect/tsgo':
         specifier: 'catalog:'
         version: 0.56.0
@@ -196,6 +199,9 @@ importers:
       '@typescript/native':
         specifier: 'catalog:'
         version: typescript@7.0.2
+      effect:
+        specifier: 4.0.5
+        version: 4.0.5
       oxfmt:
         specifier: 'catalog:'
         version: 0.74.0
