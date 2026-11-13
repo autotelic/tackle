@@ -1,6 +1,6 @@
 {
   "name": "@autotelic/cutlist",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "The vocabulary: crawl a UI codebase into tokens, tiers, owners, and duplicate candidates; render the catalog, the lint manifest, and the menu (diagrams when asked).",
   "homepage": "https://github.com/autotelic/tackle/tree/main/packages/cutlist#readme",
   "bugs": {
