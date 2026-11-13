@@ -228,13 +228,15 @@ It is serialised with sorted keys, so the same candidate produces the same key
 on every machine — which means **run from the repository root**. Evidence
 carries root-relative paths; running from a subdirectory changes the key and
 misses every cached verdict. Successful judgements are written to
-`.joggle/answers/`, one sharded, sorted, line-oriented file per key prefix;
-commit that directory and CI replays them with `--offline` and **no API key at
-all**. A new answer is a new line in a shard it shares with few others, so two
-branches that judge different candidates merge as a directory merge, and
-`joggle cache prune` keeps the store from growing without a ceiling. A legacy
-single `answers.json` is still read, and the next write migrates it. The layout,
-the merge driver and the deployment modes are in
+`.joggle/answers.jsonl`, one sorted, line-oriented answer per line; commit that
+file and CI replays them with `--offline` and **no API key at all**. A new
+answer is a new line, so two branches that judge different candidates merge with
+git's built-in `merge=union`, and `joggle cache prune` keeps the store from
+growing without a ceiling. A store large enough to make a whole-file rewrite or a
+merge expensive can be sharded instead (`cache.layout: "sharded"`, or
+`joggle cache migrate --layout sharded`); both layouts are read, and
+`cache migrate` moves between them. The older `answers.json` object is read and
+consolidated on the next write. The layouts and the deployment modes are in
 [docs/artifacts.md](./docs/artifacts.md). Bump `policy.decisionVersion` when you
 change a question's wording, and every cached answer for it is invalidated at
 once instead of silently replayed against newer questions.
@@ -426,7 +428,7 @@ and two belong to the machine.
 
 | artifact | lives in | committed | what it is |
 | --- | --- | --- | --- |
-| `answers/` | `<root>/.joggle/` | **yes** | one shard per key prefix, one line per answer, keyed by the decision and the state it read. **This is the replay path**: CI replays it with no API key and no tokens. |
+| `answers.jsonl` (or `answers/` when sharded) | `<root>/.joggle/` | **yes** | one line per answer, sorted by key, keyed by the decision and the state it read. **This is the replay path**: CI replays it with no API key and no tokens. |
 | `baseline/` | `<root>/.joggle/` | **yes** | the findings already accepted, one fragment per finding: the ratchet. |
 | `wire.json` | `<machine cache>/joggle/<root>/` | no | every wire request's response, keyed by the request. A performance artifact, and far too large to commit: 11.5 megabytes on a 2,493-file repository. |
 | `last-run.json` | `<machine cache>/joggle/<root>/` | no | a manifest and the last report. A performance artifact. |

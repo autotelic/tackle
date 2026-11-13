@@ -5,6 +5,7 @@ import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import {
+  census,
   make,
   mergeEntries,
   mergeShardText,
@@ -58,31 +59,60 @@ test("the driver declines rather than dropping a side it cannot read", async () 
   expect(await Effect.runPromise(mergeShardText({ ours, theirs: "" }))).toBe(ours)
 })
 
-it.effect("writes one shard, and a fresh store replays it", () =>
+it.effect("writes one sorted file by default, and a fresh store replays it", () =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
     const dir = fresh("joggle-store-")
-    const key = "ab0123456789abcd"
+    const first = "ab0123456789abcd"
+    const second = "cd0123456789abcd"
 
     const store = yield* make(fs, path, dir)
-    yield* store.put(key, probability(0.42))
+    expect(store.layout).toBe("single")
+    yield* store.put(first, probability(0.42))
+    yield* store.put(second, probability(0.24))
 
-    const shard = yield* fs.readFileString(join(dir, "answers", "ab.jsonl"))
-    const parsed = parseLines(shard).entries
-    expect(parsed.map((line) => line.key)).toEqual([key])
-    expect(parsed[0]?.answer).toEqual(probability(0.42))
+    const text = yield* fs.readFileString(join(dir, "answers.jsonl"))
+    expect(parseLines(text).entries.map((line) => line.key)).toEqual([first, second])
+    expect(yield* fs.exists(join(dir, "answers"))).toBe(false)
 
     const reopened = yield* make(fs, path, dir)
-    expect(Option.getOrUndefined(yield* reopened.get(key))).toEqual(probability(0.42))
+    expect(reopened.layout).toBe("single")
+    expect(Option.getOrUndefined(yield* reopened.get(first))).toEqual(probability(0.42))
+    expect(Option.getOrUndefined(yield* reopened.get(second))).toEqual(probability(0.24))
 
     // The cache owns the treatment of its own files: text-diffable (it is the
     // reviewed ledger) and merged by git's built-in union, which needs no
     // per-machine driver registration.
     const attributes = yield* fs.readFileString(join(dir, ".gitattributes"))
+    expect(attributes).toContain("answers.jsonl merge=union")
     expect(attributes).toContain("answers/*.jsonl merge=union")
     expect(attributes).not.toContain("-diff")
     expect(attributes).not.toContain("linguist-generated")
+  }).pipe(Effect.provide(nodeLayer)),
+)
+
+it.effect("writes shards when asked, and consolidates back with migrate", () =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const path = yield* Path.Path
+    const dir = fresh("joggle-layout-")
+    const first = "ab0123456789abcd"
+    const second = "cd0123456789abcd"
+
+    const store = yield* make(fs, path, dir)
+    yield* store.put(first, probability(0.42))
+    yield* store.put(second, probability(0.24))
+    expect(yield* store.migrate("sharded")).toBe(2)
+    expect(parseLines(yield* fs.readFileString(join(dir, "answers", "ab.jsonl"))).entries.length).toBe(1)
+    expect(yield* fs.exists(join(dir, "answers.jsonl"))).toBe(false)
+
+    const sharded = yield* make(fs, path, dir)
+    expect(sharded.layout).toBe("sharded")
+    expect(yield* sharded.migrate("single")).toBe(2)
+    expect(yield* fs.exists(join(dir, "answers.jsonl"))).toBe(true)
+    expect(parseLines(yield* fs.readFileString(join(dir, "answers.jsonl"))).entries.length).toBe(2)
+    expect(yield* fs.exists(join(dir, "answers", "ab.jsonl"))).toBe(false)
   }).pipe(Effect.provide(nodeLayer)),
 )
 
@@ -120,15 +150,35 @@ it.effect("migrates the legacy single file on the first write", () =>
     const store = yield* make(fs, path, dir)
     expect(Option.getOrUndefined(yield* store.get(second))).toEqual(probability(0.2))
 
-    // The first write migrates everything, then removes the old file.
+    // The first write consolidates everything into the single ledger, then
+    // removes the legacy object.
     yield* store.put(third, probability(0.3))
     expect(yield* fs.exists(join(dir, "answers.json"))).toBe(false)
+    expect(parseLines(yield* fs.readFileString(join(dir, "answers.jsonl"))).entries.length).toBe(3)
 
     const reopened = yield* make(fs, path, dir)
     expect(Option.getOrUndefined(yield* reopened.get(first))).toEqual(probability(0.1))
     expect(Option.getOrUndefined(yield* reopened.get(second))).toEqual(probability(0.2))
     expect(Option.getOrUndefined(yield* reopened.get(third))).toEqual(probability(0.3))
     expect(yield* reopened.size).toBe(3)
+  }).pipe(Effect.provide(nodeLayer)),
+)
+
+it.effect("counts a single-file ledger and reports its layout", () =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const path = yield* Path.Path
+    const dir = fresh("joggle-census-")
+    yield* fs.writeFileString(
+      join(dir, "answers.jsonl"),
+      renderShard([entry("ab1", 1_000, 0.1), entry("cd2", 2_000, 0.9)]),
+    )
+
+    const found = yield* census(fs, path, dir)
+    expect(found.layout).toBe("single")
+    expect(found.files).toBe(1)
+    expect(found.entries).toBe(2)
+    expect(found.verdicts).toEqual({ yes: 1, no: 1 })
   }).pipe(Effect.provide(nodeLayer)),
 )
 

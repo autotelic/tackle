@@ -5,7 +5,7 @@ document exists to stop is treating them as one. The rule underneath every
 decision here:
 
 > Never merge a cache. Regenerate it. Commit only what a person wrote or
-> accepted, and shard it so that a merge is impossible in the first place.
+> accepted, in lines that merge: one answer per line, sorted by key.
 
 This is not an original observation. It is what the rest of the ecosystem
 already does, and this document names the exemplar each choice is modelled on so
@@ -15,7 +15,7 @@ the reasoning can be checked rather than taken on faith.
 
 | artifact | lives in | committed | nature | model |
 | --- | --- | --- | --- | --- |
-| `answers/` — one answered question, keyed by question + atoms + model | `<root>/.joggle/` or the machine cache | opt-in | disposable, grows, mostly negatives | **Bazel action cache / sccache**: sharded, content-addressed, with GC |
+| `answers.jsonl` (or `answers/` when sharded) — one answered question, keyed by question + atoms + model | `<root>/.joggle/` or the machine cache | opt-in | disposable, grows, mostly negatives | **Bazel action cache / sccache**: content-addressed, with GC; sharded only when size earns it |
 | `baseline/` — the findings a person accepted | `<root>/.joggle/` | **yes** | durable, human-authored, per-PR | **changesets / towncrier**: one fragment per entry |
 | `wire.json` — a whole wire request's response | machine cache | no | pure performance artifact | **Nix's hidden lockfile**: machine-local, deletable |
 | `last-run.json` — the manifest and the last report | machine cache | no | pure performance artifact | **Nix's hidden lockfile**: machine-local, deletable |
@@ -34,16 +34,24 @@ question. It works at small scale and fails everywhere else:
 - **It grows monotonically.** The cache has to store the negatives too, and on a
   2,500-file repository that is tens of thousands of entries.
 
-The replacement is content-addressed and sharded, because the key already is:
-`answerKeyFor` hashes the decision, the atoms it read, the model and the
-decision version. The file an answer lands in is therefore a function of the
-answer's identity alone.
+The replacement is content-addressed and line-oriented, because the key already
+is: `answerKeyFor` hashes the decision, the atoms it read, the model and the
+decision version, so one line names one answer.
 
-```
-.joggle/answers/7b.jsonl      # every key beginning 7b
-.joggle/answers/a0.jsonl
-...
-```
+Two layouts, one format:
+
+- **single** (the default) — `.joggle/answers.jsonl`, sorted by key. This is the
+  shape a reviewer reads: a verdict change is one line in one diff. It is right
+  up to a few thousand entries.
+- **sharded** — `.joggle/answers/<first two hex chars>.jsonl`, chosen explicitly
+  (`cache.layout: "sharded"`, or `joggle cache migrate --layout sharded`) when a
+  whole-file rewrite or a merge is a real cost. Sharding 182 entries into 130
+  files was the mistake this default corrects: it traded reviewability for merge
+  granularity, and git cannot ship the driver that was supposed to make it safe.
+
+Both are read, and `joggle cache migrate --layout` moves between them. The older
+`answers.json` object is read and consolidated into the single file on the first
+write.
 
 Each line is one entry: the key, when it was written, and the stored answer.
 
@@ -53,23 +61,24 @@ Each line is one entry: the key, when it was written, and the stored answer.
 
 Three properties follow, and each is a problem the old file had:
 
-- **A new entry cannot conflict.** Two branches add different lines. Different
-  shards, different files; same shard, usually different lines.
+- **A new entry cannot conflict.** Two branches add different lines, and
+  `merge=union` keeps both. A verdict that changes is one line replaced.
 - **An entry can be pruned.** `joggle cache prune` reads the timestamp, drops
-  what is old or over a size ceiling, and rewrites only the affected shards.
+  what is old or over a size ceiling, and rewrites only the affected file.
 - **A diff is the change.** Lines are sorted by key, so a replay with no new
   answers is a no-op in git rather than a reordering.
 
-This is Bazel's shape: sharded content-addressed storage, deterministic so a
-diff means a change, and a merge driver for the residual collision.
+This is Bazel's shape where it earns it: content-addressed and deterministic so
+a diff means a change. Sharding is the opt-in for size, not the default.
 
 ### The residual collision, and the driver
 
 Sorting makes a conflict rare, not impossible: two branches can still insert
-adjacent lines in the same shard. The committed shape uses git's built-in
-`merge=union`, which needs no setup and keeps both sides' lines:
+adjacent lines in the same shard. Both layouts use git's built-in `merge=union`, which needs
+no setup and keeps both sides' lines:
 
 ```gitattributes
+answers.jsonl merge=union
 answers/*.jsonl merge=union
 ```
 
@@ -102,7 +111,7 @@ place so an existing repository migrates on its next write.
 No `-diff` and no `linguist-generated`: the ledger is the artifact a maintainer
 is supposed to have read, and those attributes made it a collapsed binary blob.
 A verdict change is one visible line. `joggle cache report` renders what the
-store holds without replaying it -- entry and shard counts, verdict
+store holds without replaying it -- entry and file counts, layout, verdict
 distribution, labels, and the date range -- so a reviewer has a summary beside
 the diff. The summary is not the artifact: it cannot be replayed.
 
@@ -143,9 +152,9 @@ three real deployments have different constraints, and joggle now names them:
   cold cache degrades to deterministic rules plus baseline, which is what a
   missing key already means.
 - **committed** — a repository that wants keyless replay without a cache
-  service. The sharded cache is committed, the merge driver is registered, and
-  `cache prune` keeps it from growing without a ceiling. joggle's own repository
-  is in this mode.
+  service. `answers.jsonl` is committed (sharded explicitly only when the store
+  is large enough to need it), and `cache prune` keeps it from growing without a
+  ceiling. joggle's own repository is in this mode.
 
 ## What is deliberately not done
 

@@ -270,7 +270,13 @@ const checkCommand = Command.make(
         Effect.provide(
           Layer.mergeAll(
             rulesLayer,
-            decisionLayer({ cacheDir, wireCacheDir: machineCache, offline: config.offline, apiKey }),
+            decisionLayer({
+              cacheDir,
+              wireCacheDir: machineCache,
+              offline: config.offline,
+              apiKey,
+              layout: effective.cache?.layout,
+            }),
             tsgoLayer(cwd, {
               runExternalCode: config.runExternalCode || effective.runExternalCode === true,
             }),
@@ -700,6 +706,7 @@ const calibrateCommand = Command.make(
               wireCacheDir: yield* runCacheDirFor(cwd),
               offline: false,
               apiKey,
+              layout: ruleSet.effective.cache?.layout,
               onAnswer: (event) => recorded.push({ answers: event.answers }),
             }),
             // The trace and the node types both run tsgo; the calibrate command
@@ -863,7 +870,15 @@ const cacheReport = Command.make(
         .join(", ")
       yield* write(
         [
-          "joggle: " + found.entries + " entries in " + found.shards + " shard(s), " + found.bytes + " bytes",
+          "joggle: " +
+            found.entries +
+            " entries in " +
+            found.files +
+            " file(s) (" +
+            found.layout +
+            "), " +
+            found.bytes +
+            " bytes",
           "  kinds     " + (kinds === "" ? "none" : kinds),
           "  verdicts  Probability " + found.verdicts.yes + " yes / " + found.verdicts.no + " no",
           "  labels    " + (labels === "" ? "none" : labels),
@@ -874,7 +889,7 @@ const cacheReport = Command.make(
     }),
 ).pipe(
   Command.withDescription(
-    "Render the committed answer ledger for a reader: entry and shard counts, verdict distribution, labels, and the date range. A summary cannot be replayed; this is what to read when reviewing the diff.",
+    "Render the committed answer ledger for a reader: entry and file counts, layout, verdict distribution, labels, and the date range. A summary cannot be replayed; this is what to read when reviewing the diff.",
   ),
   Command.withShortDescription("Report on the answer cache."),
   Command.withExamples([
@@ -893,6 +908,12 @@ const cacheMigrate = Command.make(
       Flag.withDescription("Where the answer cache lives: <cwd>/.joggle when it exists, otherwise the machine cache."),
       Flag.optional,
     ),
+    layout: Flag.Literals("layout", ["single", "sharded"]).pipe(
+      Flag.withDescription(
+        "How to write the ledger: one sorted answers.jsonl (default), or shards under answers/.",
+      ),
+      Flag.withDefault("single"),
+    ),
   },
   (config) =>
     Effect.gen(function* () {
@@ -901,18 +922,21 @@ const cacheMigrate = Command.make(
       const cwd = path.resolve(Option.getOrUndefined(config.cwd) ?? process.cwd())
       const dir = yield* cacheDirFor(cwd, Option.getOrUndefined(config.cacheDir))
       const store = yield* makeAnswerStore(fs, path, dir)
-      const written = yield* store.migrate
-      yield* write("joggle: wrote " + written + " answer(s) to " + path.join(dir, "answers"))
+      const written = yield* store.migrate(config.layout)
+      const target = config.layout === "single" ? path.join(dir, "answers.jsonl") : path.join(dir, "answers")
+      yield* write("joggle: wrote " + written + " answer(s) to " + target)
     }),
 ).pipe(
   Command.withDescription(
-    "Rewrite the cache in the sharded shape, and remove a legacy answers.json. Idempotent.",
+    "Rewrite the cache in one layout and remove the other: a single sorted answers.jsonl by default, or shards with --layout sharded. Idempotent.",
   ),
-  Command.withShortDescription("Migrate the cache to shards."),
+  Command.withShortDescription("Consolidate or shard the answer cache."),
 )
 
 const cacheCommand = Command.make("cache", {}, () =>
-  write("joggle cache: run `joggle cache prune`, or read docs/artifacts.md for the layout."),
+  write(
+    "joggle cache: run `joggle cache report`, `prune`, or `migrate --layout single|sharded`; docs/artifacts.md has the reasoning.",
+  ),
 ).pipe(
   Command.withDescription("Work on the answer cache itself: prune it, migrate it, and see how it is laid out."),
   Command.withShortDescription("Prune the answer cache."),
