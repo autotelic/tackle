@@ -39,7 +39,12 @@ const run = (
       stderr: "inherit",
     })
     return Number(yield* handle.exitCode)
-  }).pipe(Effect.orElseSucceed(() => 1))
+  }).pipe(
+    // A command handle is a scoped resource; without this the spawn fails with
+    // "Service not found: effect/Scope" before it starts.
+    Effect.scoped,
+    Effect.orElseSucceed(() => 1),
+  )
 
 /** Every package this repository publishes, read from the tree rather than assumed. */
 const published = (
