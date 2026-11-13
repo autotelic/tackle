@@ -20,6 +20,7 @@ import {
   initialise,
   initJson,
   inspectRepo,
+  mergeArchitecture,
   onboardingFor,
   summaryFor,
 } from "./init.ts"
@@ -61,6 +62,44 @@ const OXLINT = {
   jsPlugins: [{ name: "plumb", specifier: "@autotelic/plumb" }],
   rules: { "plumb/no-known-value-widening": "error" },
 }
+
+describe("mergeArchitecture", () => {
+  it("re-drafts the includes and keeps the forbid by layer name", () => {
+    const existing = {
+      unavailable: "count",
+      rules: { "joggle/import-cycle": "error", "joggle/layer-direction": "error" },
+      architecture: {
+        layers: [
+          { name: "domain", include: ["packages/domain/**"], forbid: ["react*", "fastify*"] },
+          { name: "legacy", include: ["packages/legacy/**"], forbid: ["react*"] },
+          { name: "ui", include: ["services/ui/**"] },
+        ],
+      },
+    }
+    const merged = mergeArchitecture({
+      existing,
+      draft: [
+        { name: "domain", include: ["packages/domain/**", "packages/shakti-utils/**"] },
+        { name: "ui" },
+      ] as ReadonlyArray<{ name: string; include: ReadonlyArray<string> }>,
+    })
+    const layers = (merged.file.architecture as { layers: ReadonlyArray<Record<string, unknown>> })
+      .layers
+    // The include set follows the tree; the forbid follows the name a person wrote it against.
+    expect(layers[0]).toEqual({
+      name: "domain",
+      include: ["packages/domain/**", "packages/shakti-utils/**"],
+      forbid: ["react*", "fastify*"],
+    })
+    expect(merged.forbidsKept).toEqual(["domain"])
+    // A layer the draft stopped proposing is reported, never dropped in silence: a lost
+    // forbid makes layer-purity read 0 on a rule nobody removed.
+    expect(merged.forbidsDropped).toEqual(["legacy"])
+    // Everything that is not architecture.layers survives untouched.
+    expect(merged.file.rules).toEqual(existing.rules)
+    expect(merged.file.unavailable).toBe("count")
+  })
+})
 
 describe("inspectRepo", () => {
   it("finds the package manager, the strict oxlint gate, and the engines it can run", async () => {
@@ -254,6 +293,223 @@ describe("inspectRepo", () => {
       // The order and the forbid sets are judgement: nothing pretends to enforce them.
       expect(starter.rules["joggle/layer-direction"]).toBe("off")
       expect(starter.rules["joggle/layer-purity"]).toBe("off")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it("names the repo from its manifest, not from the directory init ran in", async () => {
+    const root = project(
+      {
+        json: [
+          ["package.json", { name: "shakti-v2", description: "the repo, not the worktree" }],
+          ["tsconfig.json", {}],
+        ],
+        text: [],
+      },
+      ["joggle"],
+    )
+    try {
+      await initialiseIn(root)
+      const cookbook = readFileSync(join(root, "JIG.md"), "utf8")
+      // A worktree is named after the branch (`wt-jig-thorough`); the repo is named here.
+      expect(cookbook).toContain("The conformance harness for shakti-v2.")
+      expect(cookbook).not.toContain(root.split("/").at(-1) ?? "\u0000")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it("never names a config a person owns: cutlist.config.json is reviewed, not generated", async () => {
+    const root = project(
+      {
+        json: [
+          ["package.json", {}],
+          ["tsconfig.json", {}],
+          [".oxfmtrc.json", { printWidth: 110, ignorePatterns: [] }],
+          ["cutlist.config.json", { primitive: [], shared: [], local: [] }],
+          ["packages/domain/package.json", { name: "@acme/domain" }],
+          ["packages/rest/package.json", { name: "@acme/rest" }],
+        ],
+        text: [["pnpm-workspace.yaml", 'packages:\n  - "packages/*"\n']],
+      },
+      ["joggle"],
+    )
+    try {
+      const result = await initialiseIn(root, { force: true })
+      const note = result.profile.notes.find((entry) => entry.includes(".oxfmtrc.json"))
+      expect(note).toContain("jig.config.json")
+      // Drafted once, owned afterwards: exempting it from a formatter would exile the one
+      // config in the harness a person is meant to edit.
+      expect(note).not.toContain("cutlist.config.json")
+      expect(JSON.parse(readFileSync(join(root, "cutlist.config.json"), "utf8"))).toEqual({
+        primitive: [],
+        shared: [],
+        local: [],
+      })
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it("names the formatter that would rewrite a generated config, unless it already ignores it", async () => {
+    const build = (ignorePatterns: ReadonlyArray<string>): string =>
+      project(
+        {
+          json: [
+            ["package.json", {}],
+            ["tsconfig.json", {}],
+            [".oxfmtrc.json", { printWidth: 110, ignorePatterns }],
+            ["packages/domain/package.json", { name: "@acme/domain" }],
+            ["packages/rest/package.json", { name: "@acme/rest" }],
+          ],
+          text: [["pnpm-workspace.yaml", 'packages:\n  - "packages/*"\n']],
+        },
+        ["joggle"],
+      )
+    const unexempt = build([])
+    const exempt = build(["jig.config.json", "joggle.config.json"])
+    try {
+      const warned = await initialiseIn(unexempt)
+      const note = warned.profile.notes.find((entry) => entry.includes(".oxfmtrc.json"))
+      // A generated file's bytes belong to the generator: name the exemption instead of
+      // emitting JSON shaped for one formatter's print width.
+      expect(note).toContain("jig.config.json, joggle.config.json are generated")
+      expect(note).toContain("init --force")
+
+      const quiet = await initialiseIn(exempt)
+      expect(quiet.profile.notes.some((entry) => entry.includes(".oxfmtrc.json"))).toBe(false)
+    } finally {
+      rmSync(unexempt, { recursive: true, force: true })
+      rmSync(exempt, { recursive: true, force: true })
+    }
+  })
+
+  it("re-drafts the layers on --force and keeps the rules and forbids a person wrote", async () => {
+    const root = project(
+      {
+        json: [
+          ["package.json", {}],
+          ["tsconfig.json", {}],
+          ["packages/domain/package.json", { name: "@acme/domain" }],
+          ["packages/rest/package.json", { name: "@acme/rest" }],
+        ],
+        text: [["pnpm-workspace.yaml", 'packages:\n  - "packages/*"\n']],
+      },
+      ["joggle"],
+    )
+    try {
+      await initialiseIn(root)
+      const file = join(root, "joggle.config.json")
+      const first = JSON.parse(readFileSync(file, "utf8")) as {
+        rules: Record<string, string>
+        architecture: { layers: Array<{ name: string; include: string[]; forbid?: string[] }> }
+      }
+      // What a person commits after reviewing the draft: the rules are on, and one forbid has
+      // been checked against the manifest it constrains.
+      const edited = {
+        ...first,
+        rules: {
+          ...first.rules,
+          "joggle/import-cycle": "error",
+          "joggle/layer-direction": "error",
+        },
+        architecture: {
+          layers: first.architecture.layers.map((layer) =>
+            layer.name === "domain" ? { ...layer, forbid: ["react*"] } : layer,
+          ),
+        },
+      }
+      writeFileSync(file, `${JSON.stringify(edited, null, 2)}\n`)
+
+      // Without --force a reviewed vocabulary is kept whole: the file is a decision, not output.
+      await initialiseIn(root)
+      expect(JSON.parse(readFileSync(file, "utf8"))).toEqual(edited)
+
+      // With --force the includes follow the tree again, and the judgement follows the names.
+      await initialiseIn(root, { force: true })
+      const after = JSON.parse(readFileSync(file, "utf8")) as typeof first
+      expect(after.architecture.layers.map((layer) => layer.name)).toEqual(["domain", "rest"])
+      expect(after.architecture.layers[0]?.forbid).toEqual(["react*"])
+      expect(after.rules["joggle/layer-direction"]).toBe("error")
+      expect(after.rules["joggle/import-cycle"]).toBe("error")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it("writes each split before the root that contains it, and names two app roots apart", async () => {
+    const root = project(
+      {
+        json: [
+          ["package.json", {}],
+          ["tsconfig.json", {}],
+          ["packages/domain/package.json", { name: "@acme/domain" }],
+          ["packages/rest/package.json", { name: "@acme/rest" }],
+          // The real shape: the UI root is a directory INSIDE a workspace package.
+          ["services/ui/package.json", { name: "@acme/ui" }],
+          ["services/auth-ui/package.json", { name: "@acme/auth-ui" }],
+        ],
+        text: [
+          ["pnpm-workspace.yaml", 'packages:\n  - "packages/*"\n  - "services/*"\n'],
+          ["services/auth-ui/app/components/ui/Button.tsx", "export const Button = () => null\n"],
+          ["services/auth-ui/app/routes/index.tsx", "export const Route = () => null\n"],
+          ["services/ui/app/components/ui/Button.tsx", "export const Button = () => null\n"],
+          ["services/ui/app/routes/index.tsx", "export const Route = () => null\n"],
+          ["services/ui/app/utils/cn.ts", 'export const cn = () => ""\n'],
+          ["services/ui/app/models/plan.ts", "export const plan = 1\n"],
+          ["services/ui/app/types.ts", "export type Plan = 1\n"],
+        ],
+      },
+      ["joggle"],
+    )
+    try {
+      await initialiseIn(root)
+      const starter = JSON.parse(readFileSync(join(root, "joggle.config.json"), "utf8"))
+      const layers = starter.architecture.layers as ReadonlyArray<{
+        readonly name: string
+        readonly include: ReadonlyArray<string>
+      }>
+      const names = layers.map((layer) => layer.name)
+      const at = (include: string): number =>
+        layers.findIndex((layer) => layer.include.includes(include))
+
+      // joggle's `layerOf` is `layers.find()`: a root written before its splits matches every
+      // file under it, so the splits never apply and `layer-direction` reports 0 -- silence on
+      // a tree with real findings.
+      for (const [entry, pkg] of [
+        ["services/auth-ui/app", "services/auth-ui"],
+        ["services/ui/app", "services/ui"],
+      ] as const) {
+        expect(at(entry + "/components/ui/**")).toBeLessThan(at(entry + "/**"))
+        expect(at(entry + "/routes/**")).toBeLessThan(at(entry + "/**"))
+        // The root is still the catch-all for everything the tiers do not name...
+        expect(at(entry + "/**")).toBeGreaterThanOrEqual(0)
+        // ...and the package that contains it comes after, or it would claim every file first.
+        expect(at(entry + "/**")).toBeLessThan(at(pkg + "/**"))
+      }
+
+      // A routes split without a support layer below it reads every route's import of
+      // `utils/` or `models/` as upward -- 731 of 856 findings on the first adopter.
+      const support = names.indexOf("ui-support")
+      expect(support).toBeGreaterThanOrEqual(0)
+      expect(support).toBeLessThan(names.indexOf("ui-primitive"))
+      expect(support).toBeLessThan(names.indexOf("ui-local"))
+      const supportLayer = layers[support]
+      expect(supportLayer?.include).toEqual([
+        "services/ui/app/utils/**",
+        "services/ui/app/models/**",
+        // A support name is a directory or its file: `types.ts` holds the shared types, and
+        // leaving it in the root catch-all makes every route import read as upward.
+        "services/ui/app/types.ts",
+      ])
+
+      // Both roots live in `app/`, which used to name two layers `app-shared` and two
+      // `app-local`: a finding could not say which one it was in.
+      expect(new Set(names).size).toBe(names.length)
+      expect(names).toEqual(
+        expect.arrayContaining(["auth-ui-primitive", "auth-ui-local", "ui-primitive", "ui-local"]),
+      )
     } finally {
       rmSync(root, { recursive: true, force: true })
     }

@@ -602,6 +602,26 @@ const workspaceDirsOf = (
   })
 
 /**
+ * The tiers a UI root is split into, most depended-upon first, and the directories each names.
+ *
+ * `support` is the tier that makes a routes split usable at all: `utils/`, `lib/`, `models/`,
+ * `hooks/` and `types/` are what a route imports, and a draft that leaves them in the root
+ * catch-all puts them ABOVE `routes` -- so every legitimate import from a route reads as
+ * upward. On the first adopter that was 731 of 856 findings.
+ *
+ * Support comes first, below the primitives, because `components/ui/Button` importing
+ * `~/utils/cn` is normal and must not be a direction finding. The trade is that a primitive
+ * may then import a model, which is what `forbid` and `layer-purity` are for: direction
+ * cannot say "foundational, but not for primitives".
+ */
+const LAYER_TIERS = [
+  ["support", ["utils", "lib", "models", "hooks", "types"]],
+  ["primitive", ["components/ui"]],
+  ["shared", ["components"]],
+  ["local", ["routes"]],
+] as const
+
+/**
  * Layers proposed from the workspace, and nothing more.
  *
  * A repo with no `architecture` block gets none of joggle's `layer-direction`
@@ -610,6 +630,7 @@ const workspaceDirsOf = (
  * globs plus a package.json. The *order* and the `forbid` sets are judgement, so this draft
  * writes neither, and a person adds `forbid` where it is true.
  */
+
 const architectureDraftOf = (
   fs: FileSystem.FileSystem,
   path: Path.Path,
@@ -619,26 +640,104 @@ const architectureDraftOf = (
   Effect.gen(function* () {
     const dirs = yield* workspaceDirsOf(fs, path, root, files)
     if (dirs.length < 2) return undefined
-    const layers: Array<{ readonly name: string; readonly include: ReadonlyArray<string> }> =
-      dirs.map((dir) => ({
-        name: dir.slice(dir.lastIndexOf("/") + 1),
-        include: [dir + "/**"],
-      }))
-    // A UI root that owns `components/ui` → `components` → `routes` is three layers, not one:
+    // A UI root that owns `components/ui` -> `components` -> `routes` is three layers, not one:
     // a single `services/ui/**` layer cannot see the direction the majority of findings live in.
+    //
+    // Each split goes BEFORE the root that contains it, and the root stays last as the
+    // catch-all. joggle's `layerOf` is `layers.find()`, so a root written first matched every
+    // file under it and the splits never applied -- `layer-direction` reported 0 on a tree with
+    // 122 real findings, which reads as a clean architecture.
     const uiRoots = yield* uiRootsOf(fs, path, root)
-    for (const entry of uiRoots) {
-      const name = entry.split("/").at(-1) ?? entry
-      for (const [tier, directory] of [
-        ["primitive", "components/ui"],
-        ["shared", "components"],
-        ["local", "routes"],
-      ] as const) {
-        if (yield* existsAt({ fs, path, root, relative: entry + "/" + directory })) {
-          layers.push({ name: name + "-" + tier, include: [entry + "/" + directory + "/**"] })
+    // A support name is a directory (`types/**`) or its file (`types.ts`): the first adopter's
+    // `app/types.ts` is imported by 60 components and every route, so leaving it in the root
+    // catch-all kept 87 route imports reading as upward.
+    const globsOf = (entry: string, name: string): Effect.Effect<ReadonlyArray<string>> =>
+      Effect.gen(function* () {
+        const found: Array<string> = []
+        if (yield* existsAt({ fs, path, root, relative: entry + "/" + name }))
+          found.push(name + "/**")
+        for (const extension of ["ts", "tsx"]) {
+          const file = name + "." + extension
+          if (yield* existsAt({ fs, path, root, relative: entry + "/" + file })) found.push(file)
+        }
+        return found
+      })
+    const splitsOf = (entry: string) =>
+      Effect.map(
+        Effect.forEach(LAYER_TIERS, ([tier, names]) =>
+          Effect.map(
+            Effect.forEach(names, (name) => globsOf(entry, name)),
+            (found) => {
+              const includes = found.flat()
+              return includes.length === 0 ? undefined : { tier, includes }
+            },
+          ),
+        ),
+        (values) => values.filter((value) => value !== undefined),
+      )
+    const plan: Array<{
+      readonly entry: string
+      readonly includes: ReadonlyArray<string>
+      readonly tier: string | undefined
+    }> = []
+    const place = (entry: string): Effect.Effect<void> =>
+      Effect.gen(function* () {
+        for (const split of yield* splitsOf(entry)) {
+          plan.push({ entry, includes: split.includes, tier: split.tier })
+        }
+        plan.push({ entry, includes: [], tier: undefined })
+      })
+    // A UI root is often a directory INSIDE a workspace package (`services/ui/app` while the
+    // package is `services/ui`), and the package's own `services/ui/**` catches its files first.
+    // So a root's splits are placed before whichever layer would otherwise claim them -- its own
+    // catch-all, or the package that contains it.
+    const placed = new Set<string>()
+    for (const dir of dirs) {
+      const roots = uiRoots
+        .filter((entry) => entry === dir || entry.startsWith(dir + "/"))
+        .sort((left, right) => right.length - left.length)
+      for (const root of roots) {
+        yield* place(root)
+        placed.add(root)
+      }
+      plan.push({ entry: dir, includes: [], tier: undefined })
+    }
+    for (const root of uiRoots) {
+      if (placed.has(root)) continue
+      yield* place(root)
+    }
+    // Names come from the path, not from the last segment: two roots that both live in `app/`
+    // (`services/auth-ui/app`, `services/ui/app`) produced two layers called `app-shared`, which
+    // a finding cannot tell apart. A last segment that is `app` is scaffolding, so it is dropped
+    // and the name says which root it belongs to.
+    const names = new Set<string>()
+    const nameOf = (entry: string, tier: string | undefined): string => {
+      const segments = entry
+        .split("/")
+        .filter((segment) => segment !== "")
+        .map((segment) => (segment === "." ? "root" : segment))
+      const trimmed = segments.at(-1) === "app" ? segments.slice(0, -1) : segments
+      const parts = trimmed.length === 0 ? ["root"] : trimmed
+      for (let depth = 1; depth <= parts.length; depth += 1) {
+        const stem = parts.slice(-depth).join("-")
+        const candidate = tier === undefined ? stem : stem + "-" + tier
+        if (!names.has(candidate)) {
+          names.add(candidate)
+          return candidate
         }
       }
+      const fallback = entry.replaceAll("/", "-")
+      const candidate = tier === undefined ? fallback : fallback + "-" + tier
+      names.add(candidate)
+      return candidate
     }
+    const layers = plan.map((entry) => ({
+      name: nameOf(entry.entry, entry.tier),
+      include:
+        entry.includes.length === 0
+          ? [entry.entry + "/**"]
+          : entry.includes.map((suffix) => entry.entry + "/" + suffix),
+    }))
     return { layers }
   })
 
@@ -828,7 +927,8 @@ export const inspectRepo = (
           otherLedgers.join(", ") +
           "); jig keeps `" +
           ownLedger +
-          "` — decide which one owns these findings before enabling the gate",
+          "` — decide which one owns these findings before enabling the gate, because two " +
+          "ledgers over one rule set means neither is the record of what was reviewed",
       )
     }
     const agentDocs = ["AGENTS.md", "CLAUDE.md", ".cursorrules"].filter((file) =>
@@ -1054,7 +1154,10 @@ export const inspectRepo = (
 
     return {
       root,
-      name: path.basename(root),
+      // The manifest's name, not the directory's: `init` run from a worktree
+      // (`wt-jig-thorough`) used to bake the worktree's basename into JIG.md's first line, and
+      // every repo set up that way shipped it.
+      name: packageJson.name ?? path.basename(root),
       packageManager,
       run: packageManager,
       jig,
@@ -1095,6 +1198,52 @@ export const configFor = (profile: RepoProfile): HarnessConfig => ({
   report: { format: "text", maxWarnings: -1 },
   agent: { cookbook: profile.cookbook, onboarding: profile.onboarding },
 })
+
+/**
+ * Re-draft `architecture.layers`, keep the judgement written into them.
+ *
+ * Keyed by layer name, because the name is the only stable handle: an include glob moves when
+ * the draft learns a tier (a `routes` split becoming `support` + `routes` moved every include
+ * in the first adopter), and a `forbid` was written against a name. A layer the draft no
+ * longer proposes is reported rather than dropped in silence -- its forbidden dependency is a
+ * decision, and losing it makes `layer-purity` read 0 on rules nobody removed.
+ *
+ * Everything outside `architecture.layers` is carried through untouched: `rules`,
+ * `evidence`, `unavailable`, and whatever a later joggle adds.
+ */
+export const mergeArchitecture = (input: {
+  readonly existing: Readonly<Record<string, unknown>>
+  readonly draft: ReadonlyArray<{ readonly name: string; readonly include: ReadonlyArray<string> }>
+}): {
+  readonly file: Readonly<Record<string, unknown>>
+  readonly forbidsKept: ReadonlyArray<string>
+  readonly forbidsDropped: ReadonlyArray<string>
+} => {
+  const architecture = isRecord(input.existing.architecture) ? input.existing.architecture : {}
+  const declared = Array.isArray(architecture.layers) ? architecture.layers : []
+  const previous = new Map<string, ReadonlyArray<string>>()
+  for (const layer of declared) {
+    if (!isRecord(layer) || typeof layer.name !== "string") continue
+    const forbid = Array.isArray(layer.forbid)
+      ? layer.forbid.filter((entry): entry is string => typeof entry === "string")
+      : []
+    if (forbid.length > 0) previous.set(layer.name, forbid)
+  }
+  const drafted = new Set(input.draft.map((layer) => layer.name))
+  const forbidsKept: Array<string> = []
+  const layers = input.draft.map((layer) => {
+    const forbid = previous.get(layer.name)
+    if (forbid === undefined) return { name: layer.name, include: layer.include }
+    forbidsKept.push(layer.name)
+    return { name: layer.name, include: layer.include, forbid }
+  })
+  const forbidsDropped = [...previous.keys()].filter((name) => !drafted.has(name))
+  return {
+    file: { ...input.existing, architecture: { ...architecture, layers } },
+    forbidsKept,
+    forbidsDropped,
+  }
+}
 
 /** One line per engine, for the summary and the generated docs. */
 const engineSummary = (profile: RepoProfile): string =>
@@ -1266,12 +1415,13 @@ export const onboardingFor = (profile: RepoProfile): string => {
       : `This repository is not initialised yet. Run \`${initCommandFor(profile)}\`: it writes \`jig.config.json\`, an empty \`${profile.baseline}\`, \`${profile.cookbook}\`, and \`${profile.onboarding}\`.`,
     profile.cutlistDraft === undefined
       ? ""
-      : `The same command drafts \`cutlist.config.json\`, because this tree looks like a UI. Review the vocabulary it infers, run \`${invocationOf({ profile, tool: "cutlist", args: "build" })}\`, commit the catalog, then re-run with \`--force\`. A draft is not enabled before a person has read it.`,
+      : `The same command drafts \`cutlist.config.json\`, because this tree looks like a UI. Review the vocabulary it infers, run \`${invocationOf({ profile, tool: "cutlist", args: "build" })}\`, and commit the catalog: \`jig check\` runs the engine as \`cutlist build --check\`, which compares the tree against the catalog on disk, so a catalog that is ignored or stale passes only on the machine that built it. Then re-run with \`--force\`. A draft is not enabled before a person has read it.`,
     `Init writes each engine's own ledger too (joggle's is born accepted, and is never rewritten), so day one is "nothing new" rather than a pile nobody has judged.`,
+    'A known-broken engine does not have to be removed: set `"advisory": true` on its entry in `jig.config.json` and its findings stay in the report and the baseline while the gate ignores them, or `"enabled": false` to keep it out of a run. Both survive `init --force`, which keeps a configured engine\'s own fields.',
     `The same run installs the agent skills into \`.agents/skills/\` — \`room\`, \`intercom-setup\`, \`feedback-loop\`, \`project-run\`. pi and OpenCode both read that directory, so there is no second install; a skill someone edits is kept, and \`--force\` replaces it.`,
     profile.architectureDraft === undefined
       ? ""
-      : `The same run drafts \`architecture.layers\` in \`joggle.config.json\` from this workspace: includes only, in directory order, with \`layer-direction\`/\`layer-purity\` off, because neither the order nor the \`forbid\` sets can be inferred from a tree. Order the layers by what depends on what, add \`forbid\` where it is true, then turn those two rules on -- until then a clean architecture report means nothing looked.`,
+      : `The same run drafts \`architecture.layers\` in \`joggle.config.json\` from this workspace: includes only, in directory order, with \`layer-direction\`/\`layer-purity\` off, because neither the order nor the \`forbid\` sets can be inferred from a tree. A UI root is split into \`support\` (\`utils\`/\`lib\`/\`models\`/\`hooks\`/\`types\`), primitives, shared components and routes, in that order: a route may import support and so may a primitive, which is what keeps a routes split from reading as 731 upward imports. The splits come before the root they belong to, and each root stays last as the catch-all. Order the rest by what depends on what, add \`forbid\` where it is true, and check every \`forbid\` against the manifest of the layer that forbids it -- forbidding a dependency a package is built on reports that package's own imports as violations -- then turn those two rules on. Until then a clean architecture report means nothing looked.`,
     `Then \`${profile.jig} check --limit 20\`: read the census before the findings. An engine marked \`skipped\`, \`replayed\`, or "candidates not judged" did not look, and a note is never a pass.`,
     "Secrets are the environment and the host owns them: if a run needs a key this session was not started with, say so and stop. Never add a loader, and never nest a second `doppler run` from this directory -- it resolves the project from the working directory's `doppler.yaml`, so the layer you think you added is not the one that wins.",
   ]
@@ -1486,6 +1636,78 @@ export const summaryFor = (result: InitResult): string => {
   ]
   return lines.join("\n")
 }
+
+/**
+ * The generated JSON a run owns, in the order a formatter note should name them.
+ *
+ * `cutlist.config.json` is deliberately absent. It is written once as a draft and is a
+ * person's file from then on -- `init` keeps it, `--force` included -- so exempting it from a
+ * formatter would exile the one config in the harness a human is meant to edit. `jig.config.json`
+ * and `joggle.config.json` are the opposite: written on every `--force`, reviewed through
+ * `git diff`, never hand-edited in place.
+ */
+const GENERATED_JSON = ["jig.config.json", "joggle.config.json"] as const
+
+/** Whether a formatter's ignore list already exempts a generated file. */
+const exemptedBy = (patterns: ReadonlyArray<string>, file: string): boolean =>
+  patterns.some((pattern) => {
+    const trimmed = pattern
+      .replace(/^!/u, "")
+      .replace(/\/?\*+$/u, "")
+      .replace(/\/$/u, "")
+    return trimmed !== "" && (file === trimmed || file.startsWith(trimmed + "/"))
+  })
+
+/**
+ * The repository's formatter and the ignore list it would consult for a generated file.
+ *
+ * Only the shapes a repo actually uses here: oxfmt's `ignorePatterns`, a `.prettierignore`,
+ * or biome's `files.ignore`. Guessing wider would mean guessing at a formatter's semantics.
+ */
+const formatterOf = (input: {
+  readonly fs: FileSystem.FileSystem
+  readonly path: Path.Path
+  readonly root: string
+}): Effect.Effect<
+  { readonly file: string; readonly patterns: ReadonlyArray<string> } | undefined,
+  never,
+  FileSystem.FileSystem | Path.Path
+> =>
+  Effect.gen(function* () {
+    const read = (file: string): Effect.Effect<string | undefined> =>
+      Effect.orElseSucceed(
+        input.fs.readFileString(input.path.join(input.root, file)),
+        () => undefined,
+      )
+    const listed = (value: unknown, key: string): ReadonlyArray<string> => {
+      if (!isRecord(value)) return []
+      const found = value[key]
+      return Array.isArray(found)
+        ? found.filter((entry): entry is string => typeof entry === "string")
+        : []
+    }
+    const oxfmt = yield* read(".oxfmtrc.json")
+    if (oxfmt !== undefined) {
+      return { file: ".oxfmtrc.json", patterns: listed(parseJson(oxfmt), "ignorePatterns") }
+    }
+    const prettier = yield* read(".prettierignore")
+    if (prettier !== undefined) {
+      return {
+        file: ".prettierignore",
+        patterns: prettier
+          .split("\n")
+          .map((line) => line.trim())
+          .filter((line) => line !== "" && !line.startsWith("#")),
+      }
+    }
+    const biome = yield* read("biome.json")
+    if (biome !== undefined) {
+      const value = parseJson(biome)
+      const files = isRecord(value) && isRecord(value.files) ? value.files : {}
+      return { file: "biome.json", patterns: listed(files, "ignore") }
+    }
+    return undefined
+  })
 
 /** The plan as data, for a host that wants to reason about it rather than read prose. */
 export const initJson = (result: InitResult, prompt?: string): string => {
@@ -1848,9 +2070,36 @@ export const initialise = (
     let joggleConfig: InitResult["joggleConfig"] = "absent"
     if (profile.engines.some((engine) => engine.id === "joggle")) {
       const target = path.join(root, "joggle.config.json")
+      const draft = profile.architectureDraft?.layers
       if (yield* Effect.orElseSucceed(fs.exists(target), () => false)) {
-        joggleConfig = "kept"
-        kept.push("joggle.config.json")
+        // `--force` re-drafts the includes and keeps the judgement written into them. The
+        // committed vocabulary is the draft plus the forbids someone checked against a
+        // manifest, so a draft that learns a tier (a routes split gaining `support`) has to
+        // reach a repo that already has the file -- otherwise the only way to get it is to
+        // delete a reviewed file, and a stale draft reads as a clean architecture.
+        const text = yield* Effect.orElseSucceed(fs.readFileString(target), () => "")
+        const parsed = parseJson(text)
+        if (options.force === true && draft !== undefined && isRecord(parsed)) {
+          const merged = mergeArchitecture({ existing: parsed, draft })
+          if (merged.forbidsDropped.length > 0) {
+            profile = {
+              ...profile,
+              notes: [
+                ...profile.notes,
+                `the architecture draft no longer proposes ${merged.forbidsDropped.join(", ")}; ` +
+                  "their `forbid` sets were dropped -- check the layers before trusting `layer-purity`",
+              ],
+            }
+          }
+          if (!dryRun) {
+            yield* fs.writeFileString(target, `${JSON.stringify(merged.file, null, 2)}\n`)
+          }
+          joggleConfig = "written"
+          written.push("joggle.config.json")
+        } else {
+          joggleConfig = "kept"
+          kept.push("joggle.config.json")
+        }
       } else {
         // A repository without a model key should not print every unjudged candidate
         // as a warning. `count` keeps the census honest and the output usable; a repo
@@ -1961,7 +2210,18 @@ export const initialise = (
     ]
     const ignored = yield* ignoredByGit({
       root,
-      files: [...new Set([...written, ...kept, profile.baseline, ...rulebooks])],
+      files: [
+        ...new Set([
+          ...written,
+          ...kept,
+          profile.baseline,
+          ...rulebooks,
+          // The catalog is an engine's committed input, not a build artifact: `cutlist
+          // build --check` compares against it, so an ignored one silently passes here and
+          // fails everywhere else.
+          ...(profile.cutlistOutput === undefined ? [] : [profile.cutlistOutput.catalog]),
+        ]),
+      ],
     })
     const ignoredSet = new Set(ignored)
     const committable = [...written, ...kept]
@@ -2057,8 +2317,36 @@ export const initialise = (
     }
     const withNotes =
       hookNotes.length === 0 ? noted : { ...noted, notes: [...noted.notes, ...hookNotes] }
+    // A generated file's bytes belong to the generator -- the rule the exemplar's catalog
+    // already lives under, because `cutlist build --check` hashes it. A formatter that reflows
+    // these turns every `init --force` into a two-way rewrite on a file nobody edited, so the
+    // exemption is named rather than assumed, and only when the list does not already say so.
+    const generated = GENERATED_JSON.filter((file) => written.includes(file))
+    const formatter = generated.length === 0 ? undefined : yield* formatterOf({ fs, path, root })
+    const missing =
+      formatter === undefined
+        ? []
+        : generated.filter((file) => !exemptedBy(formatter.patterns, file))
+    const titles =
+      formatter === undefined || missing.length === 0
+        ? withNotes
+        : {
+            ...withNotes,
+            notes: [
+              ...withNotes.notes,
+              missing.join(", ") +
+                (missing.length === 1 ? " is" : " are") +
+                " generated: a formatter that reflows " +
+                (missing.length === 1 ? "it" : "them") +
+                " makes every `init --force` a two-way rewrite. Add " +
+                (missing.length === 1 ? "it" : "them") +
+                " to " +
+                formatter.file +
+                "'s ignore list -- a generated file's bytes belong to the generator, the same rule as the catalog.",
+            ],
+          }
     return {
-      profile: withNotes,
+      profile: titles,
       written,
       kept,
       ignore: [

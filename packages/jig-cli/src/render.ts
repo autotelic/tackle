@@ -132,6 +132,20 @@ export const renderText = (run: HarnessRun, options: TextOptions = {}): string =
     lines.push("", `gate — failOn: ${gate.failOn}, scope: ${gate.scope}`)
     lines.push(...gateLines(gate.failing))
   }
+  if (gate !== undefined && gate.advisory.length > 0) {
+    const byEngine = new Map<string, number>()
+    for (const diagnostic of gate.advisory) {
+      byEngine.set(diagnostic.engine, (byEngine.get(diagnostic.engine) ?? 0) + 1)
+    }
+    // Advisory is a decision about the exit code, not about the report: say so, or a reader
+    // takes a green run over 1,167 findings for a clean tree.
+    lines.push(
+      "",
+      `gate — advisory (reported, not gating): ${[...byEngine]
+        .map(([engine, count]) => `${engine} ${count} finding(s)`)
+        .join(", ")}`,
+    )
+  }
   if (diff.stale.length > 0) {
     lines.push(
       "",

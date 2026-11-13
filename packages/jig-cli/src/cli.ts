@@ -1,5 +1,7 @@
+import { execFileSync } from "node:child_process"
 import { existsSync } from "node:fs"
 import { join } from "node:path"
+import { fileURLToPath } from "node:url"
 import { Console, Effect, FileSystem, Option, Path, Runtime } from "effect"
 import { Argument, CliError, Command, Flag } from "effect/cli"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
@@ -24,6 +26,27 @@ import { renderGithub, renderJson, renderText } from "./render.ts"
 import { harnessRun } from "./run.ts"
 import { isRoomInvocation, runRoom } from "./room.ts"
 import { initialise, initJson, onboardingFor, summaryFor } from "./init.ts"
+
+/**
+ * The version a `--version` prints.
+ *
+ * Every member of the family is `0.0.0` until it is published, so after a rebuild the number
+ * cannot answer "is my link current?". When jig runs from a checkout the commit is the answer,
+ * and it rides along as semver build metadata: `0.0.0+1a2b3c4`.
+ */
+const versionOf = (): string => {
+  try {
+    const sha = execFileSync("git", ["rev-parse", "--short", "HEAD"], {
+      cwd: fileURLToPath(new URL("..", import.meta.url)),
+      stdio: ["ignore", "pipe", "ignore"],
+    })
+      .toString()
+      .trim()
+    return sha === "" ? "0.0.0" : `0.0.0+${sha}`
+  } catch {
+    return "0.0.0"
+  }
+}
 
 /** One line through Effect's Console, newline-normalized. */
 const write = (text: string): Effect.Effect<void> =>
@@ -98,6 +121,9 @@ const checkCommand = Command.make(
         failOn: settings.gate.failOn ?? "any-new",
         maxWarnings: settings.report?.maxWarnings ?? -1,
         touched: touched ?? new Set<string>(),
+        advisory: new Set(
+          settings.engines.filter((engine) => engine.advisory === true).map((engine) => engine.id),
+        ),
       })
 
       switch (format) {
@@ -168,13 +194,26 @@ const enginesCommand = Command.make("engines", { cwd: cwdFlag, config: configFla
     const lines = configured ? [header] : [header, DEFAULTS_NOTICE]
     for (const engine of settings.engines) {
       const command = engine.command ?? engine.id
-      const enabled = engine.enabled === false ? " (disabled)" : ""
+      const enabled =
+        (engine.enabled === false ? " (disabled)" : "") +
+        (engine.advisory === true ? " (advisory)" : "")
       // The column reports where the run WILL draw the command from, so it asks the
       // resolver rather than scanning PATH on its own: project install, PATH, or neither.
       const resolved = resolveEngineCommand({ root, command })
       const source = resolved !== command ? "project" : onPath(command) ? "PATH" : "no"
       lines.push(
         `${engine.id.padEnd(19)} ${engine.kind.padEnd(15)} ${command.padEnd(14)} ${source}${enabled}`,
+      )
+    }
+    if (lines.some((line) => line.endsWith(" no"))) {
+      // `no` is the whole local-dev story on a fresh clone, and it used to say nothing about
+      // what to do: an unpublished member of the family is linked from a checkout, not fetched.
+      lines.push(
+        "",
+        "`no` means the command is neither in this project nor on PATH. Members of the family",
+        "that are not published yet are linked from a checkout and built there:",
+        "  pnpm add -D -w link:/path/to/checkout   # in this repo",
+        "  pnpm build                              # in the checkout, and again after a change",
       )
     }
     yield* write(lines.join("\n"))
@@ -521,7 +560,7 @@ const cli = Command.make("jig").pipe(
 // the clean teardown the runner uses for them. A parse error instead FAILS the effect with a
 // `CliError`, which the runner would exit 1 for; catching it here maps it to the contract's 2,
 // while `--help` — a request, not a mistake — stays 0.
-const program = Command.run(cli, { version: "0.0.0" }).pipe(
+const program = Command.run(cli, { version: versionOf() }).pipe(
   Effect.catchIf(CliError.isCliError, (error) =>
     Effect.sync(() => {
       process.exitCode = Runtime.getErrorExitCode(error) === 0 ? EXIT.clean : EXIT.usage
