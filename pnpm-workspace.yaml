@@ -99,7 +99,12 @@ minimumReleaseAgeExclude:
   - "@earendil-works/pi-schema@1.5.0"
   - "@earendil-works/pi-telemetry@1.5.0"
 
+# pnpm 12 defaults `strictDepBuilds` to true, so a package whose build scripts nobody has
+# ruled on fails the install. These three are the rulings: esbuild needs its postinstall to
+# fetch its binary; the other two arrive transitively through pi-durable and neither script is
+# needed to run a room, so they are denied rather than left unreviewed. The placeholder text
+# pnpm's prompt leaves behind is not a boolean and does not count as a decision.
 allowBuilds:
-  "@google/genai": set this to true or false
+  "@google/genai": false
   esbuild: true
-  protobufjs: set this to true or false
+  protobufjs: false
