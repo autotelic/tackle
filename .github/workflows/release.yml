@@ -45,8 +45,11 @@ jobs:
       # in Doppler, or in a secret store. PUBLISHING.md records the order and the fallback.
       - uses: changesets/action@v1
         with:
-          version: pnpm version
-          publish: pnpm release
+          # `pnpm run`, not `pnpm version`: pnpm has its own `version` command — a semver
+          # bump — and it wins over the script, so a bare `pnpm version` dies asking for a
+          # version argument instead of reaching `changeset version`.
+          version: pnpm run version
+          publish: pnpm run release
           commit: "chore: version packages"
           title: "chore: version packages"
         env:
