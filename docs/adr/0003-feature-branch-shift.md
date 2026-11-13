@@ -39,9 +39,11 @@ repo's full CI as the backstop.
 
 ## Consequences
 
-- With an integration branch, idle maintenance runs every poll (60s) instead
-  of hourly: the Loop is the merger, and its merges unblock the queue. A
-  pass that finds nothing eligible costs one fetch + one PR list call.
+- With an integration branch, maintenance runs at every pick boundary,
+  throttled to 60s — not only when the queue is idle: the Loop is the
+  merger, its merges unblock the queue, and sessions otherwise bounce
+  straight from one issue to the next without ever idling. A pass that
+  finds nothing eligible costs one fetch + one PR list call.
 - A stack lands one maintenance pass per level when children were green
   before their parent (their PRs get rebased + retargeted, then CI re-runs);
   green siblings merge in the same pass. Done-marking runs after the
