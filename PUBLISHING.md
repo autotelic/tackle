@@ -31,12 +31,23 @@ how you know it was sent:
 
 ```sh
 doppler run --project tackle --config dev -- sh -c '
-  exec env "npm_config_//registry.npmjs.org/:_authToken=$NPM_TOKEN" pnpm run release'
+  exec env npm_config_userconfig=/tmp/empty-npmrc \
+    "npm_config_//registry.npmjs.org/:_authToken=$NPM_TOKEN" pnpm run release'
 ```
 
-`pnpm run release`, not `pnpm release`: pnpm owns several bare words, and `pnpm version` is its
-own semver bump. The first versions therefore carry no provenance attestation, which is the
-price of npm's ordering and the only version that pays it.
+Three things that were learned by hitting them:
+
+- **The blank user config is load-bearing.** pnpm prefers the token in `~/.npmrc`, so a login
+  token shadows this one and the registry answers `ERR_PNPM_OTP_NON_INTERACTIVE` for a token that
+  cannot bypass 2FA — while the bypass token sits unused in the environment.
+- **`pnpm run release`, not `pnpm release`.** pnpm owns several bare words; `pnpm version` is its
+  own semver bump, so the changesets action must call the script by name.
+- **A fresh package can 404 for a minute.** `npm view` is not proof that a publish failed. The
+  staged path also leaves a `0.0.0-stage` placeholder version behind; `latest` still points at
+  the real one, and the placeholder can be unpublished.
+
+The first versions therefore carry no provenance attestation, which is the price of npm's
+ordering and the only version that pays it.
 
 ## The one human act
 
