@@ -11,6 +11,9 @@ concurrency:
 permissions:
   contents: write
   pull-requests: write
+  # Exchanged by npm for a short-lived publish credential. No NPM_TOKEN exists in this
+  # repository, and none should: see PUBLISHING.md.
+  id-token: write
 
 jobs:
   release:
@@ -18,35 +21,32 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - run: corepack enable
+      # Node 26 does not ship corepack; pnpm comes from its own action. Same step as ci.yml.
+      - uses: pnpm/action-setup@v4
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 24
-          cache: pnpm
+          node-version: 26
+          # Deliberately no `cache: pnpm` here. A poisoned cache is a known way to reach
+          # publish credentials, and this job is the only one that holds them.
+          package-manager-cache: false
+          registry-url: https://registry.npmjs.org
 
       - run: pnpm install --frozen-lockfile
 
-      # Opens (or updates) the "version packages" PR from the pending changesets.
+      # With no pending changesets this step runs `publish`; with pending ones it opens the
+      # "version packages" PR instead. Publishing authenticates with the runner's OIDC
+      # identity, which each package must have been granted once, by a human, with 2FA:
       #
-      # No `publish` input, and that is deliberate rather than unfinished. With no
-      # pending changesets this action's next move is "publish any version npm does not
-      # have" — and every publishable package here is still at 0.0.0, so wiring it would
-      # publish 0.0.0 the moment anything lands on main. (Observed: the first push to
-      # main tried exactly that, and only failed because no token was configured.)
+      #   npm trust github @autotelic/<name> \
+      #     --repo autotelic/tackle --file release.yml --allow-publish
       #
-      # Turning publishing on is one input plus the version it should first publish:
-      #
-      #   publish: pnpm release        # root script: pnpm build && changeset publish
-      #   registry-url: https://registry.npmjs.org   (in setup-node above)
-      #   env: NPM_TOKEN / NODE_AUTH_TOKEN
-      #
-      # Do it in the same commit as the first real version, and give the setup-node step
-      # `package-manager-cache: false` then: these docs call out that a poisoned cache can
-      # expose publish credentials. Versioning needs none of that, so it stays off.
+      # That grant is a browser challenge, not a token, so it never belongs in this file,
+      # in Doppler, or in a secret store. PUBLISHING.md records the order and the fallback.
       - uses: changesets/action@v1
         with:
           version: pnpm version
+          publish: pnpm release
           commit: "chore: version packages"
           title: "chore: version packages"
         env:

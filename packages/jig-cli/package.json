@@ -2,7 +2,16 @@
   "name": "@autotelic/jig-cli",
   "version": "0.0.0",
   "description": "The harness (CLI: `jig`): run every conformance engine in one pass, merge them into one report, and hold the ratchet. Shells out; never links. The package is `jig-cli` only because `jig` is taken; the command the world types is `jig`.",
+  "homepage": "https://github.com/autotelic/tackle/tree/main/packages/jig-cli#readme",
+  "bugs": {
+    "url": "https://github.com/autotelic/tackle/issues"
+  },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/autotelic/tackle.git",
+    "directory": "packages/jig-cli"
+  },
   "bin": {
     "jig": "./bin/jig.js"
   },

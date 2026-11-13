@@ -2,7 +2,16 @@
   "name": "@autotelic/protocol",
   "version": "0.0.0",
   "description": "The four seams — config, report, baseline, catalog/doc — as pure types, JSON Schema, and pure helpers. Not a tool.",
+  "homepage": "https://github.com/autotelic/tackle/tree/main/packages/protocol#readme",
+  "bugs": {
+    "url": "https://github.com/autotelic/tackle/issues"
+  },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/autotelic/tackle.git",
+    "directory": "packages/protocol"
+  },
   "files": [
     "dist",
     "schema"

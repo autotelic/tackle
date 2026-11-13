@@ -2,7 +2,16 @@
   "name": "@autotelic/room",
   "version": "0.0.0",
   "description": "The project room: one durable ledger per Linear project, its local daemon, and the review job that runs jig, a Pi, and a fenced post. `jig room` is the door.",
+  "homepage": "https://github.com/autotelic/tackle/tree/main/packages/room#readme",
+  "bugs": {
+    "url": "https://github.com/autotelic/tackle/issues"
+  },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/autotelic/tackle.git",
+    "directory": "packages/room"
+  },
   "bin": {
     "room": "./bin/room.js"
   },
