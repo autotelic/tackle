@@ -25,7 +25,7 @@
 
   Validated against a local celld: a config-only repo seeds itself, a review webhook becomes an
   inbox turn, `room daemon --once` reports `delivered 1 turn(s) to session 1`, `room session
---watch` streams the `pi.user` entry with the review body, and `--note room.tool` lands a
+  --watch` streams the `pi.user` entry with the review body, and `--note room.tool` lands a
   `room.tool` write the model does not see.
 
 - 48f83a7: `jig room doctor` names a missing `pi`, and onboarding says what the room needs on a machine.
@@ -64,7 +64,7 @@
     own dedupe makes a re-run a no-op) and advances the cursor. Without `--apply` nothing is written.
 
   Measured on two real pull requests: `#1776 · cursor lost · latest: approved at 83fe79a3 (head
-83fe79a3) · 2 inline note(s) after it`, and the same shape for #1773.
+  83fe79a3) · 2 inline note(s) after it`, and the same shape for #1773.
 
 - a873158: An attached room seeds itself from `room.config.json`, and the board reports delivery as well as
   claims.
