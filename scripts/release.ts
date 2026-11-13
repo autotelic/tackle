@@ -104,7 +104,10 @@ const settled = (
   Effect.gen(function* () {
     let absent = yield* missing(manifests)
     for (let round = 1; round < attempts && absent.length > 0; round += 1) {
-      yield* Effect.sleep("5 seconds")
+      // Staged versions can take a couple of minutes to become visible; a shorter wait
+      // reads a healthy stage as a failed release, which is how this workflow went red
+      // twice on a publish that was actually fine.
+      yield* Effect.sleep("10 seconds")
       absent = yield* missing(manifests)
     }
     return absent
@@ -149,7 +152,7 @@ const program = Effect.gen(function* () {
   const status = yield* run(root, "pnpm", ["exec", "changeset", "publish"])
   // A staged publish reports success and a rerun reports 403; neither is authoritative,
   // so a failure gets no more patience than a success does.
-  let absent = yield* settled(manifests, status === 0 ? 4 : 1)
+  let absent = yield* settled(manifests, status === 0 ? 6 : 1)
   if (absent.length > 0 && status === 0) {
     yield* Effect.sync(() =>
       console.log(
@@ -159,7 +162,7 @@ const program = Effect.gen(function* () {
       ),
     )
     yield* run(root, "pnpm", ["exec", "changeset", "publish"])
-    absent = yield* settled(manifests, 6)
+    absent = yield* settled(manifests, 18)
   }
 
   if (absent.length > 0) {
