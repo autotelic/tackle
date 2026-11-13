@@ -22,9 +22,12 @@ consistent answer, which is why `board` also grew a `files` list: `dist` and not
 > Package must exist: The package you're configuring must already exist on the npm registry.
 
 So each new package's first version is published with a token, once, and every later version
-comes from OIDC. The token lives in Doppler, project `tackle`, config `dev`, and reaches npm
-as configuration rather than a file — with a clean user config, no token gives `ENEEDAUTH` and
-this variable gives `E401`, which is how you know it was sent:
+comes from OIDC. That token must have **Bypass two-factor authentication** enabled, or the registry answers
+`ERR_PNPM_OTP_NON_INTERACTIVE` and publishes nothing — a token from `npm login` is not one, and
+an interactive terminal is the only other way to answer the challenge. The token lives in
+Doppler, project `tackle`, config `dev`, and reaches npm as configuration rather than a file —
+with a clean user config, no token gives `ENEEDAUTH` and this variable gives `E401`, which is
+how you know it was sent:
 
 ```sh
 doppler run --project tackle --config dev -- sh -c '
