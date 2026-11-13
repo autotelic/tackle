@@ -1,6 +1,6 @@
 {
   "name": "@autotelic/board",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "The room's records and invariants, as Effect schemas: a chit, a claim with a fencing epoch, a job, a receipt, a presence.",
   "homepage": "https://github.com/autotelic/tackle/tree/main/packages/board#readme",
   "bugs": {
