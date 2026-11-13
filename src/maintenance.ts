@@ -10,6 +10,10 @@
  *   rebased onto their freshly-rebased parents (their PR bases stay put).
  * - A loop PR closed without merging, on an issue nobody is steering (no
  *   state): the issue parks for a human decision.
+ * - Feature-branch shift (ADR-0003): with `integrationBranch` configured, the
+ *   Loop merges its own green loop/* PRs into that branch (squash, CI green,
+ *   stateless issue) and opens the human review PR (branch → default branch)
+ *   once, on the first merge. Conflict nags dedupe across passes.
  *
  * Branches the loop is working right now (`working` state) are never
  * rebased; their turn comes when they finish or park. Conflicts never touch
@@ -19,16 +23,18 @@
  *
  * Exit code 0 always: conflicts and skips are reported, not process failures.
  */
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { type LoopConfig, loadConfig } from './config.ts'
 import { branchExists, gh, ghJson, git } from './loop/git-exec.ts'
-import { commitAndPush, readIssueFiles } from './loop/markdown-tracker.ts'
+import { commitAndPush, type IssueFile, readIssueFiles } from './loop/markdown-tracker.ts'
 import { takeLock } from './loop/reconcile.ts'
-import { type Issue, parseBaseFromBody, relabel, resolveBaseRef } from './loop/tracker.ts'
+import { parseBaseFromBody, relabel, resolveBaseRef } from './loop/tracker.ts'
 import { loadTelePiConfig, sendTelegramMessage } from './telepi.ts'
 
 export type MaintenanceReport = {
+  autoMerged: number[]
+  reviewPrUrl: string | null
   markedDone: number[]
   rebased: number[]
   retargeted: number[]
@@ -42,6 +48,8 @@ export type MaintenanceReport = {
 
 function emptyReport(): MaintenanceReport {
   return {
+    autoMerged: [],
+    reviewPrUrl: null,
     markedDone: [],
     rebased: [],
     retargeted: [],
@@ -61,6 +69,16 @@ export type MaintenanceDeps = {
 }
 
 type MergedPr = { number: number; headRefName: string; baseRefName: string; mergedAt: string }
+
+type OpenPr = {
+  number: number
+  headRefName: string
+  baseRefName: string
+  title: string
+  isDraft: boolean
+  mergeable: string
+  mergeStateStatus: string
+}
 
 /**
  * The watermark: maintenance never acts on PR history from before its own
@@ -95,6 +113,44 @@ function watermarkPath(repoDir: string, config: LoopConfig): string {
   return config.issues.tracker === 'markdown'
     ? join(config.issues.dir as string, '.treadle-maintenance-watermark')
     : join(repoDir, '.treadle', 'maintenance-watermark')
+}
+
+/**
+ * Conflict-nag state (ADR-0003): branches currently known to conflict, one
+ * per line. A branch pages a person the first pass it is seen conflicted;
+ * repeats stay silent until it resolves and conflicts again.
+ */
+function conflictsPath(repoDir: string, config: LoopConfig): string {
+  return config.issues.tracker === 'markdown'
+    ? join(config.issues.dir as string, '.treadle-maintenance-conflicts')
+    : join(repoDir, '.treadle', 'maintenance-conflicts')
+}
+
+async function readConflicts(repoDir: string, config: LoopConfig): Promise<Set<string>> {
+  try {
+    const text = await readFile(conflictsPath(repoDir, config), 'utf8')
+    return new Set(
+      text
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0),
+    )
+  } catch {
+    return new Set()
+  }
+}
+
+async function writeConflicts(
+  repoDir: string,
+  config: LoopConfig,
+  branches: Set<string>,
+): Promise<void> {
+  const path = conflictsPath(repoDir, config)
+  if (branches.size === 0) await rm(path, { force: true })
+  else await writeFile(path, `${[...branches].sort().join('\n')}\n`)
+  if (config.issues.tracker === 'markdown') {
+    await commitAndPush(config.issues.dir as string, 'treadle: maintenance conflict state')
+  }
 }
 
 function loopIssueNumber(headRefName: string): number | null {
@@ -184,13 +240,32 @@ export async function maintenance(options: {
   if (unlock === null) return report
 
   try {
-    const defaultBase = await resolveBaseRef(repoDir, { number: 0, title: '', body: '' })
+    // ADR-0003: with an integration branch configured, the default base —
+    // what dependent branches rebase onto and PRs retarget to after a merge
+    // — is that branch, not the repo's default branch.
+    const defaultBase = await resolveBaseRef(
+      repoDir,
+      { number: 0, title: '', body: '' },
+      config.integrationBranch,
+    )
     await git(repoDir, 'fetch', 'origin', '--prune')
 
     const conflicted = new Set<number>()
     // Issues whose own PR merged this pass: their branches collapse with
     // their base and get deleted below — never rebase them.
     const mergedIssues = new Set<number>()
+
+    // Conflict nags dedupe across passes (ADR-0003): the first pass a branch
+    // is seen conflicted it pages a person; repeats stay silent until it
+    // resolves and conflicts again. The set is persisted below, only when
+    // changed.
+    const previouslyConflicted = await readConflicts(repoDir, config)
+    const conflictedNow = new Set<string>()
+    const noteConflict = async (branch: string, message: string): Promise<void> => {
+      conflictedNow.add(branch)
+      if (previouslyConflicted.has(branch)) return
+      await notify(message)
+    }
 
     const rebaseDependent = async (
       issue: number,
@@ -228,7 +303,8 @@ export async function maintenance(options: {
         await git(tmpWorktree, 'rebase', '--abort').catch(() => undefined)
         conflicted.add(issue)
         report.conflicts.push(branch)
-        await notify(
+        await noteConflict(
+          branch,
           `Stack maintenance: rebase conflict on ${branch} (after ${parentBranch} merged). ` +
             'The branch is untouched — a person needs to rebase it by hand.',
         )
@@ -266,6 +342,135 @@ export async function maintenance(options: {
       }
     }
 
+    // ── Auto-merge (ADR-0003, the feature-branch shift) ───────────────
+    // With integrationBranch configured the Loop merges its own PRs into
+    // that branch instead of waiting for a person per PR: squash, lowest
+    // issue number first, GitHub CI green, non-draft, and the issue
+    // stateless — the open PR is the done marker, so a ready/working/parked
+    // issue never auto-merges. The merged-PR processing below runs in the
+    // same pass: the issue goes done, dependents rebase onto the branch and
+    // retarget, so a stack lands one maintenance pass per level. The human
+    // review PR (branch → default branch) is opened once, on the first
+    // merge; the Loop never merges it.
+    if (config.integrationBranch) {
+      const integrationBranch = config.integrationBranch
+      try {
+        const open = await deps.ghJsonFn<OpenPr[]>(
+          repoDir,
+          'pr',
+          'list',
+          '--state',
+          'open',
+          '--json',
+          'number,headRefName,baseRefName,title,isDraft,mergeable,mergeStateStatus',
+          '--limit',
+          '100',
+        )
+        const candidates = open
+          .map((pr) => ({ pr, issue: loopIssueNumber(pr.headRefName) }))
+          .filter((x): x is { pr: OpenPr; issue: number } => x.issue !== null)
+          .filter((x) => x.pr.baseRefName === integrationBranch)
+        // Conflicts with the integration branch need a human rebase.
+        for (const { pr, issue } of candidates) {
+          if (pr.mergeable === 'CONFLICTING' || pr.mergeStateStatus === 'DIRTY') {
+            await noteConflict(
+              pr.headRefName,
+              `Stack maintenance: ${pr.headRefName} conflicts with ${integrationBranch} ` +
+                `(issue #${issue}) — a person needs to rebase it by hand.`,
+            )
+          }
+        }
+        let issueFiles: IssueFile[] | null = null
+        // The issue's state gates the merge: 'missing' = the tracker doesn't
+        // know this loop/<n> (another era's branch) — never touch it; null =
+        // stateless, the done marker.
+        const stateOf = async (issue: number): Promise<string | null | 'missing'> => {
+          if (config.issues.tracker !== 'markdown') {
+            return issueState(repoDir, config, issue, deps).catch(() => 'missing')
+          }
+          issueFiles ??= await readIssueFiles(config.issues.dir as string)
+          const file = issueFiles.find((f) => f.number === issue)
+          return file === undefined ? 'missing' : (file.state ?? null)
+        }
+        const green: { pr: OpenPr; issue: number }[] = []
+        for (const { pr, issue } of candidates) {
+          if (
+            pr.isDraft !== false ||
+            pr.mergeable !== 'MERGEABLE' ||
+            pr.mergeStateStatus !== 'CLEAN'
+          )
+            continue
+          if ((await stateOf(issue)) !== null) continue
+          green.push({ pr, issue })
+        }
+        green.sort((a, b) => a.issue - b.issue)
+        let mergedCount = 0
+        for (const { pr, issue } of green) {
+          try {
+            await deps.ghFn(
+              repoDir,
+              'pr',
+              'merge',
+              String(pr.number),
+              '--squash',
+              '--subject',
+              pr.title,
+              '--body',
+              '',
+            )
+            report.autoMerged.push(issue)
+            mergedCount += 1
+            await notify(`Treadle merged #${pr.number} (${pr.title}) into ${integrationBranch}.`)
+          } catch (error) {
+            report.errors.push(
+              `${pr.headRefName}: ${error instanceof Error ? error.message : String(error)}`,
+            )
+          }
+        }
+        // The human review PR: opened once, on the first merge into the
+        // branch. Closing or merging it never re-opens it.
+        if (mergedCount > 0) {
+          const existing = await deps.ghJsonFn<{ number: number }[]>(
+            repoDir,
+            'pr',
+            'list',
+            '--state',
+            'all',
+            '--head',
+            integrationBranch,
+            '--json',
+            'number',
+            '--limit',
+            '1',
+          )
+          if (existing.length === 0) {
+            const reviewTarget = await resolveBaseRef(repoDir, { number: 0, title: '', body: '' })
+            const url = await deps.ghFn(
+              repoDir,
+              'pr',
+              'create',
+              '--base',
+              reviewTarget.name,
+              '--head',
+              integrationBranch,
+              '--title',
+              `Treadle integration branch → ${reviewTarget.name}`,
+              '--body',
+              `Auto-managed (project-loop ADR-0003): Treadle squash-merges its green ` +
+                `\`loop/*\` PRs into \`${integrationBranch}\` as they go green. Review this ` +
+                `PR into \`${reviewTarget.name}\` once at the end — the Loop never merges it.`,
+            )
+            report.reviewPrUrl = url.length > 0 ? url : null
+            if (report.reviewPrUrl !== null) {
+              await notify(`Treadle opened the review PR: ${report.reviewPrUrl}`)
+            }
+          }
+        }
+      } catch (error) {
+        report.errors.push(`auto-merge: ${error instanceof Error ? error.message : String(error)}`)
+      }
+    }
+
     // ── Merged loop PRs (only those after the watermark) ───────────────
     const watermark = await readWatermark(repoDir, config)
     const knownIssues =
@@ -293,7 +498,10 @@ export async function maintenance(options: {
     const merged = mergedRaw
       .map((pr) => ({ ...pr, issue: loopIssueNumber(pr.headRefName) }))
       .filter((pr): pr is MergedPr & { issue: number } => pr.issue !== null)
-      .filter((pr) => watermark !== null && new Date(pr.mergedAt) > watermark)
+      // >=, not >: on a first-ever run the watermark initializes to the
+      // auto-merge moment, and a PR merged in that same step must still be
+      // processed this pass (the merged list is fetched after auto-merge).
+      .filter((pr) => watermark !== null && new Date(pr.mergedAt) >= watermark)
       .sort((a, b) => a.issue - b.issue)
     for (const pr of merged) mergedIssues.add(pr.issue)
 
@@ -378,7 +586,7 @@ export async function maintenance(options: {
         (pr): pr is { number: number; headRefName: string; closedAt: string; issue: number } =>
           pr.issue !== null,
       )
-      .filter((pr) => watermark !== null && new Date(pr.closedAt) > watermark)
+      .filter((pr) => watermark !== null && new Date(pr.closedAt) >= watermark)
     for (const pr of closed) {
       try {
         if (knownIssues !== null && !knownIssues.has(pr.issue)) {
@@ -399,6 +607,12 @@ export async function maintenance(options: {
         )
       }
     }
+    // Persist the conflict-nag state, but only when it changed — a branch
+    // that stays conflicted must not commit-and-push every pass.
+    const conflictStateChanged =
+      conflictedNow.size !== previouslyConflicted.size ||
+      [...conflictedNow].some((branch) => !previouslyConflicted.has(branch))
+    if (conflictStateChanged) await writeConflicts(repoDir, config, conflictedNow)
   } finally {
     await unlock()
   }
@@ -426,6 +640,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   }
   const report = await maintenance({ repoDir, config, notify })
   const summary = [
+    `auto-merged: [${report.autoMerged.join(', ')}]`,
     `marked done: [${report.markedDone.join(', ')}]`,
     `rebased: [${report.rebased.join(', ')}]`,
     `retargeted: [${report.retargeted.join(', ')}]`,
@@ -438,6 +653,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   ]
   console.log(`maintenance: ${summary.join(' · ')}`)
   if (
+    report.autoMerged.length > 0 ||
     report.markedDone.length > 0 ||
     report.rebased.length > 0 ||
     report.parked.length > 0 ||

@@ -123,6 +123,79 @@ function fakeGh(handlers: Record<string, unknown>): {
 
 const nowIso = () => new Date().toISOString()
 
+/**
+ * The feature-branch-shift world (ADR-0003): a bare origin with develop and
+ * an integration branch feature/x at develop's tip, loop/1 branched from
+ * feature/x, loop/2 stacked on loop/1 — neither merged.
+ */
+async function makeShiftWorld() {
+  const originDir = await makeDir('treadle-sh-origin-')
+  git(originDir, 'init', '--bare', '-b', 'develop')
+  const repoDir = await makeDir('treadle-sh-repo-')
+  git(repoDir, 'clone', originDir, '.')
+  git(repoDir, 'config', 'user.email', 't@t')
+  git(repoDir, 'config', 'user.name', 't')
+  await writeFile(join(repoDir, 'app.txt'), 'base\n')
+  git(repoDir, 'add', '-A')
+  git(repoDir, 'commit', '-m', 'base')
+  git(repoDir, 'push', 'origin', 'develop')
+  git(repoDir, 'push', 'origin', 'develop:refs/heads/feature/x')
+  git(repoDir, 'fetch', 'origin')
+
+  git(repoDir, 'checkout', '-b', 'loop/1', 'origin/feature/x')
+  await writeFile(join(repoDir, 'one.txt'), 'one\n')
+  git(repoDir, 'add', '-A')
+  git(repoDir, 'commit', '-m', 'issue 1')
+  git(repoDir, 'push', 'origin', 'loop/1')
+
+  git(repoDir, 'checkout', '-b', 'loop/2', 'loop/1')
+  await writeFile(join(repoDir, 'two.txt'), 'two\n')
+  git(repoDir, 'add', '-A')
+  git(repoDir, 'commit', '-m', 'issue 2')
+  git(repoDir, 'push', 'origin', 'loop/2')
+  git(repoDir, 'checkout', 'develop')
+
+  const trackerDir = await makeDir('treadle-sh-tracker-')
+  await mkdir(join(trackerDir, 'issues'), { recursive: true })
+  git(trackerDir, 'init', '-b', 'main')
+  git(trackerDir, 'config', 'user.email', 't@t')
+  git(trackerDir, 'config', 'user.name', 't')
+  // Yesterday: everything the tests do is after the watermark.
+  await writeFile(
+    join(trackerDir, '.treadle-maintenance-watermark'),
+    `${new Date(Date.now() - 86_400_000).toISOString()}\n`,
+  )
+  return { repoDir, originDir, trackerDir }
+}
+
+const shiftConfig = (trackerDir: string) =>
+  ({
+    issues: {
+      tracker: 'markdown',
+      dir: trackerDir,
+      ready: 'ready',
+      working: 'working',
+      parked: 'parked',
+    },
+    integrationBranch: 'feature/x',
+  }) as never
+
+const loopPr = (
+  number: number,
+  headRefName: string,
+  baseRefName: string,
+  overrides: Record<string, unknown> = {},
+) => ({
+  number,
+  headRefName,
+  baseRefName,
+  title: `Issue ${headRefName.slice(5)} (#${headRefName.slice(5)})`,
+  isDraft: false,
+  mergeable: 'MERGEABLE',
+  mergeStateStatus: 'CLEAN',
+  ...overrides,
+})
+
 const notifyMessages: string[] = []
 const notify = async (text: string) => {
   notifyMessages.push(text)
@@ -451,6 +524,174 @@ describe('maintenance', () => {
     expect(report.rebased).toEqual([])
     expect(report.markedDone.sort()).toEqual([1, 2])
     expect(report.deletedBranches.sort()).toEqual(['loop/1', 'loop/2'])
+  })
+
+  it('auto-merge: merges a green stateless PR into the integration branch and opens the review PR', async () => {
+    notifyMessages.length = 0
+    const { repoDir, trackerDir } = await makeShiftWorld()
+    await writeIssue(trackerDir, '001-a.md', '')
+    await writeIssue(trackerDir, '002-b.md', 'base: 1')
+
+    const pass1 = fakeGh({
+      'pr list --state open': [loopPr(11, 'loop/1', 'feature/x'), loopPr(12, 'loop/2', 'loop/1')],
+      'pr list --state merged': [],
+      'pr list --state closed': [],
+      'pr list --state all --head feature/x': [],
+    })
+    const first = await maintenance({
+      repoDir,
+      config: shiftConfig(trackerDir),
+      withLock: false,
+      deps: pass1.deps,
+      notify,
+    })
+    expect(first.autoMerged).toEqual([1])
+    expect(pass1.ghCalls.some((c) => c.startsWith('pr merge 11 --squash'))).toBe(true)
+    expect(
+      pass1.ghCalls.some((c) => c.startsWith('pr create --base develop --head feature/x')),
+    ).toBe(true)
+    expect(notifyMessages.some((m) => m.includes('Treadle merged #11'))).toBe(true)
+    // The merged list was empty (static fake), so the done-marking waits
+    // for the next pass.
+    expect(first.markedDone).toEqual([])
+
+    // Pass 2: GitHub now reports PR 11 as merged; the cascade machinery
+    // marks the issue done, rebases the dependent onto the integration
+    // branch, retargets its PR, and never re-opens the review PR.
+    const pass2 = fakeGh({
+      'pr list --state open': [loopPr(12, 'loop/2', 'loop/1')],
+      'pr list --state merged': [
+        { number: 11, headRefName: 'loop/1', baseRefName: 'feature/x', mergedAt: nowIso() },
+      ],
+      'pr list --state closed': [],
+      'pr list --state open --head loop/1': [],
+      'pr list --state open --base loop/1': [],
+      'pr list --state all --head feature/x': [{ number: 99 }],
+    })
+    const second = await maintenance({
+      repoDir,
+      config: shiftConfig(trackerDir),
+      withLock: false,
+      deps: pass2.deps,
+      notify,
+    })
+    expect(second.markedDone).toEqual([1])
+    expect(second.rebased).toEqual([2])
+    expect(second.deletedBranches).toEqual(['loop/1'])
+    expect(pass2.ghCalls).toContain('pr edit 12 --base feature/x')
+    expect(pass2.ghCalls.some((c) => c.startsWith('pr create'))).toBe(false)
+    expect(await readFile(join(trackerDir, 'issues', '001-a.md'), 'utf8')).toContain('state: done')
+    git(repoDir, 'merge-base', '--is-ancestor', 'origin/feature/x', 'loop/2')
+  })
+
+  it('auto-merge: merges green PRs lowest issue number first', async () => {
+    const { repoDir, trackerDir } = await makeShiftWorld()
+    await writeIssue(trackerDir, '001-a.md', '')
+    await writeIssue(trackerDir, '002-b.md', '')
+    const { deps, ghCalls } = fakeGh({
+      'pr list --state open': [
+        loopPr(12, 'loop/2', 'feature/x'),
+        loopPr(11, 'loop/1', 'feature/x'),
+      ],
+      'pr list --state merged': [],
+      'pr list --state closed': [],
+      'pr list --state all --head feature/x': [],
+    })
+    const report = await maintenance({
+      repoDir,
+      config: shiftConfig(trackerDir),
+      withLock: false,
+      deps,
+      notify,
+    })
+    expect(report.autoMerged).toEqual([1, 2])
+    expect(ghCalls.findIndex((c) => c.startsWith('pr merge 11'))).toBeLessThan(
+      ghCalls.findIndex((c) => c.startsWith('pr merge 12')),
+    )
+  })
+
+  it('auto-merge: skips drafts, unclean PRs, foreign bases and steered issues', async () => {
+    const { repoDir, trackerDir } = await makeShiftWorld()
+    await writeIssue(trackerDir, '001-a.md', 'state: ready')
+    await writeIssue(trackerDir, '002-b.md', 'state: parked')
+    const { deps, ghCalls } = fakeGh({
+      'pr list --state open': [
+        loopPr(11, 'loop/1', 'feature/x'), // issue 1 is ready — a human steered it
+        loopPr(12, 'loop/2', 'feature/x'), // issue 2 is parked
+        loopPr(13, 'loop/3', 'feature/x', { isDraft: true }),
+        loopPr(14, 'loop/4', 'feature/x', { mergeStateStatus: 'BEHIND' }),
+        loopPr(15, 'loop/5', 'develop'), // not the integration branch
+        loopPr(16, 'loop/6', 'feature/x'), // issue 6 is not in the tracker
+      ],
+      'pr list --state merged': [],
+      'pr list --state closed': [],
+      'pr list --state all --head feature/x': [],
+    })
+    const report = await maintenance({
+      repoDir,
+      config: shiftConfig(trackerDir),
+      withLock: false,
+      deps,
+      notify,
+    })
+    expect(report.autoMerged).toEqual([])
+    expect(ghCalls.some((c) => c.startsWith('pr merge'))).toBe(false)
+    expect(ghCalls.some((c) => c.startsWith('pr create'))).toBe(false)
+  })
+
+  it('auto-merge: nags once about a PR conflicted with the integration branch, then stays silent', async () => {
+    notifyMessages.length = 0
+    const { repoDir, trackerDir } = await makeShiftWorld()
+    await writeIssue(trackerDir, '001-a.md', '')
+    const handlers = {
+      'pr list --state open': [
+        loopPr(11, 'loop/1', 'feature/x', {
+          mergeable: 'CONFLICTING',
+          mergeStateStatus: 'DIRTY',
+        }),
+      ],
+      'pr list --state merged': [],
+      'pr list --state closed': [],
+      'pr list --state all --head feature/x': [],
+    }
+    await maintenance({
+      repoDir,
+      config: shiftConfig(trackerDir),
+      withLock: false,
+      deps: fakeGh(handlers).deps,
+      notify,
+    })
+    const nags = () => notifyMessages.filter((m) => m.includes('conflicts with feature/x')).length
+    expect(nags()).toBe(1)
+    // Same state next pass: silent. No merge was faked, so the PR stays
+    // conflicted and nothing else pages.
+    await maintenance({
+      repoDir,
+      config: shiftConfig(trackerDir),
+      withLock: false,
+      deps: fakeGh(handlers).deps,
+      notify,
+    })
+    expect(nags()).toBe(1)
+  })
+
+  it('without an integration branch, nothing auto-merges', async () => {
+    const { repoDir, trackerDir } = await makeShiftWorld()
+    await writeIssue(trackerDir, '001-a.md', '')
+    const { deps, ghCalls } = fakeGh({
+      'pr list --state open': [loopPr(11, 'loop/1', 'feature/x')],
+      'pr list --state merged': [],
+      'pr list --state closed': [],
+    })
+    const report = await maintenance({
+      repoDir,
+      config: config(trackerDir),
+      withLock: false,
+      deps,
+      notify,
+    })
+    expect(report.autoMerged).toEqual([])
+    expect(ghCalls.some((c) => c.startsWith('pr merge'))).toBe(false)
   })
 
   it('collects per-PR errors and keeps going', async () => {

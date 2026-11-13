@@ -85,13 +85,15 @@ const notify = async (text: string) => {
 try {
   const report = await maintenance({ repoDir, config, notify, withLock: false })
   const actions =
+    report.autoMerged.length +
     report.markedDone.length +
     report.rebased.length +
     report.retargeted.length +
     report.parked.length
   if (actions > 0 || report.conflicts.length > 0) {
     console.log(
-      `maintenance: done [${report.markedDone.join(', ')}] · rebased [${report.rebased.join(', ')}] · ` +
+      `maintenance: merged [${report.autoMerged.join(', ')}] · done [${report.markedDone.join(', ')}] · ` +
+        `rebased [${report.rebased.join(', ')}] · ` +
         `retargeted [${report.retargeted.join(', ')}] · parked [${report.parked.join(', ')}] · ` +
         `conflicts [${report.conflicts.join(', ')}]`,
     )

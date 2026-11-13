@@ -311,10 +311,15 @@ export type BaseRef = {
 /**
  * What the issue's branch starts from: an explicit `base` (a number or
  * numeric string → that issue's loop/<n> branch; anything else → the ref as
- * given), or the repo's own default branch (origin/HEAD, falling back to
- * origin/main, then main).
+ * given); otherwise the integration branch when one is configured
+ * (ADR-0003's feature-branch shift); otherwise the repo's own default branch
+ * (origin/HEAD, falling back to origin/main, then main).
  */
-export async function resolveBaseRef(repoDir: string, issue: Issue): Promise<BaseRef> {
+export async function resolveBaseRef(
+  repoDir: string,
+  issue: Issue,
+  integrationBranch?: string,
+): Promise<BaseRef> {
   if (issue.base !== undefined) {
     const issueNumber =
       typeof issue.base === 'number'
@@ -327,6 +332,7 @@ export async function resolveBaseRef(repoDir: string, issue: Issue): Promise<Bas
     const base = String(issue.base)
     return { ref: base, name: base.replace(/^origin\//, '') }
   }
+  if (integrationBranch) return { ref: `origin/${integrationBranch}`, name: integrationBranch }
   const head = await git(
     repoDir,
     'symbolic-ref',

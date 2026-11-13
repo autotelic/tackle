@@ -233,9 +233,9 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
     }
     yield* tryP(() => git(repoDir, 'fetch', 'origin'))
     // Stacked PRs (#17): the issue's base decides what the branch starts
-    // from — the repo's default branch, another issue's loop/<n> branch, or
-    // a named ref.
-    const base = yield* tryP(() => resolveBaseRef(repoDir, issue))
+    // from — the integration branch (ADR-0003), another issue's loop/<n>
+    // branch, a named ref, or the repo's default branch.
+    const base = yield* tryP(() => resolveBaseRef(repoDir, issue, config.integrationBranch))
     // A parked issue keeps its loop/<n> branch; re-picking it continues the
     // branch (its Checkpoint) rather than starting over from main. Likewise,
     // a killed run leaves the worktree behind — reuse it (#8's leftovers).

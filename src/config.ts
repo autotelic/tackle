@@ -88,6 +88,13 @@ export type LoopConfig = {
   budgets: Budgets
   /** User rules (#6, #15): (event, state, guard?) → action, declaration order. */
   rules?: Rule[]
+  /**
+   * Feature-branch shift (ADR-0003): a long-lived integration branch the
+   * Loop's PRs target and auto-merge into when green; humans review that
+   * branch into the default branch once at the end. Absent = the classic
+   * per-PR flow (PRs target the default branch, humans merge each one).
+   */
+  integrationBranch?: string
 }
 
 function fail(configPath: string, what: string): never {
@@ -159,6 +166,9 @@ export function assertLoopConfig(
     assertNumber(app.readyTimeoutSeconds, 'app.readyTimeoutSeconds', configPath)
     assertEnv(app.env, 'app.env', configPath)
   }
+
+  if (c.integrationBranch !== undefined)
+    assertString(c.integrationBranch, 'integrationBranch', configPath)
 
   if (!Array.isArray(c.checks) || c.checks.length === 0)
     fail(configPath, 'checks must be a non-empty array')

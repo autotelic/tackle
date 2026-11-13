@@ -110,6 +110,21 @@ describe('resolveBaseRef', () => {
     })
   })
 
+  it('defaults to the configured integration branch; explicit bases still win', async () => {
+    expect(await resolveBaseRef('unused', issue(), 'feature/h2-permissions')).toEqual({
+      ref: 'origin/feature/h2-permissions',
+      name: 'feature/h2-permissions',
+    })
+    expect(await resolveBaseRef('unused', issue(3), 'feature/h2-permissions')).toEqual({
+      ref: 'loop/3',
+      name: 'loop/3',
+    })
+    expect(await resolveBaseRef('unused', issue('origin/x'), 'feature/h2-permissions')).toEqual({
+      ref: 'origin/x',
+      name: 'x',
+    })
+  })
+
   it('defaults to the repo’s own default branch (origin/HEAD)', async () => {
     dir = await mkdtemp(join(tmpdir(), 'treadle-base-'))
     const bare = join(dir, 'bare')
