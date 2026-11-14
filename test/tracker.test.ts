@@ -252,4 +252,36 @@ describe('workPresent', () => {
     })
     expect(result.present).toBe(true)
   })
+
+  it('prefers the explicit per-issue baseline over the repo-level snapshot', async () => {
+    const { repoDir, worktreeDir } = await setupRepos()
+    await writeFile(join(worktreeDir, 'src', 'items.ts'), 'export const y = 2\n')
+    await writeFile(join(worktreeDir, '.treadle-unit.json'), JSON.stringify({ numTotalTests: 5 }))
+    git(worktreeDir, 'add', '-A')
+    git(worktreeDir, 'commit', '-m', 'work')
+    // The repo-level snapshot says 3; the per-issue baseline says 10 (a
+    // branch created when the suite was bigger — e.g. it counts an unmerged
+    // sibling's tests). The explicit baseline wins.
+    const withBaseline = await workPresent({
+      repoDir,
+      worktreeDir,
+      baseRef: 'main',
+      changedPaths: ['src/**'],
+      requireNewTests: true,
+      unitReportPath: '.treadle-unit.json',
+      baseCount: 10,
+    })
+    expect(withBaseline.present).toBe(false)
+    expect(withBaseline.detail).toContain('10 → 5')
+    const withGrownBaseline = await workPresent({
+      repoDir,
+      worktreeDir,
+      baseRef: 'main',
+      changedPaths: ['src/**'],
+      requireNewTests: true,
+      unitReportPath: '.treadle-unit.json',
+      baseCount: 3,
+    })
+    expect(withGrownBaseline.present).toBe(true)
+  })
 })

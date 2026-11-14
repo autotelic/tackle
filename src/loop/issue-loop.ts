@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process'
-import { appendFile, mkdir, readdir, readFile, rm } from 'node:fs/promises'
+import { appendFile, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { promisify } from 'node:util'
 import { Effect } from 'effect'
@@ -28,6 +28,46 @@ import {
   resolveBaseRef,
   workPresent,
 } from './tracker.ts'
+
+/**
+ * The per-issue test-count baseline (feature-branch era): the unit report
+ * the fresh branch's baseline Checks just produced, saved under the repo's
+ * .treadle so re-entries and later Passes compare against the branch's own
+ * starting count. The repo-level snapshot goes stale the moment a worktree
+ * is removed — it once carried an unmerged branch's tests and made every
+ * later issue's `workPresent` fail its test-count guard.
+ */
+function testBaselinePath(treadleDir: string, issue: number): string {
+  return join(treadleDir, `test-baseline-${issue}.json`)
+}
+
+async function saveTestBaseline(
+  treadleDir: string,
+  issue: number,
+  worktreeDir: string,
+  unitReportPath: string,
+): Promise<void> {
+  const source = await readFile(join(worktreeDir, unitReportPath), 'utf8').catch(() => null)
+  if (source === null) return
+  const parsed = JSON.parse(source) as { numTotalTests?: number }
+  if (typeof parsed.numTotalTests !== 'number') return
+  await mkdir(dirname(testBaselinePath(treadleDir, issue)), { recursive: true })
+  await writeFile(
+    testBaselinePath(treadleDir, issue),
+    JSON.stringify({ numTotalTests: parsed.numTotalTests, at: new Date().toISOString() }),
+  )
+}
+
+async function readTestBaseline(treadleDir: string, issue: number): Promise<number | null> {
+  try {
+    const parsed = JSON.parse(await readFile(testBaselinePath(treadleDir, issue), 'utf8')) as {
+      numTotalTests?: number
+    }
+    return typeof parsed.numTotalTests === 'number' ? parsed.numTotalTests : null
+  } catch {
+    return null
+  }
+}
 
 const execFileAsync = promisify(execFile)
 
@@ -305,6 +345,19 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
         )
         return { kind: 'parked', issue: issue.number, passesUsed: 0, reason: 'no-rule' }
       }
+      // The fresh branch's own suite count is this issue's test baseline:
+      // workPresent compares later Passes against the branch's starting
+      // point, never against a repo-level snapshot (which goes stale and
+      // once carried an unmerged branch's tests).
+      const unitStep = config.checks.find((c) => c.report?.format === 'vitest-json')
+      yield* tryP(() =>
+        saveTestBaseline(
+          treadleDir,
+          issue.number,
+          worktreeDir,
+          unitStep?.report?.path ?? '.treadle/reports/unit.json',
+        ),
+      )
     }
 
     // ── The Pass loop ───────────────────────────────────────────────────
@@ -539,6 +592,7 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
       // ── Feature done (#9: checks.passed ∧ work present) ───────────────
       if (report.outcome === 'checks.passed') {
         const unitStep = config.checks.find((c) => c.report?.format === 'vitest-json')
+        const baseline = yield* tryP(() => readTestBaseline(treadleDir, issue.number))
         const present = yield* tryP(() =>
           workPresent({
             repoDir,
@@ -547,6 +601,7 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
             changedPaths: config.featureDone.changedPaths,
             requireNewTests: config.featureDone.requireNewTests,
             unitReportPath: unitStep?.report?.path ?? '.treadle/reports/unit.json',
+            baseCount: baseline,
           }),
         )
         if (present.present) {

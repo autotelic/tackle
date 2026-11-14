@@ -364,6 +364,13 @@ export async function resolveBaseRef(
  * Work present (#9's Feature done guard): the branch changes code in
  * featureDone.changedPaths and (when requireNewTests) the unit test report
  * counts more tests than the base branch's.
+ *
+ * The baseline count comes from `baseCount` when the caller has one — the
+ * count captured on the fresh branch at creation — and otherwise from the
+ * repo's own unit report. The fallback exists for pre-baseline branches;
+ * the repo-level snapshot goes stale (it outlives the worktree that wrote
+ * it and can carry unmerged branches' tests), so callers should prefer
+ * capturing a per-issue baseline at branch creation.
  */
 export async function workPresent(options: {
   repoDir: string
@@ -372,6 +379,7 @@ export async function workPresent(options: {
   changedPaths: string[]
   requireNewTests: boolean
   unitReportPath: string
+  baseCount?: number | null
 }): Promise<{ present: boolean; detail: string }> {
   const diff = await git(
     options.worktreeDir,
@@ -387,7 +395,10 @@ export async function workPresent(options: {
   if (!options.requireNewTests) return { present: true, detail: 'code changes present' }
 
   const current = await countTests(join(options.worktreeDir, options.unitReportPath))
-  const base = await countTests(join(options.repoDir, options.unitReportPath))
+  const base =
+    options.baseCount !== undefined && options.baseCount !== null
+      ? options.baseCount
+      : await countTests(join(options.repoDir, options.unitReportPath))
   if (current === null) return { present: false, detail: 'no unit test report on the branch' }
   if (base !== null && current <= base) {
     return { present: false, detail: `test count did not grow (${base} → ${current})` }
