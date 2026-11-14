@@ -11,7 +11,8 @@
  * - A loop PR closed without merging, on an issue nobody is steering (no
  *   state): the issue parks for a human decision.
  * - Feature-branch shift (ADR-0003): with `integrationBranch` configured, the
- *   Loop merges its own green loop/* PRs into that branch (squash, CI green,
+ *   branch is the staging area and the Loop merges every green PR into it
+ *   (squash, CI green,
  *   stateless issue) and opens the human review PR (branch → default branch)
  *   once, on the first merge. Conflict nags dedupe across passes.
  *
@@ -33,7 +34,7 @@ import { parseBaseFromBody, relabel, resolveBaseRef } from './loop/tracker.ts'
 import { loadTelePiConfig, sendTelegramMessage } from './telepi.ts'
 
 export type MaintenanceReport = {
-  autoMerged: number[]
+  autoMerged: (number | string)[]
   reviewPrUrl: string | null
   markedDone: number[]
   rebased: number[]
@@ -343,15 +344,17 @@ export async function maintenance(options: {
     }
 
     // ── Auto-merge (ADR-0003, the feature-branch shift) ───────────────
-    // With integrationBranch configured the Loop merges its own PRs into
-    // that branch instead of waiting for a person per PR: squash, lowest
-    // issue number first, GitHub CI green, non-draft, and the issue
-    // stateless — the open PR is the done marker, so a ready/working/parked
-    // issue never auto-merges. The merged-PR processing below runs in the
-    // same pass: the issue goes done, dependents rebase onto the branch and
-    // retarget, so a stack lands one maintenance pass per level. The human
-    // review PR (branch → default branch) is opened once, on the first
-    // merge; the Loop never merges it.
+    // With integrationBranch configured the branch is the staging area and
+    // the Loop is the merger for EVERYTHING targeting it — its own loop/*
+    // PRs and hand-authored ones alike (Ed's rule, 2026-11-14: humans
+    // review once, at the end). Squash, CI green, non-draft. For loop/*
+    // PRs the tracker gates apply (the issue stateless — the open PR is
+    // the done marker — and a stacked child waits for its parent); hand
+    // branches have no tracker linkage and merge on green alone. The
+    // merged-PR processing below runs in the same pass for loop/*: the
+    // issue goes done, dependents rebase onto the branch and retarget. The
+    // human review PR (branch → default branch) is opened once, on the
+    // first merge; the Loop never merges it.
     if (config.integrationBranch) {
       const integrationBranch = config.integrationBranch
       try {
@@ -367,23 +370,23 @@ export async function maintenance(options: {
           '100',
         )
         const candidates = open
+          .filter((pr) => pr.baseRefName === integrationBranch)
           .map((pr) => ({ pr, issue: loopIssueNumber(pr.headRefName) }))
-          .filter((x): x is { pr: OpenPr; issue: number } => x.issue !== null)
-          .filter((x) => x.pr.baseRefName === integrationBranch)
         // Conflicts with the integration branch need a human rebase.
         for (const { pr, issue } of candidates) {
           if (pr.mergeable === 'CONFLICTING' || pr.mergeStateStatus === 'DIRTY') {
+            const ref = issue === null ? pr.headRefName : `${pr.headRefName} (issue #${issue})`
             await noteConflict(
               pr.headRefName,
-              `Stack maintenance: ${pr.headRefName} conflicts with ${integrationBranch} ` +
-                `(issue #${issue}) — a person needs to rebase it by hand.`,
+              `Stack maintenance: ${ref} conflicts with ${integrationBranch} — ` +
+                'a person needs to rebase it by hand.',
             )
           }
         }
         let issueFiles: IssueFile[] | null = null
-        // The issue's state gates the merge: 'missing' = the tracker doesn't
-        // know this loop/<n> (another era's branch) — never touch it; null =
-        // stateless, the done marker.
+        // The issue's state gates loop/* merges: 'missing' = the tracker
+        // doesn't know this loop/<n> (another era's branch) — never touch
+        // it; null = stateless, the done marker. Hand branches skip this.
         const stateOf = async (issue: number): Promise<string | null | 'missing'> => {
           if (config.issues.tracker !== 'markdown') {
             return issueState(repoDir, config, issue, deps).catch(() => 'missing')
@@ -437,7 +440,7 @@ export async function maintenance(options: {
             .catch(() => null)
           return state === 'CLOSED'
         }
-        const green: { pr: OpenPr; issue: number }[] = []
+        const green: { pr: OpenPr; issue: number | null }[] = []
         for (const { pr, issue } of candidates) {
           try {
             if (
@@ -446,8 +449,10 @@ export async function maintenance(options: {
               pr.mergeStateStatus !== 'CLEAN'
             )
               continue
-            if ((await stateOf(issue)) !== null) continue
-            if (!(await parentDone(issue))) continue
+            if (issue !== null) {
+              if ((await stateOf(issue)) !== null) continue
+              if (!(await parentDone(issue))) continue
+            }
             green.push({ pr, issue })
           } catch (error) {
             report.errors.push(
@@ -456,7 +461,13 @@ export async function maintenance(options: {
             )
           }
         }
-        green.sort((a, b) => a.issue - b.issue)
+        // Tracker-tracked work first (lowest issue number), then hand
+        // branches by PR number.
+        green.sort(
+          (a, b) =>
+            (a.issue ?? Number.MAX_SAFE_INTEGER) - (b.issue ?? Number.MAX_SAFE_INTEGER) ||
+            a.pr.number - b.pr.number,
+        )
         let mergedCount = 0
         for (const { pr, issue } of green) {
           try {
@@ -471,9 +482,35 @@ export async function maintenance(options: {
               '--body',
               '',
             )
-            report.autoMerged.push(issue)
+            report.autoMerged.push(issue ?? pr.headRefName)
             mergedCount += 1
             await notify(`Treadle merged #${pr.number} (${pr.title}) into ${integrationBranch}.`)
+            // A hand branch has no tracker linkage, so the merged-PR
+            // processing below won't clean it up — delete it here, unless
+            // another open PR still uses it as a base (stacked hand work).
+            if (issue === null) {
+              const based = await deps.ghJsonFn<{ number: number }[]>(
+                repoDir,
+                'pr',
+                'list',
+                '--state',
+                'open',
+                '--base',
+                pr.headRefName,
+                '--json',
+                'number',
+                '--limit',
+                '1',
+              )
+              if (based.length === 0) {
+                if (await branchExists(repoDir, `origin/${pr.headRefName}`)) {
+                  await git(repoDir, 'push', 'origin', '--delete', pr.headRefName)
+                }
+                if (await branchExists(repoDir, pr.headRefName)) {
+                  await git(repoDir, 'branch', '-D', pr.headRefName).catch(() => undefined)
+                }
+              }
+            }
           } catch (error) {
             report.errors.push(
               `${pr.headRefName}: ${error instanceof Error ? error.message : String(error)}`,
@@ -509,8 +546,8 @@ export async function maintenance(options: {
               '--title',
               `Treadle integration branch → ${reviewTarget.name}`,
               '--body',
-              `Auto-managed (project-loop ADR-0003): Treadle squash-merges its green ` +
-                `\`loop/*\` PRs into \`${integrationBranch}\` as they go green. Review this ` +
+              `Auto-managed (project-loop ADR-0003): Treadle squash-merges every green ` +
+                `\`PRs\` into \`${integrationBranch}\` as they go green. Review this ` +
                 `PR into \`${reviewTarget.name}\` once at the end — the Loop never merges it.`,
             )
             report.reviewPrUrl = url.length > 0 ? url : null

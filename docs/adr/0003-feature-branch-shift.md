@@ -8,15 +8,19 @@ the loop's throughput was bounded by how often a human looked at GitHub. The
 review pile also became rebase risk the longer it sat.
 
 The shift: a long-lived **integration branch** (`integrationBranch` in
-loop.config.ts) becomes the Loop's merge target. Loop PRs (`loop/<n>`) target
-it; a baseless issue branches from it (numeric `base:` stacking unchanged); a
-new maintenance step **squash-merges the Loop's own green PRs into it** —
-lowest issue number first, GitHub CI green (`mergeable` + `mergeStateStatus:
-CLEAN`), non-draft, and the issue stateless (the open PR is the done marker).
-The existing cascade then runs in the same pass: the issue goes `state: done`,
-dependents rebase onto the branch and retarget. Humans review the branch into
-the default branch **once at the end**; maintenance opens that review PR on
-the first auto-merge and never again (closing or merging it is final).
+loop.config.ts) becomes the merge target for EVERYTHING in the SOW's world.
+Loop PRs (`loop/<n>`) target it; a baseless issue branches from it (numeric
+`base:` stacking unchanged); hand-authored work targets it too — no carve-out
+for non-loop PRs (Ed's rule, 2026-11-14: "everything gets merged into the
+feature branch — human review at the very end"). A maintenance step
+**squash-merges every green PR into it** — GitHub CI green (`mergeable` +
+`mergeStateStatus: CLEAN`), non-draft; tracker gates (the issue stateless, a
+stacked child waits for its parent) apply only where a tracker linkage
+exists. The existing cascade then runs for tracked issues in the same pass:
+the issue goes `state: done`, dependents rebase onto the branch and retarget.
+Humans review the branch into the default branch **once at the end**;
+maintenance opens that review PR on the first auto-merge and never again
+(closing or merging it is final).
 
 The wave rule is gone: its job was bounding the review pile, and the pile is
 now one branch that drains itself. The nightly caps still bound pace. The

@@ -742,6 +742,44 @@ describe('maintenance', () => {
     expect(nags()).toBe(1)
   })
 
+  it('auto-merge: a hand branch (no tracker linkage) merges on green alone, branch cleaned up', async () => {
+    const { repoDir, originDir, trackerDir } = await makeShiftWorld()
+    await writeIssue(trackerDir, '001-a.md', '')
+    // A hand-authored branch off the integration branch with no loop/N name
+    // and no issue file — e.g. the oracle or test-infra work.
+    git(repoDir, 'checkout', '-b', 'feat/oracle', 'origin/feature/x')
+    await writeFile(join(repoDir, 'oracle.txt'), 'oracle\n')
+    git(repoDir, 'add', '-A')
+    git(repoDir, 'commit', '-m', 'oracle')
+    git(repoDir, 'push', 'origin', 'feat/oracle')
+    git(repoDir, 'checkout', 'develop')
+
+    const pass = fakeGh({
+      'pr list --state open': [loopPr(21, 'feat/oracle', 'feature/x', { title: 'the oracle' })],
+      'pr list --state merged': [],
+      'pr list --state closed': [],
+      'pr list --state open --base feat/oracle': [],
+      'pr list --state all --head feature/x': [],
+    })
+    const report = await maintenance({
+      repoDir,
+      config: shiftConfig(trackerDir),
+      withLock: false,
+      deps: pass.deps,
+      notify,
+    })
+    expect(report.autoMerged).toEqual(['feat/oracle'])
+    expect(pass.ghCalls.some((c) => c.startsWith('pr merge 21 --squash'))).toBe(true)
+    // No tracker state was consulted or written: no issues touched.
+    expect(await readFile(join(trackerDir, 'issues', '001-a.md'), 'utf8')).not.toContain('state:')
+    // The merged hand branch is deleted on the remote (no PRs stacked on it).
+    expect(() => git(originDir, 'rev-parse', '--verify', 'feat/oracle')).toThrow()
+    // The review PR opened on the first merge.
+    expect(
+      pass.ghCalls.some((c) => c.startsWith('pr create --base develop --head feature/x')),
+    ).toBe(true)
+  })
+
   it('without an integration branch, nothing auto-merges', async () => {
     const { repoDir, trackerDir } = await makeShiftWorld()
     await writeIssue(trackerDir, '001-a.md', '')
