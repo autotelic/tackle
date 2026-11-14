@@ -141,7 +141,29 @@ async function githubListWorking(repoDir: string, workingLabel: string): Promise
     '--limit',
     '50',
   )
-  return issues.map(withParsedBase)
+  const withBases = issues.map(withParsedBase)
+  // Same normalization as the ready queue: a working issue whose numeric
+  // base issue is closed (merged) drops the base — otherwise a re-entered
+  // stacked issue resolves a parent branch that maintenance may have
+  // deleted.
+  const closedNumbers = withBases.some((issue) => typeof issue.base === 'number')
+    ? new Set(
+        (
+          await ghJson<{ number: number }[]>(
+            repoDir,
+            'issue',
+            'list',
+            '--state',
+            'closed',
+            '--json',
+            'number',
+            '--limit',
+            '100',
+          )
+        ).map((issue) => issue.number),
+      )
+    : new Set<number>()
+  return withBases.map((issue) => normalizeBase(issue, closedNumbers))
 }
 
 async function githubRelabel(
@@ -327,10 +349,17 @@ export async function resolveBaseRef(
         : /^\d+$/.test(issue.base.trim())
           ? Number.parseInt(issue.base.trim(), 10)
           : undefined
-    if (issueNumber !== undefined)
-      return { ref: `loop/${issueNumber}`, name: `loop/${issueNumber}` }
-    const base = String(issue.base)
-    return { ref: base, name: base.replace(/^origin\//, '') }
+    if (issueNumber !== undefined) {
+      // The ref must actually exist: a stacked issue resumed after its
+      // parent merged (and maintenance deleted the parent branch) must not
+      // diff or branch against a dead ref. Fall through to the integration
+      // or default branch when it's gone.
+      if (await branchExists(repoDir, `loop/${issueNumber}`))
+        return { ref: `loop/${issueNumber}`, name: `loop/${issueNumber}` }
+    } else {
+      const base = String(issue.base)
+      return { ref: base, name: base.replace(/^origin\//, '') }
+    }
   }
   if (integrationBranch) return { ref: `origin/${integrationBranch}`, name: integrationBranch }
   const head = await git(

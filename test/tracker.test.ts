@@ -94,9 +94,40 @@ describe('resolveBaseRef', () => {
     ...(base !== undefined ? { base } : {}),
   })
 
-  it('maps a numeric base to the base issue’s loop/<n> branch', async () => {
-    expect(await resolveBaseRef('unused', issue(3))).toEqual({ ref: 'loop/3', name: 'loop/3' })
-    expect(await resolveBaseRef('unused', issue('3'))).toEqual({ ref: 'loop/3', name: 'loop/3' })
+  it('maps a numeric base to the base issue’s loop/<n> branch — when the ref exists', async () => {
+    dir = await mkdtemp(join(tmpdir(), 'treadle-base-'))
+    const repo = join(dir, 'repo')
+    await mkdir(repo, { recursive: true })
+    git(repo, 'init', '-b', 'main')
+    git(repo, 'config', 'user.email', 't@t')
+    git(repo, 'config', 'user.name', 't')
+    await writeFile(join(repo, 'f'), 'x\n')
+    git(repo, 'add', '-A')
+    git(repo, 'commit', '-m', 'init')
+    git(repo, 'branch', 'loop/3')
+    expect(await resolveBaseRef(repo, issue(3))).toEqual({ ref: 'loop/3', name: 'loop/3' })
+    expect(await resolveBaseRef(repo, issue('3'))).toEqual({ ref: 'loop/3', name: 'loop/3' })
+  })
+
+  it('falls back when the numeric base’s ref is gone (parent merged + branch deleted)', async () => {
+    dir = await mkdtemp(join(tmpdir(), 'treadle-base-'))
+    const repo = join(dir, 'repo')
+    await mkdir(repo, { recursive: true })
+    git(repo, 'init', '-b', 'develop')
+    git(repo, 'config', 'user.email', 't@t')
+    git(repo, 'config', 'user.name', 't')
+    await writeFile(join(repo, 'f'), 'x\n')
+    git(repo, 'add', '-A')
+    git(repo, 'commit', '-m', 'init')
+    // loop/3 does not exist — the regression that killed the loop:
+    // a re-entered stacked issue diffing against its parent's deleted branch.
+    expect(await resolveBaseRef(repo, issue(3), 'feature/h2-permissions')).toEqual({
+      ref: 'origin/feature/h2-permissions',
+      name: 'feature/h2-permissions',
+    })
+    // Without an integration branch: the default-branch chain (this repo has
+    // no remote, so the last resort is the local main).
+    expect(await resolveBaseRef(repo, issue(3))).toEqual({ ref: 'main', name: 'main' })
   })
 
   it('passes a named base through, stripping origin/ for the PR base name', async () => {
@@ -110,14 +141,10 @@ describe('resolveBaseRef', () => {
     })
   })
 
-  it('defaults to the configured integration branch; explicit bases still win', async () => {
+  it('defaults to the configured integration branch; explicit named bases still win', async () => {
     expect(await resolveBaseRef('unused', issue(), 'feature/h2-permissions')).toEqual({
       ref: 'origin/feature/h2-permissions',
       name: 'feature/h2-permissions',
-    })
-    expect(await resolveBaseRef('unused', issue(3), 'feature/h2-permissions')).toEqual({
-      ref: 'loop/3',
-      name: 'loop/3',
     })
     expect(await resolveBaseRef('unused', issue('origin/x'), 'feature/h2-permissions')).toEqual({
       ref: 'origin/x',

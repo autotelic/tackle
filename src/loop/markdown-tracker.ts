@@ -152,6 +152,21 @@ function toIssue(file: IssueFile, byNumber: Map<number, IssueFile>): Issue {
   }
 }
 
+/**
+ * A working issue whose numeric base is done (merged) drops the base: the
+ * stack has landed below it, so diffs and any new PR resolve against the
+ * integration/default branch. Without this, a re-entered stacked issue
+ * whose parent branch was deleted after the merge crashes on the dead ref
+ * (the ready queue already normalizes this — the working queue must too).
+ */
+function normalizeDoneBase(issue: Issue, byNumber: Map<number, IssueFile>): Issue {
+  const baseNumber = typeof issue.base === 'number' ? issue.base : undefined
+  if (baseNumber !== undefined && byNumber.get(baseNumber)?.state === 'done') {
+    delete issue.base
+  }
+  return issue
+}
+
 /** The queue: `state: ready`, no open blockers, lowest number first. */
 export async function markdownListReady(
   repoDir: string,
@@ -186,7 +201,9 @@ export async function markdownListWorking(dir: string, workingLabel: string): Pr
   await syncPull(dir)
   const files = await readIssueFiles(dir)
   const byNumber = new Map(files.map((file) => [file.number, file]))
-  return files.filter((file) => file.state === workingLabel).map((file) => toIssue(file, byNumber))
+  return files
+    .filter((file) => file.state === workingLabel)
+    .map((file) => normalizeDoneBase(toIssue(file, byNumber), byNumber))
 }
 
 async function findIssueFile(dir: string, issue: number): Promise<IssueFile | undefined> {
