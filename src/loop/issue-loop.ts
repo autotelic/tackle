@@ -757,7 +757,17 @@ async function checkpoint(worktreeDir: string, branch: string, message: string):
   // should.
   if (status.length > 0) await git(worktreeDir, 'commit', '-m', message, '--no-verify')
   const sha = await git(worktreeDir, 'rev-parse', 'HEAD')
-  await git(worktreeDir, 'push', '-u', 'origin', branch)
+  // The remote branch can move under a live worktree — maintenance or a
+  // human rebases the branch while a Session runs (the feature-branch shift
+  // makes hand-rebases routine). A plain non-fast-forward rejection must
+  // not kill the issue loop: fetch, rebase the branch's own commits onto
+  // the remote tip, and retry once. Rebasing (never force-pushing) keeps
+  // any human version of the branch intact.
+  await git(worktreeDir, 'push', '-u', 'origin', branch).catch(async () => {
+    await git(worktreeDir, 'fetch', 'origin', branch)
+    await git(worktreeDir, 'rebase', `origin/${branch}`)
+    await git(worktreeDir, 'push', '-u', 'origin', branch, '--force-with-lease')
+  })
   return sha
 }
 
