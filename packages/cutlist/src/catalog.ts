@@ -636,7 +636,10 @@ export const buildCatalog = (
     }
     const withoutHash = {
       lexicon: lexiconRef("catalog"),
-      root,
+      // Repo-relative on purpose. The build path used to be written here, which put an author's
+      // directory layout into a committed artifact and made the hash differ per checkout -- so
+      // `--check` could only pass on the machine that built it.
+      root: ".",
       tokens,
       tiers: config.tiers,
       sharedRoots: [...config.tiers.shared],

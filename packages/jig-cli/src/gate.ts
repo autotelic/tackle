@@ -30,6 +30,13 @@ export interface GateOptions {
   readonly maxWarnings: number
   /** Repo-relative paths the change touched. Read only when `mode` is `touched-files`. */
   readonly touched: ReadonlySet<string>
+  /**
+   * Engines whose findings are reported and never held against the run.
+   *
+   * A rule that is wrong upstream is still worth seeing: marking the engine advisory keeps its
+   * findings in the census and the baseline while taking only the exit code away.
+   */
+  readonly advisory: ReadonlySet<string>
 }
 
 /** What a run earned: the code, the findings that earned it, and whose silence earned it. */
@@ -40,6 +47,8 @@ export interface GateVerdict {
   readonly failOn: GateOptions["failOn"]
   /** The in-scope findings the gate holds against the run, in report order. */
   readonly failing: ReadonlyArray<Diagnostic>
+  /** In-scope findings from advisory engines: printed and baselined, never fatal. */
+  readonly advisory: ReadonlyArray<Diagnostic>
   /** Engines that could not run, by id. Non-empty means the report is incomplete. */
   readonly infrastructure: ReadonlyArray<string>
 }
@@ -84,14 +93,19 @@ export const gateVerdict = (run: HarnessRun, options: GateOptions): GateVerdict 
     ...(run.report.generators.length === 0 ? ["jig"] : []),
   ]
   const scope = inScope(run, options)
-  const held = heldByFailOn(run, scope, options.failOn)
+  // Advisory is per engine, so it is decided here rather than in `heldByFailOn`: an advisory
+  // engine's findings leave the gate's arithmetic entirely -- findings, warnings, ceiling --
+  // and are carried out separately so the report can still show them.
+  const advisory = scope.filter((diagnostic) => options.advisory.has(diagnostic.engine))
+  const gated = scope.filter((diagnostic) => !options.advisory.has(diagnostic.engine))
+  const held = heldByFailOn(run, gated, options.failOn)
   // The ceiling is a second, severity-blind regime: enough warnings fail whatever `failOn`
   // says. When it trips, the warnings are what the gate holds, so they are what it shows.
-  const warnings = scope.filter((diagnostic) => diagnostic.severity === "warn")
+  const warnings = gated.filter((diagnostic) => diagnostic.severity === "warn")
   const overCeiling = options.maxWarnings >= 0 && warnings.length > options.maxWarnings
   const heldSet = new Set(held)
   const failing = overCeiling
-    ? scope.filter((diagnostic) => diagnostic.severity === "warn" || heldSet.has(diagnostic))
+    ? gated.filter((diagnostic) => diagnostic.severity === "warn" || heldSet.has(diagnostic))
     : held
   const exitCode =
     infrastructure.length > 0
@@ -99,5 +113,12 @@ export const gateVerdict = (run: HarnessRun, options: GateOptions): GateVerdict 
       : failing.length > 0
         ? EXIT.findings
         : EXIT.clean
-  return { exitCode, scope: options.mode, failOn: options.failOn, failing, infrastructure }
+  return {
+    exitCode,
+    scope: options.mode,
+    failOn: options.failOn,
+    failing,
+    advisory,
+    infrastructure,
+  }
 }

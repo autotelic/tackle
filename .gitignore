@@ -32,6 +32,10 @@ tools/foreman/*.sqlite-journal
 .pi/npm/
 .pi/sessions/
 
+# The goal ledger is the pool's local state, not the repository's.
+.pi/goals/
+.pi/.goals-pool-snapshot.json
+
 # OpenCode may install local plugin dependencies under here; none are committed.
 .opencode/node_modules/
 

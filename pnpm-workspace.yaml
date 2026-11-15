@@ -75,6 +75,12 @@ overrides:
   "@effect/platform-node-shared": "4.0.5"
   "@effect/opentelemetry": "4.0.5"
 
+# Hold a brand-new release for a day before it can be installed. The exclude list
+# below was inert without this line: pnpm has nothing to exempt when no age floor is set.
+# Twenty-four hours is enough for a compromised publish to be yanked; the packages that
+# need to move at once are named in `minimumReleaseAgeExclude`.
+minimumReleaseAge: 1440
+
 minimumReleaseAgeExclude:
   - "@effect/tsgo-darwin-arm64@0.56.0"
   - "@effect/tsgo-darwin-x64@0.56.0"
@@ -99,7 +105,12 @@ minimumReleaseAgeExclude:
   - "@earendil-works/pi-schema@1.5.0"
   - "@earendil-works/pi-telemetry@1.5.0"
 
+# pnpm 12 defaults `strictDepBuilds` to true, so a package whose build scripts nobody has
+# ruled on fails the install. These three are the rulings: esbuild needs its postinstall to
+# fetch its binary; the other two arrive transitively through pi-durable and neither script is
+# needed to run a room, so they are denied rather than left unreviewed. The placeholder text
+# pnpm's prompt leaves behind is not a boolean and does not count as a decision.
 allowBuilds:
-  "@google/genai": set this to true or false
+  "@google/genai": false
   esbuild: true
-  protobufjs: set this to true or false
+  protobufjs: false

@@ -17,6 +17,7 @@ const EngineRefSchema = Schema.Struct({
   config: Schema.optionalKey(Schema.String),
   args: Schema.optionalKey(Schema.Array(Schema.String)),
   enabled: Schema.optionalKey(Schema.Boolean),
+  advisory: Schema.optionalKey(Schema.Boolean),
 })
 
 const GateSchema = Schema.Struct({

@@ -172,6 +172,15 @@ export interface EngineRef {
    */
   readonly args?: ReadonlyArray<string>
   readonly enabled?: boolean
+  /**
+   * Report this engine's findings and never fail the gate on them.
+   *
+   * The escape hatch for an engine worth reading and not yet trustworthy: plumb 0.6.0
+   * misattributes `require-schema-type-derivation` to `file:1:1`, so 2 findings out of 1167
+   * failed a correct one-line change. Advisory findings are printed, baselined and counted --
+   * they cannot set the exit code, which is the only thing a broken engine should lose.
+   */
+  readonly advisory?: boolean
 }
 
 /** When a run fails. */
@@ -383,6 +392,7 @@ const decodeEngineRef = (value: unknown): EngineRef | undefined => {
   const args = "args" in value ? strings(value.args) : undefined
   if ("args" in value && args === undefined) return undefined
   const enabled = bool(value.enabled)
+  const advisory = bool(value.advisory)
   return {
     id,
     kind,
@@ -390,6 +400,7 @@ const decodeEngineRef = (value: unknown): EngineRef | undefined => {
     ...(config === undefined ? {} : { config }),
     ...(args === undefined ? {} : { args }),
     ...(enabled === undefined ? {} : { enabled }),
+    ...(advisory === undefined ? {} : { advisory }),
   }
 }
 

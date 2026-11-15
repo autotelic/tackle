@@ -34,15 +34,19 @@ const onPath = (name: string): string | undefined => {
   return undefined
 }
 
-/** How to launch jig: a command and its leading args. */
-interface Launcher {
+/** How to launch jig: a command, its leading args, and where the choice came from. */
+export interface Launcher {
   readonly command: string
   readonly args: ReadonlyArray<string>
+  /** Which arm answered: the host's override, the project's install, PATH, or this build. */
+  readonly kind: "override" | "project" | "path" | "build" | "source" | "bin"
 }
 
 /** The facts the fallback decision reads, injected so it can be tested without spawning. */
 export interface LaunchEnvironment {
   readonly override: string | undefined
+  /** The repository the tool call names; its own install is the authoritative one. */
+  readonly cwd: string
   readonly onPath: (name: string) => string | undefined
   readonly execPath: string
   readonly exists: (path: string) => boolean
@@ -52,38 +56,51 @@ export interface LaunchEnvironment {
 /**
  * How to invoke jig.
  *
- * `PATH` wins so the plugin and the shell get the same answer; `JIG_BIN` overrides both.
+ * The PROJECT's own install wins, then `PATH`, then this package's build: a repository
+ * that pins `@autotelic/jig-cli` as a devDependency is telling us which code its CI runs,
+ * and a global `jig` on PATH is a different version with no way to tell from the output.
+ * `JIG_BIN` overrides all of it.
+ *
  * The fallback runs this package's own build, and it must name a real interpreter rather
  * than `process.execPath`: the OpenCode server is a bun-compiled binary, so there
  * `process.execPath` is OpenCode, not Node — launching `process.execPath <jig.js>` runs
- * OpenCode, which prints its own help. Prefer a `jig` on `PATH`, then this checkout's build,
- * then its source, each under a Node found on `PATH` (or, if none, whatever runs us).
+ * OpenCode, which prints its own help. Each fallback runs under a Node found on `PATH` (or,
+ * if none, whatever runs us).
  */
 export const resolveLauncher = (env: LaunchEnvironment): Launcher => {
-  if (env.override !== undefined && env.override !== "") return { command: env.override, args: [] }
-  if (env.onPath("jig") !== undefined) return { command: "jig", args: [] }
+  if (env.override !== undefined && env.override !== "") {
+    return { command: env.override, args: [], kind: "override" }
+  }
+  const local = join(env.cwd, "node_modules", ".bin", "jig")
+  if (env.exists(local)) return { command: local, args: [], kind: "project" }
+  const global = env.onPath("jig")
+  if (global !== undefined) return { command: global, args: [], kind: "path" }
   const node = env.onPath("node") ?? env.execPath
   const built = join(env.root, "dist", "cli.js")
-  if (env.exists(built)) return { command: node, args: [built] }
+  if (env.exists(built)) return { command: node, args: [built], kind: "build" }
   const source = join(env.root, "src", "cli.ts")
-  if (env.exists(source)) return { command: node, args: ["--conditions=development", source] }
+  if (env.exists(source)) {
+    return { command: node, args: ["--conditions=development", source], kind: "source" }
+  }
   // `bin/jig.js` forwards to `dist/cli.js`, so this arm only runs with nothing to run.
-  return { command: node, args: [join(env.root, "bin", "jig.js")] }
+  return { command: node, args: [join(env.root, "bin", "jig.js")], kind: "bin" }
 }
 
-const invoke = (): Launcher =>
+const invoke = (cwd: string): Launcher =>
   resolveLauncher({
     override: process.env.JIG_BIN,
+    cwd,
     onPath,
     execPath: process.execPath,
     exists: existsSync,
     root: packageRoot(),
   })
 
-/** The report and the exit code. A non-zero exit is a result, not a thrown tool call. */
+/** The report, the exit code, and which jig answered. */
 interface Outcome {
   readonly output: string
   readonly code: number
+  readonly launcher: Launcher
 }
 
 const runJig = async (
@@ -91,14 +108,15 @@ const runJig = async (
   args: ReadonlyArray<string>,
   signal: AbortSignal | undefined,
 ): Promise<Outcome> => {
-  const { command, args: prefix } = invoke()
+  const launcher = invoke(cwd)
+  const { command, args: prefix } = launcher
   try {
     const { stdout, stderr } = await run(command, [...prefix, ...args], {
       cwd,
       maxBuffer: 32 * 1024 * 1024,
       ...(signal === undefined ? {} : { signal }),
     })
-    return { output: (stdout.trim() === "" ? stderr : stdout).trim(), code: 0 }
+    return { output: (stdout.trim() === "" ? stderr : stdout).trim(), code: 0, launcher }
   } catch (error) {
     // `execFile` rejects on a non-zero exit, and `jig check` exits non-zero on findings.
     // The report is on stdout either way; only a failed spawn has neither stream.
@@ -110,6 +128,7 @@ const runJig = async (
     return {
       output: output === "" ? (failed.message ?? "jig failed to run") : output,
       code: typeof failed.code === "number" ? failed.code : 1,
+      launcher,
     }
   }
 }
@@ -134,7 +153,7 @@ const v2 = Plugin.define({
       editor.add({
         name: "check",
         description:
-          "Run every conformance engine configured for this repository (plumb, joggle, cutlist, …) and return one merged report of errors, warnings, and notices, plus a note for any engine that could not run — and whether an engine replayed a cache or skipped a rule, because a note means 'not looked at', never 'clean'.",
+          "Run every conformance engine configured for this repository (plumb, joggle, cutlist, …) and return one merged report of errors, warnings, and notices, plus a note for any engine that could not run — and whether an engine replayed a cache or skipped a rule, because a note means 'not looked at', never 'clean'. Flags pass through in `args`. Judging (a model key, engine-only flags such as `--rule`/`--max-tokens`) needs the host started under the secret manager and a shell call: this tool spawns jig without an environment of its own.",
         input: {
           type: "object",
           properties: {
@@ -148,22 +167,62 @@ const v2 = Plugin.define({
               enum: ["text", "github", "json"],
               description: "How to render the report. Default: text.",
             },
+            args: {
+              type: "array",
+              items: { type: "string" },
+              description:
+                "Extra flags for `jig check` (`--config`, `--limit`, `--format`, …). Judged work that needs an engine flag or an environment variable is shell-only: see the tool description.",
+            },
           },
           additionalProperties: false,
         },
         options: { namespace: "jig", codemode: true },
         execute: async (input, context) => {
-          const options = (input ?? {}) as { readonly cwd?: unknown; readonly format?: unknown }
+          const options = (input ?? {}) as {
+            readonly cwd?: unknown
+            readonly format?: unknown
+            readonly args?: unknown
+          }
           const directory = directoryFor(options.cwd, root)
           const format = typeof options.format === "string" ? options.format : "text"
+          const extra = Array.isArray(options.args)
+            ? options.args.filter((value): value is string => typeof value === "string")
+            : []
           const outcome = await runJig(
             directory,
-            ["check", "--cwd", directory, "--format", format],
+            ["check", "--cwd", directory, "--format", format, ...extra],
             context.signal,
           )
           return {
             content: outcome.output === "" ? `jig check exited ${outcome.code}` : outcome.output,
-            metadata: { exitCode: outcome.code, cwd: directory },
+            metadata: { exitCode: outcome.code, cwd: directory, launcher: outcome.launcher },
+          }
+        },
+      })
+
+      editor.add({
+        name: "baseline",
+        description:
+          "Accept the current findings into the ledger (`jig baseline`). This WRITES the baseline, so a human decides it, not a tool call: use it only after they have read the report. It does not judge anything; a judged baseline needs a model key in the host's environment and is shell-only.",
+        input: {
+          type: "object",
+          properties: {
+            cwd: {
+              type: "string",
+              description:
+                "Repository whose baseline to accept, relative to this location. Default: this location.",
+            },
+          },
+          additionalProperties: false,
+        },
+        options: { namespace: "jig", codemode: true },
+        execute: async (input, context) => {
+          const options = (input ?? {}) as { readonly cwd?: unknown }
+          const directory = directoryFor(options.cwd, root)
+          const outcome = await runJig(directory, ["baseline", "--cwd", directory], context.signal)
+          return {
+            content: outcome.output === "" ? `jig baseline exited ${outcome.code}` : outcome.output,
+            metadata: { exitCode: outcome.code, cwd: directory, launcher: outcome.launcher },
           }
         },
       })
@@ -226,7 +285,7 @@ const v2 = Plugin.define({
           )
           return {
             content: outcome.output === "" ? `jig onboard exited ${outcome.code}` : outcome.output,
-            metadata: { exitCode: outcome.code, cwd: directory },
+            metadata: { exitCode: outcome.code, cwd: directory, launcher: outcome.launcher },
           }
         },
       })
@@ -286,7 +345,7 @@ const v2 = Plugin.define({
           )
           return {
             content: outcome.output === "" ? `jig init exited ${outcome.code}` : outcome.output,
-            metadata: { exitCode: outcome.code, cwd: directory },
+            metadata: { exitCode: outcome.code, cwd: directory, launcher: outcome.launcher },
           }
         },
       })
@@ -360,7 +419,7 @@ const v2 = Plugin.define({
           )
           return {
             content: outcome.output === "" ? `jig menu exited ${outcome.code}` : outcome.output,
-            metadata: { exitCode: outcome.code, cwd: directory },
+            metadata: { exitCode: outcome.code, cwd: directory, launcher: outcome.launcher },
           }
         },
       })
@@ -386,7 +445,7 @@ const v2 = Plugin.define({
           const outcome = await runJig(directory, ["engines", "--cwd", directory], context.signal)
           return {
             content: outcome.output === "" ? "no engines configured" : outcome.output,
-            metadata: { exitCode: outcome.code, cwd: directory },
+            metadata: { exitCode: outcome.code, cwd: directory, launcher: outcome.launcher },
           }
         },
       })
@@ -456,6 +515,11 @@ const server = async () => {
         description: "Run every configured engine and return one merged report.",
         args: {},
         execute: tool(["check", "--cwd", root]),
+      },
+      jig_baseline: {
+        description: "Accept the current findings into the ledger; a human decides this.",
+        args: {},
+        execute: tool(["baseline", "--cwd", root]),
       },
       jig_onboard: {
         description: "Read the setup plan and agent prompt without writing anything.",

@@ -137,6 +137,32 @@ export const JoggleConfig = Schema.Struct({
    * extensions it can parse, and says which declared ones it did not.
    */
   runExternalCode: Schema.optionalKey(Schema.Boolean),
+  /**
+   * The run's judgement budget, in the file rather than in a shell history.
+   *
+   * `--max-tokens` was the only place to say it, so CI and a local run disagreed
+   * unless every invocation remembered the flag. This is the same number, read
+   * where the rest of the run's decisions live; an explicit flag still wins.
+   */
+  decision: Schema.optionalKey(
+    Schema.Struct({
+      /** Input tokens one run may spend on judgement. */
+      maxInputTokens: Schema.optionalKey(Schema.Finite),
+    }),
+  ),
+  /**
+   * Where the committed ledger lives, and in what shape.
+   *
+   * One sorted `answers.jsonl` (the default) is what a reviewer can read: a
+   * verdict change is one line. `sharded` is the opt-in for a store large enough
+   * that a whole-file rewrite or a merge is a real cost; both are read either way,
+   * and `joggle cache migrate --layout` moves between them.
+   */
+  cache: Schema.optionalKey(
+    Schema.Struct({
+      layout: Schema.optionalKey(Schema.Literals(["single", "sharded"])),
+    }),
+  ),
   evidence: Schema.optionalKey(
     Schema.Struct({
       /**

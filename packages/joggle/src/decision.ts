@@ -21,7 +21,7 @@ import type * as HttpClient from "effect/http/HttpClient"
 import { TypeSafeClient, TypeSafeDecisionModel, TypeSafeSchema } from "@effect/ai-typesafe"
 import { canonical } from "./canonical.ts"
 import { policy } from "./policy.ts"
-import { make as makeAnswerStore } from "./answer-store.ts"
+import { make as makeAnswerStore, type Layout } from "./answer-store.ts"
 import { answerOf, memoize, PlanAnswers, storedOf, type PlanAnswerStore } from "./plans.ts"
 import type { DecisionTotals } from "./schema.ts"
 
@@ -64,6 +64,13 @@ export interface Options {
    * per-decision cache in `cacheDir` is what CI replays.
    */
   readonly wireCacheDir?: string | undefined
+  /**
+   * How to write the committed ledger: one file (default) or shards.
+   *
+   * Absent means "whatever is already on disk", so a repository that has not
+   * decided keeps its current shape rather than being rewritten by a run.
+   */
+  readonly layout?: Layout | undefined
   /** Never call the API; answer only from the persisted cache. */
   readonly offline: boolean
   /** Absent means judged rules fail with a clear reason and deterministic rules still run. */
@@ -281,7 +288,9 @@ export const layer = (
       // merge driver resolves the residual case by key. A legacy single
       // `answers.json` is read and migrated on the first write. See
       // `docs/artifacts.md`.
-      const answers = yield* makeAnswerStore(fs, path, options.cacheDir)
+      const answers = yield* makeAnswerStore(fs, path, options.cacheDir, {
+        layout: options.layout,
+      })
       const planAnswers: PlanAnswerStore = {
         get: (key) => Effect.map(answers.get(key), (stored) => Option.map(stored, answerOf)),
         put: (key, answer) => answers.put(key, storedOf(answer)),

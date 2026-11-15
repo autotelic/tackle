@@ -611,6 +611,31 @@ export const engineProvenance = (stdout: string): Provenance => {
   }
 }
 
+/**
+ * Whether an engine ran, replayed, skipped, or errored.
+ *
+ * An engine whose output jig could not read is `errored`, not `ran`: it exited, but
+ * nothing was looked at, and the status has to agree with the unparsed-output finding.
+ * The unreadable case is checked FIRST. `engineProvenance` answers `ran` for any
+ * document it could not read (that is what "no summary" looks like), so letting it win
+ * made the errored branch dead: a joggle that died with exit 1 was summarized `ran`,
+ * the gate saw no infrastructure, and `--format github` showed a green PR over a run
+ * that read nothing.
+ */
+export const engineStatus = (
+  id: string,
+  diagnostics: ReadonlyArray<Diagnostic>,
+  provenance: Provenance | undefined,
+): EngineStatus =>
+  // The parser emits the bare id, and a report normalizes it to `engine/rule`; both
+  // spellings mean the same thing here.
+  diagnostics.some(
+    (diagnostic) =>
+      diagnostic.ruleId === "unparsed-output" || diagnostic.ruleId === `${id}/unparsed-output`,
+  )
+    ? "errored"
+    : (provenance?.status ?? "ran")
+
 const summarize = (
   id: string,
   diagnostics: ReadonlyArray<Diagnostic>,
@@ -619,13 +644,7 @@ const summarize = (
 ): EngineSummary => {
   const counts = countsOf(diagnostics)
   const provenance = extra.provenance
-  // An engine whose output jig could not read is `errored`, not `ran`: it exited, but
-  // nothing was looked at, and the status has to agree with the unparsed-output finding.
-  const status =
-    provenance?.status ??
-    (diagnostics.some((diagnostic) => diagnostic.ruleId === `${id}/unparsed-output`)
-      ? "errored"
-      : "ran")
+  const status = engineStatus(id, diagnostics, provenance)
   const note = extra.note ?? provenance?.note
   return {
     id,

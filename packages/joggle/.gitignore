@@ -11,6 +11,7 @@ coverage/
 # accepted finding. Nothing else in .joggle/ is tracked. See docs/artifacts.md.
 .joggle/*
 !.joggle/.gitattributes
+!.joggle/answers.jsonl
 !.joggle/answers/
 !.joggle/answers/**
 !.joggle/baseline/

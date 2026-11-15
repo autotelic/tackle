@@ -15,11 +15,15 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - run: corepack enable
+      # Node 26 no longer ships corepack — 26.13.x has neither the binary nor the module —
+      # so `corepack enable` is the step that would break here. pnpm arrives from its own
+      # action, versioned by `packageManager` in the root package.json, which is the same
+      # answer on a fresh checkout as it is on a runner.
+      - uses: pnpm/action-setup@v4
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version: 26
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile

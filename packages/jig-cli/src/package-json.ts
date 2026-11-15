@@ -9,6 +9,7 @@ import { Effect, FileSystem, Path, Result, Schema, SchemaParser } from "effect"
  * for a directory that is not a Node package yet.
  */
 const Manifest = Schema.Struct({
+  name: Schema.optionalKey(Schema.String),
   description: Schema.optionalKey(Schema.String),
   packageManager: Schema.optionalKey(Schema.String),
   scripts: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
@@ -20,6 +21,8 @@ const decode = SchemaParser.decodeUnknownResult(Schema.fromJsonString(Manifest))
 
 /** What a scaffold reads from a package manifest. */
 export interface PackageManifest {
+  /** The package name: what a generated doc should call this repository, when it has one. */
+  readonly name: string | undefined
   readonly description: string | undefined
   readonly packageManager: string | undefined
   readonly scripts: Readonly<Record<string, string>>
@@ -39,6 +42,7 @@ export const packageJsonOf = (
     )
     const decoded = Result.getOrUndefined(decode(text))
     return {
+      name: decoded?.name,
       description: decoded?.description,
       packageManager: decoded?.packageManager,
       scripts: decoded?.scripts ?? {},

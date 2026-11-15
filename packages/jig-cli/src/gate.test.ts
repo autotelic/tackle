@@ -67,10 +67,54 @@ const options = (over: Partial<GateOptions> = {}): GateOptions => ({
   failOn: "any-new",
   maxWarnings: -1,
   touched: new Set<string>(),
+  advisory: new Set<string>(),
   ...over,
 })
 
 describe("gateVerdict", () => {
+  it("reports an advisory engine's findings and never fails on them", () => {
+    // plumb 0.6.0 misattributes findings to file:1:1: 2 out of 1167 failed a correct one-line
+    // change. Advisory keeps them in the report and takes only the exit code away.
+    const broken = [
+      diag({ engine: "plumb", ruleId: "require-schema-type-derivation", severity: "error" }),
+      diag({
+        engine: "plumb",
+        ruleId: "require-schema-type-derivation",
+        severity: "error",
+        file: "b.ts",
+      }),
+    ]
+    const verdict = gateVerdict(runOf(broken), options({ advisory: new Set(["plumb"]) }))
+    expect(verdict.exitCode).toBe(EXIT.clean)
+    expect(verdict.failing).toEqual([])
+    expect(verdict.advisory).toHaveLength(2)
+  })
+
+  it("does not let an advisory engine's warnings trip the ceiling", () => {
+    const verdict = gateVerdict(
+      runOf([
+        diag({ ruleId: "advisory-warn", severity: "warn" }),
+        diag({ engine: "joggle", ruleId: "kept", severity: "info" }),
+      ]),
+      options({ advisory: new Set(["plumb"]), maxWarnings: 0, failOn: "warn" }),
+    )
+    // One advisory warning, zero gated ones: the ceiling reads only what can fail.
+    expect(verdict.exitCode).toBe(EXIT.clean)
+  })
+
+  it("still fails on a gated engine in the same run", () => {
+    const verdict = gateVerdict(
+      runOf([
+        diag({ engine: "plumb", ruleId: "advisory", severity: "error" }),
+        diag({ engine: "joggle", ruleId: "real", severity: "error", file: "b.ts" }),
+      ]),
+      options({ advisory: new Set(["plumb"]) }),
+    )
+    expect(verdict.exitCode).toBe(EXIT.findings)
+    expect(verdict.failing.map((diagnostic) => diagnostic.ruleId)).toEqual(["real"])
+    expect(verdict.advisory.map((diagnostic) => diagnostic.ruleId)).toEqual(["advisory"])
+  })
+
   it("passes a clean run", () => {
     const verdict = gateVerdict(runOf([]), options())
     expect(verdict.exitCode).toBe(EXIT.clean)

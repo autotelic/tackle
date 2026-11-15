@@ -106,10 +106,14 @@ Two, and neither re-implements anything:
   `@opencode/plugin` is an optional peer.
 
 Both shell out to the `jig` binary and hand back what a human's terminal shows. Both expose
-`check`, `engines`, `menu`, `onboard`, and `init`: `jig_menu` / `jig.menu` returns the cutlist
-artifact's stable shape or the parts and recipes that answer a query, `jig_onboard` / `jig.onboard`
-returns the setup plan and prompt without writing anything, and `jig_init` / `jig.init` applies that
-plan only after a human approves it. If you find yourself rendering a report a second time
+`check`, `engines`, `menu`, `onboard`, `init`, and `baseline`: `jig_menu` / `jig.menu` returns
+the cutlist artifact's stable shape or the parts and recipes that answer a query, `jig_onboard` /
+`jig.onboard` returns the setup plan and prompt without writing anything, and `jig_init` /
+`jig.init` applies that plan only after a human approves it. `jig_check` accepts an `args`
+passthrough, and every result carries `details.launcher` / `metadata.launcher`: the project's
+own `node_modules/.bin/jig` first, then `PATH`, then this build. Judging (a model key, an
+engine-only flag such as `--rule` or `--max-tokens`) is shell-only, because the tools spawn
+`jig` without an environment of their own. If you find yourself rendering a report a second time
 in either one, the report belongs in `jig`'s renderers instead.
 
 ## The exemplar is a client, not a fixture

@@ -14,6 +14,7 @@ import { resolveLauncher, type LaunchEnvironment } from "./opencode.ts"
 
 const env = (over: Partial<LaunchEnvironment> = {}): LaunchEnvironment => ({
   override: undefined,
+  cwd: "/repo",
   onPath: () => undefined,
   execPath: "/opt/opencode/opencode.exe",
   exists: () => false,
@@ -32,19 +33,41 @@ describe("the OpenCode launcher fallback", () => {
       {
         command: "/custom/jig",
         args: [],
+        kind: "override",
       },
     )
   })
 
-  it("prefers a jig on PATH", () => {
-    expect(resolveLauncher(env({ onPath: only("jig") }))).toEqual({ command: "jig", args: [] })
+  it("prefers the project's own install over PATH", () => {
+    // A repo that pins jig is telling us which code its CI runs; a global jig is a
+    // different version, and the report never says which one answered.
+    const launcher = resolveLauncher(
+      env({ onPath: only("jig"), exists: (p) => p === "/repo/node_modules/.bin/jig" }),
+    )
+    expect(launcher).toEqual({
+      command: "/repo/node_modules/.bin/jig",
+      args: [],
+      kind: "project",
+    })
+  })
+
+  it("prefers a jig on PATH when the project has none", () => {
+    expect(resolveLauncher(env({ onPath: only("jig") }))).toEqual({
+      command: "/usr/bin/jig",
+      args: [],
+      kind: "path",
+    })
   })
 
   it("runs the build under Node, not the host binary", () => {
     const launcher = resolveLauncher(
       env({ onPath: only("node"), exists: (p) => p === "/pkg/dist/cli.js" }),
     )
-    expect(launcher).toEqual({ command: "/usr/bin/node", args: ["/pkg/dist/cli.js"] })
+    expect(launcher).toEqual({
+      command: "/usr/bin/node",
+      args: ["/pkg/dist/cli.js"],
+      kind: "build",
+    })
   })
 
   it("falls back to source through the development condition", () => {
@@ -54,12 +77,17 @@ describe("the OpenCode launcher fallback", () => {
     expect(launcher).toEqual({
       command: "/usr/bin/node",
       args: ["--conditions=development", "/pkg/src/cli.ts"],
+      kind: "source",
     })
   })
 
   it("names the host executable only when no Node is on PATH", () => {
     const launcher = resolveLauncher(env({ exists: (p) => p === "/pkg/dist/cli.js" }))
-    expect(launcher).toEqual({ command: "/opt/opencode/opencode.exe", args: ["/pkg/dist/cli.js"] })
+    expect(launcher).toEqual({
+      command: "/opt/opencode/opencode.exe",
+      args: ["/pkg/dist/cli.js"],
+      kind: "build",
+    })
   })
 
   it("never uses the host binary as the interpreter when Node is available (property)", () => {
