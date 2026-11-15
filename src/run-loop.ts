@@ -210,4 +210,9 @@ await startup.unlock()
 const reason = finalContext.stopReason ?? 'nothing left to do'
 console.log(`\nTreadle stopped: ${reason}`)
 await notify(`Treadle stopped: ${reason}`)
-process.exit(0)
+// A harness failure (an issue loop or queue poll erroring) is not a clean
+// stop: exit non-zero so launchd's KeepAlive restarts the Loop instead of
+// leaving it resting until the next calendar start. A genuinely crashy bug
+// just throttles — visible in `last exit`, never silent.
+const failed = reason.startsWith('issue loop failed') || reason.startsWith('queue poll failed')
+process.exit(failed ? 1 : 0)

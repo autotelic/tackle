@@ -505,6 +505,18 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
           `treadle: pass ${passNumber} checkpoint for #${issue.number} (${outcome.terminal})`,
         ),
       )
+      if (sha === null) {
+        // The branch conflicts with its remote tip (moved under the session
+        // by a rebase) — a person resolves it. The pass's commits are safe
+        // on the local branch; the next pick resumes from them.
+        yield* tryP(() => parkWithSummary('conflict'))
+        return {
+          kind: 'parked',
+          issue: issue.number,
+          passesUsed: ruleContext.passesUsed,
+          reason: 'blocked',
+        }
+      }
 
       // ── Blocked-on-human: park; the answer watcher resumes (#8/#9) ────
       if (outcome.terminal === 'blocked-on-human') {
@@ -667,13 +679,17 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
       await comment(repoDir, config, issue.number, renderReceipt(receipt))
     }
 
-    async function parkWithSummary(reason: 'budget' | 'stalled' | 'no-rule'): Promise<void> {
+    async function parkWithSummary(
+      reason: 'budget' | 'stalled' | 'no-rule' | 'conflict',
+    ): Promise<void> {
       const why =
         reason === 'budget'
           ? `budget of ${budget} Passes used`
           : reason === 'stalled'
             ? 'stalled: the Failure set stopped shrinking'
-            : 'no rule matched checks.failed'
+            : reason === 'conflict'
+              ? `the branch conflicts with origin/${branch} — rebase it by hand, then set the issue ready (the session's commits are safe on the local branch)`
+              : 'no rule matched checks.failed'
       const summary =
         `**Parked (${why}).**\n\n` +
         (tried.length > 0
@@ -742,7 +758,19 @@ async function revertProtected(worktreeDir: string, protectedPaths: string[]): P
   return touched
 }
 
-async function checkpoint(worktreeDir: string, branch: string, message: string): Promise<string> {
+/**
+ * Commit and push the pass's checkpoint. Returns the checkpoint SHA, or
+ * `null` when the branch conflicts with the remote tip: the remote moved
+ * under the live worktree (maintenance or a hand rebase — routine under
+ * the feature-branch shift), the branch's own commits don't replay cleanly
+ * onto it, and pushing is a human's rebase away. The commits are safe on
+ * the local branch either way; the caller parks the issue with a note.
+ */
+async function checkpoint(
+  worktreeDir: string,
+  branch: string,
+  message: string,
+): Promise<string | null> {
   // Guardrail (#16): the Loop only ever pushes loop/* branches.
   if (!branch.startsWith('loop/')) throw new Error(`refusing to push non-loop branch: ${branch}`)
   await git(worktreeDir, 'add', '-A')
@@ -762,13 +790,26 @@ async function checkpoint(worktreeDir: string, branch: string, message: string):
   // makes hand-rebases routine). A plain non-fast-forward rejection must
   // not kill the issue loop: fetch, rebase the branch's own commits onto
   // the remote tip, and retry once. Rebasing (never force-pushing) keeps
-  // any human version of the branch intact.
+  // any human version of the branch intact. A rebase CONFLICT (the branch
+  // carries pre-rewrite lineage, say) parks the issue instead — the loop
+  // must not die on a state a person has to resolve.
+  let conflicted = false
   await git(worktreeDir, 'push', '-u', 'origin', branch).catch(async () => {
     await git(worktreeDir, 'fetch', 'origin', branch)
-    await git(worktreeDir, 'rebase', `origin/${branch}`)
+    const rebased = await git(worktreeDir, 'rebase', `origin/${branch}`).then(
+      () => true,
+      () => {
+        git(worktreeDir, 'rebase', '--abort').catch(() => undefined)
+        return false
+      },
+    )
+    if (!rebased) {
+      conflicted = true
+      return
+    }
     await git(worktreeDir, 'push', '-u', 'origin', branch, '--force-with-lease')
   })
-  return sha
+  return conflicted ? null : sha
 }
 
 /** Which issues are ready right now, answered-first (#9). */
