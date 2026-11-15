@@ -9,8 +9,8 @@ import { Result, Schema } from "effect"
  * `review-requested:@me` returns what is outstanding and drops a pull request once a review is
  * submitted.
  *
- * So the queue is a watermark over that search, not a work list of its own. It remembers when a
- * worker was last raised for a pull request and which worker that was; it never remembers "done",
+ * So the queue is a watermark over that search, not a work list of its own. It records when a
+ * worker was last raised for a pull request and which worker that was; "done" is never recorded,
  * because "done" is the search no longer returning the row. A session that dies, a machine that
  * sleeps, or an extension that was never loaded all converge on the same reconciliation: ask
  * GitHub what is still outstanding, and raise a worker for anything whose worker is gone.

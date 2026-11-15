@@ -4,9 +4,9 @@ import { Data, Result, Schema } from "effect"
 /*
  * The room client.
  *
- * The daemon is a client of the room, not a second writer. Everything it knows about work
- * comes from this small HTTP surface, which means the same daemon works against a local
- * celld object and a deployed one.
+ * The daemon is a client of the room, not a second writer. Everything the client holds
+ * about work comes from this small HTTP surface, which means the same daemon works
+ * against a local celld object and a deployed one.
  */
 
 /** One worker session. */

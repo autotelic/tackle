@@ -44,7 +44,7 @@ export const Edit = Schema.Struct({
 export interface Edit extends Schema.Schema.Type<typeof Edit> {}
 
 /**
- * The smaller form, and everything that changes with it.
+ * The smaller form a repair proposes, and every field that changes with it.
  *
  * The operation is settled by two estimators: a table in code, and the model's
  * own read of the candidate. The cascade is never the model's -- a model that

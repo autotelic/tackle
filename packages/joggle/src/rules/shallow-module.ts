@@ -23,7 +23,7 @@ const RULE_ID = "joggle/shallow-module"
  * A file with a wide surface and little behind it.
  *
  * The CANDIDATE is structural: a file that exports more than a few things over a
- * thin body. That is a fact, and the ratio is exact.
+ * thin body. Both numbers are facts, and the ratio is exact.
  *
  * Whether it is a problem is not. Ousterhout's deep module is a simple interface
  * over a complex implementation; a wide interface over a thin one may be a grab

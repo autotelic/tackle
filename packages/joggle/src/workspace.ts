@@ -12,6 +12,7 @@ import { isIgnored, orderRules, rulesAt, type IgnorePattern } from "./gitignore.
 import { shortHash } from "./state.ts"
 import { blockingErrors, componentName, isAstro, parseInputOf, type Region } from "./astro.ts"
 import { tsconfigScope } from "./tsconfig-scope.ts"
+import { looksLikeProse, sentencesOfMarkdown, type ProseFile } from "./prose.ts"
 import { looksLikeSource } from "./source.ts"
 import { manifestAt, type PackageManifest } from "./manifest.ts"
 
@@ -407,6 +408,13 @@ export interface UnparsedFile {
 export interface Workspace {
   readonly root: string
   readonly files: ReadonlyArray<SourceFile>
+  /**
+   * Markdown files, read as prose.
+   *
+   * A rule cannot read a file the index has not read: `plan` and `run` have no
+   * `FileSystem` in their environment. Markdown arrives here, or no rule sees it.
+   */
+  readonly prose: ReadonlyArray<ProseFile>
   readonly units: ReadonlyArray<Unit>
   readonly byName: ReadonlyMap<string, ReadonlyArray<Unit>>
   /**
@@ -2018,6 +2026,8 @@ const ignored = new Set<string>(policy.ignoredDirectories)
 /** What discovery saw, and what it declined to look at. */
 export interface Discovery {
   readonly files: ReadonlyArray<string>
+  /** Markdown files, read as prose rather than parsed as source. */
+  readonly prose: ReadonlyArray<string>
   /**
    * Files the walk saw and did not treat as source, by extension.
    *
@@ -2115,6 +2125,7 @@ const walk = ({ dir, root, inherited = [] }: WalkRequest): Effect.Effect<Discove
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
     const found: Array<string> = []
+    const prose: Array<string> = []
     const skipped = new Map<string, number>()
     let rules: ReadonlyArray<IgnorePattern> = inherited
     let ignoredCount = 0
@@ -2150,6 +2161,8 @@ const walk = ({ dir, root, inherited = [] }: WalkRequest): Effect.Effect<Discove
       if (info.type === "File") {
         if (looksLikeSource(current)) {
           found.push(current)
+        } else if (looksLikeProse(current)) {
+          prose.push(current)
         } else {
           const extension = extensionOf(current)
           skipped.set(extension, (skipped.get(extension) ?? 0) + 1)
@@ -2176,6 +2189,7 @@ const walk = ({ dir, root, inherited = [] }: WalkRequest): Effect.Effect<Discove
     // analysed part of the tree and said nothing about the rest.
     return {
       files: found.sort(Order.String),
+      prose: prose.sort(Order.String),
       skippedExtensions: summarise(skipped),
       truncated: found.length >= walkLimits.files || seen.size >= walkLimits.directories,
       ignored: ignoredCount,
@@ -2190,6 +2204,7 @@ const resolveInputs = (
   Effect.gen(function* () {
     const path = yield* Path.Path
     const files: Array<string> = []
+    const prose: Array<string> = []
     const skipped = new Map<string, number>()
     let truncated = false
     let ignored = 0
@@ -2198,6 +2213,10 @@ const resolveInputs = (
       const absolute = path.isAbsolute(input) ? input : path.join(root, input)
       if (looksLikeSource(absolute)) {
         files.push(absolute)
+        continue
+      }
+      if (looksLikeProse(absolute)) {
+        prose.push(absolute)
         continue
       }
       // A .gitignore above the walked directory still applies to it, so the
@@ -2217,6 +2236,7 @@ const resolveInputs = (
       }
       const nested = yield* walk({ dir: absolute, root, inherited: orderRules(chain) })
       for (const file of nested.files) files.push(file)
+      for (const file of nested.prose) prose.push(file)
       truncated = truncated || nested.truncated
       ignored += nested.ignored
       ignoredDirectories += nested.ignoredDirectories
@@ -2224,7 +2244,14 @@ const resolveInputs = (
         skipped.set(entry.extension, (skipped.get(entry.extension) ?? 0) + entry.count)
       }
     }
-    return { files, skippedExtensions: summarise(skipped), truncated, ignored, ignoredDirectories }
+    return {
+      files,
+      prose: prose.sort(Order.String),
+      skippedExtensions: summarise(skipped),
+      truncated,
+      ignored,
+      ignoredDirectories,
+    }
   })
 
 /**
@@ -2249,6 +2276,7 @@ export const discoverFiles = (
         )
         return {
           files: [...discovered, ...astro].sort(Order.String),
+          prose: walked.prose,
           skippedExtensions: [],
           truncated: walked.truncated,
           ignored: 0,
@@ -2261,8 +2289,7 @@ export const discoverFiles = (
  * Parses to reuse, keyed by a file and its content.
  *
  * Declared here rather than in the module that persists it, so the direction is
- * one-way: the cache knows what a parse is, and the parser does not know there is
- * a cache on disk.
+ * one-way: the cache holds parses, and the parser has no cache on disk.
  */
 export interface Parses {
   readonly get: (file: string, text: string) => SourceFile | undefined
@@ -2320,6 +2347,23 @@ export interface WorkspaceInputs {
    * caller, not here, because a trace typechecks the whole program.
    */
   readonly types?: TypeIndex
+  /**
+   * Prose the caller already has.
+   *
+   * A commit message, a pull request body and a release note are read by people
+   * and are not files in the tree, so discovery cannot find them. The caller
+   * reads them and hands them over in the shape a Markdown file would arrive in.
+   */
+  readonly prose?: ReadonlyArray<ProseFile>
+  /**
+   * Paths to read as prose, whatever their extension.
+   *
+   * Discovery's own Markdown arrives here, and so does a file a caller named: a
+   * commit message has no extension at all. Both are read in one place, because a
+   * caller that passes `discovered` bypasses the walk that would have found the
+   * Markdown, and that is how prose went missing once already.
+   */
+  readonly proseFiles?: ReadonlyArray<string>
 }
 
 /**
@@ -2336,8 +2380,12 @@ export const loadWorkspace = (
     const path = yield* Path.Path
     const parses = input.parses ?? noParses()
     const types = input.types ?? emptyTypeIndex
-    const files =
-      input.discovered ?? (yield* resolveInputs(root, inputs.length > 0 ? inputs : ["."])).files
+    // Resolved once: the source list and the prose list come from the same walk.
+    const resolved =
+      input.discovered === undefined
+        ? yield* resolveInputs(root, inputs.length > 0 ? inputs : ["."])
+        : undefined
+    const files = input.discovered ?? resolved?.files ?? []
     // Where the time went, in the same shape the report already uses for rules.
     // Adding this is how I learned that the parser was never the expensive part
     // and that two guesses about the bottleneck were both wrong.
@@ -2375,6 +2423,29 @@ export const loadWorkspace = (
       }
     }
     clock = mark("read+parse", clock, yield* Clock.currentTimeMillis)
+    const prose: Array<ProseFile> = [...(input.prose ?? [])]
+    for (const file of [...(resolved?.prose ?? []), ...(input.proseFiles ?? [])]) {
+      // Absolute at the boundary: discovery reports the path it walked, and a
+      // caller reports one relative to the root, so the two disagree about what a
+      // relative path means.
+      const absolute = path.isAbsolute(file) ? file : path.resolve(file)
+      const preloaded = input.contents?.get(absolute)
+      const text =
+        preloaded ??
+        (yield* fs.readFileString(absolute).pipe(Effect.orElseSucceed(() => "")))
+      // An unreadable prose file is skipped. It is a gap, and it fails no run.
+      if (text === "") continue
+      // A document outside the analysed root keeps its own path: a commit message
+      // lives in .git, and "../.." is not a path a reader can use.
+      const relative = path.relative(path.resolve(root), absolute)
+      prose.push({
+        path: relative.startsWith("..") ? absolute : relative,
+        text,
+        sentences: sentencesOfMarkdown(text),
+      })
+    }
+    // A path can arrive twice: once from discovery and once from a caller.
+    const documents = [...new Map(prose.map((file) => [file.path, file])).values()]
     const graph = buildImportGraph(parsed, path)
     clock = mark("import-graph", clock, yield* Clock.currentTimeMillis)
     // Resolution happens here, not at parse time, because it needs the whole
@@ -2479,6 +2550,7 @@ export const loadWorkspace = (
     return {
       root,
       files: parsed,
+      prose: documents,
       units,
       byName,
       imports: graph,

@@ -32,8 +32,8 @@ const VIOLATIONS = { verdict: ["one_concept"] } as const
 // literals are collected per file, the key sets are sorted (because `{a, b}` and
 // `{b, a}` are one shape), and a shape shared by two or more files is a
 // candidate. Whether that shape is ONE CONCEPT that deserves a name, or two
-// concepts that happen to share field names, is not a fact. That is the question,
-// and it used to be answered by the key set alone.
+// concepts that happen to share field names, is a question, and the key set alone
+// used to answer it.
 /**
  * The rule's identity and its messages, in one place a reporter can be bound to
  * without the rule having to name itself.

@@ -5,9 +5,8 @@ model — the parts inventory — then renders that model several ways. No LLM. 
 in, same bytes out.
 
 A cutlist is the carpenter's enumerated parts _with their dimensions_, produced before
-you assemble. The metaphor is honest about the important thing: a cutlist is **derived
-from the project**, not a fixed catalog. That is why it is generated from the tree
-instead of hand-maintained.
+you assemble. The metaphor holds where it matters: a cutlist is **derived from the
+project**, and it is generated from the tree rather than hand-maintained.
 
 ## What it reads
 
@@ -158,7 +157,7 @@ today from what is proposed. It is a decision record, not a commitment.
 
 [docs/compression.md](docs/compression.md) records how the vocabulary grows and is
 collected: a walk allocates freely, the change set is the trigger, duplicates are garbage,
-and `joggle` is the marking phase. The menu is a memory, not a fence.
+and `joggle` is the marking phase. The menu is a memory of the vocabulary.
 
 ## Where it meets the others
 

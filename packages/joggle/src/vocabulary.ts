@@ -14,7 +14,7 @@ import { Decision } from "effect/ai"
  *
  * The split is by whether a string depends on the candidate. A string that is the
  * same for every candidate lives here. A criterion that names the member being
- * kept, or counts the declarations shown, is built in the rule that knows those
+ * kept, or counts the declarations shown, is built in the rule that holds those
  * facts -- so the WORDS still come from here, through a template.
  */
 
@@ -384,7 +384,7 @@ export const pageDecisions = {
     instructions: [
       "Should this file's state and markup live in a composition bundle instead?",
       "Inspect `page`.",
-      "The pattern earns its keep when several blocks share state that this file currently threads itself. A file with its own state and no sharing between pieces does not need it.",
+      "The pattern helps when several blocks share state that this file currently threads itself. A file with its own state and no sharing between pieces does not need it.",
       "Judge whether a bundle would remove real duplication of state, not whether this file is long.",
       "Choose `no_issue` when the state is this file's own and nothing is shared.",
     ].join("\n"),

@@ -487,11 +487,11 @@ interface PrescriptionInput {
 /**
  * What to do about it, from what the declaration IS and how the files relate.
  *
- * This is the whole judgement, and it is decided in code. The model answers two
+ * The judgement is decided in code. The model answers two
  * questions it can actually answer -- what is this, and how do these files
  * relate -- and the prescription follows from the pair. No repository has to
- * declare its boundaries for this to work, which is the point: a hand-maintained
- * map of a codebase's architecture goes stale the moment someone moves a
+ * declare its boundaries for this to work, because a hand-maintained map of a
+ * codebase's architecture goes stale the moment someone moves a
  * directory, and the paths say the same thing for free.
  *
  * The two rows that matter are the same duplication with opposite answers. A
@@ -912,7 +912,7 @@ export interface ClusterPhase {
  *
  * The phase is separate from the answer so the engine can collect plans from
  * every planned rule and answer them in one request. A rule that answered its own
- * plans could not share a request with another, which is the whole point.
+ * plans could not share a request with another, which is why the split exists.
  */
 export const planClusters = (
   rule: ClusterRule,
@@ -968,10 +968,10 @@ export const readClusters = (
 }
 
 /**
- * Plan and answer one rule's clusters, when the rule does not want batching.
+ * Plan and answer one rule's clusters, when the rule does not batch.
  *
  * A planned rule does not use this; it hands its plans to the engine. This is for
- * a rule that is the only judge in a run, or a test that wants one call's worth of
+ * a rule that is the only judge in a run, or a test that needs one call's worth of
  * behaviour.
  */
 export const assessClusters = (

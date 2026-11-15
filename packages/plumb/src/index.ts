@@ -2,6 +2,9 @@ import { eslintCompatPlugin } from "@oxlint/plugins";
 
 import { preferPropertyTestsRule } from "./rules/prefer-property-tests.ts";
 
+import { noAnthropomorphicProgramRule } from "./rules/no-anthropomorphic-program.ts";
+import { noAntithesisClauseRule } from "./rules/no-antithesis-clause.ts";
+import { noProseVerdictRule } from "./rules/no-prose-verdict.ts";
 import { noChainedTypeAssertionsRule } from "./rules/no-chained-type-assertions.ts";
 import { noConditionalEmptyObjectSpreadRule } from "./rules/no-conditional-empty-object-spread.ts";
 import { noBooleanFieldSignalsRule } from "./rules/no-boolean-field-signals.ts";
@@ -59,6 +62,9 @@ import { noStringInstantRule } from "./rules/no-string-instant.ts";
 const plumbPlugin = eslintCompatPlugin({
 	meta: { name: "plumb" },
 	rules: {
+		"no-anthropomorphic-program": noAnthropomorphicProgramRule,
+		"no-antithesis-clause": noAntithesisClauseRule,
+		"no-prose-verdict": noProseVerdictRule,
 		"no-chained-type-assertions": noChainedTypeAssertionsRule,
 		"no-boolean-field-signals": noBooleanFieldSignalsRule,
 		"no-conditional-empty-object-spread": noConditionalEmptyObjectSpreadRule,

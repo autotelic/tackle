@@ -8,7 +8,7 @@ import type { Predicate } from "effect"
  * repository that meant 1,457 JavaScript files -- an entire API and an entire
  * admin UI -- were never read, while the report said "287 files" with no hint
  * that four fifths of the tree was missing. A partial analysis that looks
- * complete is the worst output this program can produce.
+ * complete is wrong in the way a reader cannot detect.
  *
  * Both discovery paths ask this -- the directory walk and the compiler's file
  * list -- so a run with paths and a run without cannot disagree about what is

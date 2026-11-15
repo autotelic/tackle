@@ -15,6 +15,9 @@ export default defineConfig({
   rules: {
     // plumb: every rule this repo ships, enforced on itself.
     // plumb-effect rules stay consumer-opt-in: plumb is not an Effect application.
+    "plumb/no-anthropomorphic-program": "warn",
+    "plumb/no-antithesis-clause": "warn",
+    "plumb/no-prose-verdict": "warn",
     "plumb/no-builtin-throws": "error",
     "plumb/no-boolean-field-signals": "error",
     "plumb/no-barrel-export-star": "error",
@@ -94,6 +97,21 @@ export default defineConfig({
     "jsdoc/no-blank-blocks": "error",
   },
   overrides: [
+    {
+      // The three prose rules define the phrases they report, and a definition has
+      // to quote the phrase: the verdict closer is the subject of no-prose-verdict,
+      // not a slip in it. Every other file is held to the rules.
+      files: [
+        "src/rules/no-anthropomorphic-program.ts",
+        "src/rules/no-antithesis-clause.ts",
+        "src/rules/no-prose-verdict.ts",
+      ],
+      rules: {
+        "plumb/no-anthropomorphic-program": "off", // plumb:allow-off the rule quotes the phrase it reports
+        "plumb/no-antithesis-clause": "off", // plumb:allow-off the rule quotes the phrase it reports
+        "plumb/no-prose-verdict": "off", // plumb:allow-off the rule quotes the phrase it reports
+      },
+    },
     // Reflection/decode boundary modules: representation checks and broad
     // parameters are their purpose: they own the crossing between raw
     // AST/config payloads and typed rule logic.

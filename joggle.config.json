@@ -8,6 +8,11 @@
   },
   "ignore": [
     {
+      "rule": "joggle/prose-voice",
+      "path": "packages/joggle/docs/reference/**",
+      "reason": "these files are pasted external texts (a book, published articles) kept as reference for the rules that cite them. prose-voice reports the repository's own voice, and a physicist's sentences are not a finding anyone here can act on: they were 343 of the first full-corpus run's 1,030 findings, the largest single source."
+    },
+    {
       "rule": "joggle/hoist-to-domain",
       "path": "packages/cutlist/src/render/recipes.ts",
       "reason": "`recipesOf` renders the catalog and pattern view into copyable imports and usage skeletons. The business rules it appears to hold belong to the catalog it reads; the function itself decides only how to spell an import."
