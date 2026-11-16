@@ -159,6 +159,15 @@ export interface Options {
   /** Write the current findings as the accepted baseline. */
   readonly updateBaselinePath: string | undefined
   /**
+   * Write a ledger from a scoped run anyway.
+   *
+   * A scoped run's identities are not a subset of a full run's: the same site can fold to a
+   * different survivor when the candidates outside the scope are missing, so a ledger written
+   * from a partial view can be missing exactly the identity CI's full run reports. Soundness
+   * here rests on aliases existing (protocol), not on discipline.
+   */
+  readonly allowScopedBaseline?: boolean | undefined
+  /**
    * Union with the identities already in the update target instead of replacing them.
    *
    * A scoped run (`--since`) judges every candidate in its own files completely, so its
@@ -394,6 +403,20 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
         })
       }
       if (options.updateBaselinePath !== undefined) {
+        const target = baselinePath(path, options.updateBaselinePath)
+        // A scoped run is for the gate. Acceptance is a full-run act until folded findings
+        // carry the identities they absorbed, because which survivor wins a fold depends on
+        // what ran -- so a scoped accept can miss the identity a full run reports, silently.
+        const scoped = options.changed === true || options.changedPaths !== undefined
+        if (scoped && options.allowScopedBaseline !== true) {
+          return yield* WorkspaceError.make({
+            path: options.updateBaselinePath,
+            operation: "baseline",
+            cause: new Error(
+              `refusing to write ${target} for a scoped run: a scoped run's identities are not a subset of a full run's — the same site can fold to a different survivor when candidates outside the scope are missing — so this ledger could be missing the identity a full run reports. Accept with one full run (at the head of a stack), or pass --allow-scoped-baseline to accept the risk. Unscoped runs are unaffected.`,
+            ),
+          })
+        }
         if (unjudged > 0 && options.allowUnjudgedBaseline !== true) {
           return yield* WorkspaceError.make({
             path: options.updateBaselinePath,
@@ -403,14 +426,12 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
                 "Judging needs a model key in this run's environment (TYPESAFE_API_KEY); without one, " +
                 "the same findings are named from what the rule could see alone, so a ledger written " +
                 "now would not match a judged run. Judge first (raise --max-tokens if the budget was " +
-                "the limit), or scope the run to the change: --since origin/<base> judges every " +
-                "candidate in the files it read, so --update-baseline <file> --merge-baseline grows " +
-                "the ledger by one pull request's identities instead of re-judging the repository. " +
-                "Pass --allow-unjudged-baseline only to accept the unjudged debt itself.",
+                "the limit), or run scoped (--since <base>) to see the change judged with a pull " +
+                "request's budget — a scoped run reports the gate's answer but cannot write the " +
+                "ledger. Pass --allow-unjudged-baseline only to accept the unjudged debt itself.",
             ),
           })
         }
-        const target = baselinePath(path, options.updateBaselinePath)
         const fresh = report.diagnostics
           .map((entry) => entry.identity)
           .filter((identity): identity is string => identity !== undefined)

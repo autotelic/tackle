@@ -1361,8 +1361,11 @@ findings, and both look like a pass.
 
 On a branch in a stack, do not re-judge the repository to grow the ledger. A scoped run
 judges every file it reads, so its identities are the change's own:
-\`joggle check --types --no-replay --since origin/<base> --baseline .joggle/baseline
---update-baseline .joggle/baseline --merge-baseline\` adds only what the branch introduced.
+\`joggle check --types --no-replay --since origin/<base> --baseline .joggle/baseline\` judges
+only what the branch introduced. That run is for the GATE: accepting is a full-run act, and
+\`--update-baseline\` refuses a scoped run, because a scoped run folds findings differently and
+can miss the identity a full run reports. Accept once, at the head, with
+\`--update-baseline .joggle/baseline --merge-baseline\`.
 \`${profile.jig} baseline\` accepts from a full run, so it is the whole-repository tool; the
 scoped form is the one a stacked pull request needs. Finish every accept and every rebuild
 BEFORE rebasing: a commit on the parent re-dirties every child above it, so a stack is accepted

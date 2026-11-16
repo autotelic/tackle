@@ -1,12 +1,12 @@
 import { expect, test } from "vitest"
 import { Effect, Layer, Option, Ref } from "effect"
 import { Decision, DecisionModel } from "effect/ai"
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs"
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { Atoms } from "../src/atoms.ts"
 import { checkRepository } from "../src/check.ts"
-import { DecisionStats } from "../src/decision.ts"
+import { DecisionStats, layer as decisionLayer } from "../src/decision.ts"
 import { PlanAnswers, type Plan } from "../src/plans.ts"
 import { policy } from "../src/policy.ts"
 import { everyFile, finding, outcome, type DecisionAnswers, type PlannedRule } from "../src/rule.ts"
@@ -222,6 +222,50 @@ test("a git-changed scope judges only the files that moved", async () => {
   expect(result.asked).toEqual(["probe src/users.ts"])
   expect(result.files).toEqual(["src/users.ts"])
   expect(result.replayed).toBe(false)
+})
+
+test("a scoped run refuses to write the ledger", async () => {
+  const target = join(mkdtempSync(join(tmpdir(), "joggle-scoped-accept-")), "baseline.json")
+  const message = await Effect.runPromise(
+    Effect.gen(function* () {
+      const refused = yield* Effect.flip(
+        checkRepository({
+          cwd: corpus,
+          paths: ["src"],
+          rules: undefined,
+          typecheck: false,
+          types: "off",
+          useTsgo: false,
+          cacheDirExplicit: true,
+          cacheDir: mkdtempSync(join(tmpdir(), "joggle-scoped-accept-cache-")),
+          replayUnchanged: false,
+          changed: false,
+          changedPaths: ["src/users.ts"],
+          baselinePath: undefined,
+          updateBaselinePath: target,
+          config: {},
+        }).pipe(
+          Effect.provide(
+            decisionLayer({
+              cacheDir: mkdtempSync(join(tmpdir(), "joggle-scoped-accept-noise-")),
+              offline: true,
+              apiKey: Option.none(),
+            }),
+          ),
+          Effect.provide(tsgoStub),
+          Effect.provide(Layer.succeed(Rules, [probe])),
+        ),
+      )
+      return String(refused.cause)
+    }).pipe(Effect.provide(nodeLayer)),
+  )
+  // A scoped run's identities are not a subset of a full run's: the fold can pick a different
+  // survivor. Accepting here would write a ledger CI cannot hold, so it is an error and not a
+  // warning, at the moment someone tries it.
+  expect(message).toContain("refusing to write")
+  expect(message).toContain("scoped run")
+  expect(message).toContain("--allow-scoped-baseline")
+  expect(existsSync(target)).toBe(false)
 })
 
 test("an empty git scope says so instead of looking like a clean repository", async () => {

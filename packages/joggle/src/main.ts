@@ -171,6 +171,12 @@ const checkCommand = Command.make(
       ),
       Flag.withDefault(false),
     ),
+    allowScopedBaseline: Flag.Boolean("allow-scoped-baseline").pipe(
+      Flag.withDescription(
+        "Write a ledger from a scoped run. Refused by default: a scoped run's identities are not a subset of a full run's, so the ledger can miss the identity CI reports. Accept from a full run instead.",
+      ),
+      Flag.withDefault(false),
+    ),
     allowUnjudgedBaseline: Flag.Boolean("allow-unjudged-baseline").pipe(
       Flag.withDescription(
         "Write the baseline even though some candidates were not judged. A baseline is what was reviewed; this is the explicit way to accept that some of it was not.",
@@ -273,6 +279,7 @@ const checkCommand = Command.make(
         updateBaselinePath: Option.getOrUndefined(config.updateBaseline),
         allowUnjudgedBaseline: config.allowUnjudgedBaseline,
         mergeBaseline: config.mergeBaseline,
+        allowScopedBaseline: config.allowScopedBaseline,
       }).pipe(
         Effect.provide(
           Layer.mergeAll(

@@ -488,23 +488,32 @@ full-repository budget: at ~2.5k candidates a keyed run, a repository with 12k
 unjudged candidates is a 25-minute run that still refuses to write.
 
 ```sh
-joggle check --types --no-replay --since origin/<parent> \
+# the gate: what this branch adds, judged
+joggle check --types --no-replay --since origin/<parent> --baseline .joggle/baseline
+```
+
+**A scoped run is for the gate. Acceptance is a full-run act**, and the command
+enforces it: `--update-baseline` refuses a scoped run unless
+`--allow-scoped-baseline` says otherwise.
+
+The reason is the fold. Two findings at the same site with the same move are folded
+into the richer one, and which survivor wins depends on what ran: a scoped run sees
+fewer candidates at that site than a full run does, so it can name the problem with
+one rule where a full run names it with another. Identities are therefore not
+scope-invariant, a scoped accept can miss exactly the identity CI fails on, and no
+amount of `--merge-baseline` repairs a ledger that never saw it. (The fix is aliases
+on a folded survivor, so the ledger can match any of them; until that lands, the
+refusal is the honest state.) Accept with one full run at the head of a stack:
+
+```sh
+joggle check --types --no-replay \
   --baseline .joggle/baseline --update-baseline .joggle/baseline --merge-baseline
 ```
 
-A scoped run judges every candidate in the files it read, so its identities are
-a pull request's worth and not the repository's. `--merge-baseline` keeps the
-identities already accepted and adds those; without it, `--update-baseline`
-writes the file as this run alone, which for a scoped run would truncate the
-ledger. `--allow-unjudged-baseline` is not the shortcut here: it ratifies the
-thousands nobody looked at, which is a commit nobody can defend.
-
-A scoped accept is necessary, not sufficient. Cross-file rules only fire over the
-whole repository, and a scoped run folds some findings into another rule at the same
-site (the note counts them), so an identity CI fails on can be one this run never had.
-Use the scoped accept to keep a stack moving and treat the full run as the authority:
-when CI names an identity the scoped ledger lacks, accept that one and move on. Budget
-one full judged run for the stack's head, not one per branch.
+`--merge-baseline` keeps the identities already accepted and adds this run's, so
+accepting at the head does not discard the stack's accepted set. `--allow-unjudged-baseline`
+is not the shortcut here: it ratifies thousands nobody looked at, which is a commit
+nobody can defend.
 
 ### The cascade, not the conflicts
 
