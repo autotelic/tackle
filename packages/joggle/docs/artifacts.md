@@ -153,8 +153,12 @@ three real deployments have different constraints, and joggle now names them:
   missing key already means.
 - **committed** — a repository that wants keyless replay without a cache
   service. `answers.jsonl` is committed (sharded explicitly only when the store
-  is large enough to need it), and `cache prune` keeps it from growing without a
-  ceiling. joggle's own repository is in this mode.
+  is large enough to need it), and `cache prune --max-age`/`--max-bytes` keeps it
+  from growing without a ceiling. joggle's own repository is in this mode.
+  The ceiling is not optional in practice: GitHub warns above 50 MB per file and
+  refuses above 100 MB, every clone pays for the bytes, and a deep stack multiplies
+  them because each branch's scoped accept adds its own answers to the same file. A
+  run notes the store past 8 MB so the growth is visible before the warning.
 
 ## What is deliberately not done
 

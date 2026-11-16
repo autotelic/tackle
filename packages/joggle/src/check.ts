@@ -16,6 +16,7 @@ import { shortHash } from "./state.ts"
 import { canonical } from "./canonical.ts"
 import { sourceFingerprint } from "./fingerprint.ts"
 import { loadParses } from "./parsecache.ts"
+import { answerStoreBytes } from "./answer-store.ts"
 import {
   baselinePath,
   manifestOf,
@@ -64,6 +65,15 @@ import type { ImportGraph } from "./imports.ts"
  * consequences is a record of something that never happened.
  */
 const UNJUDGED_STAGES: ReadonlySet<string> = new Set(["unreadable", "no_evidence", "budget"])
+
+/**
+ * The size at which a growing ledger stops being a cache and starts being repository debt.
+ *
+ * GitHub warns above 50 MB per file and refuses above 100 MB, and every clone and CI
+ * checkout pays. Well below that is already larger than a diff anyone reviews, so the note
+ * fires early — at 8 MB — and names the cap rather than waiting for the warning.
+ */
+const CACHE_WARN_BYTES = 8 * 1024 * 1024
 
 export interface Options {
   readonly cwd: string
@@ -1109,6 +1119,21 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
         (options.changedPaths === undefined
           ? ""
           : "; a folded finding's identity is not in this run, so an accept taken from a scoped run can miss one a full run reports"),
+    })
+  }
+
+  // A committed answer cache is a cache, and a cache that only grows is a repository-health
+  // problem the run can see: GitHub warns above 50 MB per file and refuses above 100 MB, and
+  // every clone and CI checkout pays for the bytes. Scoped accepts on a deep stack grow it
+  // fastest, because each branch judges its own delta and keeps every answer.
+  const cacheBytes = yield* answerStoreBytes(fs, path, options.cacheDir)
+  if (cacheBytes > CACHE_WARN_BYTES) {
+    const megabytes = Math.round((cacheBytes / (1024 * 1024)) * 10) / 10
+    notes.push({
+      ruleId: "joggle",
+      reason:
+        `the judgement cache at ${options.cacheDir} is ${megabytes} MB; keep it machine-local or cap what is committed (` +
+        "joggle cache prune --max-bytes 4000000) — GitHub warns above 50 MB per file and every clone pays for it",
     })
   }
 

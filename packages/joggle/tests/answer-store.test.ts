@@ -1,10 +1,11 @@
 import { expect, test } from "vitest"
 import { it } from "@effect/vitest"
 import { Effect, FileSystem, Option, Path, Result } from "effect"
-import { mkdtempSync } from "node:fs"
+import { mkdtempSync, statSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import {
+  answerStoreBytes,
   census,
   make,
   mergeEntries,
@@ -24,6 +25,22 @@ const probability = (value: number): StoredAnswer => ({ kind: "Probability", pro
 const entry = (key: string, at: number, value: number): Entry => ({ key, writtenAt: at, answer: probability(value) })
 
 const fresh = (name: string): string => mkdtempSync(join(tmpdir(), name))
+
+test("the ledger's size is read from disk, not guessed from its entries", () => {
+  const dir = fresh("joggle-bytes-")
+  const file = join(dir, "answers.jsonl")
+  writeFileSync(file, renderShard([entry("ab", 1, 0.1), entry("cd", 2, 0.2)]))
+  const expected = statSync(file).size
+  return Effect.runPromise(
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem
+      const path = yield* Path.Path
+      expect(yield* answerStoreBytes(fs, path, dir)).toBe(expected)
+      // A missing store is 0 bytes, not a failure: a repository that never judged has one.
+      expect(yield* answerStoreBytes(fs, path, join(dir, "absent"))).toBe(0)
+    }).pipe(Effect.provide(nodeLayer)),
+  )
+})
 
 test("a shard is sorted by key and newline-terminated", () => {
   const text = renderShard([entry("cd", 2, 0.2), entry("ab", 1, 0.1)])

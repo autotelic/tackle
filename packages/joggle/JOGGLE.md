@@ -421,6 +421,22 @@ Deliberately *not* next: widening AST coverage to class and object-literal
 methods. That is more surface on a weaker signal. It comes after types.
 
 
+### The committed cache has a size, and it is not free
+
+Committing the answer cache buys keyless replay, and it costs bytes in every clone
+and every CI checkout. GitHub warns above **50 MB per file** and refuses above
+100 MB; a cache is worth nowhere near that.
+
+- `joggle cache prune --max-age 90` drops answers nobody has used in a season;
+  `joggle cache prune --max-bytes 4000000` caps the file, oldest answers first. Both
+  are safe: an answer is regenerable by judging again.
+- A run says so when the store passes 8 MB, because a cache nobody measured is how
+  a 0-byte ledger on the base branch becomes 55 MB at the top of a stack.
+- In a stack the growth is per branch: each scoped accept adds this branch's answers
+  and the same growing file rides in every commit above it. Cap it before the last
+  push, or stop committing it and let a keyed CI judge instead — but only with the
+  key, because without one the identities change (see the stack section above).
+
 ## Two committed artifacts, two machine artifacts
 
 joggle's state is four files with four lifetimes. Two belong to the repository

@@ -473,6 +473,39 @@ export interface PruneResult {
 
 const sizeOf = (entry: Entry): number => renderEntry(entry).length + 1
 
+/**
+ * How many bytes the ledger occupies on disk, without parsing it.
+ *
+ * A committed answer cache is a cache, and a cache that only grows is a repository-health
+ * problem: GitHub warns above 50 MB per file and refuses above 100 MB, and every clone pays
+ * for it. Reading the bytes (rather than the census) keeps the check cheap enough to run on
+ * every run, including on a ledger measured in tens of megabytes.
+ */
+export const answerStoreBytes = (
+  fs: FileSystem.FileSystem,
+  path: Path.Path,
+  dir: string,
+): Effect.Effect<number> =>
+  Effect.gen(function* () {
+    const sizeOfFile = (file: string) =>
+      fs.stat(file).pipe(
+        Effect.map((info) => Number(info.size)),
+        Effect.orElseSucceed(() => 0),
+      )
+    const single = answersFile(path, dir)
+    let total = yield* sizeOfFile(single)
+    total += yield* sizeOfFile(answersObject(path, dir))
+    const shards = answersDir(path, dir)
+    const names: ReadonlyArray<string> = yield* fs
+      .readDirectory(shards)
+      .pipe(Effect.orElseSucceed((): ReadonlyArray<string> => []))
+    for (const name of names) {
+      if (!name.endsWith(".jsonl")) continue
+      total += yield* sizeOfFile(path.join(shards, name))
+    }
+    return total
+  })
+
 /** What the committed ledger says, rendered for a reader rather than replayed. */
 export interface Census {
   readonly entries: number
