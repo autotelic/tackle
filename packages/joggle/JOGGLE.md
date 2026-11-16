@@ -483,6 +483,32 @@ writes the file as this run alone, which for a scoped run would truncate the
 ledger. `--allow-unjudged-baseline` is not the shortcut here: it ratifies the
 thousands nobody looked at, which is a commit nobody can defend.
 
+### The cascade, not the conflicts
+
+In a deep stack the conflicts are the easy half. Every one of them is a committed
+artifact — a baseline, an answer ledger, a generated catalog — so
+`git rebase -X theirs <parent>` clears the text and the artifacts are rebuilt
+rather than merged.
+
+The hard half is ordering. Accepting an identity, or rebuilding a catalog, adds a
+commit to the parent, and that commit re-dirties every child above it: with 21
+children, one fix is 21 re-dirties, and a cascade run between fixes runs once per
+fix. A 22-branch migration spent five cascades that way, not because any rebase
+was hard, but because each pass moved the parent again.
+
+So the recipe is three passes, not one per branch:
+
+1. **Finish every accept and every rebuild first**, on every branch. Nothing is
+   rebased until the artifacts have stopped moving.
+2. **Then rebase bottom-up, once**, with `-X theirs` for the artifact conflicts.
+3. **Then push once**, bottom-up, with `--force-with-lease`.
+
+`gh stack rebase` and the stacked-PR bots do exactly these three steps in one pass,
+which is why they exist. An interrupted rebase leaves `rebase-merge/` or
+`index.lock` behind and the next branch fails with "there is already a rebase-merge
+directory": `git rebase --abort` clears it, and a scripted cascade belongs in a
+`trap` that aborts rather than in a run that stops half-rebased.
+
 The baseline is by identity, not by line: rule, kept symbol and cluster
 membership. Code moves constantly, and a baseline that reports every edit as a
 new finding is a baseline nobody reads. A rename or a new member does change the

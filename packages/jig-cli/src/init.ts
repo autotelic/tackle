@@ -1364,7 +1364,10 @@ judges every file it reads, so its identities are the change's own:
 \`joggle check --types --no-replay --since origin/<base> --baseline .joggle/baseline
 --update-baseline .joggle/baseline --merge-baseline\` adds only what the branch introduced.
 \`${profile.jig} baseline\` accepts from a full run, so it is the whole-repository tool; the
-scoped form is the one a stacked pull request needs.
+scoped form is the one a stacked pull request needs. Finish every accept and every rebuild
+BEFORE rebasing: a commit on the parent re-dirties every child above it, so a stack is accepted
+bottom-to-top, then rebased bottom-up once with \`-X theirs\` for the artifact conflicts, then
+pushed once with \`--force-with-lease\`.
 
 ## Reading a finding
 
