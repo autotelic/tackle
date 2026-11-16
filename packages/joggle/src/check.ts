@@ -410,6 +410,14 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
         const known = options.mergeBaseline === true ? yield* readBaseline(fs, path, target) : undefined
         const identities = known === undefined ? fresh : [...known, ...fresh]
         yield* writeBaseline(fs, path, target, identities)
+        // An empty ledger is still a ledger: without this line a caller's merge step has to
+        // infer "nothing new" from an empty array, or worse, from a file it never looked for.
+        if (fresh.length === 0) {
+          notes.push({
+            ruleId: "joggle",
+            reason: `wrote 0 identities to ${target}: nothing new to accept`,
+          })
+        }
       }
       return notes.length === 0
         ? { ...report, diagnostics }
