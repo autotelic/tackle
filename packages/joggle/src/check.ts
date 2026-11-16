@@ -418,6 +418,20 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
             reason: `wrote 0 identities to ${target}: nothing new to accept`,
           })
         }
+        // A finding with no identity is one no baseline can ever hold: it survives every run
+        // and no accept quiets it. Saying so is the difference between "accepted" and
+        // "accepted, and these will be back".
+        const unnameable = report.diagnostics.filter(
+          (entry) => entry.identity === undefined,
+        ).length
+        if (unnameable > 0) {
+          notes.push({
+            ruleId: "joggle",
+            reason:
+              unnameable +
+              " finding(s) declare no identity, so no baseline can accept them; they will appear in every run",
+          })
+        }
       }
       return notes.length === 0
         ? { ...report, diagnostics }
