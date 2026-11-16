@@ -483,6 +483,13 @@ writes the file as this run alone, which for a scoped run would truncate the
 ledger. `--allow-unjudged-baseline` is not the shortcut here: it ratifies the
 thousands nobody looked at, which is a commit nobody can defend.
 
+A scoped accept is necessary, not sufficient. Cross-file rules only fire over the
+whole repository, and a scoped run folds some findings into another rule at the same
+site (the note counts them), so an identity CI fails on can be one this run never had.
+Use the scoped accept to keep a stack moving and treat the full run as the authority:
+when CI names an identity the scoped ledger lacks, accept that one and move on. Budget
+one full judged run for the stack's head, not one per branch.
+
 ### The cascade, not the conflicts
 
 In a deep stack the conflicts are the easy half. Every one of them is a committed

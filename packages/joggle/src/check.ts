@@ -1088,7 +1088,13 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
       ruleId: "joggle",
       reason:
         folded.folded +
-        " finding(s) reported a site another rule already reported with more evidence, and were folded into it",
+        " finding(s) reported a site another rule already reported with more evidence, and were folded into it" +
+        // In a scoped run the fold is a ledger hazard, not just a readability note: the folded
+        // finding has no identity in this run, so an accept written from a scoped run can be
+        // missing exactly the identity a full run reports (and CI fails on).
+        (options.changedPaths === undefined
+          ? ""
+          : "; a folded finding's identity is not in this run, so an accept taken from a scoped run can miss one a full run reports"),
     })
   }
 

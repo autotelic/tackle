@@ -46,7 +46,19 @@ describe("the GitHub projection separates held findings from failures", () => {
     expect(text).not.toContain("::error file=src/a.ts")
   })
 
-  it("keeps the engine's severity for a novel finding", () => {
+  it("marks a failing finding error even when the engine called it a notice", () => {
+    // `failOn: any-new` holds by novelty, not severity: an info finding the gate holds must be
+    // the red line, or the log shows a red gate with no red finding in it.
+    const quiet = finding({ severity: "info", identity: "quiet" })
+    const text = renderGithub(report([quiet]), {
+      known: new Set(),
+      gate: verdict({ exitCode: EXIT.findings, failing: [quiet] }),
+    })
+    expect(text.startsWith("::error file=src/a.ts")).toBe(true)
+    expect(text).toContain("::error title=jig gate::")
+  })
+
+  it("keeps the engine's severity for a novel finding the gate does not hold", () => {
     const text = renderGithub(report([finding({ identity: "novel" })]), {
       known: new Set(),
       gate: verdict({ exitCode: EXIT.findings, failing: [finding({ identity: "novel" })] }),

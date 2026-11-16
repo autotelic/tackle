@@ -195,11 +195,17 @@ export const renderGithub = (report: Report, options: GithubOptions = {}): strin
   const known = options.known
   const held = (diagnostic: Diagnostic): boolean =>
     known !== undefined && known.has(identityOf(diagnostic))
+  // The gate can hold a finding the engine only called a notice: `failOn: any-new` fails on
+  // novelty, not severity. Annotating that by its own severity left the log's only red line
+  // somewhere else — the failure was real, and nothing in it said so.
+  const failing =
+    options.gate === undefined ? undefined : new Set(options.gate.failing.map(identityOf))
   const lines = report.diagnostics.map((diagnostic) => {
     const { file, line, column } = diagnostic.location
     const title = `${diagnostic.engine}/${diagnostic.ruleId}`
-    const accepted = held(diagnostic)
-    const level = accepted ? "notice" : annotationLevel(diagnostic)
+    const heldAgainst = failing?.has(identityOf(diagnostic)) ?? false
+    const accepted = !heldAgainst && held(diagnostic)
+    const level = heldAgainst ? "error" : accepted ? "notice" : annotationLevel(diagnostic)
     const suffix = accepted ? " (accepted in the baseline)" : ""
     return `::${level} file=${file},line=${line},col=${column},title=${title}::${diagnostic.message}${suffix}`
   })

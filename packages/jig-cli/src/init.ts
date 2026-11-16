@@ -1367,7 +1367,10 @@ judges every file it reads, so its identities are the change's own:
 scoped form is the one a stacked pull request needs. Finish every accept and every rebuild
 BEFORE rebasing: a commit on the parent re-dirties every child above it, so a stack is accepted
 bottom-to-top, then rebased bottom-up once with \`-X theirs\` for the artifact conflicts, then
-pushed once with \`--force-with-lease\`.
+pushed once with \`--force-with-lease\`. A scoped accept is necessary, not sufficient: cross-file
+rules only fire over the whole repository, and a scoped run folds some findings into another
+rule, so CI's full run is the authority — when it names an identity the scoped ledger lacks,
+accept that one.
 
 ## Reading a finding
 
