@@ -5,7 +5,13 @@ import { fileURLToPath } from "node:url"
 import { Console, Effect, FileSystem, Option, Path, Runtime } from "effect"
 import { Argument, CliError, Command, Flag } from "effect/cli"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
-import { accept, REPORT_FORMATS } from "@autotelic/protocol"
+import {
+  accept,
+  diffBaseline,
+  ruleNameOf,
+  REPORT_FORMATS,
+  type HarnessConfig,
+} from "@autotelic/protocol"
 import { emptyBaseline, readBaseline, writeBaseline } from "./baseline.ts"
 import { explainRule, lesson, promotion, renderLesson, renderPromotion } from "./commands.ts"
 import { loadConfig } from "./config.ts"
@@ -23,7 +29,7 @@ import {
 } from "./menu.ts"
 import { renderCodeClimate, renderJsonl, renderLsp, renderSarif } from "./projections.ts"
 import { renderGithub, renderJson, renderText } from "./render.ts"
-import { harnessRun } from "./run.ts"
+import { harnessRun, type HarnessRun } from "./run.ts"
 import { isRoomInvocation, runRoom } from "./room.ts"
 import { initialise, initJson, onboardingFor, summaryFor } from "./init.ts"
 
@@ -86,6 +92,27 @@ const context = ({
     return { path, root, settings, configured }
   })
 
+/**
+ * The gate a run earns under this repo's config.
+ *
+ * One place, because `check` and `baseline` must agree about what the ledger buys: a
+ * baseline that reports success while the gate ignores the ledger is a trap, and the two
+ * commands disagreeing about the scope is how that trap opens.
+ */
+const verdictOf = (root: string, settings: HarnessConfig, run: HarnessRun) =>
+  Effect.gen(function* () {
+    const touched = settings.gate.mode === "touched-files" ? yield* touchedFiles(root) : undefined
+    return gateVerdict(run, {
+      mode: touched === undefined ? "all" : "touched-files",
+      failOn: settings.gate.failOn ?? "any-new",
+      maxWarnings: settings.report?.maxWarnings ?? -1,
+      touched: touched ?? new Set<string>(),
+      advisory: new Set(
+        settings.engines.filter((engine) => engine.advisory === true).map((engine) => engine.id),
+      ),
+    })
+  })
+
 const checkCommand = Command.make(
   "check",
   {
@@ -113,18 +140,7 @@ const checkCommand = Command.make(
       const limit = options.limit
       // The flag wins, then the repo's configured default, then the human form.
       const format = Option.getOrUndefined(options.format) ?? settings.report?.format ?? "text"
-      // The gate reads the scope git reports; when git cannot say, it widens to everything
-      // rather than narrowing to nothing — an empty scope would pass every finding.
-      const touched = settings.gate.mode === "touched-files" ? yield* touchedFiles(root) : undefined
-      const verdict = gateVerdict(run, {
-        mode: touched === undefined ? "all" : "touched-files",
-        failOn: settings.gate.failOn ?? "any-new",
-        maxWarnings: settings.report?.maxWarnings ?? -1,
-        touched: touched ?? new Set<string>(),
-        advisory: new Set(
-          settings.engines.filter((engine) => engine.advisory === true).map((engine) => engine.id),
-        ),
-      })
+      const verdict = yield* verdictOf(root, settings, run)
 
       switch (format) {
         case "json":
@@ -134,7 +150,7 @@ const checkCommand = Command.make(
           yield* write(renderJsonl(run.report))
           break
         case "github":
-          yield* write(renderGithub(run.report))
+          yield* write(renderGithub(run.report, { known, gate: verdict }))
           break
         case "sarif":
           yield* write(renderSarif(run.report, known))
@@ -167,19 +183,87 @@ const checkCommand = Command.make(
   ]),
 )
 
-const baselineCommand = Command.make("baseline", { cwd: cwdFlag, config: configFlag }, (options) =>
-  Effect.gen(function* () {
-    const { path, root, settings } = yield* context({ cwd: options.cwd, config: options.config })
-    const run = yield* harnessRun(root, settings, emptyBaseline)
-    const baseline = accept(run.report.diagnostics)
-    yield* writeBaseline(path.resolve(root, settings.gate.baseline), baseline)
-    yield* write(
-      `jig: accepted ${baseline.identities.length} finding(s) into ${settings.gate.baseline}`,
-    )
-  }),
+const baselineCommand = Command.make(
+  "baseline",
+  {
+    cwd: cwdFlag,
+    config: configFlag,
+    allowUnjudged: Flag.Boolean("allow-unjudged").pipe(
+      Flag.withDescription(
+        "Accept findings no judgement reached. A judged run can name the same finding differently, so the ledger may not hold in CI.",
+      ),
+      Flag.withDefault(false),
+    ),
+  },
+  (options) =>
+    Effect.gen(function* () {
+      const { path, root, settings } = yield* context({ cwd: options.cwd, config: options.config })
+      const run = yield* harnessRun(root, settings, emptyBaseline)
+      // An engine that could not verify a finding names it from what it could see, and a
+      // judged run can name the same finding from the cluster: two identities for one thing.
+      // Accepting the unverified one is therefore accepting a ledger CI cannot replay, which
+      // is exactly how a green local baseline and a red CI run both look like a pass.
+      const unverified = run.report.diagnostics.filter((diagnostic) => diagnostic.judged === false)
+      if (unverified.length > 0 && options.allowUnjudged !== true) {
+        yield* write(
+          `jig: refusing to accept ${unverified.length} unverified finding(s) into ${settings.gate.baseline}.\n` +
+            "  A judged run can name the same finding differently, so this ledger would not hold in CI.\n" +
+            "  Judge first: joggle reads its model key from the environment (TYPESAFE_API_KEY).\n" +
+            "  Pass --allow-unjudged to accept that debt anyway.",
+        )
+        yield* Effect.sync(() => {
+          process.exitCode = EXIT.usage
+        })
+        return
+      }
+      const baseline = accept(run.report.diagnostics)
+      yield* writeBaseline(path.resolve(root, settings.gate.baseline), baseline)
+      yield* write(
+        `jig: accepted ${baseline.identities.length} finding(s) into ${settings.gate.baseline}`,
+      )
+      if (unverified.length > 0) {
+        yield* write(
+          `jig: ${unverified.length} of them were unverified; a later judged run may report them as new identities`,
+        )
+      }
+      // The postcondition, not a promise: write, then ask the same gate `check` would ask.
+      // The ledger decides novelty alone, so under `failOn: warn|error` or a maxWarnings
+      // ceiling these accepted findings still fail, and saying "accepted" would be a lie.
+      const verdict = yield* verdictOf(root, settings, {
+        report: run.report,
+        diff: diffBaseline(baseline, run.report.diagnostics),
+      })
+      // The same exit code `check` would give, because a script that ran `baseline` and saw zero
+      // would otherwise believe the repository became green.
+      if (verdict.exitCode !== EXIT.clean) {
+        yield* Effect.sync(() => {
+          process.exitCode = verdict.exitCode
+        })
+      }
+      if (verdict.exitCode === EXIT.infrastructure) {
+        yield* write(
+          `jig: the gate still cannot judge this run: engine(s) ${verdict.infrastructure.join(", ")} did not run (exit ${EXIT.infrastructure})`,
+        )
+      } else if (verdict.failing.length > 0) {
+        const byRule = [...new Set(verdict.failing.map(ruleNameOf))].sort((left, right) =>
+          left.localeCompare(right),
+        )
+        yield* write(
+          `jig: accepted, but the gate still holds ${verdict.failing.length} of these finding(s) (exit ${verdict.exitCode}): ${byRule.join(", ")}.\n` +
+            `  The ledger decides novelty; ${verdict.failOn === "any-new" ? "maxWarnings holds warnings by count regardless of the baseline" : `failOn "${verdict.failOn}" holds by severity, and severity ignores the baseline`}.`,
+        )
+      }
+    }),
 ).pipe(
   Command.withDescription("Accept the current findings into the baseline."),
   Command.withShortDescription("Accept the current findings."),
+  Command.withExamples([
+    { command: "jig baseline", description: "Accept the verified findings into the ledger." },
+    {
+      command: "jig baseline --allow-unjudged",
+      description: "Accept findings no judgement reached, and say so.",
+    },
+  ]),
 )
 
 const enginesCommand = Command.make("engines", { cwd: cwdFlag, config: configFlag }, (options) =>

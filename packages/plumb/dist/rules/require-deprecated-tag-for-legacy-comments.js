@@ -10,7 +10,7 @@ export const requireDeprecatedTagForLegacyCommentsRule = defineRule({
             description: "Require an @deprecated tag whenever a comment describes code as deprecated/legacy/obsolete/do-not-use; prose-only warnings are invisible to editors and agents, who will otherwise discover and use paths you want retired.",
         },
         messages: {
-            missingDeprecatedTag: "Comment says this code is deprecated/legacy but carries no @deprecated tag; prose warnings are invisible to tooling. Add `@deprecated` (with a pointer to the replacement) so agents and editors see it.",
+            missingDeprecatedTag: "This comment calls the code deprecated/legacy but carries no @deprecated tag, so tooling cannot see the retirement. Add `@deprecated` (with a pointer to the replacement) inside THIS comment — a tag in a neighbouring block does not count — or reword the comment to drop the retirement wording.",
         },
     },
     createOnce(context) {

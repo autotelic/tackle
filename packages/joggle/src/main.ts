@@ -165,6 +165,12 @@ const checkCommand = Command.make(
       Flag.withDescription("Write the current findings to this file as the accepted baseline."),
       Flag.optional,
     ),
+    mergeBaseline: Flag.Boolean("merge-baseline").pipe(
+      Flag.withDescription(
+        "With --update-baseline, keep the identities already in that file and add this run's. A scoped run (--since) judges all of its own files, so this grows a ledger by one change instead of replacing it.",
+      ),
+      Flag.withDefault(false),
+    ),
     allowUnjudgedBaseline: Flag.Boolean("allow-unjudged-baseline").pipe(
       Flag.withDescription(
         "Write the baseline even though some candidates were not judged. A baseline is what was reviewed; this is the explicit way to accept that some of it was not.",
@@ -266,6 +272,7 @@ const checkCommand = Command.make(
         baselinePath: Option.getOrUndefined(config.baseline),
         updateBaselinePath: Option.getOrUndefined(config.updateBaseline),
         allowUnjudgedBaseline: config.allowUnjudgedBaseline,
+        mergeBaseline: config.mergeBaseline,
       }).pipe(
         Effect.provide(
           Layer.mergeAll(

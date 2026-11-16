@@ -149,6 +149,14 @@ export interface Options {
   /** Write the current findings as the accepted baseline. */
   readonly updateBaselinePath: string | undefined
   /**
+   * Union with the identities already in the update target instead of replacing them.
+   *
+   * A scoped run (`--since`) judges every candidate in its own files completely, so its
+   * identities are a reviewable, pull-request-sized set. Merging that set into the committed
+   * ledger adds only what the branch introduced, without re-judging the repository.
+   */
+  readonly mergeBaseline?: boolean | undefined
+  /**
    * Write the baseline even though some candidates were not judged.
    *
    * A baseline is the record of what was reviewed, and an unjudged candidate was
@@ -382,14 +390,26 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
             operation: "baseline",
             cause: new Error(
               `refusing to write ${options.updateBaselinePath}: ${unjudged} candidate(s) were not judged. ` +
-                "Pass --allow-unjudged-baseline to accept that, or judge the run first.",
+                "Judging needs a model key in this run's environment (TYPESAFE_API_KEY); without one, " +
+                "the same findings are named from what the rule could see alone, so a ledger written " +
+                "now would not match a judged run. Judge first (raise --max-tokens if the budget was " +
+                "the limit), or scope the run to the change: --since origin/<base> judges every " +
+                "candidate in the files it read, so --update-baseline <file> --merge-baseline grows " +
+                "the ledger by one pull request's identities instead of re-judging the repository. " +
+                "Pass --allow-unjudged-baseline only to accept the unjudged debt itself.",
             ),
           })
         }
-        const identities = report.diagnostics
+        const target = baselinePath(path, options.updateBaselinePath)
+        const fresh = report.diagnostics
           .map((entry) => entry.identity)
           .filter((identity): identity is string => identity !== undefined)
-        yield* writeBaseline(fs, path, baselinePath(path, options.updateBaselinePath), identities)
+        // A scoped run reports only what it judged in its own files; writing it alone would
+        // truncate the ledger to this pull request's identities. Merging keeps the accepted
+        // state and adds the run's — the hand-union an adopter had to do by hand.
+        const known = options.mergeBaseline === true ? yield* readBaseline(fs, path, target) : undefined
+        const identities = known === undefined ? fresh : [...known, ...fresh]
+        yield* writeBaseline(fs, path, target, identities)
       }
       return notes.length === 0
         ? { ...report, diagnostics }

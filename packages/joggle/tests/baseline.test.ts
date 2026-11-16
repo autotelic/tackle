@@ -58,6 +58,23 @@ it.effect("reads the legacy single file, so an old baseline still works", () =>
   }).pipe(Effect.provide(nodeLayer)),
 )
 
+it.effect("a merged write is a set: an identity accepted twice appears once", () =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const path = yield* Path.Path
+    const file = join(fresh(), "baseline.json")
+
+    // `--merge-baseline` unions the committed identities with the run's, and a run that
+    // re-reports what it already accepted must not duplicate the row.
+    yield* writeBaseline(fs, path, file, ["b", "a", "b"])
+    const decoded = JSON.parse(yield* fs.readFileString(file)) as {
+      identities: ReadonlyArray<string>
+    }
+    expect(decoded.identities).toEqual(["a", "b"])
+    expect(known(yield* readBaseline(fs, path, file))).toEqual(["a", "b"])
+  }).pipe(Effect.provide(nodeLayer)),
+)
+
 it.effect("a missing baseline is a miss, not an empty one", () =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem

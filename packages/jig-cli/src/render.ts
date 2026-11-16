@@ -1,4 +1,10 @@
-import { ruleNameOf, type Diagnostic, type EngineSummary, type Report } from "@autotelic/protocol"
+import {
+  identityOf,
+  ruleNameOf,
+  type Diagnostic,
+  type EngineSummary,
+  type Report,
+} from "@autotelic/protocol"
 import { EXIT, type GateVerdict } from "./gate.ts"
 import type { HarnessRun } from "./run.ts"
 
@@ -160,15 +166,51 @@ const ANNOTATION_LEVEL = { error: "error", warn: "warning", info: "notice" } as 
 
 const annotationLevel = (diagnostic: Diagnostic): string => ANNOTATION_LEVEL[diagnostic.severity]
 
-/** GitHub Actions workflow commands, one per finding. */
-export const renderGithub = (report: Report): string =>
-  report.diagnostics
-    .map((diagnostic) => {
-      const { file, line, column } = diagnostic.location
-      const title = `${diagnostic.engine}/${diagnostic.ruleId}`
-      return `::${annotationLevel(diagnostic)} file=${file},line=${line},col=${column},title=${title}::${diagnostic.message}`
-    })
-    .join("\n")
+/** The gate in one annotation, for the formats that carry no census of their own. */
+const gateSummary = (gate: GateVerdict, held: number): string => {
+  if (gate.infrastructure.length > 0) {
+    return `no verdict — engine(s) could not run: ${gate.infrastructure.join(", ")} (exit ${EXIT.infrastructure})`
+  }
+  if (gate.failing.length > 0) {
+    return `failOn ${gate.failOn}, scope ${gate.scope}: ${gate.failing.length} finding(s) held against the run (exit ${EXIT.findings})`
+  }
+  return `failOn ${gate.failOn}, scope ${gate.scope}: gate passed; ${held} baselined finding(s) reported, not held (exit ${EXIT.clean})`
+}
+
+/** What a CI annotation needs beyond the report: what the ledger holds and what the gate decided. */
+export interface GithubOptions {
+  /** Accepted identities. A held finding is annotated as a notice, never as an error. */
+  readonly known?: ReadonlySet<string>
+  readonly gate?: GateVerdict
+}
+
+/**
+ * GitHub Actions workflow commands, one per finding, then the gate.
+ *
+ * A finding's severity is not the gate's decision: an identity the baseline already accepted
+ * passes the gate, and annotating it `::error` paints a green run red. Held findings are
+ * notices, and the gate gets its own line so the log says which of the two failed.
+ */
+export const renderGithub = (report: Report, options: GithubOptions = {}): string => {
+  const known = options.known
+  const held = (diagnostic: Diagnostic): boolean =>
+    known !== undefined && known.has(identityOf(diagnostic))
+  const lines = report.diagnostics.map((diagnostic) => {
+    const { file, line, column } = diagnostic.location
+    const title = `${diagnostic.engine}/${diagnostic.ruleId}`
+    const accepted = held(diagnostic)
+    const level = accepted ? "notice" : annotationLevel(diagnostic)
+    const suffix = accepted ? " (accepted in the baseline)" : ""
+    return `::${level} file=${file},line=${line},col=${column},title=${title}::${diagnostic.message}${suffix}`
+  })
+  const gate = options.gate
+  if (gate !== undefined) {
+    const heldCount = report.diagnostics.filter(held).length
+    const failed = gate.failing.length > 0 || gate.infrastructure.length > 0
+    lines.push(`::${failed ? "error" : "notice"} title=jig gate::${gateSummary(gate, heldCount)}`)
+  }
+  return lines.join("\n")
+}
 
 /** The report as JSON — the machine form a host or a test reads. */
 export const renderJson = (report: Report): string => `${JSON.stringify(report, null, 2)}\n`

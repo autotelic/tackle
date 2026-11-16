@@ -183,8 +183,12 @@ export const writeBaseline = (
     if (target.endsWith(".json")) {
       const parent = path.dirname(target)
       yield* Effect.orElseSucceed(fs.makeDirectory(parent, { recursive: true }), () => undefined)
+      // A ledger is a set: a merge that re-accepts an identity must not grow a duplicate row.
       const body = JSON.stringify(
-        { version: policy.version, identities: [...identities].sort((left, right) => left.localeCompare(right)) },
+        {
+          version: policy.version,
+          identities: [...new Set(identities)].sort((left, right) => left.localeCompare(right)),
+        },
         null,
         2,
       )

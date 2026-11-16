@@ -455,6 +455,34 @@ what a person reviewed, and one written over unjudged candidates ratifies what
 nobody looked at. `--allow-unjudged-baseline` is the explicit override; `jig
 init` passes it, because a ledger born on day one has no review to protect yet.
 
+The reason an unjudged ledger is worse than an incomplete one: judgement is part of
+the analysis, not a badge on it. Without a model key (`TYPESAFE_API_KEY` in the
+run's environment) the same candidates are clustered and named from what the rules
+could see alone, so one group can be one finding locally and three in CI. The two
+runs are two analyses with two identity sets, and a ledger written by the unkeyed
+one does not hold against the keyed one — locally green, red in CI, both "passing"
+their own run. A CI ledger must be written by a run with the key; a local run
+without one is for reading, and `jig baseline` refuses unverified findings for the
+same reason. In a stack, seed a child from its parent instead of re-judging:
+`git checkout <parent> -- .jig-baseline.json .joggle/answers.jsonl` reuses every
+identity the branch inherits and asks only for the ones it adds.
+
+In a stack the run that works is scoped, because a full-repository run has a
+full-repository budget: at ~2.5k candidates a keyed run, a repository with 12k
+unjudged candidates is a 25-minute run that still refuses to write.
+
+```sh
+joggle check --types --no-replay --since origin/<parent> \
+  --baseline .joggle/baseline --update-baseline .joggle/baseline --merge-baseline
+```
+
+A scoped run judges every candidate in the files it read, so its identities are
+a pull request's worth and not the repository's. `--merge-baseline` keeps the
+identities already accepted and adds those; without it, `--update-baseline`
+writes the file as this run alone, which for a scoped run would truncate the
+ledger. `--allow-unjudged-baseline` is not the shortcut here: it ratifies the
+thousands nobody looked at, which is a commit nobody can defend.
+
 The baseline is by identity, not by line: rule, kept symbol and cluster
 membership. Code moves constantly, and a baseline that reports every edit as a
 new finding is a baseline nobody reads. A rename or a new member does change the

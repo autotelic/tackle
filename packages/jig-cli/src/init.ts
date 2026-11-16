@@ -1352,7 +1352,19 @@ little; re-baseline only after reading what the new identities are.
 
 A baseline is refused while any candidate was not judged (\`unreadable\`, \`no_evidence\`, or
 past the budget), because accepting those consequences is accepting something nobody looked
-at. \`--allow-unjudged-baseline\` is the explicit override.
+at. \`--allow-unjudged-baseline\` is the explicit override. \`${profile.jig} baseline\` refuses
+the same way (\`--allow-unjudged\`), because judgement is part of the analysis rather than a
+label on it: the unkeyed run names one cluster from what the rules could see, the keyed run
+names three from what the model saw. A ledger CI replays must therefore be written by a run
+with the key — otherwise the local baseline and CI hold different identities for the same
+findings, and both look like a pass.
+
+On a branch in a stack, do not re-judge the repository to grow the ledger. A scoped run
+judges every file it reads, so its identities are the change's own:
+\`joggle check --types --no-replay --since origin/<base> --baseline .joggle/baseline
+--update-baseline .joggle/baseline --merge-baseline\` adds only what the branch introduced.
+\`${profile.jig} baseline\` accepts from a full run, so it is the whole-repository tool; the
+scoped form is the one a stacked pull request needs.
 
 ## Reading a finding
 

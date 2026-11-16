@@ -203,7 +203,7 @@ const v2 = Plugin.define({
       editor.add({
         name: "baseline",
         description:
-          "Accept the current findings into the ledger (`jig baseline`). This WRITES the baseline, so a human decides it, not a tool call: use it only after they have read the report. It does not judge anything; a judged baseline needs a model key in the host's environment and is shell-only.",
+          "Accept the current findings into the ledger (`jig baseline`). This WRITES the baseline, so a human decides it, not a tool call: use it only after they have read the report. It does not judge anything, and it refuses findings no judgement reached — a judged baseline needs a model key in the host's environment and is shell-only.",
         input: {
           type: "object",
           properties: {
