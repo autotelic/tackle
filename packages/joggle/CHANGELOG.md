@@ -1,5 +1,13 @@
 # @autotelic/joggle
 
+## 0.4.4
+
+### Patch Changes
+
+- bbad900: `--update-baseline` reports findings no ledger can ever hold: `N finding(s) declare no
+identity, so no baseline can accept them; they will appear in every run`. Without it, "accepted"
+  read as "quiet", and the finding came back in the next run with no explanation.
+
 ## 0.4.3
 
 ### Patch Changes
