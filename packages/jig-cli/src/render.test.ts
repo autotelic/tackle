@@ -66,6 +66,28 @@ describe("the GitHub projection separates held findings from failures", () => {
     expect(text.startsWith("::error file=src/a.ts")).toBe(true)
   })
 
+  it("carries the census, so a step that skipped its rules cannot look clean", () => {
+    const quiet = makeReport({
+      diagnostics: [],
+      files: 0,
+      elapsedMs: 0,
+      generators: [
+        {
+          id: "joggle",
+          diagnostics: 0,
+          error: 0,
+          warn: 0,
+          info: 0,
+          status: "ran",
+          note: "1 rule skipped",
+        },
+      ],
+    })
+    const text = renderGithub(quiet, { gate: verdict() })
+    // An engine that never looked used to print nothing at all and exit 0.
+    expect(text).toContain("::warning title=jig census (joggle)::1 rule skipped")
+  })
+
   it("names where the failing findings are, not only how many", () => {
     const held = [
       finding({ identity: "a", location: { file: "src/one.ts", line: 3, column: 1 } }),

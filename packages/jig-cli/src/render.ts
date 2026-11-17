@@ -215,6 +215,22 @@ export const renderGithub = (report: Report, options: GithubOptions = {}): strin
   // somewhere else — the failure was real, and nothing in it said so.
   const failing =
     options.gate === undefined ? undefined : new Set(options.gate.failing.map(identityOf))
+  // The census first, in the same words the text report uses: an engine that skipped a rule
+  // or left candidates unjudged found *nothing to say*, which is not the same as nothing to
+  // find. `--format github` used to drop that entirely, so a CI step could print no
+  // annotations at all and exit 0 while the rules it exists to run never looked.
+  const census: Array<string> = []
+  for (const generator of report.generators) {
+    const annotations: Array<string> = []
+    if (generator.status !== undefined && generator.status !== "ran")
+      annotations.push(generator.status)
+    if (generator.unjudged !== undefined && generator.unjudged > 0) {
+      annotations.push(`${generator.unjudged} candidate(s) not judged`)
+    }
+    if (generator.note !== undefined) annotations.push(generator.note)
+    if (annotations.length === 0) continue
+    census.push(`::warning title=jig census (${generator.id})::${annotations.join("; ")}`)
+  }
   const lines = report.diagnostics.map((diagnostic) => {
     const { file, line, column } = diagnostic.location
     const title = `${diagnostic.engine}/${diagnostic.ruleId}`
@@ -225,6 +241,7 @@ export const renderGithub = (report: Report, options: GithubOptions = {}): strin
     return `::${level} file=${file},line=${line},col=${column},title=${title}::${diagnostic.message}${suffix}`
   })
   const gate = options.gate
+  lines.unshift(...census)
   if (gate !== undefined) {
     const heldCount = report.diagnostics.filter(held).length
     const failed = gate.failing.length > 0 || gate.infrastructure.length > 0
