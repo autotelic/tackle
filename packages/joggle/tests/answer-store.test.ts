@@ -7,6 +7,7 @@ import { join } from "node:path"
 import {
   answerStoreBytes,
   census,
+  compact,
   make,
   mergeEntries,
   mergeShardText,
@@ -41,6 +42,48 @@ test("the ledger's size is read from disk, not guessed from its entries", () => 
     }).pipe(Effect.provide(nodeLayer)),
   )
 })
+
+test("a committed line is a function of its key, so two branches merge to one line", () => {
+  // No timestamp: that is the whole point. A stamp made the same answer a different line in
+  // every clone, `merge=union` kept both, and a stack turned 0.9 MB of answers into 20.5 MB.
+  const stable = renderShard([{ key: "ab", answer: probability(0.1) }])
+  expect(stable).not.toContain("\t17")
+  const merged = Effect.runSync(
+    Effect.orDie(mergeShardText({ ours: stable, theirs: renderShard([{ key: "ab", answer: probability(0.1) }]) })),
+  )
+  expect(merged.trim().split("\n")).toHaveLength(1)
+})
+
+test("a stamped line still parses, so an old ledger is read rather than rejected", () => {
+  const parsed = parseLines("ab\t1794606090\t" + JSON.stringify({ kind: "Probability", probability: 0.2 }) + "\n")
+  expect(parsed.entries).toEqual([{ key: "ab", writtenAt: 1794606090, answer: probability(0.2) }])
+  expect(parsed.skippedLines).toBe(0)
+})
+
+test("compaction collapses the duplicates a union merge left behind", () =>
+  Effect.runPromise(
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem
+      const path = yield* Path.Path
+      const dir = fresh("joggle-compact-")
+      const line = renderEntry({ key: "ab", writtenAt: 1, answer: probability(0.1) })
+      // Three lines, two answers: what a duplicated merge looks like on disk, in the old
+      // stamped shape. Compaction is what a repository runs to repair it.
+      yield* fs.writeFileString(join(dir, "answers.jsonl"), [line, line, renderEntry({ key: "cd", writtenAt: 2, answer: probability(0.2) })].join("\n") + "\n")
+      const before = yield* census(fs, path, dir)
+      expect(before.entries).toBe(2)
+      expect(before.lines).toBe(3)
+      const result = yield* compact(fs, path, dir)
+      expect(result).toMatchObject({ lines: 3, entries: 2, duplicates: 1 })
+      const after = yield* census(fs, path, dir)
+      expect(after.entries).toBe(2)
+      expect(after.lines).toBe(2)
+      expect(result.bytesAfter).toBeLessThan(result.bytesBefore)
+      // The repaired file is the committed shape: key and answer, no age. A stamp left behind
+      // would make the next merge duplicate the same answer again.
+      expect(yield* fs.readFileString(join(dir, "answers.jsonl"))).not.toMatch(/\t\d+\t/)
+    }).pipe(Effect.provide(nodeLayer)),
+  ))
 
 test("a shard is sorted by key and newline-terminated", () => {
   const text = renderShard([entry("cd", 2, 0.2), entry("ab", 1, 0.1)])

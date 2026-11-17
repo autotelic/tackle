@@ -53,20 +53,32 @@ Both are read, and `joggle cache migrate --layout` moves between them. The older
 `answers.json` object is read and consolidated into the single file on the first
 write.
 
-Each line is one entry: the key, when it was written, and the stored answer.
+Each line is one entry: the key and the stored answer. Nothing else.
 
 ```
-7b3ff63e79c04054	1712345678	{"confidence":0.88,"kind":"Classify",...}
+7b3ff63e79c04054	{"confidence":0.88,"kind":"Classify",...}
 ```
 
-Three properties follow, and each is a problem the old file had:
+The line is a **function of the key alone**, and that is load-bearing. An earlier
+format also wrote `writtenAt`, which looked harmless and was not: the same answer
+then had a different line in every clone, `merge=union` kept both sides of a
+differing line, and a 21-branch stack turned 5,890 answers into 131,440 lines —
+20.5 MB of file for 0.9 MB of content, with one key copied 141 times. Age is a
+machine fact: the machine cache records `writtenAt` (it is pruned by age), the
+committed ledger does not.
 
-- **A new entry cannot conflict.** Two branches add different lines, and
-  `merge=union` keeps both. A verdict that changes is one line replaced.
-- **An entry can be pruned.** `joggle cache prune` reads the timestamp, drops
-  what is old or over a size ceiling, and rewrites only the affected file.
+Four properties follow:
+
+- **A new entry cannot conflict.** Two branches add different keys, and a key's
+  content is what its hash addresses. The same key merges to one identical line.
+- **A size ceiling can still be enforced.** `joggle cache prune --max-bytes`
+  rewrites the file without ages; `--max-age` applies to machine stores, where
+  ages exist.
 - **A diff is the change.** Lines are sorted by key, so a replay with no new
   answers is a no-op in git rather than a reordering.
+- **A duplicated ledger can be repaired.** `joggle cache compact` reads every key
+  once and rewrites the set, so a history that already accumulated copies collapses
+  without re-judging anything.
 
 This is Bazel's shape where it earns it: content-addressed and deterministic so
 a diff means a change. Sharding is the opt-in for size, not the default.
@@ -82,10 +94,10 @@ answers.jsonl merge=union
 answers/*.jsonl merge=union
 ```
 
-Union is correct here because the file is append-only and keyed: two branches
-add different keys, and a key's content is what its hash addresses. A
-same-key/different-content collision cannot happen unless the model answered the
-same question twice.
+Union is correct here because the file is append-only and keyed, **and because a
+line carries no timestamp**: two branches add different keys, and the same key
+serialises to the same bytes on both sides, so union keeps one copy. Insert the
+wall clock into that line and union becomes a duplicator instead of a merge.
 
 joggle also ships `joggle merge-answers` for repositories that want a
 newer-timestamp-wins dedupe. Git cannot ship a merge driver in a

@@ -5,9 +5,17 @@ import { StoredAnswer } from "./plans.ts"
 /**
  * The answer cache: one logical ledger, two on-disk layouts.
  *
- * An entry is a line of `<key>\t<unix-seconds>\t<json>`, sorted by key. The
- * key (`answerKeyFor`) already content-addresses the decision, the atoms it
- * read, the model and the decision version, so the line is the identity.
+ * An entry is a line of `<key>\t<json>`, sorted by key. The key
+ * (`answerKeyFor`) already content-addresses the decision, the atoms it read,
+ * the model and the decision version, so the line IS the identity — and a line
+ * that is a function of the key is a line two branches can merge.
+ *
+ * The timestamp is deliberately NOT in that line. A committed ledger is merged
+ * with git's built-in `merge=union`, which keeps both sides of a differing line;
+ * stamping every copy with the wall clock made the same answer a different line in
+ * every clone, so each rebase of a 21-branch stack duplicated it again — 5,890
+ * answers became 131,440 lines, 20.5 MB for 0.9 MB of content. Age is a machine
+ * fact: the machine cache records it, the committed ledger does not.
  *
  * **Single** (the default) is one file, `answers.jsonl`. It is the shape a
  * reviewer can read: a verdict change is one changed line in one diff. Sharding
@@ -75,11 +83,17 @@ const LEGACY_ATTRIBUTES = [
   "answers/*.jsonl merge=union\n" + "answers.json merge=union\n",
 ]
 
-/** One entry: the key, when it was written, and the answer. */
+/** One entry: the key, when it was written (machine stores), and the answer. */
 export interface Entry {
   readonly key: string
-  /** Unix seconds, for `cache prune --max-age`. */
-  readonly writtenAt: number
+  /**
+   * Unix seconds, for `cache prune --max-age`. Absent in a committed ledger.
+   *
+   * An absent age is not "written long ago": it means this store does not record
+   * ages, so age-based pruning leaves the entry alone and only size-based pruning
+   * can retire it.
+   */
+  readonly writtenAt?: number | undefined
   readonly answer: StoredAnswer
 }
 
@@ -92,11 +106,15 @@ const AnswersObject = Schema.Struct({
 const decodeAnswer = Schema.fromJsonString(StoredAnswer)
 
 /**
- * One line: `<key>\t<unix-seconds>\t<json>`. A tab cannot appear unescaped in
- * any of the three fields, so the split is unambiguous.
+ * One line: `<key>\t<json>`, or `<key>\t<unix-seconds>\t<json>` when the store
+ * records ages. A tab cannot appear unescaped in any field, and a payload always
+ * starts with `{`, so the split is unambiguous.
  */
 export const renderEntry = (entry: Entry): string =>
-  entry.key + "\t" + entry.writtenAt + "\t" + canonical(entry.answer)
+  entry.key +
+  "\t" +
+  (entry.writtenAt === undefined ? "" : entry.writtenAt + "\t") +
+  canonical(entry.answer)
 
 /** What a file held, and how many lines were not an entry. */
 export interface ParsedShard {
@@ -112,18 +130,24 @@ export const parseLines = (text: string): ParsedShard => {
   for (const line of text.split("\n")) {
     if (line === "") continue
     const first = line.indexOf("\t")
-    const second = line.indexOf("\t", first + 1)
-    if (first < 0 || second < 0) {
+    if (first < 0) {
       skippedLines += 1
       continue
     }
-    const writtenAt = Number(line.slice(first + 1, second))
-    const answer = Result.getOrUndefined(SchemaParser.decodeResult(decodeAnswer)(line.slice(second + 1)))
-    if (answer === undefined || !Number.isFinite(writtenAt)) {
+    const rest = line.slice(first + 1)
+    // A payload is JSON and starts with `{`; anything else is a legacy age field.
+    const stamped = /^(\d+)\t/.exec(rest)
+    const writtenAt = stamped === null ? undefined : Number(stamped[1])
+    const payload = stamped === null ? rest : rest.slice(stamped[0].length)
+    const answer = Result.getOrUndefined(SchemaParser.decodeResult(decodeAnswer)(payload))
+    if (answer === undefined || (writtenAt !== undefined && !Number.isFinite(writtenAt))) {
       skippedLines += 1
       continue
     }
-    entries.push({ key: line.slice(0, first), writtenAt, answer })
+    // Two shapes rather than a spread or a widened binding: an entry either has an age
+    // (machine store) or it does not (committed ledger).
+    const key = line.slice(0, first)
+    entries.push(writtenAt === undefined ? { key, answer } : { key, writtenAt, answer })
   }
   return { entries, skippedLines }
 }
@@ -137,12 +161,31 @@ export const renderShard = (entries: Iterable<Entry>): string => {
 }
 
 /**
- * Union two sides of one file by key.
+ * Which of two entries for one key survives.
  *
- * A key that only one side carries is kept. A key both sides carry with
- * different content keeps the newer timestamp: for a content-addressed key the
- * two answers should be identical, and the timestamp is the only signal that
- * says which the model produced last. Ties keep ours.
+ * An age is evidence of what the model produced last, so a stamped entry wins over an
+ * unstamped one. Two unstamped entries with one key are the same answer by construction.
+ *
+ * @param pair.left - The existing entry.
+ * @param pair.right - The challenger.
+ * @returns The entry that stands.
+ */
+const newer = ({ left, right }: { readonly left: Entry; readonly right: Entry }): Entry => {
+  if (left.writtenAt === undefined) return right
+  if (right.writtenAt === undefined) return left
+  return right.writtenAt > left.writtenAt ? right : left
+}
+
+/**
+ * Union two sides of one ledger by key.
+ *
+ * A key only one side carries is kept. A key both sides carry keeps the newer answer when
+ * ages exist, and otherwise ours — for a content-addressed key the payloads are identical,
+ * which is what makes a merge collapse to one line instead of copying it.
+ *
+ * @param input.ours - Our side.
+ * @param input.theirs - Their side.
+ * @returns One entry per key.
  */
 export const mergeEntries = ({
   ours,
@@ -155,7 +198,8 @@ export const mergeEntries = ({
   for (const entry of ours) merged.set(entry.key, entry)
   for (const entry of theirs) {
     const existing = merged.get(entry.key)
-    if (existing === undefined || entry.writtenAt > existing.writtenAt) merged.set(entry.key, entry)
+    if (existing === undefined) merged.set(entry.key, entry)
+    else merged.set(entry.key, newer({ left: existing, right: entry }))
   }
   return [...merged.values()]
 }
@@ -214,6 +258,8 @@ interface Loaded {
   readonly layout: Layout
   /** Files the ledger lives in: one for the single layout, one per non-empty shard. */
   readonly files: number
+  /** Lines read, before the keys collapsed. More lines than entries means duplicates. */
+  readonly lines: number
   readonly bytes: number
   readonly skippedLines: number
 }
@@ -235,9 +281,13 @@ const loadAll = (
     const merged = new Map<string, Entry>()
     const absorb = (entry: Entry): void => {
       const existing = merged.get(entry.key)
-      if (existing === undefined || entry.writtenAt > existing.writtenAt) merged.set(entry.key, entry)
+      if (existing === undefined) merged.set(entry.key, entry)
+      else merged.set(entry.key, newer({ left: existing, right: entry }))
     }
     let files = 0
+    // Lines and skipped lines together are what the file held; the difference from
+    // `merged.size` is duplication a union merge left behind.
+    let lines = 0
     let bytes = 0
     let skippedLines = 0
 
@@ -260,6 +310,7 @@ const loadAll = (
       files += 1
       bytes += bytesOf(text)
       skippedLines += parsed.skippedLines
+      lines += parsed.entries.length + parsed.skippedLines
       for (const entry of parsed.entries) absorb(entry)
     }
 
@@ -275,6 +326,7 @@ const loadAll = (
       files += 1
       bytes += bytesOf(text)
       skippedLines += parsed.skippedLines
+      lines += parsed.entries.length + parsed.skippedLines
       for (const entry of parsed.entries) absorb(entry)
     }
 
@@ -284,6 +336,7 @@ const loadAll = (
       entries: merged,
       layout: shards > 0 ? "sharded" : "single",
       files,
+      lines,
       bytes,
       skippedLines,
     }
@@ -382,6 +435,14 @@ export interface Store {
 export interface StoreOptions {
   /** The layout to write; absent means "whatever is already on disk". */
   readonly layout?: Layout | undefined
+  /**
+   * Record when each answer was written.
+   *
+   * True for the machine cache, where ages prune it. False (the default) for a
+   * committed ledger, where a timestamp would make the same answer a different line in
+   * every clone and defeat the merge.
+   */
+  readonly timestamps?: boolean | undefined
 }
 
 /**
@@ -404,13 +465,22 @@ export const make = (
     const entries = yield* Ref.make(loaded.entries)
     const dirty = yield* Ref.make<ReadonlySet<string>>(new Set())
     const layoutRef = yield* Ref.make<Layout>(chosen)
-    const fullWrite = yield* Ref.make(loaded.layout !== chosen)
+    const aged = [...loaded.entries.values()].some((entry) => entry.writtenAt !== undefined)
+    const fullWrite = yield* Ref.make(loaded.layout !== chosen || (options.timestamps !== true && aged))
     const writer = yield* Semaphore.make(1)
+
+    // A ledger written before the line was stable carries ages; a store that does not record
+    // ages rewrites them away on its first write, so a merge stops seeing two shapes of one key.
+    const strip = options.timestamps !== true
+    const sanitise = (current: ReadonlyMap<string, Entry>): ReadonlyMap<string, Entry> =>
+      strip
+        ? new Map([...current].map(([key, entry]) => [key, { key, answer: entry.answer }]))
+        : current
 
     const flush = writer.withPermits(1)(
       Effect.gen(function* () {
         const changed = yield* Ref.getAndSet(dirty, new Set<string>())
-        const current = yield* Ref.get(entries)
+        const current = sanitise(yield* Ref.get(entries))
         const layout = yield* Ref.get(layoutRef)
         const rewrite = yield* Ref.getAndSet(fullWrite, false)
         if (rewrite || layout === "single") {
@@ -434,7 +504,10 @@ export const make = (
       get: (key) => Effect.map(Ref.get(entries), (current) => Option.fromUndefinedOr(current.get(key)?.answer)),
       put: (key, answer) =>
         Effect.gen(function* () {
-          const entry: Entry = { key, writtenAt: seconds(yield* Clock.currentTimeMillis), answer }
+          const entry: Entry =
+            options.timestamps === true
+              ? { key, writtenAt: seconds(yield* Clock.currentTimeMillis), answer }
+              : { key, answer }
           yield* Ref.update(entries, (current) => new Map(current).set(key, entry))
           yield* Ref.update(dirty, (current) => new Set(current).add(key))
           yield* flush
@@ -508,7 +581,10 @@ export const answerStoreBytes = (
 
 /** What the committed ledger says, rendered for a reader rather than replayed. */
 export interface Census {
+  /** Distinct answers: the ledger is a set. */
   readonly entries: number
+  /** Lines on disk. More lines than entries means duplicates a merge left behind. */
+  readonly lines: number
   /** Files the ledger lives in: one for the single layout, one per non-empty shard. */
   readonly files: number
   readonly layout: Layout
@@ -546,8 +622,10 @@ export const census = (
     let oldest: number | undefined
     let newest: number | undefined
     for (const entry of loaded.entries.values()) {
-      oldest = oldest === undefined ? entry.writtenAt : Math.min(oldest, entry.writtenAt)
-      newest = newest === undefined ? entry.writtenAt : Math.max(newest, entry.writtenAt)
+      if (entry.writtenAt !== undefined) {
+        oldest = oldest === undefined ? entry.writtenAt : Math.min(oldest, entry.writtenAt)
+        newest = newest === undefined ? entry.writtenAt : Math.max(newest, entry.writtenAt)
+      }
       kinds.set(entry.answer.kind, (kinds.get(entry.answer.kind) ?? 0) + 1)
       if (entry.answer.kind === "Probability") {
         if (entry.answer.probability >= 0.5) yes += 1
@@ -558,6 +636,7 @@ export const census = (
     }
     return {
       entries: loaded.entries.size,
+      lines: loaded.lines,
       files: loaded.files,
       layout: loaded.layout,
       bytes: loaded.bytes,
@@ -577,9 +656,11 @@ export const census = (
 /**
  * Drop cache entries and rewrite only the file or shards that changed.
  *
- * The age cut is per entry, from the timestamp each line carries. The size cut
- * is oldest-first across the whole ledger. An emptied file or shard is deleted
- * rather than written empty.
+ * The age cut is per entry, from the timestamp each line carries — a committed
+ * ledger carries none, so age pruning leaves it alone and only `--max-bytes`
+ * retires what it holds. The size cut is oldest-first across the whole ledger,
+ * with ageless entries last. An emptied file or shard is deleted rather than
+ * written empty.
  */
 export const prune = (
   fs: FileSystem.FileSystem,
@@ -594,7 +675,8 @@ export const prune = (
     const kept = new Map<string, Entry>()
     let removed = 0
     for (const entry of loaded.entries.values()) {
-      if (cutoff !== undefined && entry.writtenAt < cutoff) {
+      // A store that does not record ages cannot be pruned by age: absent is not "old".
+      if (cutoff !== undefined && entry.writtenAt !== undefined && entry.writtenAt < cutoff) {
         removed += 1
         continue
       }
@@ -607,7 +689,8 @@ export const prune = (
       if (total > options.maxBytes) {
         // A total order: oldest first, ties by key, so the result does not
         // depend on directory iteration.
-        const ordered = [...kept.values()].sort((left, right) => left.writtenAt - right.writtenAt || byKey(left, right))
+        const age = (entry: Entry): number => entry.writtenAt ?? Number.POSITIVE_INFINITY
+        const ordered = [...kept.values()].sort((left, right) => age(left) - age(right) || byKey(left, right))
         for (const entry of ordered) {
           if (total <= options.maxBytes) break
           kept.delete(entry.key)
@@ -624,4 +707,47 @@ export const prune = (
     let bytes = 0
     for (const entry of kept.values()) bytes += sizeOf(entry)
     return { removed, kept: kept.size, bytes }
+  })
+
+/** What a compaction did, in the numbers that made it necessary. */
+export interface CompactResult {
+  /** Lines on disk before the rewrite. */
+  readonly lines: number
+  /** Distinct answers, which is what the ledger should have held. */
+  readonly entries: number
+  /** Lines that were copies of an answer the file already carried. */
+  readonly duplicates: number
+  readonly bytesBefore: number
+  readonly bytesAfter: number
+}
+
+/**
+ * Rewrite the ledger as the set it is: one sorted line per key.
+ *
+ * `merge=union` keeps both sides of a *differing* line, so before the line was a function of
+ * the key alone, every rebase of a stack copied the same answers again with a new stamp. The
+ * repair is not a prune (the copies are not stale) and not a migration (the layout is right):
+ * read every key once, newest answer winning, and write the file a fresh run would write.
+ */
+export const compact = (
+  fs: FileSystem.FileSystem,
+  path: Path.Path,
+  dir: string,
+): Effect.Effect<CompactResult> =>
+  Effect.gen(function* () {
+    const bytesBefore = yield* answerStoreBytes(fs, path, dir)
+    const loaded = yield* loadAll(fs, path, dir)
+    // Ages are a machine fact: the repaired file is the set, in the one committed shape.
+    const set = new Map(
+      [...loaded.entries].map(([key, entry]) => [key, { key, answer: entry.answer }]),
+    )
+    yield* writeAll(fs, path, dir, loaded.layout, set)
+    const bytesAfter = yield* answerStoreBytes(fs, path, dir)
+    return {
+      lines: loaded.lines,
+      entries: loaded.entries.size,
+      duplicates: Math.max(0, loaded.lines - loaded.entries.size),
+      bytesBefore,
+      bytesAfter,
+    }
   })

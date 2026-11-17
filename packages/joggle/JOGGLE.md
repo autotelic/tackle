@@ -229,10 +229,11 @@ on every machine — which means **run from the repository root**. Evidence
 carries root-relative paths; running from a subdirectory changes the key and
 misses every cached verdict. Successful judgements are written to
 `.joggle/answers.jsonl`, one sorted, line-oriented answer per line; commit that
-file and CI replays them with `--offline` and **no API key at all**. A new
-answer is a new line, so two branches that judge different candidates merge with
-git's built-in `merge=union`, and `joggle cache prune` keeps the store from
-growing without a ceiling. A store large enough to make a whole-file rewrite or a
+file and CI replays them with `--offline` and **no API key at all**. A line is the
+key and the answer and nothing else, so two branches that judge different
+candidates merge with git's built-in `merge=union` and the same answer merges to
+one line rather than a copy; `joggle cache compact` and `cache prune --max-bytes`
+keep the store from growing without a ceiling. A store large enough to make a whole-file rewrite or a
 merge expensive can be sharded instead (`cache.layout: "sharded"`, or
 `joggle cache migrate --layout sharded`); both layouts are read, and
 `cache migrate` moves between them. The older `answers.json` object is read and
@@ -427,15 +428,19 @@ Committing the answer cache buys keyless replay, and it costs bytes in every clo
 and every CI checkout. GitHub warns above **50 MB per file** and refuses above
 100 MB; a cache is worth nowhere near that.
 
-- `joggle cache prune --max-age 90` drops answers nobody has used in a season;
-  `joggle cache prune --max-bytes 4000000` caps the file, oldest answers first. Both
-  are safe: an answer is regenerable by judging again.
+- `joggle cache prune --max-bytes 4000000` caps the file, oldest first, on any store.
+  `--max-age 90` needs ages, which only the machine cache records.
 - A run says so when the store passes 8 MB, because a cache nobody measured is how
   a 0-byte ledger on the base branch becomes 55 MB at the top of a stack.
-- In a stack the growth is per branch: each scoped accept adds this branch's answers
-  and the same growing file rides in every commit above it. Cap it before the last
-  push, or stop committing it and let a keyed CI judge instead — but only with the
-  key, because without one the identities change (see the stack section above).
+- **A scoped run does not write the committed ledger.** `--since`, `--pr` and
+  `--changed` answer into the machine cache unless `--cache-dir` names a store: a
+  branch's verdicts are a cache, and committing them is what put 131,440 lines in
+  every pull request of a stack instead of the 5,890 answers they held.
+- **`joggle cache compact` repairs a duplicated ledger in place.** A line used to
+  carry `writtenAt`, so the same answer serialised differently on every branch and
+  `merge=union` kept both sides on every rebase. The line is now the key and the
+  answer only, so merges collapse to one line; for a history that already grew,
+  compact reads each key once and rewrites the set. No re-judging, no key needed.
 
 ## Two committed artifacts, two machine artifacts
 

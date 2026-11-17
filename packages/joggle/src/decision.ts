@@ -71,6 +71,13 @@ export interface Options {
    * decided keeps its current shape rather than being rewritten by a run.
    */
   readonly layout?: Layout | undefined
+  /**
+   * Record when each answer was written.
+   *
+   * True when this cache is machine-local (it is pruned by age); false for the committed
+   * ledger, whose lines must be a function of the key or a merge duplicates them.
+   */
+  readonly timestamps?: boolean | undefined
   /** Never call the API; answer only from the persisted cache. */
   readonly offline: boolean
   /** Absent means judged rules fail with a clear reason and deterministic rules still run. */
@@ -290,6 +297,7 @@ export const layer = (
       // `docs/artifacts.md`.
       const answers = yield* makeAnswerStore(fs, path, options.cacheDir, {
         layout: options.layout,
+        timestamps: options.timestamps,
       })
       const planAnswers: PlanAnswerStore = {
         get: (key) => Effect.map(answers.get(key), (stored) => Option.map(stored, answerOf)),
