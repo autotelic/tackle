@@ -438,6 +438,11 @@ and every CI checkout. GitHub warns above **50 MB per file** and refuses above
   way. Without that, a tsconfig that includes `dist` made every declaration appear twice, and
   the report said "declared in two places" about a build artifact — 73 of 95 findings on one
   repository, present on a developer's machine and absent in CI because CI had never built.
+- **The analysed set is machine-readable.** `--format json` carries a `discovery` block —
+  files analysed, files and directories ignored, extensions skipped, whether the walk was
+  truncated — and `--list-files` adds the paths. Two checkouts of one commit that report
+  different findings differ either in that set or in its verdicts, and the JSON used to show
+  neither: the census was prose and the list was never emitted.
 - **A run says how it got its answers.** "N judgement(s) were asked of the model" means a
   key was present and this run judged for itself; "N judgement(s) were replayed" means no model
   was called. The two can name the same site differently, so a local report and a CI report at

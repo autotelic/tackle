@@ -170,6 +170,13 @@ export interface Options {
   /** Answer from the cache and never write it: a gate does not edit the tree it judges. */
   readonly readOnly?: boolean | undefined
   /**
+   * Include the analysed file paths in the report's discovery block.
+   *
+   * The only honest way to answer "why does this tree see 95 findings and that one 0" is to
+   * diff the two file lists; everything else is inference.
+   */
+  readonly listFiles?: boolean | undefined
+  /**
    * Union with the identities already in the update target instead of replacing them.
    *
    * A scoped run (`--since`) judges every candidate in its own files completely, so its
@@ -1189,6 +1196,18 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
     overloaded,
   }
 
+  const seen: NonNullable<Report["discovery"]> = {
+    analysed: workspace.files.length,
+    ignored: discovery.ignored,
+    ignoredDirectories: discovery.ignoredDirectories,
+    truncated: discovery.truncated,
+    skippedExtensions: discovery.skippedExtensions,
+  }
+  // Only when asked: the list is thousands of lines, and the reason to ask is exactly "diff
+  // these two trees".
+  if (options.listFiles === true) {
+    Object.assign(seen, { paths: workspace.files.map((file) => file.path).sort(Order.String) })
+  }
   const decisionTotals: DecisionTotals = yield* decisionStats.read
   // Say how the answers were obtained. A keyed run judges live and a keyless one replays,
   // and the two can name the same site differently — which is the whole difference between
@@ -1215,6 +1234,7 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
     files: workspace.files.length,
     rules: effective.length,
     structure,
+    discovery: seen,
     skipped,
     notes,
     drops,

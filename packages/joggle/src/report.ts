@@ -59,6 +59,21 @@ export interface Report {
   readonly rules: number
   /** The shape of the codebase, for the backpressure line. */
   readonly structure: Structure
+  /**
+   * What discovery read, and what it declined to read.
+   *
+   * The counts were prose in `notes`, which is not something a caller can diff; `paths` is
+   * present only when the run asked for it, because it is thousands of lines on a real
+   * repository and the reason to ask is exactly "diff these two trees".
+   */
+  readonly discovery?: {
+    readonly analysed: number
+    readonly ignored: number
+    readonly ignoredDirectories: number
+    readonly truncated: boolean
+    readonly skippedExtensions: ReadonlyArray<{ readonly extension: string; readonly count: number }>
+    readonly paths?: ReadonlyArray<string>
+  }
   readonly skipped: ReadonlyArray<Note>
   /**
    * Bounds the rules hit, in their own words. A note is not a failure: it is
@@ -544,6 +559,7 @@ const json = (report: Report): string =>
         // artifact that hid where the candidates went -- and reading it is how the
         // gated band below was found.
         drops: report.drops,
+        discovery: report.discovery,
       },
     },
     null,

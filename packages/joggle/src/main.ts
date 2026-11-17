@@ -172,6 +172,12 @@ const checkCommand = Command.make(
       ),
       Flag.withDefault(false),
     ),
+    listFiles: Flag.Boolean("list-files").pipe(
+      Flag.withDescription(
+        "Include the analysed file paths in the report's discovery block (--format json). The only honest way to answer why two checkouts of one commit report different findings is to diff their file lists.",
+      ),
+      Flag.withDefault(false),
+    ),
     readOnly: Flag.Boolean("read-only").pipe(
       Flag.withDescription(
         "Answer from the cache and never write it. Set for every engine jig runs: a check must not edit the tree it judges, because new answers rename the findings they verify.",
@@ -298,6 +304,7 @@ const checkCommand = Command.make(
         allowUnjudgedBaseline: config.allowUnjudgedBaseline,
         mergeBaseline: config.mergeBaseline,
         allowScopedBaseline: config.allowScopedBaseline,
+        listFiles: config.listFiles,
       }).pipe(
         Effect.provide(
           Layer.mergeAll(
