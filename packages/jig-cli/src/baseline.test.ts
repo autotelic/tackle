@@ -52,6 +52,29 @@ const run = (repo: Repo, args: ReadonlyArray<string>) =>
     encoding: "utf8",
   })
 
+describe("a check never edits the tree it judges", () => {
+  it("runs every engine with JIG_READ_ONLY set", () => {
+    const root = mkdtempSync(join(tmpdir(), "jig-readonly-"))
+    mkdirSync(join(root, "src"), { recursive: true })
+    writeFileSync(join(root, "src/a.ts"), "export const a = 1\n")
+    // The engine reports the variable it was given: this is the contract a writing engine
+    // (joggle) honours, and the reason a check cannot append to .joggle/answers.jsonl.
+    writeFileSync(
+      join(root, "engine.mjs"),
+      'console.log(JSON.stringify({ diagnostics: [{ ruleId: "x", severity: "warn", message: "read-only=" + (process.env.JIG_READ_ONLY ?? "unset"), file: "src/a.ts", line: 1, column: 1, identity: "fake/x:src/a.ts" }] }))\n',
+    )
+    writeFileSync(
+      join(root, "jig.config.json"),
+      JSON.stringify({
+        engines: [{ id: "fake", kind: "process", command: process.execPath, args: ["engine.mjs"] }],
+        gate: { mode: "all", baseline: ".jig-baseline.json", failOn: "any-new" },
+      }),
+    )
+    const result = run({ root, jig: cliSource }, ["check"])
+    expect(result.stdout).toContain("read-only=1")
+  })
+})
+
 describe("jig baseline and unjudged findings", () => {
   it("refuses to accept a finding no judgement reached, and names the key", () => {
     const repo = repoWith(false)

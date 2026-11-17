@@ -111,3 +111,23 @@ test("with no paths, .astro files join tsgo's list, within tsconfig and outside 
     "src/utils/use-card.ts",
   ])
 })
+
+test("a checker's list drops build output, so a declaration is read once", async () => {
+  const root = resolve("tests/fixtures/astro")
+  // What tsgo hands over when a package emits declarations: the source AND the build. The
+  // walk has always honoured `policy.ignoredDirectories`; this list did not, so every
+  // declaration was analysed twice and reported as "declared in two places".
+  const fromTsgo = [
+    resolve(root, "src/utils/use-card.ts"),
+    resolve(root, "dist/utils/use-card.d.ts"),
+    resolve(root, "build/utils/use-card.js"),
+  ]
+  const found = await Effect.runPromise(
+    discoverFiles(root, [], fromTsgo).pipe(Effect.provide(NodeServices.layer)),
+  )
+  const relative = found.files.map((file) => file.slice(root.length + 1))
+  expect(relative).toContain("src/utils/use-card.ts")
+  expect(relative.some((file) => file.startsWith("dist/"))).toBe(false)
+  expect(relative.some((file) => file.startsWith("build/"))).toBe(false)
+  expect(found.ignored).toBe(2)
+})

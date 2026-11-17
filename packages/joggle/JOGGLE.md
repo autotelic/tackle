@@ -432,6 +432,12 @@ and every CI checkout. GitHub warns above **50 MB per file** and refuses above
   `--max-age 90` needs ages, which only the machine cache records.
 - A run says so when the store passes 8 MB, because a cache nobody measured is how
   a 0-byte ledger on the base branch becomes 55 MB at the top of a stack.
+- **Build output is never source.** The directory walk skips `node_modules`, `dist`,
+  `build`, `out`, `coverage`, `.next`, `.turbo`, `.vercel`, `.cache` and anything a
+  `.gitignore` excludes, and the checker's file list (under `--types`) is filtered the same
+  way. Without that, a tsconfig that includes `dist` made every declaration appear twice, and
+  the report said "declared in two places" about a build artifact — 73 of 95 findings on one
+  repository, present on a developer's machine and absent in CI because CI had never built.
 - **A run says how it got its answers.** "N judgement(s) were asked of the model" means a
   key was present and this run judged for itself; "N judgement(s) were replayed" means no model
   was called. The two can name the same site differently, so a local report and a CI report at
