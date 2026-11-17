@@ -1225,7 +1225,7 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
       ruleId: "joggle",
       reason:
         decisionTotals.replayed +
-        " judgement(s) were replayed from the answer cache; no model was called",
+        " judgement(s) were replayed from a cache — the committed ledger and this machine's wire cache — and no model was called. A cold CI run has neither, so it judges nothing and names the same sites differently",
     })
   }
   const elapsedMs = (yield* Clock.currentTimeMillis) - started

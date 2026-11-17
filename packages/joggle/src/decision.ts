@@ -309,7 +309,18 @@ export const layer = (
         readOnly: options.readOnly,
       })
       const planAnswers: PlanAnswerStore = {
-        get: (key) => Effect.map(answers.get(key), (stored) => Option.map(stored, answerOf)),
+        // An answer served from the ledger is a replay, and the stats said otherwise: a run
+        // whose 95 findings all came from cached verdicts reported "0 replayed, 0 calls", so
+        // the census could not tell a warm machine from a cold one.
+        get: (key) =>
+          Effect.tap(answers.get(key), (stored) =>
+            Option.isSome(stored)
+              ? Ref.update(stats, (current) => ({
+                  ...current,
+                  replayed: current.replayed + 1,
+                }))
+              : Effect.void,
+          ).pipe(Effect.map((stored) => Option.map(stored, answerOf))),
         put: (key, answer) => answers.put(key, storedOf(answer)),
       }
 
