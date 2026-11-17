@@ -167,6 +167,8 @@ export interface Options {
    * here rests on aliases existing (protocol), not on discipline.
    */
   readonly allowScopedBaseline?: boolean | undefined
+  /** Answer from the cache and never write it: a gate does not edit the tree it judges. */
+  readonly readOnly?: boolean | undefined
   /**
    * Union with the identities already in the update target instead of replacing them.
    *

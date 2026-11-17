@@ -683,7 +683,16 @@ export const runEngine = (
     const binary = engine.command ?? id
     const command = resolveEngineCommand({ root, command: binary })
     const outcome = yield* Effect.match(
-      exec({ binary: command, args: argsFor(engine), cwd: root }),
+      // Every engine runs read-only. A check is a report: one that writes into the tree it
+      // judges changes the next run's answer, and for joggle it RENAMES the findings it
+      // verifies — which re-opens identities the ledger already accepted and fails a gate
+      // on files the change never touched. joggle honours the variable; anything else ignores it.
+      exec({
+        binary: command,
+        args: argsFor(engine),
+        cwd: root,
+        env: { JIG_READ_ONLY: "1" },
+      }),
       {
         onFailure: (message: string) => ({ ok: false as const, message }),
         onSuccess: (value) => ({ ok: true as const, value }),

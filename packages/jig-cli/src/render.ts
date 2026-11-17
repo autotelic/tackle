@@ -27,16 +27,31 @@ export interface TextOptions {
   readonly gate?: GateVerdict
 }
 
-/** One line per rule the gate holds against the run, so a reader sees what failed, not why. */
+/**
+ * One line per rule the gate holds against the run, then where the failures are.
+ *
+ * A count without a place is a log nobody can act on: a gate that re-opens 91 findings in one
+ * rule and names none of them sends a reader looking through 91 files by hand. Three samples
+ * are enough to recognise the neighborhood, and the full list is still in the report above.
+ */
 const gateLines = (failing: ReadonlyArray<Diagnostic>): ReadonlyArray<string> => {
-  const byRule = new Map<string, number>()
+  const byRule = new Map<string, ReadonlyArray<Diagnostic>>()
   for (const diagnostic of failing) {
     const key = ruleNameOf(diagnostic)
-    byRule.set(key, (byRule.get(key) ?? 0) + 1)
+    byRule.set(key, [...(byRule.get(key) ?? []), diagnostic])
   }
-  return [...byRule.entries()]
-    .sort(([left], [right]) => left.localeCompare(right))
-    .map(([rule, count]) => `  ${rule}: ${count} failing finding${count === 1 ? "" : "s"}`)
+  const lines: Array<string> = []
+  for (const [rule, group] of [...byRule.entries()].sort(([left], [right]) =>
+    left.localeCompare(right),
+  )) {
+    const count = group.length
+    lines.push(`  ${rule}: ${count} failing finding${count === 1 ? "" : "s"}`)
+    const samples = group
+      .slice(0, 3)
+      .map((diagnostic) => `${diagnostic.location.file}:${diagnostic.location.line}`)
+    if (samples.length > 0) lines.push(`    ${samples.join(", ")}`)
+  }
+  return lines
 }
 
 /** One engine's census line: what it found, and what it did instead of looking. */

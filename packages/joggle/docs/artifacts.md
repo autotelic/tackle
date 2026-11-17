@@ -76,6 +76,9 @@ Four properties follow:
   ages exist.
 - **A diff is the change.** Lines are sorted by key, so a replay with no new
   answers is a no-op in git rather than a reordering.
+- **A check never writes it.** `--read-only` (what `jig check` sets for every engine)
+  answers from the ledger and writes nothing. A new answer renames the finding it verifies,
+  so a gate that judged and wrote would re-open identities its own baseline holds.
 - **A duplicated ledger can be repaired.** `joggle cache compact` reads every key
   once and rewrites the set, so a history that already accumulated copies collapses
   without re-judging anything — and a keyless CI replays the result identically,

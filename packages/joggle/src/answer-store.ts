@@ -436,6 +436,14 @@ export interface StoreOptions {
   /** The layout to write; absent means "whatever is already on disk". */
   readonly layout?: Layout | undefined
   /**
+   * Answer from the ledger; never write it.
+   *
+   * A gate must not edit the tree it judges, and for joggle the stake is higher than hygiene:
+   * a new answer RENAMES the finding it verifies, so a check that wrote here would re-open
+   * identities the baseline already accepted — a run failing on files the change never touched.
+   */
+  readonly readOnly?: boolean | undefined
+  /**
    * Record when each answer was written.
    *
    * True for the machine cache, where ages prune it. False (the default) for a
@@ -504,6 +512,7 @@ export const make = (
       get: (key) => Effect.map(Ref.get(entries), (current) => Option.fromUndefinedOr(current.get(key)?.answer)),
       put: (key, answer) =>
         Effect.gen(function* () {
+          if (options.readOnly === true) return
           const entry: Entry =
             options.timestamps === true
               ? { key, writtenAt: seconds(yield* Clock.currentTimeMillis), answer }

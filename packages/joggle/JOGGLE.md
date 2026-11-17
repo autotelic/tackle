@@ -432,6 +432,13 @@ and every CI checkout. GitHub warns above **50 MB per file** and refuses above
   `--max-age 90` needs ages, which only the machine cache records.
 - A run says so when the store passes 8 MB, because a cache nobody measured is how
   a 0-byte ledger on the base branch becomes 55 MB at the top of a stack.
+- **A check does not write the ledger at all.** `--read-only` (and any run `jig` starts,
+  which exports `JIG_READ_ONLY=1` to every engine) answers from the cache and never writes
+  it. This is not hygiene: a new answer *renames* the finding it verifies, so a check that
+  judged and wrote would re-open identities the baseline already accepted, and the next run
+  would fail on files the change never touched. One pull request's lint run appended 919
+  answers that way and re-opened 91 findings in a rule whose ledger entries were intact.
+  Warming the ledger is a deliberate act: `joggle check` on trunk, or `--update-baseline`.
 - **A scoped run does not write the committed ledger.** `--since`, `--pr` and
   `--changed` answer into the machine cache unless `--cache-dir` names a store: a
   branch's verdicts are a cache, and committing them is what put 131,440 lines in

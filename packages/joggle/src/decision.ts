@@ -78,6 +78,14 @@ export interface Options {
    * ledger, whose lines must be a function of the key or a merge duplicates them.
    */
   readonly timestamps?: boolean | undefined
+  /**
+   * Answer from the cache; never write it.
+   *
+   * Set by a gate that must not mutate the repository, and by `jig check` for every engine:
+   * a verdict is a report, and a report that edits the ledger it is read against changes the
+   * next run's answer.
+   */
+  readonly readOnly?: boolean | undefined
   /** Never call the API; answer only from the persisted cache. */
   readonly offline: boolean
   /** Absent means judged rules fail with a clear reason and deterministic rules still run. */
@@ -298,6 +306,7 @@ export const layer = (
       const answers = yield* makeAnswerStore(fs, path, options.cacheDir, {
         layout: options.layout,
         timestamps: options.timestamps,
+        readOnly: options.readOnly,
       })
       const planAnswers: PlanAnswerStore = {
         get: (key) => Effect.map(answers.get(key), (stored) => Option.map(stored, answerOf)),

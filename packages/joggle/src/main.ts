@@ -172,6 +172,12 @@ const checkCommand = Command.make(
       ),
       Flag.withDefault(false),
     ),
+    readOnly: Flag.Boolean("read-only").pipe(
+      Flag.withDescription(
+        "Answer from the cache and never write it. Set for every engine jig runs: a check must not edit the tree it judges, because new answers rename the findings they verify.",
+      ),
+      Flag.withDefault(false),
+    ),
     allowScopedBaseline: Flag.Boolean("allow-scoped-baseline").pipe(
       Flag.withDescription(
         "Write a ledger from a scoped run. Refused by default: a scoped run's identities are not a subset of a full run's, so the ledger can miss the identity CI reports. Accept from a full run instead.",
@@ -303,6 +309,7 @@ const checkCommand = Command.make(
               apiKey,
               layout: effective.cache?.layout,
               timestamps: cacheDir === machineCache,
+              readOnly: config.readOnly || process.env["JIG_READ_ONLY"] === "1",
             }),
             tsgoLayer(cwd, {
               runExternalCode: config.runExternalCode || effective.runExternalCode === true,

@@ -85,6 +85,25 @@ test("compaction collapses the duplicates a union merge left behind", () =>
     }).pipe(Effect.provide(nodeLayer)),
   ))
 
+test("a read-only store answers from the ledger and never writes it", () =>
+  Effect.runPromise(
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem
+      const path = yield* Path.Path
+      const dir = fresh("joggle-readonly-")
+      const file = join(dir, "answers.jsonl")
+      yield* fs.writeFileString(file, renderShard([entry("ab", 1, 0.1)]) + "\n")
+      const before = yield* fs.readFileString(file)
+      const store = yield* make(fs, path, dir, { readOnly: true })
+      expect(Option.isSome(yield* store.get("ab"))).toBe(true)
+      yield* store.put("cd", { kind: "Probability", probability: 0.9 })
+      // A gate must not edit the tree it judges: the answer it judged would rename a finding
+      // the ledger already accepted.
+      expect(yield* fs.readFileString(file)).toBe(before)
+      expect(Option.isNone(yield* store.get("cd"))).toBe(true)
+    }).pipe(Effect.provide(nodeLayer)),
+  ))
+
 test("a shard is sorted by key and newline-terminated", () => {
   const text = renderShard([entry("cd", 2, 0.2), entry("ab", 1, 0.1)])
   expect(text).toBe(renderEntry(entry("ab", 1, 0.1)) + "\n" + renderEntry(entry("cd", 2, 0.2)) + "\n")

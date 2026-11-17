@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { makeReport, type Diagnostic } from "@autotelic/protocol"
 import { EXIT, type GateVerdict } from "./gate.ts"
-import { renderGithub } from "./render.ts"
+import { renderGithub, renderText } from "./render.ts"
 
 /*
  * The GitHub form answers one question a reviewer cannot ask twice: which of these
@@ -64,6 +64,25 @@ describe("the GitHub projection separates held findings from failures", () => {
       gate: verdict({ exitCode: EXIT.findings, failing: [finding({ identity: "novel" })] }),
     })
     expect(text.startsWith("::error file=src/a.ts")).toBe(true)
+  })
+
+  it("names where the failing findings are, not only how many", () => {
+    const held = [
+      finding({ identity: "a", location: { file: "src/one.ts", line: 3, column: 1 } }),
+      finding({ identity: "b", location: { file: "src/two.ts", line: 9, column: 1 } }),
+    ]
+    const text = renderText(
+      {
+        report: report(held),
+        diff: { novel: held, known: [], stale: [] },
+      },
+      {
+        gate: verdict({ exitCode: EXIT.findings, failing: held }),
+      },
+    )
+    expect(text).toContain("plumb/require-deprecated-tag: 2 failing findings")
+    // A count with no place sends a reader through every file by hand.
+    expect(text).toContain("src/one.ts:3, src/two.ts:9")
   })
 
   it("always says what the gate decided, so a held annotation is never the whole story", () => {

@@ -26,14 +26,20 @@ export const exec = ({
   binary,
   args,
   cwd,
+  env,
 }: {
   readonly binary: string
   readonly args: ReadonlyArray<string>
   readonly cwd: string
+  /** Extra variables, on top of this process's environment. */
+  readonly env?: Readonly<Record<string, string>> | undefined
 }): Effect.Effect<ExecOutcome, string, Spawner> =>
   Effect.scoped(
     Effect.gen(function* () {
-      const handle = yield* ChildProcess.make(binary, [...args], { cwd })
+      const handle = yield* ChildProcess.make(binary, [...args], {
+        cwd,
+        ...(env === undefined ? {} : { env: { ...process.env, ...env } }),
+      })
       const [stdout, stderr, exitCode] = yield* Effect.all(
         [
           handle.stdout.pipe(Stream.decodeText(), Stream.mkString),

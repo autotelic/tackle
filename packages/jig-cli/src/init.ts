@@ -1340,7 +1340,7 @@ ${roomSection(profile)}${
         " baseline`, or switch the gate to `touched-files`."
   }
 
-${profile.facts.has("ci") ? "## CI\n\nRun `" + profile.jig + " check --format github` in the pull-request workflow. The gate holds new identities only, so the first run explains the debt instead of failing on it. For machine output (`--format json`, `sarif`, `github`), use `" + profile.run + " exec jig`, or `" + profile.run + " -s jig` when you type the repo's own script: a bare `" + profile.run + " jig` prints the script banner first and corrupts the document.\n\n" : ""}## Judgement
+${profile.facts.has("ci") ? "## CI\n\nRun `" + profile.jig + " check --format github` in the pull-request workflow. The gate holds new identities only, so the first run explains the debt instead of failing on it. A check runs every engine read-only — it never writes the answer cache or a generated artifact, because a run that edits what it judges reports differently next time. Warming those is deliberate: `joggle check` on the base branch, `" + profile.jig + " baseline` for the ledger. For machine output (`--format json`, `sarif`, `github`), use `" + profile.run + " exec jig`, or `" + profile.run + " -s jig` when you type the repo's own script: a bare `" + profile.run + " jig` prints the script banner first and corrupts the document.\n\n" : ""}## Judgement
 
 joggle judges candidates with the TypeSafe model. ${profile.facts.has("live-judgement") ? "A TYPESAFE_API_KEY is present in this environment, so a run can judge." : "No TYPESAFE_API_KEY is present in this environment, so unjudged candidates are counted, not printed. Set the key to judge, or keep the count in CI."}
 
