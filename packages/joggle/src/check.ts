@@ -1190,6 +1190,25 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
   }
 
   const decisionTotals: DecisionTotals = yield* decisionStats.read
+  // Say how the answers were obtained. A keyed run judges live and a keyless one replays,
+  // and the two can name the same site differently — which is the whole difference between
+  // a developer's machine and CI at the same commit. Without this line the report looks the
+  // same either way, and the difference is found by bisecting a ledger.
+  if (decisionTotals.calls > 0) {
+    notes.push({
+      ruleId: "joggle",
+      reason:
+        decisionTotals.calls +
+        " judgement(s) were asked of the model in this run: a key was present, so this run judged for itself. A run without the key replays the committed answers, and judged identities are not always the unverified ones — compare this report with CI's before treating a difference as a code change.",
+    })
+  } else if (decisionTotals.replayed > 0) {
+    notes.push({
+      ruleId: "joggle",
+      reason:
+        decisionTotals.replayed +
+        " judgement(s) were replayed from the answer cache; no model was called",
+    })
+  }
   const elapsedMs = (yield* Clock.currentTimeMillis) - started
   const report: Report = {
     diagnostics: rankDiagnostics(folded.diagnostics),

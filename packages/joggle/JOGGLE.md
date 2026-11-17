@@ -432,6 +432,10 @@ and every CI checkout. GitHub warns above **50 MB per file** and refuses above
   `--max-age 90` needs ages, which only the machine cache records.
 - A run says so when the store passes 8 MB, because a cache nobody measured is how
   a 0-byte ledger on the base branch becomes 55 MB at the top of a stack.
+- **A run says how it got its answers.** "N judgement(s) were asked of the model" means a
+  key was present and this run judged for itself; "N judgement(s) were replayed" means no model
+  was called. The two can name the same site differently, so a local report and a CI report at
+  the same commit are only comparable when this line matches.
 - **A check does not write the ledger at all.** `--read-only` (and any run `jig` starts,
   which exports `JIG_READ_ONLY=1` to every engine) answers from the cache and never writes
   it. This is not hygiene: a new answer *renames* the finding it verifies, so a check that
