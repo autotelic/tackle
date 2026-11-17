@@ -78,7 +78,11 @@ Four properties follow:
   answers is a no-op in git rather than a reordering.
 - **A duplicated ledger can be repaired.** `joggle cache compact` reads every key
   once and rewrites the set, so a history that already accumulated copies collapses
-  without re-judging anything.
+  without re-judging anything — and a keyless CI replays the result identically,
+  because the stamps were never load-bearing. Deduplicating by key in the old format
+  is equally safe, so a ledger can be shrunk before upgrading. In a stack, compact
+  bottom-up once or on the base branch after the stack merges: compaction is a commit,
+  so it re-dirties every child above it.
 
 This is Bazel's shape where it earns it: content-addressed and deterministic so
 a diff means a change. Sharding is the opt-in for size, not the default.

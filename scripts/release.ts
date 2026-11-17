@@ -150,10 +150,22 @@ const program = Effect.gen(function* () {
   }
 
   const status = yield* run(root, "pnpm", ["exec", "changeset", "publish"])
-  // A staged publish reports success and a rerun reports 403; neither is authoritative,
-  // so a failure gets no more patience than a success does.
-  let absent = yield* settled(manifests, status === 0 ? 6 : 1)
-  if (absent.length > 0 && status === 0) {
+  // The publish command's exit code is not the registry's answer, in either direction: a
+  // staged upload answers success before the version is visible, and re-posting a version
+  // that is already staged answers 409 "cannot publish over previously staged version" for a
+  // release that is in fact complete. Both happened here, so the command gets a log line and
+  // the registry gets the patience -- a failure is not treated as a verdict.
+  if (status !== 0) {
+    yield* Effect.sync(() =>
+      console.log(
+        "release: the publish command exited " +
+          status +
+          "; asking the registry instead of believing it",
+      ),
+    )
+  }
+  let absent = yield* settled(manifests, 18)
+  if (absent.length > 0) {
     yield* Effect.sync(() =>
       console.log(
         "release: " +

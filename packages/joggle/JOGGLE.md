@@ -441,6 +441,14 @@ and every CI checkout. GitHub warns above **50 MB per file** and refuses above
   `merge=union` kept both sides on every rebase. The line is now the key and the
   answer only, so merges collapse to one line; for a history that already grew,
   compact reads each key once and rewrites the set. No re-judging, no key needed.
+- **Deduplicating an old ledger is safe on a keyless CI today**, so nobody has to wait
+  for this version to shrink one: the stamps were never load-bearing for replay. A
+  parked stack deduplicated by key in the old three-field format (keeping the newest
+  stamp) went from 55.4 MB / 372,623 lines to 1.21 MB / 8,171 answers, and the
+  keyless lint job stayed green on the same answers.
+- **Compaction is a commit, so it re-dirties every child of a stack.** Compact
+  bottom-up in one pass, or compact the base branch once after the stack merges —
+  compacting a parent mid-stack costs one rebase per child for a diff nobody reads.
 
 ## Two committed artifacts, two machine artifacts
 
