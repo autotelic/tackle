@@ -1,6 +1,5 @@
 import { jobOf, labelRoomOf, roomOf, stageOf, type Job } from "@autotelic/board"
 import { Clock, Effect, FileSystem, Option, Result, Schema } from "effect"
-import { homedir } from "node:os"
 import { join } from "node:path"
 import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { createServer } from "node:net"
@@ -19,7 +18,7 @@ import {
   roomHome,
   roomsByActivity,
 } from "./paths.ts"
-import { onPath, run } from "./shell.ts"
+import { hcOf, onPath, run } from "./shell.ts"
 import { pullRequest } from "./gh.ts"
 import { renderDriver, type Driver } from "./driver.ts"
 import { runReview } from "./review.ts"
@@ -792,14 +791,6 @@ const sessionOfWindow = (input: {
   return undefined
 }
 
-/** The herdr-core binary, if this machine has it. */
-const hcOf = (): Option.Option<string> => {
-  const global = valueOf(onPath("hc"))
-  if (Option.isSome(global)) return global
-  const local = join(homedir(), ".local", "bin", "hc")
-  return existsSync(local) ? Option.some(local) : Option.none()
-}
-
 /** A port nobody is using right now. */
 const freePort = (): Promise<number> =>
   new Promise((resolve, reject) => {
@@ -871,7 +862,7 @@ export const startWorker = (input: {
     const config = Result.getOrUndefined(yield* readConfig(findConfigPath(root)))
     if (config === undefined) return yield* Effect.fail("no room.config.json in this repository")
     const substrate: Substrate = input.substrate ?? config.worker?.substrate ?? "hc"
-    const hc = substrate === "hc" ? Option.getOrUndefined(hcOf()) : undefined
+    const hc = substrate === "hc" ? Result.getOrUndefined(hcOf()) : undefined
     if (substrate === "hc" && hc === undefined) {
       return yield* Effect.fail("herdr-core is not installed (hc)")
     }
@@ -1099,7 +1090,7 @@ export const stopWorker = (input: {
   readonly name: string
 }): Effect.Effect<string, string, FileSystem.FileSystem> =>
   Effect.gen(function* () {
-    const hc = Option.getOrUndefined(hcOf())
+    const hc = Result.getOrUndefined(hcOf())
     const root = Option.getOrUndefined(valueOf(topLevel(input.cwd))) ?? input.cwd
     const config = Result.getOrUndefined(yield* readConfig(findConfigPath(root)))
     if (config === undefined) return yield* Effect.fail("no room.config.json in this repository")
@@ -1171,7 +1162,7 @@ export const attachWorker = (input: {
   readonly name: string
 }): Effect.Effect<string, string, FileSystem.FileSystem> =>
   Effect.gen(function* () {
-    const hc = Option.getOrUndefined(hcOf())
+    const hc = Result.getOrUndefined(hcOf())
     const root = Option.getOrUndefined(valueOf(topLevel(input.cwd))) ?? input.cwd
     const config = Result.getOrUndefined(yield* readConfig(findConfigPath(root)))
     if (config === undefined) return yield* Effect.fail("no room.config.json in this repository")
@@ -1472,7 +1463,7 @@ export const startPersonalWorker = (input: {
     const launched =
       input.substrate === "rex"
         ? launchRex({ name: worker, dir, script, session: input.rexSession })
-        : launchHc({ hc: Option.getOrUndefined(hcOf()) ?? "", name: worker, dir, script })
+        : launchHc({ hc: Result.getOrUndefined(hcOf()) ?? "", name: worker, dir, script })
     if (Result.isFailure(launched)) return yield* Effect.fail(launched.failure)
     return { worker, address: launched.success, worktree: dir, sha }
   })

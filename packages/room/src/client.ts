@@ -1,5 +1,8 @@
 import { Claim as ClaimSchema, Job as JobSchema, type Job } from "@autotelic/board"
 import { Data, Result, Schema } from "effect"
+// The inbox item is the ledger's row, served over HTTP: one declaration, because a second copy
+// of a wire shape is how the two drift apart one field at a time.
+import type { InboxItem } from "./ledger.ts"
 
 /*
  * The room client.
@@ -76,16 +79,7 @@ export const Board = Schema.Struct({
 /** The board projection. */
 export type Board = typeof Board.Type
 
-/** One message waiting for the project session. */
-export interface InboxItem {
-  readonly seq: number
-  readonly id: string
-  readonly kind: "turn" | "card"
-  readonly pr?: number
-  readonly ticket?: string
-  readonly text: string
-  readonly at: number
-}
+export type { InboxItem }
 
 /** What the room client can fail with. */
 export class RoomClientError extends Data.TaggedError("RoomClientError")<{

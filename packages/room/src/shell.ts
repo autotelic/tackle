@@ -1,5 +1,8 @@
 import { Predicate, Result } from "effect"
 import { spawnSync } from "node:child_process"
+import { existsSync } from "node:fs"
+import { homedir } from "node:os"
+import { join } from "node:path"
 
 /*
  * The one place the room touches a CLI.
@@ -72,4 +75,22 @@ export const onPath = (name: string): Result.Result<string, string> => {
     if (spawnSync("test", ["-x", candidate]).status === 0) return Result.succeed(candidate)
   }
   return Result.fail(`${name} is not on PATH`)
+}
+
+/**
+ * The herdr-core binary, if this machine has it.
+ *
+ * Two copies existed, one in the command surface and one in the review runner, because each
+ * grew its own way to the same fallback: PATH first, then the launcher's install directory.
+ * The room has one place it touches a CLI, so this is that place.
+ *
+ * @returns The absolute path, or nothing when herdr-core is not installed.
+ */
+export const hcOf = (): Result.Result<string, string> => {
+  const global = onPath("hc")
+  if (Result.isSuccess(global)) return global
+  const local = join(homedir(), ".local", "bin", "hc")
+  return existsSync(local)
+    ? Result.succeed(local)
+    : Result.fail("herdr-core (hc) is not installed: not on PATH, and ~/.local/bin/hc is absent")
 }

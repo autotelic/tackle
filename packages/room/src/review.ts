@@ -1,14 +1,13 @@
 import { spawn } from "node:child_process"
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
-import { homedir } from "node:os"
 import { join } from "node:path"
 import { markerOf, type Job } from "@autotelic/board"
-import { Option, Result, Schema } from "effect"
+import { Result, Schema } from "effect"
 import type { RoomConfig } from "./config.ts"
 import { hasReviewMarker, postReview, pullRequest, type PullRequest } from "./gh.ts"
 import { addWorktree, fetchCommit, fetchPull, removeWorktree } from "./git.ts"
 import { jobsRoot, worktreeRoot } from "./paths.ts"
-import { onPath, run } from "./shell.ts"
+import { hcOf, onPath, run } from "./shell.ts"
 
 /*
  * One review job.
@@ -256,14 +255,6 @@ const runPi = (args: ReadonlyArray<string>, cwd: string) =>
     })
   })
 
-/** The herdr-core binary, if this machine has it. */
-const hcOf = (): Option.Option<string> => {
-  const global = Result.getOrUndefined(onPath("hc"))
-  if (global !== undefined) return Option.some(global)
-  const local = join(homedir(), ".local", "bin", "hc")
-  return existsSync(local) ? Option.some(local) : Option.none()
-}
-
 const HcState = Schema.Struct({
   state: Schema.String,
   exit_code: Schema.optionalKey(Schema.NullOr(Schema.Finite)),
@@ -485,9 +476,9 @@ export const runReview = async ({
     const sessionDir = join(jobsRoot(config), `pr-${pr.number}-${sha.slice(0, 8)}`)
     const hc = hcOf()
     const viaHc =
-      (config.worker?.substrate ?? "local") === "hc" && Option.isSome(hc)
+      (config.worker?.substrate ?? "local") === "hc" && Result.isSuccess(hc)
         ? await runPiInHc({
-            hc: hc.value,
+            hc: hc.success,
             dir,
             sessionDir,
             name: `room-review-${pr.number}`,
