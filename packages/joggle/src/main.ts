@@ -19,6 +19,7 @@ import { loadConfig, isEnabled, severityFor } from "./config.ts"
 import { layer as gitLayer, Service as Git } from "./git.ts"
 import { loadPlugins, withDefaults } from "./plugins.ts"
 import { policy } from "./policy.ts"
+import { VERSION } from "./version.ts"
 import { exitCodeFor, render } from "./report.ts"
 import { applyDeclarationTypes, isRecord, loadWorkspace } from "./workspace.ts"
 import { answerPlansRaw, chunkPlans, type Plan, type PlanAnswers } from "./plans.ts"
@@ -1078,7 +1079,7 @@ const cli = Command.make("joggle").pipe(
 
 const services = Layer.mergeAll(NodeServices.layer, FetchHttpClient.layer, builtIn)
 
-const program = Command.run(cli, { version: policy.version }).pipe(Effect.provide(services))
+const program = Command.run(cli, { version: VERSION }).pipe(Effect.provide(services))
 
 /*
  * Never fail silently. A typed failure, an interruption and a defect all have

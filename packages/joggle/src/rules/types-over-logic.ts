@@ -127,7 +127,9 @@ export const typesOverLogic: PlannedRule = {
       }
     }
 
-    const budget = policy.evidence.maxMembers * 16
+    // The same measured ceiling as `single-path`: a 12-member evidence window times 16 was
+    // 192 guards, and a real workspace exceeds it. 64 keeps the bound without truncating.
+    const budget = policy.evidence.maxMembers * 64
     const judged = candidates.slice(0, budget)
     const overBudget: ReadonlyArray<Drop> = candidates.slice(budget).map((candidate) => ({
       ruleId: RULE_ID,

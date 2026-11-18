@@ -9,6 +9,7 @@ import { checkRepository } from "../src/check.ts"
 import { DecisionStats, layer as decisionLayer } from "../src/decision.ts"
 import { PlanAnswers, type Plan } from "../src/plans.ts"
 import { policy } from "../src/policy.ts"
+import { VERSION } from "../src/version.ts"
 import { everyFile, finding, outcome, type DecisionAnswers, type PlannedRule } from "../src/rule.ts"
 import { Rules } from "../src/rules/index.ts"
 import type { Diagnostic, Drop } from "../src/schema.ts"
@@ -127,7 +128,7 @@ test("a candidate outside the run's scope is never judged and never reported", a
     writeFileSync(
       join(dir, "last-run.json"),
       JSON.stringify({
-        version: policy.version,
+        version: VERSION,
         manifest: "stale-manifest-so-the-run-proceeds",
         sources: [
           { path: "src/orders.ts", hash: shortHash(readFileSync(join(corpus, "src/orders.ts"), "utf8")), exports: [] },

@@ -15,9 +15,6 @@
  */
 
 export const policy = {
-  /** Surfaced by `joggle --version`. */
-  version: "0.1.0",
-
   /** The System One model every rule judges with. */
   model: "jev-latest",
 
@@ -490,7 +487,13 @@ export const policy = {
    * repository rather than a budget anybody should reach.
    */
   docMatchesCode: {
-    maxDeclarations: 400,
+    /**
+     * Measured, not guessed: this workspace has 679 documented declarations, and at 400 the
+     * overflow was 279 candidates that no run could ever judge — the slice is deterministic,
+     * so a second run asks the same 400 again. A baseline that refuses to be written while
+     * candidates are unjudged cannot exist for a repository this size at that ceiling.
+     */
+    maxDeclarations: 1000,
     /** Tokens below which a declaration has nothing for a doc to describe. */
     minTokens: 40,
   },
@@ -688,8 +691,15 @@ export const policy = {
    * one run may judge, and how much evidence one candidate may carry.
    */
   strata: {
-    /** Candidates one strata rule may judge in a run. */
-    maxCandidates: 200,
+    /**
+     * Candidates one strata rule may judge in a run.
+     *
+     * 200 was a ceiling against a pathological repository, and this ordinary one reached it:
+     * `declared-staleness` had 538 projections (338 over) and `invariant-has-a-reconciler`
+     * 289 checks (89 over). The slice is deterministic, so the overflow was permanent rather
+     * than deferred to a later run.
+     */
+    maxCandidates: 1000,
     /** Fields two structures must share before their overlap is worth a question. */
     minSharedFields: 3,
     /** Tokens a function needs before a table read can be a check rather than a getter. */

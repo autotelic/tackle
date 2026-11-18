@@ -21,6 +21,7 @@ import type * as HttpClient from "effect/http/HttpClient"
 import { TypeSafeClient, TypeSafeDecisionModel, TypeSafeSchema } from "@effect/ai-typesafe"
 import { canonical } from "./canonical.ts"
 import { policy } from "./policy.ts"
+import { VERSION } from "./version.ts"
 import { make as makeAnswerStore, type Layout } from "./answer-store.ts"
 import { answerOf, memoize, PlanAnswers, storedOf, type PlanAnswerStore } from "./plans.ts"
 import type { DecisionTotals } from "./schema.ts"
@@ -232,7 +233,7 @@ export const layer = (
       const flush = writer.withPermits(1)(
         Effect.gen(function* () {
           const current = yield* Ref.get(entries)
-          const body = JSON.stringify({ version: policy.version, entries: current }, null, 2)
+          const body = JSON.stringify({ version: VERSION, entries: current }, null, 2)
           yield* Effect.orElseSucceed(fs.makeDirectory(options.cacheDir, { recursive: true }), () => undefined)
           yield* Effect.orElseSucceed(fs.writeFileString(file, body), () => undefined)
         }),

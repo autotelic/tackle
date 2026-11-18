@@ -26,6 +26,7 @@ import {
   writeStored,
 } from "./run-cache.ts"
 import { policy } from "./policy.ts"
+import { VERSION } from "./version.ts"
 import { Rules } from "./rules/index.ts"
 import type { Loaded } from "./plugins.ts"
 import { foldSiteDuplicates, funnelNotes, rankDiagnostics, type Report } from "./report.ts"
@@ -434,8 +435,10 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
               `refusing to write ${options.updateBaselinePath}: ${unjudged} candidate(s) were not judged. ` +
                 "Judging needs a model key in this run's environment (TYPESAFE_API_KEY); without one, " +
                 "the same findings are named from what the rule could see alone, so a ledger written " +
-                "now would not match a judged run. Judge first (raise --max-tokens if the budget was " +
-                "the limit), or run scoped (--since <base>) to see the change judged with a pull " +
+                "now would not match a judged run. Judge first; if the limit was the run's token " +
+                "budget, raise --max-tokens or decision.maxInputTokens. A per-rule candidate " +
+                "ceiling is not that knob, and the report names the rule whose ceiling it was. " +
+                "Or run scoped (--since <base>) to see the change judged with a pull " +
                 "request's budget — a scoped run reports the gate's answer but cannot write the " +
                 "ledger. Pass --allow-unjudged-baseline only to accept the unjudged debt itself.",
             ),
@@ -1250,7 +1253,7 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
   // next full run is compared against.
   if (!options.changed && options.changedPaths === undefined) {
     yield* writeStored(fs, path, runCache, {
-      version: policy.version,
+      version: VERSION,
       manifest,
       sources: workspace.files.map((file) => ({
         path: file.path,
