@@ -41,6 +41,9 @@ import { initialise, initJson, onboardingFor, summaryFor } from "./init.ts"
  * and it rides along as semver build metadata: `0.0.0+1a2b3c4`.
  */
 const versionOf = (): string => {
+  // SAFETY: `execFileSync` is the synchronous boundary to git. A published tarball and a plain
+  // directory have no repository, which is the ordinary case here rather than an error, and the
+  // version without a commit is the answer there.
   try {
     const sha = execFileSync("git", ["rev-parse", "--short", "HEAD"], {
       cwd: fileURLToPath(new URL("..", import.meta.url)),

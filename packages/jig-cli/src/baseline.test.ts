@@ -1,3 +1,4 @@
+/* oxlint-disable plumb/prefer-property-tests -- the ledger's identity rule is asserted against a fixed report; a generator would need the hashing under test to know what to expect. */
 import { spawnSync } from "node:child_process"
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync, existsSync } from "node:fs"
 import { tmpdir } from "node:os"

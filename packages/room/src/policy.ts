@@ -106,11 +106,11 @@ const labelsMatch = (input: {
  * @param input - The event, the room's watched label, and whether the room answered it.
  * @returns True when the event was someone else's work.
  */
-export const unaddressed = (input: {
+export const unaddressed: Predicate.Predicate<{
   readonly event: RoomEvent
   readonly label: string | undefined
   readonly queued: boolean
-}): boolean => {
+}> = (input) => {
   const label = input.label
   if (input.queued || label === undefined || label === "") return false
   if (

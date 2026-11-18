@@ -1,3 +1,4 @@
+/* oxlint-disable plumb/prefer-property-tests -- every case is a named failure mode a review queue has already had; the fixtures are the cases, and a generator would invent scenarios nobody has hit. */
 import { describe, expect, it } from "vitest"
 import {
   decodeQueue,

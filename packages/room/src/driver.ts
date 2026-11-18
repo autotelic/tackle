@@ -1,4 +1,4 @@
-import { Effect, FileSystem, Result, Schema } from "effect"
+import { Effect, FileSystem, Predicate, Result, Schema } from "effect"
 import { basename, join } from "node:path"
 import type { RoomConfig } from "./config.ts"
 import { stateDir } from "./paths.ts"
@@ -171,8 +171,10 @@ export const DRIVER_TTL_MS = 12 * 60 * 60_000
  * @param input - The claim and the instant.
  * @returns True when it is older than {@link DRIVER_TTL_MS}.
  */
-export const staleDriver = (input: { readonly driver: Driver; readonly now: number }): boolean =>
-  input.now - input.driver.attachedAt > DRIVER_TTL_MS
+export const staleDriver: Predicate.Predicate<{
+  readonly driver: Driver
+  readonly now: number
+}> = (input) => input.now - input.driver.attachedAt > DRIVER_TTL_MS
 
 /**
  * The line a board and `session --status` show for the claim.

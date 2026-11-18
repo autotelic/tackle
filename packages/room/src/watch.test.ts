@@ -1,3 +1,4 @@
+/* oxlint-disable plumb/prefer-property-tests -- the subject is timing between two clients over a real SQLite file; a generated input cannot make a cross-client commit arrive. */
 import { mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -16,29 +17,6 @@ import { closeRoomSession, followRoomSession, noteToRoom, openRoomSession } from
  * other half: a room has several clients, and the library's watch only publishes the commits of
  * the client that made them.
  */
-
-const sessions: Array<RoomSession> = []
-const dirs = new Set<string>()
-
-/** A storage directory for this test, removed afterwards. */
-const freshDir = (): string => {
-  const dir = mkdtempSync(join(tmpdir(), "room-watch-"))
-  dirs.add(dir)
-  return dir
-}
-
-/** Open a conversation over `dir`'s storage: a second call is a second client, as a terminal is. */
-const open = async (dir: string): Promise<RoomSession> => {
-  const session = await openRoomSession({ storagePath: join(dir, "session.sqlite") })
-  sessions.push(session)
-  return session
-}
-
-afterEach(async () => {
-  for (const session of sessions.splice(0).reverse()) await closeRoomSession(session)
-  for (const dir of dirs) rmSync(dir, { recursive: true, force: true })
-  dirs.clear()
-})
 
 /** The batches a follow delivered, flattened: each entry once, in the order it arrived. */
 const collected = () => {
@@ -62,6 +40,31 @@ const until = async (predicate: () => boolean, what: string): Promise<void> => {
 }
 
 describe("following the room's conversation", () => {
+  // The suite's own cleanup ledger, inside the suite rather than at module scope: a module-level
+  // array would outlive the file and be shared by any second copy vitest loaded.
+  const sessions: Array<RoomSession> = []
+  const dirs = new Set<string>()
+
+  /** A storage directory for this test, removed afterwards. */
+  const freshDir = (): string => {
+    const dir = mkdtempSync(join(tmpdir(), "room-watch-"))
+    dirs.add(dir)
+    return dir
+  }
+
+  /** Open a conversation over `dir`'s storage: a second call is a second client, as a terminal is. */
+  const open = async (dir: string): Promise<RoomSession> => {
+    const session = await openRoomSession({ storagePath: join(dir, "session.sqlite") })
+    sessions.push(session)
+    return session
+  }
+
+  afterEach(async () => {
+    for (const session of sessions.splice(0).reverse()) await closeRoomSession(session)
+    for (const dir of dirs) rmSync(dir, { recursive: true, force: true })
+    dirs.clear()
+  })
+
   it("delivers the conversation at attach, so a person watching sees the page", async () => {
     const session = await open(freshDir())
     await noteToRoom({ session, kind: "room.decision", data: { raw: '{"probe":"earlier"}' } })

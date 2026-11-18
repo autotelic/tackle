@@ -185,7 +185,7 @@ export const recordWorker = (input: {
   readonly sha: string
   readonly now: number
 }): PersonalQueue => {
-  const prs: Record<string, Raised> = { ...input.queue.prs }
+  const prs = { ...input.queue.prs }
   prs[keyOf(input.target)] = { raisedAt: input.now, worker: input.worker, sha: input.sha }
   return { version: 1, prs }
 }

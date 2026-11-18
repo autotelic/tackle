@@ -23,7 +23,7 @@ import { onPath, run } from "./shell.ts"
 import { pullRequest } from "./gh.ts"
 import { renderDriver, type Driver } from "./driver.ts"
 import { runReview } from "./review.ts"
-import { planReviews, recordWorker, workerNameOf, type ReviewTarget } from "./personal.ts"
+import { workerNameOf, type ReviewTarget } from "./personal.ts"
 import { jobsRoot, worktreeRoot } from "./paths.ts"
 
 /*
@@ -759,7 +759,11 @@ const rexWorker = (input: {
  * @param window - The window id.
  * @returns The session id, or undefined when no session holds it.
  */
-const sessionOfWindow = (rex: string, window: string): string | undefined => {
+const sessionOfWindow = (input: {
+  readonly rex: string
+  readonly window: string
+}): string | undefined => {
+  const { rex, window } = input
   const listed = run({ command: rex, args: ["ls", "--json"] })
   const sessions = Schema.decodeResult(
     Schema.fromJsonString(
@@ -1134,7 +1138,8 @@ export const stopWorker = (input: {
       const rex = Result.getOrUndefined(onPath("rex"))
       // A window lives inside a session, and Rex wants the session named: a bare window id is
       // "not found" however global it looks. Find which session holds it.
-      const session = rex === undefined ? undefined : sessionOfWindow(rex, worker.address)
+      const session =
+        rex === undefined ? undefined : sessionOfWindow({ rex, window: worker.address })
       if (rex !== undefined && session !== undefined) {
         run({ command: rex, args: ["window", "close", "-s", session, worker.address] })
       }
@@ -1178,7 +1183,8 @@ export const attachWorker = (input: {
     if (worker === undefined) return yield* Effect.fail(`no worker named ${input.name}`)
     if (worker.address.startsWith("window:")) {
       const rex = Result.getOrUndefined(onPath("rex"))
-      const session = rex === undefined ? undefined : sessionOfWindow(rex, worker.address)
+      const session =
+        rex === undefined ? undefined : sessionOfWindow({ rex, window: worker.address })
       if (rex === undefined || session === undefined) {
         return `rex tab ${worker.address} — its session is gone`
       }
@@ -1251,10 +1257,7 @@ export const reviewTargets = (input: { readonly limit: number }): ReadonlyArray<
 }
 
 /** The workers Rex reports right now, by id and by label. */
-export const liveRexWorkers = (): {
-  readonly ids: ReadonlySet<string>
-  readonly byName: ReadonlyMap<string, string>
-} => {
+export const liveRexWorkers = () => {
   const ids = new Set<string>()
   const byName = new Map<string, string>()
   const rex = Result.getOrUndefined(onPath("rex"))

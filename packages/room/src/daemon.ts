@@ -1,5 +1,5 @@
 import { actorOf, hostOf } from "@autotelic/board"
-import { Data, Effect, Predicate, Result } from "effect"
+import { Data, Effect, Exit, Predicate, Result } from "effect"
 
 import { hostname } from "node:os"
 import type { RoomConfig } from "./config.ts"
@@ -74,13 +74,13 @@ export const daemon = (options: DaemonOptions): Effect.Effect<void, DaemonError>
     // could never succeed -- one line every two seconds -- and buried the instruction that says
     // what to do (`jig room dev`). A server that dies later is a different case: the loop below
     // keeps trying, because a restart is something to wait for, not to give up on.
-    const reachable = yield* Effect.tryPromise({
-      try: () => client.health(),
-      catch: (error) => new DaemonError({ message: String(error) }),
-    }).pipe(
-      Effect.as(true),
-      Effect.orElseSucceed(() => false),
+    const health = yield* Effect.exit(
+      Effect.tryPromise({
+        try: () => client.health(),
+        catch: (error) => new DaemonError({ message: String(error) }),
+      }),
     )
+    const reachable = Exit.isSuccess(health)
     if (!reachable) {
       const start = "jig room dev"
       return yield* new DaemonError({

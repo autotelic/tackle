@@ -1,3 +1,4 @@
+import fc from "fast-check"
 import { describe, expect, it } from "vitest"
 import { cutlistDefaultOutput } from "@autotelic/protocol"
 import {
@@ -8,6 +9,23 @@ import {
 } from "./gitattributes.ts"
 
 const rules = generatedRules(cutlistDefaultOutput)
+
+describe("mergeGitattributes", () => {
+  it("is a fixed point: merging its own output changes nothing", () => {
+    // `init` runs on a repository that may already be onboarded, so the second run must be a
+    // no-op. The one exception is a hand-edited block, which the function deliberately leaves
+    // alone and reports as `malformed` -- guessing where a person's rules resume is worse.
+    fc.assert(
+      fc.property(fc.string(), (authored) => {
+        const first = mergeGitattributes(authored, rules)
+        fc.pre(first.action !== "malformed")
+        const second = mergeGitattributes(first.body, rules)
+        expect(second.body).toBe(first.body)
+        expect(second.action).toBe("unchanged")
+      }),
+    )
+  })
+})
 
 describe("generatedRules", () => {
   it("collapses the projections and leaves authored intent reviewable", () => {

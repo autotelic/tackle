@@ -1,3 +1,4 @@
+/* oxlint-disable plumb/prefer-property-tests -- the renderer's contract is one exact text for one exact report; a generated report would only assert the renderer agrees with itself. */
 import { describe, expect, it } from "vitest"
 import { makeReport, type Diagnostic } from "@autotelic/protocol"
 import { EXIT, type GateVerdict } from "./gate.ts"

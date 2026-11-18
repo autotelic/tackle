@@ -149,6 +149,23 @@ const onChanged = (findings: ReadonlyArray<Diagnostic>, files: ReadonlyArray<str
   return findings.filter((finding) => scope.has(finding.file))
 }
 
+/**
+ * The prompt a review worker starts from: the skill, the pull request, and what the machine
+ * already checked.
+ *
+ * `jigRan` is a separate input from the findings because the two failure modes are different:
+ * a clean run and a run that never happened produce the same empty list, and only one of them
+ * means the reviewer may skip its own inspection.
+ *
+ * @param input.pr - The pull request under review.
+ * @param input.files - The files the pull request changed.
+ * @param input.findings - What `jig check` reported on those files.
+ * @param input.jigNote - Why the check did not run, when it did not.
+ * @param input.jigRan - Whether the check actually ran.
+ * @param input.worktree - Where the reviewer reads the code.
+ * @param input.sha - The commit the reviewer is looking at.
+ * @returns The prompt, as the text a worker receives.
+ */
 export const promptOf = ({
   pr,
   files,

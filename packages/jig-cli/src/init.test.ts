@@ -589,14 +589,15 @@ describe("inspectRepo", () => {
     try {
       const profile = await inspect(root)
       const alias = profile.cutlistDraft?.alias ?? {}
-      expect([...(profile.cutlistDraft?.roots ?? [])].sort()).toEqual([
-        "apps/admin",
-        "apps/web",
-        "libs/ui/src",
-      ])
+      expect(
+        [...(profile.cutlistDraft?.roots ?? [])].sort((left, right) => left.localeCompare(right)),
+      ).toEqual(["apps/admin", "apps/web", "libs/ui/src"])
       // `apps/web` and `apps/admin` are roots that *are* the app directory, so their
       // tsconfig is inside them rather than in the parent. Both targets must survive.
-      expect([...(alias["@/*"] ?? [])].sort()).toEqual(["apps/admin/*", "apps/web/*"])
+      expect([...(alias["@/*"] ?? [])].sort((left, right) => left.localeCompare(right))).toEqual([
+        "apps/admin/*",
+        "apps/web/*",
+      ])
       // `libs/ui/src` keeps its tsconfig one level up, which must still be read.
       expect(alias["~/*"]).toEqual(["libs/ui/src/*"])
     } finally {

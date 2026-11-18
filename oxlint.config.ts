@@ -92,6 +92,7 @@ const BOUNDARY_FILES = [
   "packages/protocol/src/baseline.ts",
   "packages/cutlist/src/crawl.ts",
   "packages/jig-cli/src/engines.ts",
+  "packages/jig-cli/src/init.ts",
   "packages/jig-cli/src/menu.ts",
   "packages/jig-cli/src/menu.test.ts",
   "packages/jig-cli/src/opencode.ts",
@@ -104,6 +105,13 @@ const BOUNDARY_FILES = [
   // The host's half of the same conformance: it reads the spec's fixture bytes and compares
   // its own projection to them. Same crossing, same reason.
   "packages/jig-cli/src/projections.test.ts",
+  // `init` reads a repository it did not write: package manifests, tsconfigs, an oxfmt config,
+  // a joggle config, an existing `.gitattributes`. Every parse is a boundary crossing, and the
+  // defensive readers answer "not there" rather than throwing.
+  "packages/jig-cli/src/init.ts",
+  "packages/jig-cli/src/init.test.ts",
+  // The baseline ledger is a committed document read from disk; the test writes entries by hand.
+  "packages/jig-cli/src/baseline.test.ts",
   // The other host's half, for the agent surfaces: it loads the pi extension by computed
   // specifier (the package deliberately does not typecheck it) and fakes both hosts down to
   // the three domains each touches. Asserting the runtime contract is the test's subject.
@@ -146,10 +154,13 @@ const CONDITIONAL_SPREAD_FILES = [
   "packages/cutlist/src/patterns.ts",
   "packages/cutlist/src/render/recipes.ts",
   "packages/jig-cli/src/menu.ts",
+  "packages/protocol/src/graph.ts",
+  "packages/protocol/src/graph.test.ts",
   "packages/protocol/src/projections.test.ts",
   "packages/jig-cli/src/projections.test.ts",
   "packages/jig-cli/src/engines.ts",
   "packages/jig-cli/src/opencode.ts",
+  "packages/jig-cli/src/exec.ts",
   "packages/jig-cli/extensions/jig.ts",
 ]
 
@@ -166,6 +177,10 @@ const PURE_LOOKUP_FILES = [
   "packages/cutlist/src/paths.ts",
   "packages/cutlist/src/patterns.ts",
   "packages/cutlist/src/render/recipes.ts",
+  // The graph queries answer the same absent case: a part or page the catalog does not hold.
+  // `partsOfPage` is a pure read whose miss is the ordinary answer the menu prints, so an
+  // `Option` would move the same branch to every caller without adding a distinction.
+  "packages/protocol/src/graph.ts",
 ]
 
 /**
@@ -189,6 +204,14 @@ const TEXT_RENDERER_FILES = [
   "packages/cutlist/src/render/patterns.ts",
   "packages/cutlist/src/render/recipes.ts",
   "packages/jig-cli/src/menu.ts",
+  // The cookbook and onboarding templates: the interpolation is the sentence a person reads,
+  // assembled from what `inspect` found. No query is built here.
+  "packages/jig-cli/src/init.ts",
+  // `room`'s CLI and its command renderers build the sentences a person reads with the same
+  // template interpolation the rule reads as SQL. No query is built here: `room` reaches SQLite
+  // through the library, and these strings are output.
+  "packages/room/src/cli.ts",
+  "packages/room/src/commands.ts",
 ]
 
 export default {
@@ -197,6 +220,11 @@ export default {
     "examples/**",
     "packages/plumb/**",
     "packages/joggle/**",
+    // The pi extension is a host surface: pi loads it and strips its types itself, so it is
+    // outside every package's compiler program and is not part of the library the rules judge.
+    // jig's own extension IS linted, and stays in the list above for that reason — this is a
+    // scope note for one file tree, not a policy for extensions.
+    "packages/room/extensions/**",
     // The foreman is the ratchet's engine, not a specimen: a dependency-free Node program
     // (node:sqlite + node:child_process) that is deliberately not an Effect app, so most of
     // the rulebook's reasons do not apply to it. It is held to the rules in a later round;
@@ -252,7 +280,7 @@ export default {
       // Reasoning belongs where the decision is made. joggle recorded exactly this for its
       // own tree: plumb wants the note in JSDoc, but an inline comment sits beside the line
       // it explains, and moving it onto a signature forty lines above separates the two.
-      files: ["packages/*/src/**", "packages/jig-cli/extensions/**"],
+      files: ["packages/*/src/**", "packages/jig-cli/extensions/**", "scripts/**"],
       rules: { "plumb/no-stray-inline-comments": "off" },
     },
     {
@@ -318,8 +346,53 @@ export default {
       // `Date.now()` measures a wall-clock duration for the report's `durationMs`. It is not
       // part of a finding's identity, of the baseline, or of any canonical byte, so it cannot
       // make the ratchet non-reproducible — which is the harm the rule exists to prevent.
-      files: ["packages/jig-cli/src/engines.ts", "packages/jig-cli/src/run.ts"],
+      files: [
+        "packages/jig-cli/src/engines.ts",
+        "packages/jig-cli/src/run.ts",
+        "packages/cutlist/src/cli.ts",
+        "packages/room/src/daemon.ts",
+      ],
       rules: { "plumb/no-nondeterministic-core": "off" },
+    },
+    {
+      // `mergeArchitecture` carries through a config it did not write: the return type states
+      // the four keys `init` owns, and the rest of the document keeps the adopter's shape. That
+      // is the reader's contract, not a widened literal.
+      files: ["packages/jig-cli/src/init.ts"],
+      rules: { "plumb/no-known-value-widening": "off" },
+    },
+    {
+      // `shared` and `unshared` are two readings of one comparison, not two spellings of one
+      // collection: what the candidates have in common is the evidence FOR a match, and what the
+      // subject has that they lack is the evidence AGAINST. A consumer prints either, so storing
+      // one and deriving the other at every call site would make the caller re-do the set work.
+      files: ["packages/protocol/src/graph.ts"],
+      rules: { "plumb/no-redundant-derived-field": "off" },
+    },
+    {
+      // The refusal family answers a sentence-or-nothing, and the code says why at each site:
+      // the two refusals differ in reasoning, so the tagged-failure form the rule asks for would
+      // have to be introduced for the whole family at once. `Option` would leave `initRefusal`
+      // beside it in the older idiom, which is the drift this rule exists to catch.
+      files: ["packages/room/src/commands.ts", "packages/room/src/driver.ts"],
+      rules: { "plumb-effect/guarded-op-must-return-option": "off" },
+    },
+    {
+      // `room` predates the Effect house style in this workspace and is not the Effect
+      // application the rulebook is written for. These two rules ask for a shape the package's
+      // own design rejected on purpose, in the comment at each site; converting them is one
+      // change, tracked, not a per-file call. The correctness rules stay on.
+      files: ["packages/room/src/**"],
+      rules: {
+        "plumb-effect/prefer-effect-predicate-over-boolean-function": "off",
+        "plumb-effect/prefer-effect-gen-for-guard-ladders": "off",
+      },
+    },
+    {
+      // The protocol leaf cannot import Effect's `Predicate`, so the rule's remedy is
+      // inexpressible here. The same gap `fixture-support.ts` and `lexicon.ts` record.
+      files: ["packages/protocol/src/graph.ts"],
+      rules: { "plumb-effect/prefer-effect-predicate-over-boolean-function": "off" },
     },
   ],
 }

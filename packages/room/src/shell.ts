@@ -1,4 +1,4 @@
-import { Result } from "effect"
+import { Predicate, Result } from "effect"
 import { spawnSync } from "node:child_process"
 
 /*
@@ -50,7 +50,12 @@ export const run = (input: {
     stderr: result.stderr?.toString() || result.error?.message || "",
   }
   if (result.error === undefined) return outcome
-  const failure = (result.error as NodeJS.ErrnoException).code ?? result.error.message
+  // Node's spawn error carries the errno as `code` on the common failures (a missing binary,
+  // an oversized buffer, a timeout) but the base `Error` type does not declare it, so the
+  // presence of the key is the evidence. Falling back to the message keeps an untyped failure
+  // printable rather than dropping it.
+  const code = "code" in result.error ? result.error.code : undefined
+  const failure = Predicate.isString(code) ? code : result.error.message
   return { ...outcome, failure }
 }
 
