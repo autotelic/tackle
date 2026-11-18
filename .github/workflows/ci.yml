@@ -28,7 +28,13 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # format:check → typecheck → test → build, every package. `lint` is intentionally
-      # not here yet: the workspace dogfoods plumb/joggle against itself only once they
-      # are moved in (see MIGRATION.md).
+      # format:check → typecheck → test → lexicon compat → catalog → every package's own
+      # check → build.
       - run: pnpm check
+
+      # The root rulebook, over exactly the tree jig's `plumb` engine reads. It was absent
+      # while the scope and the config were still settling (MIGRATION.md item 6); the two
+      # scopes are one list now, and a tree that does not pass its own lint is not a tree to
+      # publish from. `jig check` is the next step here once the judged census is complete
+      # for every candidate -- a run that quietly skipped judgement is not a pass.
+      - run: pnpm lint
