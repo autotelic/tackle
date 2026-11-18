@@ -55,6 +55,36 @@
       "rule": "joggle/duplicate-meaning",
       "path": "packages/joggle/src/git.ts",
       "reason": "The other side of the `lines` pair: jig-cli and joggle each carry the helper because the tools never import each other. Recorded on both files so the finding cannot move with whichever side the detector names."
+    },
+    {
+      "rule": "joggle/reversal",
+      "path": "packages/cutlist/src/features.ts",
+      "reason": "The same seam as the duplicate-implementation entry above: `dirOf` exists in cutlist and joggle because the tools never import each other, so the detector naming it a second time under the reversal rule is the same fact, not a new one."
+    },
+    {
+      "rule": "joggle/reversal",
+      "path": "packages/cutlist/src/roles.ts",
+      "reason": "`baseOf` is the other half of the `dirOf`/path-scan pair: two engines that agree on bytes, not code."
+    },
+    {
+      "rule": "joggle/reversal",
+      "path": "packages/jig-cli/src/opencode.ts",
+      "reason": "`packageRoot` and `LaunchEnvironment` exist in both agent surfaces (jig's OpenCode plugin and room's) because each ships independently and neither imports the other. The launcher facts are the host contract, and the two hosts read them differently -- jig's resolution order includes its own build, room's does not."
+    },
+    {
+      "rule": "joggle/reversal",
+      "path": "packages/jig-cli/src/package-json.ts",
+      "reason": "jig and joggle each decode a package manifest, a tsconfig and their own cache because the harness never links an engine. The seam is the reason the two implementations may diverge; a shared decoder would be the runtime dependency the workspace forbids."
+    },
+    {
+      "rule": "joggle/reversal",
+      "path": "packages/joggle/src/typefacts.ts",
+      "reason": "`CachedFacts` and `CachedIndex` share the four envelope fields because that IS the cache format both files write; their entries differ (a position and a resolved type versus a line, a name and a fact). The rule read the envelope as one declaration written twice. Factoring a generic would make the version, tool and manifest fields' meaning depend on a type parameter for no reader's benefit."
+    },
+    {
+      "rule": "joggle/reversal",
+      "path": "packages/protocol/src/catalog.ts",
+      "reason": "`DuplicateCandidate` and joggle's `UnitPair` are two packages' independent declarations of a scored pair, and protocol cannot import joggle. The shared shape is the seam; the existing compose-types entry above records the same fact."
     }
   ],
   "architecture": {
