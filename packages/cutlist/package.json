@@ -42,6 +42,7 @@
   "dependencies": {
     "@autotelic/protocol": "workspace:*",
     "@effect/platform-node": "catalog:",
+    "@effect/platform-node-shared": "catalog:",
     "effect": "catalog:",
     "oxc-parser": "catalog:",
     "pele": "catalog:"
