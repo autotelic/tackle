@@ -143,6 +143,41 @@ describe("the GitHub projection separates held findings from failures", () => {
     expect(whole).toContain("1 baselined finding(s) no longer fire")
   })
 
+  it("puts what was not judged in the headline, where a zero cannot hide it", () => {
+    const quiet = makeReport({
+      diagnostics: [],
+      files: 0,
+      generators: [{ id: "joggle", diagnostics: 0, error: 0, warn: 0, info: 0, unjudged: 11_946 }],
+    })
+    const text = renderText({ report: quiet, diff: { novel: [], known: [], stale: [] } })
+    // "0 findings" from an unjudged half is not an architectural verdict; a trailing engine
+    // note is easy to scroll past, the headline is not.
+    expect(text.split("\n")[0]).toContain("11946 candidate(s) not judged")
+  })
+
+  it("says how much a scoped run set aside, so its zero is not the repository's", () => {
+    const text = renderText(
+      { report: report([]), diff: { novel: [], known: [], stale: [] } },
+      { gate: verdict(), scope: "pull request #1862: 3 file(s)", outOfScope: 412 },
+    )
+    expect(text).toContain("412 finding(s) outside this scope")
+    expect(text).toContain("run without a scope for the repository")
+  })
+
+  it("names rules that are reported but cannot fail this gate", () => {
+    const warned = [
+      finding({ ruleId: "no-stray-inline-comments", severity: "warn" }),
+      finding({ ruleId: "no-stray-inline-comments", severity: "warn" }),
+    ]
+    const text = renderText(
+      { report: report(warned), diff: { novel: [], known: [], stale: [] } },
+      // failOn error: a warning is shown and enforced by nothing.
+      { gate: verdict({ failOn: "error" }) },
+    )
+    expect(text).toContain("2 finding(s) reported and cannot fail this gate (failOn: error)")
+    expect(text).toContain("plumb/no-stray-inline-comments 2")
+  })
+
   it("says the run had no verdict when an engine could not run", () => {
     const text = renderGithub(report([]), {
       gate: verdict({ exitCode: EXIT.infrastructure, infrastructure: ["plumb"] }),

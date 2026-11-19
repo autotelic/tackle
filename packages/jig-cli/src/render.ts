@@ -33,6 +33,13 @@ export interface TextOptions {
    * identical, and only one of them means the tree is clean.
    */
   readonly scope?: string
+  /**
+   * Findings the run READ and then narrowed away.
+   *
+   * A scoped run answers for its change; it must also say how much it saw outside, because a
+   * zero that came from a file filter is not the same zero as a clean repository.
+   */
+  readonly outOfScope?: number
 }
 
 /**
@@ -109,13 +116,25 @@ export const renderText = (run: HarnessRun, options: TextOptions = {}): string =
   const limit = options.limit ?? 0
   const total = report.diagnostics.length
   const shown = limit > 0 ? report.diagnostics.slice(0, limit) : report.diagnostics
+  // What the engines did NOT judge, summed across them: a run that stopped asking says so in
+  // the headline, because "0 findings" from an unjudged half is not an architectural verdict
+  // and a trailing engine note is easy to scroll past.
+  const unjudged = report.generators.reduce((sum, generator) => sum + (generator.unjudged ?? 0), 0)
+  const notJudged = unjudged > 0 ? `; ${unjudged} candidate(s) not judged` : ""
   const lines: Array<string> = [
     report.generators.length === 0
       ? "no engines ran — this is not a clean run"
       : total === 0
-        ? `nothing new — 0 finding(s) in ${report.files} file(s)`
-        : `${report.counts.error} error(s), ${report.counts.warn} warning(s), ${report.counts.info} notice(s) in ${report.files} file(s)`,
-    ...(options.scope === undefined ? [] : [`scope — ${options.scope}`]),
+        ? `nothing new — 0 finding(s) in ${report.files} file(s)${notJudged}`
+        : `${report.counts.error} error(s), ${report.counts.warn} warning(s), ${report.counts.info} notice(s) in ${report.files} file(s)${notJudged}`,
+    ...(options.scope === undefined
+      ? []
+      : [
+          `scope — ${options.scope}` +
+            (options.outOfScope === undefined || options.outOfScope === 0
+              ? ""
+              : `; ${options.outOfScope} finding(s) outside this scope, not shown (run without a scope for the repository)`),
+        ]),
     "",
     "engines",
   ]
@@ -161,6 +180,35 @@ export const renderText = (run: HarnessRun, options: TextOptions = {}): string =
   if (gate !== undefined && gate.failing.length > 0) {
     lines.push("", `gate — failOn: ${gate.failOn}, scope: ${gate.scope}`)
     lines.push(...gateLines(gate.failing))
+  }
+  /*
+   * What the report shows but this gate can never hold.
+   *
+   * A warning under `failOn: error`, an identity the ledger already accepted, or a rule a repo
+   * marked advisory all read the same way in the findings list and all mean "reported, never
+   * enforced". A repo that keeps a second, errors-only lint config needs this line: without it
+   * the only way to learn a rule is unenforceable is to diff two config files.
+   */
+  if (gate !== undefined) {
+    const held = new Set(gate.failing)
+    const advisory = new Set(gate.advisory)
+    const reach = new Map<string, number>()
+    for (const diagnostic of report.diagnostics) {
+      if (held.has(diagnostic) || advisory.has(diagnostic)) continue
+      const rule = `${diagnostic.engine}/${diagnostic.ruleId}`
+      reach.set(rule, (reach.get(rule) ?? 0) + 1)
+    }
+    if (reach.size > 0) {
+      const count = [...reach.values()].reduce((sum, value) => sum + value, 0)
+      const top = [...reach].sort((left, right) => right[1] - left[1]).slice(0, 3)
+      const rest = reach.size - top.length
+      lines.push(
+        "",
+        `gate — ${count} finding(s) reported and cannot fail this gate (failOn: ${gate.failOn}): ` +
+          top.map(([rule, found]) => `${rule} ${found}`).join(", ") +
+          (rest > 0 ? `, +${rest} more rule(s)` : ""),
+      )
+    }
   }
   if (gate !== undefined && gate.advisory.length > 0) {
     const byEngine = new Map<string, number>()

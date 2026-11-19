@@ -5,6 +5,7 @@
 0a08eb345dd7ac52	{"confidence":0.43,"kind":"Classify","label":"value","probabilities":{"meaning":0.37,"unclear":0.01,"value":0.62}}
 0a0ba7ae11783f6e	{"confidence":0.77,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.83,"stale_reference":0.08,"wrong_behavior":0.06,"wrong_contract":0.03}}
 0a1e70908e1f9dcc	{"consistency":1,"kind":"Probability","probability":0.7111111111111111}
+0a20b3c4d13e6080	{"confidence":0.4,"kind":"Classify","label":"move","probabilities":{"leave_it":0.08,"merge":0.18,"move":0.52,"share_a_contract":0.21,"split":0.01}}
 0a2495a4322e8076	{"consistency":1,"kind":"Probability","probability":0.63}
 0a28f039bdb16f46	{"confidence":0.61,"kind":"Classify","label":"no_issue","probabilities":{"collapse":0,"keep_variants":0.26,"no_issue":0.74}}
 0a2afe0a736539f7	{"confidence":0.4,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.43,"no_difference":0.03,"removes_a_hazard":0.38,"slightly_clearer":0.16},"rating":2.17}

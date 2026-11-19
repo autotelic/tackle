@@ -8,6 +8,7 @@ d71ec111257cf645	{"confidence":0.67,"kind":"Classify","label":"neither","probabi
 d72e677f0ca5e0ee	{"consistency":0.6666666666666667,"kind":"Probability","probability":0.49444444444444446}
 d734251f3e12a16c	{"confidence":0.55,"kind":"Classify","label":"move","probabilities":{"merge":0.05,"move":0.7,"no_issue":0.25}}
 d735210ca6ca9c29	{"confidence":0.73,"kind":"Classify","label":"general","probabilities":{"general":0.82,"names_a_caller":0.01,"shared_vocabulary":0.17}}
+d7429647f005ac95	{"confidence":0.67,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.09,"keep_variants":0.78,"no_issue":0.13}}
 d74ecf36b948e324	{"confidence":0.85,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.89,"stale_reference":0,"wrong_behavior":0.08,"wrong_contract":0.03}}
 d75146b6cd07af2a	{"consistency":1,"kind":"Probability","probability":0.94}
 d752a8fa78453196	{"confidence":0.89,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.92,"stale_reference":0,"wrong_behavior":0.05,"wrong_contract":0.03}}

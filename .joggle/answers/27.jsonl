@@ -16,6 +16,7 @@
 274174c9773dc774	{"confidence":0.22,"kind":"Classify","label":"move","probabilities":{"move":0.61,"no_issue":0.39}}
 274230306daa70dd	{"confidence":0.37,"kind":"Classify","label":"no_issue","probabilities":{"merge":0.07,"move":0.35,"no_issue":0.58}}
 274293b2b9df3348	{"confidence":0.95,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.04,"same_module":0,"same_package":0,"sibling_packages":0.96}}
+2742bf5c57f34105	{"consistency":1,"kind":"Probability","probability":0.38999999999999996}
 27450b1737f8110a	{"confidence":0.4,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.43,"no_difference":0.03,"removes_a_hazard":0.38,"slightly_clearer":0.16},"rating":2.17}
 2747bcc7c121115f	{"confidence":0.34,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.19,"must_be_current":0.25,"not_a_projection":0.56}}
 274a1774ad1d73c1	{"confidence":0.4,"kind":"Classify","label":"value","probabilities":{"meaning":0.4,"unclear":0,"value":0.6}}

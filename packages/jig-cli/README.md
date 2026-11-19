@@ -99,6 +99,20 @@ revision, no `gh`, no PR for the branch) exits 3 rather than falling back to the
 tree, and the stale-ledger line is absent in a scoped run: only a whole-tree run can say an
 identity stopped firing.
 
+Three lines exist because a green gate can be true and still not answer the question a reader
+thinks it answered:
+
+- **the headline carries the unjudged count** — `0 error(s) … ; 11,946 candidate(s) not judged`.
+  A judged rule that never ran has not said the repository is architecturally fine, and a
+  trailing engine note is easy to scroll past.
+- **the scope line carries what it set aside** — `412 finding(s) outside this scope, not shown`.
+  A zero produced by a file filter is not the repository's zero.
+- **the gate line names rules that cannot fail it** — `2,112 finding(s) reported and cannot fail
+  this gate (failOn: error): plumb/no-stray-inline-comments 2005, …`. A warning under
+  `failOn: error`, a baselined identity, and an advisory engine all read as ordinary findings
+  and are enforced by nothing. If a repository keeps a second, errors-only lint config, this is
+  the line that says which rules live only there.
+
 ```sh
 jig check                    # run every engine; fail on errors and new findings
 jig check --format sarif     # SARIF 2.1.0 for code scanning

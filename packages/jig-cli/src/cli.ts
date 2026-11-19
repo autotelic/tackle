@@ -273,7 +273,9 @@ const checkCommand = Command.make(
               run,
               scopeNote === undefined
                 ? { limit, gate: verdict }
-                : { limit, gate: verdict, scope: scopeNote },
+                : run.outOfScope === undefined
+                  ? { limit, gate: verdict, scope: scopeNote }
+                  : { limit, gate: verdict, scope: scopeNote, outOfScope: run.outOfScope },
             ),
           )
           break

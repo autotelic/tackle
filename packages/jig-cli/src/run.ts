@@ -21,6 +21,13 @@ import { runEngines } from "./engines.ts"
 export interface HarnessRun {
   readonly report: Report
   readonly diff: BaselineDiff
+  /**
+   * Findings the engines produced outside the requested change set, when the run was scoped.
+   *
+   * The engines read the whole tree; a scoped run narrows the report afterwards. This is what
+   * that narrowing set aside, carried so the report can say so instead of looking clean.
+   */
+  readonly outOfScope?: number
 }
 
 /**
@@ -80,5 +87,7 @@ export const harnessRun = (
     })
     const report = touched === undefined ? whole : scopeReport(whole, touched)
     const diff = diffBaseline(baseline, report.diagnostics)
-    return { report, diff }
+    return touched === undefined
+      ? { report, diff }
+      : { report, diff, outOfScope: whole.diagnostics.length - report.diagnostics.length }
   })

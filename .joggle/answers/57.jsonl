@@ -57,6 +57,7 @@
 57de6e2c22007d84	{"consistency":1,"kind":"Probability","probability":0.5800000000000001}
 57e00d465875ed54	{"confidence":0.31,"kind":"Classify","label":"state","probabilities":{"deviation":0.15,"neither":0.31,"state":0.54}}
 57e07552739b00bb	{"consistency":1,"kind":"Probability","probability":0.4466666666666667}
+57e30c524ebdc7d1	{"confidence":0.98,"kind":"Classify","label":"value","probabilities":{"meaning":0.01,"unclear":0,"value":0.99}}
 57e82eb709bcb5c1	{"confidence":0.31,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.01,"keep_variants":0.54,"no_issue":0.45}}
 57e8eb2ce8ebe865	{"consistency":1,"kind":"Probability","probability":0.9333333333333335}
 57eb689d59d99a73	{"confidence":0.96,"kind":"Classify","label":"not_a_record","probabilities":{"mutable":0.02,"not_a_record":0.97,"supersede_only":0.01}}

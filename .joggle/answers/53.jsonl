@@ -1,4 +1,5 @@
 53019e29fcfe00ef	{"consistency":1,"kind":"Probability","probability":0.22777777777777777}
+53131d37cd1a9070	{"confidence":0.61,"kind":"Classify","label":"framework_glue","probabilities":{"domain_concept":0.03,"framework_glue":0.71,"implementation_detail":0.22,"wire_contract":0.04}}
 531bca3b37ec5fc0	{"confidence":0.83,"kind":"Classify","label":"component_or_feature","probabilities":{"already_there":0.06,"component_or_feature":0.87,"not_applicable":0.01,"route_or_handler":0.06}}
 531bf33556c54dfe	{"confidence":0.28,"kind":"Classify","label":"state","probabilities":{"deviation":0,"neither":0.48,"state":0.52}}
 531bf87df9f61a8c	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}

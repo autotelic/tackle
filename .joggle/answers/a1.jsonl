@@ -63,5 +63,6 @@ a1eb43f06b798336	{"consistency":1,"kind":"Probability","probability":0.399999999
 a1ed6e7074f116f8	{"consistency":1,"kind":"Probability","probability":0.91}
 a1edd1add0086e01	{"confidence":0.56,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.67,"stale_reference":0.02,"wrong_behavior":0.2,"wrong_contract":0.11}}
 a1ef805c21246fac	{"confidence":0.58,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.21,"member_1":0.79}}
+a1f525a12ba24431	{"confidence":0.46,"kind":"Classify","label":"move","probabilities":{"move":0.73,"no_issue":0.27}}
 a1f90d8e52151125	{"confidence":0.84,"kind":"Classify","label":"move","probabilities":{"move":0.92,"no_issue":0.08}}
 a1fe083a82e1e940	{"confidence":0.91,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.93,"different_order":0.04,"different_work":0.02,"same_operation":0.01}}

@@ -18,6 +18,7 @@
 694530b0658843e4	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
 6946b8509e40c807	{"consistency":1,"kind":"Probability","probability":0.9622222222222222}
 69482d38b0014e6f	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
+694a67c60a393d32	{"confidence":0.37,"kind":"Classify","label":"member_4","probabilities":{"member_0":0.05,"member_1":0.03,"member_2":0.01,"member_3":0.01,"member_4":0.45,"member_5":0.32,"member_6":0.12,"member_7":0.01}}
 694bb10d89ba8604	{"consistency":1,"kind":"Probability","probability":0.9066666666666667}
 694c0746104365ca	{"confidence":0.58,"kind":"Classify","label":"independent","probabilities":{"independent":0.72,"inferred":0.07,"not_applicable":0.21}}
 694d91df093af07f	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0}}
