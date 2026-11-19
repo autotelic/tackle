@@ -3,7 +3,6 @@ import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { ChildProcess } from "effect/process"
 import * as FetchHttpClient from "effect/http/FetchHttpClient"
 import * as HttpClient from "effect/http/HttpClient"
-import * as HttpClientResponse from "effect/http/HttpClientResponse"
 
 /**
  * Publish, and then believe the registry rather than the command.
@@ -33,17 +32,6 @@ const PackageManifest = Schema.Struct({
   name: Schema.optional(Schema.String),
   version: Schema.optional(Schema.String),
   private: Schema.optional(Schema.Boolean),
-})
-
-/**
- * Only one field matters in the registry's answer: the version map it publishes.
- *
- * The value type is an empty struct because the question is presence, not content. A
- * manifest is an object, so this accepts one without describing fields this script would
- * then have to keep in step with npm.
- */
-const RegistryDocument = Schema.Struct({
-  versions: Schema.optional(Schema.Record(Schema.String, Schema.Struct({}))),
 })
 
 /** One command, named rather than positional so a transposed call cannot compile. */
@@ -102,13 +90,24 @@ const published = (
     return manifests
   })
 
-/** Whether the registry has this exact version, not merely the package. */
+/**
+ * Whether the registry has this exact version, not merely the package.
+ *
+ * The question is asked of the VERSION endpoint (`HEAD /<name>/<version>`), which answers 200
+ * or 404 and nothing else. Reading the package document instead means decoding a map of every
+ * published manifest — a shape npm owns and this script does not — and the first version of
+ * this did exactly that with an empty struct as the value type: the request answered 200,
+ * every value failed to decode, the field vanished as absent, and a release that had just
+ * published reported EVERY package missing. A 409 on the retry, a red workflow, and a
+ * published version -- the precise failure this file exists to prevent.
+ *
+ * A version that is not there is the ordinary answer, not this script's failure: it is the
+ * fact the retry loop reads. A request that does not complete also answers false, so the run
+ * fails rather than claiming a release it could not verify.
+ */
 const onRegistry = (manifest: Manifest): Effect.Effect<boolean, never, HttpClient.HttpClient> =>
-  HttpClient.get(REGISTRY + "/" + manifest.name.replace("/", "%2f")).pipe(
-    Effect.flatMap(HttpClientResponse.schemaJson(RegistryDocument)),
-    // A package or version that is not there is the ordinary answer, and the registry's
-    // error document is not this script's failure: it is the fact the retry loop reads.
-    Effect.map((document) => document.versions?.[manifest.version] !== undefined),
+  HttpClient.head(REGISTRY + "/" + manifest.name.replace("/", "%2f") + "/" + manifest.version).pipe(
+    Effect.map((response) => response.status === 200),
     Effect.orElseSucceed(() => false),
   )
 
