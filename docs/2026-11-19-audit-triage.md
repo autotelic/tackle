@@ -29,10 +29,12 @@ extraction from the session JSONL. Deterministic, zero LLM turns.
   premise ×2 (#6 rider-1, #2 Oso-registration note), design judgement with
   recommended answers ×2 (#4, #5), scope pacing ×1 (#6).
 
-## 2. Budget recalibration (recommendation — needs Estone's go before landing)
+## 2. Budget recalibration (**LANDED** — Ed's go came the same night)
 
-The runaway-train signature is **spend without verified progress**, and the data
-confirms it: 76% of spend died on the cap; successful sessions average ~$0.10.
+Implemented in `eef833c` + tracker `71fd0ae`; see project-loop #18 for the
+landed description. The runaway-train signature is **spend without verified
+progress**, and the data confirms it: 76% of spend died on the cap; successful
+sessions average ~$0.10.
 
 | Today | Proposal |
 |---|---|
@@ -42,8 +44,10 @@ confirms it: 76% of spend died on the cap; successful sessions average ~$0.10.
 | 3-parks circuit breaker | circuit-break on failure signature: same failing check, no frontier delta, rising cost-per-progress |
 | blocked-on-human burns budget | already fixed for provider (402); stalled ≠ failed everywhere |
 
-Deliberately **not** landed tonight: these change budget semantics on a live
-loop and the calibrated numbers are hours old. They need Estone's eyes first.
+Originally flagged for Estone's eyes first; the go arrived later the same
+night, so the session-cap and progress-extension changes landed as described
+above. The nightly $40 protective bound stays; tighten toward ~$25 after a
+green week of Receipts.
 
 ## 3. Triage table — mistake → lowest deterministic rung
 
