@@ -306,7 +306,7 @@ export async function runChecks(
   }
 
   const failureSet = infrastructureFailure ? [] : buildFailureSet(steps)
-  return {
+  const report: CheckReport = {
     issue: options.issue ?? null,
     pass: options.pass ?? null,
     repo: repoDir,
@@ -323,6 +323,11 @@ export async function runChecks(
     failureSet,
     frontier: failureSet.length,
   }
+  // The report lands beside its logs: the session prompt names
+  // <outDir>/checks.json as the full report, and the run_checks tool result
+  // repeats that path. Without this file the agent reads a phantom path.
+  await writeFile(join(outDir, 'checks.json'), `${JSON.stringify(report, null, 2)}\n`)
+  return report
 }
 
 async function runStep(

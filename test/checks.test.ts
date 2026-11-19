@@ -58,6 +58,14 @@ describe('runChecks', () => {
     // Full logs were written alongside the report.
     const pingLog = await readFile(join(dir, '.treadle', 'out', 'logs', 'ping.log'), 'utf8')
     expect(pingLog).toContain('pong')
+
+    // The report itself lands beside them: the session prompt and the
+    // run_checks tool result name <outDir>/checks.json as the full report.
+    const persisted = JSON.parse(
+      await readFile(join(dir, '.treadle', 'out', 'checks.json'), 'utf8'),
+    ) as { outcome: string; steps: { name: string }[] }
+    expect(persisted.outcome).toBe('checks.passed')
+    expect(persisted.steps.map((s) => s.name)).toEqual(['ok', 'ping'])
   })
 
   it('reports failing tests from a vitest-json report', async () => {
