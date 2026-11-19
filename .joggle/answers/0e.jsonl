@@ -31,6 +31,7 @@
 0e98af9c400f5b98	{"confidence":0.97,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.98,"not_a_derivation":0.01,"reimplements":0.01}}
 0e9df746f4703f3a	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0.01}}
 0ea4d84d40884adb	{"consistency":1,"kind":"Probability","probability":0.8788888888888889}
+0ea526e17d204a51	{"confidence":0.59,"kind":"Classify","label":"framework_glue","probabilities":{"domain_concept":0.04,"framework_glue":0.69,"implementation_detail":0.22,"wire_contract":0.05}}
 0ea8082d389e4597	{"confidence":0.89,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.02,"must_be_current":0.05,"not_a_projection":0.93}}
 0eaa3691c01ff3de	{"consistency":1,"kind":"Probability","probability":0.9044444444444445}
 0eb08bd5896cb666	{"confidence":0.85,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.07,"not_an_invariant":0.9,"repair_path":0.03}}

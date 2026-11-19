@@ -1488,7 +1488,7 @@ export const onboardingFor = (profile: RepoProfile): string => {
   const wire = [
     piWired
       ? "- **pi** is already wired here (`.pi/settings.json`): run `pi update --extensions` rather than adding a second entry."
-      : `- **pi**: \`pi install ${profile.jigSource} --local\` writes \`.pi/settings.json\`, and the package's extension adds \`jig_check\`, \`jig_engines\`, \`jig_onboard\`, \`jig_init\`, and \`jig_menu\`.`,
+      : `- **pi**: \`pi install ${profile.jigSource} --local\` writes \`.pi/settings.json\`, and the package's extension adds \`jig_check\`, \`jig_engines\`, \`jig_onboard\`, \`jig_init\`, and \`jig_menu\`. Install it in ONE scope: if jig is already installed for every project (\`pi install\` without \`--local\`), use that copy instead — two installs declare the same tool names and pi refuses the second.`,
     opencodeWired
       ? '- **OpenCode** is already wired here: keep the existing `"plugin"` entry or `.opencode/plugins/` file rather than adding another.'
       : '- **opencode 2**: add `"@autotelic/jig-cli/opencode"` to the `"plugin"` array in `opencode.json`. **opencode 1.x** reads plugin files, not that array: add `.opencode/plugins/jig.ts` containing `export { default } from "@autotelic/jig-cli/opencode"`. Either way the surface adds `jig_check`, `jig_engines`, `jig_menu`, `jig_onboard`, and `jig_init`.',

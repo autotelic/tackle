@@ -17,6 +17,7 @@
 514fcb17b4ffd87f	{"confidence":0.37,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.06,"common_idiom":0.58,"shared_helper":0.36}}
 515037ffd046a684	{"confidence":0.58,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.01,"must_be_current":0.27,"not_a_projection":0.72}}
 51552a4eebda77f9	{"consistency":1,"kind":"Probability","probability":0.5633333333333334}
+515e7dc4d900f2a6	{"consistency":1,"kind":"Probability","probability":0.2844444444444445}
 515efb4a2bc6cc5c	{"consistency":1,"kind":"Probability","probability":0.6555555555555556}
 5161fbf182290999	{"consistency":1,"kind":"Probability","probability":0.8488888888888889}
 516350ea7ebe60e5	{"confidence":0.27,"kind":"Classify","label":"one_concept","probabilities":{"already_named":0.07,"coincidental":0.42,"one_concept":0.51}}

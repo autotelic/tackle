@@ -146,7 +146,9 @@ what was written, and the next two commands.
 `ONBOARD.md` is one paste-able prompt, not a reference: it opens with the global
 install of the CLI (the checkout when this tree builds jig, npm otherwise, and
 the manager's own verb), reads the config it just wrote, installs what the census
-says is missing, runs `init`, wires the agent host (`pi install … --local`; for OpenCode, a `"plugin"` array entry
+says is missing, runs `init`, wires the agent host (`pi install … --local`, in that scope only — two installs of the
+package declare the same tool names and pi refuses the second, so a user-scope copy and a project copy cannot
+coexist; for OpenCode, a `"plugin"` array entry
 on opencode2 or a file in `.opencode/plugins/` on opencode 1.x — 1.x reads files, not the array)
 and, in a repo that runs one, plans the room. `JIG.md` stays the reference; the prompt is the door.
 

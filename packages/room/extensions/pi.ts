@@ -30,7 +30,7 @@
  */
 import { execFile, spawn } from "node:child_process"
 import { existsSync, readFileSync, watch } from "node:fs"
-import { dirname, join } from "node:path"
+import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { promisify } from "node:util"
 import { Type } from "typebox"
@@ -388,6 +388,36 @@ const pickRoom = async (
 }
 
 export default function roomExtension(pi: ExtensionAPI): void {
+  /*
+   * One install of this package is enough, and a host can have two: a user-scope checkout and
+   * a project's own dependency, each declaring the same tools. pi refuses the second
+   * registration, so a duplicate becomes a load error per tool instead of one working surface.
+   * The first copy keeps the names; the second says which file it skipped, once.
+   *
+   * A reload of this same extension must still register, so only a tool registered by a
+   * DIFFERENT path counts as a second install. A host without `getAllTools` (or without
+   * `sourceInfo`) registers as before.
+   */
+  const self = fileURLToPath(import.meta.url)
+  const elsewhere = (typeof pi.getAllTools === "function" ? pi.getAllTools() : []).filter(
+    (tool) =>
+      tool.name.startsWith("room_") &&
+      tool.sourceInfo?.path !== undefined &&
+      resolve(tool.sourceInfo.path) !== resolve(self),
+  )
+  if (elsewhere.length > 0) {
+    console.warn(
+      "[room] " +
+        elsewhere.map((tool) => tool.name).join(", ") +
+        " already registered by " +
+        (elsewhere[0]?.sourceInfo?.path ?? "another install") +
+        "; skipping " +
+        self +
+        ". Keep one: remove @autotelic/room from either the user settings " +
+        "(~/.pi/agent/settings.json) or the project's (.pi/settings.json).",
+    )
+    return
+  }
   let active: string | undefined
   let badge: ReadonlyArray<string> = []
   let timer: ReturnType<typeof setInterval> | undefined

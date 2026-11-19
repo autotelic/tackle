@@ -17,6 +17,7 @@
 6b586172e0fb9cdb	{"confidence":0.3,"kind":"Classify","label":"row_absence_is_normal","probabilities":{"not_applicable":0.32,"row_absence_is_an_error":0.15,"row_absence_is_normal":0.53}}
 6b5a1291a928e61d	{"confidence":0.92,"kind":"Classify","label":"value","probabilities":{"meaning":0.04,"unclear":0.01,"value":0.95}}
 6b5a22f26394aff4	{"confidence":0.9,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.91,"infrastructure":0,"input_adaptation":0,"mechanical":0.08,"not_applicable":0,"orchestration":0.01,"rendering":0,"request_validation":0,"transport_concern":0}}
+6b5c162c5c67571d	{"confidence":0.37,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.33,"independent":0.58,"meaning_switched":0.09}}
 6b5cbd34ff27d7e3	{"consistency":1,"kind":"Probability","probability":0.47222222222222227}
 6b5f184c40de970f	{"consistency":1,"kind":"Probability","probability":0.6466666666666666}
 6b5fe39445567b2c	{"confidence":0.61,"kind":"Classify","label":"general","probabilities":{"general":0.74,"names_a_caller":0,"shared_vocabulary":0.26}}
