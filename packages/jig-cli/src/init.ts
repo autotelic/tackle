@@ -1321,6 +1321,8 @@ ${profile.summary === "" ? "" : "\n" + profile.summary + "\n"}
 | --- | --- |
 | \`${profile.jig} check\` | every engine, one report, fail on what is new |
 | \`${profile.jig} check --limit 50\` | the census and the first 50 findings |
+| \`${profile.jig} check --since origin/main\` | only what this branch changed, for every engine |
+| \`${profile.jig} check --pr <number>\` | the same, for one pull request's files |
 | \`${profile.jig} engines\` | what is configured, and whether each command resolves |
 | \`${profile.jig} baseline\` | accept the current findings; the ledger only shrinks after that |
 | \`${profile.jig} explain <rule>\` | everything jig knows about one rule, here, now |

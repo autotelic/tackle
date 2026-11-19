@@ -25,6 +25,7 @@
 316b6de31950b042	{"confidence":0.64,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.06,"common_idiom":0.76,"shared_helper":0.18}}
 316e49ffae867106	{"confidence":0.18,"kind":"Classify","label":"move","probabilities":{"merge":0.12,"move":0.45,"no_issue":0.43}}
 316f502bb84a45e2	{"consistency":1,"kind":"Probability","probability":0.7966666666666665}
+3174d0e8e5da5a0d	{"confidence":0.84,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.88,"stale_reference":0.01,"wrong_behavior":0.08,"wrong_contract":0.03}}
 31762954f2a92085	{"confidence":0.99,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.01,"framework_glue":0,"implementation_detail":0.99,"wire_contract":0}}
 317670074bfea04c	{"consistency":1,"kind":"Probability","probability":0.10777777777777776}
 317c84b0574b3792	{"confidence":0.91,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.93,"stale_reference":0.03,"wrong_behavior":0.02,"wrong_contract":0.02}}
@@ -35,6 +36,7 @@
 3190f6d387c4a078	{"confidence":0.42,"kind":"Classify","label":"general","probabilities":{"general":0.61,"names_a_caller":0,"shared_vocabulary":0.39}}
 319222a9ebe91b14	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0.01}}
 31985897f45bd1b2	{"consistency":1,"kind":"Probability","probability":0.831111111111111}
+31988d36179a8687	{"confidence":0.86,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.08,"inferred":0.01,"not_applicable":0.91}}
 31994b6d0e3fa29a	{"consistency":1,"kind":"Probability","probability":0.47444444444444445}
 319f518fc1ee21ca	{"consistency":1,"kind":"Probability","probability":0.77}
 31a524abd629003d	{"confidence":0.91,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.02,"must_be_current":0.04,"not_a_projection":0.94}}

@@ -2,6 +2,7 @@ f600a1b726b93bdc	{"confidence":0.67,"kind":"Classify","label":"composes","probab
 f61025a9f803c452	{"confidence":0.22,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.61,"member_1":0.39}}
 f612aa1d259ae65d	{"consistency":1,"kind":"Probability","probability":0.9566666666666667}
 f612d867b5c7138e	{"confidence":0.49,"kind":"Classify","label":"component_or_feature","probabilities":{"already_there":0.05,"component_or_feature":0.62,"not_applicable":0.01,"route_or_handler":0.32}}
+f61346975f095183	{"confidence":0.76,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.82,"stale_reference":0.01,"wrong_behavior":0.13,"wrong_contract":0.04}}
 f615cc1c550fed55	{"confidence":0.98,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.01,"inferred":0,"not_applicable":0.99}}
 f6167041133ea165	{"confidence":0.89,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.05,"not_an_invariant":0.93,"repair_path":0.02}}
 f6194d368370d01c	{"consistency":1,"kind":"Probability","probability":0.13}

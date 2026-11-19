@@ -41,6 +41,7 @@ f5b3ba7bad9385c1	{"confidence":0.95,"kind":"Classify","label":"legitimate_local"
 f5b57ed0d0384764	{"consistency":1,"kind":"Probability","probability":0.8833333333333333}
 f5b74285e1d0d27f	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0.01,"wrong_behavior":0,"wrong_contract":0}}
 f5bbf6f6a8428a0b	{"confidence":0.77,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.83,"stale_reference":0.04,"wrong_behavior":0.11,"wrong_contract":0.02}}
+f5bf3d2660fd8fe4	{"consistency":1,"kind":"Probability","probability":0.20666666666666667}
 f5cd344cd84742d2	{"confidence":0.12,"kind":"Classify","label":"hub","probabilities":{"hub":0.56,"no_concept":0.44}}
 f5cdf7e2b6d48d93	{"confidence":0.76,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.84,"not_a_derivation":0.15,"reimplements":0.01}}
 f5d071b5570df728	{"confidence":0.83,"kind":"Classify","label":"general","probabilities":{"general":0.89,"names_a_caller":0.01,"shared_vocabulary":0.1}}
@@ -51,6 +52,7 @@ f5ddf5d33b610c49	{"confidence":0.97,"kind":"Classify","label":"not_a_projection"
 f5e1e92980b234df	{"consistency":1,"kind":"Probability","probability":0.20555555555555557}
 f5e84e547e1c8a77	{"consistency":1,"kind":"Probability","probability":0.8566666666666666}
 f5e98686817913c2	{"confidence":0.7,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.01,"must_be_current":0.19,"not_a_projection":0.8}}
+f5eb872b6cc9bf20	{"confidence":0.8,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.9,"member_1":0.1}}
 f5f069c5a4431b64	{"confidence":0.28,"kind":"Classify","label":"move","probabilities":{"move":0.64,"no_issue":0.36}}
 f5f1a54e957584c1	{"confidence":0.51,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.67,"not_a_derivation":0.33,"reimplements":0}}
 f5f5662afde520d2	{"confidence":0.26,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.51,"unclear":0.11,"value":0.38}}

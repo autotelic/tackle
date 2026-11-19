@@ -1,3 +1,4 @@
+d0094ff157960c94	{"confidence":0.3,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.14,"merge":0.04,"move":0.2,"share_a_contract":0.44,"split":0.18}}
 d00ad9368d7822d9	{"confidence":0.29,"kind":"Classify","label":"route_or_handler","probabilities":{"already_there":0.23,"component_or_feature":0.23,"not_applicable":0.07,"route_or_handler":0.47000000000000003}}
 d00f74283e126c3c	{"confidence":0.26,"kind":"Classify","label":"appropriate","probabilities":{"appropriate":0.51,"independent":0.48,"meaning_switched":0.01}}
 d010b8123e34b156	{"confidence":0.71,"kind":"Classify","label":"leave_it","probabilities":{"leave_it":0.77,"merge":0.06,"move":0.13,"share_a_contract":0.03,"split":0.01}}

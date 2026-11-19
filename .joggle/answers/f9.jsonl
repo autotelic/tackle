@@ -24,6 +24,7 @@ f96b03b43fd52869	{"confidence":0.56,"kind":"Classify","label":"not_a_projection"
 f96c2d560cd196aa	{"confidence":0.85,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.89,"stale_reference":0,"wrong_behavior":0.1,"wrong_contract":0.01}}
 f96d984562a717b0	{"confidence":0.33,"kind":"Classify","label":"accounted_elsewhere","probabilities":{"accounted_elsewhere":0.55,"internal_only":0.37,"unaccounted":0.08}}
 f9716b91e3241cae	{"confidence":0.96,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.02,"must_be_current":0.01,"not_a_projection":0.97}}
+f972b548a96b8417	{"confidence":0.29,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.09,"merge":0.04,"move":0.42,"share_a_contract":0.43,"split":0.02}}
 f9754c3378c04ade	{"confidence":0.37,"kind":"Classify","label":"state","probabilities":{"deviation":0.01,"neither":0.41,"state":0.58}}
 f977d07ec2386245	{"confidence":0.85,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.9,"not_a_derivation":0.05,"reimplements":0.05}}
 f97c9e1cb277cad7	{"confidence":0.94,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.96,"not_a_derivation":0.03,"reimplements":0.01}}

@@ -23,22 +23,62 @@ export interface HarnessRun {
   readonly diff: BaselineDiff
 }
 
-/** Run every configured engine and compare the result to what was accepted. */
+/**
+ * The subset of a report inside a change set, with every count recomputed.
+ *
+ * Filtering the diagnostics alone would leave the census describing a run that was not the
+ * one printed: an engine's summary would claim 1,178 findings while its own list held three.
+ * So each engine's counts are recounted over what survived, and everything the engine said
+ * about HOW it ran -- replayed, skipped, unjudged candidates, its note -- is carried through
+ * untouched. A scoped run must still be able to say "I did not look at that".
+ */
+export const scopeReport = (report: Report, touched: ReadonlySet<string>): Report => {
+  const scoped = report.diagnostics.filter((diagnostic) => touched.has(diagnostic.location.file))
+  const scopedInput = {
+    diagnostics: scoped,
+    files: new Set(scoped.map((diagnostic) => diagnostic.location.file)).size,
+    generators: report.generators.map((generator) => {
+      const own = scoped.filter((diagnostic) => diagnostic.engine === generator.id)
+      return {
+        ...generator,
+        diagnostics: own.length,
+        error: own.filter((diagnostic) => diagnostic.severity === "error").length,
+        warn: own.filter((diagnostic) => diagnostic.severity === "warn").length,
+        info: own.filter((diagnostic) => diagnostic.severity === "info").length,
+      }
+    }),
+  }
+  return makeReport(
+    report.elapsedMs === undefined ? scopedInput : { ...scopedInput, elapsedMs: report.elapsedMs },
+  )
+}
+
+/**
+ * Run every configured engine and compare the result to what was accepted.
+ *
+ * `touched`, when given, is a change set: engines still look at the whole tree -- cross-file
+ * rules need the tree, and a scoped oxlint invocation cannot see an import from a file it did
+ * not read -- and the report and the diff are narrowed to the change afterwards. That is the
+ * same narrowing the gate's `touched-files` mode applies, so the report and the exit code
+ * cannot disagree about what was in scope.
+ */
 export const harnessRun = (
   root: string,
   config: HarnessConfig,
   baseline: Baseline,
+  touched?: ReadonlySet<string>,
 ): Effect.Effect<HarnessRun, never, Spawner> =>
   Effect.gen(function* () {
     const started = Date.now()
     const outcomes = yield* runEngines(root, config.engines)
     const diagnostics = outcomes.flatMap((outcome) => outcome.diagnostics)
-    const report = makeReport({
+    const whole = makeReport({
       diagnostics,
       files: new Set(diagnostics.map((diagnostic) => diagnostic.location.file)).size,
       generators: outcomes.map((outcome) => outcome.summary),
       elapsedMs: Date.now() - started,
     })
+    const report = touched === undefined ? whole : scopeReport(whole, touched)
     const diff = diffBaseline(baseline, report.diagnostics)
     return { report, diff }
   })

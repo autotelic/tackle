@@ -89,10 +89,23 @@ The gate is `protocol`'s baseline: findings are accepted **by identity**, never 
 A run fails on new identities only. `warn` repo-wide and `error` on what you touched is
 the same file, not a second configuration.
 
+`--changed`, `--since <rev>`, and `--pr [<number>]` narrow a run to a change set, for the
+report and the gate together: the engines still read the whole tree — a cross-file rule cannot
+answer from three files, and a scoped oxlint invocation cannot see an import it did not
+load — and the report is filtered afterwards, with every engine's counts recounted. The
+text report prints the scope on its second line, because "0 findings" over three changed
+files and over the repository are different claims. A scope that cannot be resolved (a bad
+revision, no `gh`, no PR for the branch) exits 3 rather than falling back to the whole
+tree, and the stale-ledger line is absent in a scoped run: only a whole-tree run can say an
+identity stopped firing.
+
 ```sh
 jig check                    # run every engine; fail on errors and new findings
 jig check --format sarif     # SARIF 2.1.0 for code scanning
 jig check --limit 20         # the census, then the first 20 findings
+jig check --since origin/main  # only what this branch changed, for every engine
+jig check --pr 1862          # the same, for one pull request's files
+jig check --changed          # the same, for the working tree
 jig baseline                 # accept the current findings into the baseline
 jig engines                  # what is configured, and whether it is on PATH
 jig menu                     # the cutlist stable shape and artifact files

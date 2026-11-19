@@ -35,6 +35,7 @@
 6a4d32fe2c28009d	{"consistency":1,"kind":"Probability","probability":0.8033333333333333}
 6a4f685bf45809c7	{"confidence":0.4,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.01,"name_meaning":0.1,"no_issue":0.34,"semantic_verdict":0.55}}
 6a4fb262d3b7964b	{"confidence":0.56,"kind":"Classify","label":"move","probabilities":{"merge":0.03,"move":0.71,"no_issue":0.26}}
+6a50f0bdcb630018	{"consistency":1,"kind":"Probability","probability":0.6833333333333332}
 6a512114e52eeb07	{"confidence":0.34,"kind":"Classify","label":"unclear","probabilities":{"meaning":0.02,"unclear":0.56,"value":0.42}}
 6a624bb675aa7838	{"consistency":1,"kind":"Probability","probability":0.27666666666666667}
 6a63e3bd5afc5774	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}

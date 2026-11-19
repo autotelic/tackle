@@ -7,6 +7,7 @@ d814877dcbee25ba	{"consistency":1,"kind":"Probability","probability":0.84}
 d815cfa94253bae9	{"confidence":0.4,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.17,"merge":0.02,"move":0.16,"share_a_contract":0.52,"split":0.13}}
 d81611ff452917ec	{"confidence":0.41,"kind":"Classify","label":"collapse","probabilities":{"collapse":0.61,"keep_variants":0.28,"no_issue":0.11}}
 d817fc3838266882	{"confidence":0.3,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.19,"merge":0.44,"move":0.35,"share_a_contract":0.01,"split":0.01}}
+d81a1cd83025c6b3	{"confidence":0.74,"kind":"Classify","label":"value","probabilities":{"meaning":0.17,"unclear":0,"value":0.83}}
 d81b5fe85c08c16e	{"consistency":1,"kind":"Probability","probability":0.7433333333333333}
 d820312053f1ce45	{"confidence":0.98,"kind":"Classify","label":"not_a_record","probabilities":{"mutable":0.01,"not_a_record":0.99,"supersede_only":0}}
 d82617df22f02589	{"confidence":0.41,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.05,"common_idiom":0.61,"shared_helper":0.34}}

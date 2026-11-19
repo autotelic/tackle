@@ -63,5 +63,6 @@
 54f0cbe3611a2a00	{"confidence":0.77,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.01,"must_be_current":0.14,"not_a_projection":0.85}}
 54f4b0e7662fa2ed	{"confidence":0.83,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.03,"not_an_invariant":0.89,"repair_path":0.08}}
 54f8601100224102	{"consistency":1,"kind":"Probability","probability":0.8333333333333331}
+54fb46a239371fb8	{"confidence":0.35,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.07,"not_an_invariant":0.57,"repair_path":0.36}}
 54fcc8d881e6cb38	{"confidence":0.37,"kind":"Classify","label":"move","probabilities":{"leave_it":0.04,"merge":0.07,"move":0.5,"share_a_contract":0.34,"split":0.05}}
 54fe572843f32c80	{"confidence":0.85,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.89,"stale_reference":0,"wrong_behavior":0.09,"wrong_contract":0.02}}

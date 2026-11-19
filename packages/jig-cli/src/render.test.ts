@@ -121,6 +121,28 @@ describe("the GitHub projection separates held findings from failures", () => {
     expect(failed).toContain("::error title=jig gate::failOn any-new, scope all: 1 finding(s)")
   })
 
+  it("says what a scoped run read, and never reads the ledger as stale in one", () => {
+    const stale = ["plumb/require-deprecated-tag:src/elsewhere.ts"]
+    const scoped = renderText(
+      {
+        report: report([finding({ identity: "novel" })]),
+        diff: { novel: [finding({ identity: "novel" })], known: [], stale },
+      },
+      { gate: verdict({ scope: "touched-files" }), scope: "pull request #1862: 3 file(s)" },
+    )
+    // "0 findings" over three changed files and over the whole repository look identical;
+    // only one of them means the tree is clean.
+    expect(scoped).toContain("scope — pull request #1862: 3 file(s)")
+    // Every identity outside the slice would read as stale, so a scoped run must not say so.
+    expect(scoped).not.toContain("no longer fire")
+
+    const whole = renderText(
+      { report: report([]), diff: { novel: [], known: [], stale } },
+      { gate: verdict() },
+    )
+    expect(whole).toContain("1 baselined finding(s) no longer fire")
+  })
+
   it("says the run had no verdict when an engine could not run", () => {
     const text = renderGithub(report([]), {
       gate: verdict({ exitCode: EXIT.infrastructure, infrastructure: ["plumb"] }),

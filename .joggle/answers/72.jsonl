@@ -16,6 +16,7 @@
 724d196f3070e830	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0.01}}
 72516a5a3314769b	{"confidence":0.52,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.09,"must_be_current":0.23,"not_a_projection":0.68}}
 7253f150d3b56bc3	{"consistency":1,"kind":"Probability","probability":0.8166666666666668}
+725a974ec8a7e137	{"consistency":1,"kind":"Probability","probability":0.43}
 725bf9401fd7fdf6	{"consistency":1,"kind":"Probability","probability":0.9722222222222222}
 725f0707696da24e	{"confidence":0.8,"kind":"Classify","label":"neither","probabilities":{"fact":0.11,"neither":0.87,"recomputation":0.02}}
 7261a4542dc4fafb	{"confidence":0.95,"kind":"Classify","label":"value","probabilities":{"meaning":0.03,"unclear":0,"value":0.97}}

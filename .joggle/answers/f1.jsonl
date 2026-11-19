@@ -1,5 +1,6 @@
 f10093d398c9cb82	{"confidence":0,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.5,"member_1":0.5}}
 f1039cf3c598e566	{"confidence":0.38,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.02,"common_idiom":0.59,"shared_helper":0.39}}
+f107bcfafab194fd	{"confidence":0.91,"kind":"Classify","label":"not_a_record","probabilities":{"mutable":0.04,"not_a_record":0.94,"supersede_only":0.02}}
 f1085fed6d5be41a	{"confidence":0.77,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.03,"not_an_invariant":0.85,"repair_path":0.12}}
 f109e29730019076	{"confidence":0.86,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.91,"not_a_derivation":0.01,"reimplements":0.08}}
 f10a7ce2e96aae2a	{"confidence":0.73,"kind":"Classify","label":"value","probabilities":{"meaning":0.18,"unclear":0,"value":0.82}}

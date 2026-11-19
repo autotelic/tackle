@@ -26,6 +26,7 @@ f4530ae32d0f6997	{"consistency":1,"kind":"Probability","probability":0.701111111
 f45c6ca99794eea6	{"confidence":0.7,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.8,"unclear":0.01,"value":0.19}}
 f45f2594ee2d2aa3	{"confidence":0.84,"kind":"Classify","label":"library_core","probabilities":{"domain_core":0.01,"infrastructure":0.02,"library_core":0.86,"not_applicable":0.05,"rendering_edge":0.01,"transport_edge":0.05,"utilities":0}}
 f4625bbb726beff9	{"confidence":0.79,"kind":"Classify","label":"value","probabilities":{"meaning":0.07,"unclear":0.07,"value":0.86}}
+f46a1fca13697a6d	{"confidence":0.68,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.11,"keep_variants":0.79,"no_issue":0.1}}
 f46c51b2a2c73f2d	{"confidence":0.4,"kind":"Classify","label":"value","probabilities":{"meaning":0.19,"unclear":0.21,"value":0.6}}
 f4703889b67f7b5f	{"confidence":0.79,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.14,"names_a_caller":0,"shared_vocabulary":0.86}}
 f47785990a1c669e	{"confidence":0.77,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.04,"keep_variants":0.85,"no_issue":0.11}}

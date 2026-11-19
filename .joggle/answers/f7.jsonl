@@ -62,3 +62,4 @@ f7e38d61a3a28142	{"confidence":0.96,"kind":"Classify","label":"no_issue","probab
 f7f02b7d4fc11a30	{"confidence":0.66,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.23,"names_a_caller":0,"shared_vocabulary":0.77}}
 f7fc5eed69fb2a31	{"confidence":0.92,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.04,"keep_variants":0.95,"no_issue":0.01}}
 f7fcc1cb170b1bf9	{"confidence":0.76,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.84,"unclear":0.01,"value":0.15}}
+f7fd60a6b37bc7fe	{"confidence":0.44,"kind":"Classify","label":"move","probabilities":{"move":0.72,"no_issue":0.28}}

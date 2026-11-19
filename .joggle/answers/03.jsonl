@@ -16,6 +16,7 @@
 03291dfcc0b2f293	{"confidence":0.4,"kind":"Classify","label":"leave_it","probabilities":{"leave_it":0.52,"merge":0.05,"move":0.09,"share_a_contract":0.27,"split":0.07}}
 0329510b75ad120f	{"confidence":0.15,"kind":"Classify","label":"component_or_feature","probabilities":{"already_there":0.28,"component_or_feature":0.36,"not_applicable":0.06,"route_or_handler":0.3}}
 032ad3a2bc585f79	{"confidence":0.35,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.02,"merge":0.48,"move":0.46,"share_a_contract":0.01,"split":0.03}}
+032d37f0e925724f	{"confidence":0.94,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.97,"member_1":0.03}}
 033379425a4a03a9	{"confidence":0.72,"kind":"Classify","label":"neither","probabilities":{"fact":0.15,"neither":0.81,"recomputation":0.04}}
 03357c830b51eb65	{"confidence":0.91,"kind":"Classify","label":"neither","probabilities":{"fact":0.02,"neither":0.94,"recomputation":0.04}}
 03395c14056e8ca5	{"consistency":1,"kind":"Probability","probability":0.06666666666666667}
@@ -43,6 +44,7 @@
 0392ab6fc0babfa1	{"consistency":1,"kind":"Probability","probability":0.5922222222222222}
 039634c919b813f4	{"confidence":0.47,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.01,"merge":0.58,"move":0.37,"share_a_contract":0.04,"split":0}}
 0397c218c2266913	{"confidence":0.31,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.37,"no_difference":0.06,"removes_a_hazard":0.34,"slightly_clearer":0.23},"rating":1.99}
+03a23ac5c57dcea6	{"confidence":0.2,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.13,"framework_glue":0.37,"implementation_detail":0.4,"wire_contract":0.1}}
 03a2b4ca94eacd14	{"confidence":0.32,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.15,"merge":0.01,"move":0.28,"share_a_contract":0.46,"split":0.1}}
 03a3280bd117c543	{"confidence":0.04,"kind":"Classify","label":"none","probabilities":{"lab":0.48,"none":0.52}}
 03a36a80989fda50	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}

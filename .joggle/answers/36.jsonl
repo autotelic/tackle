@@ -3,6 +3,7 @@
 360824a7159849e0	{"confidence":0.91,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.03,"must_be_current":0.03,"not_a_projection":0.94}}
 360ba1df21671aec	{"confidence":0.97,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.02,"inferred":0,"not_applicable":0.98}}
 3613ee97494a9463	{"confidence":0.79,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.84,"stale_reference":0.01,"wrong_behavior":0.13,"wrong_contract":0.02}}
+36143c8fbc861233	{"confidence":0.4,"kind":"Classify","label":"value","probabilities":{"meaning":0.37,"unclear":0.03,"value":0.6}}
 361532df5bdcaf25	{"confidence":0.95,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.96,"different_order":0.02,"different_work":0.02,"same_operation":0}}
 3615bc1627c9166b	{"confidence":0.93,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.95,"component_or_feature":0.04,"not_applicable":0.01,"route_or_handler":0}}
 36198db188e3c4c5	{"confidence":0.33,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.42,"no_difference":0.09,"removes_a_hazard":0.26,"slightly_clearer":0.23},"rating":1.85}

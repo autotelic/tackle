@@ -15,9 +15,10 @@ import {
 import { emptyBaseline, readBaseline, writeBaseline } from "./baseline.ts"
 import { explainRule, lesson, promotion, renderLesson, renderPromotion } from "./commands.ts"
 import { loadConfig } from "./config.ts"
+import type { Spawner } from "./exec.ts"
 import { resolveEngineCommand } from "./engines.ts"
 import { EXIT, gateVerdict } from "./gate.ts"
-import { touchedFiles } from "./git.ts"
+import { changedInPullRequest, changedSince, touchedFiles } from "./git.ts"
 import {
   answerGraph,
   findMatches,
@@ -102,9 +103,17 @@ const context = ({
  * baseline that reports success while the gate ignores the ledger is a trap, and the two
  * commands disagreeing about the scope is how that trap opens.
  */
-const verdictOf = (root: string, settings: HarnessConfig, run: HarnessRun) =>
+const verdictOf = (
+  root: string,
+  settings: HarnessConfig,
+  run: HarnessRun,
+  scoped?: ReadonlySet<string>,
+) =>
   Effect.gen(function* () {
-    const touched = settings.gate.mode === "touched-files" ? yield* touchedFiles(root) : undefined
+    // An explicit scope wins over the config: --since/--pr is a question about this change,
+    // and answering it with the repository's default gate would be a different run.
+    const touched =
+      scoped ?? (settings.gate.mode === "touched-files" ? yield* touchedFiles(root) : undefined)
     return gateVerdict(run, {
       mode: touched === undefined ? "all" : "touched-files",
       failOn: settings.gate.failOn ?? "any-new",
@@ -114,6 +123,69 @@ const verdictOf = (root: string, settings: HarnessConfig, run: HarnessRun) =>
         settings.engines.filter((engine) => engine.advisory === true).map((engine) => engine.id),
       ),
     })
+  })
+
+/**
+ * The change set `--changed`/`--since`/`--pr` asked for, and why it could not be read.
+ *
+ * Named for what it is, not for the flag: joggle has its own `Scope` (the files a run
+ * changed versus moved), and two packages that never import each other must not give two
+ * concepts one name.
+ */
+type ChangeScope =
+  | { readonly kind: "none" }
+  | { readonly kind: "resolved"; readonly touched: ReadonlySet<string>; readonly label: string }
+  | { readonly kind: "failed"; readonly label: string }
+
+/**
+ * Resolve the scope flag into a change set, or say which question went unanswered.
+ *
+ * A scope that cannot be resolved is NOT degraded to the whole tree: that would answer
+ * "is the repository clean" while the caller asked "is my change clean". It is reported as
+ * an infrastructure fault, the exit code that already means "this run did not look".
+ */
+const resolveScope = (
+  root: string,
+  options: {
+    readonly changed: boolean
+    readonly since: Option.Option<string>
+    readonly pr: boolean
+    readonly prNumber: Option.Option<string>
+  },
+): Effect.Effect<ChangeScope, never, Spawner> =>
+  Effect.gen(function* () {
+    const asked = [
+      options.changed ? "--changed" : undefined,
+      Option.isSome(options.since) ? "--since" : undefined,
+      options.pr ? "--pr" : undefined,
+      Option.isSome(options.prNumber) ? "--pr-number" : undefined,
+    ].filter((entry) => entry !== undefined)
+    if (asked.length > 1) {
+      return { kind: "failed", label: `choose one scope, not ${asked.join(" + ")}` }
+    }
+    if (options.changed) {
+      const touched = yield* touchedFiles(root)
+      return touched === undefined
+        ? { kind: "failed", label: "git could not say what the working tree changes" }
+        : { kind: "resolved", touched, label: "the working tree" }
+    }
+    const since = Option.getOrUndefined(options.since)
+    if (since !== undefined) {
+      const touched = yield* changedSince({ root, revision: since })
+      return touched === undefined
+        ? { kind: "failed", label: `git could not resolve ${since}` }
+        : { kind: "resolved", touched, label: `since ${since}` }
+    }
+    const number = Option.getOrUndefined(options.prNumber)
+    if (options.pr || number !== undefined) {
+      const touched = yield* changedInPullRequest({ root, number })
+      const label =
+        number === undefined ? "the current branch's pull request" : `pull request #${number}`
+      return touched === undefined
+        ? { kind: "failed", label: `gh could not list the files of ${label}` }
+        : { kind: "resolved", touched, label }
+    }
+    return { kind: "none" }
   })
 
 const checkCommand = Command.make(
@@ -131,19 +203,50 @@ const checkCommand = Command.make(
       Flag.withDescription("Maximum findings to print in the text report. 0 prints all."),
       Flag.withDefault(20),
     ),
+    changed: Flag.Boolean("changed").pipe(
+      Flag.withDescription(
+        "Scope to files changed in the working tree, the set the touched-files gate reads.",
+      ),
+      Flag.withDefault(false),
+    ),
+    since: Flag.String("since").pipe(
+      Flag.withDescription(
+        "Scope to files changed since a git revision (for example origin/main).",
+      ),
+      Flag.optional,
+    ),
+    pr: Flag.Boolean("pr").pipe(
+      Flag.withDescription("Scope to the current branch's pull request, as gh resolves it."),
+      Flag.withDefault(false),
+    ),
+    prNumber: Flag.String("pr-number").pipe(
+      Flag.withDescription("Scope to a specific pull request's changed files."),
+      Flag.optional,
+    ),
   },
   (options) =>
     Effect.gen(function* () {
       const { path, root, settings } = yield* context({ cwd: options.cwd, config: options.config })
       const baseline = yield* readBaseline(path.resolve(root, settings.gate.baseline))
-      const run = yield* harnessRun(root, settings, baseline)
+      const scope = yield* resolveScope(root, options)
+      if (scope.kind === "failed") {
+        yield* write("jig: " + scope.label)
+        yield* Effect.sync(() => {
+          process.exitCode = EXIT.usage
+        })
+        return
+      }
+      const touched = scope.kind === "resolved" ? scope.touched : undefined
+      const run = yield* harnessRun(root, settings, baseline, touched)
       // The accepted identities, so a projection can say novel from known. An empty
       // baseline still counts as "given": everything is novel until it is accepted.
       const known = new Set(baseline.identities)
       const limit = options.limit
       // The flag wins, then the repo's configured default, then the human form.
       const format = Option.getOrUndefined(options.format) ?? settings.report?.format ?? "text"
-      const verdict = yield* verdictOf(root, settings, run)
+      const verdict = yield* verdictOf(root, settings, run, touched)
+      const scopeNote =
+        scope.kind === "resolved" ? `${scope.label}: ${scope.touched.size} file(s)` : undefined
 
       switch (format) {
         case "json":
@@ -165,7 +268,14 @@ const checkCommand = Command.make(
           yield* write(renderCodeClimate(run.report))
           break
         default:
-          yield* write(renderText(run, { limit, gate: verdict }))
+          yield* write(
+            renderText(
+              run,
+              scopeNote === undefined
+                ? { limit, gate: verdict }
+                : { limit, gate: verdict, scope: scopeNote },
+            ),
+          )
           break
       }
 
@@ -183,6 +293,14 @@ const checkCommand = Command.make(
     { command: "jig check --format github", description: "Emit GitHub Actions annotations." },
     { command: "jig check --format sarif", description: "Emit SARIF 2.1.0 for code scanning." },
     { command: "jig check --limit 20", description: "Print the census and the first 20 findings." },
+    {
+      command: "jig check --since origin/main",
+      description: "Answer for a branch: only findings in what it changed.",
+    },
+    {
+      command: "jig check --pr 1862",
+      description: "The same answer for one pull request, as gh lists its files.",
+    },
   ]),
 )
 

@@ -16,6 +16,7 @@ ff3cbd86a0d3fe73	{"confidence":0.99,"kind":"Classify","label":"no_issue","probab
 ff41076dba213b01	{"confidence":0.93,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.01,"name_meaning":0,"no_issue":0.04,"semantic_verdict":0.95}}
 ff49f8c34e77a2ce	{"confidence":0.68,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.13,"framework_glue":0.01,"implementation_detail":0.76,"wire_contract":0.1}}
 ff4a07a441018515	{"confidence":0.29,"kind":"Rate","label":"slightly_clearer","probabilities":{"meaningfully_better":0.4,"no_difference":0.09,"removes_a_hazard":0.11,"slightly_clearer":0.4},"rating":1.53}
+ff4dd1ad3ae799b5	{"confidence":0.67,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.75,"stale_reference":0.03,"wrong_behavior":0.21,"wrong_contract":0.01}}
 ff4fdf472e2a82f2	{"confidence":0.1,"kind":"Classify","label":"must_be_current","probabilities":{"allowed":0.23,"must_be_current":0.4,"not_a_projection":0.37}}
 ff53c94db149b9e1	{"confidence":0.88,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.04,"framework_glue":0.01,"implementation_detail":0.91,"wire_contract":0.04}}
 ff54826f54f82348	{"consistency":1,"kind":"Probability","probability":0.85}

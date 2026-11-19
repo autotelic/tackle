@@ -25,6 +25,14 @@ export interface TextOptions {
   readonly limit?: number
   /** The gate's verdict, so the text and the exit code can never disagree. */
   readonly gate?: GateVerdict
+  /**
+   * What the run was narrowed to, when it was.
+   *
+   * A scoped run that prints the same census line as a whole-tree run is a lie of omission:
+   * "0 findings" over three changed files and "0 findings" over the repository look
+   * identical, and only one of them means the tree is clean.
+   */
+  readonly scope?: string
 }
 
 /**
@@ -107,6 +115,7 @@ export const renderText = (run: HarnessRun, options: TextOptions = {}): string =
       : total === 0
         ? `nothing new — 0 finding(s) in ${report.files} file(s)`
         : `${report.counts.error} error(s), ${report.counts.warn} warning(s), ${report.counts.info} notice(s) in ${report.files} file(s)`,
+    ...(options.scope === undefined ? [] : [`scope — ${options.scope}`]),
     "",
     "engines",
   ]
@@ -167,7 +176,9 @@ export const renderText = (run: HarnessRun, options: TextOptions = {}): string =
         .join(", ")}`,
     )
   }
-  if (diff.stale.length > 0) {
+  // Only a whole-tree run can say a ledger entry stopped firing: a scoped diff compared the
+  // ledger to a handful of files, so every identity outside that slice would read as stale.
+  if (diff.stale.length > 0 && options.scope === undefined) {
     lines.push(
       "",
       `${diff.stale.length} baselined finding(s) no longer fire; \`jig baseline\` shrinks the ledger`,

@@ -2,6 +2,7 @@ cf03b8060d956048	{"confidence":0.89,"kind":"Classify","label":"not_a_projection"
 cf08c347f64ace9d	{"confidence":0.89,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.92,"stale_reference":0,"wrong_behavior":0.06,"wrong_contract":0.02}}
 cf0974c440314a80	{"confidence":0.58,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.72,"not_a_derivation":0.27,"reimplements":0.01}}
 cf0cae0b8c7946ec	{"confidence":0.92,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.02,"same_module":0.02,"same_package":0.02,"sibling_packages":0.94}}
+cf1ef2b2cc34e22a	{"confidence":0.48,"kind":"Classify","label":"neither","probabilities":{"fact":0.13,"neither":0.65,"recomputation":0.22}}
 cf1ff252078e9cbe	{"confidence":0.48,"kind":"Classify","label":"move","probabilities":{"merge":0.18,"move":0.65,"no_issue":0.17}}
 cf27519d62cb19ad	{"confidence":0.98,"kind":"Classify","label":"not_a_record","probabilities":{"mutable":0.01,"not_a_record":0.99,"supersede_only":0}}
 cf281c602f99ffd2	{"confidence":0.68,"kind":"Classify","label":"collapse","probabilities":{"collapse":0.79,"keep_variants":0.19,"no_issue":0.02}}
@@ -9,6 +10,7 @@ cf28d01858acd73f	{"confidence":0.6,"kind":"Classify","label":"two_concepts","pro
 cf3524902044c038	{"confidence":0.74,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.13,"keep_variants":0.83,"no_issue":0.04}}
 cf36051734b471e8	{"consistency":1,"kind":"Probability","probability":0.8833333333333333}
 cf373459d9005dd8	{"confidence":0.98,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.01,"member_1":0.99}}
+cf3b928cb5cc7dd4	{"confidence":0.96,"kind":"Classify","label":"not_a_record","probabilities":{"mutable":0.02,"not_a_record":0.97,"supersede_only":0.01}}
 cf40fb13712abef3	{"confidence":0.55,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.7,"not_a_derivation":0.2,"reimplements":0.1}}
 cf42db171059fd5f	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"same_use_left":0,"same_use_right":0}}
 cf42fb4483b00753	{"confidence":0.86,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.02,"keep_variants":0.91,"no_issue":0.07}}
