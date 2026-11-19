@@ -1,7 +1,7 @@
 import { createWriteStream, type WriteStream } from 'node:fs'
 import { mkdir } from 'node:fs/promises'
 import { dirname } from 'node:path'
-import type { ExtensionAPI } from '@earendil-works/pi-coding-agent'
+import type { ExtensionAPI, ResourceLoader } from '@earendil-works/pi-coding-agent'
 import {
   type AgentSessionEvent,
   createAgentSession,
@@ -111,6 +111,12 @@ const defaultCreateSession: CreateSessionLike = async (options) => {
     ...(options.model ? { model: options.model, thinkingLevel: 'high' as const } : {}),
     sessionManager: options.sessionManager as SessionManager,
     customTools: options.customTools,
+    // The deny-pattern loader (run_checks armed): dropping this silently
+    // disarms the extension while the tool still exists — the exact bug the
+    // live verification caught on 2026-11-19 (probe fired, bash ran pnpm test).
+    ...('resourceLoader' in options && options.resourceLoader
+      ? { resourceLoader: options.resourceLoader as ResourceLoader }
+      : {}),
   })
   return { session }
 }
