@@ -54,11 +54,27 @@ export type FeatureDoneGuard = {
 export type Budgets = {
   passesPerIssue: number
   stallAfterFlatPasses: number
+  /**
+   * Backstop only (#18): the real session budgets are wall-clock and
+   * dollars. Keep this high — a session reaching it means both real caps
+   * failed to fire, which is the bug.
+   */
   maxTurnsPerSession: number
   sessionTimeoutMinutes: number
   askHumanTimeoutMinutes: number
   passesPerNight: number
   stopAfterParkedInARow: number
+  /**
+   * Optional dollar cap per Session (#18): the runaway-cost bound, checked
+   * against the Session's own accounting at every turn boundary.
+   */
+  maxCostPerSessionUsd?: number
+  /**
+   * Absolute ceiling on Passes per issue including progress-exempt ones
+   * (#18): progress (a shrinking Failure set) doesn't consume the budget,
+   * but nothing grinds forever. Default: 2× passesPerIssue.
+   */
+  maxPassesPerIssue?: number
   /** Optional dollar cap per issue across its Passes (#16). */
   maxCostPerIssueUsd?: number
   /** Optional dollar cap per day across the whole Loop (#18). */

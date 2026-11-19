@@ -50,7 +50,9 @@ export function isProviderFailure(reason: string | undefined): boolean {
   // Loop-caused kills never classify as provider, whatever they contain (#9).
   if (
     reason.startsWith('turn cap') ||
+    reason.startsWith('turn backstop') ||
     reason.startsWith('session timeout') ||
+    reason.startsWith('session $ cap') ||
     lowered.startsWith('this operation was aborted')
   ) {
     return false

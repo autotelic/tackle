@@ -161,42 +161,46 @@ describe('runSession', () => {
     expect(eventTypes.at(-1)).toBe('session.terminal')
   })
 
-  it('nudges at half and four-fifths of the turn budget', async () => {
+  it('nudges at half and four-fifths of the wall-clock budget', async () => {
     const { fake, events } = await run(
       async (f, emit) => {
         if (f.prompts.length === 1) {
-          for (let i = 0; i < 99; i++) emit(turnEnd) // settle() adds the 100th
+          // Cross half the wall-clock budget (250ms of 500ms), then four-fifths (400ms).
+          await sleep(270)
+          for (let i = 0; i < 4; i++) emit(turnEnd)
+          await sleep(150)
+          for (let i = 0; i < 4; i++) emit(turnEnd)
           settle(emit)
         }
       },
-      { maxTurns: 100 },
+      { timeoutMs: 500, maxTurns: 100 },
     )
     expect(fake.prompts).toHaveLength(3)
-    expect(fake.prompts[1]).toContain('50 of 100 turns')
+    expect(fake.prompts[1]).toContain('minutes in')
     expect(fake.prompts[1]).toContain('Start converging now')
-    expect(fake.prompts[2]).toContain('80 of 100 turns')
     expect(fake.prompts[2]).toContain('Stop exploring')
     const nudges = events.filter((e) => e.type === 'session.nudge')
     expect(nudges).toHaveLength(2)
   })
 
-  it('survives a nudge the session rejects, and nudges only at the budget fractions', async () => {
+  it('survives a nudge the session rejects, and nudges only once per fraction', async () => {
     const { fake, events, outcome } = await run(
       async (f, emit) => {
         if (f.prompts.length === 1) {
-          for (let i = 0; i < 8; i++) emit(turnEnd) // settle() adds the 9th
+          await sleep(270) // crosses half (250ms of 500ms), never four-fifths (400ms)
+          for (let i = 0; i < 8; i++) emit(turnEnd)
           settle(emit)
         } else {
           throw new Error('prompt exploded')
         }
       },
-      { maxTurns: 10 },
+      { timeoutMs: 500, maxTurns: 100 },
     )
-    // Nudges at turns 5 and 8, never on other turns; both rejected, the
-    // session still reaches its own terminal state rather than failing on
-    // the harness's message.
-    expect(events.filter((e) => e.type === 'session.nudge').map((e) => e.turns)).toEqual([5, 8])
-    expect(fake.prompts).toHaveLength(3)
+    // One nudge for the half fraction (the rapid turn ends never cross
+    // four-fifths); rejected, the session still reaches its own terminal
+    // state rather than failing on the harness's message.
+    expect(events.filter((e) => e.type === 'session.nudge')).toHaveLength(1)
+    expect(fake.prompts).toHaveLength(2)
     expect(outcome.terminal).toBe('completed')
   })
 
@@ -236,7 +240,7 @@ describe('runSession', () => {
     expect(outcome.reason).toBe('provider exploded')
   })
 
-  it('aborts past the turn cap and reports failed', async () => {
+  it('aborts at the turn backstop and reports failed', async () => {
     const { outcome } = await run(
       async (fake, emit) => {
         while (!fake.aborted) {
@@ -247,8 +251,28 @@ describe('runSession', () => {
       { maxTurns: 3 },
     )
     expect(outcome.terminal).toBe('failed')
-    expect(outcome.reason).toContain('turn cap 3')
+    expect(outcome.reason).toContain('turn backstop 3')
     expect(outcome.turns).toBeGreaterThanOrEqual(3)
+  })
+
+  it('aborts at the dollar cap and reports failed before the wall-clock does', async () => {
+    const usageTurn = (usd: number) =>
+      ev({ type: 'turn_end', message: { role: 'assistant', usage: { cost: { total: usd } } } })
+    const { outcome, events } = await run(
+      async (fake, emit) => {
+        emit(usageTurn(0.3))
+        emit(usageTurn(0.3))
+        while (!fake.aborted) await sleep(5)
+        emit(ev({ type: 'agent_end', messages: [], willRetry: false }))
+        emit(ev({ type: 'agent_settled', aborted: true }))
+      },
+      { timeoutMs: 60_000, maxCostUsd: 0.5 },
+    )
+    expect(outcome.terminal).toBe('failed')
+    expect(outcome.reason).toContain('session $ cap 0.5')
+    expect(outcome.reason).toContain('$0.60')
+    // The driver's own record of the abort, for the rules engine.
+    expect(JSON.stringify(events)).toContain('session $ cap 0.5')
   })
 
   it('aborts at the wall-clock timeout and reports failed', async () => {

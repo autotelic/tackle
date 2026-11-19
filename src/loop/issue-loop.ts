@@ -3,6 +3,7 @@ import { appendFile, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/pro
 import { dirname, join } from 'node:path'
 import { promisify } from 'node:util'
 import { Effect } from 'effect'
+import { passConsumesBudget } from '../budget.ts'
 import { runChecks } from '../checks.ts'
 import type { LoopConfig } from '../config.ts'
 import type { HumanChannel } from '../human-channel.ts'
@@ -320,12 +321,20 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
 
     // ── Budgets and history from Receipts (#8/#9) ───────────────────────
     const history = yield* tryP(() => readReceiptHistory(repoDir, config, issue.number))
-    const counted = history.filter((r) => r.checks !== null && 'outcome' in r.checks)
+    // #18: the budget counts CONSUMING passes; a failed pass that shrank
+    // the frontier is progress-exempt (its receipt carries progressExempt).
+    // Stall detection sees every pass's frontier — exempt ones included —
+    // so a shrinking-then-flatlining issue still trips the breaker.
+    const withChecks = history.filter((r) => r.checks !== null && 'outcome' in r.checks)
+    const consumed = withChecks.filter(
+      (r) => (r.checks as { progressExempt?: boolean }).progressExempt !== true,
+    )
+    const absoluteCeiling = config.budgets.maxPassesPerIssue ?? budget * 2
     const ruleContext: RuleContext = {
-      passesUsed: counted.length,
+      passesUsed: consumed.length,
       budget,
-      frontierHistory: counted.map((r) => (r.checks as { frontier: number }).frontier),
-      failureSets: counted.map((r) =>
+      frontierHistory: withChecks.map((r) => (r.checks as { frontier: number }).frontier),
+      failureSets: withChecks.map((r) =>
         (r.checks as { failureSet: FailureSetEntry[] }).failureSet.map(
           (e) => `${e.check}${e.test ? ` › ${e.test}` : ''}`,
         ),
@@ -404,7 +413,9 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
     const tried: string[] = []
 
     for (;;) {
-      if (ruleContext.passesUsed >= budget) {
+      if (ruleContext.passesUsed >= budget || passSeq >= absoluteCeiling) {
+        const why = ruleContext.passesUsed >= budget ? 'budget' : 'absolute ceiling'
+        yield* tryP(() => notify(`#${issue.number}: parked — ${why}`))
         yield* tryP(() => parkWithSummary('budget'))
         return {
           kind: 'parked',
@@ -481,6 +492,11 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
             logPath: sessionLogPath,
             // Mid-session checks through the same deterministic runner the
             // post-pass Checks use: the agent declares, the loop executes.
+            // The runaway-cost bound per Session (#18); wall-clock and the
+            // turn backstop come from the same budgets block.
+            ...(config.budgets.maxCostPerSessionUsd !== undefined
+              ? { maxCostUsd: config.budgets.maxCostPerSessionUsd }
+              : {}),
             runChecks: () => {
               const reportDir = join(
                 treadleDir,
@@ -609,8 +625,15 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
         issue: issue.number,
         sleepFn,
       })
+      // #18: a failed pass that shrank the frontier is verified progress —
+      // it doesn't consume the budget, and its receipt says so, so recovery
+      // after a restart reaches the same count.
+      const previousFrontier = lastReport?.frontier ?? null
+      const progressExempt =
+        report.outcome === 'checks.failed' &&
+        !passConsumesBudget({ previousFrontier, frontier: report.frontier })
       lastReport = report
-      ruleContext.passesUsed += 1
+      if (!progressExempt) ruleContext.passesUsed += 1
       ruleContext.frontierHistory.push(report.frontier)
       ruleContext.failureSets.push(
         report.failureSet.map((e) => `${e.check}${e.test ? ` › ${e.test}` : ''}`),
@@ -632,6 +655,7 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
             frontier: report.frontier,
             failureSet: report.failureSet,
             reportDir,
+            ...(progressExempt ? { progressExempt: true } : {}),
           },
         }),
       )

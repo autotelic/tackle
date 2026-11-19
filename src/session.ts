@@ -62,6 +62,12 @@ export type RunSessionOptions = {
   maxTurns: number
   /** Wall-clock cap (budgets.sessionTimeoutMinutes). */
   timeoutMs: number
+  /**
+   * Dollar cap per Session (budgets.maxCostPerSessionUsd): enforced on the
+   * Session's own cost accounting at each turn boundary. The wall-clock cap
+   * and the turn backstop still apply; this is the runaway-cost bound (#18).
+   */
+  maxCostUsd?: number
   /** How long ask_human waits for an answer (budgets.askHumanTimeoutMinutes). */
   askHumanTimeoutMs: number
   /** The human channel (terminal or TelePi, #14). */
@@ -360,15 +366,19 @@ function createRunChecksTool(hooks: {
   })
 }
 
-function nudgeText(fraction: 'half' | 'four-fifths', turns: number, maxTurns: number): string {
+function nudgeText(
+  fraction: 'half' | 'four-fifths',
+  elapsedMin: number,
+  budgetMin: number,
+): string {
   return fraction === 'half'
-    ? `Budget note from the harness (not the user): this session is ${turns} of ${maxTurns} turns in. ` +
+    ? `Budget note from the harness (not the user): this session is ${elapsedMin} of ~${budgetMin} minutes in. ` +
         'Start converging now: decide the smallest landable increment of your issue and what it still ' +
         'needs, then write the code and the tests before you explore further, and bring PROGRESS.md up ' +
         'to date. Exploration you cannot land is exploration the next session pays for again.'
-    : `Budget note from the harness (not the user): ${turns} of ${maxTurns} turns are gone. ` +
+    : `Budget note from the harness (not the user): ${elapsedMin} of ~${budgetMin} minutes are gone. ` +
         'Stop exploring and land it: get the code and tests written and PROGRESS.md current. If the ' +
-        "issue can't fully land in the remaining turns, leave the branch passing its checks and write " +
+        "issue can't fully land in the remaining time, leave the branch passing its checks and write " +
         'exactly what is left into PROGRESS.md so the next session starts from the truth.'
 }
 
@@ -385,21 +395,30 @@ export async function runSession(
   }
 
   let turns = 0
+  let sessionCostUsd = 0
   let abortReason: string | null = null
   let blockedQuestion: string | null = null
 
   // Budget pressure (Volta, the nudge action): at half and four-fifths of
-  // the turn budget, push the session toward landing an increment instead
-  // of dying mid-exploration at the cap. Injected as a user-role message,
-  // marked so the agent knows it is the harness, not the person.
-  const nudgedAt = new Set<number>()
+  // the wall-clock budget, push the session toward landing an increment
+  // instead of dying mid-exploration at a cap. Injected as a user-role
+  // message, marked so the agent knows it is the harness, not the person.
+  const nudgedAt = new Set<string>()
   const maybeNudge = () => {
-    const half = Math.floor(options.maxTurns / 2)
-    const fourFifths = Math.floor((options.maxTurns * 4) / 5)
-    const fraction = turns === half ? 'half' : turns === fourFifths ? 'four-fifths' : null
-    if (fraction === null || nudgedAt.has(turns)) return
-    nudgedAt.add(turns)
-    const text = nudgeText(fraction, turns, options.maxTurns)
+    const elapsed = Date.now() - startedAt
+    const fraction =
+      elapsed >= options.timeoutMs * 0.8
+        ? 'four-fifths'
+        : elapsed >= options.timeoutMs / 2
+          ? 'half'
+          : null
+    if (fraction === null || nudgedAt.has(fraction)) return
+    nudgedAt.add(fraction)
+    const text = nudgeText(
+      fraction as 'half' | 'four-fifths',
+      Math.round(elapsed / 60_000),
+      Math.round(options.timeoutMs / 60_000),
+    )
     emit({ type: 'session.nudge', turns, text })
     void session.prompt(text).catch((error: unknown) => {
       log.write(
@@ -483,10 +502,20 @@ export async function runSession(
     log.write(jsonl({ ts: new Date().toISOString(), event }))
     if (event.type === 'turn_end') {
       turns += 1
+      const usage = (event as { message?: { usage?: { cost?: { total?: number } } } }).message
+        ?.usage
+      if (typeof usage?.cost?.total === 'number') sessionCostUsd += usage.cost.total
       maybeNudge()
-      if (turns >= options.maxTurns && abortReason === null) {
-        abortReason = `turn cap ${options.maxTurns} reached`
-        void session.abort()
+      if (abortReason === null) {
+        if (options.maxCostUsd !== undefined && sessionCostUsd >= options.maxCostUsd) {
+          abortReason = `session $ cap ${options.maxCostUsd} reached ($${sessionCostUsd.toFixed(2)})`
+          void session.abort()
+        } else if (turns >= options.maxTurns) {
+          // Backstop only: wall-clock and dollars are the budgets (#18);
+          // a session this long means the caps never fired.
+          abortReason = `turn backstop ${options.maxTurns} reached`
+          void session.abort()
+        }
       }
     }
   })

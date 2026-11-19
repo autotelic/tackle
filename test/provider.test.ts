@@ -45,6 +45,8 @@ describe('isProviderFailure', () => {
 
   it('never matches loop-caused or agent failures', () => {
     expect(isProviderFailure('turn cap 80 reached')).toBe(false)
+    expect(isProviderFailure('turn backstop 300 reached')).toBe(false)
+    expect(isProviderFailure('session $ cap 0.5 reached ($0.61)')).toBe(false)
     expect(isProviderFailure('session timeout after 30 minutes')).toBe(false)
     expect(isProviderFailure('This operation was aborted')).toBe(false)
     expect(isProviderFailure(undefined)).toBe(false)

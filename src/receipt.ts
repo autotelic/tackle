@@ -27,6 +27,12 @@ export type Receipt = {
         frontier: number
         failureSet: FailureSetEntry[]
         reportDir: string
+        /**
+         * True when the failed Pass shrank the frontier: verified progress,
+         * so it did not consume the issue's budget (#18). Recovery counts
+         * budget from receipts without this flag.
+         */
+        progressExempt?: boolean
       }
     | { infrastructureFailure: string; reportDir: string }
     | null
