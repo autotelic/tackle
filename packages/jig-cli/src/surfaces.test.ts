@@ -5,7 +5,7 @@ import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import fc from "fast-check"
-import { afterAll, describe, expect, it, vi } from "vitest"
+import { afterAll, describe, expect, it } from "vitest"
 import plugin from "./opencode.ts"
 
 /*
@@ -234,46 +234,6 @@ describe("the agent surfaces and the CLI", () => {
       { numRuns: 3 },
     )
   }, 60_000)
-
-  it("registers nothing when another install already holds the tool names", async () => {
-    // pi installs extensions per scope, and this package can be present at two: a user-scope
-    // checkout and a project's own dependency. Both declare jig_* under the same names, and pi
-    // refuses the second registration -- six load errors on a boot that would otherwise work.
-    const registered: Array<string> = []
-    const warned = vi.spyOn(console, "warn").mockImplementation(() => undefined)
-    const extension = await loadPi()
-    extension({
-      getAllTools: () => [
-        {
-          name: "jig_check",
-          sourceInfo: { path: "/elsewhere/node_modules/@autotelic/jig-cli/extensions/jig.ts" },
-        },
-      ],
-      registerTool: (tool: PiTool): void => {
-        registered.push(tool.name)
-      },
-      registerCommand: (): void => {},
-    })
-    expect(registered).toEqual([])
-    // The skip must say which file it left out, or the person has no way to settle ownership.
-    expect(warned).toHaveBeenCalledOnce()
-    expect(String(warned.mock.calls[0]?.[0])).toContain("already registered by")
-    warned.mockRestore()
-  })
-
-  it("still registers when the existing tools are its own, which is a reload", async () => {
-    const registered: Array<string> = []
-    const self = fileURLToPath(new URL("../extensions/jig.ts", import.meta.url))
-    const extension = await loadPi()
-    extension({
-      getAllTools: () => [{ name: "jig_check", sourceInfo: { path: self } }],
-      registerTool: (tool: PiTool): void => {
-        registered.push(tool.name)
-      },
-      registerCommand: (): void => {},
-    })
-    expect(registered).toContain("jig_check")
-  })
 
   it("plans the same --gate all onboarding through pi and OpenCode", async () => {
     const expected = cliBytes(["onboard", "--cwd", planRoot, "--gate", "all", "--format", "json"])

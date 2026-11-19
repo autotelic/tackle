@@ -182,37 +182,6 @@ const targetFor = (cwd: string | undefined, ctx: ExtensionContext): string =>
   cwd === undefined ? ctx.cwd : resolve(ctx.cwd, cwd)
 
 export default function (pi: ExtensionAPI): void {
-  /*
-   * One install of this package is enough, and a host can have two: a user-scope checkout
-   * (`pi install <path>`) and a project's own dependency, each declaring the same six tools.
-   * pi refuses the second registration, so a duplicate became six load errors on a boot that
-   * would otherwise work — and the version that won was whichever pi loaded first.
-   *
-   * The first copy keeps the names and the second says which file it skipped, once. A RELOAD
-   * of this same extension must still register: its own tools are present in the registry
-   * with this file's path, so only a tool registered by a DIFFERENT path counts as a second
-   * install. A host without `getAllTools` (or without `sourceInfo`) registers as before.
-   */
-  const self = fileURLToPath(import.meta.url)
-  const elsewhere = (typeof pi.getAllTools === "function" ? pi.getAllTools() : []).filter(
-    (tool) =>
-      tool.name.startsWith("jig_") &&
-      tool.sourceInfo?.path !== undefined &&
-      resolve(tool.sourceInfo.path) !== resolve(self),
-  )
-  if (elsewhere.length > 0) {
-    console.warn(
-      "[jig] " +
-        elsewhere.map((tool) => tool.name).join(", ") +
-        " already registered by " +
-        (elsewhere[0]?.sourceInfo?.path ?? "another install") +
-        "; skipping " +
-        self +
-        ". Keep one: remove the jig-cli package from either the user settings " +
-        "(~/.pi/agent/settings.json) or the project's (.pi/settings.json).",
-    )
-    return
-  }
   pi.registerTool({
     name: "jig_check",
     label: "jig Check",

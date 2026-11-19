@@ -112,9 +112,6 @@ const BOUNDARY_FILES = [
   "packages/jig-cli/src/init.test.ts",
   // The baseline ledger is a committed document read from disk; the test writes entries by hand.
   "packages/jig-cli/src/baseline.test.ts",
-  // The same crossing in room: its pi extension is host-loaded and outside the compiler's
-  // program, so the test loads it by computed specifier and fakes the host surface.
-  "packages/room/src/extension.test.ts",
   // The other host's half, for the agent surfaces: it loads the pi extension by computed
   // specifier (the package deliberately does not typecheck it) and fakes both hosts down to
   // the three domains each touches. Asserting the runtime contract is the test's subject.
