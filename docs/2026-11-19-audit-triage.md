@@ -60,7 +60,7 @@ green week of Receipts.
 | 5 | blocked-on-human when issue scope names protected paths | #13 pass 2 question | machine rule: when the issue body mentions a protected path, the prompt pre-answers with the standing policy (protected wins; the wiring is the loop's job) | **PROPOSED** (next, small) |
 | 6 | Turn-cap churn | 37% of sessions, $12.43, zero completions | budget recalibration (progress-extended budgets) | **PROPOSED** (§2, needs go) |
 | 7 | Nudge text ineffective | 75% of nudged sessions still capped | superseded by #6 (structural, not textual) | — |
-| 8 | Opaque check failures ("exit code 1") | rest-gate failureSet details in receipts | addressed in part by #2 (logs + checks.json now real); further: FailureSetEntry detail should carry the first failing line for report-less checks | PROPOSED (small) |
+| 8 | Opaque check failures ("exit code 1") | rest-gate failureSet details in receipts | addressed by #2 (logs + checks.json real) + FailureSetEntry detail now carries the last error-leaning output lines | **DONE** `a70fe11` |
 | 9 | Genuine judgement questions with recommended answers | #4, #5, #6 questions | keep ask_human (correct behavior); audit well-formedness at next triage cadence | none — working as intended |
 
 ## 4. What landed tonight (commits)
@@ -72,6 +72,9 @@ green week of Receipts.
 - `8e9d397` provider classification by status table + APIError classes
 - `c2bf4bc` runChecks persists checks.json
 - `f09ad2b` deterministic branch-facts section in every prompt
+- `0e67e11` protected-path standing-policy pre-answer
+- `eef833c` budget recalibration (§2, Ed's go) + tracker `71fd0ae` config
+- `a70fe11` failure-set details carry what broke
 
 Verification: 143 unit tests green; live SDK session (glm-5.3-flash, 3 turns,
 $0.0007) confirmed: bash `pnpm test` blocked with the run_checks way-out, the
