@@ -1,15 +1,19 @@
 import { createWriteStream, type WriteStream } from 'node:fs'
 import { mkdir } from 'node:fs/promises'
 import { dirname } from 'node:path'
+import type { ExtensionAPI } from '@earendil-works/pi-coding-agent'
 import {
   type AgentSessionEvent,
   createAgentSession,
+  DefaultResourceLoader,
   defineTool,
+  getAgentDir,
   ModelRuntime,
   SessionManager,
   type ToolDefinition,
 } from '@earendil-works/pi-coding-agent'
 import { Type } from 'typebox'
+import type { CheckReport } from './report.ts'
 
 /**
  * Drive one Session through the Pi SDK (#12): start it against a worktree,
@@ -38,6 +42,16 @@ export type SessionDriverEvent =
   | { type: 'session.blocked'; question: string }
   | { type: 'session.unblocked' }
   | { type: 'session.nudge'; turns: number; text: string }
+  /** The run_checks tool was called; the deterministic runner takes it from here. */
+  | { type: 'session.checks_requested' }
+  | {
+      type: 'session.checks_result'
+      outcome: 'checks.passed' | 'checks.failed' | 'infrastructure-failure' | 'refused' | 'error'
+      frontier?: number
+      failureCount?: number
+      reportDir?: string
+      detail?: string
+    }
   | { type: 'session.terminal'; outcome: SessionOutcome }
 
 export type RunSessionOptions = {
@@ -52,6 +66,15 @@ export type RunSessionOptions = {
   askHumanTimeoutMs: number
   /** The human channel (terminal or TelePi, #14). */
   askHuman: (question: string, signal?: AbortSignal) => Promise<string>
+  /**
+   * When present, the Session gets the run_checks tool and the bash
+   * test-command deny-pattern: the agent declares what should run, the
+   * loop's deterministic runner executes it (same runner as the post-pass
+   * Checks), and the structured Failure set comes back as the tool result.
+   */
+  runChecks?: () => Promise<{ report: CheckReport; reportDir: string }>
+  /** Cap on mid-session run_checks calls (protective bound; rules tighten later). */
+  maxCheckRuns?: number
   /** The model for this and every Session; resolved against the agent's catalog. */
   model?: { readonly provider: string; readonly id: string }
   /** Per-Session JSONL event log. */
@@ -74,6 +97,8 @@ export type CreateSessionLike = (options: {
   cwd: string
   sessionManager: unknown
   customTools: ToolDefinition[]
+  /** Present when run_checks is armed: carries the bash deny-pattern factory. */
+  resourceLoader?: unknown
   /** Resolved by runSession against the agent's catalog; unchanged when unset. */
   modelRuntime?: ModelRuntime
   model?: ReturnType<ModelRuntime['getModel']>
@@ -183,6 +208,152 @@ function createAskHumanTool(hooks: {
   })
 }
 
+/**
+ * Commands that execute a test suite — run_checks owns these, not the agent's
+ * bash. Segment-scoped (stops at ; & |) so `pnpm install && pnpm test` matches
+ * the second segment, while `pnpm install` alone never matches.
+ */
+export const TEST_RUN_COMMAND =
+  /(?:^|[\s;&`|(])(?:\b(?:vitest|mocha|jest|pytest)\b|\b(?:npx|pnpm|npm|yarn)\b[^;&|`]*\btest\b|\bnode\s+--test\b|\bgo\s+test\b|\bcargo\s+test\b|\bplaywright\s+test\b)/
+
+export const RUN_CHECKS_DENY_REASON =
+  'Test suites are run by the loop, not inside your turns: call the run_checks tool ' +
+  'instead (it owns the canonical invocation — env, ports, DB stack — and returns the ' +
+  'structured failure set). Reading files and logs with bash is unaffected.'
+
+/** The bash deny-pattern: test-execution commands are refused with the way out named. */
+export function createTestCommandDenyFactory(): {
+  name: string
+  hidden: boolean
+  factory: (pi: ExtensionAPI) => void
+} {
+  return {
+    name: 'treadle-test-command-deny',
+    hidden: true,
+    factory: (pi) => {
+      pi.on('tool_call', (event) => {
+        if (event.toolName !== 'bash') return
+        const command = (event.input as { command?: unknown } | undefined)?.command
+        if (typeof command !== 'string' || !TEST_RUN_COMMAND.test(command)) return
+        return { block: true, reason: RUN_CHECKS_DENY_REASON }
+      })
+    },
+  }
+}
+
+/** The run_checks tool result, rendered compactly from the deterministic report. */
+function renderCheckResult(report: CheckReport, reportDir: string): string {
+  const lines: string[] = []
+  if (report.infrastructureFailure) {
+    lines.push(
+      `INFRASTRUCTURE FAILURE — ${report.infrastructureFailure.kind}: ${report.infrastructureFailure.detail}`,
+    )
+    lines.push(
+      'The Loop Pauses on these instead of spending budget. Do not retry and do not work ' +
+        'around it: end your turn and describe exactly what you observed in your final message.',
+    )
+  } else if (report.outcome === 'checks.passed') {
+    lines.push(
+      'checks.passed — the full Check suites are green against your branch. End your turn ' +
+        'now; the loop runs its own post-pass Checks and takes it from here.',
+    )
+  } else {
+    lines.push(
+      `checks.failed — frontier ${report.frontier}. Fix what the failure set names; then ` +
+        'you may call run_checks once more if the session budget allows.',
+    )
+    for (const entry of report.failureSet.slice(0, 8)) {
+      const where = entry.test ? `${entry.check} › ${entry.test}` : entry.check
+      lines.push(`- ${where}${entry.detail ? ` — ${entry.detail.slice(0, 200)}` : ''}`)
+    }
+  }
+  lines.push(`Full report: ${reportDir}/checks.json; per-Check logs: ${reportDir}/logs/.`)
+  return lines.join('\n')
+}
+
+type RunChecksDetails = {
+  refused?: boolean
+  outcome?: 'checks.passed' | 'checks.failed' | 'infrastructure-failure' | 'error'
+  frontier?: number
+  failureCount?: number
+  reportDir?: string
+  error?: string
+}
+
+type RunChecksToolResult = {
+  content: Array<{ type: 'text'; text: string }>
+  details: RunChecksDetails
+}
+
+function checkToolResult(text: string, details: RunChecksDetails): RunChecksToolResult {
+  return { content: [{ type: 'text', text }], details }
+}
+
+function createRunChecksTool(hooks: {
+  runChecks: () => Promise<{ report: CheckReport; reportDir: string }>
+  maxRuns: number
+  onRequested: () => void
+  onResult: (result: {
+    outcome: 'checks.passed' | 'checks.failed' | 'infrastructure-failure' | 'refused' | 'error'
+    frontier?: number
+    failureCount?: number
+    reportDir?: string
+    detail?: string
+  }) => void
+}): ToolDefinition {
+  let runsLeft = hooks.maxRuns
+  return defineTool({
+    name: 'run_checks',
+    label: 'Run checks',
+    description:
+      'Run the repository Check suites (typecheck, lint gates, test suites, REST gate) ' +
+      "through the loop's deterministic runner: same runner, same env, same ports as the " +
+      'post-pass Checks. Call it after your work is written, before you end your turn — ' +
+      'the structured failure set comes back as the tool result. Runs at most ' +
+      `${hooks.maxRuns}× per session.`,
+    promptSnippet: 'run the repository check suites and get the structured failure set',
+    parameters: Type.Object({}),
+    execute: async (_toolCallId, _params, _signal) => {
+      if (runsLeft <= 0) {
+        hooks.onResult({ outcome: 'refused', detail: `${hooks.maxRuns}-run cap reached` })
+        return checkToolResult(
+          'run_checks is disabled for this session. The loop runs the full Checks ' +
+            'after your session; write the work, keep the branch commitable, and end your turn.',
+          { refused: true },
+        )
+      }
+      runsLeft--
+      hooks.onRequested()
+      try {
+        const { report, reportDir } = await hooks.runChecks()
+        const outcome = report.infrastructureFailure
+          ? 'infrastructure-failure'
+          : (report.outcome ?? 'error')
+        hooks.onResult({
+          outcome,
+          frontier: report.frontier,
+          failureCount: report.failureSet.length,
+          reportDir,
+        })
+        return checkToolResult(renderCheckResult(report, reportDir), {
+          outcome,
+          frontier: report.frontier,
+          failureCount: report.failureSet.length,
+          reportDir,
+        })
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error)
+        hooks.onResult({ outcome: 'error', detail })
+        return checkToolResult(
+          `The checks runner failed to run (${detail}). End your turn and describe ` +
+            'what happened in your final message.',
+          { error: detail },
+        )
+      }
+    },
+  })
+}
+
 function nudgeText(fraction: 'half' | 'four-fifths', turns: number, maxTurns: number): string {
   return fraction === 'half'
     ? `Budget note from the harness (not the user): this session is ${turns} of ${maxTurns} turns in. ` +
@@ -244,6 +415,26 @@ export async function runSession(
     },
   })
 
+  // run_checks + the bash deny-pattern arm together: refusing test commands
+  // is only fair when the loop's own runner is reachable in the same session.
+  const customTools: ToolDefinition[] = [askHumanTool]
+  let resourceLoader: DefaultResourceLoader | undefined
+  if (options.runChecks !== undefined) {
+    const runChecksTool = createRunChecksTool({
+      runChecks: options.runChecks,
+      maxRuns: options.maxCheckRuns ?? 2,
+      onRequested: () => emit({ type: 'session.checks_requested' }),
+      onResult: (result) => emit({ type: 'session.checks_result', ...result }),
+    })
+    customTools.push(runChecksTool)
+    resourceLoader = new DefaultResourceLoader({
+      cwd: options.cwd,
+      agentDir: getAgentDir(),
+      extensionFactories: [createTestCommandDenyFactory()],
+    })
+    await resourceLoader.reload()
+  }
+
   // Loop-scoped model selection (#17 extension): resolve against the
   // agent's catalog (bundled + cached overlay, offline-safe) and pin the
   // same runtime on the session, so its auth and catalog are the ones the
@@ -276,7 +467,8 @@ export async function runSession(
   const { session } = await createSession({
     cwd: options.cwd,
     sessionManager: SessionManager.inMemory(),
-    customTools: [askHumanTool],
+    customTools,
+    ...(resourceLoader ? { resourceLoader } : {}),
     ...(modelRuntime ? { modelRuntime } : {}),
     ...(model ? { model } : {}),
   })

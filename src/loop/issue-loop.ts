@@ -458,6 +458,20 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
             askHumanTimeoutMs: config.budgets.askHumanTimeoutMinutes * 60_000,
             askHuman: human.askHuman,
             logPath: sessionLogPath,
+            // Mid-session checks through the same deterministic runner the
+            // post-pass Checks use: the agent declares, the loop executes.
+            runChecks: () => {
+              const reportDir = join(
+                treadleDir,
+                `checks-issue-${issue.number}-pass-${passNumber}-inflight-${stamp()}`,
+              )
+              return runChecksFn(config, {
+                repoDir: worktreeDir,
+                outDir: reportDir,
+                issue: issue.number,
+                pass: passNumber,
+              }).then((report) => ({ report, reportDir }))
+            },
           }),
         probe: async () => {
           const probe = await runSessionFn({

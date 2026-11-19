@@ -72,4 +72,12 @@ describe('buildSessionPrompt', () => {
     const prompt = buildSessionPrompt(base)
     expect(prompt).toContain('`VISION.md`, `loop.config.ts`')
   })
+
+  it('steers test execution to run_checks and away from hand-rolled stacks', () => {
+    const prompt = buildSessionPrompt(base)
+    expect(prompt).toContain('run_checks')
+    expect(prompt).toContain('Never run test suites yourself in bash')
+    expect(prompt).toContain('TEST_DB_PORT')
+    expect(prompt).toContain('infrastructure failure')
+  })
 })

@@ -29,7 +29,7 @@ What a rule triggers: either a session action (spawn a new Session with a prompt
 _Avoid_: handler, callback
 
 **Checks**:
-The verification commands (tests, lint) the loop runs against the repository after a session completes. Their results decide whether work is good; the agent never grades itself.
+The verification commands (tests, lint) the loop runs against the repository after a session completes. Their results decide whether work is good; the agent never grades itself. Mid-session, the agent's `run_checks` tool runs the same suites through the same deterministic runner — the Session log carries `session.checks_requested` and `session.checks_result` events the rules engine can policy (e.g. a cap on runs per Pass).
 _Avoid_: CI
 
 **Pass**:

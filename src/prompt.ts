@@ -34,7 +34,8 @@ export function buildSessionPrompt(input: SessionPromptInput): string {
     'You are one work session of Treadle, an automated loop working through the issues of ' +
       'this repository. The loop runs the Checks itself after you finish and decides whether ' +
       'the work is good, so you never grade yourself. Do not run `gh` or `git push`. ' +
-      'If you need a judgement call from a person, call the ask_human tool.',
+      'To see where you stand mid-session, call the run_checks tool — never run test suites ' +
+      'in bash. If you need a judgement call from a person, call the ask_human tool.',
   )
 
   sections.push(`# Vision\n\n${input.vision.trim()}`)
@@ -110,11 +111,15 @@ export function buildSessionPrompt(input: SessionPromptInput): string {
       `- Never touch the protected paths: ${protectedList}. The loop reverts them before it commits.\n` +
       "- Don't weaken or delete an existing test to make the Checks pass; if a test looks " +
       'wrong, call ask_human.\n' +
-      '- Deterministic checks run in loop code, not inside your turns: the loop runs the ' +
-      'full Check suites after your session and feeds the results into your next pass. Narrow ' +
-      'checks on the files you touched are fine (one test file, one lint or typecheck pass). ' +
-      'If you start the app to run e2e tests, stop it before you finish — the loop refuses ' +
-      'to run its own Checks while the app port is busy.',
+      '- Never run test suites yourself in bash. Call the run_checks tool instead: it runs the ' +
+      "repository Check suites through the loop's own deterministic runner — the canonical " +
+      'invocation, the right env and ports, the structured failure set. Bash stays for ' +
+      'inspecting files, logs and git state. If run_checks is refused or its budget is gone, ' +
+      'just finish your work: the loop runs the full Checks after your session either way.\n' +
+      '- Never start the app or a database stack yourself (no TEST_DB_PORT/TEST_REDIS_PORT ' +
+      'ceremonies, no server processes left running): the loop refuses to run its own Checks ' +
+      'while the app port is busy. run_checks owns all of that; if it reports an ' +
+      'infrastructure failure, stop and describe what you saw in your final message.',
   )
 
   return `${sections.join('\n\n')}\n`

@@ -3,7 +3,9 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { AgentSessionEvent, ToolDefinition } from '@earendil-works/pi-coding-agent'
 import { afterEach, describe, expect, it } from 'vitest'
+import type { CheckReport } from '../src/report.ts'
 import {
+  createTestCommandDenyFactory,
   type RunSessionOptions,
   runSession,
   type SessionDriverEvent,
@@ -82,6 +84,7 @@ type CapturedCreate = {
   cwd: string
   sessionManager: unknown
   customTools: ToolDefinition[]
+  resourceLoader?: unknown
 }
 
 type AskHumanTool = {
@@ -307,5 +310,193 @@ describe('runSession', () => {
     expect(outcome.terminal).toBe('blocked-on-human')
     expect(outcome.reason).toBe('deploy to prod?')
     expect(fake.toolResult?.content[0]?.text).toContain('No answer arrived')
+  })
+})
+
+type RunChecksTool = {
+  execute: (
+    toolCallId: string,
+    params: Record<string, never>,
+    signal: AbortSignal | undefined,
+    onUpdate: undefined,
+    ctx: unknown,
+  ) => Promise<{ content: Array<{ type: string; text?: string }>; details: unknown }>
+}
+
+const failingReport = (): CheckReport => ({
+  issue: 3,
+  pass: 2,
+  repo: '/x',
+  branch: 'loop/3',
+  startedAt: '2026-11-18T00:00:00Z',
+  durationMs: 2000,
+  outcome: 'checks.failed',
+  infrastructureFailure: null,
+  steps: [],
+  failureSet: [
+    {
+      check: 'rest-gate',
+      test: 'client contact cannot see foreign tenant',
+      detail: 'expected 403 got 200',
+    },
+  ],
+  frontier: 1,
+})
+
+describe('runSession — run_checks', () => {
+  it('executes the deterministic runner and returns the structured failure set', async () => {
+    let runs = 0
+    const { outcome, events, fake } = await run(
+      async (fakeSession, emit, getTools) => {
+        const tool = getTools().find((t) => t.name === 'run_checks') as unknown as RunChecksTool
+        fakeSession.toolResult = await tool.execute('call-1', {}, undefined, undefined, {})
+        settle(emit)
+      },
+      {
+        runChecks: () => {
+          runs++
+          return Promise.resolve({
+            report: failingReport(),
+            reportDir: '/x/.treadle/checks-inflight',
+          })
+        },
+      },
+    )
+    expect(outcome.terminal).toBe('completed')
+    expect(runs).toBe(1)
+    const text = fake.toolResult?.content[0]?.text ?? ''
+    expect(text).toContain('checks.failed — frontier 1')
+    expect(text).toContain('rest-gate › client contact cannot see foreign tenant')
+    expect(text).toContain('/x/.treadle/checks-inflight/checks.json')
+    expect(events).toContainEqual({ type: 'session.checks_requested' })
+    expect(events).toContainEqual({
+      type: 'session.checks_result',
+      outcome: 'checks.failed',
+      frontier: 1,
+      failureCount: 1,
+      reportDir: '/x/.treadle/checks-inflight',
+    })
+  })
+
+  it('renders an infrastructure failure as stop-and-describe, not a retry invitation', async () => {
+    const { fake } = await run(
+      async (fakeSession, emit, getTools) => {
+        const tool = getTools().find((t) => t.name === 'run_checks') as unknown as RunChecksTool
+        fakeSession.toolResult = await tool.execute('call-1', {}, undefined, undefined, {})
+        settle(emit)
+      },
+      {
+        runChecks: () =>
+          Promise.resolve({
+            report: {
+              ...failingReport(),
+              outcome: null,
+              infrastructureFailure: { kind: 'port-busy', detail: 'port 5433 busy' },
+            },
+            reportDir: '/x/.treadle/checks-inflight',
+          }),
+      },
+    )
+    const text = fake.toolResult?.content[0]?.text ?? ''
+    expect(text).toContain('INFRASTRUCTURE FAILURE — port-busy')
+    expect(text).toContain('Do not retry')
+  })
+
+  it('refuses past the per-session cap and keeps the session alive', async () => {
+    let runs = 0
+    const { events } = await run(
+      async (_fakeSession, emit, getTools) => {
+        const tool = getTools().find((t) => t.name === 'run_checks') as unknown as RunChecksTool
+        const first = await tool.execute('call-1', {}, undefined, undefined, {})
+        expect(JSON.stringify(first.details)).not.toContain('refused')
+        const second = await tool.execute('call-2', {}, undefined, undefined, {})
+        expect((second.details as { refused?: boolean }).refused).toBe(true)
+        settle(emit)
+      },
+      {
+        maxCheckRuns: 1,
+        runChecks: () => {
+          runs++
+          return Promise.resolve({ report: failingReport(), reportDir: '/x/r' })
+        },
+      },
+    )
+    expect(runs).toBe(1)
+    expect(events).toContainEqual({
+      type: 'session.checks_result',
+      outcome: 'refused',
+      detail: '1-run cap reached',
+    })
+  })
+
+  it('arms the tool and the deny loader together, and neither without the runner', async () => {
+    const without = await run(async (_f, emit) => settle(emit))
+    const capturedWithout = without.captured as CapturedCreate | null
+    expect(capturedWithout?.customTools.map((t) => t.name)).toEqual(['ask_human'])
+    expect(capturedWithout?.resourceLoader).toBeUndefined()
+
+    const withRunner = await run(async (_f, emit) => settle(emit), {
+      runChecks: () => Promise.resolve({ report: failingReport(), reportDir: '/x/r' }),
+    })
+    const capturedWith = withRunner.captured as CapturedCreate | null
+    expect(capturedWith?.customTools.map((t) => t.name)).toEqual(['ask_human', 'run_checks'])
+    expect(capturedWith?.resourceLoader).toBeDefined()
+  })
+})
+
+describe('TEST_RUN_COMMAND — the bash deny-pattern', () => {
+  const pi = {
+    handlers: [] as Array<(event: { toolName: string; input?: unknown }) => unknown>,
+    on(name: string, handler: (event: { toolName: string; input?: unknown }) => unknown) {
+      if (name === 'tool_call') this.handlers.push(handler)
+    },
+  }
+  const deny = createTestCommandDenyFactory()
+  deny.factory(pi as never)
+  const handle = (command: string) => {
+    for (const handler of pi.handlers) {
+      const result = handler({ toolName: 'bash', input: { command } })
+      if (result) return result as { block: boolean; reason: string }
+    }
+    return null
+  }
+
+  it('blocks suite-runner invocations with the run_checks way out', () => {
+    for (const command of [
+      'pnpm test',
+      'pnpm --filter @x/domain test:finance',
+      'npm test',
+      'npx vitest run',
+      'cd services/rest && TEST_DB_PORT=5433 TEST_REDIS_PORT=6380 pnpm test:rest:file',
+      'export PATH="$PNPM_HOME:$PATH" && npx mocha --reporter-options x',
+      'eval "$(fnm env)" && pnpm test',
+      'pytest -q',
+    ]) {
+      const blocked = handle(command)
+      expect(blocked?.block, command).toBe(true)
+      expect(blocked?.reason, command).toContain('run_checks')
+    }
+  })
+
+  it('leaves inspection, git, install and narrow non-test commands alone', () => {
+    for (const command of [
+      'cat PROGRESS.md',
+      'git status --porcelain',
+      'git diff --name-only',
+      'pnpm install --frozen-lockfile',
+      'node scripts/lint-errors-changed.mjs --base origin/main',
+      'ls .treadle/reports',
+      'grep -rn "frontier" src/ | head',
+      'oxfmt --check src/foo.ts',
+      'echo hello world',
+    ]) {
+      expect(handle(command), command).toBeNull()
+    }
+  })
+
+  it('only intercepts bash', () => {
+    for (const handler of pi.handlers) {
+      expect(handler({ toolName: 'read', input: {} })).toBeUndefined()
+    }
   })
 })
