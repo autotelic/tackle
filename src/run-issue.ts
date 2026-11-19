@@ -225,6 +225,21 @@ async function main(): Promise<number> {
     }))
     const passes: { outcome: SessionOutcome; lastText: string | null }[] = []
     let previousNote: string | null = null
+    // Where the branch stands, deterministically from git (#14/#15 question class).
+    const branchFacts = {
+      baseRef: baseRef,
+      integrationDrift: config.integrationBranch
+        ? await git(
+            worktreeDir,
+            'rev-list',
+            '--count',
+            `HEAD..origin/${config.integrationBranch}`,
+          ).then(
+            (stdout) => (Number.isFinite(Number(stdout)) ? Number(stdout) : null),
+            () => null,
+          )
+        : null,
+    }
 
     for (let pass = 1; pass <= budget; pass++) {
       console.log(`\n— pass ${pass} of ${budget}: session`)
@@ -238,6 +253,7 @@ async function main(): Promise<number> {
         pass,
         budget,
         protectedPaths: config.protectedPaths,
+        branchFacts,
       })
       const sessionLogPath = join(
         treadleDir,

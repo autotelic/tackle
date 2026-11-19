@@ -22,6 +22,16 @@ export type SessionPromptInput = {
   pass: number
   budget: number
   protectedPaths: string[]
+  /**
+   * Deterministic git facts about where the branch stands, computed by the
+   * caller from git — so the Session never burns turns discovering them and
+   * never asks the human about base staleness (the #14/#15 question class).
+   */
+  branchFacts?: {
+    baseRef: string
+    /** Commits on origin/<integrationBranch> not reachable from HEAD; null without an integration branch. */
+    integrationDrift: number | null
+  }
 }
 
 const MAX_DETAIL = 300
@@ -81,6 +91,25 @@ export function buildSessionPrompt(input: SessionPromptInput): string {
           'start changing things.',
       )
     }
+  }
+  if (input.branchFacts) {
+    const facts = input.branchFacts
+    const lines =
+      facts.integrationDrift === null
+        ? [
+            `Your branch was cut from ${facts.baseRef}.`,
+            'The loop rebases branches between passes when the base moves; never merge or rebase yourself.',
+          ]
+        : facts.integrationDrift > 0
+          ? [
+              `Your branch was cut from ${facts.baseRef}; the integration branch has moved ${facts.integrationDrift} commits ahead of it.`,
+              "Work that depends on those commits waits for the loop's next rebase (between passes). Never merge or rebase yourself — say in PROGRESS.md what you are waiting on, and continue with what does not depend on it.",
+            ]
+          : [
+              `Your branch was cut from ${facts.baseRef} and is current with the integration branch.`,
+              'The loop rebases branches between passes; never merge or rebase yourself.',
+            ]
+    sections.push(`# Where your branch stands\n\n${lines.join('\n')}`)
   }
   if (input.previousSessionNote !== null) {
     reportLines.push(

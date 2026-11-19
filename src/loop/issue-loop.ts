@@ -298,6 +298,26 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
     yield* tryP(() => installDeps(worktreeDir))
     const vision = yield* tryP(() => readFile(join(worktreeDir, 'VISION.md'), 'utf8'))
 
+    // Where the branch stands, deterministically from git: sessions burn
+    // turns discovering base staleness and then ask the human about it
+    // (issues #14 and #15 both did). The facts go into every prompt.
+    const branchFacts = {
+      baseRef: base.ref,
+      integrationDrift: yield* tryP(() =>
+        config.integrationBranch
+          ? git(
+              worktreeDir,
+              'rev-list',
+              '--count',
+              `HEAD..origin/${config.integrationBranch}`,
+            ).then(
+              (stdout) => (Number.isFinite(Number(stdout)) ? Number(stdout) : null),
+              () => null,
+            )
+          : Promise.resolve(null),
+      ),
+    }
+
     // ── Budgets and history from Receipts (#8/#9) ───────────────────────
     const history = yield* tryP(() => readReceiptHistory(repoDir, config, issue.number))
     const counted = history.filter((r) => r.checks !== null && 'outcome' in r.checks)
@@ -437,6 +457,7 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
         pass: passNumber,
         budget,
         protectedPaths: config.protectedPaths,
+        branchFacts,
         qa: yield* tryP(() => readQa(repoDir, issue.number)),
       })
       const sessionLogPath = join(

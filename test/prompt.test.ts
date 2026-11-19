@@ -80,4 +80,21 @@ describe('buildSessionPrompt', () => {
     expect(prompt).toContain('TEST_DB_PORT')
     expect(prompt).toContain('infrastructure failure')
   })
+
+  it('states the branch lineage deterministically so stale-base questions never reach a human', () => {
+    const current = buildSessionPrompt({
+      ...base,
+      branchFacts: { baseRef: 'origin/feature/h2-permissions', integrationDrift: 0 },
+    })
+    expect(current).toContain('# Where your branch stands')
+    expect(current).toContain('current with the integration branch')
+    expect(current).toContain('never merge or rebase yourself')
+
+    const stale = buildSessionPrompt({
+      ...base,
+      branchFacts: { baseRef: 'origin/feature/h2-permissions', integrationDrift: 7 },
+    })
+    expect(stale).toContain('moved 7 commits ahead')
+    expect(stale).toContain('say in PROGRESS.md what you are waiting on')
+  })
 })
