@@ -81,6 +81,23 @@ describe('buildSessionPrompt', () => {
     expect(prompt).toContain('infrastructure failure')
   })
 
+  it('pre-answers protected-path conflicts from the standing policy instead of ask_human', () => {
+    const prompt = buildSessionPrompt({
+      ...base,
+      issue: {
+        number: 13,
+        title: 'spec-check script',
+        body: 'Wire the script into CI and into loop.config.ts (a spec-check step).',
+      },
+    })
+    expect(prompt).toContain('# Already decided (standing policy)')
+    expect(prompt).toContain('`loop.config.ts`')
+    expect(prompt).toContain('Do not ask about this')
+
+    const untouched = buildSessionPrompt(base)
+    expect(untouched).not.toContain('# Already decided')
+  })
+
   it('states the branch lineage deterministically so stale-base questions never reach a human', () => {
     const current = buildSessionPrompt({
       ...base,

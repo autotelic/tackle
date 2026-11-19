@@ -37,6 +37,26 @@ export type SessionPromptInput = {
 const MAX_DETAIL = 300
 const MAX_PREVIOUS_NOTE = 1000
 
+/**
+ * Standing policy, pre-answered when the issue's own text mentions a
+ * protected path: the loop reverts protected paths and lands the wiring
+ * itself, so the agent continues with the rest instead of blocking on a
+ * human (issue #13 pass 2 burned a blocked-on-human on exactly this).
+ */
+function protectedPathPreAnswer(issueBody: string, protectedPaths: string[]): string | null {
+  const mentioned = protectedPaths.filter((path) => {
+    const name = path.split('/').pop() ?? path
+    return issueBody.includes(path) || issueBody.includes(name)
+  })
+  if (mentioned.length === 0) return null
+  return (
+    `This issue's text mentions protected path(s) ${mentioned.map((p) => `\`${p}\``).join(', ')}. ` +
+    "Those paths are the loop's, not yours: the loop lands any wiring that touches them and " +
+    'reverts anything you change there. Do not ask about this — it is already decided. ' +
+    'Do everything else the issue asks, and note in PROGRESS.md what the loop must wire.'
+  )
+}
+
 export function buildSessionPrompt(input: SessionPromptInput): string {
   const sections: string[] = []
 
@@ -110,6 +130,10 @@ export function buildSessionPrompt(input: SessionPromptInput): string {
               'The loop rebases branches between passes; never merge or rebase yourself.',
             ]
     sections.push(`# Where your branch stands\n\n${lines.join('\n')}`)
+  }
+  const preAnswer = protectedPathPreAnswer(input.issue.body, input.protectedPaths)
+  if (preAnswer !== null) {
+    sections.push(`# Already decided (standing policy)\n\n${preAnswer}`)
   }
   if (input.previousSessionNote !== null) {
     reportLines.push(
