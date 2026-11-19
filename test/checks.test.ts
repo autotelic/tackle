@@ -82,7 +82,7 @@ describe('runChecks', () => {
     const { report } = await run(['plainFail', 'unitFail'])
     expect(report.outcome).toBe('checks.failed')
     expect(report.frontier).toBe(3)
-    expect(report.failureSet[0]).toEqual({ check: 'plain', detail: 'exit code 1' })
+    expect(report.failureSet[0]).toEqual({ check: 'plain', detail: '1 — no output captured' })
   })
 
   it('treats a check timeout as an infrastructure failure and stops the run', async () => {

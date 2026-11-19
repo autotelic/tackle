@@ -41,7 +41,20 @@ describe('buildFailureSet', () => {
 
   it('has one entry per failing check that has no test report', () => {
     const set = buildFailureSet([step({ name: 'typecheck', exitCode: 2 })])
-    expect(set).toEqual([{ check: 'typecheck', detail: 'exit code 2' }])
+    expect(set).toEqual([{ check: 'typecheck', detail: '2 — no output captured' }])
+  })
+
+  it('carries the last error-leaning lines of a report-less failure', () => {
+    const set = buildFailureSet([
+      step({
+        name: 'rest-gate',
+        exitCode: 1,
+        logTail: 'seeding done\n  1 failing\n  AssertionError: expected 403 to equal 200',
+      }),
+    ])
+    expect(set).toEqual([
+      { check: 'rest-gate', detail: '1 — 1 failing | AssertionError: expected 403 to equal 200' },
+    ])
   })
 
   it('has one entry per failing test when the check has a report', () => {
@@ -68,7 +81,7 @@ describe('buildFailureSet', () => {
     const set = buildFailureSet([
       step({ name: 'unit', exitCode: 1, report: { format: 'vitest-json', failingTests: [] } }),
     ])
-    expect(set).toEqual([{ check: 'unit', detail: 'exit code 1' }])
+    expect(set).toEqual([{ check: 'unit', detail: '1 — no output captured' }])
   })
 
   it('skips timed-out and killed steps (those are infrastructure failures)', () => {

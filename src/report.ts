@@ -89,6 +89,20 @@ const MAX_DETAIL = 500
  * Build the Failure set for a Pass: one entry per failing Check that has no test
  * report, plus one per failing test from those that do (GLOSSARY.md).
  */
+/**
+ * The last non-empty lines of a step's output, error-leaning: enough for the
+ * agent to see what broke without opening the log, not the whole tail.
+ */
+function tailLines(logTail: string): string {
+  const lines = logTail
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+  const meaningful = lines.filter((line) => /error|fail|✗|×|invalid|cannot|unable/i.test(line))
+  const picked = (meaningful.length > 0 ? meaningful : lines).slice(-3)
+  return picked.join(' | ').slice(0, 300) || 'no output captured'
+}
+
 export function buildFailureSet(steps: StepResult[]): FailureSetEntry[] {
   const entries: FailureSetEntry[] = []
   for (const step of steps) {
@@ -103,9 +117,13 @@ export function buildFailureSet(steps: StepResult[]): FailureSetEntry[] {
         })
       }
     } else {
+      // Report-less checks (lint, typecheck, the REST gate) used to fail
+      // with an opaque "exit code 1": fix-checks sessions stalled on it
+      // without opening the log. The failure set now carries the last
+      // meaningful lines so the agent sees what broke in the prompt itself.
       entries.push({
         check: step.name,
-        detail: `exit code ${step.exitCode}`,
+        detail: `${step.exitCode} — ${tailLines(step.logTail)}`,
       })
     }
   }
