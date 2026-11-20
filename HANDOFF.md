@@ -1,20 +1,26 @@
-# Treadle handoff — 2026-11-19 ~07:00Z (overnight session)
+# Treadle handoff — 2026-11-19 ~07:00Z (overnight session); updated 2026-11-19 ~18:20 MST
 
 Reader: a fresh pi session (or Ed). This is the live state; history lives in
 commits, receipts, and `docs/2026-11-19-audit-triage.md`.
 
 ## 1. State in one paragraph
 
-Two lines of work finished tonight. **Treadle (project-loop)**: run_checks +
-bash deny-pattern, provider status-table classification, `checks.json`
-persistence, prompt branch-facts + protected-path pre-answers, and the full
-budget recalibration ($ + wall-clock per session, progress-extended issues,
-time-based nudges) — all committed, pushed, and **running live** in the
-forestbuilder loop (empty queue, idle by design). **Jig**: Phase 1 prep done —
-three docs in `jig/docs/treadle-prep/` (admin inventory, hermetic test-stack
-plan, VISION + gherkin skeleton), untracked. Most likely next action: jig
-Phase 2 — implement the hermetic test stack, then author Gherkin scenarios
-(unattended), after Ed confirms the rebuild shape.
+Two lines of work finished overnight, and the morning session landed the next
+one. **Treadle (project-loop)**: run_checks + bash deny-pattern, provider
+status-table classification, `checks.json` persistence, prompt branch-facts +
+protected-path pre-answers, and the full budget recalibration ($ + wall-clock
+per session, progress-extended issues, time-based nudges) — all committed,
+pushed, and **running live** in the forestbuilder loop (empty queue, idle by
+design). **Jig**: Phase 1 prep docs committed and Phase 2 **landed**
+(`971ede88`, pushed): hermetic test stack — `.env.test.example` fixture env +
+`loadTestEnv.js` mocha loader, standalone `docker-compose.test.yml` (project
+`jig-test`, owned ports 5435/6382/8109/1082), doppler removed from
+`validate_api.yaml`, `pnpm -F api test` green **with no doppler** (2391
+passing / TCL 6). Rebuild shape called by Ed: **strangler-fig inside
+`apps/admin-ui`**. The second operator's two note files were read and deleted
+(their content is captured below and in section 4). Next: playwright-bdd
+skeleton + `tier4-admin` catalog entry + Tier-A scenario authoring, then jig
+`loop.config.ts` shake-out.
 
 ## 2. Machines and paths
 
@@ -28,8 +34,12 @@ Phase 2 — implement the hermetic test stack, then author Gherkin scenarios
   Its tracker: `/Users/home/Projects/shakti/h2-permissions` (markdown; pushed to
   `~/backups/h2-permissions.git` at `71fd0ae`). `loop.config.ts` in the tracker
   clone carries the budgets.
-- `/Users/home/Projects/jig` — github `autotelic/jig`; main clean + untracked
-  `docs/treadle-prep/` (3 files, Phase 1 output).
+- `/Users/home/Projects/jig` — github `autotelic/jig`; main clean and pushed
+  through `971ede88` (Phase 1 prep docs + Phase 2 hermetic test stack). Pushes
+  touching `.github/workflows/*` must go over SSH (`git push
+  git@github.com:autotelic/jig.git main`) — the stored gh token lacks
+  `workflow` scope. Deploys trigger on `develop` pushes / manual dispatch
+  only, so main pushes are inert.
 - `/Users/home/Projects/treadle-sandbox` — sandbox target; instance not running
   since Nov 15.
 - plists: `~/Library/LaunchAgents/com.treadle-forestbuilder{,-maintenance}.plist`;
@@ -93,26 +103,42 @@ Phase 2 — implement the hermetic test stack, then author Gherkin scenarios
   `--receipts` is GitHub-only and was a silent no-op on the forestbuilder loop).
 - **Jig**: Cypress dropped (verified absent on disk — the vault plan's
   "current state" table is stale); playwright-bdd, blank slate; **doppler is
-  out of the test path** (checked-in fixture env; the api test compose currently
-  mints 15-min tokens — the one bad seam); Gherkin describes **outcomes** in two
-  tiers (Tier A API/DB seam = majority, survives the rewrite untouched; Tier B
-  thin browser tier bound via data-testid contract); **harness work builds on
-  the existing catalog + tier scripts** (add `tier4-admin`, fill tier1/tier2),
-  not a new structure.
+  out of the test path** — landed: `.env.test.example` + `loadTestEnv.js`
+  (mocha loads `.env.test` → `.env.test.example` → process-env wins),
+  standalone `docker-compose.test.yml` (project `jig-test`, owned ports db
+  5435 / redis 6382 / typesense 8109 / maildev 1082+1027, chosen to dodge the
+  machine's occupied 5433/6380 + 5434/6381), CI `validate_api.yaml`
+  doppler-free with services on the same ports, and the old
+  `docker-compose.testdb.yml` + `docker:{support,all}:test` doppler scripts
+  left as legacy aliases. `runTypesenseService.js` honors `sslmode=disable`
+  (repo convention; fixture URL carries it) — it hard-coded SSL that no local
+  postgres accepts. Fixture env discovered empirically beyond the audit table:
+  `IETF_SIG_SECRET`/`IETF_SIG_KEY` (plugins/signRequest — their absence caused
+  the keyId 500s). Gherkin describes **outcomes** in two tiers (Tier A API/DB
+  seam = majority, survives the rewrite untouched; Tier B thin browser tier
+  bound via data-testid contract); **harness work builds on the existing
+  catalog + tier scripts** (add `tier4-admin`, fill tier1/tier2), not a new
+  structure.
 - **Jev/System One** (typesafe.ai): already the judgement engine in joggle; for
   treadle, treat it as how a *script* makes calibrated calls (wire-cache makes
   it replay-safe), not as a ladder rung.
 - **The 23:04 collision**: Estone's second agent ran `git checkout -- .` on this
   repo and destroyed uncommitted work (restored ~23:07 by it; everything now
-  committed so it can't recur). It self-scoped to verify/report-only.
+  committed so it can't recur). It self-scoped to verify/report-only. Its
+  coordination notes (REPLY-NOTE / WIND-DOWN-NOTE) were read by the morning
+  session and deleted per their own instruction; substance: run_checks
+  verified live (5/5 real sessions blocked), issues #17/#18/#19 filed, its
+  only open flag (running loop predated `eef833c`) was resolved by the
+  ~23:54 kick.
 
-**Open/pending** (the question that closes each): rebuild shape — strangler-fig
-inside `apps/admin-ui` (my default) vs the brand-new-repo track (`Jig/The new
-plan.md`) → Ed. Ted chat specifics beyond treadle+monitor+feedback → Ed exports
-into the vault. Feedback lane (pi-intercom) + pi-goal-x install → interactive,
-needs Ed at a terminal. Second agent's standing arrangement → Ed. Nightly cap
-tightening ($40→~$25) → after a green week of Receipts (data, not opinion).
-#19 late-ask → audit line at the next triage cadence.
+**Resolved 2026-11-19 morning**: rebuild shape → **strangler-fig inside
+`apps/admin-ui`** (Ed's call); second operator's note files → read + deleted.
+**Open/pending** (the question that closes each): Ted chat specifics beyond
+treadle+monitor+feedback → Ed exports into the vault. Feedback lane
+(pi-intercom) + pi-goal-x install → interactive, needs Ed at a terminal.
+Second agent's standing arrangement → Ed. Nightly cap tightening ($40→~$25) →
+after a green week of Receipts (data, not opinion). #19 late-ask → audit line
+at the next triage cadence.
 
 ## 5. Live systems
 
