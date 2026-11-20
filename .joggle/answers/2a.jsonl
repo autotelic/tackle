@@ -18,6 +18,7 @@
 2a530f950e308227	{"confidence":0.51,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.36,"framework_glue":0.01,"implementation_detail":0.63,"wire_contract":0}}
 2a54f813f6d47fe5	{"confidence":0.7,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.8,"not_a_derivation":0.17,"reimplements":0.03}}
 2a5501c0f3c09475	{"confidence":0.9,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.91,"infrastructure":0,"input_adaptation":0,"mechanical":0.08,"not_applicable":0,"orchestration":0.01,"rendering":0,"request_validation":0,"transport_concern":0}}
+2a56d3be6bc5d464	{"confidence":0.85,"kind":"Classify","label":"library_core","probabilities":{"domain_core":0.09,"infrastructure":0.02,"library_core":0.87,"not_applicable":0,"rendering_edge":0,"transport_edge":0.01,"utilities":0.01}}
 2a5ae22698911506	{"confidence":0.95,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.97,"not_a_derivation":0.02,"reimplements":0.01}}
 2a5fa6c82d2c0636	{"confidence":0.5,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.12,"must_be_current":0.21,"not_a_projection":0.67}}
 2a6104000d753b22	{"confidence":0.26,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.05,"merge":0.18,"move":0.35,"share_a_contract":0.41,"split":0.01}}
@@ -33,6 +34,7 @@
 2a7f8fb99eeb3b55	{"confidence":0.38,"kind":"Classify","label":"mutable","probabilities":{"mutable":0.59,"not_a_record":0.33,"supersede_only":0.08}}
 2a85176acecb372e	{"consistency":1,"kind":"Probability","probability":0.7233333333333333}
 2a85e2a7f3e70d78	{"confidence":0.91,"kind":"Classify","label":"composes","probabilities":{"already_composed":0.02,"composes":0.93,"independent":0.05,"same_name_drift":0}}
+2a89adcc4919f3d3	{"confidence":0.92,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.02,"must_be_current":0.03,"not_a_projection":0.95}}
 2a89d4882bc572bb	{"confidence":0.31,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.08,"merge":0.16,"move":0.31,"share_a_contract":0.45,"split":0}}
 2a8b2e9d9c6042f0	{"confidence":0.68,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.76,"different_order":0,"different_work":0.24,"same_operation":0}}
 2a8c28bae45f1b33	{"confidence":0.97,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.01,"not_an_invariant":0.98,"repair_path":0.01}}

@@ -6,6 +6,7 @@
 702851b3ff98193d	{"confidence":0.94,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0,"must_be_current":0.04,"not_a_projection":0.96}}
 702852aeababdcb5	{"confidence":0.83,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.87,"component_or_feature":0.07,"not_applicable":0.05,"route_or_handler":0.01}}
 70285e23a966b68c	{"confidence":0.89,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.92,"stale_reference":0.01,"wrong_behavior":0.06,"wrong_contract":0.01}}
+702f99215a29be74	{"confidence":0.6,"kind":"Classify","label":"move","probabilities":{"leave_it":0.06,"merge":0.05,"move":0.68,"share_a_contract":0.21,"split":0}}
 70329499cae7ef72	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0.01}}
 70385169d3c01d93	{"confidence":0.91,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.05,"inferred":0.01,"not_applicable":0.94}}
 703aa84b3661d928	{"confidence":0.52,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.1,"internal_only":0.68,"unaccounted":0.22}}
@@ -35,6 +36,7 @@
 7080e0dbeeceb261	{"confidence":0.67,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.78,"unclear":0,"value":0.22}}
 7083b2a49188ed40	{"confidence":0.91,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.93,"stale_reference":0.01,"wrong_behavior":0.06,"wrong_contract":0}}
 708b811aed5f63e9	{"confidence":0.64,"kind":"Classify","label":"neither","probabilities":{"deviation":0.01,"neither":0.76,"state":0.23}}
+708c3c225260eae5	{"confidence":0.93,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.05,"framework_glue":0,"implementation_detail":0.95,"wire_contract":0}}
 708df1af14bf822b	{"consistency":1,"kind":"Probability","probability":0.8266666666666667}
 708e7a9857ece081	{"confidence":0.98,"kind":"Classify","label":"repair_path","probabilities":{"detect_only":0,"not_an_invariant":0.01,"repair_path":0.99}}
 70988395a7613faa	{"confidence":0.34,"kind":"Classify","label":"move","probabilities":{"leave_it":0.14,"merge":0.05,"move":0.47,"share_a_contract":0.31,"split":0.03}}

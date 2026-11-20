@@ -2,6 +2,7 @@
 470d3d2b5625a038	{"confidence":0.34,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.15,"must_be_current":0.29,"not_a_projection":0.56}}
 47168798bdafb1f6	{"consistency":1,"kind":"Probability","probability":0.24}
 471712602b2b9ecc	{"confidence":0.6,"kind":"Classify","label":"two_concepts","probabilities":{"intentional":0.07,"one_concept":0.2,"two_concepts":0.73}}
+471b3e50db6e3489	{"confidence":0.59,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.63,"no_difference":0.04,"removes_a_hazard":0.16,"slightly_clearer":0.17},"rating":1.9}
 471bc739aad88453	{"consistency":1,"kind":"Probability","probability":0.8377777777777777}
 471c67db4459826d	{"confidence":0.61,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.19,"name_meaning":0,"no_issue":0.1,"semantic_verdict":0.71}}
 471ff4c45f626cfc	{"confidence":0.54,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.23,"member_1":0.77}}
@@ -13,6 +14,7 @@
 474aa05c6dda78b0	{"confidence":0.74,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.09,"keep_variants":0.83,"no_issue":0.08}}
 474ac870265332a3	{"confidence":0.81,"kind":"Classify","label":"component_or_feature","probabilities":{"already_there":0.04,"component_or_feature":0.86,"not_applicable":0,"route_or_handler":0.1}}
 474b9abd0d05c5a8	{"confidence":0.5,"kind":"Classify","label":"move","probabilities":{"move":0.75,"no_issue":0.25}}
+4751eb29ed7eccc0	{"consistency":1,"kind":"Probability","probability":0.14666666666666667}
 47525cc2c6cfac6e	{"confidence":0.43,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.29,"not_an_invariant":0.62,"repair_path":0.09}}
 47547ab426ef3f23	{"confidence":0.7,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.8,"not_a_derivation":0.02,"reimplements":0.18}}
 475ce0a145778f6c	{"confidence":0.92,"kind":"Classify","label":"name_meaning","probabilities":{"magic_threshold":0,"name_meaning":0.94,"no_issue":0.04,"semantic_verdict":0.02}}

@@ -51,5 +51,6 @@
 1cddbe3f7be67693	{"confidence":0.37,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.53,"component_or_feature":0.13,"not_applicable":0.08,"route_or_handler":0.26}}
 1cdfb1d7108edd13	{"confidence":0.02,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.49,"member_1":0.51}}
 1ce25e107277ca98	{"confidence":0.72,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.08,"must_be_current":0.11,"not_a_projection":0.81}}
+1ce455ca72635003	{"confidence":0.36,"kind":"Rate","label":"slightly_clearer","probabilities":{"meaningfully_better":0.24,"no_difference":0.24,"removes_a_hazard":0.08,"slightly_clearer":0.44},"rating":1.16}
 1cf0f3dc9201e877	{"confidence":0.27,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.51,"not_a_derivation":0.45,"reimplements":0.04}}
 1cfe91e13673a406	{"confidence":0.58,"kind":"Classify","label":"move","probabilities":{"move":0.79,"no_issue":0.21}}

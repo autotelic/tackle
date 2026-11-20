@@ -26,6 +26,7 @@
 2c54d968a5a62b8b	{"confidence":0.32,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.66,"member_1":0.34}}
 2c61dd08a821c25f	{"confidence":0.64,"kind":"Classify","label":"not_a_derivation","probabilities":{"legitimate_local":0.24,"not_a_derivation":0.76,"reimplements":0}}
 2c6217e013998a55	{"confidence":0.62,"kind":"Classify","label":"value","probabilities":{"meaning":0.25,"unclear":0,"value":0.75}}
+2c66184a5ba18efd	{"confidence":0.94,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.96,"not_a_derivation":0.02,"reimplements":0.02}}
 2c67c91b2ab82c1e	{"confidence":0.5,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.24,"keep_variants":0.67,"no_issue":0.09}}
 2c6c41099f9ecbca	{"consistency":1,"kind":"Probability","probability":0.37333333333333335}
 2c6c48e118d86ab8	{"confidence":0.59,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.03,"merge":0.67,"move":0.22,"share_a_contract":0.07,"split":0.01}}

@@ -6,6 +6,7 @@
 1e09d359560f32bb	{"consistency":1,"kind":"Probability","probability":0.4166666666666667}
 1e0e33c1126ecb64	{"confidence":0.48,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.65,"not_a_derivation":0.02,"reimplements":0.33}}
 1e1bfaaf4a5227eb	{"confidence":0.91,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.01,"must_be_current":0.05,"not_a_projection":0.94}}
+1e1c4d979da850ed	{"confidence":0.6,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.7,"member_1":0.18,"member_2":0.03,"member_3":0.09}}
 1e1dbc1066ed5f91	{"confidence":0.41,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.61,"unclear":0.01,"value":0.38}}
 1e1ea3d596866c60	{"confidence":0.64,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.08,"common_idiom":0.76,"shared_helper":0.16}}
 1e2194ab064e5ba8	{"confidence":0.88,"kind":"Classify","label":"composes","probabilities":{"already_composed":0,"composes":0.91,"independent":0.08,"same_name_drift":0.01}}
@@ -26,6 +27,7 @@
 1e4b5dccf2bc000a	{"consistency":1,"kind":"Probability","probability":0.40666666666666673}
 1e4d694fd61fe1c7	{"confidence":0.34,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.03,"common_idiom":0.56,"shared_helper":0.41}}
 1e517638d8bcddc5	{"confidence":0.58,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.21,"member_1":0.79}}
+1e5bdc49f6638898	{"confidence":0.94,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.96,"not_a_derivation":0.02,"reimplements":0.02}}
 1e5fb6d71d3cce4f	{"consistency":1,"kind":"Probability","probability":0.9211111111111112}
 1e615aebf4098205	{"confidence":0.73,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.14,"must_be_current":0.04,"not_a_projection":0.82}}
 1e62a4dcf0d9a798	{"confidence":0.77,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.1,"framework_glue":0,"implementation_detail":0.83,"wire_contract":0.07}}

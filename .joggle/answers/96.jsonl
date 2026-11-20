@@ -51,6 +51,7 @@
 96cba1e6168a461b	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0.01,"wrong_behavior":0.01,"wrong_contract":0.01}}
 96cd8082f9917010	{"confidence":0.81,"kind":"Classify","label":"composes","probabilities":{"already_composed":0,"composes":0.86,"independent":0.14,"same_name_drift":0}}
 96ceede35f97ba9b	{"confidence":0.64,"kind":"Classify","label":"value","probabilities":{"meaning":0.24,"unclear":0,"value":0.76}}
+96d0fd1eb4320bc2	{"confidence":0.62,"kind":"Classify","label":"no_issue","probabilities":{"move":0.19,"no_issue":0.81}}
 96d79cbf7524c813	{"confidence":0.92,"kind":"Classify","label":"neither","probabilities":{"fact":0.03,"neither":0.95,"recomputation":0.02}}
 96e551a3ecc6156a	{"confidence":0.88,"kind":"Classify","label":"value","probabilities":{"meaning":0.08,"unclear":0,"value":0.92}}
 96e6811496df5708	{"confidence":0.98,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.01,"not_an_invariant":0.99,"repair_path":0}}

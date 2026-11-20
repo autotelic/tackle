@@ -49,9 +49,19 @@ import type { DecisionTotals } from "./schema.ts"
 // state and forgot it in the key, and the fix is to have only one of them.
 
 /** The run's judgement accounting, read once at the end of a run. */
-export class DecisionStats extends Context.Service<DecisionStats, { readonly read: Effect.Effect<DecisionTotals> }>()(
-  "@joggle/DecisionStats",
-) {}
+export class DecisionStats extends Context.Service<
+  DecisionStats,
+  {
+    readonly read: Effect.Effect<DecisionTotals>
+    /**
+     * The number of questions this run will resolve, once the caller knows it.
+     *
+     * The plans are built after this layer, so the total arrives late; the progress line
+     * prints without a denominator until it does, which is enough to tell working from hung.
+     */
+    readonly setTotal: (total: number) => Effect.Effect<void>
+  }
+>()("@joggle/DecisionStats") {}
 
 export interface Options {
   /** Directory the committed per-decision answer cache lives in. */
@@ -103,7 +113,64 @@ export interface Options {
     readonly decisions: Readonly<Record<string, Decision.Any>>
     readonly answers: Readonly<Record<string, Decision.Answer<Decision.Any>>>
   }) => void) | undefined
+  /**
+   * Where to rewrite a machine-readable progress document, atomically, on each tick.
+   *
+   * Machine-local: it describes THIS run, not a ledger. A CI log or an agent can poll it
+   * instead of tailing the answer cache to tell "working" from "hung".
+   */
+  readonly progressFile?: string | undefined
+  /** The run's input-token budget, for the progress line's denominator. */
+  readonly inputBudget?: number | undefined
 }
+
+/** How often a long run says where it is. */
+const PROGRESS_INTERVAL_MS = 10_000
+
+/** Tokens, compact enough to read in a moving line. */
+const compactTokens = (value: number): string =>
+  value >= 1_000_000
+    ? (value / 1_000_000).toFixed(1) + "M"
+    : value >= 1_000
+      ? Math.round(value / 1_000) + "k"
+      : String(value)
+
+/** Elapsed time as a person reads it. */
+const elapsedText = (milliseconds: number): string => {
+  const seconds = Math.floor(milliseconds / 1000)
+  const minutes = Math.floor(seconds / 60)
+  return minutes > 0 ? minutes + "m" + String(seconds % 60).padStart(2, "0") + "s" : seconds + "s"
+}
+
+/**
+ * The progress line, as one testable string.
+ *
+ * Counts only, and the two units are named separately: "findings" and "findings no judgement
+ * reached" added into one number is the misread that made 7,787 unjudged candidates look like
+ * 5,315 pieces of debt. No denominator before the plans are known, because a wrong one is
+ * worse than none.
+ */
+export const progressLine = (input: {
+  readonly requests: number
+  readonly calls: number
+  readonly replayed: number
+  readonly inputTokens: number
+  readonly total?: number | undefined
+  readonly budget?: number | undefined
+  readonly elapsedMs: number
+}): string =>
+  "joggle: " +
+  String(input.requests) +
+  (input.total === undefined ? "" : "/" + String(input.total)) +
+  " candidate(s) resolved (" +
+  String(input.calls) +
+  " judged, " +
+  String(input.replayed) +
+  " replayed) · " +
+  compactTokens(input.inputTokens) +
+  (input.budget === undefined ? "" : "/" + compactTokens(input.budget)) +
+  " input tokens · " +
+  elapsedText(input.elapsedMs)
 
 const emptyStats: DecisionTotals = {
   requests: 0,
@@ -225,6 +292,63 @@ export const layer = (
 
       const entries = yield* Ref.make(yield* load)
       const stats = yield* Ref.make(emptyStats)
+      const planned = yield* Ref.make<number | undefined>(undefined)
+      const startedAt = Date.now()
+      let lastBeatAt = startedAt
+
+      /*
+       * Where a long run says it is.
+       *
+       * A judged run can take many minutes, and before this it printed NOTHING until the
+       * report: stdout and stderr both zero bytes, indistinguishable from hung. The only
+       * observable signal was the answer cache growing, which is not something a person
+       * should have to tail.
+       *
+       * Counts only, on stderr, so every machine format on stdout stays clean; the two units
+       * are named separately because "findings" and "findings no judgement reached" being
+       * added into one number is exactly the misread this line exists to prevent.
+       */
+      const beat = Effect.gen(function* () {
+        const now = Date.now()
+        if (now - lastBeatAt < PROGRESS_INTERVAL_MS) return
+        lastBeatAt = now
+        const current = yield* Ref.get(stats)
+        const total = yield* Ref.get(planned)
+        const elapsedMs = now - startedAt
+        const budget = options.inputBudget ?? policy.decision.maxInputTokens
+        process.stderr.write(
+          progressLine({
+            requests: current.requests,
+            calls: current.calls,
+            replayed: current.replayed,
+            inputTokens: current.inputTokens,
+            total,
+            budget,
+            elapsedMs,
+          }) + "\n",
+        )
+        if (options.progressFile === undefined || options.readOnly === true) return
+        // Temp then rename: a poller reads a whole document or the previous one, never half.
+        const document =
+          JSON.stringify(
+            {
+              phase: "judging",
+              candidatesTotal: total ?? null,
+              candidatesResolved: current.requests,
+              judged: current.calls,
+              replayed: current.replayed,
+              apiCalls: current.calls,
+              inputTokens: current.inputTokens,
+              inputBudget: budget,
+              elapsedMs,
+              updatedAt: new Date(now).toISOString(),
+            },
+            null,
+            2,
+          ) + "\n"
+        yield* Effect.orElseSucceed(fs.writeFileString(options.progressFile + ".tmp", document), () => undefined)
+        yield* Effect.orElseSucceed(fs.rename(options.progressFile + ".tmp", options.progressFile), () => undefined)
+      })
       // Decisions run concurrently, so several calls can finish at once and each
       // one writes the whole cache. The permit keeps one writer in the file at a
       // time, so a full write cannot interleave with another.
@@ -284,7 +408,7 @@ export const layer = (
             yield* Ref.update(entries, (current) => ({ ...current, [key]: response }))
             yield* flush
             return response
-          }),
+          }).pipe(Effect.ensuring(beat)),
       })
 
       const providerModel = yield* TypeSafeDecisionModel.make({ model: policy.model }).pipe(
@@ -352,7 +476,10 @@ export const layer = (
             )
 
       return Context.make(DecisionModel.DecisionModel, decisionModel).pipe(
-        Context.add(DecisionStats, { read: Ref.get(stats) }),
+        Context.add(DecisionStats, {
+          read: Ref.get(stats),
+          setTotal: (total: number) => Ref.set(planned, total),
+        }),
         Context.add(PlanAnswers, planAnswers),
       )
     }),

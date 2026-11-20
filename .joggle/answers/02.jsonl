@@ -44,6 +44,7 @@
 02ac13e4fac0a3ba	{"confidence":0.4,"kind":"Classify","label":"not_a_record","probabilities":{"mutable":0.2,"not_a_record":0.6,"supersede_only":0.2}}
 02acea0f343e1808	{"confidence":0.89,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.07,"not_an_invariant":0.93,"repair_path":0}}
 02adf0af07ec49b6	{"confidence":0.82,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.88,"not_a_derivation":0.04,"reimplements":0.08}}
+02ae179a0d193a5b	{"consistency":1,"kind":"Probability","probability":0.4566666666666667}
 02b0aa7a44c745aa	{"confidence":0.69,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.21,"names_a_caller":0,"shared_vocabulary":0.79}}
 02b0de8d7fa6d785	{"confidence":0.52,"kind":"Classify","label":"value","probabilities":{"meaning":0.31,"unclear":0.01,"value":0.68}}
 02b2f25b22891459	{"consistency":1,"kind":"Probability","probability":0.9166666666666666}
@@ -52,6 +53,7 @@
 02b4b1ae1f054ae5	{"confidence":0.95,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.96,"component_or_feature":0.01,"not_applicable":0.01,"route_or_handler":0.02}}
 02b5be7718f38b76	{"confidence":0.89,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.93,"unclear":0.03,"value":0.04}}
 02b6111e95f97c77	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
+02bbf20d8d559d6c	{"confidence":0.53,"kind":"Classify","label":"domain_core","probabilities":{"domain_core":0.6,"infrastructure":0.01,"library_core":0.27,"not_applicable":0.01,"rendering_edge":0.06,"transport_edge":0.01,"utilities":0.04}}
 02bc0b7b6af192f6	{"confidence":0.72,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.81,"not_a_derivation":0.17,"reimplements":0.02}}
 02bf4795a74834ad	{"confidence":0.57,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.62,"infrastructure":0,"input_adaptation":0.09,"mechanical":0.04,"not_applicable":0,"orchestration":0.18,"rendering":0.07,"request_validation":0,"transport_concern":0}}
 02c799c84174006a	{"consistency":1,"kind":"Probability","probability":0.11333333333333333}

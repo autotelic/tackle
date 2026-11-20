@@ -54,6 +54,7 @@
 38c0ed0f5ef0703b	{"confidence":0.88,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.08,"independent":0.92,"meaning_switched":0}}
 38c3123ed0e17076	{"confidence":0.68,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.79,"unclear":0.01,"value":0.2}}
 38c954eb521bebde	{"confidence":0.85,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.89,"stale_reference":0.01,"wrong_behavior":0.04,"wrong_contract":0.06}}
+38cd48fe7796401b	{"confidence":0.4,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.7,"member_1":0.3}}
 38cf3e106d0817e4	{"confidence":0.69,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.79,"not_a_derivation":0.04,"reimplements":0.17}}
 38deeb6d8bcbaf10	{"consistency":1,"kind":"Probability","probability":0.62}
 38df8f57a725036f	{"consistency":1,"kind":"Probability","probability":0.7044444444444444}

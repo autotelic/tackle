@@ -27,6 +27,7 @@
 8970773b9a06fcc4	{"confidence":0.91,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.93,"stale_reference":0.01,"wrong_behavior":0.05,"wrong_contract":0.01}}
 8986ae49b46c6ca8	{"confidence":0.06,"kind":"Classify","label":"no_concept","probabilities":{"hub":0.47,"no_concept":0.53}}
 8988ec81045f46c0	{"confidence":0.34,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.02,"merge":0.47,"move":0.39,"share_a_contract":0.08,"split":0.04}}
+898a65b3c3b6eb98	{"confidence":0.84,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.88,"stale_reference":0.01,"wrong_behavior":0.09,"wrong_contract":0.02}}
 898e2fb8679a9f69	{"confidence":0.92,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.06,"same_module":0,"same_package":0,"sibling_packages":0.94}}
 898ed6e8a4f50313	{"confidence":0.73,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.01,"must_be_current":0.17,"not_a_projection":0.82}}
 89978413c9cac1f9	{"confidence":0.28,"kind":"Classify","label":"neither","probabilities":{"deviation":0.01,"neither":0.52,"state":0.47}}

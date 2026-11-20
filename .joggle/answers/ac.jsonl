@@ -5,6 +5,7 @@ ac038ae735175821	{"consistency":1,"kind":"Probability","probability":0.614444444
 ac0430eb7523101b	{"confidence":0.79,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.12,"framework_glue":0.03,"implementation_detail":0.84,"wire_contract":0.01}}
 ac0770f981cc158e	{"confidence":0.7,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.19,"names_a_caller":0.01,"shared_vocabulary":0.8}}
 ac08807d24ee42c7	{"confidence":0.28,"kind":"Classify","label":"neither","probabilities":{"deviation":0,"neither":0.52,"state":0.48}}
+ac0a33839a966227	{"confidence":0.76,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.84,"unclear":0,"value":0.16}}
 ac0cbcc132927f9e	{"confidence":0.14,"kind":"Classify","label":"one_concept","probabilities":{"one_concept":0.57,"two_concepts":0.43}}
 ac137e14bdc0f809	{"confidence":0.88,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.01,"must_be_current":0.07,"not_a_projection":0.92}}
 ac141256df27378f	{"confidence":0.94,"kind":"Classify","label":"neither","probabilities":{"fact":0.03,"neither":0.96,"recomputation":0.01}}

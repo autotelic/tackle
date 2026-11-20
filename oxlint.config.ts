@@ -351,6 +351,9 @@ export default {
         "packages/jig-cli/src/run.ts",
         "packages/cutlist/src/cli.ts",
         "packages/room/src/daemon.ts",
+        // The progress beat's elapsed clock: it measures a run and prints to stderr. It is not
+        // part of a finding's identity, the baseline, or any canonical byte.
+        "packages/joggle/src/decision.ts",
       ],
       rules: { "plumb/no-nondeterministic-core": "off" },
     },

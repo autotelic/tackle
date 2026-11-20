@@ -166,6 +166,13 @@ export default {
    */
   overrides: [
     {
+      // The progress beat measures a run with the wall clock and prints to stderr. It is not
+      // part of a finding's identity, of the ledger, or of any canonical byte, so it cannot
+      // make the ratchet non-reproducible -- which is the harm the rule exists to prevent.
+      files: ["src/decision.ts"],
+      rules: { "plumb/no-nondeterministic-core": "off" },
+    },
+    {
       // @autotelic/joggle/plugin exists to re-export a supported surface. A barrel export is
       // a smell in an application, where it hides what a module actually owns;
       // here the point IS the aggregate -- one name a rule author imports, and

@@ -55,6 +55,7 @@
 9ee872b0ba63c6a8	{"consistency":1,"kind":"Probability","probability":0.29555555555555557}
 9ee9c57bdd363258	{"confidence":0.85,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.89,"different_order":0.06,"different_work":0.04,"same_operation":0.01}}
 9eea8250d0f21055	{"confidence":0.83,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.02,"not_an_invariant":0.89,"repair_path":0.09}}
+9ef25bb362174b49	{"consistency":1,"kind":"Probability","probability":0.27444444444444444}
 9ef4a3bd8c49a47f	{"confidence":0.4,"kind":"Classify","label":"agrees","probabilities":{"agrees":0.6,"excludes":0.04,"not_applicable":0.36}}
 9ef62842cf9c5b0a	{"confidence":0.53,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.65,"component_or_feature":0.19,"not_applicable":0.09,"route_or_handler":0.07}}
 9efa56ea6c2bcc9a	{"confidence":0.97,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.02,"same_module":0,"same_package":0,"sibling_packages":0.98}}

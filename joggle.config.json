@@ -90,6 +90,16 @@
       "rule": "joggle/field-type-drift",
       "path": "packages/jig-cli/src/init.ts",
       "reason": "`RepoProfile.packageManager` is the RESOLVED manager, a closed union; `PackageManifest.packageManager` is the raw field as it appears in package.json, and that name is the JSON key the decoder reads. Two levels of one fact — the same shape joggle's own `onUnavailable` entry records."
+    },
+    {
+      "rule": "joggle/reversal",
+      "path": "packages/cutlist/src/version.ts",
+      "reason": "The reader is identical in cutlist, jig-cli and joggle because the tools never import each other: a shared module would be the runtime dependency the seam forbids. `Packaged` and `readVersion` are the same five lines in each deployable, and each reads ITS OWN manifest — the file that differs between them."
+    },
+    {
+      "rule": "joggle/duplicate-implementation",
+      "path": "packages/cutlist/src/version.ts",
+      "reason": "The other face of the reversal entry above: cutlist, jig-cli and joggle each read their own package.json because a shared reader would be the runtime dependency the seam forbids. The five lines are identical on purpose; what differs is the manifest they read."
     }
   ],
   "architecture": {

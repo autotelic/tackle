@@ -761,6 +761,9 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
       estimated += cost
       allowed.push(chunk)
     }
+    // The denominator of the progress line: every question this run will resolve, replayed or
+    // judged. Set here because the plans are built after the judgement layer exists.
+    yield* decisionStats.setTotal(allowed.reduce((sum, chunk) => sum + chunk.plans.length, 0))
 
     // A chunk that fails is CUT AND RETRIED, not abandoned.
     //

@@ -128,7 +128,12 @@ export const renderText = (run: HarnessRun, options: TextOptions = {}): string =
   // the headline, because "0 findings" from an unjudged half is not an architectural verdict
   // and a trailing engine note is easy to scroll past.
   const unjudged = report.generators.reduce((sum, generator) => sum + (generator.unjudged ?? 0), 0)
-  const notJudged = unjudged > 0 ? `; ${unjudged} candidate(s) not judged` : ""
+  // Findings and findings nobody judged are different units, and adding them into one headline
+  // number is what made "5315 findings" read as debt when most of it was budget starvation.
+  const unverified = report.diagnostics.filter((diagnostic) => diagnostic.judged === false).length
+  const notJudged =
+    (unjudged > 0 ? `; ${unjudged} candidate(s) not judged` : "") +
+    (unverified > 0 ? `; ${unverified} of these finding(s) unverified (no judgement reached)` : "")
   const lines: Array<string> = [
     report.generators.length === 0
       ? "no engines ran — this is not a clean run"

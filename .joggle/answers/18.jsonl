@@ -15,6 +15,7 @@
 1834126142271351	{"confidence":0.5,"kind":"Classify","label":"neither","probabilities":{"deviation":0.03,"neither":0.67,"state":0.3}}
 18366bd146ebb321	{"confidence":0.79,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.12,"inferred":0.02,"not_applicable":0.86}}
 183bc64f84e41f81	{"consistency":1,"kind":"Probability","probability":0.75}
+183be976fce99ca4	{"confidence":0.24,"kind":"Classify","label":"collapse","probabilities":{"collapse":0.49,"keep_variants":0.46,"no_issue":0.05}}
 183c104af7e2d164	{"confidence":0.45,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.03,"common_idiom":0.63,"shared_helper":0.34}}
 183d9395170bc11c	{"confidence":0.83,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.09,"not_an_invariant":0.89,"repair_path":0.02}}
 1844b49213b8b4fe	{"confidence":0.77,"kind":"Classify","label":"framework_glue","probabilities":{"domain_concept":0.05,"framework_glue":0.83,"implementation_detail":0.09,"wire_contract":0.03}}

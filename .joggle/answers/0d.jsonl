@@ -16,6 +16,7 @@
 0d382d4b4a9ce922	{"confidence":0.37,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.01,"merge":0.5,"move":0.19,"share_a_contract":0.15,"split":0.15}}
 0d3d15222cf12227	{"confidence":0.8,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.03,"not_an_invariant":0.87,"repair_path":0.1}}
 0d3e26c4764420f7	{"confidence":0.04,"kind":"Classify","label":"framework_glue","probabilities":{"domain_concept":0.22,"framework_glue":0.28,"implementation_detail":0.26,"wire_contract":0.24}}
+0d411305853ca197	{"confidence":0.43,"kind":"Classify","label":"member_4","probabilities":{"member_0":0.05,"member_1":0.03,"member_2":0.01,"member_3":0.01,"member_4":0.5,"member_5":0.3,"member_6":0.09,"member_7":0.01}}
 0d422d99ac908797	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0.02}}
 0d42fec6269e5f64	{"confidence":0.97,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.01,"same_module":0,"same_package":0.01,"sibling_packages":0.98}}
 0d45d044c0dda5c8	{"confidence":0.69,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.77,"stale_reference":0.01,"wrong_behavior":0.19,"wrong_contract":0.03}}
@@ -56,6 +57,7 @@
 0da2ce92f8592985	{"consistency":1,"kind":"Probability","probability":0.7066666666666667}
 0da76d2fb7b0f09d	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0}}
 0da83a6d123237ae	{"confidence":0.44,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.58,"different_order":0,"different_work":0.42,"same_operation":0}}
+0dac70b8f048c33e	{"confidence":0.65,"kind":"Rate","label":"no_difference","probabilities":{"meaningfully_better":0.05,"no_difference":0.8,"removes_a_hazard":0.05,"slightly_clearer":0.1},"rating":0.35}
 0dafc178b7c6b2e6	{"confidence":0.81,"kind":"Classify","label":"component_or_feature","probabilities":{"already_there":0.03,"component_or_feature":0.86,"not_applicable":0,"route_or_handler":0.11}}
 0dbb811b34745460	{"confidence":0.97,"kind":"Classify","label":"general","probabilities":{"general":0.98,"names_a_caller":0,"shared_vocabulary":0.02}}
 0dc82192da80b133	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0.01}}

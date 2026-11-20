@@ -21,6 +21,7 @@
 6f4ca13a88e6a83d	{"confidence":0.6,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.01,"framework_glue":0,"implementation_detail":0.7,"wire_contract":0.29}}
 6f5671b92707c2c2	{"confidence":0.3,"kind":"Classify","label":"no_issue","probabilities":{"collapse":0,"keep_variants":0.47,"no_issue":0.53}}
 6f5fa2402c7c5c82	{"confidence":0.97,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.01,"must_be_current":0.01,"not_a_projection":0.98}}
+6f63682354ac9844	{"confidence":0.5,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.67,"not_a_derivation":0.32,"reimplements":0.01}}
 6f69b83711de540b	{"consistency":0.6666666666666666,"kind":"Probability","probability":0.5566666666666666}
 6f6c89d8a95c4153	{"confidence":0.89,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.03,"name_meaning":0.01,"no_issue":0.04,"semantic_verdict":0.92}}
 6f6cbb98361bfe84	{"confidence":0.96,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.01,"not_an_invariant":0.97,"repair_path":0.02}}
@@ -55,6 +56,7 @@
 6fce2732d1c4e7cc	{"confidence":0.46,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.64,"unclear":0,"value":0.36}}
 6fcebb33bac674b7	{"confidence":0.98,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0,"must_be_current":0.01,"not_a_projection":0.99}}
 6fd33303bcd61e74	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
+6fd3b296f212ebac	{"confidence":0.64,"kind":"Classify","label":"value","probabilities":{"meaning":0.24,"unclear":0,"value":0.76}}
 6fd42882e78c210a	{"confidence":0.39,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0,"framework_glue":0,"implementation_detail":0.54,"wire_contract":0.46}}
 6fd5cff1b392741e	{"confidence":0.46,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.1,"common_idiom":0.64,"shared_helper":0.26}}
 6fda8f04db1e0599	{"confidence":0.85,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.9,"not_a_derivation":0.09,"reimplements":0.01}}

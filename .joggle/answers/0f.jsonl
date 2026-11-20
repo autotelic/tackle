@@ -14,6 +14,7 @@
 0f4b48648187bb31	{"confidence":0.35,"kind":"Classify","label":"collapse","probabilities":{"collapse":0.57,"keep_variants":0.32,"no_issue":0.11}}
 0f4fddde766da2f6	{"confidence":0.68,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.14,"inferred":0.07,"not_applicable":0.79}}
 0f531d7ace42e1c1	{"confidence":0.95,"kind":"Classify","label":"same_name_drift","probabilities":{"already_composed":0,"composes":0.03,"independent":0.01,"same_name_drift":0.96}}
+0f545bebc63b1f37	{"confidence":0.64,"kind":"Classify","label":"value","probabilities":{"meaning":0.24,"unclear":0,"value":0.76}}
 0f574bed0963c75f	{"confidence":0.66,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.77,"unclear":0.01,"value":0.22}}
 0f584b4f91e65746	{"consistency":1,"kind":"Probability","probability":0.6955555555555555}
 0f5962bb6ddbe58d	{"confidence":0.31,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.54,"not_a_derivation":0.3,"reimplements":0.16}}
@@ -47,6 +48,7 @@
 0fc8941a44430a98	{"confidence":0.89,"kind":"Classify","label":"same_name_drift","probabilities":{"already_composed":0.01,"composes":0.05,"independent":0.02,"same_name_drift":0.92}}
 0fc93728a16e497a	{"confidence":0.32,"kind":"Classify","label":"domain_concept","probabilities":{"domain_concept":0.49,"framework_glue":0.01,"implementation_detail":0.37,"wire_contract":0.13}}
 0fcd606a9a76c6f6	{"confidence":0.95,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.96,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0.02}}
+0fd0314c13fec8bf	{"confidence":0.42,"kind":"Classify","label":"one_concept","probabilities":{"intentional":0.15,"one_concept":0.61,"two_concepts":0.24}}
 0fd31741f1886908	{"confidence":0.94,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.03,"inferred":0.01,"not_applicable":0.96}}
 0fdb78d73f975586	{"confidence":0.94,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.01,"must_be_current":0.03,"not_a_projection":0.96}}
 0fe34a62d114484e	{"confidence":0.4,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.6,"not_a_derivation":0.06,"reimplements":0.34}}

@@ -9,6 +9,7 @@
 4415a8eb4e65f992	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
 4419b51b0097f3aa	{"confidence":0.53,"kind":"Classify","label":"not_applicable","probabilities":{"domain_core":0.03,"infrastructure":0.01,"library_core":0.29,"not_applicable":0.6,"rendering_edge":0,"transport_edge":0,"utilities":0.07}}
 44264f46604dbe1b	{"consistency":1,"kind":"Probability","probability":0.6644444444444445}
+442967b3a15c2f71	{"confidence":0.46,"kind":"Rate","label":"no_difference","probabilities":{"meaningfully_better":0.11,"no_difference":0.63,"removes_a_hazard":0.03,"slightly_clearer":0.23},"rating":0.55}
 4430acf81e47130c	{"confidence":0.86,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.91,"not_a_derivation":0.01,"reimplements":0.08}}
 4439139f91ae248e	{"confidence":0.98,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.01,"not_an_invariant":0.99,"repair_path":0}}
 443f596d272f77b2	{"confidence":0.89,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.92,"stale_reference":0.03,"wrong_behavior":0.04,"wrong_contract":0.01}}
@@ -23,6 +24,7 @@
 4453f214e4993f85	{"confidence":0.83,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.89,"not_a_derivation":0.08,"reimplements":0.03}}
 4457b05b7c7c21c8	{"confidence":0.62,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.25,"names_a_caller":0,"shared_vocabulary":0.75}}
 445e66f785b64313	{"confidence":0.56,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.31,"framework_glue":0,"implementation_detail":0.67,"wire_contract":0.02}}
+4466c0f104e857f1	{"confidence":0.92,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.95,"not_a_derivation":0.03,"reimplements":0.02}}
 44684bc14f37dc01	{"confidence":0.33,"kind":"Classify","label":"value","probabilities":{"meaning":0.43,"unclear":0.02,"value":0.55}}
 4468ce1d79cda707	{"confidence":0.34,"kind":"Classify","label":"value","probabilities":{"meaning":0.43,"unclear":0.01,"value":0.5599999999999999}}
 446afd3c30ad116e	{"confidence":0.82,"kind":"Classify","label":"no_issue","probabilities":{"merge":0.02,"move":0.1,"no_issue":0.88}}

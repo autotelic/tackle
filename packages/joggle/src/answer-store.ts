@@ -385,7 +385,11 @@ const writeAll = (
       if (entries.size === 0) {
         yield* removeQuietly(fs, file)
       } else {
-        yield* fs.writeFileString(file, renderShard(entries.values())).pipe(Effect.orElseSucceed(() => undefined))
+        // Temp then rename: a killed run must leave a whole ledger or the previous one, never
+        // half a line. A truncated tail decodes as "skipped lines", which loses answers
+        // silently -- exactly the failure an interruption is most likely to cause.
+        yield* Effect.orElseSucceed(fs.writeFileString(file + ".tmp", renderShard(entries.values())), () => undefined)
+        yield* Effect.orElseSucceed(fs.rename(file + ".tmp", file), () => undefined)
       }
       const names = yield* fs.readDirectory(target).pipe(Effect.orElseSucceed(() => []))
       for (const name of names) {
@@ -404,9 +408,10 @@ const writeAll = (
     }
     yield* fs.makeDirectory(target, { recursive: true }).pipe(Effect.orElseSucceed(() => undefined))
     for (const [shard, list] of grouped) {
-      yield* fs
-        .writeFileString(path.join(target, shard + ".jsonl"), renderShard(list))
-        .pipe(Effect.orElseSucceed(() => undefined))
+      // Same rule as the single layout: a shard appears whole or not at all.
+      const file = path.join(target, shard + ".jsonl")
+      yield* Effect.orElseSucceed(fs.writeFileString(file + ".tmp", renderShard(list)), () => undefined)
+      yield* Effect.orElseSucceed(fs.rename(file + ".tmp", file), () => undefined)
     }
     const names = yield* fs.readDirectory(target).pipe(Effect.orElseSucceed(() => []))
     for (const name of names) {

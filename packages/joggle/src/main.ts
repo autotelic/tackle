@@ -313,6 +313,11 @@ const checkCommand = Command.make(
             decisionLayer({
               cacheDir,
               wireCacheDir: machineCache,
+              // Machine-local, pollable, and never part of the committed ledger: it describes
+              // THIS run. A long judged run used to print nothing at all until the report.
+              progressFile: path.join(machineCache, "progress.json"),
+              inputBudget:
+                Option.getOrUndefined(config.maxTokens) ?? effective.decision?.maxInputTokens,
               offline: config.offline,
               apiKey,
               layout: effective.cache?.layout,

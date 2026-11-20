@@ -17,6 +17,7 @@
 432ff5928323a25d	{"confidence":0.93,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0.03}}
 4331be52c84bf4b7	{"confidence":0.84,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.01,"no_issue":0.11,"semantic_verdict":0.88}}
 4332f105aba25bf8	{"confidence":0.71,"kind":"Classify","label":"wire_contract","probabilities":{"domain_concept":0.2,"framework_glue":0.01,"implementation_detail":0.01,"wire_contract":0.78}}
+433883d7136983ff	{"confidence":0.88,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.91,"stale_reference":0,"wrong_behavior":0.07,"wrong_contract":0.02}}
 433c06e694e2a53a	{"confidence":0.72,"kind":"Classify","label":"value","probabilities":{"meaning":0.19,"unclear":0,"value":0.81}}
 434598130d6d926d	{"confidence":0.53,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.65,"component_or_feature":0.17,"not_applicable":0.12,"route_or_handler":0.06}}
 434843eae1e4fae3	{"confidence":0.7,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.8,"member_1":0.08,"member_2":0.12}}
@@ -46,6 +47,7 @@
 43cd8788d85e5127	{"confidence":0.61,"kind":"Classify","label":"no_issue","probabilities":{"collapse":0,"keep_variants":0.26,"no_issue":0.74}}
 43d7a77627f1e044	{"consistency":1,"kind":"Probability","probability":0.5611111111111112}
 43da338913755a57	{"confidence":0.22,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.16,"not_an_invariant":0.48,"repair_path":0.36}}
+43e08f40d7fed409	{"confidence":0.94,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.97,"member_1":0.03}}
 43e1444617f3d31e	{"confidence":0.61,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.23,"internal_only":0.74,"unaccounted":0.03}}
 43e2737d8a57b9dc	{"confidence":0.88,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.92,"not_a_derivation":0.03,"reimplements":0.05}}
 43e281f13b5fa807	{"confidence":0.97,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.01,"not_an_invariant":0.98,"repair_path":0.01}}

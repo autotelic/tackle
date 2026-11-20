@@ -33,18 +33,20 @@ import { renderGithub, renderJson, renderText } from "./render.ts"
 import { harnessRun, type HarnessRun } from "./run.ts"
 import { isRoomInvocation, runRoom } from "./room.ts"
 import { initialise, initJson, onboardingFor, summaryFor } from "./init.ts"
+import { VERSION } from "./version.ts"
 
 /**
- * The version a `--version` prints.
+ * The version a `--version` prints: the package's, plus the checkout's commit when there is one.
  *
- * Every member of the family is `0.0.0` until it is published, so after a rebuild the number
- * cannot answer "is my link current?". When jig runs from a checkout the commit is the answer,
- * and it rides along as semver build metadata: `0.0.0+1a2b3c4`.
+ * The version is what npm has, so "is my install current" is answerable from the binary. A
+ * checkout adds its short sha as build metadata (`0.5.0+1a2b3c4`), so the OTHER question —
+ * "is my link pointing at the commit I just made?" — stays answerable too. It used to answer
+ * only the second, with a hardcoded `0.0.0`, which made an npm install look like a checkout.
  */
 const versionOf = (): string => {
   // SAFETY: `execFileSync` is the synchronous boundary to git. A published tarball and a plain
-  // directory have no repository, which is the ordinary case here rather than an error, and the
-  // version without a commit is the answer there.
+  // directory have no repository, which is the ordinary case here rather than an error; the
+  // package version alone is the answer there.
   try {
     const sha = execFileSync("git", ["rev-parse", "--short", "HEAD"], {
       cwd: fileURLToPath(new URL("..", import.meta.url)),
@@ -52,9 +54,9 @@ const versionOf = (): string => {
     })
       .toString()
       .trim()
-    return sha === "" ? "0.0.0" : `0.0.0+${sha}`
+    return sha === "" ? VERSION : `${VERSION}+${sha}`
   } catch {
-    return "0.0.0"
+    return VERSION
   }
 }
 

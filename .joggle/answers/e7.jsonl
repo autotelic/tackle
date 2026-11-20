@@ -28,6 +28,7 @@ e792103f1e662dab	{"confidence":0.8,"kind":"Classify","label":"legitimate_local",
 e79a1303f44fc749	{"consistency":1,"kind":"Probability","probability":0.43333333333333335}
 e79d77589a581d03	{"consistency":1,"kind":"Probability","probability":0.10000000000000002}
 e79fb2d798d341eb	{"consistency":1,"kind":"Probability","probability":0.42333333333333334}
+e7af7ed8e3dffa0d	{"confidence":0.3,"kind":"Classify","label":"member_2","probabilities":{"member_0":0.37,"member_1":0.1,"member_2":0.53}}
 e7afcd000b67612a	{"confidence":0.55,"kind":"Classify","label":"value","probabilities":{"meaning":0.26,"unclear":0.04,"value":0.7}}
 e7b0f50c4ae2d649	{"confidence":0.31,"kind":"Classify","label":"not_a_derivation","probabilities":{"legitimate_local":0.43,"not_a_derivation":0.54,"reimplements":0.03}}
 e7bae13dce6e6d9c	{"confidence":0.66,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.03,"must_be_current":0.2,"not_a_projection":0.77}}

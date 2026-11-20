@@ -64,4 +64,5 @@
 32f511dc4f7cdd58	{"confidence":0.83,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.87,"component_or_feature":0.04,"not_applicable":0.06,"route_or_handler":0.03}}
 32f810c52dd49546	{"consistency":1,"kind":"Probability","probability":0.7266666666666667}
 32fcbbbe671e6b39	{"confidence":1,"kind":"Classify","label":"already_there","probabilities":{"already_there":1,"component_or_feature":0,"not_applicable":0,"route_or_handler":0}}
+32fd174fd9ff578e	{"confidence":0.38,"kind":"Classify","label":"no_issue","probabilities":{"merge":0.1,"move":0.31,"no_issue":0.59}}
 32ffa36cd5788cca	{"confidence":0.61,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.04,"must_be_current":0.22,"not_a_projection":0.74}}

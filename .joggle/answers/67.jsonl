@@ -34,6 +34,7 @@
 679b310df6d9831b	{"consistency":1,"kind":"Probability","probability":0.73}
 679d5d9e8a57ceb1	{"confidence":0.79,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.86,"not_a_derivation":0.09,"reimplements":0.05}}
 679d7a58acabd922	{"confidence":0.6,"kind":"Classify","label":"framework_glue","probabilities":{"domain_concept":0.16,"framework_glue":0.7,"implementation_detail":0.13,"wire_contract":0.01}}
+67a25e2507114a29	{"confidence":0.91,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.94,"not_a_derivation":0.03,"reimplements":0.03}}
 67a2856057172ce2	{"confidence":0.39,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.4,"no_issue":0.06,"semantic_verdict":0.54}}
 67aa0061a5b48693	{"confidence":0.52,"kind":"Classify","label":"no_issue","probabilities":{"merge":0.01,"move":0.31,"no_issue":0.68}}
 67ae6db3ff798063	{"confidence":0.87,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.09,"same_module":0,"same_package":0.01,"sibling_packages":0.9}}

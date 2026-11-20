@@ -1,4 +1,6 @@
 340192058025fd6f	{"confidence":0.31,"kind":"Classify","label":"one_concept","probabilities":{"already_named":0.09,"coincidental":0.37,"one_concept":0.54}}
+34028ac58a5c6545	{"confidence":0.91,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.94,"not_a_derivation":0.03,"reimplements":0.03}}
+3403e024c73fdeaf	{"confidence":0.88,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.92,"not_a_derivation":0.07,"reimplements":0.01}}
 3404cff5a6528952	{"consistency":1,"kind":"Probability","probability":0.9466666666666667}
 340611b79e8fea5b	{"confidence":0.95,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.96,"stale_reference":0.01,"wrong_behavior":0.02,"wrong_contract":0.01}}
 340669236fb93e2b	{"confidence":0.79,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.86,"not_a_derivation":0.06,"reimplements":0.08}}
@@ -30,6 +32,7 @@
 345e630e21ffcd97	{"consistency":1,"kind":"Probability","probability":0.7133333333333334}
 3463af5ddb136075	{"confidence":0.26,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.1,"must_be_current":0.39,"not_a_projection":0.51}}
 3473882affcb01d5	{"confidence":0.89,"kind":"Classify","label":"wire_contract","probabilities":{"domain_concept":0.06,"framework_glue":0.01,"implementation_detail":0.01,"wire_contract":0.92}}
+347739b455971bc6	{"confidence":0.72,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.08,"keep_variants":0.81,"no_issue":0.11}}
 347eb0032d92616b	{"confidence":0.53,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.69,"not_a_derivation":0.29,"reimplements":0.02}}
 3480c961e2a8a9c7	{"confidence":0.95,"kind":"Classify","label":"infrastructure","probabilities":{"domain_logic":0.01,"infrastructure":0.96,"input_adaptation":0,"mechanical":0,"not_applicable":0,"orchestration":0.03,"rendering":0,"request_validation":0,"transport_concern":0}}
 3483b36a52978771	{"confidence":0.34,"kind":"Classify","label":"move","probabilities":{"leave_it":0.12,"merge":0.03,"move":0.47,"share_a_contract":0.29,"split":0.09}}

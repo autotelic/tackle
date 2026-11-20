@@ -75,3 +75,4 @@
 7dfb4e3f96569ffe	{"confidence":0.3,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.53,"not_a_derivation":0.47,"reimplements":0}}
 7dfc02d4eda9af19	{"consistency":1,"kind":"Probability","probability":0.1977777777777778}
 7dfd617df51ac52b	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
+7dff7996da55c458	{"confidence":0.43,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.62,"unclear":0.01,"value":0.37}}

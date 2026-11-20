@@ -21,6 +21,7 @@
 6d5f9ebdbc058421	{"confidence":0.85,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.89,"stale_reference":0.03,"wrong_behavior":0.06,"wrong_contract":0.02}}
 6d638d8f8b969835	{"confidence":0.83,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.05,"inferred":0.06,"not_applicable":0.89}}
 6d6a30fa26a65559	{"confidence":0.7,"kind":"Classify","label":"state","probabilities":{"deviation":0.02,"neither":0.18,"state":0.8}}
+6d6d7e99b36853fa	{"confidence":0.15,"kind":"Rate","label":"slightly_clearer","probabilities":{"meaningfully_better":0.33,"no_difference":0.16,"removes_a_hazard":0.18,"slightly_clearer":0.33},"rating":1.53}
 6d6e9b101ae72dfe	{"confidence":0.85,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.89,"stale_reference":0,"wrong_behavior":0.07,"wrong_contract":0.04}}
 6d733195e12a2c1b	{"confidence":0.33,"kind":"Classify","label":"two_concepts","probabilities":{"intentional":0.42,"one_concept":0.03,"two_concepts":0.55}}
 6d774980b54f15dd	{"confidence":0.85,"kind":"Classify","label":"rendering","probabilities":{"domain_logic":0.03,"infrastructure":0,"input_adaptation":0,"mechanical":0,"not_applicable":0,"orchestration":0.1,"rendering":0.87,"request_validation":0,"transport_concern":0}}
@@ -37,6 +38,7 @@
 6d954811a9dfec42	{"confidence":0.94,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.01,"must_be_current":0.03,"not_a_projection":0.96}}
 6d96cf7ae5296111	{"confidence":0.83,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.89,"not_a_derivation":0.1,"reimplements":0.01}}
 6d9a991049c38a5f	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
+6da104d05e8092e4	{"confidence":0,"kind":"Rate","label":"no_difference","probabilities":{"meaningfully_better":0.05,"no_difference":0.6,"removes_a_hazard":0.28,"slightly_clearer":0.07},"rating":1.01}
 6da5db972f1bce64	{"consistency":1,"kind":"Probability","probability":0.8766666666666666}
 6da713563cd36007	{"confidence":0.24,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.62,"member_1":0.38}}
 6dabecc33333c730	{"confidence":0.82,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.88,"not_a_derivation":0.11,"reimplements":0.01}}

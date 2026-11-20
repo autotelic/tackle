@@ -38,12 +38,14 @@
 7e89bd57897f0777	{"consistency":1,"kind":"Probability","probability":0.7611111111111111}
 7e8e47053b539f07	{"confidence":0.66,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.22,"independent":0.77,"meaning_switched":0.01}}
 7e90d4c45019dd82	{"confidence":0.88,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.92,"unclear":0.01,"value":0.07}}
+7e994b703edfe6d8	{"confidence":0.57,"kind":"Classify","label":"leave_it","probabilities":{"leave_it":0.66,"merge":0.03,"move":0.17,"share_a_contract":0.11,"split":0.03}}
 7e9d6f977536d8ee	{"confidence":0.95,"kind":"Classify","label":"infrastructure","probabilities":{"domain_logic":0,"infrastructure":0.96,"input_adaptation":0,"mechanical":0.02,"not_applicable":0,"orchestration":0.02,"rendering":0,"request_validation":0,"transport_concern":0}}
 7e9f1899b3a430d6	{"confidence":0.89,"kind":"Classify","label":"general","probabilities":{"general":0.93,"names_a_caller":0,"shared_vocabulary":0.07}}
 7e9f8cb5c661e54a	{"confidence":0.52,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.24,"no_issue":0.12,"semantic_verdict":0.64}}
 7ea20b8e51d75fb3	{"confidence":0.8,"kind":"Classify","label":"neither","probabilities":{"fact":0.07,"neither":0.87,"recomputation":0.06}}
 7ea368b0e26a20c7	{"consistency":1,"kind":"Probability","probability":0.7477777777777778}
 7ea43df0c6f2e4a4	{"confidence":0.92,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.94,"stale_reference":0.01,"wrong_behavior":0.04,"wrong_contract":0.01}}
+7eaac7ec6b83436b	{"confidence":0.76,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.84,"unclear":0,"value":0.16}}
 7eab9e0d14697cd7	{"confidence":0.61,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.26,"names_a_caller":0,"shared_vocabulary":0.74}}
 7eac96bfdbbab86b	{"confidence":0.96,"kind":"Classify","label":"not_a_derivation","probabilities":{"legitimate_local":0.03,"not_a_derivation":0.97,"reimplements":0}}
 7ead6144d9183116	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0}}

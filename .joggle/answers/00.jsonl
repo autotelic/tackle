@@ -42,6 +42,7 @@
 00bfe368141e8ec3	{"confidence":0.62,"kind":"Classify","label":"move","probabilities":{"move":0.81,"no_issue":0.19}}
 00c194c6c43677cd	{"confidence":0.3,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.46,"names_a_caller":0.01,"shared_vocabulary":0.53}}
 00c2bc7b420abf79	{"confidence":0.79,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.86,"not_a_derivation":0.13,"reimplements":0.01}}
+00c59bff43e24510	{"confidence":0.5,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.67,"not_a_derivation":0.32,"reimplements":0.01}}
 00c784129e72a6a0	{"confidence":0.62,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.75,"not_a_derivation":0.2,"reimplements":0.05}}
 00cc5b1ed43225bc	{"confidence":0.92,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0,"must_be_current":0.05,"not_a_projection":0.95}}
 00cc7fa5ace94599	{"confidence":0.73,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.82,"not_a_derivation":0.16,"reimplements":0.02}}

@@ -9,6 +9,7 @@
 1428bee698472c71	{"confidence":0.96,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.97,"not_a_derivation":0.02,"reimplements":0.01}}
 142a1e7e3607c3e9	{"confidence":0.77,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.13,"keep_variants":0.85,"no_issue":0.02}}
 142e98a827b482c9	{"confidence":0.52,"kind":"Classify","label":"general","probabilities":{"general":0.68,"names_a_caller":0.31,"shared_vocabulary":0.01}}
+142f882fe868b4a7	{"confidence":0.55,"kind":"Classify","label":"framework_glue","probabilities":{"domain_concept":0.05,"framework_glue":0.66,"implementation_detail":0.24,"wire_contract":0.05}}
 14385c14f466814c	{"consistency":1,"kind":"Probability","probability":0.9055555555555556}
 1438a29914ee203d	{"confidence":0.59,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.01,"name_meaning":0.04,"no_issue":0.26,"semantic_verdict":0.69}}
 143d5a20b11c93d0	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}

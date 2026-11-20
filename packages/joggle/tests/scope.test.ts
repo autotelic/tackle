@@ -161,7 +161,7 @@ test("a candidate outside the run's scope is never judged and never reported", a
       Effect.provide(Layer.mergeAll(
         recordingModel(seen),
         planAnswersLayer,
-        Layer.succeed(DecisionStats, { read: Effect.succeed(totals) }),
+        Layer.succeed(DecisionStats, { read: Effect.succeed(totals), setTotal: () => Effect.void }),
         tsgoStub,
         Layer.succeed(Rules, [probe]),
       )),
@@ -205,7 +205,7 @@ test("a git-changed scope judges only the files that moved", async () => {
       }).pipe(
         Effect.provide(recordingModel(seen)),
         Effect.provide(planAnswersLayer),
-        Effect.provide(Layer.succeed(DecisionStats, { read: Effect.succeed(totals) })),
+        Effect.provide(Layer.succeed(DecisionStats, { read: Effect.succeed(totals), setTotal: () => Effect.void })),
         Effect.provide(tsgoStub),
         Effect.provide(Layer.succeed(Rules, [probe])),
       )
@@ -292,7 +292,7 @@ test("an empty git scope says so instead of looking like a clean repository", as
       }).pipe(
         Effect.provide(recordingModel(seen)),
         Effect.provide(planAnswersLayer),
-        Effect.provide(Layer.succeed(DecisionStats, { read: Effect.succeed(totals) })),
+        Effect.provide(Layer.succeed(DecisionStats, { read: Effect.succeed(totals), setTotal: () => Effect.void })),
         Effect.provide(tsgoStub),
         Effect.provide(Layer.succeed(Rules, [probe])),
       )
@@ -331,7 +331,7 @@ test("a candidate past the run's token budget is reported, not judged", async ()
       }).pipe(
         Effect.provide(recordingModel(seen)),
         Effect.provide(planAnswersLayer),
-        Effect.provide(Layer.succeed(DecisionStats, { read: Effect.succeed(totals) })),
+        Effect.provide(Layer.succeed(DecisionStats, { read: Effect.succeed(totals), setTotal: () => Effect.void })),
         Effect.provide(tsgoStub),
         Effect.provide(Layer.succeed(Rules, [probe])),
       )

@@ -21,6 +21,7 @@
 0c4b56b2b4744978	{"confidence":0.95,"kind":"Classify","label":"one_thing","probabilities":{"already_named":0.02,"one_thing":0.97,"unrelated":0.01}}
 0c4c5836a9c67925	{"confidence":0.93,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0.02}}
 0c558b56cb306120	{"confidence":0.85,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.1,"independent":0.9,"meaning_switched":0}}
+0c5707212515d2c5	{"confidence":0.86,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.91,"not_a_derivation":0.02,"reimplements":0.07}}
 0c57e284f149e752	{"confidence":0.48,"kind":"Classify","label":"domain_concept","probabilities":{"domain_concept":0.61,"framework_glue":0.01,"implementation_detail":0.25,"wire_contract":0.13}}
 0c594ef406161129	{"confidence":0.91,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0,"must_be_current":0.06,"not_a_projection":0.94}}
 0c5a0063b3929343	{"consistency":1,"kind":"Probability","probability":0.06666666666666667}
