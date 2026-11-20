@@ -1,5 +1,5 @@
 import { execFile, spawn } from 'node:child_process'
-import { createWriteStream } from 'node:fs'
+import { createWriteStream, existsSync } from 'node:fs'
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import net from 'node:net'
 import { join } from 'node:path'
@@ -64,6 +64,23 @@ async function stopProcessGroup(pid: number): Promise<void> {
 }
 
 /**
+ * The login shell a check runs under.
+ *
+ * The operator's own shell first: node and pnpm live behind fnm on some machines, and only a
+ * login shell has that PATH. Then bash, then sh, because a CI runner has no zsh at all and a
+ * hardcoded `zsh` is a check that cannot run where it is deployed. Never interactive: `-i`
+ * reads the operator's .zshrc, whose prompts and hooks then appear in a verifier's output, and
+ * a check that depends on who ran it is not the hermetic check this file promises.
+ */
+function loginShell(): { command: string; args: ReadonlyArray<string> } {
+  const fromEnv = process.env.SHELL
+  if (fromEnv !== undefined && fromEnv !== '' && existsSync(fromEnv))
+    return { command: fromEnv, args: ['-lc'] }
+  if (existsSync('/bin/bash')) return { command: '/bin/bash', args: ['-lc'] }
+  return { command: '/bin/sh', args: ['-lc'] }
+}
+
+/**
  * Run a shell command from `cwd`, streaming combined output to `logPath`.
  * On timeout the whole process group is killed and the result is marked timedOut.
  */
@@ -73,11 +90,8 @@ function spawnLogged(
 ): Promise<SpawnResult> {
   const start = Date.now()
   return new Promise((resolve, reject) => {
-    // Login shell: node and pnpm live behind fnm on this machine, so plain shells lack them.
-    // Not INTERACTIVE: `-i` reads the operator's .zshrc, whose prompts and hooks then appear in
-    // a check's output -- a verifier that depends on who ran it is not the hermetic check this
-    // file promises. `-l` still gets the login PATH.
-    const child = spawn('zsh', ['-lc', command], {
+    const shell = loginShell()
+    const child = spawn(shell.command, [...shell.args, command], {
       cwd: options.cwd,
       env: options.env,
       detached: true,
@@ -244,7 +258,8 @@ export async function runChecks(
       }
     } else {
       const appLog = join(logsDir, 'app.log')
-      const app = spawn('zsh', ['-lc', config.app.start], {
+      const shell = loginShell()
+      const app = spawn(shell.command, [...shell.args, config.app.start], {
         cwd: repoDir,
         env: { ...env, ...config.app.env },
         detached: true,

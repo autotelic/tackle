@@ -340,8 +340,10 @@ What changed on the way in:
   **729 findings** under `oxlint.config.ts` today.
 - Two fixes made because the move exposed them, not because the code was wrong for its own machine:
   checks spawned `zsh -lic`, so the operator's `.zshrc` (prompts, `zle`) landed in a verifier's
-  output; it is `-lc` now — login for PATH, not interactive. And the sandbox config test reads a
-  sibling `treadle-sandbox` checkout; it skips when that checkout is absent instead of failing.
+  output; it is `-lc` now — login for PATH, not interactive. And the shell itself was hardcoded
+  `zsh`, which the Linux CI runner does not have; it is `$SHELL` when it exists, then bash, then
+  sh. The sandbox config test reads a sibling `treadle-sandbox` checkout; it skips when that
+  checkout is absent instead of failing.
 - `effect` is declared `^4.1.2` upstream but **typechecks and passes its suite on the workspace's
   4.0.5**, so the one Effect line holds. If the conversion ever needs 4.1, the catalog bump is the
   deliberate move, not a second line.
