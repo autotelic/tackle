@@ -326,7 +326,9 @@ What changed on the way in:
 
 - `package.json` is `@autotelic/treadle` and **private**: it is an application, not a library.
   It has no `bin` and no `exports`, so it is not publishable yet; a CLI surface is the step that
-  makes it so. Dependencies go through the catalog (`effect`, `xstate`, `@xstate/effect`,
+  makes it so. It does get its **own releases**: `.changeset/config.json` sets
+  `privatePackages: { version: true, tag: true }`, so a changeset versions it, writes its
+  CHANGELOG and creates `@autotelic/treadle@x.y.z` — without publishing to npm. Dependencies go through the catalog (`effect`, `xstate`, `@xstate/effect`,
   `typebox`, `@earendil-works/pi-coding-agent`, `vitest`, `@types/node`), and the nested
   `pnpm-lock.yaml` is gone.
 - `tsconfig.json` extends `tsconfig.base.json`, with `exactOptionalPropertyTypes` and
