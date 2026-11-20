@@ -66,7 +66,7 @@ const OXLINT = {
 }
 
 describe("mergeArchitecture", () => {
-  it("re-drafts the includes and keeps the forbid by layer name", () => {
+  it("keeps authored includes and forbids, adds a missing layer, and reports both", () => {
     const existing = {
       unavailable: "count",
       rules: { "joggle/import-cycle": "error", "joggle/layer-direction": "error" },
@@ -87,13 +87,17 @@ describe("mergeArchitecture", () => {
     })
     const layers = (merged.file.architecture as { layers: ReadonlyArray<Record<string, unknown>> })
       .layers
-    // The include set follows the tree; the forbid follows the name a person wrote it against.
+    // An authored include set is a decision, not a draft: --force used to replace it, which
+    // silently dropped the patterns a repository had put in a tier. The draft only adds.
     expect(layers[0]).toEqual({
       name: "domain",
-      include: ["packages/domain/**", "packages/shakti-utils/**"],
+      include: ["packages/domain/**"],
       forbid: ["react*", "fastify*"],
     })
-    expect(merged.forbidsKept).toEqual(["domain"])
+    expect(merged.includesKept).toEqual(["domain"])
+    // A layer the tree has now and the file does not is added.
+    expect(layers.map((layer) => layer["name"])).toEqual(["domain", "legacy", "ui"])
+    expect(merged.forbidsKept).toEqual(["domain", "legacy"])
     // A layer the draft stopped proposing is reported, never dropped in silence: a lost
     // forbid makes layer-purity read 0 on a rule nobody removed.
     expect(merged.forbidsDropped).toEqual(["legacy"])
@@ -1256,6 +1260,29 @@ describe("initialise", () => {
     }
   })
 
+  it("never replaces a cookbook a repository edited, and says what is waiting", async () => {
+    const root = project(
+      {
+        json: [["package.json", { packageManager: "pnpm@9.10.0", scripts: { lint: "oxlint ." } }]],
+        text: [["AGENTS.md", "**Project**: a forestry system.\n"]],
+      },
+      ["oxlint"],
+    )
+    try {
+      await initialiseIn(root)
+      const edited = readFileSync(join(root, "JIG.md"), "utf8") + "\n## Our own notes\n"
+      writeFileSync(join(root, "JIG.md"), edited)
+      const forced = await initialiseIn(root, { force: true })
+      // --force refreshes the harness; it does not decide that a repository's own guidance
+      // was wrong. The fresh copy sits beside the file for a human to diff and merge.
+      expect(readFileSync(join(root, "JIG.md"), "utf8")).toBe(edited)
+      expect(forced.pending).toContain("JIG.md.new")
+      expect(existsSync(join(root, "JIG.md.new"))).toBe(true)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
   it("is idempotent, and --force never replaces the accepted baseline", async () => {
     const root = project(
       {
@@ -1279,8 +1306,11 @@ describe("initialise", () => {
       expect(readFileSync(join(root, ".jig-baseline.json"), "utf8")).toBe(baseline)
 
       const forced = await initialiseIn(root, { force: true })
-      expect(forced.written).toEqual(
-        expect.arrayContaining(["jig.config.json", "JIG.md", "ONBOARD.md"]),
+      // A refreshed document is either rewritten (unchanged text) or left beside a .new copy
+      // (the repository edited it) -- never silently replaced by template text.
+      expect(forced.written).toContain("jig.config.json")
+      expect([...forced.written, ...forced.kept]).toEqual(
+        expect.arrayContaining(["JIG.md", "ONBOARD.md"]),
       )
       expect(forced.kept).toContain(".jig-baseline.json")
       expect(readFileSync(join(root, ".jig-baseline.json"), "utf8")).toBe(baseline)

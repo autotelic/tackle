@@ -79,6 +79,7 @@
 21dc0dfdb9026b21	{"consistency":1,"kind":"Probability","probability":0.6333333333333333}
 21dcf5b297bedcec	{"confidence":0.73,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.82,"not_a_derivation":0.15,"reimplements":0.03}}
 21e017d0ae80a868	{"confidence":0.71,"kind":"Classify","label":"wire_contract","probabilities":{"domain_concept":0.2,"framework_glue":0.01,"implementation_detail":0.01,"wire_contract":0.78}}
+21e5a651b283e56f	{"confidence":0.94,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.97,"member_1":0.03}}
 21e99b8d39b9ca9e	{"confidence":0.97,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.01,"must_be_current":0.01,"not_a_projection":0.98}}
 21ed286e6b99b63d	{"confidence":0.62,"kind":"Classify","label":"not_a_derivation","probabilities":{"legitimate_local":0.24,"not_a_derivation":0.75,"reimplements":0.01}}
 21ed3dbc45bf953f	{"confidence":0.66,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.77,"not_a_derivation":0.23,"reimplements":0}}

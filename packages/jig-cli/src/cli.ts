@@ -339,13 +339,31 @@ const baselineCommand = Command.make(
       // judged run can name the same finding from the cluster: two identities for one thing.
       // Accepting the unverified one is therefore accepting a ledger CI cannot replay, which
       // is exactly how a green local baseline and a red CI run both look like a pass.
-      const unverified = run.report.diagnostics.filter((diagnostic) => diagnostic.judged === false)
+      /*
+       * Only findings whose engine actually SKIPPED a judgement can be unverified.
+       *
+       * `judged: false` also marks a deterministic rule's finding -- an exact duplicate has no
+       * question to ask -- and those can be accepted forever. Reading the flag alone refused
+       * every ledger containing one, and told the operator to fetch a model key that could
+       * never help. The engine's own unjudged count is the signal that judgement was available
+       * and skipped.
+       */
+      const skipped = run.report.generators.reduce(
+        (sum, generator) => sum + (generator.unjudged ?? 0),
+        0,
+      )
+      const unverified =
+        skipped > 0
+          ? run.report.diagnostics.filter((diagnostic) => diagnostic.judged === false)
+          : []
       if (unverified.length > 0 && options.allowUnjudged !== true) {
         yield* write(
           `jig: refusing to accept ${unverified.length} unverified finding(s) into ${settings.gate.baseline}.\n` +
             "  A judged run can name the same finding differently, so this ledger would not hold in CI.\n" +
-            "  Judge first: joggle reads its model key from the environment (TYPESAFE_API_KEY).\n" +
-            "  Pass --allow-unjudged to accept that debt anyway.",
+            "  " +
+            String(skipped) +
+            " candidate(s) were not judged: joggle reads its model key from this\n" +
+            "  run's environment (TYPESAFE_API_KEY). Pass --allow-unjudged to accept that debt anyway.",
         )
         yield* Effect.sync(() => {
           process.exitCode = EXIT.usage

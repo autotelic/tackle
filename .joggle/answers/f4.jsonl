@@ -5,6 +5,7 @@ f4041e91e18f938a	{"confidence":0.97,"kind":"Classify","label":"implementation_de
 f40b322ecf36bc95	{"confidence":0.77,"kind":"Classify","label":"domain_concept","probabilities":{"domain_concept":0.83,"framework_glue":0.04,"implementation_detail":0.13,"wire_contract":0}}
 f40b41b42f22d379	{"confidence":0.38,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.59,"not_a_derivation":0.32,"reimplements":0.09}}
 f40e5cb5dbd6875e	{"confidence":0.62,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.09,"must_be_current":0.16,"not_a_projection":0.75}}
+f41a5e42b3167ca5	{"confidence":0.94,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.97,"member_1":0.03}}
 f41d7fcb6ee80a99	{"confidence":0.91,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.94,"not_a_derivation":0.06,"reimplements":0}}
 f4222fdeb0773621	{"confidence":0.46,"kind":"Classify","label":"state","probabilities":{"deviation":0.17,"neither":0.19,"state":0.64}}
 f425878ecb0dabdc	{"confidence":0.58,"kind":"Classify","label":"value","probabilities":{"meaning":0.28,"unclear":0,"value":0.72}}
@@ -63,6 +64,7 @@ f4cebe39a7822777	{"confidence":0.72,"kind":"Classify","label":"implementation_de
 f4d092cf977dcb82	{"confidence":0.37,"kind":"Classify","label":"not_applicable","probabilities":{"domain_logic":0.37,"infrastructure":0.01,"input_adaptation":0.01,"mechanical":0.02,"not_applicable":0.44,"orchestration":0.02,"rendering":0,"request_validation":0.06,"transport_concern":0.07}}
 f4d28b74135c3296	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
 f4d3af963d70aadf	{"confidence":0.46,"kind":"Classify","label":"not_a_derivation","probabilities":{"legitimate_local":0.31,"not_a_derivation":0.64,"reimplements":0.05}}
+f4de70b742bd6f19	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
 f4e4d19f9b4f7ea5	{"consistency":1,"kind":"Probability","probability":0.45999999999999996}
 f4e63c8ff8d20042	{"confidence":0.43,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.62,"unclear":0,"value":0.38}}
 f4e9d89c946c8e0f	{"consistency":1,"kind":"Probability","probability":0.7244444444444444}

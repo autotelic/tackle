@@ -132,6 +132,14 @@ export interface InitResult {
   readonly accepted: number
   /** What happened to the scoped pre-commit hook. */
   readonly hooks: "absent" | "foreign" | "kept" | "not-a-repo" | "would write" | "written"
+  /**
+   * A document that differs from the one this run would generate, left for a human to merge.
+   *
+   * `--force` used to replace JIG.md and ONBOARD.md outright, so a repository's own guidance
+   * ("engines are devDependencies here", "nothing global") became template text on a refresh.
+   * The regenerated copy is written beside it instead, and the existing file is untouched.
+   */
+  readonly pending: ReadonlyArray<string>
   /** The agent skills `--skills` copied into `.agents/skills`, and what happened to each. */
   readonly skills: ReadonlyArray<{
     readonly name: string
@@ -1244,30 +1252,72 @@ export const mergeArchitecture = (input: {
   readonly file: Readonly<Record<string, unknown>>
   readonly forbidsKept: ReadonlyArray<string>
   readonly forbidsDropped: ReadonlyArray<string>
+  readonly includesKept: ReadonlyArray<string>
 } => {
   const architecture = isRecord(input.existing.architecture) ? input.existing.architecture : {}
   const declared = Array.isArray(architecture.layers) ? architecture.layers : []
-  const previous = new Map<string, ReadonlyArray<string>>()
+  /*
+   * An existing layer's INCLUDES are authored intent, not a draft to replace.
+   *
+   * `--force` used to re-derive every include set from the tree, so a repository that had put
+   * `services/ui/app/constants/**` and `services/ui/app/schemas/**` in a tier lost them: the
+   * layers then reported the constants as violations of the very layer that owns them, and
+   * `--force` looked like a tidy-up while it destroyed the decision. Only `forbid` was ever
+   * protected. The draft now adds layers that are missing and keeps what is written; the
+   * summary names the includes it kept so a re-draft is visible rather than silent.
+   */
+  const previous = new Map<
+    string,
+    { readonly include: ReadonlyArray<string>; readonly forbid: ReadonlyArray<string> }
+  >()
+  const order: Array<string> = []
   for (const layer of declared) {
     if (!isRecord(layer) || typeof layer.name !== "string") continue
-    const forbid = Array.isArray(layer.forbid)
-      ? layer.forbid.filter((entry): entry is string => typeof entry === "string")
-      : []
-    if (forbid.length > 0) previous.set(layer.name, forbid)
+    const strings = (value: unknown): ReadonlyArray<string> =>
+      Array.isArray(value)
+        ? value.filter((entry): entry is string => typeof entry === "string")
+        : []
+    previous.set(layer.name, { include: strings(layer.include), forbid: strings(layer.forbid) })
+    order.push(layer.name)
   }
-  const drafted = new Set(input.draft.map((layer) => layer.name))
+  const drafted = new Map(input.draft.map((layer) => [layer.name, layer]))
+  const includesKept: Array<string> = []
   const forbidsKept: Array<string> = []
-  const layers = input.draft.map((layer) => {
-    const forbid = previous.get(layer.name)
-    if (forbid === undefined) return { name: layer.name, include: layer.include }
-    forbidsKept.push(layer.name)
-    return { name: layer.name, include: layer.include, forbid }
-  })
+  const layers: Array<Record<string, unknown>> = []
+  for (const name of order) {
+    const prior = previous.get(name)
+    if (prior === undefined) continue
+    const draft = drafted.get(name)
+    // A draft entry may omit the include set (a layer the tree split did not describe); that
+    // is not a proposal which the file overrides.
+    const draftInclude = draft === undefined || !Array.isArray(draft.include) ? [] : draft.include
+    const include = prior.include.length > 0 ? prior.include : draftInclude
+    // Element-wise, not JSON: order is part of the decision, and a stringified comparison of
+    // ordered lists is exactly the identity check that must not depend on encoding.
+    const differs =
+      prior.include.length !== draftInclude.length ||
+      prior.include.some((entry, index) => entry !== draftInclude[index])
+    if (prior.include.length > 0 && draftInclude.length > 0 && differs) {
+      includesKept.push(name)
+    }
+    if (prior.forbid.length > 0) {
+      forbidsKept.push(name)
+      layers.push({ name, include, forbid: prior.forbid })
+    } else {
+      layers.push({ name, include })
+    }
+  }
+  // A layer the tree has now and the file does not is the one thing worth adding.
+  for (const layer of input.draft) {
+    if (previous.has(layer.name)) continue
+    layers.push({ name: layer.name, include: layer.include })
+  }
   const forbidsDropped = [...previous.keys()].filter((name) => !drafted.has(name))
   return {
     file: { ...input.existing, architecture: { ...architecture, layers } },
     forbidsKept,
     forbidsDropped,
+    includesKept,
   }
 }
 
@@ -1345,7 +1395,7 @@ ${roomSection(profile)}${
         " baseline`, or switch the gate to `touched-files`."
   }
 
-${profile.facts.has("ci") ? "## CI\n\nRun `" + profile.jig + " check --format github` on the default branch, and scope it to the change on a pull request (` + profile.jig + ` check --since origin/<base> --format github). `init` accepted the findings that existed when it ran, so the gate holds new identities only: today's debt is reported, not enforced. A check runs every engine read-only — it never writes the answer cache or a generated artifact, because a run that edits what it judges reports differently next time. Warming those is deliberate: `joggle check` on the base branch, `" + profile.jig + " baseline` for the ledger. The machine formats carry the census too, so an engine that skipped its rules shows as a warning rather than a clean run. For machine output (`--format json`, `sarif`, `github`), use `" + profile.run + " exec jig`, or `" + profile.run + " -s jig` when you type the repo's own script: a bare `" + profile.run + " jig` prints the script banner first and corrupts the document.\n\n" : ""}## Judgement
+${profile.facts.has("ci") ? "## CI\n\nRun `" + profile.jig + " check --format github` on the default branch, and on a pull request, run `" + profile.jig + " check --since origin/<base> --format github`.  `init` accepted the findings that existed when it ran, so the gate holds new identities only: today's debt is reported, not enforced. A check runs every engine read-only — it never writes the answer cache or a generated artifact, because a run that edits what it judges reports differently next time. Warming those is deliberate: `joggle check` on the base branch, `" + profile.jig + " baseline` for the ledger. The machine formats carry the census too, so an engine that skipped its rules shows as a warning rather than a clean run. For machine output (`--format json`, `sarif`, `github`), use `" + profile.run + " exec jig`, or `" + profile.run + " -s jig` when you type the repo's own script: a bare `" + profile.run + " jig` prints the script banner first and corrupts the document.\n\n" : ""}## Judgement
 
 joggle judges candidates with the TypeSafe model. ${profile.facts.has("live-judgement") ? "A TYPESAFE_API_KEY is present in this environment, so a run can judge." : "No TYPESAFE_API_KEY is present in this environment, so unjudged candidates are counted, not printed. Set the key to judge, or keep the count in CI."}
 
@@ -1642,6 +1692,12 @@ export const summaryFor = (result: InitResult): string => {
       : [`  gitattributes    ${result.gitattributes} (generated block only)`]),
     `  ${action.padEnd(16)} ${result.written.length === 0 ? "nothing" : result.written.join(", ")}`,
     ...(result.kept.length === 0 ? [] : [`  ${keptAction.padEnd(16)} ${result.kept.join(", ")}`]),
+    // A document a repository has edited is never replaced; the fresh copy sits beside it.
+    ...(result.pending.length === 0
+      ? []
+      : [
+          `  ${"for review".padEnd(16)} ${result.pending.join(", ")} — the existing file differs from this run's text and was left alone; diff and merge, then delete the .new`,
+        ]),
     ...(result.hooks === "absent" ? [] : [`  hook             pre-commit ${result.hooks}`]),
     ...(result.skills.length === 0
       ? []
@@ -1775,6 +1831,7 @@ export const initJson = (result: InitResult, prompt?: string): string => {
     dryRun: result.dryRun,
     written: result.written,
     kept: result.kept,
+    pending: result.pending,
     joggleConfig: result.joggleConfig,
     cutlistConfig: result.cutlistConfig,
     gitattributes: result.gitattributes,
@@ -1983,12 +2040,38 @@ const writeIfAbsent = (input: {
   readonly write: boolean
   readonly written: Array<string>
   readonly kept: Array<string>
+  readonly pending: Array<string>
+  /**
+   * Never replace a DIFFERENT existing file; write `<file>.new` beside it instead.
+   *
+   * For documents a repository edits: a refresh that silently discards the edits is worse than
+   * a stale document, because nobody sees the change.
+   */
+  readonly preferDiff: boolean
 }) =>
   Effect.gen(function* () {
     const target = input.path.join(input.root, input.file)
     const exists = yield* Effect.orElseSucceed(input.fs.exists(target), () => false)
     if (exists && !input.force) {
       input.kept.push(input.file)
+      return
+    }
+    if (exists && input.preferDiff) {
+      const current = yield* Effect.orElseSucceed(input.fs.readFileString(target), () => "")
+      if (current === input.body) {
+        input.kept.push(input.file)
+        return
+      }
+      const beside = input.file + ".new"
+      if (input.write) {
+        yield* Effect.orElseSucceed(
+          input.fs.writeFileString(input.path.join(input.root, beside), input.body),
+          () => undefined,
+        )
+      }
+      input.kept.push(input.file)
+      input.pending.push(beside)
+      input.written.push(beside)
       return
     }
     if (input.write) yield* input.fs.writeFileString(target, input.body)
@@ -2039,6 +2122,7 @@ export const initialise = (
     })
     const written: Array<string> = []
     const kept: Array<string> = []
+    const pending: Array<string> = []
     const force = options.force === true
     const dryRun = options.dryRun === true
 
@@ -2052,6 +2136,8 @@ export const initialise = (
       write: !dryRun,
       written,
       kept,
+      pending,
+      preferDiff: false,
     })
     let cutlistConfig: InitResult["cutlistConfig"] = "absent"
     if (profile.cutlistDraft !== undefined) {
@@ -2157,6 +2243,9 @@ export const initialise = (
       write: !dryRun,
       written,
       kept,
+      pending,
+      // A repository edits its cookbook: points at its own scripts, its own install policy.
+      preferDiff: true,
     })
     yield* writeIfAbsent({
       fs,
@@ -2168,6 +2257,8 @@ export const initialise = (
       write: !dryRun,
       written,
       kept,
+      pending,
+      preferDiff: true,
     })
 
     const accepted = yield* readBaseline(baseline).pipe(
@@ -2465,6 +2556,7 @@ export const initialise = (
       profile: titles,
       written,
       kept,
+      pending,
       ignore: [
         ...unignored.removed.map((path) => ({ path, status: "removed" as const })),
         ...unignored.patterned.map((path) => ({ path, status: "pattern" as const })),

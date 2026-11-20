@@ -9,6 +9,7 @@ d916ae5e57e38725	{"confidence":0.63,"kind":"Classify","label":"independent","pro
 d921e4b850d5d7c6	{"confidence":1,"kind":"Classify","label":"mechanical","probabilities":{"domain_logic":0,"infrastructure":0,"input_adaptation":0,"mechanical":1,"not_applicable":0,"orchestration":0,"rendering":0,"request_validation":0,"transport_concern":0}}
 d9227c9d927ddbbb	{"confidence":0.67,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.78,"not_a_derivation":0.22,"reimplements":0}}
 d924786083bc2a6d	{"confidence":0.4,"kind":"Classify","label":"move","probabilities":{"move":0.7,"no_issue":0.3}}
+d92c29d411e585f6	{"confidence":0.7,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.09,"keep_variants":0.8,"no_issue":0.11}}
 d92cf30f41d448c9	{"consistency":1,"kind":"Probability","probability":0.6477777777777778}
 d92d518c605c7113	{"consistency":1,"kind":"Probability","probability":0.8066666666666666}
 d92d8f94684df38d	{"confidence":0.8,"kind":"Classify","label":"neither","probabilities":{"fact":0.1,"neither":0.87,"recomputation":0.03}}
@@ -36,6 +37,7 @@ d9777892a0657a5a	{"confidence":0.31,"kind":"Classify","label":"common_idiom","pr
 d983581863f9e76a	{"consistency":1,"kind":"Probability","probability":0.8077777777777778}
 d98b2e2d57a29344	{"confidence":0.63,"kind":"Classify","label":"framework_glue","probabilities":{"domain_concept":0.03,"framework_glue":0.72,"implementation_detail":0.22,"wire_contract":0.03}}
 d99023192e79e807	{"confidence":0.96,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.01,"must_be_current":0.02,"not_a_projection":0.97}}
+d99ac5c62d7179c2	{"confidence":0.62,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.75,"unclear":0.01,"value":0.24}}
 d99e30d988c854ad	{"consistency":1,"kind":"Probability","probability":0.8533333333333332}
 d9a225a605e4016c	{"confidence":0.41,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.56,"component_or_feature":0.17,"not_applicable":0.16,"route_or_handler":0.11}}
 d9a236cca557dc41	{"confidence":0.28,"kind":"Classify","label":"not_applicable","probabilities":{"agrees":0.43,"excludes":0.05,"not_applicable":0.52}}

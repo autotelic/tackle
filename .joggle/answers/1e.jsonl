@@ -31,6 +31,7 @@
 1e5fb6d71d3cce4f	{"consistency":1,"kind":"Probability","probability":0.9211111111111112}
 1e615aebf4098205	{"confidence":0.73,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.14,"must_be_current":0.04,"not_a_projection":0.82}}
 1e62a4dcf0d9a798	{"confidence":0.77,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.1,"framework_glue":0,"implementation_detail":0.83,"wire_contract":0.07}}
+1e63199487203cb1	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
 1e65c7c514b6100b	{"confidence":0.28,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.46,"component_or_feature":0.22,"not_applicable":0.29,"route_or_handler":0.03}}
 1e66eac20a0acc38	{"confidence":0.97,"kind":"Classify","label":"general","probabilities":{"general":0.98,"names_a_caller":0,"shared_vocabulary":0.02}}
 1e6ff80cf2d6a7d3	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0.01}}
@@ -68,6 +69,7 @@
 1ed9abf61663d70c	{"confidence":0.68,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.76,"different_order":0,"different_work":0.24,"same_operation":0}}
 1eda2dc830d99254	{"confidence":0.77,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.04,"must_be_current":0.11,"not_a_projection":0.85}}
 1ee14794dbe4924c	{"consistency":1,"kind":"Probability","probability":0.5822222222222222}
+1ee2c3eaa988e8ff	{"consistency":1,"kind":"Probability","probability":0.66}
 1ee4b79e5fab9b8c	{"consistency":1,"kind":"Probability","probability":0.8244444444444444}
 1ee874e708515ba0	{"confidence":0.8,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.85,"component_or_feature":0.09,"not_applicable":0.05,"route_or_handler":0.01}}
 1eeb80d974d9a029	{"confidence":0.52,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.68,"not_a_derivation":0.32,"reimplements":0}}

@@ -34,6 +34,7 @@ a09c6c0e35591613	{"confidence":0.77,"kind":"Classify","label":"different_work","
 a09e037dce9e7cc6	{"consistency":1,"kind":"Probability","probability":0.7733333333333333}
 a09f1f46a1346afb	{"confidence":0.34,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.33,"member_1":0.67}}
 a0a49257a48103b6	{"confidence":0.98,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.99,"member_1":0.01}}
+a0aa7baa9b2a33a1	{"confidence":0.8,"kind":"Classify","label":"neither","probabilities":{"fact":0.12,"neither":0.87,"recomputation":0.01}}
 a0aebc00f0b27b5a	{"confidence":0.44,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.08,"framework_glue":0,"implementation_detail":0.58,"wire_contract":0.34}}
 a0b4eeff6ebc29a4	{"confidence":0.68,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.2,"independent":0.79,"meaning_switched":0.01}}
 a0b621bc7e6c1b00	{"confidence":0.6,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.73,"not_a_derivation":0.26,"reimplements":0.01}}

@@ -30,12 +30,14 @@ c2666c7d40935d5b	{"consistency":1,"kind":"Probability","probability":0.746666666
 c266761056d08c97	{"confidence":0.73,"kind":"Classify","label":"value","probabilities":{"meaning":0.16,"unclear":0.02,"value":0.82}}
 c26c4a6747679b5c	{"confidence":0.76,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.8200000000000001,"stale_reference":0,"wrong_behavior":0.06,"wrong_contract":0.12}}
 c26e99602d57f0f9	{"confidence":0.89,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.07,"not_an_invariant":0.93,"repair_path":0}}
+c274012df9e95ed9	{"confidence":0.82,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.02,"must_be_current":0.1,"not_a_projection":0.88}}
 c277d61e22ecc057	{"confidence":0.53,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.01,"name_meaning":0.02,"no_issue":0.32,"semantic_verdict":0.65}}
 c27c2a1c7499d542	{"confidence":0.83,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.89,"not_a_derivation":0.03,"reimplements":0.08}}
 c27f0facdeb0278d	{"confidence":0.83,"kind":"Classify","label":"neither","probabilities":{"fact":0.1,"neither":0.89,"recomputation":0.01}}
 c28314fa491fb936	{"confidence":0.89,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.07,"not_an_invariant":0.93,"repair_path":0}}
 c283a8212906b087	{"confidence":0.58,"kind":"Classify","label":"repair_path","probabilities":{"detect_only":0.21,"not_an_invariant":0.07,"repair_path":0.72}}
 c28ae8c7cbcf1154	{"confidence":0.98,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.01,"not_an_invariant":0.99,"repair_path":0}}
+c28aeaad2cc0690b	{"consistency":1,"kind":"Probability","probability":0.5833333333333334}
 c29613d6293a1972	{"consistency":1,"kind":"Probability","probability":0.84}
 c29a351a92f120bf	{"confidence":0.33,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.55,"not_a_derivation":0.01,"reimplements":0.44}}
 c29d9928370ccf42	{"confidence":0.7,"kind":"Classify","label":"value","probabilities":{"meaning":0.2,"unclear":0,"value":0.8}}

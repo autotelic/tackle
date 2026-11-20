@@ -428,6 +428,24 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
           })
         }
         if (unjudged > 0 && options.allowUnjudgedBaseline !== true) {
+          /*
+           * Name the LIMIT, not a knob that cannot move it.
+           *
+           * A run that stops at a per-rule candidate ceiling reports the same "unjudged" count as
+           * one that ran out of tokens, and the earlier message pointed at --max-tokens for both:
+           * raising it beyond 1e9 changed nothing, because the slice is a constant in the policy.
+           * The drops already carry the reason per rule, so the refusal quotes them.
+           */
+          const ceilings = new Map<string, number>()
+          for (const drop of report.drops) {
+            if (drop.stage !== "budget") continue
+            const key = drop.ruleId + ": " + drop.reason
+            ceilings.set(key, (ceilings.get(key) ?? 0) + 1)
+          }
+          const largest = [...ceilings]
+            .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+            .slice(0, 3)
+            .map(([cause, count]) => cause + " (" + String(count) + ")")
           return yield* WorkspaceError.make({
             path: options.updateBaselinePath,
             operation: "baseline",
@@ -435,12 +453,16 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
               `refusing to write ${options.updateBaselinePath}: ${unjudged} candidate(s) were not judged. ` +
                 "Judging needs a model key in this run's environment (TYPESAFE_API_KEY); without one, " +
                 "the same findings are named from what the rule could see alone, so a ledger written " +
-                "now would not match a judged run. Judge first; if the limit was the run's token " +
-                "budget, raise --max-tokens or decision.maxInputTokens. A per-rule candidate " +
-                "ceiling is not that knob, and the report names the rule whose ceiling it was. " +
-                "Or run scoped (--since <base>) to see the change judged with a pull " +
-                "request's budget — a scoped run reports the gate's answer but cannot write the " +
-                "ledger. Pass --allow-unjudged-baseline only to accept the unjudged debt itself.",
+                "now would not match a judged run. " +
+                (largest.length === 0
+                  ? ""
+                  : "The largest causes were " + largest.join("; ") + " — these are per-rule " +
+                    "ceilings, not the token budget, and --max-tokens cannot raise them. ") +
+                "If the limit was the run's token budget, raise --max-tokens or " +
+                "decision.maxInputTokens instead. Or run scoped (--since <base>) to see the " +
+                "change judged with a pull request's budget — a scoped run reports the gate's " +
+                "answer but cannot write the ledger. Pass --allow-unjudged-baseline only to " +
+                "accept the unjudged debt itself.",
             ),
           })
         }

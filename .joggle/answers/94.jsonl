@@ -9,6 +9,7 @@
 941fa4b6c3f45f87	{"confidence":0.89,"kind":"Classify","label":"neither","probabilities":{"fact":0.06,"neither":0.93,"recomputation":0.01}}
 941fe5512cecdc33	{"consistency":1,"kind":"Probability","probability":0.5133333333333333}
 94200149a45eb6ae	{"confidence":0.52,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.68,"not_a_derivation":0.08,"reimplements":0.24}}
+942697ac72877142	{"confidence":0.47,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.53,"no_difference":0.06,"removes_a_hazard":0.11,"slightly_clearer":0.3},"rating":1.68}
 942a4cd2787d86b0	{"confidence":0.92,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0,"must_be_current":0.05,"not_a_projection":0.95}}
 943300a0d5c59254	{"confidence":0.95,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.96,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0.01}}
 9447a9fec69970ee	{"confidence":0.96,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.97,"not_a_derivation":0.01,"reimplements":0.02}}
@@ -25,6 +26,7 @@
 9479d1193b5192fa	{"consistency":1,"kind":"Probability","probability":0.7966666666666667}
 947a6684425be338	{"confidence":0.24,"kind":"Classify","label":"move","probabilities":{"leave_it":0.07,"merge":0.12,"move":0.39,"share_a_contract":0.29,"split":0.13}}
 947ac631aedd2bb7	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0.01}}
+947ee7f28b3bf7c9	{"confidence":0.85,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.01,"must_be_current":0.09,"not_a_projection":0.9}}
 947f7e5dd9db823a	{"confidence":0.53,"kind":"Classify","label":"neither","probabilities":{"fact":0.3,"neither":0.69,"recomputation":0.01}}
 948121c7c3dbc860	{"consistency":1,"kind":"Probability","probability":0.8433333333333334}
 94832029ae22431b	{"confidence":0.79,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.1,"must_be_current":0.04,"not_a_projection":0.86}}

@@ -23,6 +23,7 @@ fb56852264d19445	{"confidence":0.93,"kind":"Classify","label":"no_issue","probab
 fb58e9857eb4ec54	{"confidence":0.38,"kind":"Classify","label":"value","probabilities":{"meaning":0.4,"unclear":0.01,"value":0.59}}
 fb593308288ff452	{"confidence":0.85,"kind":"Classify","label":"neither","probabilities":{"fact":0.09,"neither":0.9,"recomputation":0.01}}
 fb596a1dfec5c9cc	{"consistency":1,"kind":"Probability","probability":0.75}
+fb5f35159d2aba6c	{"confidence":0.85,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.03,"keep_variants":0.9,"no_issue":0.07}}
 fb64332b8936ea10	{"confidence":0.49,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.33,"not_an_invariant":0.66,"repair_path":0.01}}
 fb66682f5933c716	{"confidence":0.62,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.19,"internal_only":0.75,"unaccounted":0.06}}
 fb6a1d7e8326be47	{"confidence":0.26,"kind":"Classify","label":"move","probabilities":{"merge":0.13,"move":0.51,"no_issue":0.36}}

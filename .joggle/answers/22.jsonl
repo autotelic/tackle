@@ -49,6 +49,7 @@
 22afcdb75a86bc97	{"confidence":0.48,"kind":"Classify","label":"framework_glue","probabilities":{"domain_concept":0.12,"framework_glue":0.61,"implementation_detail":0.25,"wire_contract":0.02}}
 22b33e16186f41f8	{"confidence":0.56,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.71,"not_a_derivation":0.11,"reimplements":0.18}}
 22b63a5bfe00f40c	{"confidence":0.55,"kind":"Classify","label":"no_issue","probabilities":{"generic_noun":0.3,"generic_verb":0,"no_issue":0.66,"overloaded_domain":0.04}}
+22bbbfc76b88e839	{"confidence":0.76,"kind":"Classify","label":"repair_path","probabilities":{"detect_only":0.1,"not_an_invariant":0.06,"repair_path":0.84}}
 22c5a3579375268a	{"consistency":1,"kind":"Probability","probability":0.8622222222222221}
 22caf1d11f35e3e9	{"consistency":1,"kind":"Probability","probability":0.9066666666666667}
 22cc2db7f642450b	{"confidence":0,"kind":"Rate","label":"no_difference","probabilities":{"meaningfully_better":0.08,"no_difference":0.54,"removes_a_hazard":0.27,"slightly_clearer":0.11},"rating":1.08}

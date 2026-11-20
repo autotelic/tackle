@@ -34,6 +34,7 @@
 4d922f5841b317a2	{"confidence":0.64,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.73,"component_or_feature":0.2,"not_applicable":0.05,"route_or_handler":0.02}}
 4d94eda1dfc56698	{"confidence":0.87,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.02,"name_meaning":0,"no_issue":0.08,"semantic_verdict":0.9}}
 4d95791a84ea457a	{"confidence":0.6,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.06,"common_idiom":0.73,"shared_helper":0.21}}
+4d998208c4fcf375	{"consistency":1,"kind":"Probability","probability":0.3133333333333333}
 4d9b6e5f99d4e841	{"confidence":0.46,"kind":"Classify","label":"value","probabilities":{"meaning":0.36,"unclear":0,"value":0.64}}
 4da0f162c5fd99c7	{"consistency":1,"kind":"Probability","probability":0.1366666666666667}
 4da7bd19ce26dd6e	{"confidence":1,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0,"must_be_current":0,"not_a_projection":1}}

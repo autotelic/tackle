@@ -36,6 +36,7 @@ f18be72f6bf9b8c8	{"confidence":0.78,"kind":"Classify","label":"mechanical","prob
 f18c9ef57041691c	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
 f19115399fad9e63	{"confidence":0.86,"kind":"Classify","label":"one_concept","probabilities":{"one_concept":0.93,"two_concepts":0.07}}
 f1945df90e5b9cef	{"confidence":0.89,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.07,"not_an_invariant":0.93,"repair_path":0}}
+f19825ab0b45ad74	{"consistency":1,"kind":"Probability","probability":0.37222222222222223}
 f19a806653a5604e	{"confidence":0.82,"kind":"Classify","label":"compatible","probabilities":{"compatible":0.88,"drift":0.11,"two_concepts":0.01}}
 f19b14987d54f622	{"confidence":0.56,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.22,"member_1":0.78}}
 f19bcf56a5d51cb3	{"confidence":0.55,"kind":"Rate","label":"slightly_clearer","probabilities":{"meaningfully_better":0.27,"no_difference":0.1,"removes_a_hazard":0.04,"slightly_clearer":0.59},"rating":1.24}

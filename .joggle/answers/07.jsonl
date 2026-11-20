@@ -12,6 +12,7 @@
 072670d4cc7fd65c	{"confidence":0.94,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0,"must_be_current":0.04,"not_a_projection":0.96}}
 072ac90d6a4c287b	{"confidence":0.92,"kind":"Classify","label":"rendering","probabilities":{"domain_logic":0.07,"infrastructure":0,"input_adaptation":0,"mechanical":0,"not_applicable":0,"orchestration":0,"rendering":0.93,"request_validation":0,"transport_concern":0}}
 072af8680212cd91	{"confidence":0.92,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.94,"stale_reference":0,"wrong_behavior":0.04,"wrong_contract":0.02}}
+072dcb46da0e1d0a	{"confidence":0.76,"kind":"Classify","label":"repair_path","probabilities":{"detect_only":0.1,"not_an_invariant":0.06,"repair_path":0.84}}
 073041510161c38f	{"confidence":0.55,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.25,"no_issue":0.09,"semantic_verdict":0.66}}
 0734720b52c18f35	{"confidence":0.83,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.04,"must_be_current":0.07,"not_a_projection":0.89}}
 0734a07abe7c05a1	{"confidence":0.74,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.04,"must_be_current":0.13,"not_a_projection":0.83}}
@@ -50,6 +51,7 @@
 07c7e54bb1ff6901	{"consistency":1,"kind":"Probability","probability":0.38999999999999996}
 07ca02de1cf23ca4	{"confidence":0.92,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.94,"stale_reference":0.01,"wrong_behavior":0.04,"wrong_contract":0.01}}
 07ca7019e655995f	{"confidence":0.79,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.84,"component_or_feature":0.08,"not_applicable":0.04,"route_or_handler":0.04}}
+07cdb09755d98cbb	{"confidence":0.8,"kind":"Classify","label":"move","probabilities":{"move":0.9,"no_issue":0.1}}
 07cfb5d497e3d57e	{"confidence":0.68,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.16,"member_1":0.84}}
 07d0597469b1c02f	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0.01}}
 07d4056dd16712a4	{"confidence":0.23,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.42,"component_or_feature":0.35,"not_applicable":0.12,"route_or_handler":0.11}}

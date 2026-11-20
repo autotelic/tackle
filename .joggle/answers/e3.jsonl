@@ -49,6 +49,7 @@ e38f4cceb162f772	{"confidence":0.56,"kind":"Classify","label":"semantic_verdict"
 e390766888595aa6	{"confidence":0.7,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.19,"not_an_invariant":0.8,"repair_path":0.01}}
 e3935b5aff3e6afd	{"confidence":0.89,"kind":"Classify","label":"neither","probabilities":{"fact":0.06,"neither":0.93,"recomputation":0.01}}
 e3977a0773bc13ef	{"confidence":0.66,"kind":"Classify","label":"move","probabilities":{"move":0.83,"no_issue":0.17}}
+e39af241ceafd4d2	{"consistency":1,"kind":"Probability","probability":0.9177777777777778}
 e39e7b8ce0af7326	{"confidence":0.98,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0,"must_be_current":0.01,"not_a_projection":0.99}}
 e39e9790db9f7622	{"confidence":0.73,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.13,"must_be_current":0.05,"not_a_projection":0.82}}
 e39fcd453cb11597	{"confidence":0.34,"kind":"Classify","label":"state","probabilities":{"deviation":0.12,"neither":0.32,"state":0.56}}

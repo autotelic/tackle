@@ -10,6 +10,7 @@
 6b2f1713529d8623	{"consistency":1,"kind":"Probability","probability":0.7799999999999999}
 6b33ab3a1ee49bdd	{"confidence":0.7,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.8,"unclear":0,"value":0.2}}
 6b351c47c7e77e76	{"consistency":1,"kind":"Probability","probability":0.44333333333333336}
+6b352067d45b3a6f	{"confidence":0.34,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.04,"merge":0.47,"move":0.32,"share_a_contract":0.12,"split":0.05}}
 6b3720dd5d676fbe	{"confidence":0.74,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.02,"must_be_current":0.15,"not_a_projection":0.83}}
 6b3f83f53ec59d94	{"confidence":0.22,"kind":"Classify","label":"not_a_derivation","probabilities":{"legitimate_local":0.4,"not_a_derivation":0.48,"reimplements":0.12}}
 6b43b2835fc19c42	{"confidence":0.93,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.95,"different_order":0.03,"different_work":0.02,"same_operation":0}}
@@ -26,6 +27,7 @@
 6b6bbc4fec68ca7a	{"confidence":0.72,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.81,"unclear":0,"value":0.19}}
 6b6d40e3da775166	{"confidence":0.64,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.01,"keep_variants":0.76,"no_issue":0.23}}
 6b719d43130dd1c0	{"confidence":0.62,"kind":"Classify","label":"collapse","probabilities":{"collapse":0.75,"keep_variants":0.21,"no_issue":0.04}}
+6b73eafebd37ade5	{"confidence":0.48,"kind":"Classify","label":"value","probabilities":{"meaning":0.34,"unclear":0.01,"value":0.65}}
 6b782b38a48f543b	{"confidence":0.79,"kind":"Classify","label":"one_thing","probabilities":{"already_named":0.03,"one_thing":0.86,"unrelated":0.11}}
 6b8252e60cfb11df	{"consistency":1,"kind":"Probability","probability":0.79}
 6b82c2a87fd0c254	{"confidence":0.89,"kind":"Classify","label":"same_package","probabilities":{"different_deployables":0,"same_module":0.08,"same_package":0.92,"sibling_packages":0}}

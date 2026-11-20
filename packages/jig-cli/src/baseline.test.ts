@@ -29,9 +29,30 @@ const repoWith = (judged: boolean, gate: Record<string, unknown> = {}): Repo => 
   const root = mkdtempSync(join(tmpdir(), "jig-baseline-"))
   mkdirSync(join(root, "src"), { recursive: true })
   writeFileSync(join(root, "src/a.ts"), "export const a = 1\n")
+  // The engine prints a report document. A finding is "unverified" only when the census says
+  // judgement was SKIPPED — the flag alone also marks a deterministic rule, which can always be
+  // accepted — so the unjudged variant carries a drop.
+  const plain = {
+    ruleId: "x",
+    severity: "error",
+    message: "m",
+    file: "src/a.ts",
+    line: 1,
+    column: 1,
+    identity: "fake/x:src/a.ts",
+  }
+  const finding = judged ? plain : { ...plain, judged: false }
+  const document = judged
+    ? { diagnostics: [finding] }
+    : {
+        diagnostics: [finding],
+        summary: {
+          drops: [{ ruleId: "x", subject: "s", stage: "unreadable", reason: "no key" }],
+        },
+      }
   writeFileSync(
     join(root, "engine.mjs"),
-    `console.log(JSON.stringify({ diagnostics: [{ ruleId: "x", severity: "error", message: "m", file: "src/a.ts", line: 1, column: 1, identity: "fake/x:src/a.ts", ${judged ? "" : "judged: false,"} }] }))\n`,
+    "console.log(" + JSON.stringify(JSON.stringify(document)) + ")\n",
   )
   writeFileSync(
     join(root, "jig.config.json"),

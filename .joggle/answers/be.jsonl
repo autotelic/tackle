@@ -6,6 +6,7 @@ be0ee22e1038c021	{"confidence":0.87,"kind":"Classify","label":"implementation_de
 be0faff952cc8ff4	{"consistency":1,"kind":"Probability","probability":0.8333333333333334}
 be154c85b25c8a6f	{"confidence":0.83,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.09,"same_module":0.02,"same_package":0.02,"sibling_packages":0.87}}
 be196a6761c21876	{"confidence":0.35,"kind":"Classify","label":"infrastructure","probabilities":{"domain_logic":0.25,"infrastructure":0.42,"input_adaptation":0.03,"mechanical":0.18,"not_applicable":0.02,"orchestration":0.01,"rendering":0,"request_validation":0,"transport_concern":0.09}}
+be1b128f839445a8	{"confidence":0.47,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.53,"no_difference":0.06,"removes_a_hazard":0.11,"slightly_clearer":0.3},"rating":1.68}
 be22a8b2c905da6e	{"confidence":0.54,"kind":"Classify","label":"domain_core","probabilities":{"domain_core":0.61,"infrastructure":0.01,"library_core":0.3,"not_applicable":0.02,"rendering_edge":0.01,"transport_edge":0.01,"utilities":0.04}}
 be23607b2c1f9ecc	{"consistency":1,"kind":"Probability","probability":0.8233333333333333}
 be2b648ef2952611	{"confidence":0.64,"kind":"Classify","label":"row_absence_is_normal","probabilities":{"not_applicable":0.18,"row_absence_is_an_error":0.06,"row_absence_is_normal":0.76}}
