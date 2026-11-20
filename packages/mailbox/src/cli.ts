@@ -54,7 +54,16 @@ const exportCommand = Command.make(
   },
   (options) =>
     Effect.gen(function* () {
-      const log = yield* attempt(() => exportDirectory(options.dir))
+      // Re-exporting an existing log must not move its backfill timestamp: the header records
+      // when the history was first admitted, not when it was last re-read.
+      const previous = yield* attempt(async () => {
+        try {
+          return parseLog(await readFile(options.out, "utf8")).backfill
+        } catch {
+          return undefined
+        }
+      })
+      const log = yield* attempt(() => exportDirectory(options.dir, previous?.at === undefined ? {} : { at: previous.at }))
       yield* attempt(() => writeFile(options.out, serializeLog(log), "utf8"))
       yield* Console.log(`exported ${log.turns.length} turns to ${options.out}`)
     }).pipe(report),
