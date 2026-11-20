@@ -53,9 +53,22 @@ batches: draft lists with supplier/state/count; commit → state committed +
 AVAILABLE inventory rows per item line): 21→23, PR #559 auto-merged.
 **Issue 003 was the first fully launchd-driven run** (Tier-A tenant
 isolation: cross-tenant locations/orders invisibility + unknown tenant key
-→ 403): 23→26, PR #560 auto-merged (`loop/integration` @ `c674b0bd`), issue
-done — no human in the loop beyond the issue body. The gherkin suite is now
-**26 scenarios**. Gardener note: portorford tenant constants were added to
+→ 403): 23→26, PR #560 auto-merged, issue done. The gherkin suite is now
+**26 scenarios**. Then Ed said "do all the gherkin you can without
+stopping" and the evening session authored three more waves DIRECTLY
+(gardener lane, tier4-verified locally, each wave committed + ff'd into
+`loop/integration`): regions/tags/variants (→26), lookups/notifications/
+member-address (→31), pnp packing + member history sub-views (→34).
+**Suite: 34 scenarios green** (x3 runs; mocha 2391; tier0/tier3 ok).
+Contract facts landed along the way: the lookup route is
+`membership-state-types`; the order detail schema types boxNumbers NUMERIC
+(a string boxNumbers is a fast-json-stringify 500); packing a pnp order
+needs the member's current-season credit balance (charge adjustments) and
+item units/uom set; tags persist across scenarios (idempotent Given reuses
+the existing tag on the unique violation). Remaining uncovered Tier-A
+surfaces: wherefour integration settings/inventory-sync (deep — the auto-
+ship incident domain), member-account shipping-charges, checkout-flow and
+product-variant lookups, reports. Gardener note: portorford tenant constants were added to
 specs/support/constants.js first (protected path — gardener edits only).
 project-loop#20 fixed (`57a9708`: worktree prune before the list check +
 missing-branch re-entry resets to ready with a notify; 148 tests green) and
