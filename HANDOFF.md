@@ -234,11 +234,15 @@ at the next triage cadence.
    Astro slice).
 4. ~~Phase 3: jig loop config + shake-out + plists~~ **done**: config +
    tracker + integration branch + shake-out green (issue 001 merged, review
-   PR #558 open). **Plists written, NOT loaded** — Ed's go:
-   `launchctl load ~/Library/LaunchAgents/com.treadle-jig.plist
-   ~/Library/LaunchAgents/com.treadle-jig-maintenance.plist` (starts live
-   spend against its own budgets: $0.5/session, $40/night; both loops idle
-   on empty queues until issues are written). Next jig issues: the first
+   PR #558 open). **Plists LOADED 2026-11-19 ~21:40 (Ed's go)** — `com.treadle-jig` is running
+(PID at load: 3807; started immediately on load despite RunAtLoad=false),
+idling on the empty queue with 60s polls + hourly maintenance;
+`com.treadle-jig-maintenance` loaded (first hourly run within the hour).
+Live spend against its own budgets: $0.5/session, $40/night. Escalation
+channel is TERMINAL mode (no telepi config on this machine): stuck issues
+leave question files in `~/.treadle/questions/` and wait up to 30 min for
+answers in `~/.treadle/answers/` — Phase 4's monitoring/feedback sessions
+would watch those. Both loops idle on empty queues until issues are written. Next jig issues: the first
    Astro admin slice (needs Ed's layout go — see the Tier B guard feature
    for the two scenarios it must satisfy), then more Tier-A domains
    (packing queues, notifications, integrations) or rebuild slices.
