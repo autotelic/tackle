@@ -2,6 +2,7 @@ import { readFile, readdir } from "node:fs/promises"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
+import { appendTurn } from "./append.ts"
 import { exportDirectory } from "./export.ts"
 import { parseLog, serializeLog, type Turn } from "./log.ts"
 import { renderLog, verifyLog } from "./render.ts"
@@ -104,8 +105,66 @@ describe("log decoding", () => {
     expect(() => parseLog(lines.join("\n"))).toThrow(/duplicate tid/)
   })
 
-  it("refuses a seq that goes backwards", () => {
-    const lines = [turn(2), turn(1, { replyTo: null })].map((entry) => JSON.stringify(entry))
-    expect(() => parseLog(lines.join("\n"))).toThrow(/seq is not increasing/)
+  it("refuses a repeated seq", () => {
+    const lines = [turn(1), turn(1, { tid: "234567abcdefz", replyTo: null })].map((entry) =>
+      JSON.stringify(entry),
+    )
+    expect(() => parseLog(lines.join("\n"))).toThrow(/seq must be dense/)
+  })
+})
+
+describe("append", () => {
+  const first = turn(1, { tid: "234567abcdef2" })
+  const second = turn(2, { tid: "234567abcdef3", replyTo: first.tid })
+  const log = { turns: [first, second] }
+
+  it("assigns the next seq, a later TID, and the previous turn as the edge", () => {
+    const appended = appendTurn(log, {
+      path: "0003-c.md",
+      body: "# 0003 — TAC-15 — c\n",
+      at: 1_800_000_000_000,
+    })
+    expect(appended.turn.seq).toBe(3)
+    expect(appended.turn.replyTo).toBe(second.tid)
+    expect(appended.turn.tid > second.tid).toBe(true)
+  })
+
+  it("honours an explicit reply edge", () => {
+    const appended = appendTurn(log, {
+      path: "0003-c.md",
+      body: "# 0003 — TAC-15 — c\n",
+      replyTo: first.tid,
+    })
+    expect(appended.turn.replyTo).toBe(first.tid)
+  })
+
+  it("refuses an edge that names no admitted turn", () => {
+    expect(() =>
+      appendTurn(log, {
+        path: "0003-c.md",
+        body: "# 0003 — TAC-15 — c\n",
+        replyTo: "234567abcdef9",
+      }),
+    ).toThrow(/replyTo names no earlier turn/)
+  })
+
+  it("takes the sender from the heading when none is passed", () => {
+    const appended = appendTurn(log, { path: "0003-c.md", body: "# 0003 — TAC-15 — c\n" })
+    expect(appended.turn.sender).toBe("TAC-15")
+  })
+})
+
+describe("log invariants", () => {
+  it("refuses a gap in seq", () => {
+    const lines = [turn(1), turn(3, { replyTo: turn(1).tid })].map((entry) => JSON.stringify(entry))
+    expect(() => parseLog(lines.join("\n"))).toThrow(/seq must be dense/)
+  })
+
+  it("refuses a TID that sorts before its predecessor", () => {
+    const lines = [
+      turn(1, { tid: "234567abcdefg" }),
+      turn(2, { tid: "234567abcdeee", replyTo: "234567abcdefg" }),
+    ].map((entry) => JSON.stringify(entry))
+    expect(() => parseLog(lines.join("\n"))).toThrow(/tid is not increasing/)
   })
 })

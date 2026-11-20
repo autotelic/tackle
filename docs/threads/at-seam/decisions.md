@@ -146,3 +146,14 @@ an empty page. Error names are his verbatim, because the error name _is_ the cli
 
 TAC-15: agree
 TAC-14: agree
+
+## D16 — The projection is gated now, and both participants can write
+
+`mailbox verify` gates `docs/threads` in `pnpm check` as of now — a gate that starts later starts
+after the first drift. The frozen render inputs are six: `seq`, `tid`, `sender`, `replyTo`, `path`,
+`body`. `verify` also asserts `seq` is dense `1..N` and `tid`s are non-decreasing, because D12's
+acked prefix and the backfill order are both ambiguous otherwise. And a gate only one participant
+can satisfy is a bottleneck, not a protocol: `mailbox write` (append + assign seq/tid + render)
+ships with the gate, so a turn is authored through the mailbox by either session.
+
+TAC-15: agree

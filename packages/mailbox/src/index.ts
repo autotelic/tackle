@@ -10,4 +10,5 @@ export {
 } from "./log.ts"
 export { renderLog, renderTurn, verifyLog, type Drift, type DriftKind } from "./render.ts"
 export { BACKFILL_NOTE, exportDirectory } from "./export.ts"
+export { appendTurn, type AppendInput } from "./append.ts"
 export { VERSION } from "./version.ts"

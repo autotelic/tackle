@@ -3,6 +3,7 @@ import { Command, Flag } from "effect/cli"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises"
 import { join } from "node:path"
+import { appendTurn } from "./append.ts"
 import { exportDirectory } from "./export.ts"
 import { parseLog, serializeLog } from "./log.ts"
 import { renderLog, verifyLog } from "./render.ts"
@@ -63,7 +64,9 @@ const exportCommand = Command.make(
           return undefined
         }
       })
-      const log = yield* attempt(() => exportDirectory(options.dir, previous?.at === undefined ? {} : { at: previous.at }))
+      const log = yield* attempt(() =>
+        exportDirectory(options.dir, previous?.at === undefined ? {} : { at: previous.at }),
+      )
       yield* attempt(() => writeFile(options.out, serializeLog(log), "utf8"))
       yield* Console.log(`exported ${log.turns.length} turns to ${options.out}`)
     }).pipe(report),
@@ -93,6 +96,51 @@ const renderCommand = Command.make(
 ).pipe(
   Command.withDescription("Render the log into turn files, deterministically and idempotently."),
   Command.withShortDescription("Render the log into markdown."),
+)
+
+const writeCommand = Command.make(
+  "write",
+  {
+    log: Flag.String("log").pipe(Flag.withDescription("Log to append the turn to, JSONL.")),
+    turn: Flag.String("turn").pipe(
+      Flag.withDescription("Turn file to render (the path recorded in the log)."),
+    ),
+    body: Flag.String("body").pipe(Flag.withDescription("File holding the turn's markdown body.")),
+    sender: Flag.String("sender").pipe(
+      Flag.withDescription("Sender label or DID (default: read from the heading)."),
+      Flag.withDefault(""),
+    ),
+    reply: Flag.String("reply").pipe(
+      Flag.withDescription("TID this turn answers (default: the last turn)."),
+      Flag.withDefault(""),
+    ),
+  },
+  (options) =>
+    Effect.gen(function* () {
+      const body = yield* attempt(() => readFile(options.body, "utf8"))
+      const current = yield* attempt(async () => {
+        try {
+          return parseLog(await readFile(options.log, "utf8"))
+        } catch (cause) {
+          if ((cause as { code?: string }).code === "ENOENT") return { turns: [] }
+          throw cause
+        }
+      })
+      const { log, turn } = appendTurn(current, {
+        path: options.turn,
+        body,
+        ...(options.sender === "" ? {} : { sender: options.sender }),
+        ...(options.reply === "" ? {} : { replyTo: options.reply }),
+      })
+      yield* attempt(() => writeFile(options.log, serializeLog(log), "utf8"))
+      yield* attempt(() => writeFile(options.turn, body, "utf8"))
+      yield* Console.log(`wrote ${turn.path} seq=${turn.seq} tid=${turn.tid}`)
+    }).pipe(report),
+).pipe(
+  Command.withDescription(
+    "Append a turn: assign the next seq and a TID, check the reply edge, write the log and render the file.",
+  ),
+  Command.withShortDescription("Append and render one turn."),
 )
 
 const verifyCommand = Command.make(
@@ -129,7 +177,7 @@ const cli = Command.make("mailbox").pipe(
   Command.withDescription(
     "The mail seam: a canonical turn log, a deterministic markdown projection, and the fence that will host it.",
   ),
-  Command.withSubcommands([exportCommand, renderCommand, verifyCommand]),
+  Command.withSubcommands([exportCommand, writeCommand, renderCommand, verifyCommand]),
 )
 
 const program = Command.run(cli, { version: VERSION }).pipe(Effect.provide(NodeServices.layer))
