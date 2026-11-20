@@ -16,14 +16,18 @@ design). **Jig**: Phase 1 prep docs committed and Phase 2 **landed**
 `loadTestEnv.js` mocha loader, standalone `docker-compose.test.yml` (project
 `jig-test`, owned ports 5435/6382/8109/1082), doppler removed from
 `validate_api.yaml`, `pnpm -F api test` green **with no doppler** (2391
-passing / TCL 6). Phase 3 prep also **landed** (`eb2cd2ca`, pushed): the
-Gherkin outcome suite (tier4) — playwright-bdd v9 + @playwright/test at repo
-root (`features/` + `steps/`), Tier A bound at the API/DB seam via an
+passing / TCL 6). Phase 3 prep also **landed** (`eb2cd2ca` + `9498e203` + `829c6879`, pushed):
+the Gherkin outcome suite (tier4) — playwright-bdd v9 + @playwright/test at
+repo root (`features/` + `steps/`), Tier A bound at the API/DB seam via an
 in-process API boot (`apps/api/specs/support/gherkinApp.js`) against
-postgres_test prepared by the playwright globalSetup; five scenarios green
-through `pnpm harness:tier4` (seasons/pickup-windows: closed sessions not
-offered + cart cutoff rejection/acceptance; products: variant counts +
-discontinued status); tier0/tier3 still green. Rebuild shape called by Ed:
+postgres_test prepared by the playwright globalSetup. **19 scenarios green**
+through `pnpm harness:tier4` (stable x3 runs) covering the whole Tier-A
+authoring order: seasons/pickup-windows, products, orders/transactions
+(cancel returns credit to the member's balance and shows in the admin
+transactions list; double-cancel rejected; void), users/member-accounts
+(memberships, direct balance top-up, walk-up checkout → instantly completed
+order), suppliers, promo/coupon codes, gift certificates (issue + cancel),
+shipping rules, config. tier0/tier3 still green. Rebuild shape called by Ed:
 **strangler-fig inside `apps/admin-ui`**. The second operator's two note files
 were read and deleted (their content is captured below and in section 4).
 Next: more Tier-A domains (orders/transactions, memberships/users, suppliers,
@@ -199,12 +203,13 @@ at the next triage cadence.
    called).
 2. ~~Hermetic test stack~~ **done** (`971ede88`): `pnpm -F api test` green
    with no doppler; CI validate_api doppler-free.
-3. ~~Gherkin skeleton + tier4 + first Tier-A scenarios~~ **done** (`eb2cd2ca`):
-   5 scenarios green via `pnpm harness:tier4`. Next: author more Tier-A
-   domains from `jig/docs/*.md` (orders/transactions, memberships/users,
-   suppliers, promo/coupon/gift-cards, shipping rules, config), then Tier B
-   admin shell (browser tier — needs chromium install + the current
-   React admin or the first Astro slice).
+3. ~~Gherkin skeleton + tier4 + Tier-A scenarios~~ **done** (`eb2cd2ca`,
+   `9498e203`, `829c6879`): the full Tier-A authoring order is green — 19
+   scenarios via `pnpm harness:tier4`. Remaining Tier-A gap: the
+   products/unsynced-search outcome is aspirational (no such API surface
+   exists yet — noted in the catalog). Next: Tier B admin shell (browser
+   tier — needs chromium install + the current React admin or the first
+   Astro slice).
 4. Then (Phase 3): jig `loop.config.ts` with checks = the tier scripts, manual
    `run-loop.ts --repo jig` shake-out until the fresh-branch baseline is green,
    then the plist pair.
