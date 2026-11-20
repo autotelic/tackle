@@ -44,6 +44,7 @@
 74cada24dc6cb965	{"confidence":0.75,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.81,"component_or_feature":0.09,"not_applicable":0.09,"route_or_handler":0.01}}
 74cd5a36572e0b3d	{"confidence":0.91,"kind":"Classify","label":"value","probabilities":{"meaning":0.06,"unclear":0,"value":0.94}}
 74cd95a5dd83cda1	{"confidence":0.61,"kind":"Classify","label":"general","probabilities":{"general":0.74,"names_a_caller":0.05,"shared_vocabulary":0.21}}
+74d5d12464a55fec	{"confidence":0.35,"kind":"Classify","label":"no_issue","probabilities":{"merge":0.13,"move":0.3,"no_issue":0.57}}
 74d8591f1f74ff0b	{"confidence":0.43,"kind":"Classify","label":"keep","probabilities":{"fix_tag":0.21,"keep":0.62,"migrate":0.17}}
 74ddd61e1e073acb	{"confidence":0.73,"kind":"Classify","label":"wire_contract","probabilities":{"domain_concept":0.01,"framework_glue":0,"implementation_detail":0.19,"wire_contract":0.8}}
 74e4611445fea217	{"confidence":0.55,"kind":"Classify","label":"leave_it","probabilities":{"leave_it":0.64,"merge":0.07,"move":0.25,"share_a_contract":0.03,"split":0.01}}

@@ -1,3 +1,4 @@
+1c005cb042595b0f	{"confidence":0.2,"kind":"Rate","label":"removes_a_hazard","probabilities":{"meaningfully_better":0.24,"no_difference":0.1,"removes_a_hazard":0.53,"slightly_clearer":0.13},"rating":2.2}
 1c0405bdf5a5ba88	{"consistency":1,"kind":"Probability","probability":0.28}
 1c06f124ce134797	{"confidence":0.68,"kind":"Classify","label":"input_adaptation","probabilities":{"domain_logic":0.12,"infrastructure":0,"input_adaptation":0.72,"mechanical":0.01,"not_applicable":0,"orchestration":0,"rendering":0,"request_validation":0.12,"transport_concern":0.03}}
 1c164d868d70e737	{"confidence":0.91,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.93,"stale_reference":0.02,"wrong_behavior":0.04,"wrong_contract":0.01}}

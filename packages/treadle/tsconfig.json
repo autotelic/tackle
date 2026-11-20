@@ -1,15 +1,12 @@
 {
+  "extends": "../../tsconfig.base.json",
+  // Imported as its own application, so it keeps its own two strictness settings for now:
+  // exactOptionalPropertyTypes and noUncheckedIndexedAccess were off in its compiler config,
+  // and turning them on is a separate, reviewable conversion (every receipt with an optional
+  // reason is a call site). Everything else from the base applies from day one.
   "compilerOptions": {
-    "target": "ES2024",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "strict": true,
-    "noEmit": true,
-    "allowImportingTsExtensions": true,
-    "erasableSyntaxOnly": true,
-    "verbatimModuleSyntax": true,
-    "skipLibCheck": true,
-    "types": ["node"]
+    "exactOptionalPropertyTypes": false,
+    "noUncheckedIndexedAccess": false
   },
   "include": ["src", "test", "vitest.config.ts"]
 }

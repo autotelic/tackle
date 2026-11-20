@@ -314,3 +314,38 @@ harmless (the run just repeats), but it is not the gate — the gate is CI.
    (`"@effect/platform-node@4.0.0-rc.116>@effect/platform-node-shared": "4.0.0-rc.116"`), which
    leaves every 4.0.5 consumer alone. The override comes out with unknown #1 — it is the price
    of holding two Effect lines in one workspace.
+
+## `treadle` — the loop engine
+
+Moved in from `autotelic/treadle` at `93f3c78` with `git subtree`, history intact. It is the
+long-lived loop around an agent session: one repository, one session at a time, a markdown issue
+tracker as the queue, deterministic checks after every session, budgets, receipts, and a
+maintenance twin that merges green PRs. One loop = the engine bound to one repo.
+
+What changed on the way in:
+
+- `package.json` is `@autotelic/treadle` and **private**: it is an application, not a library.
+  It has no `bin` and no `exports`, so it is not publishable yet; a CLI surface is the step that
+  makes it so. Dependencies go through the catalog (`effect`, `xstate`, `@xstate/effect`,
+  `typebox`, `@earendil-works/pi-coding-agent`, `vitest`, `@types/node`), and the nested
+  `pnpm-lock.yaml` is gone.
+- `tsconfig.json` extends `tsconfig.base.json`, with `exactOptionalPropertyTypes` and
+  `noUncheckedIndexedAccess` off for now: those were off in its own compiler config, and turning
+  them on is a per-call-site conversion (every receipt with an optional reason).
+- **It keeps its own Biome gate.** `biome.json` is restored and `pnpm check` runs `biome check`,
+  typecheck, and tests. `packages/treadle/**` is in `.oxfmtrc.json`'s `ignorePatterns`, the root
+  `lint` path list does not name it, jig's `plumb` engine ignores it, and `joggle.config.json`
+  has a global ignore for it plus an `app` layer. Same pattern as `plumb` and `joggle`: an
+  imported tree with its own rulebook, held to the house one as a recorded conversion. Measured:
+  **729 findings** under `oxlint.config.ts` today.
+- Two fixes made because the move exposed them, not because the code was wrong for its own machine:
+  checks spawned `zsh -lic`, so the operator's `.zshrc` (prompts, `zle`) landed in a verifier's
+  output; it is `-lc` now — login for PATH, not interactive. And the sandbox config test reads a
+  sibling `treadle-sandbox` checkout; it skips when that checkout is absent instead of failing.
+- `effect` is declared `^4.1.2` upstream but **typechecks and passes its suite on the workspace's
+  4.0.5**, so the one Effect line holds. If the conversion ever needs 4.1, the catalog bump is the
+  deliberate move, not a second line.
+
+Deferred, explicitly: the Biome→plumb/oxlint conversion (729 findings), the two strictness flags,
+a `bin`/`exports` surface so it can publish, and the absolute paths in `README.md` and
+`HANDOFF.md` that describe one operator's machine.

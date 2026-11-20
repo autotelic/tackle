@@ -56,6 +56,7 @@
 61c4c0e88b9de21c	{"confidence":0.64,"kind":"Classify","label":"collapse","probabilities":{"collapse":0.76,"keep_variants":0.19,"no_issue":0.05}}
 61ccc06882aa3118	{"confidence":0.75,"kind":"Classify","label":"same_package","probabilities":{"different_deployables":0,"same_module":0.18,"same_package":0.81,"sibling_packages":0.01}}
 61ceeba635afb643	{"confidence":0,"kind":"Rate","label":"removes_a_hazard","probabilities":{"meaningfully_better":0.22,"no_difference":0.2,"removes_a_hazard":0.33,"slightly_clearer":0.25},"rating":1.68}
+61cf5c8a5933e3f5	{"confidence":0.41,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.44,"no_difference":0.03,"removes_a_hazard":0.38,"slightly_clearer":0.15},"rating":2.16}
 61d30afcbad651de	{"confidence":0.45,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.15,"common_idiom":0.63,"shared_helper":0.22}}
 61d61f44d68f3325	{"confidence":0.85,"kind":"Classify","label":"general","probabilities":{"general":0.9,"names_a_caller":0.01,"shared_vocabulary":0.09}}
 61d717f88606614c	{"confidence":0.48,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.65,"unclear":0,"value":0.35}}

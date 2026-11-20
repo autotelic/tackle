@@ -67,6 +67,14 @@ catalog:
   # TypeScript. Draft 2020-12, which is what schema/*.json declares. Dev-only; protocol's
   # runtime stays dependency-free.
   ajv: "8.17.1"
+  # treadle: the long-lived loop engine. xstate drives the pass machine through @xstate/effect;
+  # typebox is what its rules and the pi extension declare state with. Versions are the ones
+  # its own lockfile resolved, so the move does not also change its behaviour.
+  "@biomejs/biome": "2.6.5"
+  "@earendil-works/pi-coding-agent": "1.5.0"
+  "@xstate/effect": "1.0.0-alpha.12"
+  xstate: "6.0.0-alpha.73"
+  typebox: "1.4.4"
 
 # `@opencode/plugin` (jig's optional, dev-only peer) pins `effect@4.0.1` and its own
 # `@effect/*` tree. In this workspace that installs a SECOND copy of Effect, which the

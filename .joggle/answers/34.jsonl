@@ -61,6 +61,7 @@
 34d1661003509d66	{"consistency":1,"kind":"Probability","probability":0.9500000000000001}
 34d34cde7892a2fa	{"consistency":1,"kind":"Probability","probability":0.7933333333333333}
 34d89d4ff4e9036e	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
+34dfdf362aa7fe19	{"confidence":0.61,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.15,"keep_variants":0.74,"no_issue":0.11}}
 34e38c13b495400b	{"confidence":0.72,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.79,"different_order":0.01,"different_work":0.2,"same_operation":0}}
 34e8bdcd0539029c	{"confidence":0.88,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.91,"stale_reference":0.01,"wrong_behavior":0.05,"wrong_contract":0.03}}
 34ed0c6755851ff8	{"confidence":0.96,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.02,"member_1":0.98}}

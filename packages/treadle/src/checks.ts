@@ -74,7 +74,10 @@ function spawnLogged(
   const start = Date.now()
   return new Promise((resolve, reject) => {
     // Login shell: node and pnpm live behind fnm on this machine, so plain shells lack them.
-    const child = spawn('zsh', ['-lic', command], {
+    // Not INTERACTIVE: `-i` reads the operator's .zshrc, whose prompts and hooks then appear in
+    // a check's output -- a verifier that depends on who ran it is not the hermetic check this
+    // file promises. `-l` still gets the login PATH.
+    const child = spawn('zsh', ['-lc', command], {
       cwd: options.cwd,
       env: options.env,
       detached: true,
@@ -241,7 +244,7 @@ export async function runChecks(
       }
     } else {
       const appLog = join(logsDir, 'app.log')
-      const app = spawn('zsh', ['-lic', config.app.start], {
+      const app = spawn('zsh', ['-lc', config.app.start], {
         cwd: repoDir,
         env: { ...env, ...config.app.env },
         detached: true,

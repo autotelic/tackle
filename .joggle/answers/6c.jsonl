@@ -23,6 +23,7 @@
 6c5da7d4dcbc4c1c	{"confidence":0.83,"kind":"Classify","label":"neither","probabilities":{"fact":0.07,"neither":0.89,"recomputation":0.04}}
 6c6245b3cbddde58	{"consistency":1,"kind":"Probability","probability":0.29444444444444445}
 6c696af4115b873e	{"confidence":0.91,"kind":"Classify","label":"not_a_record","probabilities":{"mutable":0.05,"not_a_record":0.94,"supersede_only":0.01}}
+6c71774173b3d9db	{"confidence":0.96,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.97,"not_a_derivation":0.02,"reimplements":0.01}}
 6c7232def4c4e9f3	{"confidence":0.89,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.93,"not_a_derivation":0.03,"reimplements":0.04}}
 6c742113dd1ebe12	{"confidence":0.98,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0,"must_be_current":0.01,"not_a_projection":0.99}}
 6c76a523d1cc9780	{"confidence":0.88,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.02,"must_be_current":0.06,"not_a_projection":0.92}}

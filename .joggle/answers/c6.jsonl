@@ -4,6 +4,7 @@ c60d6b901d851e99	{"confidence":0.85,"kind":"Classify","label":"semantic_verdict"
 c60e7a72b35ba144	{"consistency":1,"kind":"Probability","probability":0.9333333333333335}
 c610ac8557f8d260	{"confidence":0.88,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.02,"must_be_current":0.06,"not_a_projection":0.92}}
 c612d524368ea02f	{"confidence":0.22,"kind":"Classify","label":"state","probabilities":{"deviation":0.08,"neither":0.44,"state":0.48}}
+c617d3bf581518af	{"consistency":1,"kind":"Probability","probability":0.34333333333333327}
 c61829450166680c	{"confidence":0.97,"kind":"Classify","label":"not_a_record","probabilities":{"mutable":0.02,"not_a_record":0.98,"supersede_only":0}}
 c61c810b7f8ccea7	{"consistency":1,"kind":"Probability","probability":0.6066666666666666}
 c6232f4918908592	{"confidence":0.54,"kind":"Classify","label":"move","probabilities":{"move":0.77,"no_issue":0.23}}

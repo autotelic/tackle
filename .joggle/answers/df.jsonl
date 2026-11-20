@@ -1,4 +1,5 @@
 df041578249fb8ca	{"confidence":0.91,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.02,"must_be_current":0.04,"not_a_projection":0.94}}
+df0589b03587d24f	{"confidence":0.97,"kind":"Classify","label":"value","probabilities":{"meaning":0.02,"unclear":0,"value":0.98}}
 df06d4cb6e063fa9	{"confidence":0.31,"kind":"Classify","label":"move","probabilities":{"leave_it":0.13,"merge":0.26,"move":0.45,"share_a_contract":0.15,"split":0.01}}
 df08967e3ac3070f	{"confidence":0.43,"kind":"Classify","label":"state","probabilities":{"deviation":0,"neither":0.38,"state":0.62}}
 df08b3da71feb7bf	{"confidence":0.43,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.62,"not_a_derivation":0.35,"reimplements":0.03}}

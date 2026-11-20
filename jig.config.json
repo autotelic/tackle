@@ -20,6 +20,8 @@
         "--ignore-pattern",
         "packages/joggle/**",
         "--ignore-pattern",
+        "packages/treadle/**",
+        "--ignore-pattern",
         "tools/**",
         "--ignore-pattern",
         "packages/room/extensions/**"

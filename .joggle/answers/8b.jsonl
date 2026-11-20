@@ -4,6 +4,7 @@
 8b1c62c2c97cc299	{"confidence":0.92,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.04,"not_an_invariant":0.95,"repair_path":0.01}}
 8b1ced2786baf87a	{"confidence":0.48,"kind":"Classify","label":"rendering_edge","probabilities":{"domain_core":0.03,"infrastructure":0,"library_core":0.39,"not_applicable":0,"rendering_edge":0.55,"transport_edge":0,"utilities":0.03}}
 8b1d2e1d979ac0ed	{"confidence":0.5,"kind":"Classify","label":"keep","probabilities":{"fix_tag":0.11,"keep":0.67,"migrate":0.22}}
+8b1e971f12877daf	{"confidence":0.82,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.88,"not_a_derivation":0.08,"reimplements":0.04}}
 8b21c9c763ce9d98	{"confidence":0,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.5,"member_1":0.5}}
 8b22ecf3f7c2f4cf	{"confidence":0.55,"kind":"Classify","label":"framework_glue","probabilities":{"domain_concept":0.05,"framework_glue":0.66,"implementation_detail":0.24,"wire_contract":0.05}}
 8b2f1dd84ba09b6e	{"confidence":0.46,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.1,"internal_only":0.64,"unaccounted":0.26}}
@@ -16,6 +17,7 @@
 8b631ff75c4dc270	{"confidence":0.68,"kind":"Classify","label":"neither","probabilities":{"deviation":0.01,"neither":0.79,"state":0.2}}
 8b64d67b140c9943	{"confidence":0.37,"kind":"Rate","label":"slightly_clearer","probabilities":{"meaningfully_better":0.2,"no_difference":0.31,"removes_a_hazard":0.06,"slightly_clearer":0.43},"rating":1.01}
 8b6658ca112cd70b	{"confidence":0.97,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.01,"member_1":0.98,"member_2":0.01}}
+8b69ea7cfdc93810	{"confidence":0.42,"kind":"Classify","label":"member_2","probabilities":{"member_0":0.26,"member_1":0.13,"member_2":0.61}}
 8b6c2262c7cb20b4	{"confidence":0.8,"kind":"Classify","label":"value","probabilities":{"meaning":0.13,"unclear":0,"value":0.87}}
 8b6c57ced1bec912	{"confidence":0.86,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.08,"independent":0.91,"meaning_switched":0.01}}
 8b6d83ffb3e5bd2e	{"confidence":0.98,"kind":"Classify","label":"not_a_record","probabilities":{"mutable":0.01,"not_a_record":0.99,"supersede_only":0}}

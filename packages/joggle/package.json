@@ -77,7 +77,8 @@
     "@effect/platform-node": "catalog:",
     "@effect/platform-node-shared": "catalog:",
     "effect": "catalog:",
-    "oxc-parser": "catalog:"
+    "oxc-parser": "catalog:",
+    "@autotelic/protocol": "workspace:*"
   },
   "devDependencies": {
     "@autotelic/plumb": "workspace:*",

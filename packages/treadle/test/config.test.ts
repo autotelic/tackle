@@ -1,23 +1,29 @@
+import { existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { assertLoopConfig, loadConfig } from '../src/config.ts'
 
+// A live deployment's tracker config lives in a sibling checkout, not in this repository.
+// It is exercised where it exists; a checkout without it must not be red.
 const sandboxConfig = fileURLToPath(
   new URL('../../treadle-sandbox/loop.config.ts', import.meta.url),
 )
 
 describe('loadConfig', () => {
-  it('loads and validates the sandbox loop.config.ts', async () => {
-    const config = await loadConfig(sandboxConfig)
-    expect(config.app?.healthUrl).toBe('http://127.0.0.1:4317/health')
-    expect(config.checks.map((c) => c.name)).toEqual(['typecheck', 'lint', 'unit', 'e2e'])
-    expect(config.checks[3]?.needsApp).toBe(true)
-    expect(config.checks[2]?.report).toEqual({
-      format: 'vitest-json',
-      path: '.treadle/reports/unit.json',
-    })
-    expect(config.budgets.passesPerIssue).toBe(3)
-  })
+  it.skipIf(!existsSync(sandboxConfig))(
+    'loads and validates the sandbox loop.config.ts',
+    async () => {
+      const config = await loadConfig(sandboxConfig)
+      expect(config.app?.healthUrl).toBe('http://127.0.0.1:4317/health')
+      expect(config.checks.map((c) => c.name)).toEqual(['typecheck', 'lint', 'unit', 'e2e'])
+      expect(config.checks[3]?.needsApp).toBe(true)
+      expect(config.checks[2]?.report).toEqual({
+        format: 'vitest-json',
+        path: '.treadle/reports/unit.json',
+      })
+      expect(config.budgets.passesPerIssue).toBe(3)
+    },
+  )
 
   it('rejects a config missing required fields', () => {
     expect(() => assertLoopConfig({}, 'x')).toThrow(/issues/)

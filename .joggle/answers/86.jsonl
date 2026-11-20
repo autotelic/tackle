@@ -58,6 +58,7 @@
 86bf3d208f493a18	{"confidence":0.14,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.35,"no_difference":0.21,"removes_a_hazard":0.15,"slightly_clearer":0.29},"rating":1.44}
 86c27eaf48770b26	{"confidence":0.68,"kind":"Classify","label":"move","probabilities":{"move":0.84,"no_issue":0.16}}
 86d12656e2d42ece	{"consistency":1,"kind":"Probability","probability":0.15555555555555556}
+86d5c6f7a7e47925	{"consistency":1,"kind":"Probability","probability":0.30000000000000004}
 86d9bbbea9110e56	{"consistency":1,"kind":"Probability","probability":0.8333333333333334}
 86db9e1d9e5c0065	{"consistency":1,"kind":"Probability","probability":0.6266666666666668}
 86ddaa7c56eb2a6d	{"confidence":0.82,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.06,"not_an_invariant":0.88,"repair_path":0.06}}

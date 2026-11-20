@@ -10,6 +10,7 @@
     ".pi/**",
     "packages/plumb/**",
     "packages/joggle/**",
+    "packages/treadle/**",
     "packages/joggle/tests/fixtures/**",
     "examples/*/tools/ui-catalog/**"
   ]

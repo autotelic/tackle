@@ -1,4 +1,5 @@
 import { Match } from "effect"
+import { severityRank } from "@autotelic/protocol"
 import type { Diagnostic, Drop, Note, Severity, Structure } from "./schema.ts"
 import { moveOrder, moveVocabulary, type Move } from "./moves.ts"
 
@@ -109,8 +110,6 @@ export interface Report {
   readonly replayed: boolean
 }
 
-const rank: Record<Severity, number> = { error: 0, warn: 1, info: 2 }
-
 /** Rank findings for reading: file, line, column, severity, then rule. */
 export const sortDiagnostics = (
   diagnostics: ReadonlyArray<Diagnostic>,
@@ -120,7 +119,7 @@ export const sortDiagnostics = (
       a.location.file.localeCompare(b.location.file) ||
       a.location.line - b.location.line ||
       a.location.column - b.location.column ||
-      rank[a.severity] - rank[b.severity] ||
+      severityRank[a.severity] - severityRank[b.severity] ||
       a.ruleId.localeCompare(b.ruleId),
   )
 

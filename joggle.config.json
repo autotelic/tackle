@@ -17,6 +17,10 @@
       "reason": "plumb is the deterministic single-file linter: its rules are written once and applied everywhere, and its rule-authoring shapes are its own concern. joggle asks whether two things are the same and whether a thing fits THIS repository; plumb's rule internals are not that question, and the root lint already scopes plumb out. Judging them produced 82 `rule-judgment` readings about plumb's own rule metadata, 4 `object-shape` readings about its metadata literals, 3 `duplicate-meaning` and 2 `compose-types` readings within its own rule internals — none of them about this repository."
     },
     {
+      "path": "packages/treadle/**",
+      "reason": "treadle is an application imported as its own tree -- its own Biome gate and two compiler settings -- not one of the seam packages the architecture law describes. Its loop-engine internals (trackers, rules, budgets, receipts) would be judged against a vocabulary they do not use, which is the same reason plumb's rule internals are scoped out. Converting it to the house rulebook is a recorded MIGRATION item, not a silent exception."
+    },
+    {
       "rule": "joggle/compose-types",
       "path": "packages/protocol/src/catalog.ts",
       "reason": "`DuplicateCandidate` and joggle's `ScoredPair` are two packages' independent declarations of a scored pair. They cannot compose: the dependency law is that `protocol` depends on nothing, so it cannot import a type from `joggle`. The shared shape IS the seam — they agree on bytes, not on code."
@@ -113,6 +117,20 @@
         "name": "engine",
         "include": ["packages/plumb/**", "packages/joggle/**", "packages/cutlist/**"],
         "forbid": ["@autotelic/jig-cli", "@autotelic/jig-cli/**"]
+      },
+      {
+        "name": "app",
+        "include": ["packages/treadle/**"],
+        "forbid": [
+          "@autotelic/plumb",
+          "@autotelic/plumb/**",
+          "@autotelic/joggle",
+          "@autotelic/joggle/**",
+          "@autotelic/cutlist",
+          "@autotelic/cutlist/**",
+          "@autotelic/jig-cli",
+          "@autotelic/jig-cli/**"
+        ]
       },
       {
         "name": "harness",

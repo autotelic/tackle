@@ -5,6 +5,7 @@ ba10159cdb84dbf9	{"confidence":0.31,"kind":"Classify","label":"not_a_derivation"
 ba173253ee801c74	{"consistency":1,"kind":"Probability","probability":0.9188888888888888}
 ba231095a1580f10	{"confidence":0.57,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.68,"different_order":0,"different_work":0.32,"same_operation":0}}
 ba26ad9eecad322b	{"confidence":0.77,"kind":"Classify","label":"domain_concept","probabilities":{"domain_concept":0.83,"framework_glue":0.03,"implementation_detail":0.13,"wire_contract":0.01}}
+ba27e3517af134b6	{"confidence":0.76,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.84,"unclear":0,"value":0.16}}
 ba286243f855c159	{"confidence":0.95,"kind":"Classify","label":"mechanical","probabilities":{"domain_logic":0,"infrastructure":0.02,"input_adaptation":0,"mechanical":0.96,"not_applicable":0.02,"orchestration":0,"rendering":0,"request_validation":0,"transport_concern":0}}
 ba2af511a96c7158	{"confidence":0.61,"kind":"Classify","label":"wire_contract","probabilities":{"domain_concept":0.29,"framework_glue":0,"implementation_detail":0,"wire_contract":0.71}}
 ba302caf248243c5	{"consistency":1,"kind":"Probability","probability":0.7799999999999999}
@@ -65,6 +66,7 @@ bae5a405f1aeb0e0	{"confidence":0.74,"kind":"Classify","label":"mechanical","prob
 bae5cbf03c03aaa4	{"confidence":0.67,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.01,"name_meaning":0.08,"no_issue":0.16,"semantic_verdict":0.75}}
 baec995381c53aec	{"confidence":0.38,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.4,"names_a_caller":0.01,"shared_vocabulary":0.59}}
 baedbc68e7ad267b	{"confidence":0.72,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.1,"must_be_current":0.09,"not_a_projection":0.81}}
+baf4e4d423af43de	{"confidence":0.85,"kind":"Classify","label":"wire_contract","probabilities":{"domain_concept":0.09,"framework_glue":0.01,"implementation_detail":0.01,"wire_contract":0.89}}
 baf5ce3cedac8783	{"confidence":0.88,"kind":"Classify","label":"neither","probabilities":{"fact":0.07,"neither":0.92,"recomputation":0.01}}
 baf716366f84f2c7	{"confidence":0.63,"kind":"Classify","label":"rendering","probabilities":{"domain_logic":0.25,"infrastructure":0,"input_adaptation":0.01,"mechanical":0.01,"not_applicable":0.05,"orchestration":0,"rendering":0.67,"request_validation":0,"transport_concern":0.01}}
 bafc587df88dcff2	{"consistency":1,"kind":"Probability","probability":0.75}

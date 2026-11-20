@@ -69,6 +69,7 @@
 8fe4b7d95cb4d5c2	{"confidence":0.65,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.74,"component_or_feature":0.11,"not_applicable":0.09,"route_or_handler":0.06}}
 8fe633941c9260a0	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
 8fe9344eca0e4263	{"confidence":0.23,"kind":"Classify","label":"domain_concept","probabilities":{"domain_concept":0.42,"framework_glue":0.1,"implementation_detail":0.17,"wire_contract":0.31}}
+8fee2c14954dc55b	{"confidence":0.92,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.95,"not_a_derivation":0.04,"reimplements":0.01}}
 8ffaaf3c06d06b52	{"confidence":0.93,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0,"wrong_behavior":0.04,"wrong_contract":0.01}}
 8ffadd103ff6fcfb	{"confidence":0.88,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.09,"same_module":0,"same_package":0,"sibling_packages":0.91}}
 8fffbb9a8fc9ee2a	{"consistency":1,"kind":"Probability","probability":0.6266666666666666}

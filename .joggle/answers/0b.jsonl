@@ -62,6 +62,7 @@
 0bdb609a2aa0bcba	{"consistency":1,"kind":"Probability","probability":0.6666666666666666}
 0bddb7c9b11c70e0	{"confidence":0.73,"kind":"Classify","label":"utilities","probabilities":{"domain_core":0.01,"infrastructure":0,"library_core":0.21000000000000002,"not_applicable":0.01,"rendering_edge":0,"transport_edge":0,"utilities":0.77}}
 0be6d298ce62cc01	{"confidence":0.86,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.09,"names_a_caller":0,"shared_vocabulary":0.91}}
+0be96082a1f7af25	{"confidence":0.92,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.96,"member_1":0.04}}
 0bee32a4e6542e76	{"confidence":0.83,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.11,"not_an_invariant":0.89,"repair_path":0}}
 0bef89798909287f	{"confidence":0.72,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.81,"unclear":0.01,"value":0.18}}
 0bf001b0d508946a	{"confidence":0.51,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.33,"independent":0.67,"meaning_switched":0}}
