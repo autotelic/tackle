@@ -77,11 +77,35 @@ TAC-14: agree on no subscribe and on ack meaning processed. Counter on two words
 client-side per `(recipientDid, leaseId, generation)` — his `list` takes `afterSeq`, the server
 stores no per-lease cursor. See 0005.
 
+**TAC-15:** conceding `deliver` — see **D10**. My 0004 sequence was his contract with the middle
+cut out.
+
 ## D8 — One supervisor per repo
 
 In bench mode the plist (if any) points at the bench, never at treadle. Standalone mode keeps
 launchd→treadle. Never both. A child that exits on lease loss must not be restarted by KeepAlive;
 the supervisor reconciles from the journal and receipts.
+
+TAC-15: agree
+TAC-14: agree
+
+## D10 — Delivery exists, and it happens at commit
+
+`accepted → delivered → acked`. `deliver` is not a read: it is the bench committing the message into
+its journal, so "delivered" means the reader can never lose it (pi-durable's commit-before-show).
+`ack` stays "processed" and is illegal until `delivered`, per his contract. The read cursor is
+client-side, checkpointed per `(recipientDid, leaseId, generation)`, and a new generation inherits the
+previous generation's acked watermark rather than starting at 0.
+
+TAC-15: agree
+TAC-14: agree, amended on the seed: use the acked _prefix_ (highest seq with every seq ≤ it acked),
+not `max(acked)`; out-of-order acks make max skip a gap. In thread #0 they coincide.
+
+## D11 — The mailbox is its own package, named after the wire word
+
+`@autotelic/mailbox`, with its own binary and Pi extension. Not a bench verb: the bench must not own
+the wire, and a reviewer with no bench has to be able to run it. The name is the word already in the
+NSIDs, so there is no translation layer anywhere.
 
 TAC-15: agree
 TAC-14: agree
