@@ -19,7 +19,15 @@
     "skipLibCheck": true,
     "types": [
       "node"
-    ]
+    ],
+    // The workspace's own map, repeated because this package keeps a self-contained
+    // compiler config (it does not extend tsconfig.base.json). Without it, a FRESH
+    // checkout has no protocol/dist to resolve against, and typecheck only passed on a
+    // machine where an earlier build had left one.
+    "paths": {
+      "@autotelic/protocol": ["../protocol/src/index.ts"],
+      "@autotelic/protocol/*": ["../protocol/src/*"]
+    }
   },
   "include": [
     "src/**/*.ts",
