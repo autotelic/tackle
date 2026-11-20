@@ -113,6 +113,13 @@ thinks it answered:
   and are enforced by nothing. If a repository keeps a second, errors-only lint config, this is
   the line that says which rules live only there.
 
+A repository with judged rules has **two populations** of finding: the deterministic ones a
+keyless run can name, and the judged ones only a run with a model key produces. Accept from the
+**keyed** run once (`jig baseline --allow-unjudged` when a per-rule ceiling or a `count` policy
+left candidates unjudged). That ledger is a superset: keyed runs pass on what they judged, and
+keyless CI passes on the subset it can name. The reverse — accepting keyless, then running with a
+key — is the direction that fails, because the keyed run names findings the ledger never held.
+
 ```sh
 jig check                    # run every engine; fail on errors and new findings
 jig check --format sarif     # SARIF 2.1.0 for code scanning

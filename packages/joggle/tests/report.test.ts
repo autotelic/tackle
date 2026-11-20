@@ -20,7 +20,7 @@ const report = (diagnostics: ReadonlyArray<Diagnostic>): Report => ({
   drops: [],
   notes: [{ ruleId: "joggle/duplicate-meaning", reason: "12 of 412 clusters were not judged" }],
   timings: [{ phase: "workspace", ms: 1200 }],
-  decision: { requests: 1, replayed: 0, calls: 1, unavailable: 0, inputTokens: 900, outputTokens: 40 },
+  decision: { requests: 1, replayed: 0, judged: 1, calls: 1, unavailable: 0, inputTokens: 900, outputTokens: 40 },
   elapsedMs: 5,
   replayed: false,
 })
@@ -110,7 +110,7 @@ it("a run with no model key says so, rather than only counting it unavailable", 
   const out = render(
     {
       ...report([]),
-      decision: { requests: 2, replayed: 0, calls: 0, unavailable: 2, inputTokens: 0, outputTokens: 0 },
+      decision: { requests: 2, replayed: 0, judged: 0, calls: 0, unavailable: 2, inputTokens: 0, outputTokens: 0 },
     },
     "text",
   )

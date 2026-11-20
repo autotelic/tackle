@@ -37,7 +37,7 @@ const reportOf = (diagnostics: Report["diagnostics"]): Report => ({
   notes: [],
   drops: [],
   timings: [],
-  decision: { requests: 1, replayed: 0, calls: 1, unavailable: 0, inputTokens: 0, outputTokens: 0 },
+  decision: { requests: 1, replayed: 0, judged: 0, calls: 1, unavailable: 0, inputTokens: 0, outputTokens: 0 },
   elapsedMs: 0,
   replayed: false,
 })

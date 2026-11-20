@@ -96,7 +96,9 @@ export interface Report {
   readonly decision: {
     readonly requests: number
     readonly replayed: number
-    /** Wire calls. Fewer than requests means batching worked. */
+    /** Answers judged and written: one per candidate, however the calls were batched. */
+    readonly judged: number
+    /** Wire calls. Fewer than judged means batching worked. */
     readonly calls: number
     readonly unavailable: number
     readonly inputTokens: number

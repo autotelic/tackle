@@ -357,13 +357,31 @@ const baselineCommand = Command.make(
           ? run.report.diagnostics.filter((diagnostic) => diagnostic.judged === false)
           : []
       if (unverified.length > 0 && options.allowUnjudged !== true) {
+        /*
+         * Name the cause that is actually true in THIS run.
+         *
+         * It used to say "joggle reads its model key from this run's environment" whether or
+         * not the key was there. On a repository that sets `unavailable: "count"` the key IS
+         * there and most candidates are still not judged — a per-rule ceiling, not a missing
+         * secret — so the instruction sent the operator to look for a key they already had.
+         */
+        const keyPresent =
+          process.env["TYPESAFE_API_KEY"] !== undefined && process.env["TYPESAFE_API_KEY"] !== ""
         yield* write(
           `jig: refusing to accept ${unverified.length} unverified finding(s) into ${settings.gate.baseline}.\n` +
             "  A judged run can name the same finding differently, so this ledger would not hold in CI.\n" +
             "  " +
             String(skipped) +
-            " candidate(s) were not judged: joggle reads its model key from this\n" +
-            "  run's environment (TYPESAFE_API_KEY). Pass --allow-unjudged to accept that debt anyway.",
+            " candidate(s) were not judged. " +
+            (keyPresent
+              ? "TYPESAFE_API_KEY is present, so judgement was attempted: the limit was a\n" +
+                "  per-rule candidate ceiling or this run's token budget (the report names which),\n" +
+                "  and no key can raise either."
+              : "No TYPESAFE_API_KEY is in this run's environment, so judged rules cannot ask.") +
+            "\n  A repository whose engine policy is `unavailable: count` has declared that this is\n" +
+            "  expected: --allow-unjudged accepts those findings, and keyless CI reproduces them.\n" +
+            "  Accepting from a KEYED run is a superset: keyed runs then pass on what they judged,\n" +
+            "  and keyless runs pass on the subset they can name.",
         )
         yield* Effect.sync(() => {
           process.exitCode = EXIT.usage

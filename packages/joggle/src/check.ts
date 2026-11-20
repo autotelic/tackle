@@ -529,7 +529,7 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
         structure: stored.structure ?? { concepts: 0, declarations: 0, duplicated: 0, overloaded: 0 },
         timings: [{ phase: "replay-check", ms: discoverMs }],
         // This run spent nothing, so it reports nothing spent.
-        decision: { requests: 0, replayed: 0, calls: 0, unavailable: 0, inputTokens: 0, outputTokens: 0 },
+        decision: { requests: 0, replayed: 0, judged: 0, calls: 0, unavailable: 0, inputTokens: 0, outputTokens: 0 },
         elapsedMs: (yield* Clock.currentTimeMillis) - started,
         replayed: true,
       })

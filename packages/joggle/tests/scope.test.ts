@@ -17,7 +17,7 @@ import { shortHash } from "../src/state.ts"
 import { planAnswersLayer } from "../src/testing.ts"
 import { corpus, nodeLayer, tsgoStub } from "./support.ts"
 
-const totals = { requests: 0, replayed: 0, calls: 0, unavailable: 0, inputTokens: 0, outputTokens: 0 }
+const totals = { requests: 0, replayed: 0, judged: 0, calls: 0, unavailable: 0, inputTokens: 0, outputTokens: 0 }
 
 /**
  * A rule that does NOT filter by scope. It emits one candidate inside the run's

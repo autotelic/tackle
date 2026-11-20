@@ -151,22 +151,28 @@ const elapsedText = (milliseconds: number): string => {
  * worse than none.
  */
 export const progressLine = (input: {
-  readonly requests: number
-  readonly calls: number
+  /** Candidates whose answer is known: judged + replayed + unavailable. */
+  readonly resolved: number
+  /** Answers written from a model response — one per candidate, even when calls are batched. */
+  readonly judged: number
   readonly replayed: number
+  /** Requests to the provider; a batched call answers many candidates at once. */
+  readonly apiCalls: number
   readonly inputTokens: number
   readonly total?: number | undefined
   readonly budget?: number | undefined
   readonly elapsedMs: number
 }): string =>
   "joggle: " +
-  String(input.requests) +
+  String(input.resolved) +
   (input.total === undefined ? "" : "/" + String(input.total)) +
   " candidate(s) resolved (" +
-  String(input.calls) +
+  String(input.judged) +
   " judged, " +
   String(input.replayed) +
-  " replayed) · " +
+  " replayed, " +
+  String(input.apiCalls) +
+  " api call(s)) · " +
   compactTokens(input.inputTokens) +
   (input.budget === undefined ? "" : "/" + compactTokens(input.budget)) +
   " input tokens · " +
@@ -175,6 +181,7 @@ export const progressLine = (input: {
 const emptyStats: DecisionTotals = {
   requests: 0,
   replayed: 0,
+  judged: 0,
   calls: 0,
   unavailable: 0,
   inputTokens: 0,
@@ -316,11 +323,17 @@ export const layer = (
         const total = yield* Ref.get(planned)
         const elapsedMs = now - startedAt
         const budget = options.inputBudget ?? policy.decision.maxInputTokens
+        // "Resolved" is the sum of the three terminal outcomes. It used to print the WIRE
+        // request count, which is a different unit: a replayed candidate never makes a request,
+        // and one batched call resolves many candidates. A 10-minute run reported 198 while
+        // writing 17k answers, and the number was not wrong — it was the wrong quantity.
+        const resolved = current.judged + current.replayed + current.unavailable
         process.stderr.write(
           progressLine({
-            requests: current.requests,
-            calls: current.calls,
+            resolved,
+            judged: current.judged,
             replayed: current.replayed,
+            apiCalls: current.calls,
             inputTokens: current.inputTokens,
             total,
             budget,
@@ -334,9 +347,10 @@ export const layer = (
             {
               phase: "judging",
               candidatesTotal: total ?? null,
-              candidatesResolved: current.requests,
-              judged: current.calls,
+              candidatesResolved: resolved,
+              judged: current.judged,
               replayed: current.replayed,
+              unavailable: current.unavailable,
               apiCalls: current.calls,
               inputTokens: current.inputTokens,
               inputBudget: budget,
@@ -446,7 +460,10 @@ export const layer = (
                 }))
               : Effect.void,
           ).pipe(Effect.map((stored) => Option.map(stored, answerOf))),
-        put: (key, answer) => answers.put(key, storedOf(answer)),
+        put: (key, answer) =>
+          Effect.tap(answers.put(key, storedOf(answer)), () =>
+            Ref.update(stats, (current) => ({ ...current, judged: current.judged + 1 })),
+          ),
       }
 
       // Every answer is remembered per decision, so the committed cache is the
