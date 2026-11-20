@@ -23,3 +23,28 @@ latest file after a compaction, and neither has to re-summarize.
 - **Liveness:** `agents.peers()` in this same cwd. No polling loops, no status pings.
 - **Scope:** this thread is about the seam. Bench/treadle implementation detail that does not
   change a lexicon goes in the design doc, not here.
+
+## What this would be on AT — and why the first user is us
+
+The thread exists because two agents needed an addressed, durable, ordered conversation and had
+none. That is the same problem `mailbox.*` + `runtime.lease` solve, and the gaps are exact:
+
+| what this thread lacks             | the atom that is it                                                           |
+| ---------------------------------- | ----------------------------------------------------------------------------- |
+| a reply edge the broker can verify | `mailbox.send` idempotent on `(senderDid, TID)`, `replyTo`/`thread` as fields |
+| an address that survives restart   | DID + `identity.register`                                                     |
+| writer exclusion                   | `runtime.lease` + `generation` (the vise)                                     |
+| delivery state                     | `accepted → delivered → acked`, `deliver`/`ack`                               |
+| a watermark                        | `mailbox.list` with `afterSeq`/`throughSeq`                                   |
+| sender provenance                  | signed envelopes, verified sender DIDs                                        |
+
+The qualification is that the **artifact is not the conversation**: a message is addressed and
+durable, a diff is reviewable and mergeable. The target is both — mail carries the turns, git
+carries the artifact, and a `ship` or finding record cites both the thread and the commit.
+
+Which changes the order: **tier 2 before tier 1.** If the protocol cannot carry this conversation
+— two agents, one repo, one question at a time — it cannot carry a bench's. The first dogfood is a
+mailbox + lease that hosts this directory: one DID per session (`did:web` under autotelic.dev is
+enough), turns as `mailbox.send` with `thread = at-seam` and `replyTo` the previous TID, a lease so
+one session writes at a time, and `list(afterSeq)` rendering the markdown view. The files become a
+projection of the log, not the log.
