@@ -1,4 +1,4 @@
-# Treadle handoff — 2026-11-19 ~07:00Z (overnight session); updated 2026-11-19 ~18:20 MST
+# Treadle handoff — 2026-11-19 ~07:00Z (overnight session); updated 2026-11-19 ~19:00 MST
 
 Reader: a fresh pi session (or Ed). This is the live state; history lives in
 commits, receipts, and `docs/2026-11-19-audit-triage.md`.
@@ -16,10 +16,18 @@ design). **Jig**: Phase 1 prep docs committed and Phase 2 **landed**
 `loadTestEnv.js` mocha loader, standalone `docker-compose.test.yml` (project
 `jig-test`, owned ports 5435/6382/8109/1082), doppler removed from
 `validate_api.yaml`, `pnpm -F api test` green **with no doppler** (2391
-passing / TCL 6). Rebuild shape called by Ed: **strangler-fig inside
-`apps/admin-ui`**. The second operator's two note files were read and deleted
-(their content is captured below and in section 4). Next: playwright-bdd
-skeleton + `tier4-admin` catalog entry + Tier-A scenario authoring, then jig
+passing / TCL 6). Phase 3 prep also **landed** (`eb2cd2ca`, pushed): the
+Gherkin outcome suite (tier4) — playwright-bdd v9 + @playwright/test at repo
+root (`features/` + `steps/`), Tier A bound at the API/DB seam via an
+in-process API boot (`apps/api/specs/support/gherkinApp.js`) against
+postgres_test prepared by the playwright globalSetup; five scenarios green
+through `pnpm harness:tier4` (seasons/pickup-windows: closed sessions not
+offered + cart cutoff rejection/acceptance; products: variant counts +
+discontinued status); tier0/tier3 still green. Rebuild shape called by Ed:
+**strangler-fig inside `apps/admin-ui`**. The second operator's two note files
+were read and deleted (their content is captured below and in section 4).
+Next: more Tier-A domains (orders/transactions, memberships/users, suppliers,
+promo/coupon/gift-cards, shipping rules, config), Tier B admin shell, then jig
 `loop.config.ts` shake-out.
 
 ## 2. Machines and paths
@@ -114,11 +122,18 @@ skeleton + `tier4-admin` catalog entry + Tier-A scenario authoring, then jig
   (repo convention; fixture URL carries it) — it hard-coded SSL that no local
   postgres accepts. Fixture env discovered empirically beyond the audit table:
   `IETF_SIG_SECRET`/`IETF_SIG_KEY` (plugins/signRequest — their absence caused
-  the keyId 500s). Gherkin describes **outcomes** in two tiers (Tier A API/DB
-  seam = majority, survives the rewrite untouched; Tier B thin browser tier
-  bound via data-testid contract); **harness work builds on the existing
-  catalog + tier scripts** (add `tier4-admin`, fill tier1/tier2), not a new
-  structure.
+  the keyId 500s). **Tier 4 (Gherkin) landed** (`eb2cd2ca`): playwright-bdd v9
+  step callbacks must take a fixtures-destructuring first arg (`({})`) and the
+  v9 config keys are `features`/`steps` globs (v8's featuresDir/stepsDir are
+  gone); the storefront pickup-sessions listing hard-filters
+  `order_cutoff_at >= now`, so "closed" for a member means *not offered at
+  all* — that is the Tier A outcome, and the cart cutoff error
+  ("the order cut off date is in the past") is the enforcement seam. Root
+  suite runs workers:1 (shared db) with a scenario-scoped `world` singleton.
+  Gherkin describes **outcomes** in two tiers (Tier A API/DB seam = majority,
+  survives the rewrite untouched; Tier B thin browser tier bound via
+  data-testid contract); **harness work builds on the existing catalog + tier
+  scripts** (tier4-admin added; tier1/tier2 still stubs).
 - **Jev/System One** (typesafe.ai): already the judgement engine in joggle; for
   treadle, treat it as how a *script* makes calibrated calls (wire-cache makes
   it replay-safe), not as a ladder rung.
@@ -180,20 +195,22 @@ at the next triage cadence.
 
 ## 7. Next actions, ordered
 
-1. **Ed (morning)**: read + delete the two note files in project-loop root;
-   call the rebuild shape (strangler default vs new repo); export the Ted chat
-   into the vault if it carries more.
-2. **Fresh session, jig Phase 2 (unattended)**: implement the hermetic test
-   stack exactly as `jig/docs/treadle-prep/2026-11-19-hermetic-test-stack.md`
-   orders it — checked-in test env, test compose without token minting, stub
-   outbound world — and prove `pnpm -F api test` green with no doppler.
-3. Then: playwright-bdd skeleton (shop-first to prove the pipeline), a
-   `tier4-admin` catalog entry, and Tier-A scenario authoring from `jig/docs/*.md`
-   domain docs; commit the prep docs alongside.
+1. ~~Ed: notes + rebuild shape~~ **done** (notes read + deleted; strangler-fig
+   called).
+2. ~~Hermetic test stack~~ **done** (`971ede88`): `pnpm -F api test` green
+   with no doppler; CI validate_api doppler-free.
+3. ~~Gherkin skeleton + tier4 + first Tier-A scenarios~~ **done** (`eb2cd2ca`):
+   5 scenarios green via `pnpm harness:tier4`. Next: author more Tier-A
+   domains from `jig/docs/*.md` (orders/transactions, memberships/users,
+   suppliers, promo/coupon/gift-cards, shipping rules, config), then Tier B
+   admin shell (browser tier — needs chromium install + the current
+   React admin or the first Astro slice).
 4. Then (Phase 3): jig `loop.config.ts` with checks = the tier scripts, manual
    `run-loop.ts --repo jig` shake-out until the fresh-branch baseline is green,
    then the plist pair.
 5. With Ed at a terminal (Phase 4): stand up the monitoring session and the
    passive feedback session per the Ted-chat shape.
 6. Optional: #19 audit line; borrow joggle's wire-cache/replay pattern for
-   triage decisions when the triage cadence starts.
+   triage decisions when the triage cadence starts. Tier 1 (pgtap/squawk) and
+   Tier 2 (spectral/oasdiff/schemathesis) gardener todos now inherit the
+   hermetic stack.
