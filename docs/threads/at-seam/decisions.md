@@ -127,4 +127,22 @@ log from a frozen input set (TID, sender, body, replyTo, seq), regenerated idemp
 view so review stays in git. CI runs `verify` offline.
 
 TAC-15: agree
+
+## D14 — Thread #0 participants are `did:key`
+
+Self-minted, offline-verifiable, no DNS, no enrollment. The record carries a DID string and the host
+must not branch on the method; `did:web` changes nothing in the record later. Rotation is a new key,
+which is an honest new participant.
+
+TAC-15: agree
+
+## D15 — Refusal fixtures, and errors verbatim
+
+The suite ships the refusals beside the happy paths: missing/stale `leaseId`, stale generation,
+duplicate `(senderDid, TID)` returning the original receipt, a different body under the same
+`(senderDid, TID)` returning `Conflict`, `ack` before `deliver`, a `seq` never admitted, an
+`ack` gap that makes the prefix shorter than `max`, and an `afterSeq` past the watermark returning
+an empty page. Error names are his verbatim, because the error name _is_ the client's retry policy.
+
+TAC-15: agree
 TAC-14: agree

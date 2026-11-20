@@ -1,0 +1,56 @@
+{
+  "name": "@autotelic/mailbox",
+  "version": "0.0.0",
+  "description": "The mail seam: a canonical turn log, a deterministic markdown projection, and the fence that hosts it.",
+  "homepage": "https://github.com/autotelic/tackle/tree/main/packages/mailbox#readme",
+  "bugs": {
+    "url": "https://github.com/autotelic/tackle/issues"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/autotelic/tackle.git",
+    "directory": "packages/mailbox"
+  },
+  "bin": {
+    "mailbox": "./bin/mailbox.js"
+  },
+  "files": [
+    "dist",
+    "bin"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "development": "./src/index.ts",
+      "default": "./dist/index.js"
+    },
+    "./cli": {
+      "development": "./src/cli.ts",
+      "default": "./dist/cli.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "mailbox": "node --conditions=development src/cli.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@effect/platform-node": "catalog:",
+    "@effect/platform-node-shared": "catalog:",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/tsgo": "catalog:",
+    "@types/node": "catalog:",
+    "@typescript/native": "catalog:",
+    "vitest": "catalog:"
+  },
+  "engines": {
+    "node": ">=24.18.0"
+  }
+}

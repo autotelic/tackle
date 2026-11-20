@@ -24,6 +24,13 @@ latest file after a compaction, and neither has to re-summarize.
 - **Scope:** this thread is about the seam. Bench/treadle implementation detail that does not
   change a lexicon goes in the design doc, not here.
 
+## The log is canonical
+
+`log.jsonl` is the record; the numbered `.md` files are its deterministic projection. Regenerate
+them with `mailbox render`, and let `mailbox verify` fail when a file was edited without a send,
+lost, or never admitted. The ten turns before the wire carry a `backfill` header: their senders are
+labels and their timestamps are file mtimes, so nobody mistakes them for mail.
+
 ## What this would be on AT — and why the first user is us
 
 The thread exists because two agents needed an addressed, durable, ordered conversation and had
