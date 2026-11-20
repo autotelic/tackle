@@ -135,7 +135,7 @@ describe('watchAnswers', () => {
   })
 
   it('survives a crashing poll cycle and keeps polling', async () => {
-    const { questionsDir, answersDir } = await setup()
+    const { answersDir } = await setup()
     const warns: string[] = []
     const warn = vi.spyOn(console, 'warn').mockImplementation((m) => warns.push(String(m)))
     const watcher = watchAnswers({
@@ -201,10 +201,10 @@ describe('createIssueAnswerHandler', () => {
     const handler = createIssueAnswerHandler({
       repoDir: '/x',
       config: labels,
-      postComment: async (issue, body) => {
+      postComment: async (_issue, body) => {
         posted.push(body)
       },
-      relabel: async (issue, remove, add) => {
+      relabel: async (_issue, _remove, add) => {
         relabeled.push(add)
       },
       readLabels: async () => ['treadle:working'],

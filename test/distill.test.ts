@@ -31,9 +31,7 @@ async function makeWorktree(): Promise<string> {
 }
 
 function sessionLog(entries: unknown[]): string {
-  return (
-    entries.map((e) => JSON.stringify({ ts: '2026-11-09T00:00:00Z', event: e })).join('\n') + '\n'
-  )
+  return `${entries.map((e) => JSON.stringify({ ts: '2026-11-09T00:00:00Z', event: e })).join('\n')}\n`
 }
 
 function thinkingEvent(thinking: string): unknown {
@@ -109,7 +107,7 @@ describe('extractHandoff', () => {
 
   it('truncates the thinking tail, end-weighted', async () => {
     const worktree = await makeWorktree()
-    const long = 'x'.repeat(1200) + 'THE-IMPORTANT-END'
+    const long = `${'x'.repeat(1200)}THE-IMPORTANT-END`
     const logPath = await writeLog(worktree, [thinkingEvent(long)])
     const handoff = await extractHandoff({
       worktreeDir: worktree,

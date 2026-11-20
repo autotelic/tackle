@@ -6,7 +6,7 @@ commits, receipts, and `docs/2026-11-19-audit-triage.md`.
 ## 1. State in one paragraph
 
 Two lines of work finished overnight, and the morning session landed the next
-one. **Treadle (project-loop)**: run_checks + bash deny-pattern, provider
+one. **Treadle (the `treadle` repo — renamed from `project-loop` 2026-11-20)**: run_checks + bash deny-pattern, provider
 status-table classification, `checks.json` persistence, prompt branch-facts +
 protected-path pre-answers, and the full budget recalibration ($ + wall-clock
 per session, progress-extended issues, time-based nudges) — all committed,
@@ -70,7 +70,7 @@ surfaces: wherefour integration settings/inventory-sync (deep — the auto-
 ship incident domain), member-account shipping-charges, checkout-flow and
 product-variant lookups, reports. Gardener note: portorford tenant constants were added to
 specs/support/constants.js first (protected path — gardener edits only).
-project-loop#20 fixed (`57a9708`: worktree prune before the list check +
+treadle#20 fixed (`57a9708`: worktree prune before the list check +
 missing-branch re-entry resets to ready with a notify; 148 tests green) and
 the forestbuilder loop kickstarted onto it.
 
@@ -81,7 +81,8 @@ the forestbuilder loop kickstarted onto it.
   Obsidian vault (`/Users/estone/vaults/main`). The mini has a readable mirror
   at `/Users/home/vaults/main` — reads fine; **write vault files via laptop
   ssh**; never touch `/Users/home/Documents/main-STALE-frozen-2026-07-21`.
-- `/Users/home/Projects/project-loop` — treadle code; github `autotelic/project-loop`, main synced (`1e9df11`+).
+- `/Users/home/Projects/treadle` — treadle code; github `autotelic/treadle` (renamed
+  from `project-loop` 2026-11-20; GitHub redirects old URLs), main synced.
 - `/Users/home/Projects/shakti/forestbuilder-loop` — loop target (clone).
   Its tracker: `/Users/home/Projects/shakti/h2-permissions` (markdown; pushed to
   `~/backups/h2-permissions.git` at `71fd0ae`). `loop.config.ts` in the tracker
@@ -96,15 +97,15 @@ the forestbuilder loop kickstarted onto it.
   since Nov 15.
 - plists: `~/Library/LaunchAgents/com.treadle-forestbuilder{,-maintenance}.plist`;
   logs in `~/Library/Logs/treadle/`.
-- Second operator's leftovers: `project-loop/{REPLY-NOTE,WIND-DOWN-NOTE}-2026-11-19.md`
+- Second operator's leftovers (deleted 2026-11-19; kept here for the record): formerly at `treadle/{REPLY-NOTE,WIND-DOWN-NOTE}-2026-11-19.md`
   (untracked), `/tmp/verify-runchecks/`.
 
 ## 3. Files of record (read these, don't re-derive)
 
-- `project-loop/docs/2026-11-19-audit-triage.md` — the calibration numbers + the
+- `treadle/docs/2026-11-19-audit-triage.md` — the calibration numbers + the
   triage table (mistake → ladder rung → status). Update it when a rung lands.
-- `project-loop/GLOSSARY.md` — event vocabulary incl. `session.checks_requested/result`.
-- gh issues on `autotelic/project-loop`: **#17** run_checks (landed), **#18**
+- `treadle/GLOSSARY.md` — event vocabulary incl. `session.checks_requested/result`.
+- gh issues on `autotelic/treadle`: **#17** run_checks (landed), **#18**
   calibration (landed), **#19** late-ask (open candidate, scoped to an audit line).
 - `jig/docs/treadle-prep/2026-11-19-admin-surface-inventory.md` — the ratchet
   list (32 resources, worker seam, coverage baseline).
@@ -128,29 +129,29 @@ the forestbuilder loop kickstarted onto it.
 
 - **run_checks**: the agent declares, the deterministic runner runs, the
   FailureSet returns as the tool result; capped at 2 runs/session; driver
-  events feed the rules engine. *Why: ~30% of bash calls were hand-rolled test
-  runs; one session used the shared `TEST_DB_PORT=5433`.*
+  events feed the rules engine. _Why: ~30% of bash calls were hand-rolled test
+  runs; one session used the shared `TEST_DB_PORT=5433`._
 - **The bash deny-pattern arms only when a runner is present** (refusing tests
   with no way out would strand the agent); the regex is segment-scoped —
   `pnpm install` survives, `pnpm install && pnpm test` is caught.
 - **Provider classification** = leading `"NNN:"` status table (401/402/403/408/
   429 and 5xx = provider; 400/404/422 = honest budget burn) + exact pi APIError
-  classes (`Connection error.`, `Request timed out.`) + narrow tokens. *Why:
-  `Connection error.` ×200 was burning issue budget instead of Pausing.*
-- **runChecks persists `checks.json`** beside its logs. *Why: every prompt
-  named a file that never existed.*
+  classes (`Connection error.`, `Request timed out.`) + narrow tokens. _Why:
+  `Connection error.` ×200 was burning issue budget instead of Pausing._
+- **runChecks persists `checks.json`** beside its logs. _Why: every prompt
+  named a file that never existed._
 - **Every prompt carries deterministic git branch-facts** (baseRef + integration
   drift) **and a protected-path standing-policy pre-answer** when the issue text
-  names a protected path. *Why: two blocked-on-human classes (#14/#15 lineage,
-  #13/2 contradiction) killed at the source.*
+  names a protected path. _Why: two blocked-on-human classes (#14/#15 lineage,
+  #13/2 contradiction) killed at the source._
 - **Budgets (Ed's go, `eef833c` + tracker `71fd0ae`)**: per-session $0.5 +
   60-min wall-clock; `maxTurnsPerSession` demoted to a **backstop** (reason
   string `turn backstop`); a failed pass whose frontier strictly shrank is
   **progress-exempt** (receipt field `progressExempt`; restart recovery counts
   the same); absolute ceiling `maxPassesPerIssue` (default 2× passesPerIssue);
-  **nudges are time-based** (half / four-fifths of the session budget). *Why:
+  **nudges are time-based** (half / four-fifths of the session budget). _Why:
   37% of sessions died on the 100-turn cap ($12.43, zero completions); 75% of
-  turn-nudges failed to prevent it.*
+  turn-nudges failed to prevent it._
 - **`audit-summary.ts --log-dir`** for markdown-tracker receipt files (the old
   `--receipts` is GitHub-only and was a silent no-op on the forestbuilder loop).
 - **Jig**: Cypress dropped (verified absent on disk — the vault plan's
@@ -170,8 +171,8 @@ the forestbuilder loop kickstarted onto it.
   step callbacks must take a fixtures-destructuring first arg (`({})`) and the
   v9 config keys are `features`/`steps` globs (v8's featuresDir/stepsDir are
   gone); the storefront pickup-sessions listing hard-filters
-  `order_cutoff_at >= now`, so "closed" for a member means *not offered at
-  all* — that is the Tier A outcome, and the cart cutoff error
+  `order_cutoff_at >= now`, so "closed" for a member means _not offered at
+  all_ — that is the Tier A outcome, and the cart cutoff error
   ("the order cut off date is in the past") is the enforcement seam. Root
   suite runs workers:1 (shared db) with a scenario-scoped `world` singleton.
   Gherkin describes **outcomes** in two tiers (Tier A API/DB seam = majority,
@@ -179,7 +180,7 @@ the forestbuilder loop kickstarted onto it.
   data-testid contract); **harness work builds on the existing catalog + tier
   scripts** (tier4-admin added; tier1/tier2 still stubs).
 - **Jev/System One** (typesafe.ai): already the judgement engine in joggle; for
-  treadle, treat it as how a *script* makes calibrated calls (wire-cache makes
+  treadle, treat it as how a _script_ makes calibrated calls (wire-cache makes
   it replay-safe), not as a ladder rung.
 - **The 23:04 collision**: Estone's second agent ran `git checkout -- .` on this
   repo and destroyed uncommitted work (restored ~23:07 by it; everything now
@@ -203,7 +204,7 @@ at the next triage cadence.
 
 - **`com.treadle-forestbuilder`** (PID 6560 at handoff time, up since ~23:54 MST
   Nov 18): `node src/run-loop.ts --repo …/forestbuilder-loop` with cwd
-  project-loop — **code changes here need a manual `launchctl kickstart -k
+  treadle — **code changes here need a manual `launchctl kickstart -k
   gui/$(id -u)/com.treadle-forestbuilder`** (calendar start won't restart a
   running job). KeepAlive SuccessfulExit=false → crash-restarts every 60s.
   **Idles by design**: empty queue → 60s polls + hourly idle maintenance; a
@@ -225,7 +226,7 @@ at the next triage cadence.
   ssh PATH. `tsc` strict + `biome check --write` must pass before committing.
 - pi session logs: `~/.pi/agent/sessions/<cwd-slug>/*.jsonl`; session-spend
   one-liner: sum `"cost":{...,"total":N}` matches over the newest jsonl.
-- `audit-summary.ts` runs from project-loop root; pass
+- `audit-summary.ts` runs from treadle root; pass
   `--log-dir /Users/home/Projects/shakti/h2-permissions/log` for the
   forestbuilder loop.
 - The loop's worktrees live under `<repo>/.treadle/worktrees/<issue>`. Two
@@ -253,18 +254,18 @@ at the next triage cadence.
 4. ~~Phase 3: jig loop config + shake-out + plists~~ **done**: config +
    tracker + integration branch + shake-out green (issue 001 merged, review
    PR #558 open). **Plists LOADED 2026-11-19 ~21:40 (Ed's go)** — `com.treadle-jig` is running
-(PID at load: 3807; started immediately on load despite RunAtLoad=false),
-idling on the empty queue with 60s polls + hourly maintenance;
-`com.treadle-jig-maintenance` loaded (first hourly run within the hour).
-Live spend against its own budgets: $0.5/session, $40/night. Escalation
-channel is TERMINAL mode (no telepi config on this machine): stuck issues
-leave question files in `~/.treadle/questions/` and wait up to 30 min for
-answers in `~/.treadle/answers/` — Phase 4's monitoring/feedback sessions
-would watch those. Both loops idle on empty queues until issues are written. Next jig issues: the first
+   (PID at load: 3807; started immediately on load despite RunAtLoad=false),
+   idling on the empty queue with 60s polls + hourly maintenance;
+   `com.treadle-jig-maintenance` loaded (first hourly run within the hour).
+   Live spend against its own budgets: $0.5/session, $40/night. Escalation
+   channel is TERMINAL mode (no telepi config on this machine): stuck issues
+   leave question files in `~/.treadle/questions/` and wait up to 30 min for
+   answers in `~/.treadle/answers/` — Phase 4's monitoring/feedback sessions
+   would watch those. Both loops idle on empty queues until issues are written. Next jig issues: the first
    Astro admin slice (needs Ed's layout go — see the Tier B guard feature
    for the two scenarios it must satisfy), then more Tier-A domains
    (packing queues, notifications, integrations) or rebuild slices.
-   Upstream robustness note FIXED: project-loop#20 (`57a9708`).
+   Upstream robustness note FIXED: treadle#20 (`57a9708`).
 5. With Ed at a terminal (Phase 4): stand up the monitoring session and the
    passive feedback session per the Ted-chat shape.
 6. Optional: #19 audit line; borrow joggle's wire-cache/replay pattern for

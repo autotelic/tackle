@@ -1,7 +1,7 @@
 import { pathToFileURL } from 'node:url'
 import type { Rule } from './loop/rules.ts'
 
-/** The pinned shape of a target repo's loop.config.ts (autotelic/project-loop#11). */
+/** The pinned shape of a target repo's loop.config.ts (treadle#11). */
 
 export type CheckReportRef = {
   format: 'vitest-json'

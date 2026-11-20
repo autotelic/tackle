@@ -546,7 +546,7 @@ export async function maintenance(options: {
               '--title',
               `Treadle integration branch → ${reviewTarget.name}`,
               '--body',
-              `Auto-managed (project-loop ADR-0003): Treadle squash-merges every green ` +
+              `Auto-managed (treadle ADR-0003): Treadle squash-merges every green ` +
                 `\`PRs\` into \`${integrationBranch}\` as they go green. Review this ` +
                 `PR into \`${reviewTarget.name}\` once at the end — the Loop never merges it.`,
             )

@@ -7,7 +7,7 @@
  * Install: copy this file to ~/.pi/agent/extensions/treadle.ts and restart
  * TelePi (launchctl kickstart -k gui/<uid>/com.telepi) so its sessions load it.
  *
- * Canonical source: autotelic/project-loop, extensions/treadle.ts.
+ * Canonical source: autotelic/treadle, extensions/treadle.ts.
  */
 import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'

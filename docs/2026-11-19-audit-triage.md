@@ -31,18 +31,18 @@ extraction from the session JSONL. Deterministic, zero LLM turns.
 
 ## 2. Budget recalibration (**LANDED** — Ed's go came the same night)
 
-Implemented in `eef833c` + tracker `71fd0ae`; see project-loop #18 for the
+Implemented in `eef833c` + tracker `71fd0ae`; see treadle #18 for the
 landed description. The runaway-train signature is **spend without verified
 progress**, and the data confirms it: 76% of spend died on the cap; successful
 sessions average ~$0.10.
 
-| Today | Proposal |
-|---|---|
-| maxTurnsPerSession = 100 | wall-clock ~45 min + $ cap per session (~$0.50 glm-era; Checkpoints make long sessions safe) |
-| passesPerIssue = N fixed | progress-extended: a pass with a green Checkpoint + green Checks extends the issue budget (+1); a pass that doesn't consumes it |
-| nightly 12 passes / $40 | keep $40 protective; observed honest-day glm-era cost is ~$8–16, so tighten toward ~$25 once a full green week is measured |
-| 3-parks circuit breaker | circuit-break on failure signature: same failing check, no frontier delta, rising cost-per-progress |
-| blocked-on-human burns budget | already fixed for provider (402); stalled ≠ failed everywhere |
+| Today                         | Proposal                                                                                                                        |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| maxTurnsPerSession = 100      | wall-clock ~45 min + $ cap per session (~$0.50 glm-era; Checkpoints make long sessions safe)                                    |
+| passesPerIssue = N fixed      | progress-extended: a pass with a green Checkpoint + green Checks extends the issue budget (+1); a pass that doesn't consumes it |
+| nightly 12 passes / $40       | keep $40 protective; observed honest-day glm-era cost is ~$8–16, so tighten toward ~$25 once a full green week is measured      |
+| 3-parks circuit breaker       | circuit-break on failure signature: same failing check, no frontier delta, rising cost-per-progress                             |
+| blocked-on-human burns budget | already fixed for provider (402); stalled ≠ failed everywhere                                                                   |
 
 Originally flagged for Estone's eyes first; the go arrived later the same
 night, so the session-cap and progress-extension changes landed as described
@@ -51,17 +51,17 @@ green week of Receipts.
 
 ## 3. Triage table — mistake → lowest deterministic rung
 
-| # | Mistake class | Evidence | Rung | Status |
-|---|---|---|---|---|
-| 1 | Agent executes test suites in bash with hand-rolled env/ports | 58/196 sandbox bash calls (~30%); forestbuilder ceremonies incl. shared-port 5433 collision | tool + deny-pattern (`run_checks`) | **DONE** `670d3a3`+`52d21bd`, live-verified |
-| 2 | Agent pointed at a report file that never existed | every checks-* dir in history contains only logs/; prompt names `<dir>/checks.json` | harness (write the file) | **DONE** `c2bf4bc` |
-| 3 | blocked-on-human on branch lineage | #14 pass 3, #15 pass 1 questions | machine rule (deterministic prompt facts from git) | **DONE** `f09ad2b` |
-| 4 | Provider failures burned issue budget instead of Pausing | "Connection error." ×200 and "Request timed out." ×5 unmatched by prose regexes | machine rule (status table + exact APIError classes) | **DONE** `8e9d397` |
-| 5 | blocked-on-human when issue scope names protected paths | #13 pass 2 question | machine rule: when the issue body mentions a protected path, the prompt pre-answers with the standing policy (protected wins; the wiring is the loop's job) | **PROPOSED** (next, small) |
-| 6 | Turn-cap churn | 37% of sessions, $12.43, zero completions | budget recalibration (progress-extended budgets) | **PROPOSED** (§2, needs go) |
-| 7 | Nudge text ineffective | 75% of nudged sessions still capped | superseded by #6 (structural, not textual) | — |
-| 8 | Opaque check failures ("exit code 1") | rest-gate failureSet details in receipts | addressed by #2 (logs + checks.json real) + FailureSetEntry detail now carries the last error-leaning output lines | **DONE** `a70fe11` |
-| 9 | Genuine judgement questions with recommended answers | #4, #5, #6 questions | keep ask_human (correct behavior); audit well-formedness at next triage cadence | none — working as intended |
+| #   | Mistake class                                                 | Evidence                                                                                    | Rung                                                                                                                                                        | Status                                      |
+| --- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| 1   | Agent executes test suites in bash with hand-rolled env/ports | 58/196 sandbox bash calls (~30%); forestbuilder ceremonies incl. shared-port 5433 collision | tool + deny-pattern (`run_checks`)                                                                                                                          | **DONE** `670d3a3`+`52d21bd`, live-verified |
+| 2   | Agent pointed at a report file that never existed             | every checks-* dir in history contains only logs/; prompt names `<dir>/checks.json`         | harness (write the file)                                                                                                                                    | **DONE** `c2bf4bc`                          |
+| 3   | blocked-on-human on branch lineage                            | #14 pass 3, #15 pass 1 questions                                                            | machine rule (deterministic prompt facts from git)                                                                                                          | **DONE** `f09ad2b`                          |
+| 4   | Provider failures burned issue budget instead of Pausing      | "Connection error." ×200 and "Request timed out." ×5 unmatched by prose regexes             | machine rule (status table + exact APIError classes)                                                                                                        | **DONE** `8e9d397`                          |
+| 5   | blocked-on-human when issue scope names protected paths       | #13 pass 2 question                                                                         | machine rule: when the issue body mentions a protected path, the prompt pre-answers with the standing policy (protected wins; the wiring is the loop's job) | **PROPOSED** (next, small)                  |
+| 6   | Turn-cap churn                                                | 37% of sessions, $12.43, zero completions                                                   | budget recalibration (progress-extended budgets)                                                                                                            | **PROPOSED** (§2, needs go)                 |
+| 7   | Nudge text ineffective                                        | 75% of nudged sessions still capped                                                         | superseded by #6 (structural, not textual)                                                                                                                  | —                                           |
+| 8   | Opaque check failures ("exit code 1")                         | rest-gate failureSet details in receipts                                                    | addressed by #2 (logs + checks.json real) + FailureSetEntry detail now carries the last error-leaning output lines                                          | **DONE** `a70fe11`                          |
+| 9   | Genuine judgement questions with recommended answers          | #4, #5, #6 questions                                                                        | keep ask_human (correct behavior); audit well-formedness at next triage cadence                                                                             | none — working as intended                  |
 
 ## 4. What landed tonight (commits)
 
@@ -94,7 +94,7 @@ one exists in the session dir. Note left at
 ## 6. For Estone in the morning
 
 1. §2 budget recalibration — go/no-go with the numbers above.
-2. §5 — do you know what was operating in project-loop at 23:03–23:07?
+2. §5 — do you know what was operating in treadle at 23:03–23:07?
    If it was your second agent, it should be told to build on main.
 3. Handoff items unchanged: feedback lane (pi-intercom, interactive) and the
    pi-goal-x-on-the-mini decision. Default stands: goal lives outside spawned
