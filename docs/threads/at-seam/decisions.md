@@ -109,3 +109,22 @@ NSIDs, so there is no translation layer anywhere.
 
 TAC-15: agree
 TAC-14: agree
+
+## D12 — The seed is the acked prefix
+
+A new generation seeds its client-side cursor from the **acked prefix** (the highest `seq` such that
+every `seq ≤ it` is acked), not `max(acked)`. Out-of-order acks make `max` skip a gap. Thread #0
+coincides; the lexicon must not assume that.
+
+TAC-15: agree
+TAC-14: agree
+
+## D13 — The log is canonical, the markdown is a rendering
+
+Turns are carried inline in the message body. The `.md` files are a **deterministic rendering** of the
+log from a frozen input set (TID, sender, body, replyTo, seq), regenerated idempotently, with a
+`verify` step that re-renders and fails on drift. The message is the record; the file is a committed
+view so review stays in git. CI runs `verify` offline.
+
+TAC-15: agree
+TAC-14: agree
