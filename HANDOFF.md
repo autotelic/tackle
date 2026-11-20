@@ -1,4 +1,4 @@
-# Treadle handoff — 2026-11-19 ~07:00Z (overnight session); updated 2026-11-19 ~19:00 MST
+# Treadle handoff — 2026-11-19 ~07:00Z (overnight session); updated 2026-11-19 ~20:00 MST (evening session)
 
 Reader: a fresh pi session (or Ed). This is the live state; history lives in
 commits, receipts, and `docs/2026-11-19-audit-triage.md`.
@@ -30,9 +30,19 @@ order), suppliers, promo/coupon codes, gift certificates (issue + cancel),
 shipping rules, config. tier0/tier3 still green. Rebuild shape called by Ed:
 **strangler-fig inside `apps/admin-ui`**. The second operator's two note files
 were read and deleted (their content is captured below and in section 4).
-Next: more Tier-A domains (orders/transactions, memberships/users, suppliers,
-promo/coupon/gift-cards, shipping rules, config), Tier B admin shell, then jig
-`loop.config.ts` shake-out.
+
+**Phase 3 (jig loop) landed and SHAKEN OUT the same evening** (`0d1b0641`,
+`119bf532`, jig): tracker `~/Projects/jig-issues` (bare backup
+`~/backups/jig-issues.git`), loop clone `~/Projects/jig-loop` (config
+symlinked to the tracker's `loop.config.ts`), integration branch
+`loop/integration` (deliberately NOT develop — develop pushes deploy
+staging), checks = the five tier scripts + api-lint, tier4 emits
+`.treadle/reports/unit.json` (numTotalTests) for the done-guard ratchet,
+`VISION.md` landed at the repo root (the prompt reads it). **Shake-out
+green end-to-end**: issue 001 (Tier-A locations scenarios) → baseline green
+→ session → 19→21 count growth → PR #557 auto-merged into `loop/integration`
+→ issue done; review PR #558 (loop/integration → main) open for Ed. Plists
+written but UNLOADED (see §7).
 
 ## 2. Machines and paths
 
@@ -210,9 +220,15 @@ at the next triage cadence.
    exists yet — noted in the catalog). Next: Tier B admin shell (browser
    tier — needs chromium install + the current React admin or the first
    Astro slice).
-4. Then (Phase 3): jig `loop.config.ts` with checks = the tier scripts, manual
-   `run-loop.ts --repo jig` shake-out until the fresh-branch baseline is green,
-   then the plist pair.
+4. ~~Phase 3: jig loop config + shake-out + plists~~ **done**: config +
+   tracker + integration branch + shake-out green (issue 001 merged, review
+   PR #558 open). **Plists written, NOT loaded** — Ed's go:
+   `launchctl load ~/Library/LaunchAgents/com.treadle-jig.plist
+   ~/Library/LaunchAgents/com.treadle-jig-maintenance.plist` (starts live
+   spend against its own budgets: $0.5/session, $40/night; both loops idle
+   on empty queues until issues are written). Next jig issues = the admin
+   rebuild slices; seed the tracker with them when ready. Upstream robustness
+   note filed: project-loop#20 (stale worktree → spawn ENOENT).
 5. With Ed at a terminal (Phase 4): stand up the monitoring session and the
    passive feedback session per the Ted-chat shape.
 6. Optional: #19 audit line; borrow joggle's wire-cache/replay pattern for
