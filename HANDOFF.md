@@ -50,8 +50,13 @@ green end-to-end**: issue 001 (Tier-A locations scenarios) → baseline green
 → issue done; review PR #558 (loop/integration → main) open for Ed. Plists
 written but UNLOADED (see §7). **Issue 002 followed the same path** (Tier-A
 batches: draft lists with supplier/state/count; commit → state committed +
-AVAILABLE inventory rows per item line): 21→23, PR #559 auto-merged
-(`loop/integration` @ `58df544f`). The gherkin suite is now 23 scenarios.
+AVAILABLE inventory rows per item line): 21→23, PR #559 auto-merged.
+**Issue 003 was the first fully launchd-driven run** (Tier-A tenant
+isolation: cross-tenant locations/orders invisibility + unknown tenant key
+→ 403): 23→26, PR #560 auto-merged (`loop/integration` @ `c674b0bd`), issue
+done — no human in the loop beyond the issue body. The gherkin suite is now
+**26 scenarios**. Gardener note: portorford tenant constants were added to
+specs/support/constants.js first (protected path — gardener edits only).
 project-loop#20 fixed (`57a9708`: worktree prune before the list check +
 missing-branch re-entry resets to ready with a notify; 148 tests green) and
 the forestbuilder loop kickstarted onto it.
