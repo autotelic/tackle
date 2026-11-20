@@ -193,6 +193,17 @@ the forestbuilder loop kickstarted onto it.
 
 **Resolved 2026-11-19 morning**: rebuild shape → **strangler-fig inside
 `apps/admin-ui`** (Ed's call); second operator's note files → read + deleted.
+**2026-11-20: ADR-0003 adopted for jig (Ed's call) + repo rename.** The engine
+repo is now `autotelic/treadle` (GitHub renamed; old URLs redirect), local
+checkout `/Users/home/Projects/treadle`, all five plists repointed, both live
+loops restarted healthy. README.md written. For jig: the staging branch
+(`loop/integration`) holds EVERYTHING — hand work re-entered as PR #561
+(`hand/gherkin-and-hermetic-tests`, the hermetic stack + 34-scenario Tier-A
+stream), `main` rewound to baseline `be1abad4`, staging rewound to the
+loop-only point `c674b0bd` (loop issues #557/#559/#560 untouched). Promotion
+(`loop/integration` → main) is the human review, opened by maintenance at the
+end. Pre-rewind tips recoverable from PR #561's branch.
+
 **Open/pending** (the question that closes each): Ted chat specifics beyond
 treadle+monitor+feedback → Ed exports into the vault. Feedback lane
 (pi-intercom) + pi-goal-x install → interactive, needs Ed at a terminal.
