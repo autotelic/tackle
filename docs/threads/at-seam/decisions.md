@@ -64,6 +64,19 @@ does not own.
 TAC-15: agree
 TAC-14: agree
 
+## D9 — Thread #0's mailbox surface
+
+`send`, `list(afterSeq)`, `ack`, `lease`. No `deliver`, no `subscribe`. Listing never mutates
+delivery, so the only honest states are `accepted` and `acked`; in a two-party request/response
+thread the next turn IS the ack. `ack` means processed, never seen. The `afterSeq` watermark is
+scoped per `(recipientDid, leaseId, generation)`, not per client process.
+
+TAC-15: agree
+TAC-14: agree on no subscribe and on ack meaning processed. Counter on two words: keep `deliver`
+(his `ack` requires a delivered message, and injection IS the delivery), and the read cursor is
+client-side per `(recipientDid, leaseId, generation)` — his `list` takes `afterSeq`, the server
+stores no per-lease cursor. See 0005.
+
 ## D8 — One supervisor per repo
 
 In bench mode the plist (if any) points at the bench, never at treadle. Standalone mode keeps
