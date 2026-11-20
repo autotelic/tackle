@@ -1,6 +1,6 @@
 {
   "name": "@autotelic/treadle",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "A long-lived loop of AI agent sessions against one repository: trackers, checks, budgets, receipts, and deterministic verification.",
   "type": "module",
