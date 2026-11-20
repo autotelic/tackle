@@ -1,0 +1,117 @@
+import { describe, expect, it } from 'vitest'
+import { buildSessionPrompt, type SessionPromptInput } from '../src/prompt.ts'
+import type { CheckReport } from '../src/report.ts'
+
+const base: SessionPromptInput = {
+  vision: '# Vision\n\nA reading-list service.',
+  issue: {
+    number: 1,
+    title: 'Save and list items',
+    body: '## Acceptance criteria\n\n- POST /items',
+  },
+  progressNote: null,
+  lastReport: null,
+  lastReportDir: null,
+  previousSessionNote: null,
+  pass: 1,
+  budget: 3,
+  protectedPaths: ['VISION.md', 'loop.config.ts'],
+}
+
+const failedReport: CheckReport = {
+  issue: 1,
+  pass: 1,
+  repo: '/x',
+  branch: 'loop/1',
+  startedAt: '2026-11-05T00:00:00Z',
+  durationMs: 1000,
+  outcome: 'checks.failed',
+  infrastructureFailure: null,
+  steps: [],
+  failureSet: [
+    { check: 'unit', test: 'POST /items creates an item', detail: 'expected 201 got 404' },
+    { check: 'typecheck', detail: 'exit code 2' },
+  ],
+  frontier: 2,
+}
+
+describe('buildSessionPrompt', () => {
+  it('carries the vision, the issue and the first-pass framing', () => {
+    const prompt = buildSessionPrompt(base)
+    expect(prompt).toContain('A reading-list service.')
+    expect(prompt).toContain('#1: Save and list items')
+    expect(prompt).toContain('POST /items')
+    expect(prompt).toContain('first Pass')
+    expect(prompt).toContain('Create one at the repository root')
+  })
+
+  it('carries the progress note when one exists', () => {
+    const prompt = buildSessionPrompt({ ...base, progressNote: '# Progress\n\nPOST works.' })
+    expect(prompt).toContain('PROGRESS.md so far:')
+    expect(prompt).toContain('POST works.')
+  })
+
+  it('names the failure set and the log paths from the last report', () => {
+    const prompt = buildSessionPrompt({
+      ...base,
+      pass: 2,
+      lastReport: failedReport,
+      lastReportDir: '/repo/.treadle/checks-issue-1-pass-1',
+      previousSessionNote: 'I got the routes wrong.',
+    })
+    expect(prompt).toContain('Pass 2 of 3')
+    expect(prompt).toContain('checks.failed')
+    expect(prompt).toContain('frontier 2')
+    expect(prompt).toContain('unit › POST /items creates an item — expected 201 got 404')
+    expect(prompt).toContain('- typecheck')
+    expect(prompt).toContain('/repo/.treadle/checks-issue-1-pass-1/logs/')
+    expect(prompt).toContain('I got the routes wrong.')
+  })
+
+  it('lists the protected paths', () => {
+    const prompt = buildSessionPrompt(base)
+    expect(prompt).toContain('`VISION.md`, `loop.config.ts`')
+  })
+
+  it('steers test execution to run_checks and away from hand-rolled stacks', () => {
+    const prompt = buildSessionPrompt(base)
+    expect(prompt).toContain('run_checks')
+    expect(prompt).toContain('Never run test suites yourself in bash')
+    expect(prompt).toContain('TEST_DB_PORT')
+    expect(prompt).toContain('infrastructure failure')
+  })
+
+  it('pre-answers protected-path conflicts from the standing policy instead of ask_human', () => {
+    const prompt = buildSessionPrompt({
+      ...base,
+      issue: {
+        number: 13,
+        title: 'spec-check script',
+        body: 'Wire the script into CI and into loop.config.ts (a spec-check step).',
+      },
+    })
+    expect(prompt).toContain('# Already decided (standing policy)')
+    expect(prompt).toContain('`loop.config.ts`')
+    expect(prompt).toContain('Do not ask about this')
+
+    const untouched = buildSessionPrompt(base)
+    expect(untouched).not.toContain('# Already decided')
+  })
+
+  it('states the branch lineage deterministically so stale-base questions never reach a human', () => {
+    const current = buildSessionPrompt({
+      ...base,
+      branchFacts: { baseRef: 'origin/feature/h2-permissions', integrationDrift: 0 },
+    })
+    expect(current).toContain('# Where your branch stands')
+    expect(current).toContain('current with the integration branch')
+    expect(current).toContain('never merge or rebase yourself')
+
+    const stale = buildSessionPrompt({
+      ...base,
+      branchFacts: { baseRef: 'origin/feature/h2-permissions', integrationDrift: 7 },
+    })
+    expect(stale).toContain('moved 7 commits ahead')
+    expect(stale).toContain('say in PROGRESS.md what you are waiting on')
+  })
+})

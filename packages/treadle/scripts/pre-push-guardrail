@@ -1,0 +1,23 @@
+#!/bin/sh
+# Treadle guardrail (#16): the Loop only ever pushes loop/* branches, never
+# deletes anything. The agent has the mini's git auth, so main is protected
+# here at the repo level rather than by convention.
+blocked=0
+while read -r local_ref local_sha remote_ref remote_sha; do
+  case "$remote_ref" in
+    refs/heads/main|refs/heads/master)
+      echo "pre-push: pushes to main are not allowed from this repo" >&2
+      blocked=1
+      ;;
+  esac
+  if [ "$local_sha" = "0000000000000000000000000000000000000000" ]; then
+    case "$remote_ref" in
+      refs/heads/loop/*) ;;
+      refs/heads/*)
+        echo "pre-push: deleting $remote_ref is not allowed from this repo" >&2
+        blocked=1
+        ;;
+    esac
+  fi
+done
+exit $blocked
