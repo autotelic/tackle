@@ -1,4 +1,4 @@
-# Treadle handoff — 2026-11-19 ~07:00Z (overnight session); updated 2026-11-19 ~20:00 MST (evening session)
+# Treadle handoff — 2026-11-19 ~07:00Z (overnight session); updated 2026-11-19 ~21:20 MST (evening session)
 
 Reader: a fresh pi session (or Ed). This is the live state; history lives in
 commits, receipts, and `docs/2026-11-19-audit-triage.md`.
@@ -31,6 +31,12 @@ shipping rules, config. tier0/tier3 still green. Rebuild shape called by Ed:
 **strangler-fig inside `apps/admin-ui`**. The second operator's two note files
 were read and deleted (their content is captured below and in section 4).
 
+**Tier B groundwork landed** (`7014bc67`, jig): the admin-shell guard
+feature (`features/admin-shell/access-outcomes.feature`, Tier B) is authored
+per the authoring order but EXCLUDED from the tier4 bdd glob
+(`!features/admin-shell/**`) until the first Astro slice binds it — bddgen
+fails loudly on unbound features, and playwright.config.ts is gardener-owned.
+
 **Phase 3 (jig loop) landed and SHAKEN OUT the same evening** (`0d1b0641`,
 `119bf532`, jig): tracker `~/Projects/jig-issues` (bare backup
 `~/backups/jig-issues.git`), loop clone `~/Projects/jig-loop` (config
@@ -42,7 +48,13 @@ staging), checks = the five tier scripts + api-lint, tier4 emits
 green end-to-end**: issue 001 (Tier-A locations scenarios) → baseline green
 → session → 19→21 count growth → PR #557 auto-merged into `loop/integration`
 → issue done; review PR #558 (loop/integration → main) open for Ed. Plists
-written but UNLOADED (see §7).
+written but UNLOADED (see §7). **Issue 002 followed the same path** (Tier-A
+batches: draft lists with supplier/state/count; commit → state committed +
+AVAILABLE inventory rows per item line): 21→23, PR #559 auto-merged
+(`loop/integration` @ `58df544f`). The gherkin suite is now 23 scenarios.
+project-loop#20 fixed (`57a9708`: worktree prune before the list check +
+missing-branch re-entry resets to ready with a notify; 148 tests green) and
+the forestbuilder loop kickstarted onto it.
 
 ## 2. Machines and paths
 
@@ -226,9 +238,11 @@ at the next triage cadence.
    `launchctl load ~/Library/LaunchAgents/com.treadle-jig.plist
    ~/Library/LaunchAgents/com.treadle-jig-maintenance.plist` (starts live
    spend against its own budgets: $0.5/session, $40/night; both loops idle
-   on empty queues until issues are written). Next jig issues = the admin
-   rebuild slices; seed the tracker with them when ready. Upstream robustness
-   note filed: project-loop#20 (stale worktree → spawn ENOENT).
+   on empty queues until issues are written). Next jig issues: the first
+   Astro admin slice (needs Ed's layout go — see the Tier B guard feature
+   for the two scenarios it must satisfy), then more Tier-A domains
+   (packing queues, notifications, integrations) or rebuild slices.
+   Upstream robustness note FIXED: project-loop#20 (`57a9708`).
 5. With Ed at a terminal (Phase 4): stand up the monitoring session and the
    passive feedback session per the Ted-chat shape.
 6. Optional: #19 audit line; borrow joggle's wire-cache/replay pattern for
