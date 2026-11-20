@@ -91,25 +91,38 @@ const published = (
   })
 
 /**
- * Whether the registry has this exact version, not merely the package.
+ * Whether a consumer can INSTALL this exact version.
  *
- * The question is asked of the VERSION endpoint (`HEAD /<name>/<version>`), which answers 200
- * or 404 and nothing else. Reading the package document instead means decoding a map of every
- * published manifest — a shape npm owns and this script does not — and the first version of
- * this did exactly that with an empty struct as the value type: the request answered 200,
- * every value failed to decode, the field vanished as absent, and a release that had just
- * published reported EVERY package missing. A 409 on the retry, a red workflow, and a
- * published version -- the precise failure this file exists to prevent.
+ * Not "does the version document exist". npm writes that document before the artifact finishes
+ * uploading: @autotelic/joggle@0.10.0 answered 200 on `/<name>/<version>`, carried an integrity
+ * hash and signatures, and its tarball returned 404 for minutes — a release reported green that
+ * could not be installed. The tarball is the only question that matches the reader's.
  *
- * A version that is not there is the ordinary answer, not this script's failure: it is the
- * fact the retry loop reads. A request that does not complete also answers false, so the run
- * fails rather than claiming a release it could not verify.
+ * The URL is the registry's own convention (scoped packages drop the scope in the file name),
+ * so this reads no manifest shape of npm's: a HEAD on the artifact, 200 or not.
  */
-const onRegistry = (manifest: Manifest): Effect.Effect<boolean, never, HttpClient.HttpClient> =>
-  HttpClient.head(REGISTRY + "/" + manifest.name.replace("/", "%2f") + "/" + manifest.version).pipe(
+const onRegistry = (manifest: Manifest): Effect.Effect<boolean, never, HttpClient.HttpClient> => {
+  const bare = manifest.name.includes("/")
+    ? manifest.name.slice(manifest.name.indexOf("/") + 1)
+    : manifest.name
+  const tarball =
+    REGISTRY +
+    "/" +
+    manifest.name.replace("/", "%2f") +
+    "/-/" +
+    bare +
+    "-" +
+    manifest.version +
+    ".tgz"
+  // GET, not HEAD: during finalisation a HEAD answered 200 for a tarball whose GET still
+  // returned 404, so the method that mirrors a consumer's request is the one that counts.
+  return HttpClient.get(tarball).pipe(
     Effect.map((response) => response.status === 200),
+    // A request that does not complete answers false, so the run fails rather than claiming a
+    // release it could not verify.
     Effect.orElseSucceed(() => false),
   )
+}
 
 /** The packages whose local version the registry does not have. */
 const missing = (
@@ -146,7 +159,13 @@ const settled = (
 const report = (absent: ReadonlyArray<Manifest>): Effect.Effect<void> =>
   Effect.sync(() => {
     for (const manifest of absent) {
-      console.error("release: still missing " + manifest.name + "@" + manifest.version)
+      console.error(
+        "release: " +
+          manifest.name +
+          "@" +
+          manifest.version +
+          " is not installable yet (the registry's version document can precede its tarball)",
+      )
     }
   })
 
@@ -197,7 +216,10 @@ const program = Effect.gen(function* () {
       ),
     )
   }
-  let absent = yield* settled(manifests, 18)
+  // npm writes the version document before the artifact finishes uploading; one observed
+  // finalisation took five minutes. The window is here so a healthy publish is not red, not so
+  // a broken one can pass.
+  let absent = yield* settled(manifests, 36)
   if (absent.length > 0) {
     yield* Effect.sync(() =>
       console.log(
@@ -207,7 +229,7 @@ const program = Effect.gen(function* () {
       ),
     )
     yield* run({ root, command: "pnpm", args: ["exec", "changeset", "publish"] })
-    absent = yield* settled(manifests, 18)
+    absent = yield* settled(manifests, 36)
   }
 
   if (absent.length > 0) {
