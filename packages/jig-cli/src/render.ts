@@ -40,6 +40,14 @@ export interface TextOptions {
    * zero that came from a file filter is not the same zero as a clean repository.
    */
   readonly outOfScope?: number
+  /**
+   * Whether the committed ledger has no identities.
+   *
+   * An empty ledger under `any-new` makes every existing finding new, so the gate is red on
+   * adoption and every pull request fails on debt it did not create. The report says which of
+   * those states it is in, and the two ways out.
+   */
+  readonly emptyLedger?: boolean
 }
 
 /**
@@ -175,6 +183,20 @@ export const renderText = (run: HarnessRun, options: TextOptions = {}): string =
     lines.push(
       "",
       `gate — touched-files: no finding in this change; ${total} existing finding(s) are reported, not enforced`,
+    )
+  }
+  if (
+    gate !== undefined &&
+    gate.failing.length > 0 &&
+    gate.failOn === "any-new" &&
+    options.emptyLedger === true
+  ) {
+    lines.push(
+      "",
+      "gate — the ledger is empty, so every finding in the tree is new to this gate: accept today's" +
+        " debt with `jig baseline` (a model key is needed when judged rules are configured, or" +
+        " --allow-unjudged to accept that debt explicitly), or scope this run to the change" +
+        " (`jig check --since <base>`).",
     )
   }
   if (gate !== undefined && gate.failing.length > 0) {

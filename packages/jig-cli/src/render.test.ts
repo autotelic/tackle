@@ -164,6 +164,19 @@ describe("the GitHub projection separates held findings from failures", () => {
     expect(text).toContain("run without a scope for the repository")
   })
 
+  it("explains an empty ledger when it is the reason the gate is red", () => {
+    const held = finding({ identity: "novel" })
+    const text = renderText(
+      { report: report([held]), diff: { novel: [held], known: [], stale: [] } },
+      { gate: verdict({ exitCode: EXIT.findings, failing: [held] }), emptyLedger: true },
+    )
+    // Adoption state, not a dirty change: every existing finding is new to this gate, and the
+    // two ways out are named.
+    expect(text).toContain("the ledger is empty")
+    expect(text).toContain("jig baseline")
+    expect(text).toContain("jig check --since")
+  })
+
   it("names rules that are reported but cannot fail this gate", () => {
     const warned = [
       finding({ ruleId: "no-stray-inline-comments", severity: "warn" }),

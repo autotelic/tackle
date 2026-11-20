@@ -5,6 +5,7 @@
 2f117a6da895351e	{"confidence":0.33,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.08,"merge":0.46,"move":0.35,"share_a_contract":0.06,"split":0.05}}
 2f18410b07d666c2	{"confidence":0.92,"kind":"Classify","label":"neither","probabilities":{"fact":0.03,"neither":0.95,"recomputation":0.02}}
 2f20531c5b40eced	{"consistency":0.6666666666666666,"kind":"Probability","probability":0.5033333333333333}
+2f2109ddd00ade6d	{"confidence":0.52,"kind":"Classify","label":"move","probabilities":{"move":0.76,"no_issue":0.24}}
 2f2dfe94556fd34c	{"confidence":0.97,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0,"must_be_current":0.02,"not_a_projection":0.98}}
 2f2f0c1601e544d6	{"consistency":1,"kind":"Probability","probability":0.87}
 2f31a8092cc6ac77	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0.01}}

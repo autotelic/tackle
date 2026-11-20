@@ -32,6 +32,7 @@ eec642e7933306f0	{"confidence":0.97,"kind":"Classify","label":"no_issue","probab
 eec6ca583485e1e6	{"confidence":0.66,"kind":"Classify","label":"not_a_derivation","probabilities":{"legitimate_local":0.23,"not_a_derivation":0.77,"reimplements":0}}
 eec6fef059dfca6f	{"confidence":0.92,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.94,"stale_reference":0.01,"wrong_behavior":0.04,"wrong_contract":0.01}}
 eed2238b24220b6f	{"confidence":0.91,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.93,"stale_reference":0,"wrong_behavior":0.05,"wrong_contract":0.02}}
+eed627dc757c84a7	{"confidence":0.79,"kind":"Classify","label":"component_or_feature","probabilities":{"already_there":0.05,"component_or_feature":0.84,"not_applicable":0.04,"route_or_handler":0.07}}
 eee6c6c2f3a8b123	{"confidence":0.35,"kind":"Classify","label":"wire_contract","probabilities":{"domain_concept":0.04,"framework_glue":0,"implementation_detail":0.45,"wire_contract":0.51}}
 eee9c9a7c9aa3813	{"confidence":0.35,"kind":"Rate","label":"slightly_clearer","probabilities":{"meaningfully_better":0.34,"no_difference":0.13,"removes_a_hazard":0.09,"slightly_clearer":0.44},"rating":1.39}
 eef0fda9aae9858c	{"consistency":1,"kind":"Probability","probability":0.898888888888889}

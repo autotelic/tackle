@@ -39,6 +39,7 @@
 02a62989aac254c3	{"consistency":1,"kind":"Probability","probability":0.9066666666666667}
 02a70a499a6e1a06	{"confidence":0.66,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.11,"names_a_caller":0.12,"shared_vocabulary":0.77}}
 02a759ed1e2a2ef8	{"confidence":0.83,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.89,"not_a_derivation":0.08,"reimplements":0.03}}
+02a98ee6480eaf5a	{"confidence":1,"kind":"Classify","label":"rendering","probabilities":{"derivation":0,"domain_logic":0,"infrastructure":0,"input_adaptation":0,"mechanical":0,"not_applicable":0,"orchestration":0,"reconciliation":0,"recording":0,"rendering":1,"request_validation":0,"transport_concern":0}}
 02ab4071c1ecf42f	{"confidence":0.25,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.37,"must_be_current":0.13,"not_a_projection":0.5}}
 02ac13e4fac0a3ba	{"confidence":0.4,"kind":"Classify","label":"not_a_record","probabilities":{"mutable":0.2,"not_a_record":0.6,"supersede_only":0.2}}
 02acea0f343e1808	{"confidence":0.89,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.07,"not_an_invariant":0.93,"repair_path":0}}

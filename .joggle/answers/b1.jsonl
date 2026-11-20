@@ -36,6 +36,7 @@ b172cfcb8f3bf52f	{"confidence":0.28,"kind":"Classify","label":"no_issue","probab
 b1750c62acee8dcc	{"confidence":0.68,"kind":"Classify","label":"not_a_derivation","probabilities":{"legitimate_local":0.19,"not_a_derivation":0.79,"reimplements":0.02}}
 b1880bc4172768d6	{"confidence":0.2,"kind":"Classify","label":"must_be_current","probabilities":{"allowed":0.26,"must_be_current":0.47,"not_a_projection":0.27}}
 b18a2a0c08643bf9	{"confidence":0.95,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.04,"same_module":0,"same_package":0,"sibling_packages":0.96}}
+b18db1d1ed3c2e9c	{"confidence":0.8,"kind":"Classify","label":"different_work","probabilities":{"different_inputs":0.13,"different_order":0.01,"different_work":0.85,"same_operation":0.01}}
 b19123d69c097684	{"consistency":1,"kind":"Probability","probability":0.38999999999999996}
 b191ba1180571327	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0}}
 b19a2d31ad0eb567	{"confidence":0.77,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.85,"not_a_derivation":0.04,"reimplements":0.11}}
@@ -60,4 +61,5 @@ b1f64504a4258283	{"confidence":0.94,"kind":"Classify","label":"not_an_invariant"
 b1f67b79bdcde4b6	{"confidence":0.69,"kind":"Classify","label":"same_module","probabilities":{"different_deployables":0,"same_module":0.77,"same_package":0.23,"sibling_packages":0}}
 b1f6b38a4b1397d7	{"confidence":0.35,"kind":"Classify","label":"wire_contract","probabilities":{"domain_concept":0.04,"framework_glue":0,"implementation_detail":0.45,"wire_contract":0.51}}
 b1facfc7bc22ea3d	{"confidence":0.79,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.01,"must_be_current":0.13,"not_a_projection":0.86}}
+b1fbd73ceb284ec9	{"confidence":0.87,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.9,"stale_reference":0,"wrong_behavior":0.07,"wrong_contract":0.03}}
 b1fdc4148f11fd8d	{"confidence":0.77,"kind":"Classify","label":"domain_concept","probabilities":{"domain_concept":0.83,"framework_glue":0.04,"implementation_detail":0.13,"wire_contract":0}}

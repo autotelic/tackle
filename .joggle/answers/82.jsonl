@@ -15,12 +15,14 @@
 8243354e5a92197a	{"confidence":0.95,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.96,"stale_reference":0.02,"wrong_behavior":0.01,"wrong_contract":0.01}}
 824998b2f471de56	{"confidence":0.92,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.94,"stale_reference":0,"wrong_behavior":0.04,"wrong_contract":0.02}}
 824f697e6f1d6bff	{"consistency":1,"kind":"Probability","probability":0.8933333333333334}
+824f9f81f99ebdbe	{"confidence":0.42,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.61,"not_a_derivation":0.37,"reimplements":0.02}}
 825c2ed72ec085e4	{"confidence":0.6,"kind":"Classify","label":"input_adaptation","probabilities":{"domain_logic":0.02,"infrastructure":0,"input_adaptation":0.64,"mechanical":0,"not_applicable":0,"orchestration":0.08,"rendering":0,"request_validation":0.13,"transport_concern":0.13}}
 8264c2c58839a755	{"confidence":0.26,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.05,"merge":0.18,"move":0.35,"share_a_contract":0.41,"split":0.01}}
 826722a7d0b8434e	{"confidence":0.94,"kind":"Classify","label":"neither","probabilities":{"fact":0.03,"neither":0.96,"recomputation":0.01}}
 826e4004cb32fb71	{"confidence":0.5,"kind":"Classify","label":"not_a_derivation","probabilities":{"legitimate_local":0.31,"not_a_derivation":0.67,"reimplements":0.02}}
 82750a455f1d8954	{"confidence":0.91,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.9400000000000001,"not_a_derivation":0.03,"reimplements":0.03}}
 827598ad2cec6410	{"confidence":0.39,"kind":"Classify","label":"same_module","probabilities":{"different_deployables":0,"same_module":0.54,"same_package":0.43,"sibling_packages":0.03}}
+827bc02f44dba126	{"confidence":0.46,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.52,"no_difference":0.06,"removes_a_hazard":0.12,"slightly_clearer":0.3},"rating":1.71}
 827c51a5abf9c042	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0.01}}
 828806ca83afdfdd	{"confidence":0.72,"kind":"Classify","label":"accounted_elsewhere","probabilities":{"accounted_elsewhere":0.81,"internal_only":0.11,"unaccounted":0.08}}
 8288adcccc07f72f	{"confidence":0.8,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.85,"stale_reference":0.05,"wrong_behavior":0.05,"wrong_contract":0.05}}

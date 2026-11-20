@@ -35,6 +35,7 @@
 3276f4f2be99c4e5	{"confidence":0.85,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.01,"must_be_current":0.09,"not_a_projection":0.9}}
 32815459851d09e5	{"confidence":0.77,"kind":"Classify","label":"value","probabilities":{"meaning":0.14,"unclear":0.01,"value":0.85}}
 328226c1b5514d57	{"confidence":0.85,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.02,"must_be_current":0.08,"not_a_projection":0.9}}
+3288389041942bf8	{"confidence":0.58,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.21,"keep_variants":0.72,"no_issue":0.07}}
 32896455f8b26359	{"confidence":0.73,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.14,"framework_glue":0,"implementation_detail":0.8,"wire_contract":0.06}}
 328d3d0a7788702e	{"consistency":1,"kind":"Probability","probability":0.5888888888888889}
 328d925a909d24c4	{"consistency":1,"kind":"Probability","probability":0.7288888888888888}

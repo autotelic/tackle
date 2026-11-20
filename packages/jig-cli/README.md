@@ -151,11 +151,23 @@ onboarding. `init` inspects the repository first:
 - the agent docs already present, which are left untouched.
 
 It enables only engines that can run, writes a starter `joggle.config.json` with
-`unavailable: "count"` when joggle is enabled, and defaults the gate to
-`touched-files`: existing debt is reported, not enforced, until someone touches
-it. `--gate all` opts into the repo-wide ratchet. The generated `JIG.md` and
-`ONBOARD.md` are specific to the profile, and the summary names what was kept,
-what was written, and the next two commands.
+`unavailable: "count"` when joggle is enabled, and defaults the gate to **`all`**:
+every finding in the tree is measured, because `touched-files` measures against
+`HEAD` and a clean CI checkout has no touched set at all — a scaffold that looks
+like a gate and gates nothing is worse than no scaffold. `--gate touched-files`
+remains the pre-commit shape, where there is always a working-tree change.
+
+A repo-wide gate needs a ledger to pass, so `init` runs the engines once and
+**accepts the findings that exist today** as the baseline. Initiating a ratchet
+means freezing what is there and failing on what comes next; an empty ledger under
+`failOn: any-new` makes every existing finding new, so adoption is red on day one
+and every pull request fails on debt it did not create — and on a repository with
+judged rules, `jig baseline` needs a model key, which can leave that state
+impossible to exit. The acceptance stays reviewable: the summary prints how many
+identities were accepted, the ledger is in the same commit, and `jig check --limit 0`
+lists them. A run that could not judge (no key) writes unverified identities, and
+says so. The generated `JIG.md` and `ONBOARD.md` are specific to the profile, and
+the summary names what was kept, what was written, and the next two commands.
 
 `ONBOARD.md` is one paste-able prompt, not a reference: it opens with the global
 install of the CLI (the checkout when this tree builds jig, npm otherwise, and
@@ -166,12 +178,16 @@ coexist; for OpenCode, a `"plugin"` array entry
 on opencode2 or a file in `.opencode/plugins/` on opencode 1.x — 1.x reads files, not the array)
 and, in a repo that runs one, plans the room. `JIG.md` stays the reference; the prompt is the door.
 
-`touched-files` is the adoption default, but it is the wrong gate for validating a
-clean checkout: the working-tree diff is empty, so the touched set is empty, and a
-run can exit 0 while the report lists findings. For a first run, a workshop, or CI
-on a clean PR checkout, pass `--gate all` — or `gate: "all"` to `jig_onboard` /
-`jig.onboard` and `jig_init` / `jig.init`. The plan's next command carries the gate
-it chose, so the applied config matches what was approved.
+`touched-files` is the opt-in for a repo that wants debt reported and not
+enforced until someone edits the file; it is the wrong gate for CI on a clean
+checkout, where the touched set is empty and a run can exit 0 while the report
+lists findings. The plan's next command carries the gate it chose, so the applied
+config matches what was approved.
+
+For a pull request, scope the gate to the change instead of guessing at a ledger:
+`jig check --since origin/<base> --format github` answers for what the branch
+introduced. Keep the unscoped `jig check` on the default branch — that is where the
+whole tree is compared to the ledger, and where new debt becomes visible.
 
 `jig init --print` and `jig onboard` are the agent door: they run the same
 inspection but write nothing, and print that same prompt with the plan's engines,

@@ -14,7 +14,9 @@ import { dirname, join } from "node:path"
 import { describe, expect, it } from "vitest"
 import { Effect } from "effect"
 import { NodeServices } from "@effect/platform-node"
+import { makeReport } from "@autotelic/protocol"
 import {
+  acceptedIdentities,
   configFor,
   cookbookFor,
   initialise,
@@ -972,8 +974,41 @@ describe("making the harness real", () => {
   })
 })
 
+describe("acceptedIdentities", () => {
+  it("accepts one key per rule and file, sorted, so the ledger merges", () => {
+    const report = makeReport({
+      diagnostics: [
+        {
+          engine: "plumb",
+          ruleId: "no-x",
+          severity: "warn",
+          message: "a",
+          location: { file: "b.ts", line: 1, column: 1 },
+        },
+        {
+          engine: "plumb",
+          ruleId: "no-x",
+          severity: "warn",
+          message: "b",
+          location: { file: "b.ts", line: 9, column: 1 },
+        },
+        {
+          engine: "plumb",
+          ruleId: "no-x",
+          severity: "error",
+          message: "c",
+          location: { file: "a.ts", line: 1, column: 1 },
+        },
+      ],
+      files: 2,
+      generators: [],
+    })
+    expect(acceptedIdentities(report)).toEqual(["plumb/no-x:a.ts", "plumb/no-x:b.ts"])
+  })
+})
+
 describe("initialise", () => {
-  it("writes a config, an empty baseline, the docs, and a counted joggle config", async () => {
+  it("writes a config, a ledger, the docs, and a counted joggle config", async () => {
     const root = project(
       {
         json: [

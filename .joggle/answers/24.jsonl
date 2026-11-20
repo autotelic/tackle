@@ -19,6 +19,7 @@
 24347136863ff05d	{"confidence":0.98,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.99,"not_a_derivation":0.01,"reimplements":0}}
 24370296c0005b0a	{"confidence":0.9,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.95,"member_1":0.05}}
 243c4e7208aeabe1	{"confidence":0.76,"kind":"Classify","label":"no_issue","probabilities":{"merge":0.1,"move":0.06,"no_issue":0.84}}
+243d24b7fdd57551	{"confidence":0.77,"kind":"Classify","label":"component_or_feature","probabilities":{"already_there":0.06,"component_or_feature":0.83,"not_applicable":0.04,"route_or_handler":0.07}}
 2442599265929efc	{"confidence":0.82,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.88,"not_a_derivation":0.1,"reimplements":0.02}}
 244aa8feb0a1d3e2	{"confidence":0.95,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.97,"not_a_derivation":0.03,"reimplements":0}}
 244b560657624ec7	{"confidence":0.18,"kind":"Classify","label":"drift","probabilities":{"compatible":0.27,"drift":0.45,"two_concepts":0.28}}
@@ -31,6 +32,7 @@
 24658c6558dd5383	{"confidence":0.88,"kind":"Classify","label":"neither","probabilities":{"fact":0.06,"neither":0.92,"recomputation":0.02}}
 246b5a5e291e25ee	{"confidence":0.36,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.09,"merge":0.03,"move":0.37,"share_a_contract":0.49,"split":0.02}}
 2471700f9243af04	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
+24779d4241d33f37	{"confidence":0.35,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.09,"merge":0.04,"move":0.37,"share_a_contract":0.48,"split":0.02}}
 247ebff7f2c9285c	{"confidence":0.79,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.14,"names_a_caller":0,"shared_vocabulary":0.86}}
 247eec13709504a0	{"confidence":0.25,"kind":"Classify","label":"framework_glue","probabilities":{"domain_concept":0.14,"framework_glue":0.44,"implementation_detail":0.41,"wire_contract":0.01}}
 2480b4d0ae58e397	{"consistency":1,"kind":"Probability","probability":0.42}

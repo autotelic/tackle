@@ -41,6 +41,7 @@
 989ac4224ac6e765	{"confidence":0.91,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.93,"stale_reference":0,"wrong_behavior":0.06,"wrong_contract":0.01}}
 989ddd34bafa14bc	{"confidence":0.85,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.06,"must_be_current":0.04,"not_a_projection":0.9}}
 989e2bf5e065889c	{"confidence":0.91,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.93,"stale_reference":0.02,"wrong_behavior":0.01,"wrong_contract":0.04}}
+98a1e5d27e5a4f88	{"confidence":0.98,"kind":"Classify","label":"value","probabilities":{"meaning":0.01,"unclear":0,"value":0.99}}
 98a7b5d2513c265b	{"consistency":1,"kind":"Probability","probability":0.7933333333333333}
 98b4b35f7b06d811	{"confidence":0.6,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.2,"name_meaning":0.03,"no_issue":0.07,"semantic_verdict":0.7}}
 98b4f8a4bb59e2b3	{"confidence":0.82,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.91,"member_1":0.09}}
@@ -49,6 +50,7 @@
 98bc612d6f38cf8d	{"confidence":0.53,"kind":"Classify","label":"general","probabilities":{"general":0.69,"names_a_caller":0.01,"shared_vocabulary":0.3}}
 98c6cf8d1cd73c74	{"confidence":0.21,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.19,"merge":0.03,"move":0.37,"share_a_contract":0.37,"split":0.04}}
 98cbf1550898bc8a	{"confidence":0.73,"kind":"Classify","label":"input_adaptation","probabilities":{"derivation":0,"domain_logic":0.09,"infrastructure":0,"input_adaptation":0.75,"mechanical":0,"not_applicable":0,"orchestration":0,"reconciliation":0,"recording":0,"rendering":0,"request_validation":0.04,"transport_concern":0.12}}
+98dc434dbdf9ab74	{"confidence":0.28,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.52,"not_a_derivation":0.43,"reimplements":0.05}}
 98dd5e7db3d0f8f2	{"confidence":0.83,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.87,"component_or_feature":0.06,"not_applicable":0.05,"route_or_handler":0.02}}
 98dfe01f4ec42b18	{"consistency":1,"kind":"Probability","probability":0.73}
 98e340048bef6fbb	{"confidence":0.4,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.4,"names_a_caller":0,"shared_vocabulary":0.6}}

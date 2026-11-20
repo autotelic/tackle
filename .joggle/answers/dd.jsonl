@@ -50,6 +50,7 @@ dd9b80751fb4160b	{"confidence":0.64,"kind":"Classify","label":"meaning","probabi
 dd9edbbfbb18b6d1	{"confidence":0.96,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.01,"not_an_invariant":0.97,"repair_path":0.02}}
 dd9ee1e7e1863341	{"confidence":0.67,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.2,"inferred":0.02,"not_applicable":0.78}}
 dd9ffd27da652a78	{"confidence":0.88,"kind":"Classify","label":"wire_contract","probabilities":{"domain_concept":0.04,"framework_glue":0.03,"implementation_detail":0.02,"wire_contract":0.91}}
+dda4dd10722b05fe	{"confidence":0.43,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.62,"not_a_derivation":0.37,"reimplements":0.01}}
 dda7a34e41c131c2	{"consistency":1,"kind":"Probability","probability":0.9488888888888888}
 dda82829ef1d741d	{"consistency":1,"kind":"Probability","probability":0.8766666666666668}
 dda95b35cb84ac58	{"confidence":0.56,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.25,"inferred":0.04,"not_applicable":0.71}}

@@ -72,6 +72,7 @@
 5dcd72640580af81	{"confidence":0.88,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.91,"stale_reference":0,"wrong_behavior":0.04,"wrong_contract":0.05}}
 5dd15b595eae3f13	{"confidence":0.67,"kind":"Classify","label":"state","probabilities":{"deviation":0.01,"neither":0.21,"state":0.78}}
 5dd33ce482cf8d08	{"confidence":0.8,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.02,"no_issue":0.13,"semantic_verdict":0.85}}
+5dd6a1eafea6cbe4	{"confidence":0.53,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.69,"not_a_derivation":0.3,"reimplements":0.01}}
 5dd87bf08c1c6722	{"confidence":0.86,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.91,"not_a_derivation":0.03,"reimplements":0.06}}
 5de0897a25c2ba83	{"confidence":0.99,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.01,"framework_glue":0,"implementation_detail":0.99,"wire_contract":0}}
 5de23ef1ce3eccf2	{"consistency":1,"kind":"Probability","probability":0.69}

@@ -4,16 +4,19 @@ import { Effect, FileSystem, Option, Path, PlatformError } from "effect"
 import {
   cutlistDefaultOutput,
   decodeCutlistConfig,
+  identityOf,
   parseJson,
   isRecord,
   type CutlistConfig,
   type CutlistOutput,
   type EngineRef,
   type HarnessConfig,
+  type Report,
   type ResolvedCutlistOutput,
 } from "@autotelic/protocol"
 import { emptyBaseline, readBaseline, writeBaseline } from "./baseline.ts"
 import { loadConfig } from "./config.ts"
+import { harnessRun } from "./run.ts"
 import { resolveEngineCommand } from "./engines.ts"
 import { exec, type Spawner } from "./exec.ts"
 import {
@@ -1342,7 +1345,7 @@ ${roomSection(profile)}${
         " baseline`, or switch the gate to `touched-files`."
   }
 
-${profile.facts.has("ci") ? "## CI\n\nRun `" + profile.jig + " check --format github` in the pull-request workflow. The gate holds new identities only, so the first run explains the debt instead of failing on it. A check runs every engine read-only — it never writes the answer cache or a generated artifact, because a run that edits what it judges reports differently next time. Warming those is deliberate: `joggle check` on the base branch, `" + profile.jig + " baseline` for the ledger. The machine formats carry the census too, so an engine that skipped its rules shows as a warning rather than a clean run. For machine output (`--format json`, `sarif`, `github`), use `" + profile.run + " exec jig`, or `" + profile.run + " -s jig` when you type the repo's own script: a bare `" + profile.run + " jig` prints the script banner first and corrupts the document.\n\n" : ""}## Judgement
+${profile.facts.has("ci") ? "## CI\n\nRun `" + profile.jig + " check --format github` on the default branch, and scope it to the change on a pull request (` + profile.jig + ` check --since origin/<base> --format github). `init` accepted the findings that existed when it ran, so the gate holds new identities only: today's debt is reported, not enforced. A check runs every engine read-only — it never writes the answer cache or a generated artifact, because a run that edits what it judges reports differently next time. Warming those is deliberate: `joggle check` on the base branch, `" + profile.jig + " baseline` for the ledger. The machine formats carry the census too, so an engine that skipped its rules shows as a warning rather than a clean run. For machine output (`--format json`, `sarif`, `github`), use `" + profile.run + " exec jig`, or `" + profile.run + " -s jig` when you type the repo's own script: a bare `" + profile.run + " jig` prints the script banner first and corrupts the document.\n\n" : ""}## Judgement
 
 joggle judges candidates with the TypeSafe model. ${profile.facts.has("live-judgement") ? "A TYPESAFE_API_KEY is present in this environment, so a run can judge." : "No TYPESAFE_API_KEY is present in this environment, so unjudged candidates are counted, not printed. Set the key to judge, or keep the count in CI."}
 
@@ -1468,11 +1471,11 @@ export const onboardingFor = (profile: RepoProfile): string => {
   const initialise = [
     profile.facts.has("configured")
       ? `\`jig.config.json\` is already here, and nothing needs applying: a re-run keeps it. \`${initCommandFor(profile)} --force\` rewrites the config and the two docs — never the baseline — so run that only when the plan changes.`
-      : `This repository is not initialised yet. Run \`${initCommandFor(profile)}\`: it writes \`jig.config.json\`, an empty \`${profile.baseline}\`, \`${profile.cookbook}\`, and \`${profile.onboarding}\`.`,
+      : `This repository is not initialised yet. Run \`${initCommandFor(profile)}\`: it writes \`jig.config.json\`, \`${profile.baseline}\` (the findings that exist today, accepted), \`${profile.cookbook}\`, and \`${profile.onboarding}\`.`,
     profile.cutlistDraft === undefined
       ? ""
       : `The same command drafts \`cutlist.config.json\`, because this tree looks like a UI. Review the vocabulary it infers, run \`${invocationOf({ profile, tool: "cutlist", args: "build" })}\`, and commit the catalog: \`jig check\` runs the engine as \`cutlist build --check\`, which compares the tree against the catalog on disk, so a catalog that is ignored or stale passes only on the machine that built it. Then re-run with \`--force\`. A draft is not enabled before a person has read it.`,
-    `Init writes each engine's own ledger too (joggle's is born accepted, and is never rewritten), so day one is "nothing new" rather than a pile nobody has judged.`,
+    `The ledger is born accepted: the gate freezes what exists today and fails on what comes next, so day one is "nothing new" rather than a red tree nobody can get past -- which is also why \`jig baseline\` needs a model key on a repository with judged rules. Read what it accepted with \`${profile.jig} check --limit 0\`; the file is in the same commit.`,
     'A known-broken engine does not have to be removed: set `"advisory": true` on its entry in `jig.config.json` and its findings stay in the report and the baseline while the gate ignores them, or `"enabled": false` to keep it out of a run. Both survive `init --force`, which keeps a configured engine\'s own fields.',
     `The same run installs the agent skills into \`.agents/skills/\` — \`room\`, \`intercom-setup\`, \`feedback-loop\`, \`project-run\`. pi and OpenCode both read that directory, so there is no second install; a skill someone edits is kept, and \`--force\` replaces it.`,
     profile.architectureDraft === undefined
@@ -1993,6 +1996,18 @@ const writeIfAbsent = (input: {
   })
 
 /**
+ * The identities an `init` run accepts as today's debt: unique, sorted, and committed verbatim.
+ *
+ * Unique because two findings in one file under one rule are one ratchet key, and sorted so the
+ * ledger is a stable file two branches can merge rather than a report's order.
+ *
+ * @param report - The run over the tree as it is now.
+ * @returns The ledger's identities.
+ */
+export const acceptedIdentities = (report: Report): ReadonlyArray<string> =>
+  [...new Set(report.diagnostics.map(identityOf))].sort((left, right) => left.localeCompare(right))
+
+/**
  * Inspect a repository and write the harness it should have.
  *
  * @param root - The project root.
@@ -2088,12 +2103,48 @@ export const initialise = (
       }
     }
 
-    // The baseline is a reviewed ledger. Even `--force` does not replace it.
+    /*
+     * The ledger is born accepted. Even `--force` does not replace an existing one.
+     *
+     * A repo-wide gate with an empty ledger is a gate that cannot pass: EVERY finding already
+     * in the tree is a new identity, so adoption is red on day one and every pull request fails
+     * on debt it did not create -- and on a repository with judged rules, `jig baseline` needs
+     * a model key, so the state can be impossible to leave. Initiating a ratchet means freezing
+     * what exists now and failing on what comes next; that is this run's report. The acceptance
+     * stays reviewable: the count is in the summary, the ledger is in the same commit, and
+     * `jig check --limit 0` lists every accepted finding.
+     *
+     * Only for `all`: a `touched-files` gate holds nothing outside the change, so it needs no
+     * ledger to pass and should not pay for a full run at init.
+     */
     const baseline = path.join(root, profile.baseline)
     if (yield* Effect.orElseSucceed(fs.exists(baseline), () => false)) {
       kept.push(profile.baseline)
     } else {
-      if (!dryRun) yield* writeBaseline(baseline, emptyBaseline)
+      if (!dryRun && profile.gateMode === "all") {
+        const settings = yield* loadConfig(path.join(root, "jig.config.json"))
+        const run = yield* harnessRun(root, settings, emptyBaseline)
+        const identities = acceptedIdentities(run.report)
+        yield* writeBaseline(baseline, { ...emptyBaseline, identities })
+        // A ledger written without a model key holds UNVERIFIED identities: CI replays the same
+        // keyless run, so it agrees today, but adding a key can rename them. Say it here rather
+        // than let the first keyed run look like a regression.
+        const unjudged = run.report.generators.reduce(
+          (sum, generator) => sum + (generator.unjudged ?? 0),
+          0,
+        )
+        if (unjudged > 0) {
+          profile = {
+            ...profile,
+            notes: [
+              ...profile.notes,
+              `accepted ${identities.length} finding(s) from a run that did not judge ${unjudged} candidate(s): the ledger is playable in CI but not judged. Add TYPESAFE_API_KEY and re-run \`jig baseline\` before trusting a judged change.`,
+            ],
+          }
+        }
+      } else if (!dryRun) {
+        yield* writeBaseline(baseline, emptyBaseline)
+      }
       written.push(profile.baseline)
     }
     yield* writeIfAbsent({

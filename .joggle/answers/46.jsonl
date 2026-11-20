@@ -10,6 +10,7 @@
 46216a39f4aa3c41	{"confidence":0.95,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.02,"inferred":0.01,"not_applicable":0.97}}
 46274b7b0cd99513	{"confidence":0.6,"kind":"Classify","label":"not_a_derivation","probabilities":{"legitimate_local":0.27,"not_a_derivation":0.73,"reimplements":0}}
 4632978aab9eea97	{"consistency":1,"kind":"Probability","probability":0.8366666666666666}
+463c58fb62f83abb	{"confidence":0.83,"kind":"Classify","label":"component_or_feature","probabilities":{"already_there":0.06,"component_or_feature":0.87,"not_applicable":0.04,"route_or_handler":0.03}}
 463e75230ea9668b	{"confidence":0.55,"kind":"Classify","label":"neither","probabilities":{"deviation":0.01,"neither":0.7,"state":0.29}}
 4640165370c4b020	{"confidence":0.76,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.1,"keep_variants":0.84,"no_issue":0.06}}
 4641c78b0d69c02b	{"confidence":0.44,"kind":"Classify","label":"two_concepts","probabilities":{"intentional":0.28,"one_concept":0.09,"two_concepts":0.63}}

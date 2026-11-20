@@ -16,9 +16,11 @@ b4252d9f8007a56a	{"confidence":0.91,"kind":"Classify","label":"shared_vocabulary
 b42c51ac91f8ea6f	{"confidence":0.8,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0,"keep_variants":0.87,"no_issue":0.13}}
 b42d5d1cca935ed3	{"confidence":0.85,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.9,"not_a_derivation":0.09,"reimplements":0.01}}
 b4307fead85c91e3	{"confidence":0.83,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.87,"stale_reference":0.07,"wrong_behavior":0.04,"wrong_contract":0.02}}
+b433bb7e7552b135	{"confidence":0.26,"kind":"Classify","label":"not_a_derivation","probabilities":{"legitimate_local":0.42,"not_a_derivation":0.51,"reimplements":0.07}}
 b43508fd0e5cd84c	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0.01}}
 b43632aab0f0e28c	{"confidence":0.32,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.01,"name_meaning":0.18,"no_issue":0.32,"semantic_verdict":0.49}}
 b43a2dfd0a2a1d77	{"confidence":0.8,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.04,"keep_variants":0.87,"no_issue":0.09}}
+b43f1f33b170bdf1	{"confidence":1,"kind":"Classify","label":"rendering","probabilities":{"derivation":0,"domain_logic":0,"infrastructure":0,"input_adaptation":0,"mechanical":0,"not_applicable":0,"orchestration":0,"reconciliation":0,"recording":0,"rendering":1,"request_validation":0,"transport_concern":0}}
 b44068542e61f477	{"confidence":0.51,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.67,"not_a_derivation":0.33,"reimplements":0}}
 b44cd537b5ddbb00	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
 b44d0964a0a1f8f2	{"confidence":0.87,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.9,"stale_reference":0.03,"wrong_behavior":0.05,"wrong_contract":0.02}}

@@ -1,4 +1,5 @@
 fa01f49aec327fd4	{"confidence":0.28,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.37,"no_difference":0.09,"removes_a_hazard":0.27,"slightly_clearer":0.27},"rating":1.81}
+fa02094c4fc14b43	{"confidence":0.79,"kind":"Classify","label":"rendering","probabilities":{"derivation":0,"domain_logic":0.07,"infrastructure":0,"input_adaptation":0,"mechanical":0,"not_applicable":0,"orchestration":0.12,"reconciliation":0,"recording":0,"rendering":0.81,"request_validation":0,"transport_concern":0}}
 fa051892e6c6c11a	{"consistency":1,"kind":"Probability","probability":0.18000000000000002}
 fa0b18802c1b3530	{"confidence":0.46,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.06,"not_an_invariant":0.64,"repair_path":0.3}}
 fa0cc3c53d0ced97	{"confidence":0.91,"kind":"Classify","label":"component_or_feature","probabilities":{"already_there":0.04,"component_or_feature":0.9299999999999999,"not_applicable":0.01,"route_or_handler":0.02}}

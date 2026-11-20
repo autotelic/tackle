@@ -45,6 +45,7 @@
 13bcf5472251a25c	{"consistency":1,"kind":"Probability","probability":0.5411111111111112}
 13be5db3d7ce1ab0	{"consistency":0.6666666666666666,"kind":"Probability","probability":0.5133333333333333}
 13c06fbd2032d6c5	{"confidence":0.38,"kind":"Classify","label":"value","probabilities":{"meaning":0.22,"unclear":0.19,"value":0.59}}
+13c2473cec35c2b7	{"confidence":0.36,"kind":"Classify","label":"orchestration","probabilities":{"derivation":0.11,"domain_logic":0.16,"infrastructure":0,"input_adaptation":0.01,"mechanical":0.01,"not_applicable":0,"orchestration":0.41,"reconciliation":0,"recording":0,"rendering":0.3,"request_validation":0,"transport_concern":0}}
 13c38919b73e7c09	{"confidence":0.85,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.9,"not_a_derivation":0.1,"reimplements":0}}
 13c449896ce92468	{"confidence":0.34,"kind":"Classify","label":"value","probabilities":{"meaning":0.43,"unclear":0.01,"value":0.56}}
 13cfba0e109b57ac	{"confidence":0.73,"kind":"Classify","label":"value","probabilities":{"meaning":0.18,"unclear":0,"value":0.82}}

@@ -272,10 +272,21 @@ const checkCommand = Command.make(
             renderText(
               run,
               scopeNote === undefined
-                ? { limit, gate: verdict }
+                ? { limit, gate: verdict, emptyLedger: baseline.identities.length === 0 }
                 : run.outOfScope === undefined
-                  ? { limit, gate: verdict, scope: scopeNote }
-                  : { limit, gate: verdict, scope: scopeNote, outOfScope: run.outOfScope },
+                  ? {
+                      limit,
+                      gate: verdict,
+                      scope: scopeNote,
+                      emptyLedger: baseline.identities.length === 0,
+                    }
+                  : {
+                      limit,
+                      gate: verdict,
+                      scope: scopeNote,
+                      outOfScope: run.outOfScope,
+                      emptyLedger: baseline.identities.length === 0,
+                    },
             ),
           )
           break

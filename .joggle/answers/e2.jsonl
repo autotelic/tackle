@@ -30,12 +30,14 @@ e26419a9f62adf29	{"consistency":1,"kind":"Probability","probability":0.700000000
 e26cfe2cb97c63ab	{"confidence":0.88,"kind":"Classify","label":"wire_contract","probabilities":{"domain_concept":0.07,"framework_glue":0.01,"implementation_detail":0.01,"wire_contract":0.91}}
 e26e4f443730edfd	{"confidence":0.61,"kind":"Classify","label":"component_or_feature","probabilities":{"already_there":0.13,"component_or_feature":0.71,"not_applicable":0.01,"route_or_handler":0.15}}
 e26ec560c5365005	{"confidence":0.67,"kind":"Classify","label":"different_work","probabilities":{"different_inputs":0.25,"different_order":0,"different_work":0.75,"same_operation":0}}
+e275985ad9c8f693	{"confidence":0.34,"kind":"Classify","label":"state","probabilities":{"deviation":0.12,"neither":0.32,"state":0.56}}
 e27c288bf629d09d	{"confidence":0.21,"kind":"Classify","label":"move","probabilities":{"leave_it":0.06,"merge":0.16,"move":0.37,"share_a_contract":0.35,"split":0.06}}
 e27c35e494845f72	{"confidence":0.42,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.09,"common_idiom":0.61,"shared_helper":0.3}}
 e28198ecf021e871	{"confidence":0.53,"kind":"Classify","label":"neither","probabilities":{"fact":0.3,"neither":0.69,"recomputation":0.01}}
 e2823edf811eb158	{"confidence":0.43,"kind":"Classify","label":"same_package","probabilities":{"different_deployables":0,"same_module":0.43,"same_package":0.57,"sibling_packages":0}}
 e289b4e929a9e3c8	{"confidence":0.37,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.58,"unclear":0,"value":0.42}}
 e28a91c2408b3151	{"confidence":0.37,"kind":"Rate","label":"slightly_clearer","probabilities":{"meaningfully_better":0.42,"no_difference":0.07,"removes_a_hazard":0.07,"slightly_clearer":0.44},"rating":1.48}
+e290cac7d0bda150	{"confidence":0.77,"kind":"Classify","label":"upward","probabilities":{"exception":0.05,"order_wrong":0.1,"upward":0.85}}
 e299e1d5d51d1d0b	{"confidence":0.87,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.9,"stale_reference":0.01,"wrong_behavior":0.08,"wrong_contract":0.01}}
 e29ac2eb7aeb3a20	{"consistency":1,"kind":"Probability","probability":0.13555555555555557}
 e29b23ff6f26b9e8	{"confidence":0.6,"kind":"Classify","label":"move","probabilities":{"leave_it":0.02,"merge":0.29,"move":0.68,"share_a_contract":0.01,"split":0}}

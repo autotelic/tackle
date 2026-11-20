@@ -9,6 +9,7 @@
 75143a8805d43b31	{"confidence":0.94,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.03,"keep_variants":0.96,"no_issue":0.01}}
 7515feaf242a1f71	{"confidence":0.8,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.1,"member_1":0.9}}
 7517f170c8210288	{"confidence":0.99,"kind":"Classify","label":"rendering","probabilities":{"derivation":0,"domain_logic":0.01,"infrastructure":0,"input_adaptation":0,"mechanical":0,"not_applicable":0,"orchestration":0,"reconciliation":0,"recording":0,"rendering":0.99,"request_validation":0,"transport_concern":0}}
+7517f1715d90c34e	{"confidence":0.91,"kind":"Classify","label":"component_or_feature","probabilities":{"already_there":0.02,"component_or_feature":0.93,"not_applicable":0.02,"route_or_handler":0.03}}
 75182d0ed29b3b7f	{"confidence":0.28,"kind":"Classify","label":"state","probabilities":{"deviation":0,"neither":0.48,"state":0.52}}
 752b8a09704eec81	{"confidence":0.41,"kind":"Classify","label":"same_module","probabilities":{"different_deployables":0,"same_module":0.56,"same_package":0.44,"sibling_packages":0}}
 752e63a8aa2f4aaf	{"confidence":0.52,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.24,"keep_variants":0.68,"no_issue":0.08}}
@@ -25,6 +26,7 @@
 7550897f75df3ffe	{"confidence":0.92,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.95,"not_a_derivation":0.04,"reimplements":0.01}}
 7550cde192af8725	{"confidence":0.67,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.01,"no_issue":0.24,"semantic_verdict":0.75}}
 7551cfb49b2975ee	{"confidence":0.06,"kind":"Classify","label":"open","probabilities":{"none":0.47,"open":0.53}}
+7554b56abbfbf2c6	{"confidence":0.77,"kind":"Classify","label":"component_or_feature","probabilities":{"already_there":0.07,"component_or_feature":0.83,"not_applicable":0.06,"route_or_handler":0.04}}
 755c62ebfa031a61	{"consistency":1,"kind":"Probability","probability":0.9366666666666666}
 755eda8c3b8b7824	{"confidence":0.37,"kind":"Classify","label":"input_adaptation","probabilities":{"domain_logic":0.04,"infrastructure":0.01,"input_adaptation":0.44,"mechanical":0.06,"not_applicable":0.15,"orchestration":0.01,"rendering":0,"request_validation":0,"transport_concern":0.29}}
 756219ce2abb9417	{"confidence":0.22,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.61,"member_1":0.39}}

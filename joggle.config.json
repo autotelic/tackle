@@ -85,6 +85,11 @@
       "rule": "joggle/reversal",
       "path": "packages/protocol/src/catalog.ts",
       "reason": "`DuplicateCandidate` and joggle's `UnitPair` are two packages' independent declarations of a scored pair, and protocol cannot import joggle. The shared shape is the seam; the existing compose-types entry above records the same fact."
+    },
+    {
+      "rule": "joggle/field-type-drift",
+      "path": "packages/jig-cli/src/init.ts",
+      "reason": "`RepoProfile.packageManager` is the RESOLVED manager, a closed union; `PackageManifest.packageManager` is the raw field as it appears in package.json, and that name is the JSON key the decoder reads. Two levels of one fact — the same shape joggle's own `onUnavailable` entry records."
     }
   ],
   "architecture": {
