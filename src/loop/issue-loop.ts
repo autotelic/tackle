@@ -284,10 +284,29 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
       Effect.orElseSucceed(() => ''),
     )
     const resumeLike = deps.resume || branchExists !== ''
+    // A force-removed worktree (operator cleanup, a crashed run) leaves a
+    // stale "prunable" entry: without a prune, `alreadyThere` is true for a
+    // directory that no longer exists, `worktree add` is skipped, and the
+    // install spawn ENOENTs on the missing cwd (#20).
+    yield* tryP(() => git(repoDir, 'worktree', 'prune'))
     const worktrees = yield* tryP(() => git(repoDir, 'worktree', 'list', '--porcelain'))
     const alreadyThere = worktrees.split('\n').some((line) => line === `worktree ${worktreeDir}`)
     if (!alreadyThere) {
       if (resumeLike) {
+        // Re-entry reuses the issue's own branch. If it no longer exists
+        // (operator reset), resume semantics can't hold: back to ready with
+        // a notify instead of a loud `invalid reference` crash (#20).
+        if (branchExists === '') {
+          yield* tryP(() =>
+            notify(
+              `#${issue.number}: branch ${branch} is gone — resetting the issue to ${config.issues.ready} (nothing was on the branch).`,
+            ),
+          )
+          yield* tryP(() =>
+            relabel(repoDir, config, issue.number, config.issues.working, config.issues.ready),
+          )
+          return { kind: 'parked', issue: issue.number, passesUsed: 0, reason: 'no-rule' }
+        }
         yield* tryP(() => git(repoDir, 'worktree', 'add', worktreeDir, branch))
       } else {
         yield* tryP(() => git(repoDir, 'worktree', 'add', worktreeDir, '-b', branch, base.ref))
