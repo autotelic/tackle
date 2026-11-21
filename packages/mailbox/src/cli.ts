@@ -65,7 +65,7 @@ const exportCommand = Command.make(
         }
       })
       const log = yield* attempt(() =>
-        exportDirectory(options.dir, previous?.at === undefined ? {} : { at: previous.at }),
+        exportDirectory(options.dir, { at: previous?.at ?? new Date().toISOString() }),
       )
       yield* attempt(() => writeFile(options.out, serializeLog(log), "utf8"))
       yield* Console.log(`exported ${log.turns.length} turns to ${options.out}`)
@@ -127,6 +127,7 @@ const writeCommand = Command.make(
         }
       })
       const { log, turn } = appendTurn(current, {
+        at: Date.now(),
         path: options.turn,
         body,
         ...(options.sender === "" ? {} : { sender: options.sender }),

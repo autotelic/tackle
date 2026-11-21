@@ -56,7 +56,11 @@ describe("append", () => {
   it("refuses a turn whose path is already in the log", () => {
     const first = { turns: [turn(1)] }
     expect(() =>
-      appendTurn(first, { path: "0001-a-turn.md", body: "# 0001 — TAC-15 — again\n" }),
+      appendTurn(first, {
+        at: 1_800_000_000_000,
+        path: "0001-a-turn.md",
+        body: "# 0001 — TAC-15 — again\n",
+      }),
     ).toThrow(/already in the log/)
   })
 })
@@ -166,6 +170,7 @@ describe("append", () => {
       path: "0003-c.md",
       body: "# 0003 — TAC-15 — c\n",
       replyTo: first.tid,
+      at: 1_800_000_000_000,
     })
     expect(appended.turn.replyTo).toBe(first.tid)
   })
@@ -176,18 +181,27 @@ describe("append", () => {
         path: "0003-c.md",
         body: "# 0003 — TAC-15 — c\n",
         replyTo: "234567abcdef9",
+        at: 1_800_000_000_000,
       }),
     ).toThrow(/replyTo names no earlier turn/)
   })
 
   it("refuses a filename whose prefix is not the next seq", () => {
     expect(() =>
-      appendTurn(log, { path: "0002-wrong.md", body: "# 0002 — TAC-15 — wrong\n" }),
+      appendTurn(log, {
+        at: 1_800_000_000_000,
+        path: "0002-wrong.md",
+        body: "# 0002 — TAC-15 — wrong\n",
+      }),
     ).toThrow(/filename says 0002 but this turn is seq 3/)
   })
 
   it("takes the sender from the heading when none is passed", () => {
-    const appended = appendTurn(log, { path: "0003-c.md", body: "# 0003 — TAC-15 — c\n" })
+    const appended = appendTurn(log, {
+      at: 1_800_000_000_000,
+      path: "0003-c.md",
+      body: "# 0003 — TAC-15 — c\n",
+    })
     expect(appended.turn.sender).toBe("TAC-15")
   })
 })

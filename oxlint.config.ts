@@ -269,6 +269,18 @@ export default {
       rules: { "plumb/no-sql-string-interpolation": "off" },
     },
     {
+      // The mailbox log reports the offending line as a sentence; the rule reads the template
+      // as a query. There is no SQL in this file, only an error message.
+      files: ["packages/mailbox/src/log.ts"],
+      rules: { "plumb/no-sql-string-interpolation": "off" },
+    },
+    {
+      // The CLI is the process boundary: it mints the instant and passes it into the core.
+      // No core byte depends on a clock.
+      files: ["packages/mailbox/src/cli.ts"],
+      rules: { "plumb/no-nondeterministic-core": "off" },
+    },
+    {
       // Reasoning belongs where the decision is made. joggle recorded exactly this for its
       // own tree: plumb wants the note in JSDoc, but an inline comment sits beside the line
       // it explains, and moving it onto a signature forty lines above separates the two.

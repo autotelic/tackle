@@ -13,7 +13,7 @@ export const BACKFILL_NOTE =
  */
 export const exportDirectory = async (
   dir: string,
-  options: { at?: string; note?: string } = {},
+  options: { at: string; note?: string },
 ): Promise<TurnLog> => {
   const names = (await readdir(dir)).filter(isTurnPath).sort()
   if (names.length === 0) throw new LogError(`${dir}: no turn files`)
@@ -32,7 +32,7 @@ export const exportDirectory = async (
   return {
     backfill: {
       kind: "backfill",
-      at: options.at ?? new Date().toISOString(),
+      at: options.at,
       from: names,
       timestampSource: "mtime",
       note: options.note ?? BACKFILL_NOTE,

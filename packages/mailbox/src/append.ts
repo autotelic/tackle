@@ -7,8 +7,8 @@ export interface AppendInput {
   readonly body: string
   readonly sender?: string
   readonly replyTo?: string | null
-  /** Injectable for tests; production passes the wall clock. */
-  readonly at?: number
+  /** The instant the turn is written. Passed at the boundary; the core never reads a clock. */
+  readonly at: number
 }
 
 /**
@@ -38,7 +38,7 @@ export const appendTurn = (
     throw new LogError(`replyTo names no earlier turn: ${replyTo}`)
   }
   // A TID must sort after its predecessor; if the clock has not moved, step the microsecond.
-  let at = input.at ?? Date.now()
+  let at = input.at
   let tid = tidAt(at, seq & 0x3ff)
   while (previous !== undefined && tid <= previous.tid) {
     at += 1
