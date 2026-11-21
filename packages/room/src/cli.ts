@@ -1,4 +1,7 @@
-import { Effect } from "effect"
+import { Effect, Option } from "effect"
+import { spawnSync } from "node:child_process"
+import { existsSync } from "node:fs"
+import { homedir } from "node:os"
 import { join } from "node:path"
 import { parseArgs } from "node:util"
 import { Worktree, WorktreeLive } from "./Worktree.ts"
@@ -25,6 +28,8 @@ const usage = [
   "  room status [--id <id>] [--root .room] [--json]",
   "  room pause --id <id> [--root .room]",
   "  room resume --id <id> [--root .room]",
+  "  room use --id <id> [--root .room]   (label this Herdr terminal with room=<id>)",
+  "  room run --id <id> [--root .room] -- <command...>",
   "  room move --id <id> --to <host> [--root .room] [--json]  (not implemented; refuses)",
   "",
   "Exit codes: 0 ok, 1 declined, 2 usage, 3 infrastructure.",
@@ -48,6 +53,31 @@ const options = {
   exec: { type: "string" },
   help: { type: "boolean", short: "h", default: false },
 } as const
+
+/** HC_BIN first, then PATH, then the installer's default location. */
+const hcBin = (): Option.Option<string> => {
+  if (process.env.HC_BIN !== undefined && process.env.HC_BIN !== "")
+    return Option.some(process.env.HC_BIN)
+  for (const dir of (process.env.PATH ?? "").split(":")) {
+    if (dir === "") continue
+    const candidate = join(dir, "hc")
+    if (existsSync(candidate)) return Option.some(candidate)
+  }
+  const local = join(homedir(), ".local", "bin", "hc")
+  return existsSync(local) ? Option.some(local) : Option.none()
+}
+
+const runHc = (args: ReadonlyArray<string>) => {
+  const binary = hcBin()
+  if (Option.isNone(binary)) return { ok: false as const, message: "hc is not on PATH" }
+  const result = spawnSync(binary.value, [...args], { encoding: "utf8" })
+  return result.status === 0
+    ? { ok: true as const, output: result.stdout }
+    : {
+        ok: false as const,
+        message: result.stderr.trim() || result.error?.message || "hc exited " + result.status,
+      }
+}
 
 const slug = (value: string): string =>
   value
@@ -73,7 +103,7 @@ const main = async (): Promise<void> => {
     console.log(usage)
     return
   }
-  const parsed = parseArgs({ args: process.argv.slice(3), options, allowPositionals: false })
+  const parsed = parseArgs({ args: process.argv.slice(3), options, allowPositionals: true })
   const values = parsed.values
   if (values.help === true) {
     console.log(usage)
@@ -139,6 +169,49 @@ const main = async (): Promise<void> => {
 
   if (values.id === undefined) return fail(command + " needs --id (see room --help)", EXIT.usage)
   const id = values.id
+
+  if (command === "run") {
+    const room = await readRoom({ root, id })
+    if (room === undefined || room.state._tag === "Absent")
+      return fail("RoomNotFound", EXIT.declined)
+    if (parsed.positionals.length === 0)
+      return fail("run needs a command after -- (see room --help)", EXIT.usage)
+    const worktree = await ensureWorktree({
+      repo: room.state.repo,
+      base: room.base,
+      root: join(roomDir({ root, id }), "worktree"),
+    }).catch((cause) => fail("worktree failed: " + String(cause), EXIT.infrastructure))
+    const binary = hcBin()
+    if (Option.isNone(binary)) return fail("hc is not on PATH", EXIT.infrastructure)
+    const child = spawnSync(
+      binary.value,
+      ["run", "--label", "room=" + id, "--cwd", worktree, "--", ...parsed.positionals],
+      { stdio: "inherit" },
+    )
+    return process.exit(child.status ?? EXIT.infrastructure)
+  }
+
+  if (command === "use") {
+    const terminal = process.env.HC_TERMINAL_ID
+    if (terminal === undefined || terminal === "")
+      return fail(
+        "use needs HC_TERMINAL_ID; run it from a Herdr terminal (hc run/inject)",
+        EXIT.declined,
+      )
+    const room = await readRoom({ root, id })
+    if (room === undefined) return fail("RoomNotFound", EXIT.declined)
+    const probe = runHc(["get", terminal, "--json"])
+    if (!probe.ok)
+      return fail("hc could not find terminal " + terminal + ": " + probe.message, EXIT.declined)
+    const labeled = runHc(["label", terminal, "room=" + id])
+    if (!labeled.ok)
+      return fail(
+        "hc could not label terminal " + terminal + ": " + labeled.message,
+        EXIT.infrastructure,
+      )
+    console.log("room " + id + " labels terminal " + terminal)
+    return
+  }
 
   if (command === "up") {
     const room = await readRoom({ root, id })

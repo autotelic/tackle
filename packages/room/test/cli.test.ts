@@ -1,5 +1,13 @@
 import { execFileSync, spawnSync } from "node:child_process"
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -30,6 +38,17 @@ const room = (cwd: string, ...args: ReadonlyArray<string>) =>
   spawnSync(process.execPath, ["--conditions=development", cli, ...args], {
     cwd,
     encoding: "utf8",
+  })
+
+const roomWithEnv = (
+  cwd: string,
+  args: ReadonlyArray<string>,
+  env: Readonly<Record<string, string>>,
+) =>
+  spawnSync(process.execPath, ["--conditions=development", cli, ...args], {
+    cwd,
+    encoding: "utf8",
+    env: { ...process.env, ...env },
   })
 
 const scratch = () => {
@@ -125,4 +144,62 @@ describe("a verb that prints a completion is a claim", () => {
       close()
     }
   }, 30_000)
+
+  it("labels this Herdr terminal only when asked", () => {
+    const { root, close } = scratch()
+    try {
+      expect(room(root, "new", "--repo", repository(root), "--scope", "dev").status).toBe(0)
+      const bin = join(root, "bin")
+      mkdirSync(bin, { recursive: true })
+      const hc = join(bin, "hc")
+      writeFileSync(hc, '#!/bin/sh\necho "$@" >> "$HC_LOG"\nexit 0\n')
+      chmodSync(hc, 0o755)
+      const log = join(root, "hc.log")
+      const used = roomWithEnv(root, ["use", "--id", "dev-repo"], {
+        HC_TERMINAL_ID: "t1",
+        HC_LOG: log,
+        PATH: bin + ":" + (process.env.PATH ?? ""),
+      })
+      expect(used.status).toBe(0)
+      expect(used.stdout).toBe("room dev-repo labels terminal t1\n")
+      expect(readFileSync(log, "utf8")).toBe("get t1 --json\nlabel t1 room=dev-repo\n")
+    } finally {
+      close()
+    }
+  })
+
+  it("stamps room= on a child at spawn", () => {
+    const { root, close } = scratch()
+    try {
+      expect(room(root, "new", "--repo", repository(root), "--scope", "dev").status).toBe(0)
+      const bin = join(root, "bin")
+      mkdirSync(bin, { recursive: true })
+      const hc = join(bin, "hc")
+      writeFileSync(hc, '#!/bin/sh\necho "$@" >> "$HC_LOG"\nexit 0\n')
+      chmodSync(hc, 0o755)
+      const log = join(root, "hc-run.log")
+      const spawned = roomWithEnv(root, ["run", "--id", "dev-repo", "--", "echo", "hi"], {
+        HC_LOG: log,
+        PATH: bin + ":" + (process.env.PATH ?? ""),
+      })
+      expect(spawned.status).toBe(0)
+      const line = readFileSync(log, "utf8").trim()
+      expect(line).toContain("run --label room=dev-repo --cwd ")
+      expect(line).toContain("-- echo hi")
+    } finally {
+      close()
+    }
+  })
+
+  it("refuses to label when HC_TERMINAL_ID is absent", () => {
+    const { root, close } = scratch()
+    try {
+      expect(room(root, "new", "--repo", repository(root), "--scope", "dev").status).toBe(0)
+      const used = roomWithEnv(root, ["use", "--id", "dev-repo"], { HC_TERMINAL_ID: "" })
+      expect(used.status).toBe(1)
+      expect(used.stderr).toContain("use needs HC_TERMINAL_ID")
+    } finally {
+      close()
+    }
+  })
 })
