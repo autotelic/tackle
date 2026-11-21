@@ -161,7 +161,17 @@ const presence = async ({
     shop: root,
     observedAt: new Date().toISOString(),
     service: { pid: process.pid, host, port },
-    rooms: rooms.map((room) => ({ id: room.id, state: room.state._tag })),
+    rooms: await Promise.all(
+      rooms.map(async (room) => {
+        const run = await readRun({ root, id: room.id })
+        return {
+          id: room.id,
+          state: room.state._tag,
+          process:
+            run === undefined ? null : { pid: run.pid, alive: alive(run.pid), exec: run.exec },
+        }
+      }),
+    ),
   }
 }
 
