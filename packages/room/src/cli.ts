@@ -22,7 +22,7 @@ const usage = [
   "room — one durable place per scope",
   "",
   "Usage:",
-  "  room new --repo <path> --scope <name> [--base main] [--id <id>] [--root .room]",
+  "  room new --repo <path> --scope <name> [--base main] [--branch <existing>] [--id <id>] [--root .room]",
   "  room up --id <id> [--exec <command>] [--root .room]",
   "  room down --id <id> [--root .room]",
   "  room status [--id <id>] [--root .room] [--json]",
@@ -46,6 +46,7 @@ const options = {
   repo: { type: "string" },
   scope: { type: "string" },
   base: { type: "string", default: "main" },
+  branch: { type: "string" },
   id: { type: "string" },
   root: { type: "string", default: ".room" },
   to: { type: "string" },
@@ -85,6 +86,18 @@ const slug = (value: string): string =>
     .replace(/[^a-z0-9]+/gu, "-")
     .replace(/^-|-$/gu, "") || "room"
 
+const attachWorktree = (input: {
+  readonly repo: string
+  readonly branch: string
+  readonly root: string
+}) =>
+  Effect.runPromise(
+    Effect.gen(function* () {
+      const trees = yield* Worktree
+      return yield* trees.attach(input)
+    }).pipe(Effect.provide(WorktreeLive)),
+  )
+
 const ensureWorktree = (input: {
   readonly repo: string
   readonly base: string
@@ -118,7 +131,10 @@ const main = async (): Promise<void> => {
     let worktree = join(roomDir({ root, id }), "worktree")
     // SAFETY: the worktree provider is a process boundary; its failure is infrastructure.
     try {
-      worktree = await ensureWorktree({ repo: values.repo, base: values.base, root: worktree })
+      worktree =
+        values.branch === undefined
+          ? await ensureWorktree({ repo: values.repo, base: values.base, root: worktree })
+          : await attachWorktree({ repo: values.repo, branch: values.branch, root: worktree })
     } catch (cause) {
       return fail("worktree failed: " + String(cause), EXIT.infrastructure)
     }
@@ -127,7 +143,7 @@ const main = async (): Promise<void> => {
       id,
       repo: values.repo,
       scope: values.scope,
-      base: values.base,
+      base: values.branch ?? values.base,
       at: Date.now(),
     })
     if (!created.ok) return fail(created.error, EXIT.declined)

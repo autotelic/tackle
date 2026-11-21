@@ -14,6 +14,11 @@ export interface WorktreeService {
     readonly repo: string
     readonly base: string
   }) => Effect.Effect<string, WorktreeError>
+  readonly attach: (input: {
+    readonly root: string
+    readonly repo: string
+    readonly branch: string
+  }) => Effect.Effect<string, WorktreeError>
   readonly archive: (input: { readonly root: string }) => Effect.Effect<void, WorktreeError>
 }
 
@@ -46,6 +51,19 @@ export const WorktreeLive = Layer.effect(
           if (existsSync(join(absolute, ".git"))) return absolute
           await mkdir(join(absolute, ".."), { recursive: true })
           await run("git", ["worktree", "add", "-B", `room/${base}`, absolute, base], { cwd: repo })
+          return absolute
+        },
+        catch: (cause) => new WorktreeError(String(cause)),
+      }),
+    attach: ({ root, repo, branch }) =>
+      Effect.tryPromise({
+        try: async () => {
+          const absolute = resolve(root)
+          // The existing branch is the PR's branch; do not mint room/<branch>, or the commits
+          // land somewhere the pull request cannot see.
+          if (existsSync(join(absolute, ".git"))) return absolute
+          await mkdir(join(absolute, ".."), { recursive: true })
+          await run("git", ["worktree", "add", absolute, branch], { cwd: repo })
           return absolute
         },
         catch: (cause) => new WorktreeError(String(cause)),

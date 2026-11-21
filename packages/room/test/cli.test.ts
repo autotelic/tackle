@@ -145,6 +145,32 @@ describe("a verb that prints a completion is a claim", () => {
     }
   }, 30_000)
 
+  it("attaches an existing PR branch instead of minting room/<branch>", () => {
+    const { root, close } = scratch()
+    try {
+      const repo = repository(root)
+      git(repo, "checkout", "-q", "-b", "feature/pr")
+      writeFileSync(join(repo, "PR.md"), "pr\n")
+      git(repo, "add", "PR.md")
+      git(repo, "commit", "-q", "-m", "pr")
+      git(repo, "checkout", "-q", "main")
+      const created = room(root, "new", "--repo", repo, "--scope", "pr", "--branch", "feature/pr")
+      expect(created.status).toBe(0)
+      const worktree = join(root, ".room", "pr-repo", "worktree")
+      expect(
+        execFileSync("git", ["branch", "--show-current"], {
+          cwd: worktree,
+          encoding: "utf8",
+        }).trim(),
+      ).toBe("feature/pr")
+      expect(
+        JSON.parse(readFileSync(join(root, ".room", "pr-repo", "room.json"), "utf8")).base,
+      ).toBe("feature/pr")
+    } finally {
+      close()
+    }
+  })
+
   it("labels this Herdr terminal only when asked", () => {
     const { root, close } = scratch()
     try {

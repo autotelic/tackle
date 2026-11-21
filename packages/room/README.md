@@ -6,6 +6,7 @@ One durable place per scope: a git worktree plus the control-plane state that na
 
 ```sh
 room new --repo ~/code/app --scope dev-1575
+room new --repo ~/code/app --scope dev-1575 --branch feature/existing-pr
 room status [--id dev-1575] [--json]
 room up --id dev-1575
 room up --id dev-1575 --exec 'pnpm dev'
@@ -18,6 +19,10 @@ room run --id dev-1575 -- pnpm test
 
 `new` creates `.room/<id>/worktree` and `.room/<id>/room.json`. `up` is
 idempotent: an existing worktree is not re-added.
+
+With `--branch`, the worktree checks out that existing branch instead of minting
+`room/<base>`; use it for a PR branch so commits land where the pull request can
+see them.
 
 With `--exec`, `up` starts a detached supervisor (recorded in `run.json` and
 logged to `.room/<id>/room.log`) that restarts the command with a crash budget.
