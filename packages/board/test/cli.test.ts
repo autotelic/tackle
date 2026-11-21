@@ -83,6 +83,10 @@ test("board up serves presence and queue until down", async () => {
       service: { port },
     })
 
+    const discovery = await fetch("http://127.0.0.1:" + port + "/.well-known/presence.json")
+    expect(discovery.status).toBe(200)
+    expect(await discovery.json()).toMatchObject({ shop: "rooms" })
+
     const queue = await fetch("http://127.0.0.1:" + port + "/queue")
     expect(await queue.json()).toEqual(["r1"])
 

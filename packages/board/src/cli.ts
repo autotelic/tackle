@@ -198,7 +198,7 @@ const serve = async ({
       })
       return
     }
-    if (path === "/presence") {
+    if (path === "/presence" || path === "/.well-known/presence.json") {
       void presence({ root, port, host }).then(
         (body) => json({ response, status: 200, body }),
         (cause: unknown) => json({ response, status: 500, body: { error: String(cause) } }),
@@ -220,7 +220,10 @@ const serve = async ({
     json({
       response,
       status: 404,
-      body: { error: "not found", paths: ["/health", "/presence", "/queue"] },
+      body: {
+        error: "not found",
+        paths: ["/health", "/presence", "/.well-known/presence.json", "/queue"],
+      },
     })
   })
 
