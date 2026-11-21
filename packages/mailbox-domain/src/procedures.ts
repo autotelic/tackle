@@ -82,6 +82,7 @@ export type Failure =
   | { readonly _tag: "RoleUnresolved" }
   | { readonly _tag: "MessageNotFound" }
   | { readonly _tag: "InvalidTransition"; readonly from: DeliveryState; readonly to: DeliveryState }
+  | { readonly _tag: "UnsupportedEnvelope" }
 
 export type Result<A> =
   | { readonly ok: true; readonly value: A }
@@ -135,7 +136,7 @@ const senderFence = (
 }
 
 export interface SendInput {
-  readonly envelope: Envelope
+  readonly envelope: unknown
   readonly leaseId?: string
   readonly generation?: number
   readonly woke?: boolean
@@ -143,12 +144,26 @@ export interface SendInput {
 }
 
 /** Admit a send, idempotently on the sender DID plus TID. */
+/** The shape an admitted send must have; a plaintext body is not a wire envelope. */
+export const isEncryptedEnvelope = (value: unknown): value is Envelope => {
+  if (value === null || typeof value !== "object") return false
+  const candidate = value as Partial<Envelope>
+  return (
+    candidate.version === 1 &&
+    candidate.suite !== undefined &&
+    candidate.enc !== undefined &&
+    candidate.ciphertext !== undefined &&
+    candidate.aad !== undefined
+  )
+}
+
 export const send = (
   state: MailboxState,
   input: SendInput,
   actorDid: string,
   now: number,
 ): Result<Receipt> => {
+  if (!isEncryptedEnvelope(input.envelope)) return fail({ _tag: "UnsupportedEnvelope" })
   const aad = input.envelope.aad
   if (aad.senderDid !== actorDid) return fail({ _tag: "RoleUnresolved" })
 

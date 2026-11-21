@@ -15,7 +15,8 @@
     "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
-    "@autotelic/mailbox-domain": "workspace:*"
+    "@autotelic/mailbox-domain": "workspace:*",
+    "@hpke/core": "1.10.1"
   },
   "devDependencies": {
     "@effect/tsgo": "catalog:",

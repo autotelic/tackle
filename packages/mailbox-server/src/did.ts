@@ -1,0 +1,68 @@
+// A did:key is a multicodec tag and a raw public key in base58btc. Only Ed25519 is used for
+// signatures here; the encryption key travels as recipientKeyId, not as the signing DID.
+const BASE58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+const ED25519 = [0xed, 0x01] as const
+
+const encodeBase58 = (bytes: Uint8Array): string => {
+  let value = 0n
+  for (const byte of bytes) value = (value << 8n) | BigInt(byte)
+  let out = ""
+  while (value > 0n) {
+    const rest = Number(value % 58n)
+    out = BASE58[rest]! + out
+    value /= 58n
+  }
+  for (const byte of bytes) {
+    if (byte !== 0) break
+    out = "1" + out
+  }
+  return out
+}
+
+const decodeBase58 = (text: string): Uint8Array => {
+  let value = 0n
+  for (const char of text) {
+    const digit = BASE58.indexOf(char)
+    if (digit < 0) throw new Error("invalid base58")
+    value = value * 58n + BigInt(digit)
+  }
+  const bytes: number[] = []
+  while (value > 0n) {
+    bytes.unshift(Number(value & 0xffn))
+    value >>= 8n
+  }
+  for (const char of text) {
+    if (char !== "1") break
+    bytes.unshift(0)
+  }
+  return Uint8Array.from(bytes)
+}
+
+/** Encode a raw Ed25519 public key as a did:key. */
+export const didKeyFromEd25519 = (raw: Uint8Array): string =>
+  "did:key:z" + encodeBase58(Uint8Array.from([...ED25519, ...raw]))
+
+/** Decode a did:key to its raw Ed25519 public key. */
+export const ed25519FromDidKey = (did: string): Uint8Array => {
+  if (!did.startsWith("did:key:z")) throw new Error("did:key with base58btc required")
+  const bytes = decodeBase58(did.slice("did:key:z".length))
+  if (bytes[0] !== ED25519[0] || bytes[1] !== ED25519[1]) throw new Error("not an Ed25519 did:key")
+  const raw = bytes.slice(2)
+  if (raw.length !== 32) throw new Error("Ed25519 key must be 32 bytes")
+  return raw
+}
+
+/** Sign bytes with an Ed25519 key. */
+export const signDetached = async (privateKey: any, data: Uint8Array): Promise<Uint8Array> =>
+  new Uint8Array(await crypto.subtle.sign("Ed25519", privateKey, data))
+
+/** Verify bytes against a raw Ed25519 public key from a did:key. */
+export const verifyDetached = async (
+  did: string,
+  data: Uint8Array,
+  signature: Uint8Array,
+): Promise<boolean> => {
+  const raw = ed25519FromDidKey(did)
+  const key = await crypto.subtle.importKey("raw", raw, { name: "Ed25519" }, false, ["verify"])
+  return crypto.subtle.verify("Ed25519", key, signature, data)
+}
