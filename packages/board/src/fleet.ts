@@ -23,8 +23,18 @@ const RemoteSource = Schema.Struct({
 const RemotePresence = Schema.Struct({
   shop: Schema.String,
   observedAt: Schema.String,
+  authority: Schema.optional(Schema.String),
   rooms: Schema.Array(RemoteRoom),
   sessions: Schema.Struct({ herdr: RemoteSource, rex: RemoteSource }),
+  network: Schema.optional(
+    Schema.Struct({
+      tailscale: Schema.optional(
+        Schema.Struct({
+          self: Schema.optional(Schema.Struct({ dnsName: Schema.optional(Schema.String) })),
+        }),
+      ),
+    }),
+  ),
 })
 
 export interface FleetRoom {
@@ -186,6 +196,11 @@ export const fleet = async (input: {
       try {
         const decoded = decode(await pull({ base, fetcher }))
         if (decoded === undefined) throw new Error("presence did not decode")
+        const expected = peer.dnsName?.replace(/\.$/u, "")
+        const claimed = decoded.network?.tailscale?.self?.dnsName?.replace(/\.$/u, "")
+        if (expected === undefined) throw new Error("no tailnet name to bind")
+        if (claimed !== expected)
+          throw new Error("origin mismatch: claimed " + (claimed ?? "no origin"))
         hosts.push({
           host: peer.host,
           dnsName: peer.dnsName,
@@ -230,6 +245,23 @@ export const fleet = async (input: {
     }),
   )
 
+  const counts = new Map<string, number>()
+  for (const host of hosts) counts.set(host.host, (counts.get(host.host) ?? 0) + 1)
+  const duplicated = new Set(
+    [...counts.entries()].filter(([, count]) => count > 1).map(([host]) => host),
+  )
+  for (let index = 0; index < hosts.length; index++) {
+    const host = hosts[index]
+    if (host !== undefined && duplicated.has(host.host))
+      hosts[index] = {
+        ...host,
+        ok: false,
+        rooms: undefined,
+        sessions: undefined,
+        error: "duplicate host",
+      }
+  }
+
   const rank = (host: FleetHost): number => (host.self ? 0 : host.ok ? 1 : host.online ? 3 : 2)
   hosts.sort((left, right) => rank(left) - rank(right) || left.host.localeCompare(right.host))
   const hostRank = (host: string): number => (host === input.tailnet.self?.host ? 0 : 1)
@@ -248,7 +280,7 @@ export const fleet = async (input: {
   return {
     observedAt: self?.observedAt ?? new Date().toISOString(),
     hosts,
-    rooms,
-    sessions,
+    rooms: rooms.filter((room) => !duplicated.has(room.host)),
+    sessions: sessions.filter((session) => !duplicated.has(session.host)),
   }
 }

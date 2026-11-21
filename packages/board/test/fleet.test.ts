@@ -15,6 +15,7 @@ const selfPresence = {
 
 const remotePresence = {
   shop: "remote",
+  network: { tailscale: { self: { dnsName: "remote.tail.ts.net." } } },
   observedAt: "2026-11-21T00:00:01.000Z",
   rooms: [{ id: "remote-room", state: "Paused", process: null }],
   sessions: {
@@ -132,5 +133,24 @@ describe("fleet pulls presence from the tailnet", () => {
         joinedBy: undefined,
       },
     ])
+  })
+
+  it("does not let two hosts with one label win silently", async () => {
+    const firstPeer = tailnet.peers[0]!
+    const result = await fleet({
+      tailnet: {
+        ...tailnet,
+        peers: [firstPeer, { ...firstPeer, dnsName: "other.tail.ts.net.", ips: ["100.0.0.9"] }],
+      },
+      self: selfPresence,
+      port: 4780,
+      fetcher: async () => remotePresence,
+    })
+    expect(result.hosts.filter((host) => host.host === "remote")).toEqual([
+      expect.objectContaining({ ok: false, error: "duplicate host", rooms: undefined }),
+      expect.objectContaining({ ok: false, error: "duplicate host", rooms: undefined }),
+    ])
+    expect(result.rooms).toEqual([{ host: "self", id: "local", state: "Ready", process: null }])
+    expect(result.sessions.map((session) => session.host)).toEqual(["self"])
   })
 })

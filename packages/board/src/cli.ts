@@ -29,6 +29,9 @@ const usage = [
 
 const EXIT = { clean: 0, declined: 1, usage: 2, infrastructure: 3 } as const
 
+/** Remote text reaches a terminal; control characters never do. */
+const safe = (value: string): string => value.replace(/\p{Cc}/gu, "?")
+
 const fail = (message: string, code: number): never => {
   console.error("board: " + message)
   process.exit(code)
@@ -157,6 +160,7 @@ const observe = async (root: string) => {
   const rooms = await listRooms(root)
   return {
     shop: root,
+    authority: "observation" as const,
     observedAt: new Date().toISOString(),
     sessions: await discoverSessions(),
     network: { tailscale: await discoverTailnet() },
@@ -424,10 +428,12 @@ const main = async (): Promise<void> => {
     }
     for (const host of result.hosts)
       console.log(
-        host.host +
+        safe(host.host) +
           (host.self ? " (self)" : "") +
           ": " +
-          (host.ok ? host.rooms + " rooms, " + host.sessions + " sessions" : host.error),
+          (host.ok
+            ? host.rooms + " rooms, " + host.sessions + " sessions"
+            : safe(host.error ?? "unknown")),
       )
     console.log(result.rooms.length + " rooms, " + result.sessions.length + " sessions total")
     return
