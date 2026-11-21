@@ -9,7 +9,7 @@ const AadSchema = Schema.Struct({
   expiresAt: Schema.String,
 })
 
-const EnvelopeSchema = Schema.Struct({
+export const EnvelopeSchema = Schema.Struct({
   version: Schema.Literal(1),
   suite: Schema.Struct({
     kemId: Schema.Literal(16),
@@ -32,42 +32,68 @@ export interface MessageRef {
 /** The delivery states Rat King's receipt carries, in order. */
 export type DeliveryState = "accepted" | "delivered" | "acked"
 
-export interface Receipt {
-  readonly message: MessageRef
-  readonly recipientDid: string
-  readonly state: DeliveryState
-  readonly seq: number
-  readonly recordedAt?: string
-  readonly woke?: boolean
-}
+export type Receipt = typeof ReceiptSchema.Type
 
 /** The harness that holds a lease; known adapters add their ids. */
-export interface Harness {
-  readonly $type: string
-  readonly sessionId?: string
-  readonly paneId?: string
-  readonly executionId?: string
-}
+export type Harness = typeof HarnessSchema.Type
 
-export interface Lease {
-  readonly did: string
-  readonly leaseId: string
-  readonly generation: number
-  readonly expiresAt: string
-  readonly harness: Harness
-}
+export type Lease = typeof LeaseSchema.Type
 
-export interface NameRecord {
-  readonly did: string
-  readonly retiredAt?: string
-  readonly successor?: string
-}
+export type NameRecord = typeof NameRecordSchema.Type
 
-export interface StoredMessage {
-  readonly envelope: Envelope
-  readonly receipt: Receipt
-  readonly state: DeliveryState
-}
+export type StoredMessage = typeof StoredMessageSchema.Type
+
+/** The snapshot shape: maps become arrays so the mailbox can be a file. */
+export const ReceiptSchema = Schema.Struct({
+  message: Schema.Struct({ senderDid: Schema.String, messageId: Schema.String }),
+  recipientDid: Schema.String,
+  state: Schema.Union([
+    Schema.Literal("accepted"),
+    Schema.Literal("delivered"),
+    Schema.Literal("acked"),
+  ]),
+  seq: Schema.Finite,
+  recordedAt: Schema.optional(Schema.String),
+  woke: Schema.optional(Schema.Boolean),
+})
+
+export const HarnessSchema = Schema.Struct({
+  $type: Schema.String,
+  sessionId: Schema.optional(Schema.String),
+  paneId: Schema.optional(Schema.String),
+  executionId: Schema.optional(Schema.String),
+})
+
+export const LeaseSchema = Schema.Struct({
+  did: Schema.String,
+  leaseId: Schema.String,
+  generation: Schema.Finite,
+  expiresAt: Schema.String,
+  harness: HarnessSchema,
+})
+
+export const NameRecordSchema = Schema.Struct({
+  did: Schema.String,
+  retiredAt: Schema.optional(Schema.String),
+  successor: Schema.optional(Schema.String),
+})
+
+export const StoredMessageSchema = Schema.Struct({
+  envelope: EnvelopeSchema,
+  receipt: ReceiptSchema,
+  state: Schema.Union([
+    Schema.Literal("accepted"),
+    Schema.Literal("delivered"),
+    Schema.Literal("acked"),
+  ]),
+})
+
+export const MailboxSnapshot = Schema.Struct({
+  messages: Schema.Array(Schema.Struct({ key: Schema.String, value: StoredMessageSchema })),
+  leases: Schema.Array(Schema.Struct({ key: Schema.String, value: LeaseSchema })),
+  names: Schema.Array(Schema.Struct({ key: Schema.String, value: NameRecordSchema })),
+  seq: Schema.Finite,
+})
 
 export interface MailboxState {
   readonly messages: Map<string, StoredMessage>

@@ -144,6 +144,11 @@
       "rule": "joggle/single-path",
       "path": "packages/joggle/src/rules/cluster-verdict.ts",
       "reason": "The three branches choose a sentence, not a list format; memberList is the one formatter. The rule reads the repeated template as a second path."
+    },
+    {
+      "rule": "joggle/deviation-has-a-shape",
+      "path": "packages/protocol/src/config.ts",
+      "reason": "`EngineRef.advisory` is a per-engine policy flag, not a value deviation with an authority and an instant. Replacing it with a tagged variant changes the public `jig.config.json` contract, which this task forbids without asking; the finding is recorded here instead of hidden in a baseline."
     }
   ],
   "architecture": {

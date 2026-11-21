@@ -4,7 +4,7 @@ import { startMailboxService } from "./service.ts"
 const usage = [
   "mailbox-server — the mailbox as a process",
   "",
-  "Usage: mailbox-server serve [--host 127.0.0.1] [--port 4781]",
+  "Usage: mailbox-server serve [--host 127.0.0.1] [--port 4781] [--state .mailbox/state.json]",
   "",
   "Routes: /health, /xrpc/dev.autotelic.mailbox.{send,deliver,ack,acquire,release,list}",
 ].join("\n")
@@ -26,13 +26,18 @@ const main = async (): Promise<void> => {
     options: {
       host: { type: "string", default: "127.0.0.1" },
       port: { type: "string", default: "4781" },
+      state: { type: "string", default: ".mailbox/state.json" },
     },
     allowPositionals: false,
   })
   const port = Number(parsed.values.port)
   if (!Number.isInteger(port) || port < 1 || port > 65_535)
     return fail("--port must be an integer between 1 and 65535")
-  const service = await startMailboxService({ host: parsed.values.host, port })
+  const service = await startMailboxService({
+    host: parsed.values.host,
+    port,
+    statePath: parsed.values.state,
+  })
   console.log("mailbox-server: " + service.url + " (pid " + process.pid + ")")
   const shutdown = (): void => {
     void service.close().finally(() => process.exit(0))

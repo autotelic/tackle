@@ -1,4 +1,6 @@
-import { readFileSync } from "node:fs"
+import { mkdtempSync, readFileSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import * as Schema from "effect/Schema"
 import { expect, test } from "vitest"
@@ -26,9 +28,9 @@ const LeaseReply = Schema.Struct({
 })
 const StateReply = Schema.Struct({ value: Schema.Struct({ state: Schema.String }) })
 
-const start = () => {
+const start = (statePath?: string) => {
   const port = 30_000 + Math.floor(Math.random() * 20_000)
-  return startMailboxService({ host: "127.0.0.1", port })
+  return startMailboxService({ host: "127.0.0.1", port, statePath })
 }
 
 const post = async (
@@ -114,3 +116,40 @@ test("a plaintext body is refused as an unsupported envelope", async () => {
     await service.close()
   }
 })
+
+test("a restart keeps the admitted message", async () => {
+  const root = mkdtempSync(join(tmpdir(), "mailbox-state-"))
+  const statePath = join(root, "state.json")
+  const source = Schema.decodeUnknownSync(EnvelopeFixture)(fixture("send.input.json"))
+  const aad = Schema.decodeUnknownSync(Aad)(source.envelope).aad
+  try {
+    const first = await start(statePath)
+    try {
+      const sent = await post(first.url, "send", {
+        actorDid: aad.senderDid,
+        envelope: source.envelope,
+      })
+      expect(sent.status).toBe(200)
+    } finally {
+      await first.close()
+    }
+
+    const second = await start(statePath)
+    try {
+      const listed = await fetch(
+        second.url +
+          "/xrpc/dev.autotelic.mailbox.list?recipientDid=" +
+          encodeURIComponent(aad.recipientDid) +
+          "&afterSeq=0",
+      )
+      expect(await listed.json()).toMatchObject({
+        throughSeq: 1,
+        events: [{ seq: 1, receipt: { state: "accepted" } }],
+      })
+    } finally {
+      await second.close()
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+}, 20_000)

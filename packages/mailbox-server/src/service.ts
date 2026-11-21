@@ -1,17 +1,22 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http"
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises"
+import { dirname } from "node:path"
 import {
   ack,
   acquire,
   deliver,
   empty,
   list,
+  MailboxSnapshot,
   release,
+  HarnessSchema,
   send,
   type Failure,
+  type Harness,
   type MailboxState,
   type Result as ProcedureResult,
 } from "@autotelic/mailbox-domain/procedures"
-import { Option } from "effect"
+import { Data, Option } from "effect"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 
@@ -22,13 +27,6 @@ import * as Schema from "effect/Schema"
  * service is a local endpoint, not a federated one; the sender DID is the body's claim until
  * a signed envelope check exists.
  */
-
-const Harness = Schema.Struct({
-  $type: Schema.String,
-  sessionId: Schema.optional(Schema.String),
-  paneId: Schema.optional(Schema.String),
-  executionId: Schema.optional(Schema.String),
-})
 
 const MessageRef = Schema.Struct({ senderDid: Schema.String, messageId: Schema.String })
 
@@ -52,7 +50,7 @@ const AckBody = DeliverBody
 
 const AcquireBody = Schema.Struct({
   did: Schema.String,
-  harness: Harness,
+  harness: HarnessSchema,
   expiresAt: Schema.String,
   leaseId: Schema.optional(Schema.String),
   generation: Schema.optional(Schema.Finite),
@@ -72,19 +70,54 @@ interface MailboxSendInput {
   resolvedFrom?: string
 }
 
-interface MailboxHarness {
-  readonly $type: string
-  sessionId?: string
-  paneId?: string
-  executionId?: string
-}
+class MailboxStateError extends Data.TaggedError("MailboxStateError")<{
+  readonly path: string
+  readonly reason: string
+}> {}
 
 interface MailboxAcquireInput {
   readonly did: string
-  readonly harness: MailboxHarness
+  readonly harness: Harness
   readonly expiresAt: string
   leaseId?: string
   generation?: number
+}
+
+const toMap = <K, V>(entries: ReadonlyArray<{ readonly key: K; readonly value: V }>): Map<K, V> => {
+  const map = new Map<K, V>()
+  for (const entry of entries) map.set(entry.key, entry.value)
+  return map
+}
+
+/** Load a snapshot; a malformed file refuses to start rather than silently losing mail. */
+const loadMailboxState = async (path: string): Promise<MailboxState> => {
+  const text = await readFile(path, "utf8").catch(() => undefined)
+  if (text === undefined) return empty()
+  const json = Schema.decodeResult(Schema.fromJsonString(Schema.Unknown))(text)
+  if (Result.isFailure(json)) throw new MailboxStateError({ path, reason: "the file is not JSON" })
+  const decoded = Schema.decodeUnknownResult(MailboxSnapshot)(json.success)
+  if (Result.isFailure(decoded))
+    throw new MailboxStateError({ path, reason: "the file does not decode" })
+  return {
+    messages: toMap(decoded.success.messages),
+    leases: toMap(decoded.success.leases),
+    names: toMap(decoded.success.names),
+    seq: decoded.success.seq,
+  }
+}
+
+/** The inverse of load; temp + rename keeps a crash from truncating the log. */
+const saveMailboxState = async (path: string, state: MailboxState): Promise<void> => {
+  const snapshot = {
+    messages: [...state.messages].map(([key, value]) => ({ key, value })),
+    leases: [...state.leases].map(([key, value]) => ({ key, value })),
+    names: [...state.names].map(([key, value]) => ({ key, value })),
+    seq: state.seq,
+  }
+  await mkdir(dirname(path), { recursive: true })
+  const temporary = path + ".tmp"
+  await writeFile(temporary, JSON.stringify(snapshot) + "\n")
+  await rename(temporary, path)
 }
 
 const failureStatus = (failure: Failure): number => {
@@ -191,12 +224,12 @@ const handleMailboxRequest = async (
   if (route === "/xrpc/dev.autotelic.mailbox.acquire") {
     const body = Schema.decodeUnknownResult(AcquireBody)(value)
     if (Result.isFailure(body)) return { status: 400, body: { error: "invalid acquire body" } }
-    const harness: MailboxHarness = { $type: body.success.harness.$type }
-    if (body.success.harness.sessionId !== undefined)
-      harness.sessionId = body.success.harness.sessionId
-    if (body.success.harness.paneId !== undefined) harness.paneId = body.success.harness.paneId
-    if (body.success.harness.executionId !== undefined)
-      harness.executionId = body.success.harness.executionId
+    const harness: Harness = {
+      $type: body.success.harness.$type,
+      sessionId: body.success.harness.sessionId,
+      paneId: body.success.harness.paneId,
+      executionId: body.success.harness.executionId,
+    }
     const input: MailboxAcquireInput = {
       did: body.success.did,
       harness,
@@ -223,21 +256,29 @@ export interface MailboxService {
 export const startMailboxService = async ({
   host,
   port,
+  statePath,
 }: {
   readonly host: string
   readonly port: number
+  readonly statePath?: string | undefined
 }): Promise<MailboxService> => {
-  const state = empty()
+  const state = statePath === undefined ? empty() : await loadMailboxState(statePath)
+  const save = async (): Promise<void> => {
+    if (statePath !== undefined) await saveMailboxState(statePath, state)
+  }
   const server = createServer((request, response) => {
-    void handleMailboxRequest(state, request, Date.now()).then(
-      (reply) => json({ response, status: reply.status, body: reply.body }),
-      (cause: unknown) =>
+    void handleMailboxRequest(state, request, Date.now())
+      .then(async (reply) => {
+        if (reply.status === 200 && request.method === "POST") await save()
+        json({ response, status: reply.status, body: reply.body })
+      })
+      .catch((cause: unknown) =>
         json({
           response,
           status: 500,
           body: { error: cause instanceof Error ? cause.message : String(cause) },
         }),
-    )
+      )
   })
   await new Promise<void>((resolve, reject) => {
     server.once("error", reject)
