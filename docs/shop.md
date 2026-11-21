@@ -400,6 +400,49 @@ budgets and disk quotas are _machine-level_ decisions. Eight plists cannot make 
 launchd will happily restart a child that exited for the correct reason (lease loss) which is the
 wrong behaviour — the same failure Amp guards with `keepAlive` leases.
 
+### 3.1.1 The supervision tree, in OTP terms
+
+The process model is a supervision tree, not a daemon loop, and the vocabulary is worth borrowing
+because it makes two decisions structural instead of conditional (`docs/otp-and-at.md` has the
+sources: Armstrong §4.3–4.4 and §5.2, the OTP supervisor behaviour, Waldo, FLP/Chandra–Toueg).
+
+```
+shop supervisor                     one per machine (D8) — survives every bench
+  └─ bench supervisor               one per bench, restart intensity 3 in 60s
+       ├─ agent loop                transient  crash → restart; lease lost → no restart
+       ├─ services                  one_for_one, restarted with the bench, never independently
+       ├─ outbox flusher            permanent  (mail is the saga; it must always be retried)
+       └─ desk watcher              monitors   (it observes, it does not restart anything)
+```
+
+**Exit reasons are data**, and the two lease failures are different reasons:
+
+```
+{shutdown, lease_lost}      the authority granted g+1 to someone else — fatal for this incarnation;
+                            the child spec is transient, so a normal shutdown does not restart it
+{shutdown, lease_expired}   nobody holds it, renewal failed past the deadline — the supervisor may
+                            re-acquire at g+1 on the same shop. That is a restart, not a takeover.
+```
+
+Shutdown ordering, because "stop" has two meanings: **stop effecting** (refuse new outbound mail, no
+review posts, no ship; bounded drain ~5s) → **then commit** (the journal is local, so checkpointing
+after the fence is lost is allowed; sending is not) → **then exit**. And the dying process never writes
+the narrative: the supervisor writes the receipt, the authority's expiry writes the desk item.
+
+`lease_expired` re-acquires automatically with backoff — an expiry is nobody's grant and should not
+need a human — under three constraints: **re-acquire is not re-claim** (it goes to the authority for
+`g+1` with the same `harness`, and a name already held is `lease_lost`, fatal, so the two paths never
+share a retry loop); **a lease loop is bounded like a crash loop** (no lease held for N seconds inside
+M minutes goes to `blocked: lease-unavailable` with one desk item — a cap-stop is a state, not a typo);
+and **a paused bench's lease expiring is normal**, so it never triggers re-acquisition. Otherwise every
+paused bench wakes itself up to prove it is asleep.
+
+Restart intensity exceeded is `blocked: crash-looping` with one desk item, never a silent loop and
+never an automatic delete — escalation ends at a human, the same rule as evacuation.
+
+Two things OTP offers that we must **not** take: unbounded mailboxes and selective receive. Every
+mailbox is bounded, and overflow goes to a dead-letter record rather than to memory.
+
 ### 3.2 The provider port
 
 Everything that touches a machine goes through one interface. Three implementations, one contract:
@@ -682,6 +725,35 @@ Four rules that are not optional:
    copy is moved to `quarantine/<name>-<generation>` and a human decides. Silent merges of two
    journals is how a transcript becomes fiction.
 
+### 5.1.1 Evacuated, never deleted
+
+A move creates a hole in the source, and a reconciler seeing a missing directory plans a delete. Make
+that unrepresentable rather than unlikely:
+
+```
+present ──move──▶ evacuated { movedTo: did, fromGeneration, journal.sha, at }
+                        │  the target signs an adoption receipt { name, sha, adoptedGeneration, leaseId }
+                        ▼
+        sha matches  ──▶ archived (cold/, retained)         ← a reconcile can never destroy it
+        sha differs  ──▶ blocked: divergent   (quarantine, no delete)
+        no receipt   ──▶ blocked: move-unacknowledged        (visible, not silent)
+```
+
+1. **A tombstone always beats a removal policy.** `evacuated` forces `retain`, whatever `bench.json`
+   or a resource default says — otherwise an innocuous policy edit three weeks later deletes the
+   journal that was handed over.
+2. **The tombstone never lives only in the reconciler's state.** Alchemy's `retain` is evaluated at
+   delete time and _drops the state row_, so the single copy of "this moved" would sit in the place
+   designed to forget. The tombstone is a file in the bench directory **and** an org record; the
+   state store caches it.
+3. **A move never deletes anything.** The source archives to `cold/`; the only irreversible operation
+   is an explicit `bench forget`, which requires the adoption receipt or records the human who
+   forced it. Cold does not expire on its own — an automatic expiry is the silent delete coming back
+   through the back door.
+
+Same shape as the baseline (D5): an event, then a fold. `evacuated` is to a bench what `drop` is to
+an accepted finding.
+
 ### 5.2 The continuation token
 
 What actually crosses the network is a small, checkable descriptor — not a machine image:
@@ -790,6 +862,37 @@ Four things make that work, and three of them already exist in this document:
 4. **An adoption snapshot for the org.** The same record shape as `rule.adoption` (at-seam D7):
    counts, no paths. “5 of 6 on 0.5.0” is a query over pins, and it is the only number the org
    needs to see.
+
+Five states, and **two columns**, because the calendar must never rewrite a fact about a tree:
+
+```
+  package.pin        derived from the shipped lockfile    commit + resolved version + integrity hash
+  package.advisory   authored by the package's author     minimum version + reason + at
+  pin.exception      authored by the consumer's reviewer  cites the advisory, reason, expiresAt
+```
+
+```
+  shippedState  fold(pin at ship, advisories as of ship, exception as of ship)
+                immutable:  on · behind · declined · superseded
+  currentState  the same fold, evaluated now
+                the same, plus: lapsed
+```
+
+Adoption's headline number is `shippedState` — so “5 of 6 on 0.5.0, one declined” never moves without a
+ship, and HEAD stays a proposal. The **desk** watches `currentState`, because a lapse is actionable
+today while adoption is not. `bench status` prints both:
+
+```
+  shipped  declined   x@0.5.0  sha:…   (advisory <at-uri>, exception <at-uri>)
+  now      lapsed     x@0.5.0           (expired 3d ago)
+```
+
+An exception is a _decision about_ the pin — a separate authored record, never a field in the derived
+one, because a derived artifact must not carry intent (the cutlist rule). It expires, because a waiver
+with no expiry is a permanent waiver granted by inattention. It is closed by an **event**
+(`expired` | `superseded-by <at-uri>` | `ship-replaced`), so a state never arrives without a reason.
+And `currentState` is computed, never written: the **desk item is the record**, created when the
+transition is observed — no scheduler anywhere in the system.
 
 And one rule that keeps the train from derailing: **the parent never edits a child's code.** It
 publishes and asks. A cross-repo change that requires an edit inside a consumer is a _different_
