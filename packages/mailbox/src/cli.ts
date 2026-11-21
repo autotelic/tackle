@@ -6,7 +6,7 @@ import { dirname, join } from "node:path"
 import { appendTurn } from "./append.ts"
 import { exportDirectory } from "./export.ts"
 import { parseLog, serializeLog } from "./log.ts"
-import { renderLog, verifyLog } from "./render.ts"
+import { renderLog, renderTurn, verifyLog } from "./render.ts"
 import { VERSION } from "./version.ts"
 
 class MailboxError extends Data.TaggedError("MailboxError")<{ readonly detail: string }> {}
@@ -138,7 +138,9 @@ const writeCommand = Command.make(
       const turnPath = options.turn.includes("/")
         ? options.turn
         : join(dirname(options.log), options.turn)
-      yield* attempt(() => writeFile(turnPath, body, "utf8"))
+      // Write what render would write, not the body verbatim: verify compares bytes, and a body
+      // without a trailing newline would pass the append and fail the projection.
+      yield* attempt(() => writeFile(turnPath, renderTurn(turn), "utf8"))
       yield* Console.log(`wrote ${turn.path} seq=${turn.seq} tid=${turn.tid}`)
     }).pipe(report),
 ).pipe(

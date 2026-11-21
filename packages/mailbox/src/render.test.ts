@@ -180,6 +180,12 @@ describe("append", () => {
     ).toThrow(/replyTo names no earlier turn/)
   })
 
+  it("refuses a filename whose prefix is not the next seq", () => {
+    expect(() =>
+      appendTurn(log, { path: "0002-wrong.md", body: "# 0002 — TAC-15 — wrong\n" }),
+    ).toThrow(/filename says 0002 but this turn is seq 3/)
+  })
+
   it("takes the sender from the heading when none is passed", () => {
     const appended = appendTurn(log, { path: "0003-c.md", body: "# 0003 — TAC-15 — c\n" })
     expect(appended.turn.sender).toBe("TAC-15")

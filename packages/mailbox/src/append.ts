@@ -31,6 +31,10 @@ export const appendTurn = (
     throw new LogError("no sender: pass --sender or write a '— SENDER —' heading")
   const previous = log.turns.at(-1)
   const seq = (previous?.seq ?? 0) + 1
+  // Two authors pick the same NNNN when they write concurrently; the log knows the real seq.
+  if (Number(path.slice(0, 4)) !== seq) {
+    throw new LogError(`${path}: filename says ${path.slice(0, 4)} but this turn is seq ${seq}`)
+  }
   const replyTo = input.replyTo === undefined ? (previous?.tid ?? null) : input.replyTo
   if (replyTo !== null && !log.turns.some((turn) => turn.tid === replyTo)) {
     throw new LogError(`replyTo names no earlier turn: ${replyTo}`)
