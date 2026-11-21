@@ -224,3 +224,9 @@ minutes, handover at gen+1; HPKE envelope; a record resolves by URI/CID from ano
 - `domain`/`server` split: yes, for both bench and mailbox.
 - C7 partner: **local Rat King checkout, pinned SHA**, with the hosted service as a non-gating smoke
   test; a hosted instance can change under a claim.
+
+## Delivered after C10
+
+- room and board binaries; jig room door restored.
+- Pinned Rat King interop: 9c49c10b; send fixture receipt matches, ship record has a CID and at-uri.
+- Cutover exchange includes a refusal (ack before deliver) and runs without pi-intercom.
