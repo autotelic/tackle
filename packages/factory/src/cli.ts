@@ -1,10 +1,11 @@
 import { parseArgs } from "node:util"
+import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 import { adopt } from "./adopt.ts"
 import { appendEvent } from "./events.ts"
 import { runPass } from "./kernel.ts"
-import { listWorkstreams, Phase } from "./store.ts"
-import { fingerprintOf, ReportKind, writeReport, type Report } from "./report.ts"
+import { listWorkstreams, Phase, readWorkstream, writeWorkstream } from "./store.ts"
+import { deliverReport, fingerprintOf, ReportKind, writeReport, type Report } from "./report.ts"
 import { watchOnce } from "./watch.ts"
 
 const usage = [
@@ -16,7 +17,8 @@ const usage = [
   "  factory event --id <id> --kind <kind> [--payload <json>] [--at <iso>]",
   "  factory run --id <id> --worker <command> [--at <iso>]",
   "  factory watch --id <id> --worker <command> [--once] [--interval <ms>]",
-  "  factory report --workstream <id> --kind <kind> --command <cmd> --expected <text> --actual <text> [--output <text>] [--blocked]",
+  "  factory report --workstream <id> --kind <kind> --command <cmd> --expected <text> --actual <text> [--output <text>] [--blocked] [--deliver <session>]",
+  "  factory phase --id <id> --set reconcile|build|land|blocked|done",
   "",
   "FACTORY_HOME defaults to ~/.factory; records live outside the governed repository.",
 ].join("\n")
@@ -123,6 +125,25 @@ const main = async (): Promise<void> => {
     return
   }
 
+  if (command === "phase") {
+    const parsed = parseArgs({
+      args: process.argv.slice(3),
+      options: { id: { type: "string" }, set: { type: "string" } },
+      allowPositionals: false,
+    })
+    if (parsed.values.id === undefined || parsed.values.set === undefined)
+      return fail("phase needs --id and --set")
+    if (!Schema.is(Phase)(parsed.values.set))
+      return fail("--set must be one of reconcile, build, land, blocked, done")
+    const record = await readWorkstream({ id: parsed.values.id })
+    if (record === undefined) return fail("WorkstreamNotFound")
+    await writeWorkstream({
+      record: { ...record, phase: parsed.values.set, updatedAt: new Date().toISOString() },
+    })
+    console.log("factory: " + record.id + " phase " + parsed.values.set)
+    return
+  }
+
   if (command === "report") {
     const parsed = parseArgs({
       args: process.argv.slice(3),
@@ -135,6 +156,7 @@ const main = async (): Promise<void> => {
         output: { type: "string", default: "" },
         blocked: { type: "boolean", default: false },
         id: { type: "string" },
+        deliver: { type: "string" },
       },
       allowPositionals: false,
     })
@@ -165,6 +187,11 @@ const main = async (): Promise<void> => {
     }
     await writeReport({ report })
     console.log("factory: report " + id + " written")
+    if (parsed.values.deliver !== undefined) {
+      const delivered = deliverReport({ report, to: parsed.values.deliver })
+      if (Result.isFailure(delivered))
+        return fail("report written, but intercom delivery failed: " + delivered.failure)
+    }
     return
   }
 

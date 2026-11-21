@@ -1,129 +1,114 @@
-# Slack: the sink humans actually look at
+# The strategic surface (Slack, and the role behind it)
 
-`docs/surfaces.md` says a surface owns nothing: it ingests, it answers, it renders. This document is the Slack
-shape of that — what the factory says, where, as whom, and what it must refuse to say.
-
----
-
-## 1. The decision, up front
-
-| question                               | answer                                       | why                                                                                                                                                                                                           |
-| -------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| channel per project or per workstream? | **per area**, thread per workstream          | a workstream lives weeks; channels are membership and notification surfaces, and forty channels is a sidebar nobody reads                                                                                     |
-| one bot or a bot per foreman?          | **one bot per factory**, per-message persona | a bot is a Slack app: one OAuth install per workspace, one token rotation, one name-registration. Persona belongs in the message (`chat:write.customize` allows `username` + `icon_emoji`), not in an install |
-| DM?                                    | **only for “anything needs me”**             | a DM per workstream is the channel sprawl problem in a worse place                                                                                                                                            |
-| who speaks?                            | the bot, as the **workstream's label**       | “I'm the permissions foreman” is a property of the message, and it survives the app being reinstalled                                                                                                         |
-
-So the shape is:
-
-```
-#shakti-forestbuilder        ← area channel: digests, items, thread roots
-  └─ 🧵 perms-1862           ← one thread per workstream, the bot's persona = "perms-1862"
-       ├─ item: merge 2 PRs   ← Block Kit, buttons, the only thing that blocks
-       └─ human reply         → steer / note, never an answer
-```
+Of the three places a human meets the factory (`docs/factory-loop.md` §3), this is the noisy one: days, not
+hours; outside the loop, not inside it; intent, not state. Slack is one implementation. The role is what the
+design serves, so a Discord, a Teams, or a web space can fill it without changing a single rule below.
 
 ---
 
-## 2. Three surfaces, three cadences
+## 1. What this surface is for
 
-| surface    | cadence                                         | contains                                                                     | never contains                          |
-| ---------- | ----------------------------------------------- | ---------------------------------------------------------------------------- | --------------------------------------- |
-| **digest** | ≤1 per area per hour, only if something changed | one line per workstream: phase · checkpoint age · freshness · open items     | a tool call, a token stream, “working…” |
-| **item**   | one message per item, edited as it changes      | title, `why`, the artifact rows (diffstat, jig counts, check state), buttons | a decision the bot made for you         |
-| **thread** | on demand                                       | conversation with the foreman: steer, ask, dispute                           | the room's transcript mirrored in       |
+Two jobs, and neither is “status”.
 
-Rule of thumb: **if it does not need a human, it is a digest line, not a message.** The shop docs' claim that
-attention is the binding constraint is only true if the factory spends it deliberately — a channel muted in a week
-is worse than no channel.
+1. **Ask.** A product question the factory cannot answer from the repo: “is this project's scope still what we
+   want by Friday?”, “the reconciliation says 26 done — do you believe it?”. These are _decisions_: they arrive as
+   desk items, they have options, they expire, and a button answers them.
+2. **Listen.** The product is _discussed_ here, and that conversation is an input nothing else has. Declared
+   channels may be read as context; what comes out of them is a **hint**, never an answer, never a SOW edit.
 
-## 3. Inbound: what a human action means
+The asymmetry is the governance story: **listening produces candidates; only a person produces decisions.**
 
-| what they do                                  | what it becomes                            | why                                                         |
-| --------------------------------------------- | ------------------------------------------ | ----------------------------------------------------------- |
-| click an **item button**                      | `desk.answer` record                       | a choice is an axis with options, and an answer is evidence |
-| reply **in the item's thread**                | a **note** on the item, not an answer      | free text is ambiguous; the button is the decision          |
-| `@factory <id> …` in an area channel          | a **steer** to that workstream's next pass | the same as typing it in the terminal                       |
-| react 👀                                      | nothing                                    | a reaction is not an answer                                 |
-| reply in a workstream thread without a button | a note + a wake                            | conversation is allowed to be text; decisions are not       |
+## 2. What this surface is not
 
-Two of these are the whole safety story: **buttons produce answers, prose produces notes**, and an answer is a
-record that outlives the person who gave it.
+- not a status board — status is `factory status`, one line, and a digest at most hourly;
+- not a conversation with the agent — that is the machinery surface, where the session is live and a thought is
+  free;
+- not where code decisions live — those belong on the PR, where the diff is;
+- not the ledger. If the Slack app is uninstalled, we lose a doorbell and nothing else.
+
+## 3. The three shapes it renders
+
+| shape          | cadence                                         | contains                                                                                         | never contains                                      |
+| -------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------ | --------------------------------------------------- |
+| **projection** | ≤1 per area per hour, only if something changed | one line per workstream: phase · checkpoint age · freshness · open items · what it is waiting on | “3 passes run!”, a tool call, a token stream        |
+| **item**       | one message per item, edited as it changes      | title, why, the artifact rows (diffstat, jig counts, check state), buttons                       | a decision the bot made for you                     |
+| **thread**     | on demand                                       | the discussion around an item, and steers that a human chose to give here                        | the journal, the room, “what the agent is thinking” |
+
+A projection that reads like activity is a bug: **state, not motion.**
+
+## 4. The channel shape
+
+| question                               | answer                                 | why                                                                                                                                                                                                       |
+| -------------------------------------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| channel per project or per workstream? | **per area**, thread per workstream    | a workstream lives weeks; forty channels is a sidebar nobody reads, and per-channel notification prefs are the actual product                                                                             |
+| one bot or a bot per foreman?          | **one bot**, persona per message       | a bot is a Slack _app_: one OAuth install, one token rotation, one name registration. Persona is `username` + `icon_emoji` (`chat:write.customize`), so “I'm the perms-1862 foreman” survives a reinstall |
+| DMs?                                   | one, for “anything needs me”           | a DM per workstream is channel sprawl in a worse place                                                                                                                                                    |
+| who speaks?                            | the bot, as the **workstream's label** | the label is a display string, never an authority                                                                                                                                                         |
+
+```
+#shakti-forestbuilder          ← area: projections, items, thread roots
+  └─ 🧵 perms-1862             ← one thread per workstream; persona = the workstream
+       ├─ item: merge 2 PRs     ← buttons: the only thing that blocks
+       └─ human reply          → a steer or a note, never an answer
+```
 
 ---
 
-## 4. Identity, and the one thing Slack cannot give us
+## 5. Inbound: what a human action means here
 
-- **The bot is the org's DID.** It signs nothing; it is a transport identity.
-- **The per-message persona is the workstream label**, so `perms-1862` reads as the one responsible — but it is a
-  display string, never an authority.
-- **A Slack user is not a DID.** The binding is an explicit `link` record (`docs/surfaces.md` §4):
-  `{ surface: "slack", subject: "T0123/U0456", did, role, at }`. Display names are claims; `T0123/U0456` is a
-  subject.
-- **Bot token, not user token.** Acting as a human (`@estebanforge/pi-slack-me`, a `xoxp-` token) is right for a
-  personal assistant and wrong for a project foreman: a workstream that speaks in a person's voice has no visible
-  boundary between the bot's opinion and that person's.
+| what they do                     | what it becomes                  | why                                                     |
+| -------------------------------- | -------------------------------- | ------------------------------------------------------- |
+| click an **item button**         | `desk.answer` record             | a choice is an axis with options; an answer is evidence |
+| reply **in the item's thread**   | a **note** on the item           | free text is ambiguous; the button is the decision      |
+| write in a **declared channel**  | a **hint** for the next proposal | context, not authority                                  |
+| `@factory …` toward a workstream | a **steer**                      | the same as typing it into the live session             |
+| react 👀                         | nothing                          | a reaction is not an answer                             |
 
-## 5. What Amp got right, and where we differ
+And the rule that follows from the routing table (`docs/factory-loop.md` §4): **this surface is for product
+decisions.** A question about a refusal code goes on the PR; a question about a ticket's scope goes on the ticket.
+An item has exactly one home.
 
-Amp's Spaces are the closest thing in the wild and worth copying in three places:
+## 6. Identity
 
-1. **a space is an initiative with a goal**, and the agent keeps its threads directed at it — our workstream is that
-   space, with a Linear project as the goal's home;
-2. **live cards with status and “needs someone”** — our digest line and item are the same idea, and “needs someone”
-   is the single most valuable bit;
-3. **comments are human-only until someone mentions the agent** — a team can discuss without waking the bot. Worth
-   copying literally.
+- **The bot is the org's DID** — a transport identity that signs nothing.
+- **A Slack user is not a DID.** The binding is an explicit `link` record: `{ surface, subject: "T0123/U0456", did,
+  role, at }`. Display names are claims; the subject is stable.
+- **Bot token, never user token.** Acting as a human is right for a personal assistant and wrong for a project
+  foreman: a workstream that speaks in a person's voice has no visible boundary between the bot's opinion and that
+  person's.
+- **Hints cite their source.** A hint carries the channel, the message id and the sentence it came from, or it does
+  not exist.
 
-Three places I would not copy:
+## 7. What Amp got right, and where we differ
 
-- **channel-to-space linking is all-or-nothing and public-channel-only**, and “other messages, including bot posts,
-  do not reach the space”. That is fine for a planning surface and wrong for a workstream: a foreman needs the
-  _review comment_ to reach it, and its own posts to never wake it — which is a per-event rule (see
-  `packages/factory/test/fixtures/watch/wake-cases.json`, `self-authored`), not a channel rule.
-- **one identity for the whole surface.** For them, `@Amp` is enough because a space is one conversation. We have
-  N workstreams in one channel and a human asking “which one is this?” — persona per message is cheap and fixes it.
-- **multiplayer that widens access without narrowing autonomy.** Their security note is the sharpest thing in
-  their docs: in a multiplayer thread the agent _refuses_ to change account settings, secrets or configuration.
-  Copy that rule: **the more humans can watch a workstream, the narrower its autonomy.** A thread shared with three
-  people must not be allowed to rotate a credential or accept a baseline.
+Amp's Spaces are the closest thing in the wild. Copy: a space is an initiative with a goal and the agent keeps its
+threads directed at it; live cards with status and “needs someone”; and **comments are human-only until someone
+mentions the agent**, so a team can talk without waking a bot.
 
-## 6. The two entry points, and the message we owe the operator
+Differ: their channel linking is all-or-nothing, public-channel-only, and bot posts never reach the space — right for
+a planning surface, wrong for a workstream whose review comments arrive as bots. Our rule is per-event
+(`packages/factory/test/fixtures/watch/wake-cases.json`: `self-authored` does not wake, `stale-head-review` does).
 
-Starting work should feel the same from either side:
+And take their sharpest rule, from the multiplayer docs: in a shared thread the agent **refuses to change account
+settings, secrets or configuration**. Generalized: **the more humans can watch, the narrower the autonomy.** A
+workstream whose thread is shared with three people may not rotate a credential or accept a baseline.
 
-```
-terminal     factory up perms-1862            ← the door we already have
-slack        @factory up perms-1862           ← same call, same refusals (BlockedByDependency etc.), rendered as a message
-```
-
-And the message the whole factory exists to send:
-
-```
-perms-1862 · READY TO REVIEW
-  PR 1862 · 14 files +412 −88 · jig 0 error / 2 warn (baseline) · tests green
-  checkpoint 2m ago · 3 passes · queued: 11 leaves
-  [ Open thread ]  [ Approve merge ]  [ Reject with a note ]
-```
-
-Every number in it exists already — it is `factory status` plus the lander's item, rendered. That is the test of the
-whole design: **the thing a human sees first is the artifact, not a claim about the artifact.**
-
-## 7. What not to build
+## 8. What not to build
 
 - a bot, channel or DM per workstream;
-- streaming output into Slack (rate limits, and it makes the message a transcript);
-- Slack as a source of truth — if the Slack app is uninstalled, nothing is lost except the doorbell;
-- `@here`/`@channel` from a bot. Ever;
-- an approval prompt on every tool call. We ship one human gate (the desk) and a digest; two gates train
-  click-through (`docs/executor.md`).
+- streaming output (rate limits, and it makes the message a transcript);
+- the journal or the room mirrored in (`docs/factory-loop.md` §7);
+- `@here` / `@channel` from a bot, ever;
+- an approval prompt on every tool call — we ship one human gate and a projection, because two gates train
+  click-through (`docs/executor.md`);
+- a bot that comments on prose. If it must ask “record that as an answer?”, it asks **once**, quoting the sentence,
+  and never again for the same item.
 
-## 8. Threading into the factory as built
+## 9. Threading into the build
 
-- **P1/P2 need no change.** The desk item shape is the interface (`packages/factory/test/fixtures/desk/`), and
-  Slack is a renderer: buttons → `desk.answer`, replies → notes. The kernel gains one outbound hook
-  (`notify`) and one inbound route, not a second state machine.
-- **What to build after P2:** a renderer that turns an item into Block Kit, a digest tick, and the `link` table.
-  All three are testable against fixtures with no Slack workspace: the button payload is just JSON.
-- **The ordering that saves rework:** write the `item → blocks` renderer and a "ready to review" fixture _before_
-  the Slack app exists. Then the first real app is a transport, not a design session.
+- nothing in P0–P2 changes: a desk item is the interface (`packages/factory/test/fixtures/desk/`), and this surface
+  is a renderer. The kernel gains one outbound hook and one inbound route.
+- **one new field on the item:** `route: "slack" | "github" | "live"`, declared when it is raised, so an item has
+  exactly one home.
+- **the first thing to write is the renderer**, against a fixture: `item → blocks`, and a “READY TO REVIEW” message
+  built from `factory status` plus the lander's item. Then the real app is a transport, not a design session.

@@ -4,9 +4,18 @@ Slack, GitHub, a terminal, a phone. Each one is another way several people and s
 stand in the same room — and the only thing that makes that safe is that **a surface is a
 projection of the desk, never a second copy of it.**
 
-This document is the deep dive you asked for: what opencode actually ships, what the three real
-Slack bridges do, how Slack's platform mechanics happen to land exactly on our idempotency and
-fence rules, and the three verbs a surface is allowed to have.
+This document is the deep dive: what opencode actually ships, what the three real Slack bridges do,
+how Slack's platform mechanics land exactly on our idempotency and fence rules, and the three verbs a
+surface is allowed to have.
+
+It sits inside a larger frame: **three surfaces, three roles** — the _machinery_ you are inside
+(herdr/rex/terminal: steer, live), the _funnel_ at the boundary of the work (GitHub/Linear: state),
+and the _strategy_ outside the loop (Slack: intent). The roles, the ledgers, and where each decision
+is asked live in `docs/factory-loop.md`; Slack's role specifically is `docs/slack.md`.
+
+The distinction that matters for everything below: **a steer is additive and unfenced** (the lease
+holds the pen), **a state change is GitHub's** (it already has a permission model), and **a decision
+is single-valued** (a desk item, first valid answer wins, later answers recorded with `supersedes`).
 
 ---
 
@@ -240,13 +249,14 @@ Slack gives us an install (team id) and a subject (user id). Neither is an ident
 
 ## 6. The same three verbs, everywhere else
 
-| surface                      | ingest                                       | answer                           | render                               | gotchas                                                                       |
-| ---------------------------- | -------------------------------------------- | -------------------------------- | ------------------------------------ | ----------------------------------------------------------------------------- |
-| **GitHub**                   | webhooks; idempotency on `X-GitHub-Delivery` | reviews, comments, label changes | status on the PR; one marker comment | `CidConflict` ≠ replay; a filtered review is still a fact (\`unrouted\`)      |
-| **terminal** (`bench inbox`) | a prompt typed by a human                    | Enter                            | the desk, the journal, `--json`      | one writer: the CLI must refuse to answer while another person holds the item |
-| **pi extension**             | a tool call                                  | a tool result                    | the desk in the editor's border      | must not become a second renderer of jig's report                             |
-| **phone viewer**             | nothing                                      | nothing                          | read-only status + a mail link       | no writing from a surface without a fence                                     |
-| **Slack**                    | events (Socket Mode)                         | buttons and thread answers       | digest + item                        | the table in §2                                                               |
+| surface                      | ingest                                          | answer                                               | render                                      | gotchas                                                                                                                                                               |
+| ---------------------------- | ----------------------------------------------- | ---------------------------------------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **GitHub**                   | webhooks; idempotency on `X-GitHub-Delivery`    | reviews, comments, label changes                     | status on the PR; one marker comment        | `CidConflict` ≠ replay; a filtered review is still a fact (\`unrouted\`)                                                                                              |
+| **herdr / rex** (machinery)  | a thought injected into a live pass             | a steer, or a question answered before the pass ends | the live status, the question, the artifact | additive and unfenced by design: three steers at once is fine, because the lease holds the pen — but a **decision-shaped** sentence must be turned into an item, once |
+| **terminal** (`bench inbox`) | a prompt typed by a human                       | Enter                                                | the desk, the journal, `--json`             | one writer: the CLI must refuse to answer while another person holds the item                                                                                         |
+| **pi extension**             | a tool call                                     | a tool result                                        | the desk in the editor's border             | must not become a second renderer of jig's report                                                                                                                     |
+| **phone viewer**             | nothing                                         | nothing                                              | read-only status + a mail link              | no writing from a surface without a fence                                                                                                                             |
+| **Slack** (strategy)         | events (Socket Mode) + declared-channel context | buttons; prose is a note or a hint                   | projection + item + thread                  | the table in §2                                                                                                                                                       |
 
 All five are the same shape, which is the point: **a new surface is a decoder and a renderer, never
 a state machine.**

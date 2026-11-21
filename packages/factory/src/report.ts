@@ -1,4 +1,6 @@
+import { spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
+import { homedir } from "node:os"
 import { mkdir, readFile, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import * as Result from "effect/Result"
@@ -65,6 +67,36 @@ export const fingerprintOf = (input: {
     .digest("hex")
     .slice(0, 12)
   return input.kind + ":" + input.command + ":" + digest
+}
+
+/**
+ * Deliver a report to a Tackle session over the intercom CLI.
+ *
+ * @param input - the report and the target session id.
+ * @returns true when the CLI accepted it.
+ */
+export const deliverReport = (input: {
+  readonly report: Report
+  readonly to: string
+}): Result.Result<void, string> => {
+  const cli =
+    process.env.INTERCOM_CLI ??
+    join(homedir(), ".pi", "agent", "npm", "node_modules", "pi-intercom", "cli.mjs")
+  const text =
+    "factory report " +
+    input.report.id +
+    " · " +
+    input.report.kind +
+    " · " +
+    input.report.workstream +
+    ": " +
+    input.report.actual
+  const result = spawnSync(process.execPath, [cli, "send", "--to", input.to, "--text", text], {
+    encoding: "utf8",
+  })
+  return result.status === 0
+    ? Result.succeed(undefined)
+    : Result.fail((result.stderr || "intercom exited " + result.status).trim())
 }
 
 /** Write one report outside every governed repo. */

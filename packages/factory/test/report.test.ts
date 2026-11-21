@@ -1,8 +1,8 @@
-import { mkdtempSync, rmSync } from "node:fs"
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { expect, test } from "vitest"
-import { fingerprintOf, readReport, writeReport } from "../src/report.ts"
+import { deliverReport, fingerprintOf, readReport, writeReport } from "../src/report.ts"
 
 /* oxlint-disable plumb/prefer-property-tests -- one stable report record. */
 
@@ -34,6 +34,18 @@ test("a report round-trips and its fingerprint ignores the later lines", async (
     }
     await writeReport({ report, home: root })
     expect(await readReport({ id: report.id, home: root })).toEqual(report)
+
+    const cli = join(root, "intercom.mjs")
+    writeFileSync(
+      cli,
+      '#!/usr/bin/env node\nimport { writeFileSync } from "node:fs"\nwriteFileSync(process.env.INTERCOM_LOG, process.argv.slice(2).join(" "))\n',
+    )
+    chmodSync(cli, 0o755)
+    const log = join(root, "intercom.log")
+    process.env.INTERCOM_CLI = cli
+    process.env.INTERCOM_LOG = log
+    expect(deliverReport({ report, to: "01a1f0c4" })._tag).toBe("Success")
+    expect(readFileSync(log, "utf8")).toContain("--to 01a1f0c4")
   } finally {
     rmSync(root, { recursive: true, force: true })
   }

@@ -1,5 +1,13 @@
 import { execFileSync } from "node:child_process"
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { expect, test } from "vitest"
@@ -88,6 +96,8 @@ test("a pass consumes its events, checkpoints the worktree, and survives worker 
     expect(result.ok).toBe(true)
     if (!result.ok) return
     expect(result.receipt.status).toBe("done")
+    expect(result.receipt.journal).toBeDefined()
+    if (result.receipt.journal !== undefined) expect(existsSync(result.receipt.journal)).toBe(true)
     expect(readFileSync(join(f.root, "prompt.txt"), "utf8")).toContain("review-1")
     expect((await readEvents({ id: "permissions-1862", home: f.home }))[0]?.status).toBe("consumed")
     expect((await readWorkstream({ id: "permissions-1862", home: f.home }))?.checkpoint.sha).toBe(

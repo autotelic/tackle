@@ -4,6 +4,10 @@ A factory that only reads its tracker builds exactly what the tracker says. This
 input — the one that says _the thing we shipped is slow, erroring, or annoying_ — and how it enters without
 becoming a firehose of tickets or a surveillance surface.
 
+It is the **experience loop** in `docs/factory-loop.md` §5: the delivery loop ends in a merged sha, and every
+signal measured after that sha is attributed back to the workstream that shipped it. Two loops, joined by
+`work.ship.sha`.
+
 ---
 
 ## 1. The one rule
@@ -163,6 +167,10 @@ Telemetry tells you _that_ a route is slow or erroring, and roughly _where_ (a s
 not tell you which line to change, and an agent that pretends otherwise will propose plausible rewrites to code
 it never read. So the signal's job ends at a _candidate with evidence_: the workstream then does what it already
 does — read the code, run the checks, ship one PR.
+
+Nor is telemetry the only non-tracker input. The **strategy surface** produces evidence too — a declared channel
+can be read as context (`docs/slack.md` §1) — under a stricter rule: a hint may shape a proposal, and may never
+answer a decision or edit the SOW.
 
 ## 8. Where this threads into the factory as built
 

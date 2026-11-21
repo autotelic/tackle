@@ -7,6 +7,7 @@ import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 import { captureCheckpoint } from "./adopt.ts"
 import { consumeEvents, readEvents, type Event } from "./events.ts"
+import { snapshotJournal } from "./journal.ts"
 import {
   factoryHome,
   readWorkstream,
@@ -37,6 +38,7 @@ export interface Receipt {
     readonly after: Quality
     readonly regressed: boolean
   }
+  readonly journal?: string
 }
 
 const JigReport = Schema.Struct({
@@ -211,17 +213,31 @@ export const runPass = async (input: {
   })
 
   if (result.status !== 0) {
-    const failed: Receipt = { ...receipt, status: "failed", exit: result.status ?? -1 }
+    const journal = await snapshotJournal({
+      id: record.id,
+      pass,
+      at: input.at,
+      status: "failed",
+      home: input.home,
+    })
+    const failed: Receipt = {
+      ...receipt,
+      status: "failed",
+      exit: result.status ?? -1,
+      journal,
+    }
     await writeReceipt({ id: input.id, receipt: failed, home: input.home })
     return { ok: false, reason: "worker exited " + (result.status ?? "signal"), receipt: failed }
   }
 
   const after = measureQuality({ path: record.path })
   const regressed = after.errors > before.errors || after.warnings > before.warnings
+  const head = spawnSync("git", ["-C", record.path, "rev-parse", "HEAD"], { encoding: "utf8" })
+  const currentHead = head.status === 0 ? head.stdout.trim() : record.head
   const captured = captureCheckpoint({
     path: record.path,
     id: record.id,
-    head: record.head,
+    head: currentHead,
     at: input.at,
   })
   if (!captured.ok) {
@@ -235,12 +251,20 @@ export const runPass = async (input: {
   }
 
   if (regressed) {
+    const journal = await snapshotJournal({
+      id: record.id,
+      pass,
+      at: input.at,
+      status: "failed",
+      home: input.home,
+    })
     const failed: Receipt = {
       ...receipt,
       status: "failed",
       exit: 0,
       checkpoint: captured.value.sha,
       quality: { before, after, regressed },
+      journal,
     }
     await writeReceipt({ id: record.id, receipt: failed, home: input.home })
     return { ok: false, reason: "quality-regressed", receipt: failed }
@@ -251,17 +275,26 @@ export const runPass = async (input: {
     ids: receipt.events,
     home: input.home,
   })
+  const journal = await snapshotJournal({
+    id: record.id,
+    pass,
+    at: input.at,
+    status: "done",
+    home: input.home,
+  })
   const done: Receipt = {
     ...receipt,
     status: "done",
     exit: 0,
     checkpoint: captured.value.sha,
     quality: { before, after, regressed },
+    journal,
   }
   await writeReceipt({ id: record.id, receipt: done, home: input.home })
   await writeWorkstream({
     record: {
       ...record,
+      head: currentHead,
       checkpoint: captured.value,
       updatedAt: input.at,
     },
