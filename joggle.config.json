@@ -134,6 +134,16 @@
       "rule": "joggle/reversal",
       "path": "packages/protocol/src/config.ts",
       "reason": "`CutlistOutput`'s fields are independent optional destinations: absence means 'not written', not a missing deviation field. Sharing a base with the vocabulary would tie an output path to an ownership setting."
+    },
+    {
+      "rule": "joggle/deviation-has-a-shape",
+      "path": "packages/joggle/src/config.ts",
+      "reason": "IgnoreRule is authored config: its authority is git and it has no instant; the missing runtime `suppressed` report is tracked as its own change, not disguised as a field here."
+    },
+    {
+      "rule": "joggle/single-path",
+      "path": "packages/joggle/src/rules/cluster-verdict.ts",
+      "reason": "The three branches choose a sentence, not a list format; memberList is the one formatter. The rule reads the repeated template as a second path."
     }
   ],
   "architecture": {
