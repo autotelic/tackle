@@ -460,6 +460,9 @@ importers:
       '@ipld/dag-cbor':
         specifier: 11.0.0
         version: 11.0.0
+      effect:
+        specifier: 4.1.5
+        version: 4.1.5
     devDependencies:
       '@effect/tsgo':
         specifier: 'catalog:'

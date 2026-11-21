@@ -320,6 +320,8 @@ export default {
         "packages/room/src/cli.ts",
         "packages/room/src/supervise.ts",
         "packages/board/src/cli.ts",
+        "packages/mailbox-server/src/service.ts",
+        "packages/mailbox-server/src/cli.ts",
       ],
       rules: { "plumb/no-nondeterministic-core": "off" },
     },

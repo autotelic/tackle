@@ -4,6 +4,9 @@
   "private": true,
   "description": "The Rat King mailbox surface: fixtures, XRPC procedures, and the errors clients retry on.",
   "license": "MIT",
+  "bin": {
+    "mailbox-server": "./bin/mailbox-server.js"
+  },
   "type": "module",
   "sideEffects": false,
   "exports": {
@@ -17,7 +20,8 @@
   "dependencies": {
     "@autotelic/mailbox-domain": "workspace:*",
     "@hpke/core": "1.10.1",
-    "@ipld/dag-cbor": "11.0.0"
+    "@ipld/dag-cbor": "11.0.0",
+    "effect": "catalog:"
   },
   "devDependencies": {
     "@effect/tsgo": "catalog:",

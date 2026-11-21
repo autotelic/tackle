@@ -347,7 +347,7 @@ export const similarityOf = ({
   return shared / (left.size + right.size - shared)
 }
 
-/** The nearest same-or-higher-tier twin of a component, at or above a threshold. */
+/** The nearest other component, at or above a threshold. */
 export const nearestDuplicate = (
   catalog: Catalog,
   subject: CatalogComponent,
