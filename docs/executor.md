@@ -30,6 +30,21 @@ Do not run two approval systems. The desk is the gate for work that needs a pers
 owns credentials and the tool catalog. Executor may require approval on a tool, but it must not
 become a second authority for room or mailbox transitions.
 
+## Two axes, not one
+
+Importing the policy algebra wholesale hides a distinction:
+
+- **Authority** is one-way. The narrowest scope may make a wide rule stricter, never looser;
+  organization guardrails are the floor. This is what `shop.md` now states.
+- **Applicability** is not authority. A file-scoped exemption may loosen a wide rule —
+  `packages/board/src/fleet.ts` does — but only in writing, with a reason and a fixture. It changes
+  where a rule applies, not who may permit what.
+
+A policy table does not license an exemption, and an exemption does not grant authority. Keep the
+words separate so a later reader cannot turn one into the other.
+
+The real policy spec waits for a second **authority** consumer, not a second policy table.
+
 ## Why it does not replace anything we have
 
 - `room` owns a worktree and a process group; Executor owns neither.

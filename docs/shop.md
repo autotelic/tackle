@@ -812,6 +812,9 @@ One rule keeps this from exploding: **one bench = one `(repo, scope)`.** A paren
 “spaces without a project” with one noun instead of three, and it is why a Linear project that spans
 repos does not need a special object.
 
+Policy precedence is one-way: a bench or room scope may make a shop or mesh rule **stricter**,
+never looser. A narrower scope never widens authority.
+
 ### 6.2 The binding constraint is work in progress, not CPU
 
 Forty paused benches cost disk. Twelve active benches cost **attention**: twelve PRs to review,
