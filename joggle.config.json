@@ -149,6 +149,11 @@
       "rule": "joggle/deviation-has-a-shape",
       "path": "packages/protocol/src/config.ts",
       "reason": "`EngineRef.advisory` is a per-engine policy flag, not a value deviation with an authority and an instant. Replacing it with a tagged variant changes the public `jig.config.json` contract, which this task forbids without asking; the finding is recorded here instead of hidden in a baseline."
+    },
+    {
+      "rule": "joggle/reversal",
+      "path": "packages/factory/src/store.ts",
+      "reason": "canonicalWorkstreamPath is a four-line realpath-with-fallback at a filesystem boundary; joggle has the same idiom in its tsgo reader, and the tools never import each other. The seam is the record bytes, not a shared path helper."
     }
   ],
   "architecture": {
