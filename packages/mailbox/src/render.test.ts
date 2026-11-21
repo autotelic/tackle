@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest"
 import { appendTurn } from "./append.ts"
 import { exportDirectory } from "./export.ts"
 import { parseLog, serializeLog, type Turn } from "./log.ts"
+import { journalDigest } from "./digest.ts"
 import { verifyLog } from "./render.ts"
 import { isTid } from "./tid.ts"
 
@@ -234,4 +235,36 @@ it("an unknown field survives the round trip, and canonical encoding is idempote
   const once = serializeLog(parseLog(line))
   expect(once).toContain('"futureField"')
   expect(serializeLog(parseLog(once))).toBe(once)
+})
+
+it("the journal digest is the record set, not the file bytes", () => {
+  const log = {
+    turns: [
+      {
+        seq: 1,
+        tid: "234567abcdef2",
+        sender: "TAC-14",
+        replyTo: null,
+        path: "0001-a.md",
+        body: "# a\n",
+      },
+    ],
+  }
+  const reordered = {
+    turns: [
+      {
+        body: "# a\n",
+        path: "0001-a.md",
+        replyTo: null,
+        sender: "TAC-14",
+        tid: "234567abcdef2",
+        seq: 1,
+      },
+    ],
+  }
+  expect(journalDigest(log)).toBe(journalDigest(reordered))
+  const changed = { turns: [{ ...log.turns[0]!, body: "# b\n" }] }
+  expect(journalDigest(changed)).not.toBe(journalDigest(log))
+  const extra = { turns: [{ ...log.turns[0]!, futureField: true }] }
+  expect(journalDigest(extra)).not.toBe(journalDigest(log))
 })

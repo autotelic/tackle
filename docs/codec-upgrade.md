@@ -58,3 +58,13 @@ provable instead of hopeful.
 - decode a line with `futureField`, encode, and assert the field is still there;
 - encode the 24-turn log, decode, encode again, and assert the same bytes;
 - the one-time rewrite changes only key order, never a value.
+
+## Journal identity
+
+`journal.sha` is sha256 over the **DAG-CBOR record set**, not over the JSONL file's bytes. DAG-CBOR
+orders map keys by length then bytewise (DRISL), so the digest is a function of the records. The
+one-time key-order rewrite therefore did not change any journal's identity; a continuation token
+that had recorded file bytes would have read as divergent for no reason.
+
+The token carries the digest, the record count, and the lease generation. Hash once, in CBOR; do
+not start with a JSON digest and migrate the token later.

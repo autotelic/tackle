@@ -42,6 +42,7 @@
   "dependencies": {
     "@effect/platform-node": "catalog:",
     "@effect/platform-node-shared": "catalog:",
+    "@ipld/dag-cbor": "11.0.0",
     "effect": "catalog:"
   },
   "devDependencies": {
