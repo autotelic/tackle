@@ -135,7 +135,7 @@ jig init                     # inspect the repo, then write the harness it can r
 jig init --gate all          # the same, enforcing every finding from the first run
 jig init --print             # the same plan and agent prompt, writing nothing
 jig init --hooks             # .git/hooks/pre-commit, running the scoped gate
-jig init                     # also writes .agents/skills: room, intercom-setup, feedback-loop, project-run
+jig init                     # also writes .agents/skills: intercom-setup, feedback-loop, project-run
 jig onboard                  # just the setup prompt for an agent
 jig onboard --gate all       # the prompt, planning a repo-wide gate
 ```
@@ -183,7 +183,7 @@ says is missing, runs `init`, wires the agent host (`pi install … --local`, in
 package declare the same tool names and pi refuses the second, so a user-scope copy and a project copy cannot
 coexist; for OpenCode, a `"plugin"` array entry
 on opencode2 or a file in `.opencode/plugins/` on opencode 1.x — 1.x reads files, not the array)
-and, in a repo that runs one, plans the room. `JIG.md` stays the reference; the prompt is the door.
+`JIG.md` stays the reference; the prompt is the door.
 
 `touched-files` is the opt-in for a repo that wants debt reported and not
 enforced until someone edits the file; it is the wrong gate for CI on a clean

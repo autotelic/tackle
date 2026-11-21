@@ -17,7 +17,7 @@ Point a person at one file:
   they have read. This is the file to send; the raw form works for an agent that fetches URLs:
   `https://raw.githubusercontent.com/autotelic/tackle/main/ADOPT.md`.
 - **`ONBOARD.md` in any initialised repository** — the same prompt for that repository, generated
-  by `jig init` from what it found (engines, gate, cutlist, room). `jig onboard` prints it
+  by `jig init` from what it found (engines, gate, cutlist). `jig onboard` prints it
   without writing anything.
 
 ## The pieces

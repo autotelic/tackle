@@ -72,11 +72,6 @@
     },
     {
       "rule": "joggle/reversal",
-      "path": "packages/jig-cli/src/opencode.ts",
-      "reason": "`packageRoot` and `LaunchEnvironment` exist in both agent surfaces (jig's OpenCode plugin and room's) because each ships independently and neither imports the other. The launcher facts are the host contract, and the two hosts read them differently -- jig's resolution order includes its own build, room's does not."
-    },
-    {
-      "rule": "joggle/reversal",
       "path": "packages/jig-cli/src/package-json.ts",
       "reason": "jig and joggle each decode a package manifest, a tsconfig and their own cache because the harness never links an engine. The seam is the reason the two implementations may diverge; a shared decoder would be the runtime dependency the workspace forbids."
     },

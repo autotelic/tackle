@@ -110,9 +110,6 @@ catalogs:
     '@biomejs/biome':
       specifier: 2.6.5
       version: 2.6.5
-    '@cloudflare/workers-types':
-      specifier: 5.20261023.1
-      version: 5.20261023.1
     '@earendil-works/pi-coding-agent':
       specifier: 1.5.0
       version: 1.5.0
@@ -143,9 +140,6 @@ catalogs:
     ajv:
       specifier: 8.17.1
       version: 8.17.1
-    esbuild:
-      specifier: 0.28.2
-      version: 0.28.2
     fast-check:
       specifier: 4.10.2
       version: 4.10.2
@@ -238,28 +232,6 @@ importers:
       '@autotelic/jig-cli':
         specifier: workspace:*
         version: link:../../packages/jig-cli
-
-  packages/board:
-    dependencies:
-      effect:
-        specifier: 4.0.5
-        version: 4.0.5
-    devDependencies:
-      '@effect/tsgo':
-        specifier: 'catalog:'
-        version: 0.56.0
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.13.5
-      '@typescript/native':
-        specifier: 'catalog:'
-        version: typescript@7.0.2
-      fast-check:
-        specifier: 'catalog:'
-        version: 4.10.2
-      vitest:
-        specifier: 'catalog:'
-        version: 5.0.1(@opentelemetry/api@1.9.0)(@types/node@24.13.5)(vite@8.3.4(@types/node@24.13.5))
 
   packages/cutlist:
     dependencies:
@@ -457,58 +429,6 @@ importers:
       fast-check:
         specifier: 'catalog:'
         version: 4.10.2
-      vitest:
-        specifier: 'catalog:'
-        version: 5.0.1(@opentelemetry/api@1.9.0)(@types/node@24.13.5)(vite@8.3.4(@types/node@24.13.5))
-
-  packages/room:
-    dependencies:
-      '@autotelic/board':
-        specifier: workspace:*
-        version: link:../board
-      '@earendil-works/chord':
-        specifier: 1.5.0
-        version: 1.5.0(esbuild@0.28.2)
-      '@earendil-works/pi-ai':
-        specifier: 1.5.0
-        version: 1.5.0(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.5)(undici@8.12.2)
-      '@earendil-works/pi-durable':
-        specifier: 1.5.0
-        version: 1.5.0(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.5)(esbuild@0.28.2)(undici@8.12.2)
-      '@effect/platform-node':
-        specifier: 4.0.5
-        version: 4.0.5(effect@4.0.5)(redis@6.3.0(@opentelemetry/api@1.9.0))
-      '@effect/platform-node-shared':
-        specifier: 4.0.5
-        version: 4.0.5(effect@4.0.5)
-      effect:
-        specifier: 4.0.5
-        version: 4.0.5
-    devDependencies:
-      '@cloudflare/workers-types':
-        specifier: 'catalog:'
-        version: 5.20261023.1
-      '@effect/tsgo':
-        specifier: 'catalog:'
-        version: 0.56.0
-      '@opencode/plugin':
-        specifier: 'catalog:'
-        version: 2.1.2(@opentelemetry/semantic-conventions@1.43.0)(redis@6.3.0(@opentelemetry/api@1.9.0))
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.13.5
-      '@typescript/native':
-        specifier: 'catalog:'
-        version: typescript@7.0.2
-      esbuild:
-        specifier: 'catalog:'
-        version: 0.28.2
-      fast-check:
-        specifier: 'catalog:'
-        version: 4.10.2
-      typebox:
-        specifier: 1.3.34
-        version: 1.3.34
       vitest:
         specifier: 'catalog:'
         version: 5.0.1(@opentelemetry/api@1.9.0)(@types/node@24.13.5)(vite@8.3.4(@types/node@24.13.5))
@@ -827,21 +747,6 @@ packages:
   '@changesets/write@0.4.0':
     resolution: {integrity: sha512-CdTLvIOPiCNuH71pyDu3rA+Q0n65cmAbXnwWH84rKGiFumFzkmHNT8KHTMEchcxN+Kl8I54xGUhJ7l3E7X396Q==}
 
-  '@cloudflare/workers-types@5.20261023.1':
-    resolution: {integrity: sha512-jRaMsWUF/08dd0dWnX3zPGPOjakkkA2JPnK5vLsCQFmYC40kbMPZ02fvOPO8kqjqgljoMZrKsRiXpR1u1Lp0Qg==}
-
-  '@earendil-works/chord@1.5.0':
-    resolution: {integrity: sha512-jf555zbCM21E03DVBDPD/Tuae0lz64YjaHx/athUxNZ/H7phVVb0dWfZsaYnxaXPQ1odW8iHEoVLOlE/prvUPg==}
-    engines: {node: '>=22.19.0'}
-    peerDependencies:
-      esbuild: 0.28.2
-      ws: 8.21.0
-    peerDependenciesMeta:
-      esbuild:
-        optional: true
-      ws:
-        optional: true
-
   '@earendil-works/pi-agent-core@1.5.0':
     resolution: {integrity: sha512-FOj+jXj48DbzMycR/ghNa2KcsqWmvOln24e0FnQOVgnd8vn5H79g335WdHaZUVdRo+zCeogb40/qPPlCWFuvmA==}
     engines: {node: '>=22.19.0'}
@@ -859,10 +764,6 @@ packages:
     resolution: {integrity: sha512-xNDZ5kqowO6Z03FS2gwAkPEGk1ssxVcYKQ6qZId84mFEvwACvvyc2l0vAMOS+c5zvxLRMLBE9r4y44IGYkMJaQ==}
     engines: {node: '>=22.19.0'}
     hasBin: true
-
-  '@earendil-works/pi-durable@1.5.0':
-    resolution: {integrity: sha512-xeBP2vIo5NvsCMQ4Y/V+Z164xQEi9JWiBWHdjn4Z15EnFqV3c0FxJAX26FqyyyintrYyk+Enre94GNcvRlBA5g==}
-    engines: {node: '>=22.19.0'}
 
   '@earendil-works/pi-mcp@1.5.0':
     resolution: {integrity: sha512-DURw3IwHCTMHV8CzUJWVp9css27NowsCWfXt4xg2r09IZ+P1O/Uq58hp0hb9WJO0dbkaKGXKBIkV4LVXcu2nlg==}
@@ -2028,9 +1929,6 @@ packages:
 
   '@silvia-odwyer/photon-node@0.3.4':
     resolution: {integrity: sha512-bnly4BKB3KDTFxrUIcgCLbaeVVS8lrAkri1pEzskpmxu9MdfGQTy8b8EgcD83ywD3RPMsIulY8xJH5Awa+t9fA==}
-
-  '@silvia-odwyer/photon@0.3.3':
-    resolution: {integrity: sha512-8BhUjEch4slwRe8uXnaA4vcA5uiiOTT90UMsxulOj2gN98X1p0q9Z4Ysk4DkD05uNgbR9XoSqtZ37w+33w4QKQ==}
 
   '@smithy/core@3.36.0':
     resolution: {integrity: sha512-3hJiwG1F5t1SoXqp/yOCmYXziyx7ZVqF63S5W6YU201e/qwVaHPex+E/3vvyY9a3ORq/b+BydeNZpP2saQ9X2g==}
@@ -4328,44 +4226,10 @@ snapshots:
       human-id: 4.2.2
       prettier: 2.8.8
 
-  '@cloudflare/workers-types@5.20261023.1': {}
-
-  '@earendil-works/chord@1.5.0(esbuild@0.28.2)':
-    dependencies:
-      '@earendil-works/pi-schema': 1.5.0
-      '@earendil-works/pi-telemetry': 1.5.0
-    optionalDependencies:
-      esbuild: 0.28.2
-
   '@earendil-works/pi-agent-core@1.5.0(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.5)(undici@8.12.3)(ws@8.22.0)':
     dependencies:
       '@earendil-works/pi-ai': 1.5.0(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.5)(undici@8.12.3)(ws@8.22.0)
       '@earendil-works/pi-schema': 1.5.0
-    transitivePeerDependencies:
-      - '@aws-sdk/credential-provider-node'
-      - '@modelcontextprotocol/sdk'
-      - '@smithy/hash-node'
-      - '@smithy/signature-v4'
-      - bufferutil
-      - kerberos
-      - supports-color
-      - undici
-      - utf-8-validate
-      - ws
-      - zod
-
-  '@earendil-works/pi-ai@1.5.0(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.5)(undici@8.12.2)':
-    dependencies:
-      '@anthropic-ai/sdk': 0.129.0
-      '@aws-sdk/client-bedrock-runtime': 3.1127.0
-      '@earendil-works/pi-schema': 1.5.0
-      '@earendil-works/pi-telemetry': 1.5.0
-      '@google/genai': 2.21.0
-      '@smithy/node-http-handler': 4.12.1
-      http-proxy-agent: 9.1.0
-      https-proxy-agent: 9.1.0
-      openai: 7.19.0(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.5)(undici@8.12.2)
-      partial-json: 0.1.7
     transitivePeerDependencies:
       - '@aws-sdk/credential-provider-node'
       - '@modelcontextprotocol/sdk'
@@ -4440,29 +4304,6 @@ snapshots:
       - bufferutil
       - kerberos
       - supports-color
-      - utf-8-validate
-      - ws
-      - zod
-
-  '@earendil-works/pi-durable@1.5.0(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.5)(esbuild@0.28.2)(undici@8.12.2)':
-    dependencies:
-      '@earendil-works/chord': 1.5.0(esbuild@0.28.2)
-      '@earendil-works/pi-ai': 1.5.0(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.5)(undici@8.12.2)
-      '@earendil-works/pi-codemode': 1.5.0
-      '@earendil-works/pi-schema': 1.5.0
-      '@earendil-works/pi-telemetry': 1.5.0
-      '@silvia-odwyer/photon': 0.3.3
-      diff: 8.0.4
-    transitivePeerDependencies:
-      - '@aws-sdk/credential-provider-node'
-      - '@modelcontextprotocol/sdk'
-      - '@smithy/hash-node'
-      - '@smithy/signature-v4'
-      - bufferutil
-      - esbuild
-      - kerberos
-      - supports-color
-      - undici
       - utf-8-validate
       - ws
       - zod
@@ -5360,8 +5201,6 @@ snapshots:
 
   '@silvia-odwyer/photon-node@0.3.4': {}
 
-  '@silvia-odwyer/photon@0.3.3': {}
-
   '@smithy/core@3.36.0':
     dependencies:
       '@smithy/types': 4.19.0
@@ -5829,6 +5668,7 @@ snapshots:
       '@esbuild/win32-arm64': 0.28.2
       '@esbuild/win32-ia32': 0.28.2
       '@esbuild/win32-x64': 0.28.2
+    optional: true
 
   escape-string-regexp@4.0.0: {}
 
@@ -6496,12 +6336,6 @@ snapshots:
       is-inside-container: 1.0.0
       powershell-utils: 0.2.1
       wsl-utils: 1.0.1
-
-  openai@7.19.0(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.5)(undici@8.12.2):
-    optionalDependencies:
-      '@aws-sdk/credential-provider-node': 3.972.86
-      '@smithy/signature-v4': 5.7.5
-      undici: 8.12.2
 
   openai@7.19.0(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.5)(undici@8.12.3)(ws@8.22.0):
     optionalDependencies:

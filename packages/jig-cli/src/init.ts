@@ -61,9 +61,7 @@ export interface RepoProfile {
   /** The command that runs jig: `pnpm jig` when it is a local dependency, else `jig`. */
   readonly jig: string
   /** Facts about the repo that change what the docs say. A set, not flags that can disagree. */
-  readonly facts: ReadonlySet<
-    "ci" | "configured" | "live-judgement" | "room" | "typescript" | "workspaces"
-  >
+  readonly facts: ReadonlySet<"ci" | "configured" | "live-judgement" | "typescript" | "workspaces">
   readonly agentDocs: ReadonlyArray<string>
   /** A short, factual sentence about the repository, from AGENTS.md, README or package.json. */
   readonly summary: string
@@ -1161,21 +1159,6 @@ export const inspectRepo = (
       )
     }
 
-    // The room is the same product as the harness: a repo that keeps one -- or builds one --
-    // wants its commands in the docs, and a room without a config is "not initialised", not
-    // "configured".
-    const room =
-      files.includes("room.config.json") ||
-      dependencies["@autotelic/room"] !== undefined ||
-      (yield* existsAt({ fs, path, root, relative: "packages/room/package.json" }))
-    if (room && !files.includes("room.config.json")) {
-      notes.push(
-        "room not initialised: no room.config.json; `" +
-          jig +
-          " room plan` prints the init it would run",
-      )
-    }
-
     // A repo's engine list is a decision, not a detection artefact: a forced run adds what
     // this run found and drops what no longer resolves, but it never erases an engine the
     // repo configured.
@@ -1203,7 +1186,6 @@ export const inspectRepo = (
         ...(liveJudgement ? (["live-judgement"] as const) : []),
         ...(ci ? (["ci"] as const) : []),
         ...(hasConfig ? (["configured"] as const) : []),
-        ...(room ? (["room"] as const) : []),
       ]),
       agentDocs,
       summary,
@@ -1331,31 +1313,6 @@ const engineSummary = (profile: RepoProfile): string =>
         )
         .join(", ")
 
-/** The room's commands, for the repositories that run one. */
-const roomSection = (profile: RepoProfile): string =>
-  profile.facts.has("room")
-    ? `## The room
-
-\`jig room\` is this repo's listener: one ledger per Linear project, a daemon on each
-machine, and a review job that runs \`${profile.jig}\`, a Pi, and one fenced post.
-
-- \`${profile.jig} room plan\` — read the repo, the token, and the rooms; print the init it would run
-- \`${profile.jig} room init\` — write \`room.config.json\` and register the room
-- \`${profile.jig} room doctor\` — prove the loop: config, identity, celld, pi, the forward, the room
-- \`${profile.jig} room dev\` — run the room locally with \`celld dev\`
-- \`${profile.jig} room webhook\` — print the \`gh webhook forward\` command for this room
-- \`${profile.jig} room daemon\` — claim jobs, run reviews, deliver into the durable session
-- \`${profile.jig} room session\` — the room's durable conversation (--json, --say, --watch, --note)
-- \`${profile.jig} room work --pr N\` — a worktree, an app, and an attachable Pi session
-- \`${profile.jig} room board\` — jobs, chits, and presence
-
-\`${profile.jig} room doctor\` names the prerequisites this machine is missing — \`celld\`,
-the \`gh webhook\` extension, a Linear token at \`~/.linearis/token\`, \`pi\` on PATH — so the
-list never goes stale here. \`hc\` (herdr-core) is only needed by \`room work\`.
-
-`
-    : ""
-
 /** One blank line between sections, however the template was assembled. */
 const tighten = (text: string): string => text.replace(/\n{3,}/gu, "\n\n")
 
@@ -1379,7 +1336,6 @@ ${profile.summary === "" ? "" : "\n" + profile.summary + "\n"}
 | \`${profile.jig} engines\` | what is configured, and whether each command resolves |
 | \`${profile.jig} baseline\` | accept the current findings; the ledger only shrinks after that |
 | \`${profile.jig} explain <rule>\` | everything jig knows about one rule, here, now |
-${profile.facts.has("room") ? "| `" + profile.jig + " room board` | the room: jobs, chits, and presence |\n" : ""}${profile.engines.some((engine) => engine.id === "cutlist") ? "| `" + profile.jig + " menu` | the component catalog cutlist built |\n\nEditing one component can mark several generated catalog files stale: `cutlist build --check` compares the whole catalog, so run `" + invocationOf({ profile, tool: "cutlist", args: "build" }) + "` after a UI edit, or wire it into lint-staged.\n" : ""}${profile.commands.length === 0 ? "" : "\n## The repo's own commands\n\n" + profile.commands.map((command) => "- `" + command.command + "` — the repo's " + command.name + " script").join("\n") + "\n"}
 
 ## What runs
 
@@ -1387,13 +1343,13 @@ ${profile.facts.has("room") ? "| `" + profile.jig + " room board` | the room: jo
 - gate: \`${profile.gateMode}\`, failing on \`any-new\` identity
 - baseline: \`${profile.baseline}\`
 ${profile.notes.length === 0 ? "" : "\nNotes:\n" + profile.notes.map((note) => "- " + note).join("\n") + "\n"}
-${roomSection(profile)}${
-    profile.gateMode === "touched-files"
-      ? "Only findings in the change in front of you fail a run. Existing debt is reported,\nnot enforced, until you touch it."
-      : "Every finding in the repository fails a run. Accept the current debt deliberately\nwith `" +
-        profile.jig +
-        " baseline`, or switch the gate to `touched-files`."
-  }
+${
+  profile.gateMode === "touched-files"
+    ? "Only findings in the change in front of you fail a run. Existing debt is reported,\nnot enforced, until you touch it."
+    : "Every finding in the repository fails a run. Accept the current debt deliberately\nwith `" +
+      profile.jig +
+      " baseline`, or switch the gate to `touched-files`."
+}
 
 ${profile.facts.has("ci") ? "## CI\n\nRun `" + profile.jig + " check --format github` on the default branch, and on a pull request, run `" + profile.jig + " check --since origin/<base> --format github`.  `init` accepted the findings that existed when it ran, so the gate holds new identities only: today's debt is reported, not enforced. A check runs every engine read-only — it never writes the answer cache or a generated artifact, because a run that edits what it judges reports differently next time. Warming those is deliberate: `joggle check` on the base branch, `" + profile.jig + " baseline` for the ledger. The machine formats carry the census too, so an engine that skipped its rules shows as a warning rather than a clean run. For machine output (`--format json`, `sarif`, `github`), use `" + profile.run + " exec jig`, or `" + profile.run + " -s jig` when you type the repo's own script: a bare `" + profile.run + " jig` prints the script banner first and corrupts the document.\n\n" : ""}## Judgement
 
@@ -1498,7 +1454,7 @@ const GLOBAL_BIN_HINT = {
  * The shape is the one that works -- Alchemy's and rat-stack's: a line of intent, one
  * named command per step, the doc to read before acting, and an explicit place to stop
  * and ask. Nothing is left as "see the README": a prompt that stops at "run init" leaves
- * the person to discover the CLI install, the agent wiring, and the room alone. `JIG.md`
+ * the person to discover the CLI install, the agent wiring alone. `JIG.md`
  * stays the reference; this is the door.
  */
 export const onboardingFor = (profile: RepoProfile): string => {
@@ -1527,7 +1483,7 @@ export const onboardingFor = (profile: RepoProfile): string => {
       : `The same command drafts \`cutlist.config.json\`, because this tree looks like a UI. Review the vocabulary it infers, run \`${invocationOf({ profile, tool: "cutlist", args: "build" })}\`, and commit the catalog: \`jig check\` runs the engine as \`cutlist build --check\`, which compares the tree against the catalog on disk, so a catalog that is ignored or stale passes only on the machine that built it. Then re-run with \`--force\`. A draft is not enabled before a person has read it.`,
     `The ledger is born accepted: the gate freezes what exists today and fails on what comes next, so day one is "nothing new" rather than a red tree nobody can get past -- which is also why \`jig baseline\` needs a model key on a repository with judged rules. Read what it accepted with \`${profile.jig} check --limit 0\`; the file is in the same commit.`,
     'A known-broken engine does not have to be removed: set `"advisory": true` on its entry in `jig.config.json` and its findings stay in the report and the baseline while the gate ignores them, or `"enabled": false` to keep it out of a run. Both survive `init --force`, which keeps a configured engine\'s own fields.',
-    `The same run installs the agent skills into \`.agents/skills/\` — \`room\`, \`intercom-setup\`, \`feedback-loop\`, \`project-run\`. pi and OpenCode both read that directory, so there is no second install; a skill someone edits is kept, and \`--force\` replaces it.`,
+    `The same run installs the agent skills into \`.agents/skills/\` — \`intercom-setup\`, \`feedback-loop\`, \`project-run\`. pi and OpenCode both read that directory, so there is no second install; a skill someone edits is kept, and \`--force\` replaces it.`,
     profile.architectureDraft === undefined
       ? ""
       : `The same run drafts \`architecture.layers\` in \`joggle.config.json\` from this workspace: includes only, in directory order, with \`layer-direction\`/\`layer-purity\` off, because neither the order nor the \`forbid\` sets can be inferred from a tree. A UI root is split into \`support\` (\`utils\`/\`lib\`/\`models\`/\`hooks\`/\`types\`), primitives, shared components and routes, in that order: a route may import support and so may a primitive, which is what keeps a routes split from reading as 731 upward imports. The splits come before the root they belong to, and each root stays last as the catch-all. Order the rest by what depends on what, add \`forbid\` where it is true, and check every \`forbid\` against the manifest of the layer that forbids it -- forbidding a dependency a package is built on reports that package's own imports as violations -- then turn those two rules on. Until then a clean architecture report means nothing looked.`,
@@ -1554,34 +1510,6 @@ export const onboardingFor = (profile: RepoProfile): string => {
   ]
     .filter((line) => line !== "")
     .join("\n")
-  const room = (): string =>
-    profile.facts.has("room")
-      ? `${section("The room — **STOP and ask**")}
-
-This repository keeps a project room: one ledger per Linear project, a daemon on this
-machine, and a review job that runs jig, a Pi, and one fenced post.
-
-\`\`\`sh
-${profile.jig} room plan            # read it, then show me the init line and wait
-${profile.jig} room init            # only after I approve: writes room.config.json, registers the room
-${profile.jig} room doctor          # names what is missing on this machine
-${profile.jig} room dev             # the room, locally
-${profile.jig} room webhook | sh    # forward GitHub events to it
-${profile.jig} room daemon          # its own terminal: claims jobs, wakes the session
-\`\`\`
-
-Ask before installing anything doctor names. What the checks mean:
-
-- \`celld\` — the room itself: \`curl -fsSL https://celld.dev/install.sh | sh\`
-- \`gh webhook\` — the GitHub forward: \`gh extension install cli/gh-webhook\`
-- a Linear token at \`~/.linearis/token\` (\`linearis\`), when this room watches Linear
-- \`pi\` — the review and the session wake both run it, so it has to be on PATH
-
-\`hc\` (herdr-core) is only needed by \`${profile.jig} room work\`, and the wake needs the machine
-awake: a sleeping laptop is a hosting problem, not a bug.
-
-`
-      : ""
   const notes = (): string =>
     profile.notes.length === 0
       ? ""
@@ -1642,7 +1570,7 @@ ${section("Wire this agent")}
 
 ${wire}
 
-${room()}${section("Report, then stop")}
+${section("Report, then stop")}
 
 Tell me what you installed, what \`${profile.jig} init\` wrote and kept, the census, and the first findings. Then wait for me.
 
@@ -1651,7 +1579,7 @@ ${section("Never, without asking me")}
 - \`${profile.jig} baseline\` — it accepts every current finding, and an unreviewed baseline is debt made invisible.
 - Changing the gate ${profile.gateMode === "all" ? "back to `touched-files`" : "to `all`"}, or adding an ignore to get green.
 - Installing an engine, or anything else globally. Step 1 is the one exception.
-${profile.facts.has("room") ? "- `" + profile.jig + " room init`, which registers the room against Linear.\n" : ""}- Changing \`jig.config.json\` by hand instead of re-running \`init\`.
+- Changing \`jig.config.json\` by hand instead of re-running \`init\`.
 
 ${notes()}
 

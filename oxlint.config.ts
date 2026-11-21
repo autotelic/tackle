@@ -207,11 +207,6 @@ const TEXT_RENDERER_FILES = [
   // The cookbook and onboarding templates: the interpolation is the sentence a person reads,
   // assembled from what `inspect` found. No query is built here.
   "packages/jig-cli/src/init.ts",
-  // `room`'s CLI and its command renderers build the sentences a person reads with the same
-  // template interpolation the rule reads as SQL. No query is built here: `room` reaches SQLite
-  // through the library, and these strings are output.
-  "packages/room/src/cli.ts",
-  "packages/room/src/commands.ts",
 ]
 
 export default {
@@ -222,9 +217,6 @@ export default {
     "packages/joggle/**",
     // The pi extension is a host surface: pi loads it and strips its types itself, so it is
     // outside every package's compiler program and is not part of the library the rules judge.
-    // jig's own extension IS linted, and stays in the list above for that reason — this is a
-    // scope note for one file tree, not a policy for extensions.
-    "packages/room/extensions/**",
     // The foreman is the ratchet's engine, not a specimen: a dependency-free Node program
     // (node:sqlite + node:child_process) that is deliberately not an Effect app, so most of
     // the rulebook's reasons do not apply to it. It is held to the rules in a later round;
@@ -350,7 +342,6 @@ export default {
         "packages/jig-cli/src/engines.ts",
         "packages/jig-cli/src/run.ts",
         "packages/cutlist/src/cli.ts",
-        "packages/room/src/daemon.ts",
         // The progress beat's elapsed clock: it measures a run and prints to stderr. It is not
         // part of a finding's identity, the baseline, or any canonical byte.
         "packages/joggle/src/decision.ts",
@@ -371,25 +362,6 @@ export default {
       // one and deriving the other at every call site would make the caller re-do the set work.
       files: ["packages/protocol/src/graph.ts"],
       rules: { "plumb/no-redundant-derived-field": "off" },
-    },
-    {
-      // The refusal family answers a sentence-or-nothing, and the code says why at each site:
-      // the two refusals differ in reasoning, so the tagged-failure form the rule asks for would
-      // have to be introduced for the whole family at once. `Option` would leave `initRefusal`
-      // beside it in the older idiom, which is the drift this rule exists to catch.
-      files: ["packages/room/src/commands.ts", "packages/room/src/driver.ts"],
-      rules: { "plumb-effect/guarded-op-must-return-option": "off" },
-    },
-    {
-      // `room` predates the Effect house style in this workspace and is not the Effect
-      // application the rulebook is written for. These two rules ask for a shape the package's
-      // own design rejected on purpose, in the comment at each site; converting them is one
-      // change, tracked, not a per-file call. The correctness rules stay on.
-      files: ["packages/room/src/**"],
-      rules: {
-        "plumb-effect/prefer-effect-predicate-over-boolean-function": "off",
-        "plumb-effect/prefer-effect-gen-for-guard-ladders": "off",
-      },
     },
     {
       // The protocol leaf cannot import Effect's `Predicate`, so the rule's remedy is

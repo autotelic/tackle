@@ -847,33 +847,6 @@ describe("inspectRepo", () => {
       rmSync(root, { recursive: true, force: true })
     }
   })
-
-  it("documents the room when this repo runs one, and asks before registering it", async () => {
-    const root = project(
-      {
-        json: [["package.json", {}]],
-        text: [["packages/room/package.json", "{}"]],
-      },
-      [],
-    )
-    try {
-      const profile = await inspect(root)
-      expect(profile.facts.has("room")).toBe(true)
-      expect(profile.notes.join("\n")).toContain("room not initialised")
-      expect(cookbookFor(profile)).toContain("room doctor")
-      expect(cookbookFor(profile)).toContain("room board")
-      expect(onboardingFor(profile)).toContain("room doctor")
-      expect(onboardingFor(profile)).toContain("room plan")
-      expect(onboardingFor(profile)).toContain("**STOP and ask**")
-      // The prompt names what the room needs on the machine, and says who checks it.
-      expect(onboardingFor(profile)).toContain("celld")
-      expect(onboardingFor(profile)).toContain("gh extension install cli/gh-webhook")
-      expect(onboardingFor(profile)).toContain("room doctor")
-      expect(cookbookFor(profile)).toContain("room daemon")
-    } finally {
-      rmSync(root, { recursive: true, force: true })
-    }
-  })
 })
 
 describe("a repository that ignores the harness", () => {
@@ -1480,14 +1453,14 @@ describe("init --skills", () => {
     try {
       const result = await initialiseIn(root, { skills: true })
       const names = result.skills.map((skill) => skill.name)
-      expect(names).toContain("room")
+      expect(names).toContain("project-run")
       expect(names).toContain("intercom-setup")
       expect(names).toContain("feedback-loop")
       expect(result.skills.every((skill) => skill.state === "written")).toBe(true)
-      const body = readFileSync(join(root, ".agents", "skills", "room", "SKILL.md"), "utf8")
+      const body = readFileSync(join(root, ".agents", "skills", "project-run", "SKILL.md"), "utf8")
       // Frontmatter is the contract both hosts read: a name and a routing description.
-      expect(body.startsWith("---\nname: room\ndescription:")).toBe(true)
-      expect(result.written).toContain(".agents/skills/room/SKILL.md")
+      expect(body.startsWith("---\nname: project-run\ndescription:")).toBe(true)
+      expect(result.written).toContain(".agents/skills/project-run/SKILL.md")
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
@@ -1497,10 +1470,15 @@ describe("init --skills", () => {
     const root = project({}, ["pnpm"])
     try {
       await initialiseIn(root, { skills: true })
-      const before = readFileSync(join(root, ".agents", "skills", "room", "SKILL.md"), "utf8")
+      const before = readFileSync(
+        join(root, ".agents", "skills", "project-run", "SKILL.md"),
+        "utf8",
+      )
       const again = await initialiseIn(root, { skills: true })
       expect(again.skills.every((skill) => skill.state === "kept")).toBe(true)
-      expect(readFileSync(join(root, ".agents", "skills", "room", "SKILL.md"), "utf8")).toBe(before)
+      expect(readFileSync(join(root, ".agents", "skills", "project-run", "SKILL.md"), "utf8")).toBe(
+        before,
+      )
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
@@ -1534,11 +1512,11 @@ it("keeps a skill someone edited, and --force replaces it", async () => {
   const root = project({}, ["pnpm"])
   try {
     await initialiseIn(root)
-    const target = join(root, ".agents", "skills", "room", "SKILL.md")
-    const mine = "---\nname: room\ndescription: mine.\n---\n\nour own room notes\n"
+    const target = join(root, ".agents", "skills", "project-run", "SKILL.md")
+    const mine = "---\nname: project-run\ndescription: mine.\n---\n\nour own notes\n"
     writeFileSync(target, mine)
     const kept = await initialiseIn(root)
-    expect(kept.skills.find((skill) => skill.name === "room")?.state).toBe("kept")
+    expect(kept.skills.find((skill) => skill.name === "project-run")?.state).toBe("kept")
     expect(readFileSync(target, "utf8")).toBe(mine)
     expect(kept.profile.notes.some((note) => note.includes("differs from the shipped skill"))).toBe(
       true,
