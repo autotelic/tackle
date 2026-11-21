@@ -5,6 +5,7 @@ import * as Schema from "effect/Schema"
 import { BenchId } from "./Bench.id.ts"
 import { BenchCreated, BenchAlreadyExists, CreateBench } from "./CreateBench.command.ts"
 import { BenchNotPaused, BenchResumed, ResumeBench } from "./ResumeBench.command.ts"
+import { BenchNotFound } from "./BenchNotFound.rejection.ts"
 import { BenchNotRunning, BenchPaused, PauseBench } from "./PauseBench.command.ts"
 
 /**
@@ -49,13 +50,15 @@ export class Bench extends Domain.Aggregate("Bench", {
         }),
       ]
     }),
-    PauseBench: Effect.fn(function* (bench, command) {
+    PauseBench: Effect.fn(function* (bench, _command, { now }) {
+      if (bench._tag === "Absent") return yield* new BenchNotFound()
       if (bench._tag !== "Ready") return yield* new BenchNotRunning()
-      return [new BenchPaused({ at: command.at })]
+      return [new BenchPaused({ at: DateTime.toEpochMillis(now) })]
     }),
-    ResumeBench: Effect.fn(function* (bench, command) {
+    ResumeBench: Effect.fn(function* (bench, _command, { now }) {
+      if (bench._tag === "Absent") return yield* new BenchNotFound()
       if (bench._tag !== "Paused") return yield* new BenchNotPaused()
-      return [new BenchResumed({ at: command.at })]
+      return [new BenchResumed({ at: DateTime.toEpochMillis(now) })]
     }),
   },
   evolve: {

@@ -6,6 +6,7 @@ import { BenchModel, BenchHandlers } from "../src/Bench/Bench.model.ts"
 import { BenchView } from "../src/Bench/BenchStatus.view.ts"
 import { BenchAlreadyExists, BenchCreated, CreateBench } from "../src/Bench/CreateBench.command.ts"
 import { BenchNotRunning, BenchPaused, PauseBench } from "../src/Bench/PauseBench.command.ts"
+import { BenchNotFound } from "../src/Bench/BenchNotFound.rejection.ts"
 import { BenchNotPaused, BenchResumed, ResumeBench } from "../src/Bench/ResumeBench.command.ts"
 
 const story = Story.make(BenchModel, { layer: BenchHandlers })
@@ -38,26 +39,30 @@ describe("Bench", () => {
       ),
       Story.rejected(new BenchAlreadyExists()),
 
-      Story.when(bench, new PauseBench({ benchId: bench.id, at: T1 })),
+      Story.clock(T1),
+      Story.when(bench, new PauseBench({ benchId: bench.id })),
       Story.then(bench, new BenchPaused({ at: T1 })),
       Story.view(BenchView, bench, { status: "paused" }),
 
-      Story.when(bench, new PauseBench({ benchId: bench.id, at: T1 })),
+      Story.clock(T1),
+      Story.when(bench, new PauseBench({ benchId: bench.id })),
       Story.rejected(new BenchNotRunning()),
 
-      Story.when(bench, new ResumeBench({ benchId: bench.id, at: T2 })),
+      Story.clock(T2),
+      Story.when(bench, new ResumeBench({ benchId: bench.id })),
       Story.then(bench, new BenchResumed({ at: T2 })),
       Story.view(BenchView, bench, { status: "ready" }),
 
-      Story.when(bench, new ResumeBench({ benchId: bench.id, at: T2 })),
+      Story.clock(T2),
+      Story.when(bench, new ResumeBench({ benchId: bench.id })),
       Story.rejected(new BenchNotPaused()),
     ),
   )
 
   it.effect("refuses to pause a bench that does not exist", () =>
     story(
-      Story.when(absent, new PauseBench({ benchId: absent.id, at: T0 })),
-      Story.rejected(new BenchNotRunning()),
+      Story.when(absent, new PauseBench({ benchId: absent.id })),
+      Story.rejected(new BenchNotFound()),
     ),
   )
 })

@@ -1,6 +1,7 @@
 import * as Domain from "@alchemy.run/domain"
 import * as Schema from "effect/Schema"
 import { BenchId } from "./Bench.id.ts"
+import { BenchNotFound } from "./BenchNotFound.rejection.ts"
 
 export class BenchResumed extends Domain.Event(
   "BenchResumed",
@@ -18,9 +19,9 @@ export class ResumeBench extends Domain.Command(
   "ResumeBench",
   {
     target: BenchId,
-    input: { benchId: BenchId, at: Schema.Int },
+    input: { benchId: BenchId },
     events: [BenchResumed],
-    rejects: [BenchNotPaused],
+    rejects: [BenchNotFound, BenchNotPaused],
   },
   { description: "Resume a paused bench." },
 ) {}
