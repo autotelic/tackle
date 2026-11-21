@@ -1,16 +1,18 @@
 import { parseArgs } from "node:util"
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
+import { readFile } from "node:fs/promises"
 import { join } from "node:path"
 import { listRooms } from "@autotelic/room/store"
+import * as Result from "effect/Result"
+import * as Schema from "effect/Schema"
 
 const usage = [
   "board — the shop: supervisor, queue and one-owner lock",
   "",
   "Usage:",
-  "  board status [--root .room] [--json]",
+  "  board status [--root .room] [--json]   (rooms and the shop lock)",
   "  board queue [--root .room] [--json]",
-  "  board up [--root .room]",
-  "  board down [--root .room]",
+  "  board up [--root .room]                (refuses until a supervisor exists)",
+  "  board down [--root .room]              (refuses until a supervisor exists)",
   "",
   "Exit codes: 0 ok, 1 declined, 2 usage, 3 infrastructure.",
 ].join("\n")
@@ -38,6 +40,43 @@ const alive = (pid: number): boolean => {
   }
 }
 
+type Shop =
+  | { readonly state: "none" }
+  | {
+      readonly state: "held"
+      readonly pid: number
+      readonly since: number | undefined
+      readonly alive: boolean
+    }
+  | { readonly state: "malformed" }
+
+/**
+ * The lock as `status` sees it. A lock that does not parse is malformed, not absent:
+ * reporting "no lock" for a corrupt one is the same quiet zero the status line exists
+ * to prevent.
+ */
+const ShopLock = Schema.Struct({ pid: Schema.Finite, at: Schema.optional(Schema.Finite) })
+
+const readShop = async (root: string): Promise<Shop> => {
+  const text = await readFile(join(root, "shop.lock"), "utf8").catch(() => undefined)
+  if (text === undefined) return { state: "none" }
+  const decoded = Schema.decodeResult(Schema.fromJsonString(ShopLock))(text)
+  if (Result.isFailure(decoded)) return { state: "malformed" }
+  const { pid, at } = decoded.success
+  return { state: "held", pid, since: at, alive: alive(pid) }
+}
+
+const describeShop = (shop: Shop): string => {
+  switch (shop.state) {
+    case "none":
+      return "shop: no lock"
+    case "malformed":
+      return "shop: lock unreadable"
+    case "held":
+      return shop.alive ? "shop: lock held by " + shop.pid : "shop: stale lock from " + shop.pid
+  }
+}
+
 const main = async (): Promise<void> => {
   const command = process.argv[2]
   if (command === undefined || command === "--help" || command === "-h") {
@@ -51,12 +90,16 @@ const main = async (): Promise<void> => {
     return
   }
   const root = values.root
-  const lock = join(root, "shop.lock")
 
   if (command === "status") {
     const rooms = await listRooms(root)
-    if (values.json) console.log(JSON.stringify(rooms, null, 2))
-    else console.log(rooms.map((room) => room.id + " " + room.state._tag).join("\n"))
+    const shop = await readShop(root)
+    if (values.json) {
+      console.log(JSON.stringify({ shop, rooms }, null, 2))
+      return
+    }
+    for (const room of rooms) console.log(room.id + " " + room.state._tag)
+    console.log(describeShop(shop))
     return
   }
 
@@ -68,29 +111,13 @@ const main = async (): Promise<void> => {
     return
   }
 
-  if (command === "up") {
-    await mkdir(root, { recursive: true })
-    const existing = await readFile(lock, "utf8").catch(() => undefined)
-    if (existing !== undefined) {
-      const owner = Number(JSON.parse(existing).pid)
-      if (Number.isFinite(owner) && alive(owner)) return fail("ShopBusy", EXIT.declined)
-    }
-    await writeFile(lock, JSON.stringify({ pid: process.pid, at: Date.now() }, null, 2) + "\n")
-    console.log("board: shop lock held by " + process.pid)
-    return
-  }
-
-  if (command === "down") {
-    const existing = await readFile(lock, "utf8").catch(() => undefined)
-    if (existing !== undefined) {
-      const owner = Number(JSON.parse(existing).pid)
-      if (Number.isFinite(owner) && owner !== process.pid && alive(owner))
-        return fail("ShopBusy", EXIT.declined)
-    }
-    await rm(lock, { force: true })
-    console.log("board: shop lock released")
-    return
-  }
+  if (command === "up" || command === "down")
+    return fail(
+      "not a supervisor yet; refusing to " +
+        (command === "up" ? "hold" : "release") +
+        " a lock it cannot keep",
+      EXIT.declined,
+    )
 
   return fail("unknown command " + command + " (see board --help)", EXIT.usage)
 }

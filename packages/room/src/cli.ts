@@ -5,7 +5,6 @@ import { Worktree, WorktreeLive } from "./Worktree.ts"
 import {
   createRoom,
   listRooms,
-  moveRoom,
   pauseRoom,
   readRoom,
   resumeRoom,
@@ -22,7 +21,7 @@ const usage = [
   "  room status [--id <id>] [--root .room] [--json]",
   "  room pause --id <id> [--root .room]",
   "  room resume --id <id> [--root .room]",
-  "  room move --id <id> --to <host> [--root .room] [--json]",
+  "  room move --id <id> --to <host> [--root .room] [--json]  (not implemented; refuses)",
   "",
   "Exit codes: 0 ok, 1 declined, 2 usage, 3 infrastructure.",
 ].join("\n")
@@ -114,6 +113,12 @@ const main = async (): Promise<void> => {
     return
   }
 
+  if (command === "move")
+    return fail(
+      "move is not implemented; refusing to record a move that does not happen",
+      EXIT.declined,
+    )
+
   if (values.id === undefined) return fail(command + " needs --id (see room --help)", EXIT.usage)
   const id = values.id
 
@@ -138,26 +143,14 @@ const main = async (): Promise<void> => {
   if (command === "pause") {
     const result = await pauseRoom({ root, id, at: Date.now() })
     if (!result.ok) return fail(result.error, EXIT.declined)
-    console.log("room " + id + " paused")
+    console.log("room " + id + " recorded paused; no process was signalled")
     return
   }
 
   if (command === "resume") {
     const result = await resumeRoom({ root, id, at: Date.now() })
     if (!result.ok) return fail(result.error, EXIT.declined)
-    console.log("room " + id + " ready")
-    return
-  }
-
-  if (command === "move") {
-    if (values.to === undefined) return fail("move needs --to (see room --help)", EXIT.usage)
-    const result = await moveRoom({ root, id, to: values.to, at: Date.now() })
-    if (!result.ok) return fail(result.error, EXIT.declined)
-    console.log(
-      values.json
-        ? JSON.stringify(result.value, null, 2)
-        : "room " + id + " move requested to " + values.to,
-    )
+    console.log("room " + id + " recorded ready; no process was started")
     return
   }
 

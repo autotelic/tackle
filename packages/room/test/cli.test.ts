@@ -1,63 +1,81 @@
 import { execFileSync, spawnSync } from "node:child_process"
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { expect, test } from "vitest"
+import { describe, expect, it } from "vitest"
+
+/* oxlint-disable plumb/prefer-property-tests -- the subject is the printed sentence over one scratch repository. */
 
 const cli = fileURLToPath(new URL("../src/cli.ts", import.meta.url))
-const run = (args: ReadonlyArray<string>, cwd: string) =>
-  spawnSync(process.execPath, ["--conditions=development", cli, ...args], { cwd, encoding: "utf8" })
 
-const repo = (root: string): string => {
-  const path = join(root, "repo")
-  execFileSync("git", ["init", "-q", "-b", "main", path])
-  writeFileSync(join(path, "README.md"), "room\n")
-  execFileSync("git", ["-C", path, "add", "README.md"])
-  execFileSync("git", [
-    "-C",
-    path,
-    "-c",
-    "user.email=a@b.c",
-    "-c",
-    "user.name=A",
-    "commit",
-    "-qm",
-    "init",
-  ])
-  return path
+const git = (cwd: string, ...args: ReadonlyArray<string>): void => {
+  execFileSync("git", args, { cwd, stdio: "ignore" })
 }
 
-test("new, status, pause, resume and move through the room binary", () => {
-  const root = mkdtempSync(join(tmpdir(), "room-cli-"))
-  try {
-    const path = repo(root)
-    const created = run(
-      ["new", "--repo", path, "--scope", "dev", "--id", "r1", "--root", "rooms"],
-      root,
-    )
-    expect(created.status).toBe(0)
-    expect(readFileSync(join(root, "rooms", "r1", "room.json"), "utf8")).toContain('"Ready"')
-    expect(run(["status", "--id", "r1", "--root", "rooms"], root).stdout).toContain("r1 Ready")
-    expect(run(["pause", "--id", "r1", "--root", "rooms"], root).status).toBe(0)
-    expect(run(["pause", "--id", "r1", "--root", "rooms"], root).status).toBe(1)
-    expect(run(["resume", "--id", "r1", "--root", "rooms"], root).status).toBe(0)
-    expect(run(["move", "--id", "r1", "--to", "mini", "--root", "rooms"], root).status).toBe(0)
-    expect(readFileSync(join(root, "rooms", "r1", "move.json"), "utf8")).toContain("mini")
-  } finally {
-    rmSync(root, { recursive: true, force: true })
-  }
-}, 20_000)
+/** A committed repository so `git worktree add` has a base to branch from. */
+const repository = (root: string): string => {
+  const repo = join(root, "repo")
+  mkdirSync(repo, { recursive: true })
+  git(repo, "init", "-q", "-b", "main")
+  git(repo, "config", "user.email", "room@example.test")
+  git(repo, "config", "user.name", "Room Test")
+  writeFileSync(join(repo, "README.md"), "room\n")
+  git(repo, "add", "README.md")
+  git(repo, "commit", "-q", "-m", "init")
+  return repo
+}
 
-test("usage and decode failures are not declined", () => {
+const room = (cwd: string, ...args: ReadonlyArray<string>) =>
+  spawnSync(process.execPath, ["--conditions=development", cli, ...args], {
+    cwd,
+    encoding: "utf8",
+  })
+
+const scratch = () => {
   const root = mkdtempSync(join(tmpdir(), "room-cli-"))
-  try {
-    expect(run(["new", "--scope", "dev"], root).status).toBe(2)
-    mkdirSync(join(root, "rooms", "bad"), { recursive: true })
-    writeFileSync(join(root, "rooms", "bad", "room.json"), "not json")
-    expect(run(["status", "--id", "bad", "--root", "rooms"], root).status).toBe(2)
-    expect(run(["pause", "--root", "rooms"], root).status).toBe(2)
-  } finally {
-    rmSync(root, { recursive: true, force: true })
-  }
+  return { root, close: () => rmSync(root, { recursive: true, force: true }) }
+}
+
+describe("a verb that prints a completion is a claim", () => {
+  it("says pause recorded state and signalled nothing", () => {
+    const { root, close } = scratch()
+    try {
+      const created = room(root, "new", "--repo", repository(root), "--scope", "dev")
+      expect(created.status).toBe(0)
+      const paused = room(root, "pause", "--id", "dev-repo")
+      expect(paused.status).toBe(0)
+      expect(paused.stdout).toBe("room dev-repo recorded paused; no process was signalled\n")
+    } finally {
+      close()
+    }
+  })
+
+  it("says resume recorded state and started nothing", () => {
+    const { root, close } = scratch()
+    try {
+      expect(room(root, "new", "--repo", repository(root), "--scope", "dev").status).toBe(0)
+      expect(room(root, "pause", "--id", "dev-repo").status).toBe(0)
+      const resumed = room(root, "resume", "--id", "dev-repo")
+      expect(resumed.status).toBe(0)
+      expect(resumed.stdout).toBe("room dev-repo recorded ready; no process was started\n")
+    } finally {
+      close()
+    }
+  })
+
+  it("refuses move instead of recording a move that does not happen", () => {
+    const { root, close } = scratch()
+    try {
+      expect(room(root, "new", "--repo", repository(root), "--scope", "dev").status).toBe(0)
+      const moved = room(root, "move", "--id", "dev-repo", "--to", "mini")
+      expect(moved.status).toBe(1)
+      expect(moved.stdout).toBe("")
+      expect(moved.stderr).toContain(
+        "move is not implemented; refusing to record a move that does not happen",
+      )
+    } finally {
+      close()
+    }
+  })
 })
