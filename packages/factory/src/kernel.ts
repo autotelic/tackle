@@ -2,11 +2,18 @@ import { spawnSync } from "node:child_process"
 import { existsSync } from "node:fs"
 import { mkdir, readdir, writeFile } from "node:fs/promises"
 import { join } from "node:path"
+import { Match } from "effect"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 import { captureCheckpoint } from "./adopt.ts"
 import { consumeEvents, readEvents, type Event } from "./events.ts"
-import { readWorkstream, workstreamDir, writeWorkstream, type Workstream } from "./store.ts"
+import {
+  factoryHome,
+  readWorkstream,
+  workstreamDir,
+  writeWorkstream,
+  type Workstream,
+} from "./store.ts"
 
 /** One pass's receipt; written before the worker starts because the pass is charged then. */
 export interface Quality {
@@ -123,6 +130,22 @@ const promptOf = (input: {
       ").",
     "Phase: " + input.record.phase + ". Worktree: " + input.record.path + ".",
     "PR " + input.record.pr + " on " + input.record.repo + ".",
+    Match.value(input.record.phase).pipe(
+      Match.when(
+        "reconcile",
+        () =>
+          "This is read-only reconciliation: inspect the Linear project, its issues, the branch and PR. Do not edit code, Linear, or the SOW. Write a reconciliation report with per-issue evidence and states done/refused/remaining/unknown to $FACTORY_REPORT_DIR/<workstream>-reconcile.json, then stop.",
+      ),
+      Match.when(
+        "land",
+        () =>
+          "This is a land pass: make the PR mergeable (conflicts, checks, description, reviewers). Do not merge, edit the SOW, or open another PR.",
+      ),
+      Match.orElse(
+        () =>
+          "Work the project in this phase. Do not merge, edit the SOW, or touch another workstream.",
+      ),
+    ),
     "Handle only these events, then stop and write a receipt:",
     ...input.events.map(
       (event) => "- " + event.kind + " " + event.id + " " + JSON.stringify(event.payload),
@@ -182,6 +205,7 @@ export const runPass = async (input: {
       FACTORY_PROJECT: record.project,
       FACTORY_PHASE: record.phase,
       FACTORY_EVENTS: JSON.stringify(events),
+      FACTORY_REPORT_DIR: join(factoryHome(), "reports"),
       FACTORY_PROMPT: promptOf({ record, events }),
     },
   })

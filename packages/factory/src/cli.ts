@@ -4,6 +4,7 @@ import { adopt } from "./adopt.ts"
 import { appendEvent } from "./events.ts"
 import { runPass } from "./kernel.ts"
 import { listWorkstreams, Phase } from "./store.ts"
+import { fingerprintOf, ReportKind, writeReport, type Report } from "./report.ts"
 import { watchOnce } from "./watch.ts"
 
 const usage = [
@@ -15,6 +16,7 @@ const usage = [
   "  factory event --id <id> --kind <kind> [--payload <json>] [--at <iso>]",
   "  factory run --id <id> --worker <command> [--at <iso>]",
   "  factory watch --id <id> --worker <command> [--once] [--interval <ms>]",
+  "  factory report --workstream <id> --kind <kind> --command <cmd> --expected <text> --actual <text> [--output <text>] [--blocked]",
   "",
   "FACTORY_HOME defaults to ~/.factory; records live outside the governed repository.",
 ].join("\n")
@@ -118,6 +120,51 @@ const main = async (): Promise<void> => {
         " done; checkpoint " +
         result.checkpoint.slice(0, 8),
     )
+    return
+  }
+
+  if (command === "report") {
+    const parsed = parseArgs({
+      args: process.argv.slice(3),
+      options: {
+        workstream: { type: "string" },
+        kind: { type: "string" },
+        command: { type: "string" },
+        expected: { type: "string" },
+        actual: { type: "string" },
+        output: { type: "string", default: "" },
+        blocked: { type: "boolean", default: false },
+        id: { type: "string" },
+      },
+      allowPositionals: false,
+    })
+    const { workstream, kind, command: invoked, expected, actual } = parsed.values
+    if (
+      workstream === undefined ||
+      kind === undefined ||
+      invoked === undefined ||
+      expected === undefined ||
+      actual === undefined
+    )
+      return fail("report needs --workstream, --kind, --command, --expected and --actual")
+    if (!Schema.is(ReportKind)(kind))
+      return fail("--kind must be ergonomics, conformance, docs, blocker or quality")
+    const at = new Date().toISOString()
+    const id = parsed.values.id ?? "report-" + workstream + "-" + Date.parse(at)
+    const report: Report = {
+      id,
+      workstream,
+      kind,
+      at,
+      command: invoked,
+      expected,
+      actual,
+      output: parsed.values.output,
+      blocked: parsed.values.blocked,
+      fingerprint: fingerprintOf({ kind, command: invoked, actual }),
+    }
+    await writeReport({ report })
+    console.log("factory: report " + id + " written")
     return
   }
 
