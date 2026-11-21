@@ -9,7 +9,7 @@
     "build": "pnpm -r run build",
     "typecheck": "pnpm -r run typecheck",
     "test": "pnpm -r run test",
-    "lint": "oxlint --ignore-pattern 'examples/**' --ignore-pattern 'packages/plumb/**' --ignore-pattern 'packages/joggle/**' --ignore-pattern 'tools/**' packages/protocol packages/cutlist packages/jig-cli packages/mailbox scripts oxlint.config.ts",
+    "lint": "oxlint --ignore-pattern 'examples/**' --ignore-pattern 'packages/plumb/**' --ignore-pattern 'packages/joggle/**' --ignore-pattern 'tools/**' packages/protocol packages/cutlist packages/jig-cli packages/mailbox packages/bench-domain packages/bench-server scripts oxlint.config.ts",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
     "lexicon:compat": "pnpm --filter @autotelic/protocol lexicon:compat",
