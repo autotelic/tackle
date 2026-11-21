@@ -47,20 +47,20 @@ GitHub, the filesystem and the DO hosting. `mailbox-domain`/server is a separate
 
 ## Commits
 
-| # | Commit | Verification |
-|---|---|---|
-| C0 | this plan + the decision turn | `pnpm check`, thread verify |
-| C1 | `jig: remove the room door` — passthrough, init detection/docs/table, `skills/room`, project-run refs, init tests | `jig init` output no longer mentions room |
-| C2 | `remove room and board` — packages, deps, lint, docs, PUBLISHING; `pnpm install` prunes | grep proof; `pnpm check` |
-| C3 | **`effect 4.1.4`** across the workspace | every package green; `jig check` on `examples/self` |
-| C4 | **`bench-domain` + `bench-server`** — Bench aggregate, Create/Pause/Resume, worktree provider, `Domain.InMemory` stories | stories pass; `alchemy plan` works |
-| C5 | **host the model on DOs** + `shop` supervisor — `DomainCloudflare.layerDurableObjects()`, child specs, intensity | kill a child → restart; 4 crashes → escalation |
-| C6 | **move saga** — quiesce/release/seal/copy/acquire/countersign/archive; adoption | stale gen → refused; hash mismatch → quarantine |
-| C7 | **`mailbox-domain` + `mailbox-server`** — his procedures, error names, fixtures | his `v0` fixtures pass |
-| C8 | **HPKE + DIDs** — sign-then-encrypt, `did:key`, `did:web` | foreign DID verifies; plaintext send rejected |
-| C9 | **records + federation** — publish with real at-uris/CIDs; cross-host message + record | resolvable from another host |
-| C10 | `jig: pin + ship` | pin/lockfile drift fails |
-| C11 | cleanup + npm deprecate | check green; deprecation reported |
+| #   | Commit                                                                                                                   | Verification                                        |
+| --- | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------- |
+| C0  | this plan + the decision turn                                                                                            | `pnpm check`, thread verify                         |
+| C1  | `jig: remove the room door` — passthrough, init detection/docs/table, `skills/room`, project-run refs, init tests        | `jig init` output no longer mentions room           |
+| C2  | `remove room and board` — packages, deps, lint, docs, PUBLISHING; `pnpm install` prunes                                  | grep proof; `pnpm check`                            |
+| C3  | **`effect 4.1.4`** across the workspace                                                                                  | every package green; `jig check` on `examples/self` |
+| C4  | **`bench-domain` + `bench-server`** — Bench aggregate, Create/Pause/Resume, worktree provider, `Domain.InMemory` stories | stories pass; `alchemy plan` works                  |
+| C5  | **host the model on DOs** + `shop` supervisor — `DomainCloudflare.layerDurableObjects()`, child specs, intensity         | kill a child → restart; 4 crashes → escalation      |
+| C6  | **move saga** — quiesce/release/seal/copy/acquire/countersign/archive; adoption                                          | stale gen → refused; hash mismatch → quarantine     |
+| C7  | **`mailbox-domain` + `mailbox-server`** — his procedures, error names, fixtures                                          | his `v0` fixtures pass                              |
+| C8  | **HPKE + DIDs** — sign-then-encrypt, `did:key`, `did:web`                                                                | foreign DID verifies; plaintext send rejected       |
+| C9  | **records + federation** — publish with real at-uris/CIDs; cross-host message + record                                   | resolvable from another host                        |
+| C10 | `jig: pin + ship`                                                                                                        | pin/lockfile drift fails                            |
+| C11 | cleanup + npm deprecate                                                                                                  | check green; deprecation reported                   |
 
 ## Acceptance tests
 
