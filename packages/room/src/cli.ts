@@ -8,6 +8,7 @@ import {
   pauseRoom,
   readRoom,
   resumeRoom,
+  setRoomExec,
   roomDir,
   RoomDecodeError,
 } from "./store.ts"
@@ -149,9 +150,14 @@ const main = async (): Promise<void> => {
     } catch (cause) {
       return fail("worktree failed: " + String(cause), EXIT.infrastructure)
     }
-    if (values.exec === undefined) {
+    const exec = values.exec ?? room.exec
+    if (exec === undefined) {
       console.log("room " + id + " ready at " + worktree)
       return
+    }
+    if (values.exec !== undefined) {
+      const saved = await setRoomExec({ root, id, exec: values.exec })
+      if (!saved.ok) return fail(saved.error, EXIT.declined)
     }
     const running = await readRun({ root, id })
     if (running !== undefined && alive(running.pid))
@@ -160,12 +166,12 @@ const main = async (): Promise<void> => {
       root,
       id,
       worktree,
-      exec: values.exec,
+      exec,
       log: join(roomDir({ root, id }), "room.log"),
     })
     if (!started.ok) return fail(started.reason, EXIT.infrastructure)
     console.log(
-      "room " + id + " up; supervisor " + started.run.pid + " runs " + JSON.stringify(values.exec),
+      "room " + id + " up; supervisor " + started.run.pid + " runs " + JSON.stringify(exec),
     )
     return
   }

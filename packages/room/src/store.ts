@@ -9,7 +9,12 @@ import { PauseRoom } from "./Room/PauseRoom.command.ts"
 import { ResumeRoom } from "./Room/ResumeRoom.command.ts"
 import { RoomState } from "./Room/Room.aggregate.ts"
 
-const RoomFileSchema = Schema.Struct({ id: Schema.String, base: Schema.String, state: RoomState })
+const RoomFileSchema = Schema.Struct({
+  id: Schema.String,
+  base: Schema.String,
+  state: RoomState,
+  exec: Schema.optional(Schema.String),
+})
 
 /** The file a room is: its id, its base branch, and the control-plane state. */
 export type RoomFile = typeof RoomFileSchema.Type
@@ -128,7 +133,20 @@ export const pauseRoom = async (input: {
     input.at,
   )
   if (!decided.ok) return decided
-  const next: RoomFile = { id: input.id, base: room.base, state: decided.value }
+  const next: RoomFile = { ...room, state: decided.value }
+  await write({ root: input.root, room: next })
+  return { ok: true, value: next }
+}
+
+/** Remember the command `up` should run after a `down`. */
+export const setRoomExec = async (input: {
+  readonly root: string
+  readonly id: string
+  readonly exec: string
+}): Promise<StoreResult<RoomFile>> => {
+  const room = await readRoom(input)
+  if (room === undefined) return { ok: false, error: "RoomNotFound" }
+  const next: RoomFile = { ...room, exec: input.exec }
   await write({ root: input.root, room: next })
   return { ok: true, value: next }
 }
@@ -148,7 +166,7 @@ export const resumeRoom = async (input: {
     input.at,
   )
   if (!decided.ok) return decided
-  const next: RoomFile = { id: input.id, base: room.base, state: decided.value }
+  const next: RoomFile = { ...room, state: decided.value }
   await write({ root: input.root, room: next })
   return { ok: true, value: next }
 }

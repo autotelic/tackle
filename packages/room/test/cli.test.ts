@@ -116,6 +116,10 @@ describe("a verb that prints a completion is a claim", () => {
       const down = room(root, "down", "--id", "dev-repo")
       expect(down.status).toBe(0)
       expect(down.stdout).toContain("stopped")
+      const again = room(root, "up", "--id", "dev-repo")
+      expect(again.status).toBe(0)
+      expect(again.stdout).toContain("room dev-repo up; supervisor ")
+      expect(room(root, "down", "--id", "dev-repo").status).toBe(0)
     } finally {
       room(root, "down", "--id", "dev-repo")
       close()

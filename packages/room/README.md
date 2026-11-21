@@ -19,6 +19,8 @@ idempotent: an existing worktree is not re-added.
 
 With `--exec`, `up` starts a detached supervisor (recorded in `run.json` and
 logged to `.room/<id>/room.log`) that restarts the command with a crash budget.
+The command is remembered in `room.json`, so a later `room up --id <id>` with no
+`--exec` starts the same command again.
 `pause` and `resume` send `SIGSTOP`/`SIGCONT` to the whole process group;
 `down` sends `SIGTERM`. Without `--exec`, `pause` and `resume` change only the
 recorded state.
