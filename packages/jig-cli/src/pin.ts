@@ -1,13 +1,15 @@
+import { Option, Predicate, Schema } from "effect"
 import { parse } from "yaml"
 
 /** A repo's assertion about one resolved dependency; derived from the lockfile, never hand-written. */
-export interface RepoPin {
-  readonly name: string
-  readonly version: string
-  readonly integrity: string | null
-  readonly importer: string
-  readonly lockfile: "pnpm-lock.yaml"
-}
+export const RepoPinSchema = Schema.Struct({
+  name: Schema.String,
+  version: Schema.String,
+  integrity: Schema.NullOr(Schema.String),
+  importer: Schema.String,
+  lockfile: Schema.Literal("pnpm-lock.yaml"),
+})
+export type RepoPin = typeof RepoPinSchema.Type
 
 interface LockEntry {
   readonly version?: string
@@ -28,23 +30,35 @@ interface Lockfile {
 const GROUPS = ["dependencies", "devDependencies", "optionalDependencies"] as const
 
 /** Derive the pin of one package from the lockfile; the first importer that names it wins. */
-export const derivePin = (lockText: string, name: string): RepoPin | undefined => {
-  const lock = parse(lockText) as Lockfile
+export const derivePin = (input: {
+  readonly lockText: string
+  readonly name: string
+}): Option.Option<RepoPin> => {
+  const lock: Lockfile = parse(input.lockText)
   for (const [importer, entry] of Object.entries(lock.importers ?? {})) {
     for (const group of GROUPS) {
-      const dependency = entry[group]?.[name]
+      const dependency = entry[group]?.[input.name]
       if (dependency?.version === undefined) continue
       const version = dependency.version.replace(/\(.*\)$/u, "")
-      const integrity = lock.packages?.[`${name}@${version}`]?.resolution?.integrity ?? null
-      return { name, version, integrity, importer, lockfile: "pnpm-lock.yaml" }
+      const integrity = lock.packages?.[`${input.name}@${version}`]?.resolution?.integrity ?? null
+      return Option.some({
+        name: input.name,
+        version,
+        integrity,
+        importer,
+        lockfile: "pnpm-lock.yaml",
+      })
     }
   }
-  return undefined
+  return Option.none()
 }
 
 /** The pin is a fact about the lockfile; a stored pin that differs is drift, not a preference. */
-export const pinMatches = (stored: RepoPin, derived: RepoPin): boolean =>
-  stored.name === derived.name &&
-  stored.version === derived.version &&
-  stored.integrity === derived.integrity &&
-  stored.lockfile === derived.lockfile
+export const pinMatches: Predicate.Predicate<{
+  readonly stored: RepoPin
+  readonly derived: RepoPin
+}> = (input) =>
+  input.stored.name === input.derived.name &&
+  input.stored.version === input.derived.version &&
+  input.stored.integrity === input.derived.integrity &&
+  input.stored.lockfile === input.derived.lockfile

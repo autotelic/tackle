@@ -136,11 +136,8 @@ const moduleIndex = (modules: ReadonlyArray<SourceModule>): ReadonlyMap<string, 
 }
 
 /** What resolution needs beyond the specifier: where it was written, and where it may land. */
-interface TargetQuery {
-  readonly specifier: string
-  readonly importerDir: string
+interface TargetQuery extends SpecifierQuery {
   readonly importerRoot: string | undefined
-  readonly rules: ReadonlyArray<AliasRule>
   readonly byBase: ReadonlyMap<string, string>
 }
 

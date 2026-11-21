@@ -1,5 +1,6 @@
 import { Effect, FileSystem, Order, Path, Predicate } from "effect"
 import { parseSync } from "oxc-parser"
+import type { CatalogDeclaration } from "@autotelic/protocol"
 
 /*
  * Pass 1 — parse.
@@ -23,18 +24,9 @@ export interface ObjectLiteral {
 }
 
 /** One declaration in a module. A part's kind is a question about these, not about the file. */
-export interface Declaration {
-  readonly name: string
-  readonly kind: "function" | "class" | "variable" | "type"
-  readonly exported: boolean
-  /** Whether the declaration's own body renders JSX. */
-  readonly renders: boolean
-  /** Callee names inside the declaration; `useState`, `createContext`, `memo`. */
-  readonly calls: ReadonlyArray<string>
+export interface Declaration extends CatalogDeclaration {
   /** JSX tags inside the declaration, so one file's declarations can be asked separately. */
   readonly tags: ReadonlyArray<string>
-  /** Keys, when a variable is bound to an object literal. */
-  readonly objectKeys?: ReadonlyArray<string>
 }
 
 /** A JSX element as written, with where it was written. */

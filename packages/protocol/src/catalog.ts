@@ -69,7 +69,11 @@ export interface CatalogFeature {
   readonly valueKeys: ReadonlyArray<string>
 }
 
-/** One component as the crawler classified it. */
+/**
+ * One component as the crawler classified it.
+ *
+ * Projection of `cutlist build`; refresh by running it, and read it as stale until then.
+ */
 export interface CatalogComponent extends ComponentFields {
   /**
    * The part's stable identity: its repository-relative path without the source

@@ -99,6 +99,41 @@
       "rule": "joggle/duplicate-implementation",
       "path": "packages/cutlist/src/version.ts",
       "reason": "The other face of the reversal entry above: cutlist, jig-cli and joggle each read their own package.json because a shared reader would be the runtime dependency the seam forbids. The five lines are identical on purpose; what differs is the manifest they read."
+    },
+    {
+      "rule": "joggle/invariant-has-a-reconciler",
+      "path": "packages/cutlist/src/catalog.ts",
+      "reason": "Cutlist is a read-only projection: the repair for an invariant it reports is a developer edit or a `cutlist build`, not a runtime reconciler. The detector is the whole contract."
+    },
+    {
+      "rule": "joggle/invariant-has-a-reconciler",
+      "path": "packages/cutlist/src/check.ts",
+      "reason": "The staleness and drift checks are read-only reports. Repair belongs to `cutlist build`, which writes the catalog; adding a reconciler here would make the checker a writer."
+    },
+    {
+      "rule": "joggle/reversal",
+      "path": "packages/cutlist/src/crawl.ts",
+      "reason": "`isTestPath` and `isTid` are already `Predicate.Predicate<string>`; the shared element is that type, which both packages already have. A runtime regex-predicate helper in `protocol` would add runtime to the package chartered as no-runtime."
+    },
+    {
+      "rule": "joggle/reversal",
+      "path": "packages/joggle/src/answer-store.ts",
+      "reason": "`Census` and `Loaded` share field names but not meanings: `entries` is a count in the census and a map in the load. Extending one from the other would make the count a map; the repetition is the two contracts, not a copy."
+    },
+    {
+      "rule": "joggle/invariant-has-a-reconciler",
+      "path": "packages/protocol/src/baseline.ts",
+      "reason": "The baseline's repair path is `jig baseline`, which writes the ledger. `diffBaseline` and `ratchetViolations` are the read-only detectors; a reconciler here would collapse the writer and the check."
+    },
+    {
+      "rule": "joggle/invariant-has-a-reconciler",
+      "path": "packages/protocol/src/catalog.ts",
+      "reason": "`nearestDuplicate` is an advisory candidate finder. The repair is a developer's edit, named in the report; a runtime reconciler would decide a design question for them."
+    },
+    {
+      "rule": "joggle/reversal",
+      "path": "packages/protocol/src/config.ts",
+      "reason": "`CutlistOutput`'s fields are independent optional destinations: absence means 'not written', not a missing deviation field. Sharing a base with the vocabulary would tie an output path to an ownership setting."
     }
   ],
   "architecture": {

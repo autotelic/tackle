@@ -1,3 +1,4 @@
+import { Predicate } from "effect"
 import { spawnSync } from "node:child_process"
 import { existsSync } from "node:fs"
 import { join } from "node:path"
@@ -6,7 +7,8 @@ import { fileURLToPath } from "node:url"
 const here = fileURLToPath(new URL(".", import.meta.url))
 
 /** Whether this invocation is `jig room ...`. */
-export const isRoomInvocation = (argv: ReadonlyArray<string>): boolean => argv[2] === "room"
+export const isRoomInvocation: Predicate.Predicate<ReadonlyArray<string>> = (argv) =>
+  argv[2] === "room"
 
 /**
  * Run the room CLI with the remaining arguments. The door maps nothing: the room's

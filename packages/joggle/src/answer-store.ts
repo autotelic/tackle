@@ -595,11 +595,8 @@ export const answerStoreBytes = (
 
 /** What the committed ledger says, rendered for a reader rather than replayed. */
 export interface Census {
-  /** Distinct answers: the ledger is a set. */
   readonly entries: number
-  /** Lines on disk. More lines than entries means duplicates a merge left behind. */
   readonly lines: number
-  /** Files the ledger lives in: one for the single layout, one per non-empty shard. */
   readonly files: number
   readonly layout: Layout
   readonly bytes: number
@@ -668,13 +665,8 @@ export const census = (
   })
 
 /**
- * Drop cache entries and rewrite only the file or shards that changed.
- *
- * The age cut is per entry, from the timestamp each line carries — a committed
- * ledger carries none, so age pruning leaves it alone and only `--max-bytes`
- * retires what it holds. The size cut is oldest-first across the whole ledger,
- * with ageless entries last. An emptied file or shard is deleted rather than
- * written empty.
+ * Retire entries older than the cutoff when they carry a timestamp, then enforce
+ * maxBytes. Rewrite only the files or shards that changed, and delete an empty one.
  */
 export const prune = (
   fs: FileSystem.FileSystem,

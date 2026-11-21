@@ -320,6 +320,17 @@ export default {
       rules: { "plumb/no-nondeterministic-core": "off" },
     },
     {
+      // The jig CLI is the process boundary: it mints the ship instant and stamps the pin file.
+      files: ["packages/jig-cli/src/cli.ts"],
+      rules: { "plumb/no-nondeterministic-core": "off" },
+    },
+    {
+      // derivePin is a pure lockfile projection: Option says 'not resolved'; there is no effect
+      // and no runtime to return.
+      files: ["packages/jig-cli/src/pin.ts"],
+      rules: { "plumb-effect/guarded-op-must-return-effect": "off" },
+    },
+    {
       // Room stories and the supervisor suite are ordered scenarios (given/when/then, crash then
       // restart), not claims over arbitrary input; a property suite would test something else.
       files: [
@@ -341,6 +352,8 @@ export default {
         "packages/mailbox-server/test/federation.test.ts",
         "packages/mailbox-server/test/fixtures.test.ts",
         "packages/mailbox/src/render.test.ts",
+        "packages/jig-cli/src/pin.test.ts",
+        "packages/mailbox-server/test/rat-king.test.ts",
       ],
       rules: { "plumb/prefer-property-tests": "off" },
     },

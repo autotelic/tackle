@@ -14,4 +14,14 @@
  * @returns The count and the matching form, e.g. `3 parts`.
  */
 export const plural = (count: number, forms: readonly [one: string, many: string]): string =>
-  `${count} ${count === 1 ? forms[0] : forms[1]}`
+  String(count) + " " + (count === 1 ? forms[0] : forms[1])
+
+/** A comma list of backticked names, limited, with a remainder count. */
+export const some = (items: ReadonlyArray<string>, limit: number): string => {
+  const shown = items
+    .slice(0, limit)
+    .map((item) => "`" + item + "`")
+    .join(", ")
+  const rest = items.length - limit
+  return rest > 0 ? shown + " +" + String(rest) + " more" : shown
+}
