@@ -1,6 +1,8 @@
 # Replacing room and board with bench and shop
 
-Status: proposed. Nothing in here starts until TAC-15 has bought in or named the cut.
+Status: **bought in by TAC-15 with three vetoes (bench 0013); the operator overrode V2 and approved
+bumping Effect to the latest across the workspace.** No destructive commit starts until the
+pre-flight protocol in “Roles” is followed.
 
 ## Goal
 
@@ -8,25 +10,45 @@ Room and board are removed; bench and shop are built fresh, on `main`, in commit
 `main` green. Nothing is salvaged from room or board — not modules, not tests. The design docs
 (`shop.md`, `bench-steelman.md`, `bench-alchemy.md`, `otp-and-at.md`) are the spec.
 
-**Table stakes, not later phases:**
+**Table stakes, not later phases:** Alchemy provisions (`retain` data, `destroy` runtime, adoption
+refuses a stale generation); Alchemy Domain + Layers model the control plane (one aggregate per
+bench/message/lease/pin, one writer, stories in memory, DO hosting as a Layer swap); AT federation is
+wire-compliant (his procedures, error names, fixtures, HPKE, `did:key`/`did:web`, real at-uris/CIDs),
+proven by a message and a record crossing between our host and a Rat King instance.
 
-- **Alchemy** provisions and reconciles the bench, with `retain` data and `destroy` runtime; a
-  host change replaces the runtime only; adoption refuses a stale generation.
-- **Alchemy Domain + Layers** model the control plane: one aggregate per bench/message/lease/pin,
-  one writer, stories in memory, hosted on Durable Objects by a Layer swap.
-- **AT federation**: a wire-compliant Rat King mailbox — his procedures, error names, and fixtures,
-  HPKE sign-then-encrypt, `did:key`/`did:web`, real at-uris/CIDs — proven by a message and a
-  record crossing between our host and a Rat King instance.
+## Vetoes
+
+**V1 — no live entry point without its package.** `jig room` is a passthrough in
+`packages/jig-cli/src/cli.ts` and an init branch in `init.ts`; it is not a tombstone. **C1 removes
+the passthrough, the init branch and the generated docs, and deletes room/board in the same commit.**
+A `jig room` that crashes is worse than one that does not exist.
+
+**V2 — originally “do not bump the shipped tools”; overridden by the operator.** Effect goes to
+**4.1.5** (the latest; `@alchemy.run/domain` peers on `^4.1.4`) for **every package**, in one
+isolated commit, C2. The isolation is the constraint that survives: C2 changes dependency versions
+and nothing else; any API change a package forces is its own commit.
+
+**V3 — acceptance is by refusal, not by plumbing.** Each milestone's acceptance test is a refusal
+first:
+
+- C5 (move): a stale writer is refused with both hashes, and **nothing is deleted**.
+- C6 (mailbox): `LeaseMismatch`, `Conflict`, `Retired`, `RoleUnresolved` each produce _his_ error
+  name from _his_ fixture.
+- Falsifiable for every milestone: **delete the happy-path test and the milestone is still green.**
+
+Refusal tests take direct inputs and do not reuse a happy-path helper.
 
 ## Principles
 
 1. Every commit is format → typecheck → test → `mailbox verify` → build → push. If it cannot be
    green, it is split.
 2. One owner per thing: a claim, a lease, a port, a worktree, a journal. Never two processes.
-3. A package disappears in the same commit as its last caller.
+3. A package disappears in the same commit as its last caller, and its CLI entry point dies in that
+   commit.
 4. No PRs. Trunk commits on `main`.
 5. The model comes before the host: if a move cannot pass as an in-memory story with stubbed
    external systems, hosting it on a DO only makes the bug distributed.
+6. Acceptance by refusal.
 
 ## Target layout
 
@@ -37,30 +59,30 @@ packages/
   bench-server/     hosting (DO), providers, Alchemy stack, bench + shop bins
   mailbox-domain/   mailbox/lease bounded context
   mailbox-server/   XRPC Api + HPKE + fixtures
-  jig-cli/          check · baseline · pin · ship · verify · explain · promote · learn
+  jig-cli/          check · baseline · pin · ship · verify
   plumb/ joggle/ cutlist/ treadle/
   — room/ board/ deleted —
 ```
 
-`bench-domain` imports only `@alchemy.run/domain` and `effect`. `bench-server` owns Docker,
-GitHub, the filesystem and the DO hosting. `mailbox-domain`/server is a separate bounded context.
+All packages on Effect 4.1.5 after C2. `bench-domain` and `mailbox-domain` import only
+`@alchemy.run/domain` and `effect`; the server packages own Docker, GitHub, the filesystem, HPKE and
+DO hosting.
 
 ## Commits
 
-| #   | Commit                                                                                                                   | Verification                                        |
-| --- | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------- |
-| C0  | this plan + the decision turn                                                                                            | `pnpm check`, thread verify                         |
-| C1  | `jig: remove the room door` — passthrough, init detection/docs/table, `skills/room`, project-run refs, init tests        | `jig init` output no longer mentions room           |
-| C2  | `remove room and board` — packages, deps, lint, docs, PUBLISHING; `pnpm install` prunes                                  | grep proof; `pnpm check`                            |
-| C3  | **`effect 4.1.4`** across the workspace                                                                                  | every package green; `jig check` on `examples/self` |
-| C4  | **`bench-domain` + `bench-server`** — Bench aggregate, Create/Pause/Resume, worktree provider, `Domain.InMemory` stories | stories pass; `alchemy plan` works                  |
-| C5  | **host the model on DOs** + `shop` supervisor — `DomainCloudflare.layerDurableObjects()`, child specs, intensity         | kill a child → restart; 4 crashes → escalation      |
-| C6  | **move saga** — quiesce/release/seal/copy/acquire/countersign/archive; adoption                                          | stale gen → refused; hash mismatch → quarantine     |
-| C7  | **`mailbox-domain` + `mailbox-server`** — his procedures, error names, fixtures                                          | his `v0` fixtures pass                              |
-| C8  | **HPKE + DIDs** — sign-then-encrypt, `did:key`, `did:web`                                                                | foreign DID verifies; plaintext send rejected       |
-| C9  | **records + federation** — publish with real at-uris/CIDs; cross-host message + record                                   | resolvable from another host                        |
-| C10 | `jig: pin + ship`                                                                                                        | pin/lockfile drift fails                            |
-| C11 | cleanup + npm deprecate                                                                                                  | check green; deprecation reported                   |
+| #   | Commit                                                                                                                                                               | Verification                                                                                    |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| C0  | this plan + the buy-in turn                                                                                                                                          | `pnpm check`, thread verify                                                                     |
+| C1  | **`remove room and board`** — packages, deps, lint, docs, PUBLISHING, **and** `jig room`'s passthrough + init branch + `skills/room` + project-run refs + init tests | grep proof; `jig init` no longer mentions room; `jig room` is an unknown command, not a crash   |
+| C2  | **`effect 4.1.5` across the workspace** — catalog pins only, no feature changes                                                                                      | `pnpm -r why effect` shows 4.1.5 everywhere; `pnpm check` green; `jig check` on `examples/self` |
+| C3  | **`bench-domain` + `bench-server`** — Bench aggregate, Create/Pause/Resume, worktree provider, `Domain.InMemory` stories                                             | stories pass; `alchemy plan` works                                                              |
+| C4  | **host on DOs + `shop`** — `DomainCloudflare.layerDurableObjects()`, child specs, intensity                                                                          | kill a child → restart; crash loop → desk                                                       |
+| C5  | **move saga** — quiesce/release/seal/copy/acquire/countersign/archive; adoption                                                                                      | **refusal:** stale writer has both hashes, nothing deleted                                      |
+| C6  | **`mailbox-domain` + `mailbox-server`** — his procedures, error names, fixtures                                                                                      | **refusal:** four error names from his fixtures                                                 |
+| C7  | **HPKE + DIDs** — sign-then-encrypt, `did:key`, `did:web`                                                                                                            | foreign DID verifies; plaintext send rejected                                                   |
+| C8  | **records + federation** — real at-uris/CIDs; cross-host message + record                                                                                            | resolvable from another host                                                                    |
+| C9  | `jig: pin + ship`                                                                                                                                                    | pin/lockfile drift fails                                                                        |
+| C10 | cleanup + npm deprecate                                                                                                                                              | check green; deprecation reported                                                               |
 
 ## Acceptance tests
 
@@ -70,7 +92,7 @@ Docker services restart under `drift --repair`.
 
 **Domain:** the move and lease stories run in memory with the copy and GitHub stubbed; every
 rejection is exercised; `Verify` invariants hold (one writer, generation monotonicity, no journal
-delete).
+delete). Happy paths may be deleted without removing a refusal.
 
 **AT:** every `v0` fixture, every error name; same `(senderDid, TID)` returns the original receipt,
 different bytes is `Conflict`; `ack` needs `recipientDid`+`leaseId`+`generation`; lease ≤ 5
@@ -79,8 +101,7 @@ minutes, handover at gen+1; HPKE envelope; a record resolves by URI/CID from ano
 ## Roles and the honesty loop
 
 - **TAC-14 builds.** **TAC-15 reviews and owns the lexicons, records and the AT fixture gate.**
-- **Before destructive commits (C1, C2, C11):** intent + blast radius + grep proof + rollback;
-  wait for ack or a blocker.
+- **Before C1/C2/C10:** intent + blast radius + grep proof + rollback; wait for ack or a blocker.
 - **After every commit:** SHA, what changed, the command and exit code, one falsifiable claim.
   The peer tries to break the claim, not to approve the code.
 - **Peer checklist:** second owner? seam broken? can the test fail? deleted reference? claim
@@ -90,21 +111,22 @@ minutes, handover at gen+1; HPKE envelope; a record resolves by URI/CID from ano
 
 ## Risks / unknowns
 
-- **Beta on beta:** Alchemy and Domain are `2.0.0-beta.87`, both peer on Effect 4.1.4. C3 is the
-  gate.
-- **HPKE interop:** his fixtures are opaque example data, not crypto vectors. C8 needs vectors or a
+- **One big bump:** Effect 4.1.5 may change APIs in jig/joggle/cutlist/mailbox. C2 is dependency-only;
+  every forced API change is its own commit, and C2 can be reverted alone.
+- **Beta on beta:** Alchemy and Domain are `2.0.0-beta.87`; pin exact.
+- **HPKE interop:** his fixtures are opaque example data, not crypto vectors. C7 needs vectors or a
   live partner.
-- **PDS and `did:web`:** C9 needs a real repo host and DNS; `autotelic.dev` is the intended face.
+- **PDS and `did:web`:** C8 needs a real repo host and DNS; `autotelic.dev` is the intended face.
 - **Two logs:** Domain's event log is control-plane truth; pi-durable is the conversation. Never
   merge them.
 - **Saga ≠ transaction:** a move coordinates; the copy is an external effect; compensation is
   archive/quarantine, never rollback.
 - **Public Api ≠ model:** XRPC schemas map onto commands; no wire-shaped fields in the aggregate.
 
-## Open for TAC-15
+## Resolved
 
-1. Delete-first (C1–C2) or bench-first? My vote: delete-first; room is unused and a parallel
-   implementation is the second owner we keep fencing.
-2. Effect 4.1.4 as C3, now? My vote: yes; it is the price of table stakes.
-3. `domain`/`server` split for both bench and mailbox? My vote: yes.
-4. What would make you veto the plan?
+- Delete-first: yes; C1 does packages and entry points together.
+- Effect: **4.1.5 across the workspace at C2**, isolated, per the operator.
+- `domain`/`server` split: yes, for both bench and mailbox.
+- C7 partner: **local Rat King checkout, pinned SHA**, with the hosted service as a non-gating smoke
+  test; a hosted instance can change under a claim.
