@@ -1,6 +1,12 @@
+import { DateTime } from "effect"
 import { Schema } from "effect"
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises"
 import { join } from "node:path"
+import { Room } from "./Room/Room.aggregate.ts"
+import { RoomId } from "./Room/Room.id.ts"
+import { CreateRoom } from "./Room/CreateRoom.command.ts"
+import { PauseRoom } from "./Room/PauseRoom.command.ts"
+import { ResumeRoom } from "./Room/ResumeRoom.command.ts"
 import { RoomState } from "./Room/Room.aggregate.ts"
 
 const RoomFileSchema = Schema.Struct({ id: Schema.String, base: Schema.String, state: RoomState })
@@ -68,6 +74,22 @@ const write = async (input: { readonly root: string; readonly room: RoomFile }):
   )
 }
 
+/** Ask the Room aggregate what a command does to a state; the store never re-implements it. */
+const decide = (
+  state: RoomState,
+  command: CreateRoom | PauseRoom | ResumeRoom,
+  id: string,
+  at: number,
+): StoreResult<RoomState> => {
+  const outcome = Room.predict(state, command, {
+    id: RoomId.make(id),
+    now: DateTime.makeUnsafe(at),
+  })
+  if (outcome._tag === "Accepted") return { ok: true, value: outcome.state }
+  if (outcome._tag === "Rejected") return { ok: false, error: outcome.rejection._tag }
+  return { ok: false, error: "Unpredictable" }
+}
+
 /** Create a ready room; an existing id is a refusal, never an overwrite. */
 export const createRoom = async (input: {
   readonly root: string
@@ -79,16 +101,19 @@ export const createRoom = async (input: {
 }): Promise<StoreResult<RoomFile>> => {
   if ((await readRoom({ root: input.root, id: input.id })) !== undefined)
     return { ok: false, error: "RoomAlreadyExists" }
-  const room: RoomFile = {
-    id: input.id,
-    base: input.base,
-    state: { _tag: "Ready", repo: input.repo, scope: input.scope, createdAt: input.at },
-  }
+  const decided = decide(
+    { _tag: "Absent" },
+    new CreateRoom({ roomId: RoomId.make(input.id), repo: input.repo, scope: input.scope }),
+    input.id,
+    input.at,
+  )
+  if (!decided.ok) return decided
+  const room: RoomFile = { id: input.id, base: input.base, state: decided.value }
   await write({ root: input.root, room })
   return { ok: true, value: room }
 }
 
-/** Pause a ready room; any other state is a refusal. */
+/** Pause a ready room through the aggregate; any other state is a refusal. */
 export const pauseRoom = async (input: {
   readonly root: string
   readonly id: string
@@ -96,23 +121,19 @@ export const pauseRoom = async (input: {
 }): Promise<StoreResult<RoomFile>> => {
   const room = await readRoom(input)
   if (room === undefined) return { ok: false, error: "RoomNotFound" }
-  if (room.state._tag !== "Ready") return { ok: false, error: "RoomNotRunning" }
-  const next: RoomFile = {
-    id: input.id,
-    base: room.base,
-    state: {
-      _tag: "Paused",
-      repo: room.state.repo,
-      scope: room.state.scope,
-      createdAt: room.state.createdAt,
-      pausedAt: input.at,
-    },
-  }
+  const decided = decide(
+    room.state,
+    new PauseRoom({ roomId: RoomId.make(input.id) }),
+    input.id,
+    input.at,
+  )
+  if (!decided.ok) return decided
+  const next: RoomFile = { id: input.id, base: room.base, state: decided.value }
   await write({ root: input.root, room: next })
   return { ok: true, value: next }
 }
 
-/** Resume a paused room; any other state is a refusal. */
+/** Resume a paused room through the aggregate; any other state is a refusal. */
 export const resumeRoom = async (input: {
   readonly root: string
   readonly id: string
@@ -120,17 +141,14 @@ export const resumeRoom = async (input: {
 }): Promise<StoreResult<RoomFile>> => {
   const room = await readRoom(input)
   if (room === undefined) return { ok: false, error: "RoomNotFound" }
-  if (room.state._tag !== "Paused") return { ok: false, error: "RoomNotPaused" }
-  const next: RoomFile = {
-    id: input.id,
-    base: room.base,
-    state: {
-      _tag: "Ready",
-      repo: room.state.repo,
-      scope: room.state.scope,
-      createdAt: room.state.createdAt,
-    },
-  }
+  const decided = decide(
+    room.state,
+    new ResumeRoom({ roomId: RoomId.make(input.id) }),
+    input.id,
+    input.at,
+  )
+  if (!decided.ok) return decided
+  const next: RoomFile = { id: input.id, base: room.base, state: decided.value }
   await write({ root: input.root, room: next })
   return { ok: true, value: next }
 }
