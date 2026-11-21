@@ -1,6 +1,9 @@
 import { Predicate } from "effect"
+import { spawn } from "node:child_process"
+import { existsSync } from "node:fs"
 import { readFile, rm, writeFile } from "node:fs/promises"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 
@@ -76,6 +79,59 @@ export const alive: Predicate.Predicate<number> = (pid) => {
   } catch {
     return false
   }
+}
+
+export type StartOutcome =
+  | { readonly ok: true; readonly run: RoomRun }
+  | { readonly ok: false; readonly reason: string }
+
+/** The supervisor script, source in development and build after a build. */
+const supervisorPath = (): string => {
+  const here = dirname(fileURLToPath(import.meta.url))
+  return existsSync(join(here, "supervise.js"))
+    ? join(here, "supervise.js")
+    : join(here, "supervise.ts")
+}
+
+/**
+ * Start the detached supervisor for one room and wait until its run record is live.
+ *
+ * @param input - the room root and id, the worktree, the command, and its log path.
+ * @returns the live run record, or the reason no supervisor claimed the room.
+ */
+export const startRoomRun = async (input: {
+  readonly root: string
+  readonly id: string
+  readonly worktree: string
+  readonly exec: string
+  readonly log: string
+}): Promise<StartOutcome> => {
+  await removeRun(input)
+  const child = spawn(
+    process.execPath,
+    [
+      "--conditions=development",
+      supervisorPath(),
+      "--root",
+      input.root,
+      "--id",
+      input.id,
+      "--cwd",
+      input.worktree,
+      "--exec",
+      input.exec,
+      "--log",
+      input.log,
+    ],
+    { detached: true, stdio: "ignore" },
+  )
+  child.unref()
+  for (let attempt = 0; attempt < 60; attempt++) {
+    const run = await readRun(input)
+    if (run !== undefined && alive(run.pid)) return { ok: true, run }
+    await new Promise((resolve) => setTimeout(resolve, 50))
+  }
+  return { ok: false, reason: "supervisor did not start; see " + runFile(input) }
 }
 
 export type SignalOutcome = "signalled" | "no-process"

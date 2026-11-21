@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process"
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -91,6 +91,42 @@ test("board up serves presence and queue until down", async () => {
     expect(down.status).toBe(0)
     expect(down.stdout).toContain("stopped")
     expect(run(["status", "--root", "rooms"], root).stdout).toContain("shop: no lock")
+  } finally {
+    run(["down", "--root", "rooms"], root)
+    rmSync(root, { recursive: true, force: true })
+  }
+}, 30_000)
+
+test("restarts a room supervisor that died", async () => {
+  const root = mkdtempSync(join(tmpdir(), "board-watch-"))
+  const rooms = join(root, "rooms")
+  try {
+    mkdirSync(join(rooms, "r1", "worktree"), { recursive: true })
+    writeFileSync(
+      join(rooms, "r1", "room.json"),
+      JSON.stringify({
+        id: "r1",
+        base: "main",
+        state: { _tag: "Ready", repo: "/r", scope: "dev", createdAt: 1 },
+      }),
+    )
+    writeFileSync(
+      join(rooms, "r1", "run.json"),
+      JSON.stringify({ pid: 99999999, exec: "sleep 30", startedAt: 1, log: "room.log" }),
+    )
+    const port = 20_000 + Math.floor(Math.random() * 20_000)
+    expect(run(["up", "--root", "rooms", "--port", String(port), "--detach"], root).status).toBe(0)
+    let pid = 99999999
+    const record = join(rooms, "r1", "run.json")
+    for (let attempt = 0; attempt < 60; attempt++) {
+      if (existsSync(record)) pid = JSON.parse(readFileSync(record, "utf8")).pid
+      if (pid !== 99999999) break
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
+    expect(pid).not.toBe(99999999)
+    expect(() => process.kill(pid, 0)).not.toThrow()
+    expect(run(["down", "--root", "rooms"], root).status).toBe(0)
+    process.kill(-pid, "SIGTERM")
   } finally {
     run(["down", "--root", "rooms"], root)
     rmSync(root, { recursive: true, force: true })

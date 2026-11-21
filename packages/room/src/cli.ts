@@ -1,9 +1,6 @@
 import { Effect } from "effect"
-import { spawn } from "node:child_process"
-import { existsSync } from "node:fs"
-import { dirname, join } from "node:path"
+import { join } from "node:path"
 import { parseArgs } from "node:util"
-import { fileURLToPath } from "node:url"
 import { Worktree, WorktreeLive } from "./Worktree.ts"
 import {
   createRoom,
@@ -14,7 +11,7 @@ import {
   roomDir,
   RoomDecodeError,
 } from "./store.ts"
-import { alive, readRun, removeRun, runFile, signalRun } from "./run.ts"
+import { alive, readRun, removeRun, signalRun, startRoomRun } from "./run.ts"
 
 const usage = [
   "room — one durable place per scope",
@@ -49,13 +46,6 @@ const options = {
   exec: { type: "string" },
   help: { type: "boolean", short: "h", default: false },
 } as const
-
-const supervisor = (): string => {
-  const here = dirname(fileURLToPath(import.meta.url))
-  return existsSync(join(here, "supervise.js"))
-    ? join(here, "supervise.js")
-    : join(here, "supervise.ts")
-}
 
 const slug = (value: string): string =>
   value
@@ -166,38 +156,18 @@ const main = async (): Promise<void> => {
     const running = await readRun({ root, id })
     if (running !== undefined && alive(running.pid))
       return fail("room " + id + " already has supervisor " + running.pid, EXIT.declined)
-    await removeRun({ root, id })
-    const log = join(roomDir({ root, id }), "room.log")
-    const child = spawn(
-      process.execPath,
-      [
-        "--conditions=development",
-        supervisor(),
-        "--root",
-        root,
-        "--id",
-        id,
-        "--cwd",
-        worktree,
-        "--exec",
-        values.exec,
-        "--log",
-        log,
-      ],
-      { detached: true, stdio: "ignore" },
+    const started = await startRoomRun({
+      root,
+      id,
+      worktree,
+      exec: values.exec,
+      log: join(roomDir({ root, id }), "room.log"),
+    })
+    if (!started.ok) return fail(started.reason, EXIT.infrastructure)
+    console.log(
+      "room " + id + " up; supervisor " + started.run.pid + " runs " + JSON.stringify(values.exec),
     )
-    child.unref()
-    for (let attempt = 0; attempt < 60; attempt++) {
-      const run = await readRun({ root, id })
-      if (run !== undefined && alive(run.pid)) {
-        console.log(
-          "room " + id + " up; supervisor " + run.pid + " runs " + JSON.stringify(values.exec),
-        )
-        return
-      }
-      await new Promise((resolve) => setTimeout(resolve, 50))
-    }
-    return fail("supervisor did not start; see " + runFile({ root, id }), EXIT.infrastructure)
+    return
   }
 
   if (command === "down") {

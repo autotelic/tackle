@@ -4,6 +4,7 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { parseArgs } from "node:util"
 import { listRooms } from "@autotelic/room/store"
+import { readRun, startRoomRun } from "@autotelic/room/run"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 
@@ -232,7 +233,31 @@ const serve = async ({
   )
   console.log("board: press Ctrl-C, or run `board down --root " + root + "`")
 
+  /** Restart a room supervisor that died while its room is not paused. */
+  const watch = async (): Promise<void> => {
+    for (const room of await listRooms(root)) {
+      if (room.state._tag === "Paused") continue
+      const run = await readRun({ root, id: room.id })
+      if (run === undefined || alive(run.pid)) continue
+      const started = await startRoomRun({
+        root,
+        id: room.id,
+        worktree: join(root, room.id, "worktree"),
+        exec: run.exec,
+        log: run.log,
+      })
+      if (started.ok)
+        console.log("board: restarted room " + room.id + " as supervisor " + started.run.pid)
+      else console.error("board: could not restart " + room.id + " — " + started.reason)
+    }
+  }
+  const timer = setInterval(() => {
+    void watch()
+  }, 5_000)
+  void watch()
+
   const shutdown = (): void => {
+    clearInterval(timer)
     server.close(() => {
       void rm(lockPath(root), { force: true }).finally(() => process.exit(EXIT.clean))
     })
