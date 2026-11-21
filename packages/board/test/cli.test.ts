@@ -15,13 +15,11 @@ test("presence is readable without a shop", () => {
     const output = run(["presence", "--json", "--root", "rooms"], root)
     expect(output.status).toBe(0)
     const presence = JSON.parse(output.stdout)
-    expect(presence).toMatchObject({
-      shop: "rooms",
-      rooms: [],
-      sessions: { rex: { available: false, sessions: [] } },
-    })
+    expect(presence).toMatchObject({ shop: "rooms", rooms: [] })
+    expect(Array.isArray(presence.sessions.herdr.sessions)).toBe(true)
+    expect(Array.isArray(presence.sessions.rex.sessions)).toBe(true)
     expect(presence.sessions.herdr).toHaveProperty("available")
-    expect(presence.sessions.herdr).toHaveProperty("sessions")
+    expect(presence.sessions.rex).toHaveProperty("available")
   } finally {
     rmSync(root, { recursive: true, force: true })
   }

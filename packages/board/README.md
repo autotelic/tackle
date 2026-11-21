@@ -23,13 +23,19 @@ process is gone) and serves:
 `SIGTERM`, waits, then removes the lock.
 
 `presence` is the same document one-shot, without running the shop. It includes
-local Herdr terminals via `hc ls --json` when the binary is available, and
-reports Rex as unavailable until a Rex binary exists. A missing source is
-`available: false`, never "nothing is running".
+local Herdr terminals via `hc ls --json`, and Rex sessions/blocks via the
+server binary bundled with the Rex app (`REX_BIN`, then PATH, then the app
+support path). A missing source is `available: false`, never "nothing is
+running".
 
-A session joins a room only when its cwd resolves inside that room's worktree;
-the longest worktree wins and `joinedBy: "cwd"` marks it as provisional. The
-one-shot command keeps `cwd` as evidence; the served `/presence` drops it.
+A session joins a room only by the explicit Herdr label `room=<id>`, set with
+`hc label <terminal> room=<id>`; `joinedBy: "label"` records the join. The
+terminal's `cwd` is the shell's directory, not the agent's, so it is never used
+as a room identity. The one-shot command keeps `cwd` and labels as evidence; the
+served `/presence` drops both and keeps `roomId`/`joinedBy`.
+
+Rex blocks carry a session label, block id, creator, flavor, host and placement;
+they have no cwd, so they never join by path either.
 
 `status` prints the rooms and the lock state: no lock, held by pid, stale, or
 unreadable. It never claims a lock it does not hold.

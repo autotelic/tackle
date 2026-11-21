@@ -7,7 +7,6 @@ import { parseArgs } from "node:util"
 import { listRooms } from "@autotelic/room/store"
 import { readRun, startRoomRun } from "@autotelic/room/run"
 import { discoverSessions, type Session } from "./sessions.ts"
-import { joinSessions } from "./join.ts"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 
@@ -153,15 +152,10 @@ const json = ({
 
 const observe = async (root: string) => {
   const rooms = await listRooms(root)
-  const discovered = await discoverSessions()
-  const herdr = await joinSessions({
-    sessions: discovered.herdr.sessions,
-    rooms: rooms.map((room) => ({ id: room.id, worktree: join(root, room.id, "worktree") })),
-  })
   return {
     shop: root,
     observedAt: new Date().toISOString(),
-    sessions: { ...discovered, herdr: { ...discovered.herdr, sessions: herdr } },
+    sessions: await discoverSessions(),
     rooms: await Promise.all(
       rooms.map(async (room) => {
         const run = await readRun({ root, id: room.id })
@@ -177,8 +171,8 @@ const observe = async (root: string) => {
 }
 
 /** The served document keeps the join result and drops the path evidence. */
-const redact = (session: Session): Omit<Session, "cwd"> => {
-  const { cwd: _cwd, ...rest } = session
+const redact = (session: Session): Omit<Session, "cwd" | "labels"> => {
+  const { cwd: _cwd, labels: _labels, ...rest } = session
   return rest
 }
 
