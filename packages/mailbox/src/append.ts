@@ -39,10 +39,10 @@ export const appendTurn = (
   }
   // A TID must sort after its predecessor; if the clock has not moved, step the microsecond.
   let at = input.at
-  let tid = tidAt(at, seq & 0x3ff)
+  let tid = tidAt({ timestampMs: at, clockId: seq & 0x3ff })
   while (previous !== undefined && tid <= previous.tid) {
     at += 1
-    tid = tidAt(at, seq & 0x3ff)
+    tid = tidAt({ timestampMs: at, clockId: seq & 0x3ff })
   }
   const turn: Turn = { seq, tid, sender, replyTo, path, body: input.body }
   return {

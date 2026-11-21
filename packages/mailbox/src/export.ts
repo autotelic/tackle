@@ -25,7 +25,7 @@ export const exportDirectory = async (
     const seq = Number(name.slice(0, 4))
     const sender = senderOf(body)
     if (sender === undefined) throw new LogError(`${name}: no "— SENDER —" heading`)
-    const tid = tidAt(stats.mtimeMs, seq & 0x3ff)
+    const tid = tidAt({ timestampMs: stats.mtimeMs, clockId: seq & 0x3ff })
     turns.push({ seq, tid, sender, replyTo: previous, path: name, body })
     previous = tid
   }

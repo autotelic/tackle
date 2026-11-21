@@ -1,10 +1,7 @@
+import { Predicate, Result, Schema } from "effect"
 import { isTid } from "./tid.ts"
 
-/**
- * A turn is the wire record: the body the sender wrote, addressed by its own TID and linked to
- * the turn it answers. `path` is frozen too, because the markdown projection needs a stable
- * filename and deriving one from the heading would make the renderer depend on prose.
- */
+/** A turn is the wire record: the body the sender wrote, addressed by its own TID and linked to the turn it answers. */
 export interface Turn {
   readonly seq: number
   readonly tid: string
@@ -14,16 +11,13 @@ export interface Turn {
   readonly body: string
 }
 
-/**
- * A backfill header is how history that predates the wire enters the log honestly. Senders are
- * labels because no participant held a key yet; timestamps are file mtimes, not send times.
- */
+/** History from before the wire: senders are labels, not DIDs; timestamps are file mtimes. */
 export interface Backfill {
   readonly kind: "backfill"
   readonly at: string
   readonly from: readonly string[]
   readonly timestampSource: "mtime" | "declared"
-  readonly note?: string
+  readonly note?: string | undefined
 }
 
 export interface TurnLog {
@@ -33,91 +27,59 @@ export interface TurnLog {
 
 export class LogError extends Error {}
 
-export const isTurnPath = (path: string): boolean =>
+const BackfillLine = Schema.Struct({
+  kind: Schema.Literal("backfill"),
+  at: Schema.String,
+  from: Schema.Array(Schema.String),
+  timestampSource: Schema.Union([Schema.Literal("mtime"), Schema.Literal("declared")]),
+  note: Schema.optional(Schema.String),
+})
+
+const TurnLine = Schema.Struct({
+  seq: Schema.Int,
+  tid: Schema.String,
+  sender: Schema.String,
+  replyTo: Schema.NullOr(Schema.String),
+  path: Schema.String,
+  body: Schema.String,
+})
+
+const Line = Schema.Union([BackfillLine, TurnLine])
+const decodeLine = Schema.decodeUnknownResult(Schema.fromJsonString(Line))
+
+/** One turn file name: four digits, a slug, and `.md`. */
+export const isTurnPath: Predicate.Predicate<string> = (path) =>
   /^\d{4}-[a-z0-9]+(?:-[a-z0-9]+)*\.md$/.test(path)
 
-const record = (value: unknown, where: string): Record<string, unknown> => {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new LogError(`${where}: not an object`)
-  }
-  return value as Record<string, unknown>
-}
-
-const text = (value: unknown, where: string): string => {
-  if (typeof value !== "string" || value === "")
-    throw new LogError(`${where}: expected a non-empty string`)
-  return value
-}
-
-const decodeBackfill = (value: Record<string, unknown>, where: string): Backfill => {
-  const from = value.from
-  if (!Array.isArray(from) || from.some((entry) => typeof entry !== "string")) {
-    throw new LogError(`${where}: backfill.from must be string[]`)
-  }
-  const source = value.timestampSource
-  if (source !== "mtime" && source !== "declared") {
-    throw new LogError(`${where}: backfill.timestampSource must be "mtime" or "declared"`)
-  }
-  return {
-    kind: "backfill",
-    at: text(value.at, `${where}.at`),
-    from,
-    timestampSource: source,
-    ...(typeof value.note === "string" ? { note: value.note } : {}),
-  }
-}
-
-const decodeTurn = (value: Record<string, unknown>, where: string): Turn => {
-  const seq = value.seq
-  if (typeof seq !== "number" || !Number.isInteger(seq) || seq < 1) {
-    throw new LogError(`${where}: seq must be a positive integer`)
-  }
-  const tid = text(value.tid, `${where}.tid`)
-  if (!isTid(tid)) throw new LogError(`${where}: tid is not a TID`)
-  const replyTo = value.replyTo
-  if (replyTo !== null && (typeof replyTo !== "string" || !isTid(replyTo))) {
-    throw new LogError(`${where}: replyTo must be a TID or null`)
-  }
-  const path = text(value.path, `${where}.path`)
-  if (!isTurnPath(path)) throw new LogError(`${where}: path is not a turn file`)
-  return {
-    seq,
-    tid,
-    sender: text(value.sender, `${where}.sender`),
-    replyTo,
-    path,
-    body: text(value.body, `${where}.body`),
-  }
-}
-
 /**
- * Read defensively means "name the broken line", not "skip it". A turn dropped in silence is a
- * turn the projection will happily render as if it never existed.
+ * Read defensively means name the broken line, never skip it: a turn dropped in silence is a turn
+ * the projection renders as if it never existed. The line is decoded through the schema, so a
+ * malformed shape is a named error, not a cast.
  */
 export const parseLog = (text: string): TurnLog => {
   const lines = text.split("\n").filter((line) => line.trim() !== "")
   let backfill: Backfill | undefined
   const turns: Turn[] = []
   const tids = new Set<string>()
-  // One turn per file. Two turns at one path parse fine and then one of them is silently
-  // unrenderable — a lost turn that verify reports as a healthy count. Refuse it at the seam.
   const paths = new Set<string>()
   for (const [index, line] of lines.entries()) {
     const where = `line ${index + 1}`
-    let parsed: unknown
-    try {
-      parsed = JSON.parse(line)
-    } catch {
-      throw new LogError(`${where}: not JSON`)
-    }
-    const value = record(parsed, where)
-    if (value.kind === "backfill") {
+    const decoded = decodeLine(line)
+    if (Result.isFailure(decoded)) throw new LogError(`${where}: ${String(decoded.failure)}`)
+    const value = decoded.success
+    if ("kind" in value) {
       if (backfill !== undefined || turns.length > 0)
         throw new LogError(`${where}: backfill must be the first line`)
-      backfill = decodeBackfill(value, where)
+      backfill = value
       continue
     }
-    const turn = decodeTurn(value, where)
+    const turn = value
+    if (turn.seq < 1) throw new LogError(`${where}: seq must be positive`)
+    if (!isTid(turn.tid)) throw new LogError(`${where}: tid is not a TID`)
+    if (turn.replyTo !== null && !isTid(turn.replyTo))
+      throw new LogError(`${where}: replyTo must be a TID or null`)
+    if (!isTurnPath(turn.path)) throw new LogError(`${where}: path is not a turn file`)
+    if (turn.body === "" || turn.sender === "") throw new LogError(`${where}: empty field`)
     const previous = turns.at(-1)
     if (previous === undefined && turn.seq !== 1)
       throw new LogError(`${where}: the log must start at seq 1`)

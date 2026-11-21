@@ -12,26 +12,27 @@ prevent.
 - **False positive narrowed.** `plumb/no-sql-string-interpolation` read the turn-file error message
   in `log.ts` as a query. The rule is off for that one file, with the reason in `oxlint.config.ts`.
 
-## Carried (38 findings)
+## Carried (41 findings)
 
-| rule                                                         | severity | count | files                             |
-| ------------------------------------------------------------ | -------- | ----- | --------------------------------- |
-| `no-runtime-typeof`                                          | error    | 6     | log.ts                            |
-| `no-conditional-empty-object-spread`                         | warn     | 4     | append.ts, cli.ts, log.ts         |
-| `no-unsafe-dictionary-type`                                  | error    | 4     | log.ts                            |
-| `require-jsdoc-on-exported`                                  | error    | 4     | log.ts, render.ts, tid.ts         |
-| `plumb-effect/no-try-catch`                                  | error    | 3     | cli.ts, log.ts                    |
-| `require-sort-comparator`                                    | error    | 3     | cli.ts, export.ts, render.test.ts |
-| `no-reinterpret-cast`                                        | error    | 2     | cli.ts, log.ts                    |
-| `no-unknown-parameters`                                      | error    | 2     | log.ts                            |
-| `plumb-effect/prefer-effect-predicate-over-boolean-function` | error    | 2     | log.ts, tid.ts                    |
-| `require-safety-comment-for-type-assertion`                  | error    | 2     | cli.ts, log.ts                    |
-| `eslint/no-unused-vars`                                      | warn     | 1     | render.test.ts                    |
-| `no-known-value-widening`                                    | error    | 1     | append.ts                         |
-| `no-multiple-function-params`                                | error    | 1     | tid.ts                            |
-| `no-swappable-primitive-params`                              | error    | 1     | tid.ts                            |
-| `plumb-effect/guarded-op-must-return-option`                 | error    | 1     | log.ts                            |
-| `prefer-property-tests`                                      | warn     | 1     | render.test.ts                    |
+| rule                                               | severity | count | files                                                         |
+| -------------------------------------------------- | -------- | ----- | ------------------------------------------------------------- |
+| `require-jsdoc-on-exported`                        | error    | 9     | packages/mailbox-domain/src/procedures.ts, render.ts          |
+| `no-reinterpret-cast`                              | error    | 4     | packages/mailbox-server/test/fixtures.test.ts, cli.ts         |
+| `require-safety-comment-for-type-assertion`        | error    | 4     | packages/mailbox-server/test/fixtures.test.ts, cli.ts         |
+| `no-conditional-empty-object-spread`               | warn     | 3     | append.ts, cli.ts                                             |
+| `plumb-effect/guarded-op-must-return-option`       | error    | 3     | packages/mailbox-domain/src/procedures.ts, log.ts             |
+| `require-sort-comparator`                          | error    | 3     | cli.ts, export.ts, render.test.ts                             |
+| `no-unsafe-dictionary-type`                        | error    | 2     | packages/mailbox-domain/src/procedures.ts                     |
+| `plumb-effect/no-try-catch`                        | error    | 2     | cli.ts                                                        |
+| `prefer-property-tests`                            | warn     | 2     | packages/mailbox-server/test/fixtures.test.ts, render.test.ts |
+| `require-canonical-stringify-for-identity`         | error    | 2     | packages/mailbox-domain/src/procedures.ts                     |
+| `eslint/no-unused-vars`                            | warn     | 1     | render.test.ts                                                |
+| `no-known-value-widening`                          | error    | 1     | append.ts                                                     |
+| `no-multiple-function-params`                      | error    | 1     | packages/mailbox-domain/src/procedures.ts                     |
+| `no-swappable-primitive-params`                    | error    | 1     | packages/mailbox-domain/src/procedures.ts                     |
+| `plumb-effect/no-manual-field-guards`              | warn     | 1     | log.ts                                                        |
+| `plumb-effect/no-nullish-default-on-partial-input` | error    | 1     | packages/mailbox-domain/src/procedures.ts                     |
+| `plumb-effect/prefer-tagged-enum`                  | error    | 1     | packages/mailbox-domain/src/procedures.ts                     |
 
 ## Why these are not fixed here
 
