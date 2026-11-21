@@ -28,12 +28,20 @@ export interface Receipt {
 
 export type DeliveryState = "accepted" | "delivered" | "acked"
 
+/** The harness that holds a lease; known adapters add their ids. */
+export interface Harness {
+  readonly $type: string
+  readonly sessionId?: string
+  readonly paneId?: string
+  readonly executionId?: string
+}
+
 export interface Lease {
   readonly did: string
   readonly leaseId: string
   readonly generation: number
   readonly expiresAt: string
-  readonly harness: Record<string, unknown>
+  readonly harness: Harness
 }
 
 export interface NameRecord {
@@ -55,6 +63,7 @@ export interface MailboxState {
   seq: number
 }
 
+/** A fresh mailbox with no messages, leases or names. */
 export const empty = (): MailboxState => ({
   messages: new Map(),
   leases: new Map(),
@@ -62,6 +71,7 @@ export const empty = (): MailboxState => ({
   seq: 0,
 })
 
+/** The admission key: one sender DID plus one TID. */
 export const keyOf = (ref: MessageRef): string => ref.senderDid + "\u0000" + ref.messageId
 
 export type Failure =
@@ -76,6 +86,20 @@ export type Failure =
 export type Result<A> =
   | { readonly ok: true; readonly value: A }
   | { readonly ok: false; readonly error: Failure }
+
+const stable = (value: unknown): string => {
+  if (Array.isArray(value)) return "[" + value.map(stable).join(",") + "]"
+  if (value !== null && typeof value === "object")
+    return (
+      "{" +
+      Object.keys(value as Record<string, unknown>)
+        .sort()
+        .map((k) => JSON.stringify(k) + ":" + stable((value as Record<string, unknown>)[k]))
+        .join(",") +
+      "}"
+    )
+  return JSON.stringify(value)
+}
 
 const ok = <A>(value: A): Result<A> => ({ ok: true, value })
 const fail = <A>(error: Failure): Result<A> => ({ ok: false, error })
@@ -118,6 +142,7 @@ export interface SendInput {
   readonly resolvedFrom?: string
 }
 
+/** Admit a send, idempotently on the sender DID plus TID. */
 export const send = (
   state: MailboxState,
   input: SendInput,
@@ -144,8 +169,7 @@ export const send = (
   const key = keyOf({ senderDid: aad.senderDid, messageId: aad.messageId })
   const existing = state.messages.get(key)
   if (existing !== undefined) {
-    if (JSON.stringify(existing.envelope) !== JSON.stringify(input.envelope))
-      return fail({ _tag: "Conflict" })
+    if (stable(existing.envelope) !== stable(input.envelope)) return fail({ _tag: "Conflict" })
     return ok(existing.receipt)
   }
 
@@ -156,7 +180,7 @@ export const send = (
     state: "accepted",
     seq: state.seq,
     recordedAt: new Date(now).toISOString(),
-    woke: input.woke ?? false,
+    woke: input.woke === undefined ? false : input.woke,
   }
   state.messages.set(key, { envelope: input.envelope, receipt, state: "accepted" })
   return ok(receipt)
@@ -169,6 +193,7 @@ export interface DeliverInput {
   readonly generation: number
 }
 
+/** Move an accepted message to delivered under the recipient's fence. */
 export const deliver = (state: MailboxState, input: DeliverInput, now: number): Result<Receipt> => {
   const fenceError = fence(state, input.recipientDid, input.leaseId, input.generation, now)
   if (fenceError !== undefined) return fail(fenceError)
@@ -191,6 +216,7 @@ export interface AckInput {
   readonly generation: number
 }
 
+/** Move a delivered message to acked; an ack before deliver is InvalidTransition. */
 export const ack = (state: MailboxState, input: AckInput, now: number): Result<Receipt> => {
   const fenceError = fence(state, input.recipientDid, input.leaseId, input.generation, now)
   if (fenceError !== undefined) return fail(fenceError)
@@ -208,7 +234,7 @@ export const ack = (state: MailboxState, input: AckInput, now: number): Result<R
 
 export interface AcquireInput {
   readonly did: string
-  readonly harness: Record<string, unknown>
+  readonly harness: Harness
   readonly expiresAt: string
   readonly leaseId?: string
   readonly generation?: number
@@ -216,6 +242,7 @@ export interface AcquireInput {
 
 const FIVE_MINUTES = 5 * 60 * 1000
 
+/** Acquire or hand over the per-DID lease; expiresAt is clamped to five minutes. */
 export const acquire = (state: MailboxState, input: AcquireInput, now: number): Result<Lease> => {
   const current = state.leases.get(input.did)
   if (live(current, now)) {
@@ -237,6 +264,7 @@ export const acquire = (state: MailboxState, input: AcquireInput, now: number): 
   return ok(lease)
 }
 
+/** Release a lease only with its current fence. */
 export const release = (
   state: MailboxState,
   input: { did: string; leaseId: string; generation: number },
@@ -248,6 +276,7 @@ export const release = (
   return ok(undefined)
 }
 
+/** One page of a recipient's log after a sequence number. */
 export const list = (state: MailboxState, input: { recipientDid: string; afterSeq: number }) => {
   const events = [...state.messages.values()]
     .filter((m) => m.receipt.recipientDid === input.recipientDid && m.receipt.seq > input.afterSeq)

@@ -34,7 +34,7 @@ const report = <A>(effect: Effect.Effect<A, MailboxError>): Effect.Effect<void> 
 
 const readFiles = async (dir: string): Promise<ReadonlyMap<string, string>> => {
   const files = new Map<string, string>()
-  for (const name of (await readdir(dir)).sort()) {
+  for (const name of (await readdir(dir)).sort((a, b) => a.localeCompare(b))) {
     if (!name.endsWith(".md")) continue
     files.set(name, await readFile(join(dir, name), "utf8"))
   }
@@ -58,6 +58,7 @@ const exportCommand = Command.make(
       // Re-exporting an existing log must not move its backfill timestamp: the header records
       // when the history was first admitted, not when it was last re-read.
       const previous = yield* attempt(async () => {
+        // SAFETY: reading a possibly-absent log is an integration boundary; absence is the expected case.
         try {
           return parseLog(await readFile(options.out, "utf8")).backfill
         } catch {
@@ -119,6 +120,7 @@ const writeCommand = Command.make(
     Effect.gen(function* () {
       const body = yield* attempt(() => readFile(options.body, "utf8"))
       const current = yield* attempt(async () => {
+        // SAFETY: the log may not exist yet; ENOENT is the expected first-write case.
         try {
           return parseLog(await readFile(options.log, "utf8"))
         } catch (cause) {
@@ -126,13 +128,11 @@ const writeCommand = Command.make(
           throw cause
         }
       })
-      const { log, turn } = appendTurn(current, {
-        at: Date.now(),
-        path: options.turn,
-        body,
-        ...(options.sender === "" ? {} : { sender: options.sender }),
-        ...(options.reply === "" ? {} : { replyTo: options.reply }),
-      })
+      const base = { at: Date.now(), path: options.turn, body }
+      const withSender = options.sender === "" ? base : { ...base, sender: options.sender }
+      const withReply =
+        options.reply === "" ? withSender : { ...withSender, replyTo: options.reply }
+      const { log, turn } = appendTurn(current, withReply)
       yield* attempt(() => writeFile(options.log, serializeLog(log), "utf8"))
       // A bare filename belongs beside the log, not in whatever directory the caller stood in.
       // Writing to the cwd and then verifying the thread directory is the failure that proves it.

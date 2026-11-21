@@ -15,10 +15,7 @@ export interface AppendInput {
  * The pre-wire `send`: assign the next dense seq and a TID, check the reply edge, and hand back
  * the new log. The file is rendered from the same body, so authoring and the gate cannot disagree.
  */
-export const appendTurn = (
-  log: TurnLog,
-  input: AppendInput,
-): { readonly log: TurnLog; readonly turn: Turn } => {
+export const appendTurn = (log: TurnLog, input: AppendInput) => {
   const path = basename(input.path)
   if (!isTurnPath(path)) throw new LogError(`${path}: not a turn filename`)
   if (log.turns.some((turn) => turn.path === path)) {
@@ -45,11 +42,9 @@ export const appendTurn = (
     tid = tidAt({ timestampMs: at, clockId: seq & 0x3ff })
   }
   const turn: Turn = { seq, tid, sender, replyTo, path, body: input.body }
-  return {
-    log: {
-      ...(log.backfill === undefined ? {} : { backfill: log.backfill }),
-      turns: [...log.turns, turn],
-    },
-    turn,
-  }
+  const next =
+    log.backfill === undefined
+      ? { turns: [...log.turns, turn] }
+      : { backfill: log.backfill, turns: [...log.turns, turn] }
+  return { log: next, turn }
 }

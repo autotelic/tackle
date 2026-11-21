@@ -12,7 +12,7 @@ const thread = fileURLToPath(new URL("../../../docs/threads/at-seam", import.met
 
 const filesIn = async (dir: string): Promise<ReadonlyMap<string, string>> => {
   const files = new Map<string, string>()
-  for (const name of (await readdir(dir)).sort()) {
+  for (const name of (await readdir(dir)).sort((a, b) => a.localeCompare(b))) {
     if (name.endsWith(".md")) files.set(name, await readFile(join(dir, name), "utf8"))
   }
   return files
