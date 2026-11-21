@@ -6,7 +6,13 @@ The mailbox procedures as a process: an HTTP endpoint with a durable JSON snapsh
 
 ```sh
 mailbox-server serve --port 4781 --state .mailbox/state.json
+
+mailbox-server list --url http://127.0.0.1:4781 --recipient did:plc:bbb…
+mailbox-server send --url http://127.0.0.1:4781 \
+  --actor did:plc:aaa… --envelope envelope.json
 ```
+
+`send` accepts either the envelope object or the fixture shape `{ "envelope": … }`.
 
 ## Routes
 

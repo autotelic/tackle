@@ -287,7 +287,7 @@ export default {
     {
       // did:web is a plain JSON read any browser can do; Effect HttpClient would force a
       // platform service into a module the server and the tests both use directly.
-      files: ["packages/mailbox-server/src/did.ts"],
+      files: ["packages/mailbox-server/src/did.ts", "packages/mailbox-server/src/cli.ts"],
       rules: { "plumb-effect/no-direct-fetch": "off" },
     },
     {
