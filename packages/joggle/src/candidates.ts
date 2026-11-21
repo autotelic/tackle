@@ -2,6 +2,7 @@ import { Effect, Option, Order, Predicate, Schema } from "effect"
 import { Decision, DecisionModel } from "effect/ai"
 import { clusterOf, components, type Cluster } from "./cluster.ts"
 import { inScope, type Scope } from "./rule.ts"
+import type { JoggleDecision } from "./plans.ts"
 import { allPairs } from "./similarity.ts"
 import { unitFields, type Unit, type UnitKind } from "./workspace.ts"
 
@@ -635,7 +636,7 @@ export const rankSpeculative = <T>(input: {
   const rest = ordered.slice(window.length)
 
   const decide = Effect.gen(function* () {
-    const decisions: Record<string, Decision.Any> = {}
+    const decisions: Record<string, JoggleDecision> = {}
     window.forEach((_entry, index) => {
       decisions["keep_" + String(index)] = Decision.probability({
         instructions: RANK_INSTRUCTIONS,
@@ -645,10 +646,7 @@ export const rankSpeculative = <T>(input: {
         },
       })
     })
-    const definition = Decision.make({
-      input: RankInput,
-      decisions,
-    })
+    const definition = Decision.make({ input: RankInput, decisions })
     const decided = yield* DecisionModel.decide(definition, {
       input: { candidates: window.map((entry) => entry.evidence) },
     })

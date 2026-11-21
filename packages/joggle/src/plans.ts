@@ -7,6 +7,21 @@ import { policy } from "./policy.ts"
 import { shortHash } from "./state.ts"
 import type { Consistency, DecisionAnswers } from "./rule.ts"
 
+/** Joggle declares classify, rate and probability decisions; Effect 4.1 also added Locate. */
+export type JoggleDecision =
+  | Decision.Classify<string>
+  | Decision.Rate<string>
+  | Decision.Probability
+
+/** Narrow a decision to the kinds joggle declares. */
+export const isJoggleDecision = (decision: Decision.Any): decision is JoggleDecision =>
+  decision._tag !== "Locate"
+
+/** Narrow an answer to the kinds joggle can store. */
+export const isJoggleAnswer = (
+  answer: Decision.Answer<Decision.Any>,
+): answer is Decision.Answer<JoggleDecision> => !("box" in answer)
+
 /* -------------------------------------------------------------------------- */
 /* Vocabulary                                                                  */
 /* -------------------------------------------------------------------------- */
@@ -146,7 +161,7 @@ export const reduceRepeats = (
 }
 
 /** The stored form of an answer, for the cache file. */
-export const storedOf = (answer: Decision.Answer<Decision.Any>): StoredAnswer => {
+export const storedOf = (answer: Decision.Answer<JoggleDecision>): StoredAnswer => {
   if ("probability" in answer) {
     const consistency = consistencyOf(answer)
     return consistency === undefined
@@ -239,7 +254,7 @@ const asProviderAnswer = (
 const revalidate = (
   decision: Decision.Any,
   answer: Decision.Answer<Decision.Any>,
-): Effect.Effect<Option.Option<Decision.Answer<Decision.Any>>> =>
+): Effect.Effect<Option.Option<Decision.Answer<JoggleDecision>>> =>
   Effect.gen(function* () {
     const provider = asProviderAnswer(decision, answer)
     if (Option.isNone(provider)) return Option.none()
@@ -248,9 +263,14 @@ const revalidate = (
         Effect.succeed({
           answers: { q: provider.value },
           usage: { inputTokens: undefined, outputTokens: undefined },
+          metadata: {},
         }),
     })
-    const definition = Decision.make({ input: Schema.Json, decisions: { q: decision } })
+    if (!isJoggleDecision(decision)) return Option.none()
+    const definition = Decision.make({
+      input: Schema.Json,
+      decisions: { q: decision },
+    })
     const decided = yield* model.decide(definition, { input: null }).pipe(Effect.orElseSucceed(() => undefined))
     if (decided === undefined) return Option.none()
     const validated = decided.answers["q"]
@@ -276,13 +296,15 @@ export const memoize = (
 ): DecisionModel.DecisionModel =>
   DecisionModel.DecisionModel.of({
     [DecisionModel.TypeId]: DecisionModel.TypeId,
+    decideSettled: inner.decideSettled,
     decide: (definition, options) =>
       Effect.gen(function* () {
         const entries = Object.entries(definition.decisions)
-        const answers: Record<string, Decision.Answer<Decision.Any>> = {}
-        const missing: Record<string, Decision.Any> = {}
+        const answers: Record<string, Decision.Answer<JoggleDecision>> = {}
+        const missing: Record<string, JoggleDecision> = {}
         const keys = new Map<string, string>()
         for (const [name, decision] of entries) {
+          if (!isJoggleDecision(decision)) continue
           const key = answerKeyFor(decision, options.input)
           keys.set(name, key)
           const stored = yield* cache.get(key)
@@ -302,7 +324,7 @@ export const memoize = (
           // answers its own questions directly (`DecisionModel.decide`) passes
           // through here, so the reduction cannot live only in the plan engine.
           const repeats = policy.decision.consistency.repeats
-          const requested: Record<string, Decision.Any> = {}
+          const requested: Record<string, JoggleDecision> = {}
           const asked = new Map<string, ReadonlyArray<string>>()
           for (const [name, decision] of Object.entries(missing)) {
             const names =
@@ -321,7 +343,7 @@ export const memoize = (
             const names = asked.get(name) ?? [name]
             const gathered = names
               .map((one) => response.answers[one])
-              .filter((answer): answer is Decision.Answer<Decision.Any> => answer !== undefined)
+              .filter((answer) => answer !== undefined)
             const first = gathered[0]
             if (first === undefined) continue
             let answer: Decision.Answer<Decision.Any> = first
@@ -345,7 +367,7 @@ export const memoize = (
         // validated the missing ones and the cache validated the rest -- and the
         // record was built in the definition's own order.
         const complete = ordered as Decision.Answers<typeof definition.decisions>
-        return { answers: complete, usage }
+        return { answers: complete, usage, metadata: {} }
       }),
   })
 
@@ -487,7 +509,7 @@ export const answerPlansRaw = (
     if (pending.length > 0) {
       const ids = [...new Set(pending.flatMap((entry) => distinct.get(entry.key)?.atoms ?? []))]
       const state = yield* atoms.values(ids)
-      const decisions: Record<string, Decision.Any> = {}
+      const decisions: Record<string, JoggleDecision> = {}
       const names = new Map<string, ReadonlyArray<string>>()
       // A Noul is asked `repeats` times, in the SAME request: one yes/no carries
       // no margin, so the agreement across asks is the second signal a Choice
@@ -496,6 +518,7 @@ export const answerPlansRaw = (
       for (const entry of pending) {
         const found = distinct.get(entry.key)
         if (found === undefined) continue
+        if (!isJoggleDecision(found.decision)) continue
         const requestNames =
           found.decision._tag === "Probability"
             ? Array.from({ length: repeats }, (_, index) => found.requestName + "~" + String(index))
@@ -511,7 +534,7 @@ export const answerPlansRaw = (
         const decision = distinct.get(entry.key)?.decision
         const gathered = requestNames
           .map((name) => decided.answers[name])
-          .filter((answer): answer is Decision.Answer<Decision.Any> => answer !== undefined)
+          .filter((answer) => answer !== undefined)
         if (decision?._tag === "Probability") {
           const values = gathered.flatMap((answer) => ("probability" in answer ? [answer.probability] : []))
           const reduced = reduceRepeats(values)

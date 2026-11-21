@@ -23,22 +23,22 @@ ignoredBuiltDependencies:
   - protobufjs
 
 catalog:
-  effect: "4.0.5" # stable v4
+  effect: "4.1.5" # stable v4
   # The OpenCode plugin API, used only by jig's optional `./opencode` surface.
   "@opencode/plugin": "2.1.2"
   # The Worker/DO types for the room bundle, and the bundler celld dev shells out to.
   "@cloudflare/workers-types": "5.20261023.1"
   esbuild: "0.28.2"
-  "@effect/platform-node": "4.0.5"
-  # Beside platform-node on purpose: it declares "^4.0.5" for its own shared package, so a
+  "@effect/platform-node": "4.1.5"
+  # Beside platform-node on purpose: it declares "^4.1.5" for its own shared package, so a
   # consumer install floats it to a newer minor while `effect` stays at the pinned version,
   # and the published tool then dies on a NodeWS export the newer shared no longer provides.
   # Workspace `overrides` hide this locally; a dependency is what publishes.
-  "@effect/platform-node-shared": "4.0.5"
-  "@effect/vitest": "4.0.5"
+  "@effect/platform-node-shared": "4.1.5"
+  "@effect/vitest": "4.1.5"
   # joggle's judgement model: Effect's AI surface plus the TypeSafe provider. On the
   # stable line with the rest of the workspace now that joggle's port landed.
-  "@effect/ai-typesafe": "4.0.5"
+  "@effect/ai-typesafe": "4.1.5"
   # Typechecking and building run on TypeScript 7's native compiler, wearing
   # Effect's language service (@effect/tsgo) via the `prepare` patch. TypeScript 7
   # ships no programmatic API, so the `typescript` name stays aliased to the
@@ -83,10 +83,10 @@ catalog:
 # workspace's line; the plugin is never shipped, and the public surface still gets the
 # host's own `@opencode/plugin` at runtime.
 overrides:
-  effect: "4.0.5"
-  "@effect/platform-node": "4.0.5"
-  "@effect/platform-node-shared": "4.0.5"
-  "@effect/opentelemetry": "4.0.5"
+  effect: "4.1.5"
+  "@effect/platform-node": "4.1.5"
+  "@effect/platform-node-shared": "4.1.5"
+  "@effect/opentelemetry": "4.1.5"
 
 # Hold a brand-new release for a day before it can be installed. The exclude list
 # below was inert without this line: pnpm has nothing to exempt when no age floor is set.
@@ -95,6 +95,13 @@ overrides:
 minimumReleaseAge: 1440
 
 minimumReleaseAgeExclude:
+  # Operator directive: Effect 4.1.5 is the workspace line, so its publish age is waived.
+  - effect@4.1.5
+  - "@effect/platform-node@4.1.5"
+  - "@effect/platform-node-shared@4.1.5"
+  - "@effect/vitest@4.1.5"
+  - "@effect/ai-typesafe@4.1.5"
+  - "@effect/opentelemetry@4.1.5"
   - "@effect/tsgo-darwin-arm64@0.56.0"
   - "@effect/tsgo-darwin-x64@0.56.0"
   - "@effect/tsgo-linux-arm64@0.56.0"

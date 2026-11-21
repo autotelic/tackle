@@ -23,7 +23,7 @@ import { canonical } from "./canonical.ts"
 import { policy } from "./policy.ts"
 import { VERSION } from "./version.ts"
 import { make as makeAnswerStore, type Layout } from "./answer-store.ts"
-import { answerOf, memoize, PlanAnswers, storedOf, type PlanAnswerStore } from "./plans.ts"
+import { answerOf, isJoggleAnswer, memoize, PlanAnswers, storedOf, type PlanAnswerStore } from "./plans.ts"
 import type { DecisionTotals } from "./schema.ts"
 
 // The judged half of joggle, as Effect's own DecisionModel.
@@ -461,9 +461,11 @@ export const layer = (
               : Effect.void,
           ).pipe(Effect.map((stored) => Option.map(stored, answerOf))),
         put: (key, answer) =>
-          Effect.tap(answers.put(key, storedOf(answer)), () =>
-            Ref.update(stats, (current) => ({ ...current, judged: current.judged + 1 })),
-          ),
+          isJoggleAnswer(answer)
+            ? Effect.tap(answers.put(key, storedOf(answer)), () =>
+                Ref.update(stats, (current) => ({ ...current, judged: current.judged + 1 })),
+              )
+            : Effect.void,
       }
 
       // Every answer is remembered per decision, so the committed cache is the

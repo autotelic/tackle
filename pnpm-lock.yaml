@@ -114,14 +114,14 @@ catalogs:
       specifier: 1.5.0
       version: 1.5.0
     '@effect/ai-typesafe':
-      specifier: 4.0.5
-      version: 4.0.5
+      specifier: 4.1.5
+      version: 4.1.5
     '@effect/tsgo':
       specifier: 0.56.0
       version: 0.56.0
     '@effect/vitest':
-      specifier: 4.0.5
-      version: 4.0.5
+      specifier: 4.1.5
+      version: 4.1.5
     '@opencode/plugin':
       specifier: 2.1.2
       version: 2.1.2
@@ -172,10 +172,10 @@ catalogs:
       version: 6.0.0-alpha.73
 
 overrides:
-  effect: 4.0.5
-  '@effect/platform-node': 4.0.5
-  '@effect/platform-node-shared': 4.0.5
-  '@effect/opentelemetry': 4.0.5
+  effect: 4.1.5
+  '@effect/platform-node': 4.1.5
+  '@effect/platform-node-shared': 4.1.5
+  '@effect/opentelemetry': 4.1.5
 
 importers:
 
@@ -197,8 +197,8 @@ importers:
         specifier: ^2.29.0
         version: 2.31.1(@types/node@24.13.5)
       '@effect/platform-node':
-        specifier: 4.0.5
-        version: 4.0.5(effect@4.0.5)(redis@6.3.0(@opentelemetry/api@1.9.0))
+        specifier: 4.1.5
+        version: 4.1.5(effect@4.1.5)(redis@6.3.0(@opentelemetry/api@1.9.0))
       '@effect/tsgo':
         specifier: 'catalog:'
         version: 0.56.0
@@ -209,8 +209,8 @@ importers:
         specifier: 'catalog:'
         version: typescript@7.0.2
       effect:
-        specifier: 4.0.5
-        version: 4.0.5
+        specifier: 4.1.5
+        version: 4.1.5
       oxfmt:
         specifier: 'catalog:'
         version: 0.74.0
@@ -239,14 +239,14 @@ importers:
         specifier: workspace:*
         version: link:../protocol
       '@effect/platform-node':
-        specifier: 4.0.5
-        version: 4.0.5(effect@4.0.5)(redis@6.3.0(@opentelemetry/api@1.9.0))
+        specifier: 4.1.5
+        version: 4.1.5(effect@4.1.5)(redis@6.3.0(@opentelemetry/api@1.9.0))
       '@effect/platform-node-shared':
-        specifier: 4.0.5
-        version: 4.0.5(effect@4.0.5)
+        specifier: 4.1.5
+        version: 4.1.5(effect@4.1.5)
       effect:
-        specifier: 4.0.5
-        version: 4.0.5
+        specifier: 4.1.5
+        version: 4.1.5
       oxc-parser:
         specifier: 'catalog:'
         version: 0.150.0
@@ -276,14 +276,14 @@ importers:
         specifier: workspace:*
         version: link:../protocol
       '@effect/platform-node':
-        specifier: 4.0.5
-        version: 4.0.5(effect@4.0.5)(redis@6.3.0(@opentelemetry/api@1.9.0))
+        specifier: 4.1.5
+        version: 4.1.5(effect@4.1.5)(redis@6.3.0(@opentelemetry/api@1.9.0))
       '@effect/platform-node-shared':
-        specifier: 4.0.5
-        version: 4.0.5(effect@4.0.5)
+        specifier: 4.1.5
+        version: 4.1.5(effect@4.1.5)
       effect:
-        specifier: 4.0.5
-        version: 4.0.5
+        specifier: 4.1.5
+        version: 4.1.5
     devDependencies:
       '@effect/tsgo':
         specifier: 'catalog:'
@@ -314,19 +314,19 @@ importers:
         version: link:../protocol
       '@effect/ai-typesafe':
         specifier: 'catalog:'
-        version: 4.0.5(effect@4.0.5)
+        version: 4.1.5(effect@4.1.5)
       '@effect/platform-node':
-        specifier: 4.0.5
-        version: 4.0.5(effect@4.0.5)(redis@6.3.0(@opentelemetry/api@1.9.0))
+        specifier: 4.1.5
+        version: 4.1.5(effect@4.1.5)(redis@6.3.0(@opentelemetry/api@1.9.0))
       '@effect/platform-node-shared':
-        specifier: 4.0.5
-        version: 4.0.5(effect@4.0.5)
+        specifier: 4.1.5
+        version: 4.1.5(effect@4.1.5)
       '@typescript/native':
         specifier: 'catalog:'
         version: typescript@7.0.2
       effect:
-        specifier: 4.0.5
-        version: 4.0.5
+        specifier: 4.1.5
+        version: 4.1.5
       oxc-parser:
         specifier: 'catalog:'
         version: 0.150.0
@@ -339,7 +339,7 @@ importers:
         version: 0.56.0
       '@effect/vitest':
         specifier: 'catalog:'
-        version: 4.0.5(effect@4.0.5)(vitest@5.0.1(@opentelemetry/api@1.9.0)(@types/node@24.13.5)(vite@8.3.4(@types/node@24.13.5)))
+        version: 4.1.5(effect@4.1.5)(vitest@5.0.1(@opentelemetry/api@1.9.0)(@types/node@24.13.5)(vite@8.3.4(@types/node@24.13.5)))
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.5
@@ -359,14 +359,14 @@ importers:
   packages/mailbox:
     dependencies:
       '@effect/platform-node':
-        specifier: 4.0.5
-        version: 4.0.5(effect@4.0.5)(redis@6.3.0(@opentelemetry/api@1.9.0))
+        specifier: 4.1.5
+        version: 4.1.5(effect@4.1.5)(redis@6.3.0(@opentelemetry/api@1.9.0))
       '@effect/platform-node-shared':
-        specifier: 4.0.5
-        version: 4.0.5(effect@4.0.5)
+        specifier: 4.1.5
+        version: 4.1.5(effect@4.1.5)
       effect:
-        specifier: 4.0.5
-        version: 4.0.5
+        specifier: 4.1.5
+        version: 4.1.5
     devDependencies:
       '@effect/tsgo':
         specifier: 'catalog:'
@@ -440,10 +440,10 @@ importers:
         version: 1.5.0(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.5)(ws@8.22.0)
       '@xstate/effect':
         specifier: 'catalog:'
-        version: 1.0.0-alpha.12(@oxlint/plugins@1.89.0)(effect@4.0.5)(xstate@6.0.0-alpha.73)
+        version: 1.0.0-alpha.12(@oxlint/plugins@1.89.0)(effect@4.1.5)(xstate@6.0.0-alpha.73)
       effect:
-        specifier: 4.0.5
-        version: 4.0.5
+        specifier: 4.1.5
+        version: 4.1.5
       typebox:
         specifier: 'catalog:'
         version: 1.4.4
@@ -781,14 +781,14 @@ packages:
     resolution: {integrity: sha512-56KqrDVeLF18k+syppVbT35Ai1opbM44ot+sL7O3K40CaWwXCiwOpqEFugDBAILtAhseZh6uYIuYxPPOJHLFAA==}
     engines: {node: '>=22.19.0'}
 
-  '@effect/ai-typesafe@4.0.5':
-    resolution: {integrity: sha512-MyYYzocm5c1JOnpBdu0ZJt4ZrOzfv75NsjqEGnj9gzJPs+oxbkAydIcrSqXSn+2TibvdxszL1bnXTNH2hLhiAg==}
+  '@effect/ai-typesafe@4.1.5':
+    resolution: {integrity: sha512-QvCGWIssDkd/de101yh2WSJ41lKFWzsV8AMs2fwZEAKXTfH0298LaWcPnmQdQJcU3mggcJScLVsRVk5wt26uNQ==}
     peerDependencies:
-      effect: 4.0.5
+      effect: 4.1.5
 
-  '@effect/opentelemetry@4.0.5':
-    resolution: {integrity: sha512-/Ms5DCZyHZzAbQQtXP4QRCSvHnKXaw3vLnDUegFmO3K3qIRqRdqfVtIqbGa1pbjMKdTShggiitDjRAYOHyWo1A==}
-    engines: {node: '>=18.0.0'}
+  '@effect/opentelemetry@4.1.5':
+    resolution: {integrity: sha512-npD5KIkqIh754Rofno3qdKvbAyaNVfl777fTZkdgtUlZE6VycwCng+49aWK+sGpo4B4wKDSQLsbjAoDf/13Wew==}
+    engines: {node: '>=22.19.0'}
     peerDependencies:
       '@opentelemetry/api': '>=1.9.0 <2.0.0'
       '@opentelemetry/api-logs': '>=0.203.0 <0.300.0'
@@ -799,7 +799,7 @@ packages:
       '@opentelemetry/sdk-trace-node': '>=2.0.0 <3.0.0'
       '@opentelemetry/sdk-trace-web': '>=2.0.0 <3.0.0'
       '@opentelemetry/semantic-conventions': '>=1.33.0 <2.0.0'
-      effect: 4.0.5
+      effect: 4.1.5
     peerDependenciesMeta:
       '@opentelemetry/api':
         optional: true
@@ -818,18 +818,18 @@ packages:
       '@opentelemetry/sdk-trace-web':
         optional: true
 
-  '@effect/platform-node-shared@4.0.5':
-    resolution: {integrity: sha512-a8rCdEkfZBGe9C6bsIjxVZuRp73svIyK5IHwHdDAVsvZXjrbkxusfI+rZ8WlX31RP1mKizwI/E72GQTNfdMWHw==}
-    engines: {node: '>=18.0.0'}
+  '@effect/platform-node-shared@4.1.5':
+    resolution: {integrity: sha512-JzlrYe4uKaBFTWihBRXo2pDjkUVB39kQpKdGfXdbp7Co5sKT8hbcjOmdB5pg/WOYESdGTddd3fxD4lwlZELbZQ==}
+    engines: {node: '>=22.19.0'}
     peerDependencies:
-      effect: 4.0.5
+      effect: 4.1.5
 
-  '@effect/platform-node@4.0.5':
-    resolution: {integrity: sha512-v4KD5fWvEUa4QmWFpZFbBsRhmfnTP6ETCME2r9ifyXVDPjhfpxpTZl41prjgQFMqZBHdWWCl7YC5ImbXv5ui5g==}
-    engines: {node: '>=18.0.0'}
+  '@effect/platform-node@4.1.5':
+    resolution: {integrity: sha512-tFnRvxF9EKc3oU17sDHj1JeLP+TL/IkaOEl3IUk2EjgMS0x7AWs0ioUXjdNKLb3Z1LdjVfMf/DxsNh9PW5FFAg==}
+    engines: {node: '>=22.19.0'}
     peerDependencies:
-      effect: 4.0.5
-      redis: '>=5.0.0 <7.0.0'
+      effect: 4.1.5
+      redis: '>=5.1.0 <7.0.0'
 
   '@effect/tsgo-darwin-arm64@0.56.0':
     resolution: {integrity: sha512-08yYRU3OOw/jKzy582EF741xKvLJ2HK6GO+L2zuSR97b61ES7fER2fxg1xp4mv8u2Fc3bBRvk7026GzdKEGFgw==}
@@ -870,10 +870,10 @@ packages:
     resolution: {integrity: sha512-/S5G8RJjtaVjE/RhwFNTvWQwFAQyDGc+3Ig4Oynvlo3gJu8le4MUgM/DBjoiwkwBsQ+BhufGDCBpwojplerGlw==}
     hasBin: true
 
-  '@effect/vitest@4.0.5':
-    resolution: {integrity: sha512-q64paZ/i4V2NiRhTyqCmT2KiDbFjlxc2EZrZca8GGt+Nf8844946HyJM5bPk/q+YeRkFSxIrlCs+J+LSfky/wA==}
+  '@effect/vitest@4.1.5':
+    resolution: {integrity: sha512-18u1013wkJtSelk1ZYLc/5aUnluTQyDfi2hAemkJW1GQ9qXw4mtPSiSf0AXZPhesmGCvG1Dk2C4JYD2sz+R72w==}
     peerDependencies:
-      effect: 4.0.5
+      effect: 4.1.5
       vitest: '>=5.0.0 <6.0.0'
 
   '@esbuild/aix-ppc64@0.28.2':
@@ -1223,7 +1223,7 @@ packages:
   '@opencode/client@2.1.2':
     resolution: {integrity: sha512-c7FqI/zMy6HrdVGHynzouiz3y1smokGuimh2+Is2iVWz8I8VzJEty9eTrvQkQzXG1Hj5K2FL1K5fytQ7yJEd9w==}
     peerDependencies:
-      effect: 4.0.5
+      effect: 4.1.5
       solid-js: '>=1.9.0'
     peerDependenciesMeta:
       effect:
@@ -1933,6 +1933,9 @@ packages:
   '@smithy/core@3.36.0':
     resolution: {integrity: sha512-3hJiwG1F5t1SoXqp/yOCmYXziyx7ZVqF63S5W6YU201e/qwVaHPex+E/3vvyY9a3ORq/b+BydeNZpP2saQ9X2g==}
     engines: {node: '>=18.0.0'}
+    deprecated: |-
+      Deprecated due to a bug in custom logger data redaction. Upgrade to the latest version. If you used a custom logger with this
+        version, review your logs and rotate any credentials or other secrets. See https://github.com/aws/aws-sdk-js-v3/issues/8393.
 
   '@smithy/core@3.38.1':
     resolution: {integrity: sha512-U/mB2XiwTLaf+NSgLSWwJfptsMT/H8aBi0aTAA/E5e2/TagFeGCqAyhKGG0w0A9IWTkm4qYEmLoD/HB6aYfnRA==}
@@ -2210,7 +2213,7 @@ packages:
     resolution: {integrity: sha512-D72whH2VWGnvMefc3CrylVwgqu2Ph2jfA861RG3gbLOk0mkXH8ZUn9h+IZO//xRKaCPFfKMXkXnqy4aIED1THg==}
     peerDependencies:
       '@oxlint/plugins': ^1.76.0
-      effect: 4.0.5
+      effect: 4.1.5
       xstate: ^6.0.0-alpha.73
     peerDependenciesMeta:
       '@oxlint/plugins':
@@ -2427,8 +2430,8 @@ packages:
   ecdsa-sig-formatter@1.0.11:
     resolution: {integrity: sha512-nagl3RYrbNv6kQkeJIpt6NJZy8twLB/2vtz6yN9Z4vRKHN4/QZJIEbqohALSgwKdnksuY3k5Addp5lg8sVoVcQ==}
 
-  effect@4.0.5:
-    resolution: {integrity: sha512-BY4/28NlpOd99yzmV741xbVGmp+1U7tks4oB7F/Png64bTa5tm5eCA6W0RiXsnuLDDoJpjfVSo4Dnq4BZb/89Q==}
+  effect@4.1.5:
+    resolution: {integrity: sha512-xyR20KhQI0vg2gD8ILUSQRTTESEYJ0JKdP+QD8J37xbwPTqXRxFM/l0+vUVD9fuSvoYruoTqyt33C4FZv1s4TQ==}
 
   emoji-regex@8.0.0:
     resolution: {integrity: sha512-MSjYzcWNOA0ewAHpz0MxpYFvwg6yjy1NG3xteoqz644VCo/RPgnr1/GGt+ic3iJTzQ8Eu3TdM14SawnVUmGE6A==}
@@ -3554,12 +3557,12 @@ packages:
     resolution: {integrity: sha512-EvRlUt/QqAEvXdQeRMYUfwOQsfzpDztykrG2owGEE/rBOBoYv9uF39ZzsNDh4lTFHhTr2XOZjKkYgueD12ZmGA==}
     engines: {node: '>=18.17'}
 
-  undici@8.12.2:
-    resolution: {integrity: sha512-XtuDWVdqTLr3NAxm2ly9/hU6kUsJOgGh1RASzMBbsw6aWCOaQzHdW+QQDfdERjfJ2V5vL5pRPa4RetO9UfivDg==}
-    engines: {node: '>=22.19.0'}
-
   undici@8.12.3:
     resolution: {integrity: sha512-+fdndUTwBP86cVjihTp21hZHo7d6oj1c/47XPA3lL8mM0XHs+C4EkcjmgRsFnFk2f/UONGDy9ItBItmXsLOQHw==}
+    engines: {node: '>=22.19.0'}
+
+  undici@8.12.4:
+    resolution: {integrity: sha512-8Mx+uNKKER2bA4AdtedkqRbwUCIJFr2nJckXRe5yrDqzePqwLP7VNcctN8/XdmDSbF7mS+jJKIszlL+vbam1VA==}
     engines: {node: '>=22.19.0'}
 
   universalify@0.1.2:
@@ -3701,6 +3704,18 @@ packages:
 
   ws@8.22.0:
     resolution: {integrity: sha512-Ydggc987+RO0AnWtZ/7Wq9FtNvcrL1b/RO0ud9mWjUPgDrsAAwQSF51sm2hm1XofbU/4jkpGEsLFsZZxU+1DOg==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
+
+  ws@8.23.0:
+    resolution: {integrity: sha512-wCkmX8QMOrKjgO8HW2WyDbTSGeqkocxgDzS9iR79rEAexty6/2qzilx3Ag8Tqf9ykop3irLKle0MtVn5qjVnoQ==}
     engines: {node: '>=10.0.0'}
     peerDependencies:
       bufferutil: ^4.0.1
@@ -4322,14 +4337,14 @@ snapshots:
       marked: 18.0.11
       marked-cjk-friendly: 0.1.2(marked@18.0.11)
 
-  '@effect/ai-typesafe@4.0.5(effect@4.0.5)':
+  '@effect/ai-typesafe@4.1.5(effect@4.1.5)':
     dependencies:
-      effect: 4.0.5
+      effect: 4.1.5
 
-  '@effect/opentelemetry@4.0.5(@opentelemetry/api-logs@0.219.0)(@opentelemetry/api@1.9.0)(@opentelemetry/resources@2.8.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-logs@0.219.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-metrics@2.8.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.8.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-node@2.8.0(@opentelemetry/api@1.9.0))(@opentelemetry/semantic-conventions@1.43.0)(effect@4.0.5)':
+  '@effect/opentelemetry@4.1.5(@opentelemetry/api-logs@0.219.0)(@opentelemetry/api@1.9.0)(@opentelemetry/resources@2.8.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-logs@0.219.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-metrics@2.8.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.8.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-node@2.8.0(@opentelemetry/api@1.9.0))(@opentelemetry/semantic-conventions@1.43.0)(effect@4.1.5)':
     dependencies:
       '@opentelemetry/semantic-conventions': 1.43.0
-      effect: 4.0.5
+      effect: 4.1.5
     optionalDependencies:
       '@opentelemetry/api': 1.9.0
       '@opentelemetry/api-logs': 0.219.0
@@ -4339,21 +4354,21 @@ snapshots:
       '@opentelemetry/sdk-trace-base': 2.8.0(@opentelemetry/api@1.9.0)
       '@opentelemetry/sdk-trace-node': 2.8.0(@opentelemetry/api@1.9.0)
 
-  '@effect/platform-node-shared@4.0.5(effect@4.0.5)':
+  '@effect/platform-node-shared@4.1.5(effect@4.1.5)':
     dependencies:
       '@types/ws': 8.18.2
-      effect: 4.0.5
-      ws: 8.22.0
+      effect: 4.1.5
+      ws: 8.23.0
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
 
-  '@effect/platform-node@4.0.5(effect@4.0.5)(redis@6.3.0(@opentelemetry/api@1.9.0))':
+  '@effect/platform-node@4.1.5(effect@4.1.5)(redis@6.3.0(@opentelemetry/api@1.9.0))':
     dependencies:
-      '@effect/platform-node-shared': 4.0.5(effect@4.0.5)
-      effect: 4.0.5
+      '@effect/platform-node-shared': 4.1.5(effect@4.1.5)
+      effect: 4.1.5
       redis: 6.3.0(@opentelemetry/api@1.9.0)
-      undici: 8.12.2
+      undici: 8.12.4
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -4389,9 +4404,9 @@ snapshots:
       '@effect/tsgo-win32-arm64': 0.56.0
       '@effect/tsgo-win32-x64': 0.56.0
 
-  '@effect/vitest@4.0.5(effect@4.0.5)(vitest@5.0.1(@opentelemetry/api@1.9.0)(@types/node@24.13.5)(vite@8.3.4(@types/node@24.13.5)))':
+  '@effect/vitest@4.1.5(effect@4.1.5)(vitest@5.0.1(@opentelemetry/api@1.9.0)(@types/node@24.13.5)(vite@8.3.4(@types/node@24.13.5)))':
     dependencies:
-      effect: 4.0.5
+      effect: 4.1.5
       vitest: 5.0.1(@opentelemetry/api@1.9.0)(@types/node@24.13.5)(vite@8.3.4(@types/node@24.13.5))
 
   '@esbuild/aix-ppc64@0.28.2':
@@ -4735,27 +4750,27 @@ snapshots:
       '@smithy/eventstream-codec': 4.2.14
       '@smithy/util-utf8': 4.2.2
       aws4fetch: 1.0.20
-      effect: 4.0.5
+      effect: 4.1.5
       google-auth-library: 10.5.0
     transitivePeerDependencies:
       - supports-color
 
-  '@opencode/client@2.1.2(effect@4.0.5)':
+  '@opencode/client@2.1.2(effect@4.1.5)':
     dependencies:
       '@opencode/protocol': 2.1.2
       '@opencode/schema': 2.1.2
     optionalDependencies:
-      effect: 4.0.5
+      effect: 4.1.5
 
   '@opencode/plugin@2.1.2(@opentelemetry/semantic-conventions@1.43.0)(redis@6.3.0(@opentelemetry/api@1.9.0))':
     dependencies:
       '@ai-sdk/provider': 3.0.8
       '@opencode/ai': 2.1.2
-      '@opencode/client': 2.1.2(effect@4.0.5)
+      '@opencode/client': 2.1.2(effect@4.1.5)
       '@opencode/protocol': 2.1.2
       '@opencode/schema': 2.1.2
       '@opencode/util': 2.1.2(@opentelemetry/semantic-conventions@1.43.0)(redis@6.3.0(@opentelemetry/api@1.9.0))
-      effect: 4.0.5
+      effect: 4.1.5
     transitivePeerDependencies:
       - '@opentelemetry/sdk-trace-web'
       - '@opentelemetry/semantic-conventions'
@@ -4767,18 +4782,18 @@ snapshots:
   '@opencode/protocol@2.1.2':
     dependencies:
       '@opencode/schema': 2.1.2
-      effect: 4.0.5
+      effect: 4.1.5
 
   '@opencode/schema@2.1.2':
     dependencies:
       '@standard-schema/spec': 1.1.0
-      effect: 4.0.5
+      effect: 4.1.5
 
   '@opencode/util@2.1.2(@opentelemetry/semantic-conventions@1.43.0)(redis@6.3.0(@opentelemetry/api@1.9.0))':
     dependencies:
-      '@effect/opentelemetry': 4.0.5(@opentelemetry/api-logs@0.219.0)(@opentelemetry/api@1.9.0)(@opentelemetry/resources@2.8.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-logs@0.219.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-metrics@2.8.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.8.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-node@2.8.0(@opentelemetry/api@1.9.0))(@opentelemetry/semantic-conventions@1.43.0)(effect@4.0.5)
-      '@effect/platform-node': 4.0.5(effect@4.0.5)(redis@6.3.0(@opentelemetry/api@1.9.0))
-      '@effect/platform-node-shared': 4.0.5(effect@4.0.5)
+      '@effect/opentelemetry': 4.1.5(@opentelemetry/api-logs@0.219.0)(@opentelemetry/api@1.9.0)(@opentelemetry/resources@2.8.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-logs@0.219.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-metrics@2.8.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.8.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-node@2.8.0(@opentelemetry/api@1.9.0))(@opentelemetry/semantic-conventions@1.43.0)(effect@4.1.5)
+      '@effect/platform-node': 4.1.5(effect@4.1.5)(redis@6.3.0(@opentelemetry/api@1.9.0))
+      '@effect/platform-node-shared': 4.1.5(effect@4.1.5)
       '@npmcli/arborist': 9.4.0
       '@npmcli/config': 10.8.1
       '@opentelemetry/api': 1.9.0
@@ -4791,7 +4806,7 @@ snapshots:
       '@opentelemetry/sdk-trace-base': 2.8.0(@opentelemetry/api@1.9.0)
       '@opentelemetry/sdk-trace-node': 2.8.0(@opentelemetry/api@1.9.0)
       cross-spawn: 7.0.6
-      effect: 4.0.5
+      effect: 4.1.5
       glob: 13.0.5
       mime-types: 3.0.2
       minimatch: 10.2.5
@@ -5444,9 +5459,9 @@ snapshots:
 
   '@vitest/spy@5.0.1': {}
 
-  '@xstate/effect@1.0.0-alpha.12(@oxlint/plugins@1.89.0)(effect@4.0.5)(xstate@6.0.0-alpha.73)':
+  '@xstate/effect@1.0.0-alpha.12(@oxlint/plugins@1.89.0)(effect@4.1.5)(xstate@6.0.0-alpha.73)':
     dependencies:
-      effect: 4.0.5
+      effect: 4.1.5
       xstate: 6.0.0-alpha.73
     optionalDependencies:
       '@oxlint/plugins': 1.89.0
@@ -5625,7 +5640,7 @@ snapshots:
     dependencies:
       safe-buffer: 5.2.1
 
-  effect@4.0.5: {}
+  effect@4.1.5: {}
 
   emoji-regex@8.0.0: {}
 
@@ -6831,9 +6846,9 @@ snapshots:
 
   undici@6.29.1: {}
 
-  undici@8.12.2: {}
-
   undici@8.12.3: {}
+
+  undici@8.12.4: {}
 
   universalify@0.1.2: {}
 
@@ -6917,6 +6932,8 @@ snapshots:
       signal-exit: 4.1.0
 
   ws@8.22.0: {}
+
+  ws@8.23.0: {}
 
   wsl-utils@1.0.1:
     dependencies:

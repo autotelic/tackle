@@ -7,6 +7,7 @@ import {
   answerPlans,
   PlanAnswers,
   StoredAnswer,
+  type JoggleDecision,
   storedOf,
   type Plan,
   type PlanAnswerStore,
@@ -200,7 +201,7 @@ test("the same decision over the same atoms is asked once", async () => {
 test("an answer round-trips through its stored form", () => {
   // The three shapes a cache file can hold, through JSON and back, because the
   // decoder is what stands between a cached answer and a rule.
-  const answers: ReadonlyArray<Decision.Answer<Decision.Any>> = [
+  const answers: ReadonlyArray<Decision.Answer<JoggleDecision>> = [
     { label: "yes", probabilities: { yes: 1, no: 0 }, confidence: 0.9 },
     { rating: 2, label: "b", probabilities: { a: 0, b: 1, c: 0 }, confidence: 0.8 },
     { probability: 0.42 },
