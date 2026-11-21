@@ -1,21 +1,38 @@
-export interface Envelope {
-  readonly version: number
-  readonly suite: { readonly kemId: number; readonly kdfId: number; readonly aeadId: number }
-  readonly enc: { readonly $bytes: string }
-  readonly ciphertext: { readonly $bytes: string }
-  readonly aad: {
-    readonly senderDid: string
-    readonly recipientDid: string
-    readonly messageId: string
-    readonly recipientKeyId: string
-    readonly expiresAt: string
-  }
-}
+import { Option, Schema } from "effect"
+import stringify from "safe-stable-stringify"
+
+const AadSchema = Schema.Struct({
+  senderDid: Schema.String,
+  recipientDid: Schema.String,
+  messageId: Schema.String,
+  recipientKeyId: Schema.String,
+  expiresAt: Schema.String,
+})
+
+const EnvelopeSchema = Schema.Struct({
+  version: Schema.Literal(1),
+  suite: Schema.Struct({
+    kemId: Schema.Literal(16),
+    kdfId: Schema.Literal(1),
+    aeadId: Schema.Literal(1),
+  }),
+  enc: Schema.Struct({ $bytes: Schema.String }),
+  ciphertext: Schema.Struct({ $bytes: Schema.String }),
+  aad: AadSchema,
+})
+
+export type Aad = typeof AadSchema.Type
+export type Envelope = typeof EnvelopeSchema.Type
 
 export interface MessageRef {
   readonly senderDid: string
   readonly messageId: string
 }
+
+/** The delivery states Rat King's receipt carries, in order. */
+// The wire state is a string in the receipt, not a local dispatch discriminant.
+// oxlint-disable-next-line plumb-effect/prefer-tagged-enum
+export type DeliveryState = "accepted" | "delivered" | "acked"
 
 export interface Receipt {
   readonly message: MessageRef
@@ -25,8 +42,6 @@ export interface Receipt {
   readonly recordedAt?: string
   readonly woke?: boolean
 }
-
-export type DeliveryState = "accepted" | "delivered" | "acked"
 
 /** The harness that holds a lease; known adapters add their ids. */
 export interface Harness {
@@ -88,20 +103,6 @@ export type Result<A> =
   | { readonly ok: true; readonly value: A }
   | { readonly ok: false; readonly error: Failure }
 
-const stable = (value: unknown): string => {
-  if (Array.isArray(value)) return "[" + value.map(stable).join(",") + "]"
-  if (value !== null && typeof value === "object")
-    return (
-      "{" +
-      Object.keys(value as Record<string, unknown>)
-        .sort()
-        .map((k) => JSON.stringify(k) + ":" + stable((value as Record<string, unknown>)[k]))
-        .join(",") +
-      "}"
-    )
-  return JSON.stringify(value)
-}
-
 const ok = <A>(value: A): Result<A> => ({ ok: true, value })
 const fail = <A>(error: Failure): Result<A> => ({ ok: false, error })
 
@@ -109,30 +110,18 @@ const fail = <A>(error: Failure): Result<A> => ({ ok: false, error })
 const live = (lease: Lease | undefined, now: number): lease is Lease =>
   lease !== undefined && Date.parse(lease.expiresAt) > now
 
-const fence = (
-  state: MailboxState,
-  did: string,
-  leaseId?: string,
-  generation?: number,
-  now = 0,
-): Failure | undefined => {
-  const lease = state.leases.get(did)
-  if (!live(lease, now)) return undefined
-  if (leaseId !== lease.leaseId || generation !== lease.generation) return { _tag: "LeaseMismatch" }
-  return undefined
-}
-
-const senderFence = (
-  state: MailboxState,
-  input: SendInput,
-  actorDid: string,
-  now: number,
-): Failure | undefined => {
-  const lease = state.leases.get(actorDid)
-  if (!live(lease, now)) return undefined
-  if (input.leaseId !== lease.leaseId || input.generation !== lease.generation)
-    return { _tag: "LeaseMismatch" }
-  return undefined
+const fence = (input: {
+  readonly state: MailboxState
+  readonly did: string
+  readonly leaseId: string | undefined
+  readonly generation: number | undefined
+  readonly now: number
+}): Option.Option<Failure> => {
+  const lease = input.state.leases.get(input.did)
+  return live(lease, input.now) &&
+    (input.leaseId !== lease.leaseId || input.generation !== lease.generation)
+    ? Option.some({ _tag: "LeaseMismatch" })
+    : Option.none()
 }
 
 export interface SendInput {
@@ -143,20 +132,10 @@ export interface SendInput {
   readonly resolvedFrom?: string
 }
 
-/** Admit a send, idempotently on the sender DID plus TID. */
 /** The shape an admitted send must have; a plaintext body is not a wire envelope. */
-export const isEncryptedEnvelope = (value: unknown): value is Envelope => {
-  if (value === null || typeof value !== "object") return false
-  const candidate = value as Partial<Envelope>
-  return (
-    candidate.version === 1 &&
-    candidate.suite !== undefined &&
-    candidate.enc !== undefined &&
-    candidate.ciphertext !== undefined &&
-    candidate.aad !== undefined
-  )
-}
+export const isEncryptedEnvelope: (value: unknown) => value is Envelope = Schema.is(EnvelopeSchema)
 
+/** Admit a send, idempotently on the sender DID plus TID. */
 export const send = (
   state: MailboxState,
   input: SendInput,
@@ -178,13 +157,20 @@ export const send = (
     if (record.did !== aad.recipientDid) return fail({ _tag: "RoleUnresolved" })
   }
 
-  const fenceError = senderFence(state, input, actorDid, now)
-  if (fenceError !== undefined) return fail(fenceError)
+  const senderError = fence({
+    state,
+    did: actorDid,
+    leaseId: input.leaseId,
+    generation: input.generation,
+    now,
+  })
+  if (Option.isSome(senderError)) return fail(senderError.value)
 
   const key = keyOf({ senderDid: aad.senderDid, messageId: aad.messageId })
   const existing = state.messages.get(key)
   if (existing !== undefined) {
-    if (stable(existing.envelope) !== stable(input.envelope)) return fail({ _tag: "Conflict" })
+    if (stringify(existing.envelope) !== stringify(input.envelope))
+      return fail({ _tag: "Conflict" })
     return ok(existing.receipt)
   }
 
@@ -210,8 +196,14 @@ export interface DeliverInput {
 
 /** Move an accepted message to delivered under the recipient's fence. */
 export const deliver = (state: MailboxState, input: DeliverInput, now: number): Result<Receipt> => {
-  const fenceError = fence(state, input.recipientDid, input.leaseId, input.generation, now)
-  if (fenceError !== undefined) return fail(fenceError)
+  const fenceError = fence({
+    state,
+    did: input.recipientDid,
+    leaseId: input.leaseId,
+    generation: input.generation,
+    now,
+  })
+  if (Option.isSome(fenceError)) return fail(fenceError.value)
   const key = keyOf(input.message)
   const stored = state.messages.get(key)
   if (stored === undefined) return fail({ _tag: "MessageNotFound" })
@@ -233,8 +225,14 @@ export interface AckInput {
 
 /** Move a delivered message to acked; an ack before deliver is InvalidTransition. */
 export const ack = (state: MailboxState, input: AckInput, now: number): Result<Receipt> => {
-  const fenceError = fence(state, input.recipientDid, input.leaseId, input.generation, now)
-  if (fenceError !== undefined) return fail(fenceError)
+  const fenceError = fence({
+    state,
+    did: input.recipientDid,
+    leaseId: input.leaseId,
+    generation: input.generation,
+    now,
+  })
+  if (Option.isSome(fenceError)) return fail(fenceError.value)
   const key = keyOf(input.message)
   const stored = state.messages.get(key)
   if (stored === undefined) return fail({ _tag: "MessageNotFound" })
@@ -282,11 +280,17 @@ export const acquire = (state: MailboxState, input: AcquireInput, now: number): 
 /** Release a lease only with its current fence. */
 export const release = (
   state: MailboxState,
-  input: { did: string; leaseId: string; generation: number },
+  input: { readonly did: string; readonly leaseId: string; readonly generation: number },
   now: number,
 ): Result<void> => {
-  const fenceError = fence(state, input.did, input.leaseId, input.generation, now)
-  if (fenceError !== undefined) return fail(fenceError)
+  const fenceError = fence({
+    state,
+    did: input.did,
+    leaseId: input.leaseId,
+    generation: input.generation,
+    now,
+  })
+  if (Option.isSome(fenceError)) return fail(fenceError.value)
   state.leases.delete(input.did)
   return ok(undefined)
 }

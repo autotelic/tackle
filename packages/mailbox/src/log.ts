@@ -1,4 +1,5 @@
-import { Predicate, Result, Schema } from "effect"
+import { Option, Predicate, Result, Schema } from "effect"
+import stringify from "safe-stable-stringify"
 import { isTid } from "./tid.ts"
 
 /** A turn is the wire record, plus any field a newer writer added; unknown fields are kept. */
@@ -9,6 +10,8 @@ export interface Turn {
   readonly replyTo: string | null
   readonly path: string
   readonly body: string
+  // Unknown fields are the point of an open record; the codec preserves them.
+  // oxlint-disable-next-line plumb/no-unsafe-dictionary-type
   readonly [key: string]: unknown
 }
 
@@ -19,6 +22,7 @@ export interface Backfill {
   readonly from: readonly string[]
   readonly timestampSource: "mtime" | "declared"
   readonly note?: string | undefined
+  // oxlint-disable-next-line plumb/no-unsafe-dictionary-type
   readonly [key: string]: unknown
 }
 
@@ -57,21 +61,8 @@ export const isTurnPath: Predicate.Predicate<string> = (path) =>
   /^\d{4}-[a-z0-9]+(?:-[a-z0-9]+)*\.md$/.test(path)
 
 /**
- * Canonical JSON: sorted keys, recursively. The encoding of a value is a function of the value,
- * and an unknown field is as much a part of it as a known one.
- */
-const canonical = (value: unknown): string => {
-  if (Array.isArray(value)) return "[" + value.map(canonical).join(",") + "]"
-  if (value !== null && typeof value === "object") {
-    const entries = Object.entries(value).sort(([a], [b]) => a.localeCompare(b))
-    return "{" + entries.map(([k, v]) => JSON.stringify(k) + ":" + canonical(v)).join(",") + "}"
-  }
-  return JSON.stringify(value)
-}
-
-/**
- * Read defensively means name the broken line, never skip it. The known fields are validated;
- * the raw object is the source, so a field this version does not know survives the parse.
+ * Read defensively means name the broken line, never skip it. Known fields are validated; the
+ * raw object is the source, so a field this version does not know survives the parse.
  */
 export const parseLog = (text: string): TurnLog => {
   const lines = text.split("\n").filter((line) => line.trim() !== "")
@@ -87,7 +78,7 @@ export const parseLog = (text: string): TurnLog => {
     const decoded = decodeLine(raw)
     if (Result.isFailure(decoded)) throw new LogError(`${where}: ${String(decoded.failure)}`)
     const value = decoded.success
-    if ("kind" in value) {
+    if (Schema.is(BackfillLine)(value)) {
       if (backfill !== undefined || turns.length > 0)
         throw new LogError(`${where}: backfill must be the first line`)
       backfill = { ...raw, ...value }
@@ -120,13 +111,16 @@ export const parseLog = (text: string): TurnLog => {
 
 /** One canonical line per turn, the header first; unknown fields included, keys sorted. */
 export const serializeLog = (log: TurnLog): string => {
-  const lines = log.turns.map((turn) => canonical(turn))
+  const lines = log.turns.map((turn) => stringify(turn))
   return (
-    [...(log.backfill === undefined ? [] : [canonical(log.backfill)]), ...lines].join("\n") + "\n"
+    [...(log.backfill === undefined ? [] : [stringify(log.backfill)]), ...lines].join("\n") + "\n"
   )
 }
 
 const SENDER = /^#\s+\d{4}\s+—\s+(\S+)\s+—/
 
 /** The sender a turn heading names, if it names one. */
-export const senderOf = (body: string): string | undefined => SENDER.exec(body)?.[1]
+export const senderInBody = (body: string): Option.Option<string> => {
+  const match = SENDER.exec(body)
+  return match?.[1] === undefined ? Option.none() : Option.some(match[1])
+}

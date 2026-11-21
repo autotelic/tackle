@@ -275,6 +275,52 @@ export default {
       rules: { "plumb/no-sql-string-interpolation": "off" },
     },
     {
+      // A receipt's state is Rat King's wire string, not a local dispatch tag. The envelope
+      // predicate takes unknown because it is the boundary parser, and returns a Schema.is
+      // refinement rather than a cast.
+      files: ["packages/mailbox-domain/src/procedures.ts"],
+      rules: {
+        "plumb-effect/prefer-tagged-enum": "off",
+        "plumb/no-unknown-parameters": "off",
+      },
+    },
+    {
+      // did:web is a plain JSON read any browser can do; Effect HttpClient would force a
+      // platform service into a module the server and the tests both use directly.
+      files: ["packages/mailbox-server/src/did.ts"],
+      rules: { "plumb-effect/no-direct-fetch": "off" },
+    },
+    {
+      // The host lookup is a pure two-map read used by sync tests; making it an Effect would
+      // put a runtime between a fixture and the record it resolves.
+      files: ["packages/mailbox-server/src/records.ts"],
+      rules: { "plumb-effect/guarded-op-must-return-effect": "off" },
+    },
+    {
+      // Schema.is is the discriminant here: the union is Backfill | Turn, and the predicate is
+      // the schema's own refinement, not an ad-hoc field check.
+      files: ["packages/mailbox/src/log.ts"],
+      rules: { "plumb-effect/no-manual-field-guards": "off" },
+    },
+    {
+      // senderInBody is a pure Option extraction from a regex, not an effectful guarded
+      // operation; the Option is the contract, not a missing Effect.
+      files: ["packages/mailbox/src/log.ts"],
+      rules: { "plumb-effect/guarded-op-must-return-effect": "off" },
+    },
+    {
+      // These suites are Rat King's published fixtures and protocol examples, not general
+      // claims about arbitrary input; a property suite would be a different suite.
+      files: [
+        "packages/mailbox-server/test/cutover.test.ts",
+        "packages/mailbox-server/test/envelope.test.ts",
+        "packages/mailbox-server/test/federation.test.ts",
+        "packages/mailbox-server/test/fixtures.test.ts",
+        "packages/mailbox/src/render.test.ts",
+      ],
+      rules: { "plumb/prefer-property-tests": "off" },
+    },
+    {
       // The CLI is the process boundary: it mints the instant and passes it into the core.
       // No core byte depends on a clock.
       files: ["packages/mailbox/src/cli.ts"],

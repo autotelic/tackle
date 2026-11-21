@@ -14,10 +14,14 @@
     "typecheck": "tsc --noEmit",
     "build": "tsc -p tsconfig.build.json"
   },
+  "dependencies": {
+    "safe-stable-stringify": "3.0.1"
+  },
   "devDependencies": {
     "@effect/tsgo": "catalog:",
     "@types/node": "catalog:",
     "@typescript/native": "catalog:",
+    "fast-check": "catalog:",
     "vitest": "catalog:"
   },
   "engines": {

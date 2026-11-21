@@ -1,4 +1,5 @@
 import { encode } from "@ipld/dag-cbor"
+import { Option } from "effect"
 import { createHash } from "node:crypto"
 import {
   ack,
@@ -6,6 +7,7 @@ import {
   deliver,
   empty,
   send,
+  type Envelope,
   type MailboxState,
   type Receipt,
 } from "@autotelic/mailbox-domain/procedures"
@@ -28,8 +30,17 @@ const base32 = (bytes: Uint8Array): string => {
   return out
 }
 
+/** A DAG-CBOR value: the record shape AT repositories carry. */
+export type DagValue =
+  | string
+  | number
+  | boolean
+  | null
+  | ReadonlyArray<DagValue>
+  | { readonly [key: string]: DagValue }
+
 /** A CIDv1 in dag-cbor, sha2-256, base32: the same bytes as IPFS/AT use. */
-export const recordCid = (record: unknown): string => {
+export const recordCid = (record: DagValue): string => {
   const digest = createHash("sha256").update(encode(record)).digest()
   const bytes = Uint8Array.from([0x01, 0x71, 0x12, 0x20, ...digest])
   return "b" + base32(bytes)
@@ -38,7 +49,7 @@ export const recordCid = (record: unknown): string => {
 export interface Published {
   readonly uri: string
   readonly cid: string
-  readonly record: unknown
+  readonly record: DagValue
 }
 
 export class Host {
@@ -52,7 +63,7 @@ export class Host {
     this.did = did
   }
 
-  publish(collection: string, rkey: string, record: unknown): Published {
+  publish(collection: string, rkey: string, record: DagValue): Published {
     const published: Published = {
       uri: `at://${this.did}/${collection}/${rkey}`,
       cid: recordCid({ record, did: this.did, collection, rkey }),
@@ -69,11 +80,12 @@ export class Host {
     this.byCid.set(published.cid, published)
   }
 
-  resolve(key: string): Published | undefined {
-    return this.records.get(key) ?? this.byCid.get(key)
+  lookup(key: string): Option.Option<Published> {
+    const found = this.records.get(key) ?? this.byCid.get(key)
+    return found === undefined ? Option.none() : Option.some(found)
   }
 
-  admit(envelope: unknown, actorDid: string, now: number): ReturnType<typeof send> {
+  admit(envelope: Envelope, actorDid: string, now: number): ReturnType<typeof send> {
     return send(this.state, { envelope }, actorDid, now)
   }
 

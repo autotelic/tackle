@@ -45,10 +45,12 @@ test("did:key round-trips an Ed25519 key and verifies only its own signatures", 
   const did = didKeyFromEd25519(raw)
   expect(ed25519FromDidKey(did)).toEqual(raw)
   const data = new TextEncoder().encode("a signed turn")
-  const signature = await signDetached(keys.privateKey, data)
-  await expect(verifyDetached(did, data, signature)).resolves.toBe(true)
+  const signature = await signDetached({ privateKey: keys.privateKey, data })
+  await expect(verifyDetached({ did, data, signature })).resolves.toBe(true)
   const otherRaw = new Uint8Array(await crypto.subtle.exportKey("raw", other.publicKey))
-  await expect(verifyDetached(didKeyFromEd25519(otherRaw), data, signature)).resolves.toBe(false)
+  await expect(verifyDetached({ did: didKeyFromEd25519(otherRaw), data, signature })).resolves.toBe(
+    false,
+  )
 })
 
 test("a plaintext body is not an envelope and is refused", () => {
@@ -81,8 +83,8 @@ test("a did:web document resolves and verifies, and only its key verifies", asyn
     const port = server.address().port
     const did = `did:web:127.0.0.1%3A${port}`
     const data = new TextEncoder().encode("did:web turn")
-    const signature = await signDetached(keys.privateKey, data)
-    await expect(verifyDid(did, data, signature)).resolves.toBe(true)
+    const signature = await signDetached({ privateKey: keys.privateKey, data })
+    await expect(verifyDid({ did, data, signature })).resolves.toBe(true)
     const otherRaw = new Uint8Array(await crypto.subtle.exportKey("raw", other.publicKey))
     expect(otherRaw).not.toEqual(raw)
   } finally {

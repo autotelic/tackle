@@ -1,15 +1,7 @@
 import { expect, test } from "vitest"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
-import {
-  ack,
-  acquire,
-  deliver,
-  empty,
-  release,
-  send,
-  type Envelope,
-} from "@autotelic/mailbox-domain/procedures"
+import { ack, acquire, deliver, empty, release, send } from "@autotelic/mailbox-domain/procedures"
 
 const fixture = (name: string) =>
   JSON.parse(

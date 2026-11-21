@@ -410,6 +410,9 @@ importers:
       effect:
         specifier: 4.1.5
         version: 4.1.5
+      safe-stable-stringify:
+        specifier: 3.0.1
+        version: 3.0.1
     devDependencies:
       '@effect/tsgo':
         specifier: 'catalog:'
@@ -425,6 +428,10 @@ importers:
         version: 5.0.1(@opentelemetry/api@1.9.0)(@types/node@24.13.5)(vite@8.3.4(@types/node@24.13.5))
 
   packages/mailbox-domain:
+    dependencies:
+      safe-stable-stringify:
+        specifier: 3.0.1
+        version: 3.0.1
     devDependencies:
       '@effect/tsgo':
         specifier: 'catalog:'
@@ -435,6 +442,9 @@ importers:
       '@typescript/native':
         specifier: 'catalog:'
         version: typescript@7.0.2
+      fast-check:
+        specifier: 'catalog:'
+        version: 4.10.2
       vitest:
         specifier: 'catalog:'
         version: 5.0.1(@opentelemetry/api@1.9.0)(@types/node@24.13.5)(vite@8.3.4(@types/node@24.13.5))
@@ -3963,6 +3973,10 @@ packages:
 
   safe-buffer@5.2.1:
     resolution: {integrity: sha512-rp3So07KcdmmKbGvgaNxQSJr7bGVSVk5S9Eq1F+ppbRo70+YeaDxkw5Dd8NPN+GD6bjnYm2VuPuCXmpuYvmCXQ==}
+
+  safe-stable-stringify@3.0.1:
+    resolution: {integrity: sha512-tQUOE7EhXynTVsedprW7zvmY7sCETpwRRywh0XiF9Ml+yRAfaP6/UnZ+eDhhrX/tkQZeKBb2AZ1c1L8XCmEyzg==}
+    engines: {node: '>=18'}
 
   safer-buffer@2.1.2:
     resolution: {integrity: sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==}
@@ -7641,6 +7655,8 @@ snapshots:
       queue-microtask: 1.2.3
 
   safe-buffer@5.2.1: {}
+
+  safe-stable-stringify@3.0.1: {}
 
   safer-buffer@2.1.2: {}
 

@@ -1,5 +1,6 @@
 import { expect, test } from "vitest"
 import { Aes128Gcm, CipherSuite, DhkemP256HkdfSha256, HkdfSha256 } from "@hpke/core"
+import { Option } from "effect"
 import { Host } from "../src/records.ts"
 import { sealEnvelope } from "../src/envelope.ts"
 
@@ -18,8 +19,8 @@ test("a record gets a real at-uri and dag-cbor CID, and resolves across hosts", 
   expect(published.uri).toBe("at://did:key:zA/dev.autotelic.work.ship/ship-1")
   expect(published.cid.startsWith("bafy")).toBe(true)
   b.ingest(published)
-  expect(b.resolve(published.uri)?.record).toEqual(published.record)
-  expect(b.resolve(published.cid)?.uri).toBe(published.uri)
+  expect(Option.getOrUndefined(b.lookup(published.uri))?.record).toEqual(published.record)
+  expect(Option.getOrUndefined(b.lookup(published.cid))?.uri).toBe(published.uri)
 })
 
 test("a message and its receipt cross from one host to the other", async () => {

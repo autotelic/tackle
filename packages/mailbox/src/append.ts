@@ -1,5 +1,6 @@
+import { Option } from "effect"
 import { basename } from "node:path"
-import { isTurnPath, LogError, senderOf, type Turn, type TurnLog } from "./log.ts"
+import { isTurnPath, LogError, senderInBody, type Turn, type TurnLog } from "./log.ts"
 import { tidAt } from "./tid.ts"
 
 export interface AppendInput {
@@ -21,7 +22,7 @@ export const appendTurn = (log: TurnLog, input: AppendInput) => {
   if (log.turns.some((turn) => turn.path === path)) {
     throw new LogError(`${path}: already in the log; a turn is written once`)
   }
-  const sender = input.sender ?? senderOf(input.body)
+  const sender = input.sender ?? Option.getOrUndefined(senderInBody(input.body))
   if (sender === undefined)
     throw new LogError("no sender: pass --sender or write a '— SENDER —' heading")
   const previous = log.turns.at(-1)

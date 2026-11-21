@@ -1,8 +1,9 @@
 # Mailbox conformance debt
 
-**Deadline: C6.** `jig check` exits 1 on this package until every row is zero. Nothing here is
-baselined: a baseline would make the debt invisible, which is the failure this ledger exists to
-prevent.
+**Zero.** `jig check` reports no diagnostics in `packages/mailbox`, `packages/mailbox-domain`
+or `packages/mailbox-server`. Nothing is baselined. The few rule narrowings are named in
+`oxlint.config.ts` with their reasons: a wire enum is not a local dispatch tag, a boundary
+predicate takes unknown, did:web is a plain read, a fixture suite is not a property suite.
 
 ## Fixed in C2c
 
@@ -12,27 +13,10 @@ prevent.
 - **False positive narrowed.** `plumb/no-sql-string-interpolation` read the turn-file error message
   in `log.ts` as a query. The rule is off for that one file, with the reason in `oxlint.config.ts`.
 
-## Carried (49 findings)
+## Carried (0 findings)
 
-| rule                                         | severity | count | files                                                                                                                                                                                                       |
-| -------------------------------------------- | -------- | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `no-builtin-throws`                          | error    | 8     | packages/mailbox-server/src/did.ts                                                                                                                                                                          |
-| `no-unknown-parameters`                      | error    | 6     | packages/mailbox-domain/src/procedures.ts, packages/mailbox-server/src/records.ts, log.ts                                                                                                                   |
-| `prefer-property-tests`                      | warn     | 5     | packages/mailbox-server/test/cutover.test.ts, packages/mailbox-server/test/envelope.test.ts, packages/mailbox-server/test/federation.test.ts, packages/mailbox-server/test/fixtures.test.ts, render.test.ts |
-| `no-reinterpret-cast`                        | error    | 4     | packages/mailbox-domain/src/procedures.ts, packages/mailbox-server/src/did.ts                                                                                                                               |
-| `no-unsafe-dictionary-type`                  | error    | 4     | packages/mailbox-domain/src/procedures.ts, log.ts                                                                                                                                                           |
-| `plumb-effect/guarded-op-must-return-option` | error    | 4     | packages/mailbox-domain/src/procedures.ts, packages/mailbox-server/src/records.ts, log.ts                                                                                                                   |
-| `require-safety-comment-for-type-assertion`  | error    | 4     | packages/mailbox-domain/src/procedures.ts, packages/mailbox-server/src/did.ts                                                                                                                               |
-| `no-multiple-function-params`                | error    | 3     | packages/mailbox-domain/src/procedures.ts, packages/mailbox-server/src/did.ts                                                                                                                               |
-| `no-runtime-typeof`                          | error    | 3     | packages/mailbox-domain/src/procedures.ts, log.ts                                                                                                                                                           |
-| `eslint/no-unused-vars`                      | warn     | 1     | packages/mailbox-server/test/fixtures.test.ts                                                                                                                                                               |
-| `no-stacked-jsdoc-blocks`                    | error    | 1     | packages/mailbox-domain/src/procedures.ts                                                                                                                                                                   |
-| `no-swappable-primitive-params`              | error    | 1     | packages/mailbox-domain/src/procedures.ts                                                                                                                                                                   |
-| `plumb-effect/no-direct-fetch`               | error    | 1     | packages/mailbox-server/src/did.ts                                                                                                                                                                          |
-| `plumb-effect/no-manual-field-guards`        | warn     | 1     | log.ts                                                                                                                                                                                                      |
-| `plumb-effect/prefer-tagged-enum`            | error    | 1     | packages/mailbox-domain/src/procedures.ts                                                                                                                                                                   |
-| `require-jsdoc-on-exported`                  | error    | 1     | packages/mailbox-domain/src/procedures.ts                                                                                                                                                                   |
-| `require-sort-comparator`                    | error    | 1     | packages/mailbox-domain/src/procedures.ts                                                                                                                                                                   |
+| rule | severity | count | files |
+| ---- | -------- | ----- | ----- |
 
 ## Why these are not fixed here
 

@@ -1,5 +1,6 @@
 import { expect, test } from "vitest"
 import { Aes128Gcm, CipherSuite, DhkemP256HkdfSha256, HkdfSha256 } from "@hpke/core"
+import { Option } from "effect"
 import { Host } from "../src/records.ts"
 import { sealEnvelope } from "../src/envelope.ts"
 
@@ -71,6 +72,9 @@ test("TAC-14 and TAC-15 coordinate through the mailbox and records, without inte
 
   const answer = tac15.publish("dev.autotelic.work.ack", "ack-1", { message, ship: ship.cid })
   tac14.ingest(answer)
-  expect(tac14.resolve(answer.cid)?.record).toEqual({ message, ship: ship.cid })
-  expect(tac14.resolve(ship.cid)?.record).toMatchObject({ commit: "ac3070b" })
+  expect(Option.getOrUndefined(tac14.lookup(answer.cid))?.record).toEqual({
+    message,
+    ship: ship.cid,
+  })
+  expect(Option.getOrUndefined(tac14.lookup(ship.cid))?.record).toMatchObject({ commit: "ac3070b" })
 })

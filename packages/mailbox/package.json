@@ -43,7 +43,8 @@
     "@effect/platform-node": "catalog:",
     "@effect/platform-node-shared": "catalog:",
     "@ipld/dag-cbor": "11.0.0",
-    "effect": "catalog:"
+    "effect": "catalog:",
+    "safe-stable-stringify": "3.0.1"
   },
   "devDependencies": {
     "@effect/tsgo": "catalog:",

@@ -1,6 +1,7 @@
+import { Option } from "effect"
 import { readFile, readdir, stat } from "node:fs/promises"
 import { join } from "node:path"
-import { isTurnPath, LogError, senderOf, type Turn, type TurnLog } from "./log.ts"
+import { isTurnPath, LogError, senderInBody, type Turn, type TurnLog } from "./log.ts"
 import { tidAt } from "./tid.ts"
 
 export const BACKFILL_NOTE =
@@ -23,7 +24,7 @@ export const exportDirectory = async (
     const path = join(dir, name)
     const [body, stats] = await Promise.all([readFile(path, "utf8"), stat(path)])
     const seq = Number(name.slice(0, 4))
-    const sender = senderOf(body)
+    const sender = Option.getOrUndefined(senderInBody(body))
     if (sender === undefined) throw new LogError(`${name}: no "— SENDER —" heading`)
     const tid = tidAt({ timestampMs: stats.mtimeMs, clockId: seq & 0x3ff })
     turns.push({ seq, tid, sender, replyTo: previous, path: name, body })
