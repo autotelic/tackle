@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises"
 import { parseArgs } from "node:util"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
@@ -6,6 +7,7 @@ import { appendEvent } from "./events.ts"
 import { runPass } from "./kernel.ts"
 import { listWorkstreams, Phase, readWorkstream, writeWorkstream } from "./store.ts"
 import { deliverReport, fingerprintOf, ReportKind, writeReport, type Report } from "./report.ts"
+import { runDaemon, startDaemon, stopDaemon } from "./daemon.ts"
 import { watchOnce } from "./watch.ts"
 
 const usage = [
@@ -18,7 +20,11 @@ const usage = [
   "  factory run --id <id> --worker <command> [--at <iso>]",
   "  factory watch --id <id> --worker <command> [--once] [--interval <ms>]",
   "  factory report --workstream <id> --kind <kind> --command <cmd> --expected <text> --actual <text> [--output <text>] [--blocked] [--deliver <session>]",
-  "  factory phase --id <id> --set reconcile|build|land|blocked|done",
+  "  factory phase --id <id> --set reconcile|build|land|blocked|done [--answer <desk-answer.json>]",
+  "  factory daemon start --worker <command> [--interval <ms>]",
+  "  factory daemon run --worker <command> [--interval <ms>]",
+  "  factory daemon stop",
+  "  factory cursor --id <id> --github <iso> --linear <iso>",
   "",
   "FACTORY_HOME defaults to ~/.factory; records live outside the governed repository.",
 ].join("\n")
@@ -125,10 +131,69 @@ const main = async (): Promise<void> => {
     return
   }
 
+  if (command === "cursor") {
+    const parsed = parseArgs({
+      args: process.argv.slice(3),
+      options: {
+        id: { type: "string" },
+        github: { type: "string" },
+        linear: { type: "string" },
+      },
+      allowPositionals: false,
+    })
+    if (parsed.values.id === undefined) return fail("cursor needs --id")
+    const record = await readWorkstream({ id: parsed.values.id })
+    if (record === undefined) return fail("WorkstreamNotFound")
+    await writeWorkstream({
+      record: {
+        ...record,
+        cursors: {
+          github: parsed.values.github ?? record.cursors.github,
+          linear: parsed.values.linear ?? record.cursors.linear,
+        },
+        updatedAt: new Date().toISOString(),
+      },
+    })
+    console.log("factory: " + record.id + " cursors set")
+    return
+  }
+
+  if (command === "daemon") {
+    const sub = process.argv[3]
+    if (sub === "stop") {
+      console.log("factory: daemon " + (await stopDaemon()))
+      return
+    }
+    if (sub !== "start" && sub !== "run") return fail("daemon needs start, run or stop")
+    const parsed = parseArgs({
+      args: process.argv.slice(4),
+      options: {
+        worker: { type: "string" },
+        interval: { type: "string", default: "60000" },
+      },
+      allowPositionals: false,
+    })
+    if (parsed.values.worker === undefined) return fail("daemon needs --worker")
+    const interval = Number(parsed.values.interval)
+    if (!Number.isInteger(interval) || interval < 1)
+      return fail("--interval must be a positive integer")
+    if (sub === "start") {
+      const pid = await startDaemon({ worker: parsed.values.worker, intervalMs: interval })
+      console.log("factory: daemon " + pid + " running")
+      return
+    }
+    await runDaemon({ worker: parsed.values.worker, intervalMs: interval })
+    return
+  }
+
   if (command === "phase") {
     const parsed = parseArgs({
       args: process.argv.slice(3),
-      options: { id: { type: "string" }, set: { type: "string" } },
+      options: {
+        id: { type: "string" },
+        set: { type: "string" },
+        answer: { type: "string" },
+      },
       allowPositionals: false,
     })
     if (parsed.values.id === undefined || parsed.values.set === undefined)
@@ -137,6 +202,31 @@ const main = async (): Promise<void> => {
       return fail("--set must be one of reconcile, build, land, blocked, done")
     const record = await readWorkstream({ id: parsed.values.id })
     if (record === undefined) return fail("WorkstreamNotFound")
+
+    // A phase change is a gate, not a convenience. Leaving reconcile or blocked needs an
+    // answer record; otherwise anyone can advance a held workstream (a probe did exactly that).
+    if (record.phase === "reconcile" || record.phase === "blocked") {
+      if (parsed.values.answer === undefined)
+        return fail(
+          "desk gate: " +
+            record.phase +
+            " -> " +
+            parsed.values.set +
+            " needs --answer <desk-answer.json>",
+        )
+      const text = await readFile(parsed.values.answer, "utf8").catch(() => undefined)
+      if (text === undefined) return fail("desk answer not found: " + parsed.values.answer)
+      const answer = Schema.decodeResult(Schema.fromJsonString(Schema.Unknown))(text)
+      if (Result.isFailure(answer)) return fail("desk answer is not JSON")
+      const decoded = Schema.decodeUnknownResult(Schema.Struct({ choice: Schema.String }))(
+        answer.success,
+      )
+      if (Result.isFailure(decoded)) return fail("desk answer has no choice")
+      const choice = decoded.success.choice
+      if (choice !== "accept" && choice !== "accept-and-continue" && choice !== "apply-evidenced")
+        return fail("desk answer must choose accept, accept-and-continue or apply-evidenced")
+    }
+
     await writeWorkstream({
       record: { ...record, phase: parsed.values.set, updatedAt: new Date().toISOString() },
     })

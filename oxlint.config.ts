@@ -348,6 +348,7 @@ export default {
         "packages/room/src/supervise.ts",
         "packages/board/src/cli.ts",
         "packages/factory/src/cli.ts",
+        "packages/factory/src/daemon.ts",
         "packages/mailbox-server/src/service.ts",
         "packages/mailbox-server/src/cli.ts",
       ],

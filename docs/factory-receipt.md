@@ -51,6 +51,13 @@ path or PR is refused.
 - `factory report`: structured report outside the repo, optional intercom delivery to Tackle.
 - All fixture-tested: 9 tests in `packages/factory/test`.
 
+## Running now
+
+- `factory daemon` is running on this machine with two workstreams, a 2-minute poll, and a log at
+  `~/.factory/daemon.log`; the one-owner lock is `~/.factory/shop.lock`.
+- `board presence` now carries `factory.workstreams` and `factory.reports` beside rooms, sessions
+  and the tailnet. That is the room/board read surface for the feedback stream.
+
 ## Gates
 
 `jig check` 0, `pnpm check` 0. The last commits are on `main`; this receipt is committed with

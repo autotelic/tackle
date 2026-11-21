@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
 import { homedir } from "node:os"
-import { mkdir, readFile, writeFile } from "node:fs/promises"
+import { mkdir, readFile, readdir, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
@@ -111,10 +111,27 @@ export const writeReport = async (input: {
   )
 }
 
+/**
+ * Every decodable report, in id order; malformed reports are a miss.
+ *
+ * @param input - the optional home.
+ * @returns the reports.
+ */
+export const listReports = async (input?: { readonly home?: string | undefined }) => {
+  const names = await readdir(reportDir(input?.home)).catch(() => [])
+  const reports: Array<Report> = []
+  for (const name of names.sort((left, right) => left.localeCompare(right))) {
+    if (!name.endsWith(".json")) continue
+    const report = await readReport({ id: name.slice(0, -5), home: input?.home })
+    if (report !== undefined) reports.push(report)
+  }
+  return reports
+}
+
 /** Read one report; malformed is a miss, because reports degrade to silence. */
 export const readReport = async (input: {
   readonly id: string
-  readonly home?: string
+  readonly home?: string | undefined
 }): Promise<Report | undefined> => {
   const text = await readFile(reportFile(input), "utf8").catch(() => undefined)
   if (text === undefined) return undefined

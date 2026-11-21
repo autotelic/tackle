@@ -23,7 +23,8 @@ process is gone) and serves:
 `--detach` starts the same process detached and waits for the lock. `down` sends
 `SIGTERM`, waits, then removes the lock.
 
-`presence` is the same document one-shot, without running the shop. It includes
+`presence` is the same document one-shot, without running the shop. It also carries the factory's
+workstreams and reports under `factory`, so the board is the read surface for both places. It includes
 local Herdr terminals via `hc ls --json`, and Rex sessions/blocks via the
 server binary bundled with the Rex app (`REX_BIN`, then PATH, then the app
 support path). A missing source is `available: false`, never "nothing is

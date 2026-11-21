@@ -6,6 +6,8 @@ import { join } from "node:path"
 import { parseArgs } from "node:util"
 import { listRooms } from "@autotelic/room/store"
 import { readRun, startRoomRun } from "@autotelic/room/run"
+import { listReports } from "@autotelic/factory/report"
+import { listWorkstreams } from "@autotelic/factory/store"
 import { discoverSessions, type Session } from "./sessions.ts"
 import { discoverTailnet } from "./tailnet.ts"
 import { fleet } from "./fleet.ts"
@@ -164,6 +166,7 @@ const observe = async (root: string) => {
     observedAt: new Date().toISOString(),
     sessions: await discoverSessions(),
     network: { tailscale: await discoverTailnet() },
+    factory: { workstreams: await listWorkstreams(), reports: await listReports() },
     rooms: await Promise.all(
       rooms.map(async (room) => {
         const run = await readRun({ root, id: room.id })

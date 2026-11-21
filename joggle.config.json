@@ -159,6 +159,16 @@
       "rule": "joggle/reversal",
       "path": "packages/factory/src/report.ts",
       "reason": "reportFile and workstreamFile are two join(dir,id+\".json\") one-liners for different record kinds; a shared helper would couple their storage layouts. The seam is the file bytes."
+    },
+    {
+      "rule": "joggle/reversal",
+      "path": "packages/factory/src/daemon.ts",
+      "reason": "alive is a three-line process.pid probe duplicated from board because the packages never import each other; the seam is the lock bytes. The clock functions are the daemon boundary and are exempted in oxlint.config.ts."
+    },
+    {
+      "rule": "joggle/reversal",
+      "path": "packages/board/src/cli.ts",
+      "reason": "alive is a three-line process.pid probe shared with the factory daemon; board and factory never import each other, so the duplication is the seam and the lock is the record."
     }
   ],
   "architecture": {
