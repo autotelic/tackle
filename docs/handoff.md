@@ -11,3 +11,9 @@ Current as of 3f60acb.
   round-trip is the check.
 - Then C7 HPKE/DIDs, C8 federation, C9 pin/ship, C10 cutover.
 - Never mark C6 complete until the ledger is zero. Nothing in the ledger is baselined.
+
+## Later
+
+- Room and board name the new pair; old code is gone. Mailbox ledger is Zero (52972a9).
+- The goal-control tool stopped exposing update_goal, so the zero-ledger goal could not be
+  marked complete. The work is on main; a fresh session should not redo it.
