@@ -7,6 +7,7 @@ import { appendEvent } from "./events.ts"
 import { runPass } from "./kernel.ts"
 import { listWorkstreams, Phase, readWorkstream, writeWorkstream } from "./store.ts"
 import { deliverReport, fingerprintOf, ReportKind, writeReport, type Report } from "./report.ts"
+import { answerDesk, listDesk, raiseDesk, readAnswer, type DeskItem } from "./desk.ts"
 import { runDaemon, startDaemon, stopDaemon } from "./daemon.ts"
 import { watchOnce } from "./watch.ts"
 
@@ -25,6 +26,9 @@ const usage = [
   "  factory daemon run --worker <command> [--interval <ms>]",
   "  factory daemon stop",
   "  factory cursor --id <id> --github <iso> --linear <iso>",
+  "  factory desk list [--json]",
+  "  factory desk answer --item <id> --choice <choice> --by <did-or-name>",
+  "  factory desk raise --workstream <id> --title <text> [--body <text>] [--choices <a,b>] [--route live|github|slack]",
   "",
   "FACTORY_HOME defaults to ~/.factory; records live outside the governed repository.",
 ].join("\n")
@@ -131,6 +135,84 @@ const main = async (): Promise<void> => {
     return
   }
 
+  if (command === "desk") {
+    const sub = process.argv[3]
+    if (sub === "list") {
+      const parsed = parseArgs({
+        args: process.argv.slice(4),
+        options: { json: { type: "boolean", default: false } },
+        allowPositionals: false,
+      })
+      const items = await listDesk()
+      if (parsed.values.json) console.log(JSON.stringify(items, null, 2))
+      else
+        for (const item of items) console.log(item.id + "  " + item.workstream + "  " + item.title)
+      return
+    }
+    if (sub === "answer") {
+      const parsed = parseArgs({
+        args: process.argv.slice(4),
+        options: {
+          item: { type: "string" },
+          choice: { type: "string" },
+          by: { type: "string", default: process.env.USER ?? "human" },
+        },
+        allowPositionals: false,
+      })
+      if (parsed.values.item === undefined || parsed.values.choice === undefined)
+        return fail("desk answer needs --item and --choice")
+      await answerDesk({
+        answer: {
+          item: parsed.values.item,
+          choice: parsed.values.choice,
+          by: parsed.values.by,
+          at: new Date().toISOString(),
+        },
+      })
+      console.log("factory: answered " + parsed.values.item + " = " + parsed.values.choice)
+      return
+    }
+    if (sub === "raise") {
+      const parsed = parseArgs({
+        args: process.argv.slice(4),
+        options: {
+          workstream: { type: "string" },
+          title: { type: "string" },
+          body: { type: "string", default: "" },
+          choices: { type: "string", default: "accept,decline" },
+          route: { type: "string", default: "live" },
+          id: { type: "string" },
+        },
+        allowPositionals: false,
+      })
+      if (parsed.values.workstream === undefined || parsed.values.title === undefined)
+        return fail("desk raise needs --workstream and --title")
+      if (
+        parsed.values.route !== "live" &&
+        parsed.values.route !== "github" &&
+        parsed.values.route !== "slack"
+      )
+        return fail("--route must be live, github or slack")
+      const item: DeskItem = {
+        id: parsed.values.id ?? "desk-" + parsed.values.workstream + "-" + Date.now(),
+        workstream: parsed.values.workstream,
+        kind: "decision",
+        title: parsed.values.title,
+        body: parsed.values.body,
+        choices: parsed.values.choices
+          .split(",")
+          .map((choice) => choice.trim())
+          .filter(Boolean),
+        route: parsed.values.route,
+        at: new Date().toISOString(),
+      }
+      await raiseDesk({ item })
+      console.log("factory: desk " + item.id + " raised")
+      return
+    }
+    return fail("desk needs list, answer or raise")
+  }
+
   if (command === "cursor") {
     const parsed = parseArgs({
       args: process.argv.slice(3),
@@ -215,14 +297,20 @@ const main = async (): Promise<void> => {
             " needs --answer <desk-answer.json>",
         )
       const text = await readFile(parsed.values.answer, "utf8").catch(() => undefined)
-      if (text === undefined) return fail("desk answer not found: " + parsed.values.answer)
-      const answer = Schema.decodeResult(Schema.fromJsonString(Schema.Unknown))(text)
-      if (Result.isFailure(answer)) return fail("desk answer is not JSON")
-      const decoded = Schema.decodeUnknownResult(Schema.Struct({ choice: Schema.String }))(
-        answer.success,
-      )
-      if (Result.isFailure(decoded)) return fail("desk answer has no choice")
-      const choice = decoded.success.choice
+      let choice: string
+      if (text === undefined) {
+        const stored = await readAnswer({ id: parsed.values.answer })
+        if (stored === undefined) return fail("desk answer not found: " + parsed.values.answer)
+        choice = stored.choice
+      } else {
+        const answer = Schema.decodeResult(Schema.fromJsonString(Schema.Unknown))(text)
+        if (Result.isFailure(answer)) return fail("desk answer is not JSON")
+        const decoded = Schema.decodeUnknownResult(Schema.Struct({ choice: Schema.String }))(
+          answer.success,
+        )
+        if (Result.isFailure(decoded)) return fail("desk answer has no choice")
+        choice = decoded.success.choice
+      }
       if (choice !== "accept" && choice !== "accept-and-continue" && choice !== "apply-evidenced")
         return fail("desk answer must choose accept, accept-and-continue or apply-evidenced")
     }

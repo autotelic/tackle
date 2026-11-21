@@ -169,6 +169,11 @@
       "rule": "joggle/reversal",
       "path": "packages/board/src/cli.ts",
       "reason": "alive is a three-line process.pid probe shared with the factory daemon; board and factory never import each other, so the duplication is the seam and the lock is the record."
+    },
+    {
+      "rule": "joggle/reversal",
+      "path": "packages/factory/src/desk.ts",
+      "reason": "deskItemFile is one join(dir,id+\".json\") for a different record kind; a shared helper would couple desk, report and workstream storage layouts. The seam is the file bytes."
     }
   ],
   "architecture": {
