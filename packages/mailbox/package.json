@@ -1,6 +1,6 @@
 {
   "name": "@autotelic/mailbox",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "The mail seam: a canonical turn log, a deterministic markdown projection, and the fence that hosts it.",
   "homepage": "https://github.com/autotelic/tackle/tree/main/packages/mailbox#readme",
   "bugs": {
