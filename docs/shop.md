@@ -430,6 +430,33 @@ Two properties of their provider we should keep: **it is outbound-only** (Amp ne
 **the dispatch program is a file you write, not an API you implement** (`amp orb provider
 ./dispatch.sh`). Ours: the shop dials its mailbox; nothing ever dials the shop.
 
+### 3.2.1 Alchemy belongs to the second provider, and never to the fence
+
+`alchemy@2.0.0-beta.87` already ships the provider catalog this section was going to invent: Docker,
+sandboxes (Daytona, E2B, Modal, Boat), machines (Fly, Hetzner), `Command`, Git/GitHub, ACME. Its
+model — declare resources, `reconcile` observe/ensure/sync, `diff` for update-vs-replace,
+`renamedFrom` to migrate a row, `retain` to drop state and keep the object, `phase: read` to
+reconstruct outputs without touching anything — is the port written by someone else. So it enters at
+the **second** provider, and if it costs more than a day there, the port was fiction.
+
+Three corrections, all of which are our own rules applied to its vocabulary:
+
+```
+  data children     worktree journal outbox desk    removal policy = retain   (never destroyed)
+  runtime children  container sandbox machine        removal policy = destroy
+  a host change     replaces the runtime only; data is adopted on the target
+```
+
+1. **`read` is not the fence.** A hash match makes a copy _eligible_ for adoption; the lease still
+   decides who owns the bench. Delegating ownership to `read` swaps our fence for a state-file lock,
+   which fails differently: one stale state row, and every host agrees on the wrong answer.
+2. **The shop is one stack**, with a `Bench` resource per bench. The state store takes a per-
+   `(stack, stage)` lock during a run, so "one stack per shop" makes D8's one-supervisor rule
+   structural rather than procedural — two `alchemy` processes against one shop become impossible.
+3. **`effect`.** Alchemy `beta.87` peers on `^4.1.4`; this workspace pins `4.0.5`. That bump is its
+   own change, taken when Alchemy is actually adopted — never smuggled in to prove a port that a
+   `Command`-based provider can prove for free.
+
 ### 3.3 Three providers, in order
 
 | provider    | rung  | isolation       | what it proves                       | when                                   |
@@ -647,7 +674,10 @@ Four rules that are not optional:
    security bug, not a convenience.
 3. **Secrets do not travel.** Re-injected at start from the shop's own store or an OIDC exchange.
    A moved bench that carried `~/.env` in its tar has published the key to the network.
-4. **A fork is quarantined, not merged.** The fence stops the _effects_ of a stale writer; it cannot
+4. **The shop compares `journal.sha` at acquire**, before anything starts, and fails into
+   `blocked: divergent` with both hashes when they disagree. Not a human, not optional, and not a
+   warning: a divergence that renders as a warning is a divergence that becomes history.
+5. **A fork is quarantined, not merged.** The fence stops the _effects_ of a stale writer; it cannot
    stop two copies of the _data_ existing. If both shops believe they hold the bench, the losing
    copy is moved to `quarantine/<name>-<generation>` and a human decides. Silent merges of two
    journals is how a transcript becomes fiction.
