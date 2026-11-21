@@ -23,6 +23,9 @@ export const appendTurn = (
 ): { readonly log: TurnLog; readonly turn: Turn } => {
   const path = basename(input.path)
   if (!isTurnPath(path)) throw new LogError(`${path}: not a turn filename`)
+  if (log.turns.some((turn) => turn.path === path)) {
+    throw new LogError(`${path}: already in the log; a turn is written once`)
+  }
   const sender = input.sender ?? SENDER.exec(input.body)?.[1]
   if (sender === undefined)
     throw new LogError("no sender: pass --sender or write a '— SENDER —' heading")

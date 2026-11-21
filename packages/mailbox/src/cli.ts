@@ -2,7 +2,7 @@ import { Console, Data, Effect } from "effect"
 import { Command, Flag } from "effect/cli"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
 import { appendTurn } from "./append.ts"
 import { exportDirectory } from "./export.ts"
 import { parseLog, serializeLog } from "./log.ts"
@@ -133,7 +133,12 @@ const writeCommand = Command.make(
         ...(options.reply === "" ? {} : { replyTo: options.reply }),
       })
       yield* attempt(() => writeFile(options.log, serializeLog(log), "utf8"))
-      yield* attempt(() => writeFile(options.turn, body, "utf8"))
+      // A bare filename belongs beside the log, not in whatever directory the caller stood in.
+      // Writing to the cwd and then verifying the thread directory is the failure that proves it.
+      const turnPath = options.turn.includes("/")
+        ? options.turn
+        : join(dirname(options.log), options.turn)
+      yield* attempt(() => writeFile(turnPath, body, "utf8"))
       yield* Console.log(`wrote ${turn.path} seq=${turn.seq} tid=${turn.tid}`)
     }).pipe(report),
 ).pipe(

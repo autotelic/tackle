@@ -52,6 +52,15 @@ describe("the thread's own projection", () => {
   })
 })
 
+describe("append", () => {
+  it("refuses a turn whose path is already in the log", () => {
+    const first = { turns: [turn(1)] }
+    expect(() =>
+      appendTurn(first, { path: "0001-a-turn.md", body: "# 0001 — TAC-15 — again\n" }),
+    ).toThrow(/already in the log/)
+  })
+})
+
 describe("drift", () => {
   const files = new Map([
     ["0001-a.md", "# 0001 — TAC-14 — a\n"],
@@ -79,6 +88,29 @@ describe("drift", () => {
     const lost = new Map(files)
     lost.delete("0002-b.md")
     expect(verifyLog(log, lost)).toContainEqual({ path: "0002-b.md", kind: "missing" })
+  })
+
+  it("refuses two turns at one path, because one would be unrenderable", () => {
+    const body = "# 0001 — TAC-14 — a\n\nBody.\n"
+    const text = [
+      JSON.stringify({
+        seq: 1,
+        tid: turn(1).tid,
+        sender: "TAC-14",
+        replyTo: null,
+        path: "0001-a.md",
+        body,
+      }),
+      JSON.stringify({
+        seq: 2,
+        tid: turn(2).tid,
+        sender: "TAC-15",
+        replyTo: turn(1).tid,
+        path: "0001-a.md",
+        body,
+      }),
+    ].join("\n")
+    expect(() => parseLog(text)).toThrow(/duplicate path/)
   })
 
   it("ignores files that are not turns", () => {

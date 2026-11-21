@@ -99,6 +99,9 @@ export const parseLog = (text: string): TurnLog => {
   let backfill: Backfill | undefined
   const turns: Turn[] = []
   const tids = new Set<string>()
+  // One turn per file. Two turns at one path parse fine and then one of them is silently
+  // unrenderable — a lost turn that verify reports as a healthy count. Refuse it at the seam.
+  const paths = new Set<string>()
   for (const [index, line] of lines.entries()) {
     const where = `line ${index + 1}`
     let parsed: unknown
@@ -121,11 +124,13 @@ export const parseLog = (text: string): TurnLog => {
     if (previous !== undefined && turn.seq !== previous.seq + 1)
       throw new LogError(`${where}: seq must be dense (expected ${previous.seq + 1})`)
     if (tids.has(turn.tid)) throw new LogError(`${where}: duplicate tid`)
+    if (paths.has(turn.path)) throw new LogError(`${where}: duplicate path (one turn per file)`)
     if (previous !== undefined && turn.tid <= previous.tid)
       throw new LogError(`${where}: tid is not increasing`)
     if (turn.replyTo !== null && !tids.has(turn.replyTo))
       throw new LogError(`${where}: replyTo names no earlier turn`)
     tids.add(turn.tid)
+    paths.add(turn.path)
     turns.push(turn)
   }
   return backfill === undefined ? { turns } : { backfill, turns }
