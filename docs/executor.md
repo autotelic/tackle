@@ -19,6 +19,16 @@ DID authority, or lease fence.
   Cloud swaps Better Auth for WorkOS behind an `AccountProvider` seam.
 - Apps are owned by `organization:<id>`. Organization removal is a durable workflow that purges
   the owner store, auth records, billing and webhooks.
+- Access policy is a table per owner — `{pattern, action, position}` — with actions
+  `allow`, `require-approval`, `block`; the most restrictive decision wins across organization
+  and user scopes. Imported tools have no function hook. A user preference may narrow an
+  organization guardrail, never weaken it.
+
+## The one human gate
+
+Do not run two approval systems. The desk is the gate for work that needs a person; Executor
+owns credentials and the tool catalog. Executor may require approval on a tool, but it must not
+become a second authority for room or mailbox transitions.
 
 ## Why it does not replace anything we have
 
@@ -35,10 +45,11 @@ Gateway only. Connect MCP/OpenAPI/GraphQL services and accounts, set policy, poi
 Executor's MCP endpoint. Keep canonical state outside: room records, mailbox log, leases, fleet
 presence. Executor may own credentials and routing for tools; it may not own the records.
 
-Per-operation approval functions are an app-code feature. A gateway-only imported MCP gets the
-built-in policy, not our custom function. The fence therefore stays inside the tool
-(`board_fleet`, `mailbox_*`, `room_move`); an Executor approval is UX around that check, not the
-grant. If a thin approval app is ever installed, it owns no state and is disposable.
+Per-operation approval functions are an app-code feature; imported tools get the policy table
+(policy as a table, `allow`/`require-approval`/`block`, most restrictive wins). The fence
+therefore stays inside the tool (`board_fleet`, `mailbox_*`, `room_move`); an Executor approval
+is UX around that check, not the grant. If a thin approval app is ever installed, it owns no state
+and is disposable.
 
 ## What to borrow, in order
 
@@ -46,8 +57,9 @@ grant. If a thin approval app is ever installed, it owns no state and is disposa
    Postgres. Replace the mailbox's JSON snapshot; keep `mailbox-domain` procedures. The package
    is not published; vendor or port the source with attribution.
 2. **The approval contract** — input-aware, three outcomes, persisted pending request, resume by
-   model/native/browser. Borrow the shape, not the host. It may ask our authority; it may never
-   grant, and it fails closed.
+   model/native/browser. Borrow the shape, not the host. Imported tools have only the policy table,
+   so the fence still lives inside our tools. Also borrow the owner-scoping precedence: a user
+   preference cannot weaken an organization guardrail.
 3. **MCP/OpenAPI/GraphQL routers** — `apps/mcp`, `apps/openapi`, `apps/graphql` are the shortest
    path to exposing `jig_check`, `board_fleet` and mailbox reads as tools.
 4. **QuickJS app runtime** — an isolation model worth studying for untrusted room commands, not a
