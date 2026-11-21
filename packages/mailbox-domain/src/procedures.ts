@@ -30,8 +30,6 @@ export interface MessageRef {
 }
 
 /** The delivery states Rat King's receipt carries, in order. */
-// The wire state is a string in the receipt, not a local dispatch discriminant.
-// oxlint-disable-next-line plumb-effect/prefer-tagged-enum
 export type DeliveryState = "accepted" | "delivered" | "acked"
 
 export interface Receipt {

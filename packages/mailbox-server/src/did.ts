@@ -102,8 +102,6 @@ const DidDocument = Schema.Struct({
 
 /** Resolve a did:web document and return its Ed25519 verification key. */
 export const resolveDidWeb = async (did: string): Promise<Uint8Array> => {
-  // oxlint-disable-next-line plumb-effect/no-direct-fetch -- a did:web resolver is a read any
-  // browser can do; Effect HttpClient would force a platform service into this module.
   const response = await fetch(didWebUrl(did))
   if (!response.ok) return fail(`did:web ${did}: HTTP ${response.status}`)
   const document = Schema.decodeUnknownSync(DidDocument)(await response.json())
