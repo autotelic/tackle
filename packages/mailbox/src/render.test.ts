@@ -220,3 +220,18 @@ describe("log invariants", () => {
     expect(() => parseLog(lines.join("\n"))).toThrow(/tid is not increasing/)
   })
 })
+
+it("an unknown field survives the round trip, and canonical encoding is idempotent", () => {
+  const line = JSON.stringify({
+    seq: 1,
+    tid: "234567abcdef2",
+    sender: "TAC-14",
+    replyTo: null,
+    path: "0001-a.md",
+    body: "# 0001 — TAC-14 — a\n",
+    futureField: { nested: [1, 2] },
+  })
+  const once = serializeLog(parseLog(line))
+  expect(once).toContain('"futureField"')
+  expect(serializeLog(parseLog(once))).toBe(once)
+})

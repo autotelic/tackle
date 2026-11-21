@@ -12,20 +12,20 @@ prevent.
 - **False positive narrowed.** `plumb/no-sql-string-interpolation` read the turn-file error message
   in `log.ts` as a query. The rule is off for that one file, with the reason in `oxlint.config.ts`.
 
-## Carried (19 findings)
+## Carried (23 findings)
 
 | rule                                         | severity | count | files                                                         |
 | -------------------------------------------- | -------- | ----- | ------------------------------------------------------------- |
+| `no-unsafe-dictionary-type`                  | error    | 4     | packages/mailbox-domain/src/procedures.ts, log.ts             |
 | `plumb-effect/guarded-op-must-return-option` | error    | 3     | packages/mailbox-domain/src/procedures.ts, log.ts             |
 | `no-reinterpret-cast`                        | error    | 2     | packages/mailbox-domain/src/procedures.ts                     |
-| `no-unsafe-dictionary-type`                  | error    | 2     | packages/mailbox-domain/src/procedures.ts                     |
+| `no-runtime-typeof`                          | error    | 2     | packages/mailbox-domain/src/procedures.ts, log.ts             |
+| `no-unknown-parameters`                      | error    | 2     | packages/mailbox-domain/src/procedures.ts, log.ts             |
 | `prefer-property-tests`                      | warn     | 2     | packages/mailbox-server/test/fixtures.test.ts, render.test.ts |
 | `require-safety-comment-for-type-assertion`  | error    | 2     | packages/mailbox-domain/src/procedures.ts                     |
 | `eslint/no-unused-vars`                      | warn     | 1     | packages/mailbox-server/test/fixtures.test.ts                 |
 | `no-multiple-function-params`                | error    | 1     | packages/mailbox-domain/src/procedures.ts                     |
-| `no-runtime-typeof`                          | error    | 1     | packages/mailbox-domain/src/procedures.ts                     |
 | `no-swappable-primitive-params`              | error    | 1     | packages/mailbox-domain/src/procedures.ts                     |
-| `no-unknown-parameters`                      | error    | 1     | packages/mailbox-domain/src/procedures.ts                     |
 | `plumb-effect/no-manual-field-guards`        | warn     | 1     | log.ts                                                        |
 | `plumb-effect/prefer-tagged-enum`            | error    | 1     | packages/mailbox-domain/src/procedures.ts                     |
 | `require-sort-comparator`                    | error    | 1     | packages/mailbox-domain/src/procedures.ts                     |
