@@ -6,6 +6,8 @@ import { join } from "node:path"
 import { parseArgs } from "node:util"
 import { listRooms } from "@autotelic/room/store"
 import { readRun, startRoomRun } from "@autotelic/room/run"
+import { discoverSessions, type Session } from "./sessions.ts"
+import { joinSessions } from "./join.ts"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 
@@ -15,6 +17,7 @@ const usage = [
   "Usage:",
   "  board up [--root .room] [--host 127.0.0.1] [--port 4780] [--detach]",
   "  board down [--root .room]",
+  "  board presence [--root .room] [--json] (rooms, processes, sessions)",
   "  board status [--root .room] [--json]   (rooms, lock, and the service)",
   "  board queue [--root .room] [--json]",
   "",
@@ -137,7 +140,7 @@ const json = ({
 }: {
   readonly response: import("node:http").ServerResponse
   readonly status: number
-  readonly body: Schema.Json
+  readonly body: object
 }): void => {
   const text = JSON.stringify(body) + "\n"
   response.writeHead(status, {
@@ -148,20 +151,17 @@ const json = ({
   response.end(text)
 }
 
-const presence = async ({
-  root,
-  port,
-  host,
-}: {
-  readonly root: string
-  readonly port: number
-  readonly host: string
-}) => {
+const observe = async (root: string) => {
   const rooms = await listRooms(root)
+  const discovered = await discoverSessions()
+  const herdr = await joinSessions({
+    sessions: discovered.herdr.sessions,
+    rooms: rooms.map((room) => ({ id: room.id, worktree: join(root, room.id, "worktree") })),
+  })
   return {
     shop: root,
     observedAt: new Date().toISOString(),
-    service: { pid: process.pid, host, port },
+    sessions: { ...discovered, herdr: { ...discovered.herdr, sessions: herdr } },
     rooms: await Promise.all(
       rooms.map(async (room) => {
         const run = await readRun({ root, id: room.id })
@@ -173,6 +173,35 @@ const presence = async ({
         }
       }),
     ),
+  }
+}
+
+/** The served document keeps the join result and drops the path evidence. */
+const redact = (session: Session): Omit<Session, "cwd"> => {
+  const { cwd: _cwd, ...rest } = session
+  return rest
+}
+
+const presence = async ({
+  root,
+  port,
+  host,
+}: {
+  readonly root: string
+  readonly port: number
+  readonly host: string
+}) => {
+  const snapshot = await observe(root)
+  return {
+    ...snapshot,
+    sessions: {
+      ...snapshot.sessions,
+      herdr: {
+        ...snapshot.sessions.herdr,
+        sessions: snapshot.sessions.herdr.sessions.map(redact),
+      },
+    },
+    service: { pid: process.pid, host, port },
   }
 }
 
@@ -347,6 +376,25 @@ const main = async (): Promise<void> => {
     return
   }
   const root = values.root
+
+  if (command === "presence") {
+    const snapshot = await observe(root)
+    if (values.json) {
+      console.log(JSON.stringify(snapshot, null, 2))
+      return
+    }
+    for (const room of snapshot.rooms)
+      console.log(
+        room.id + " " + room.state + (room.process === null ? "" : " pid " + room.process.pid),
+      )
+    console.log(
+      snapshot.sessions.herdr.available
+        ? "herdr: " + snapshot.sessions.herdr.sessions.length + " sessions"
+        : "herdr: unavailable",
+    )
+    console.log(snapshot.sessions.rex.available ? "rex: available" : "rex: unavailable")
+    return
+  }
 
   if (command === "status") {
     const rooms = await listRooms(root)

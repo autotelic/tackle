@@ -9,6 +9,24 @@ const cli = fileURLToPath(new URL("../src/cli.ts", import.meta.url))
 const run = (args: ReadonlyArray<string>, cwd: string) =>
   spawnSync(process.execPath, ["--conditions=development", cli, ...args], { cwd, encoding: "utf8" })
 
+test("presence is readable without a shop", () => {
+  const root = mkdtempSync(join(tmpdir(), "board-presence-"))
+  try {
+    const output = run(["presence", "--json", "--root", "rooms"], root)
+    expect(output.status).toBe(0)
+    const presence = JSON.parse(output.stdout)
+    expect(presence).toMatchObject({
+      shop: "rooms",
+      rooms: [],
+      sessions: { rex: { available: false, sessions: [] } },
+    })
+    expect(presence.sessions.herdr).toHaveProperty("available")
+    expect(presence.sessions.herdr).toHaveProperty("sessions")
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
 test("status reports the lock it claims to own", () => {
   const root = mkdtempSync(join(tmpdir(), "board-cli-"))
   try {
