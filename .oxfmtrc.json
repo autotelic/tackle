@@ -13,6 +13,6 @@
     "packages/treadle/**",
     "packages/joggle/tests/fixtures/**",
     "examples/*/tools/ui-catalog/**",
-    "docs/threads/at-seam/[0-9][0-9][0-9][0-9]-*.md"
+    "docs/threads/**/[0-9][0-9][0-9][0-9]-*.md"
   ]
 }

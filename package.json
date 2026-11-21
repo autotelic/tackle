@@ -24,7 +24,7 @@
     "changeset": "changeset",
     "version": "changeset version && oxfmt --write packages/*/CHANGELOG.md",
     "release": "node --conditions=development scripts/release.ts",
-    "mailbox:verify": "node --conditions=development packages/mailbox/src/cli.ts verify --log docs/threads/at-seam/log.jsonl --dir docs/threads/at-seam"
+    "mailbox:verify": "for log in docs/threads/*/log.jsonl; do node --conditions=development packages/mailbox/src/cli.ts verify --log \"$log\" --dir \"$(dirname \"$log\")\" || exit 1; done"
   },
   "devDependencies": {
     "@autotelic/cutlist": "workspace:*",
