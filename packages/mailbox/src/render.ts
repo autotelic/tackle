@@ -1,7 +1,6 @@
 import { isTurnPath, type Turn, type TurnLog } from "./log.ts"
 
-/** The body is the record; the file is the body plus exactly one trailing newline. */
-/** Render one turn as its markdown file, with one trailing newline. */
+/** Render one turn as its markdown file, with exactly one trailing newline. */
 export const renderTurn = (turn: Turn): string =>
   turn.body.endsWith("\n") ? turn.body : `${turn.body}\n`
 

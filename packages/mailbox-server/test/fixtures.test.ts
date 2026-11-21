@@ -23,7 +23,7 @@ const accepted = (state = empty()) => {
   const input = fixture("send.input")
   const result = send(state, input, sender, NOW)
   if (!result.ok) throw new Error("expected admit, got " + result.error._tag)
-  return { state, receipt: result.value, envelope: input.envelope as Envelope }
+  return { state, receipt: result.value, envelope: input.envelope }
 }
 
 test("send admits the fixture envelope and returns its receipt", () => {
@@ -42,7 +42,7 @@ test("replay returns the original receipt; different bytes are Conflict", () => 
 })
 
 test("a live sender lease without its fence is LeaseMismatch", () => {
-  const input = fixture("fenced-send.input") as { envelope: Envelope }
+  const input = fixture("fenced-send.input")
   const state = empty()
   const lease = acquire(
     state,
@@ -168,7 +168,7 @@ test("lease acquisition is per DID, clamped, and handed over only with the curre
 
 test("retired and unresolved names produce his names, not a generic failure", () => {
   const state = empty()
-  const envelope = fixture("send.input").envelope as Envelope
+  const envelope = fixture("send.input").envelope
   state.names.set("old", {
     did: recipient,
     retiredAt: "2026-10-01T00:00:00.000Z",

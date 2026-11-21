@@ -9,6 +9,9 @@ import { parseLog, serializeLog } from "./log.ts"
 import { renderLog, renderTurn, verifyLog } from "./render.ts"
 import { VERSION } from "./version.ts"
 
+const isMissing = (cause: unknown): boolean =>
+  cause instanceof Error && "code" in cause && cause.code === "ENOENT"
+
 class MailboxError extends Data.TaggedError("MailboxError")<{ readonly detail: string }> {}
 
 const attempt = <A>(run: () => Promise<A>): Effect.Effect<A, MailboxError> =>
@@ -124,7 +127,7 @@ const writeCommand = Command.make(
         try {
           return parseLog(await readFile(options.log, "utf8"))
         } catch (cause) {
-          if ((cause as { code?: string }).code === "ENOENT") return { turns: [] }
+          if (isMissing(cause)) return { turns: [] }
           throw cause
         }
       })

@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest"
 import { appendTurn } from "./append.ts"
 import { exportDirectory } from "./export.ts"
 import { parseLog, serializeLog, type Turn } from "./log.ts"
-import { renderLog, verifyLog } from "./render.ts"
+import { verifyLog } from "./render.ts"
 import { isTid } from "./tid.ts"
 
 const thread = fileURLToPath(new URL("../../../docs/threads/at-seam", import.meta.url))

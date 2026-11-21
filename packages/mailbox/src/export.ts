@@ -15,7 +15,7 @@ export const exportDirectory = async (
   dir: string,
   options: { at: string; note?: string },
 ): Promise<TurnLog> => {
-  const names = (await readdir(dir)).filter(isTurnPath).sort()
+  const names = (await readdir(dir)).filter(isTurnPath).sort((a, b) => a.localeCompare(b))
   if (names.length === 0) throw new LogError(`${dir}: no turn files`)
   const turns: Turn[] = []
   let previous: string | null = null
