@@ -10,23 +10,23 @@ import { Worktree, WorktreeLive } from "../src/Worktree.ts"
 const run = promisify(execFile)
 
 const project = async () => {
-  const root = await mkdtemp(join(tmpdir(), "bench-worktree-"))
+  const root = await mkdtemp(join(tmpdir(), "room-worktree-"))
   const repo = join(root, "repo")
   await run("git", ["init", "-q", "-b", "main", repo])
-  await writeFile(join(repo, "README.md"), "bench\n")
+  await writeFile(join(repo, "README.md"), "room\n")
   await run("git", ["-C", repo, "add", "README.md"])
   await run("git", [
     "-C",
     repo,
     "-c",
-    "user.email=bench@example.com",
+    "user.email=room@example.com",
     "-c",
-    "user.name=Bench",
+    "user.name=Room",
     "commit",
     "-qm",
     "init",
   ])
-  return { root, repo, worktree: join(root, "bench") }
+  return { root, repo, worktree: join(root, "room") }
 }
 
 test("the worktree provider creates a checkout and archives it without deleting", async () => {
@@ -39,7 +39,7 @@ test("the worktree provider creates a checkout and archives it without deleting"
       }).pipe(Effect.provide(WorktreeLive)),
     )
     expect(ensured).toBe(worktree)
-    expect(await readFile(join(worktree, "README.md"), "utf8")).toBe("bench\n")
+    expect(await readFile(join(worktree, "README.md"), "utf8")).toBe("room\n")
 
     await Effect.runPromise(
       Effect.gen(function* () {
@@ -50,7 +50,7 @@ test("the worktree provider creates a checkout and archives it without deleting"
     // The archive is a move, not a delete: the cold copy still has the file.
     const cold = join(root, "cold")
     const [name] = await import("node:fs/promises").then((fs) => fs.readdir(cold))
-    expect(await readFile(join(cold, name!, "README.md"), "utf8")).toBe("bench\n")
+    expect(await readFile(join(cold, name!, "README.md"), "utf8")).toBe("room\n")
   } finally {
     await rm(root, { recursive: true, force: true })
   }

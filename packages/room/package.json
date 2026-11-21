@@ -1,8 +1,8 @@
 {
-  "name": "@autotelic/bench-domain",
+  "name": "@autotelic/room",
   "version": "0.0.0",
   "private": true,
-  "description": "The bench model: one aggregate per durable place, commands, events, views, and stories.",
+  "description": "The room model: one aggregate per durable place, commands, events, views, and stories.",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,

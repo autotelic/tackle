@@ -66,3 +66,44 @@ export const verifyDetached = async (
   const key = await crypto.subtle.importKey("raw", raw, { name: "Ed25519" }, false, ["verify"])
   return crypto.subtle.verify("Ed25519", key, signature, data)
 }
+
+/** The URL a did:web document lives at; a port is percent-encoded in the DID. */
+export const didWebUrl = (did: string): string => {
+  if (!did.startsWith("did:web:")) throw new Error("not a did:web")
+  const parts = did.slice("did:web:".length).split(":")
+  const host = decodeURIComponent(parts[0] ?? "")
+  const path = parts.slice(1).map(decodeURIComponent).join("/")
+  // Loopback tests serve plain HTTP; a real did:web is HTTPS only.
+  const scheme = host.startsWith("127.0.0.1") || host.startsWith("localhost") ? "http" : "https"
+  return `${scheme}://${host}/${path === "" ? "" : path + "/"}did.json`
+}
+
+/** The multibase form of an Ed25519 key, as a DID document carries it. */
+export const multibaseFromEd25519 = (raw: Uint8Array): string =>
+  "z" + encodeBase58(Uint8Array.from([...ED25519, ...raw]))
+
+/** Resolve a did:web document and return its Ed25519 verification key. */
+export const resolveDidWeb = async (did: string): Promise<Uint8Array> => {
+  const response = await fetch(didWebUrl(did))
+  if (!response.ok) throw new Error(`did:web ${did}: HTTP ${response.status}`)
+  const document = (await response.json()) as {
+    verificationMethod?: ReadonlyArray<{ publicKeyMultibase?: string }>
+  }
+  const multibase = document.verificationMethod?.[0]?.publicKeyMultibase
+  if (multibase === undefined || !multibase.startsWith("z"))
+    throw new Error("did:web: no multibase key")
+  const bytes = decodeBase58(multibase.slice(1))
+  if (bytes[0] !== ED25519[0] || bytes[1] !== ED25519[1]) throw new Error("did:web: not Ed25519")
+  return bytes.slice(2)
+}
+
+/** Verify with either identity method; the signature check does not branch on trust. */
+export const verifyDid = async (
+  did: string,
+  data: Uint8Array,
+  signature: Uint8Array,
+): Promise<boolean> => {
+  const raw = did.startsWith("did:web:") ? await resolveDidWeb(did) : ed25519FromDidKey(did)
+  const key = await crypto.subtle.importKey("raw", raw, { name: "Ed25519" }, false, ["verify"])
+  return crypto.subtle.verify("Ed25519", key, signature, data)
+}

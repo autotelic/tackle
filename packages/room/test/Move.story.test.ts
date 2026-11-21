@@ -3,13 +3,13 @@ import { expect, it } from "@effect/vitest"
 import { Move } from "../src/Move/Move.aggregate.ts"
 import { MoveModel } from "../src/Move/Move.model.ts"
 import {
-  AdoptBench,
-  BenchAdopted,
+  AdoptRoom,
+  RoomAdopted,
   MoveDiverged,
   StaleGeneration,
-} from "../src/Move/AdoptBench.command.ts"
-import { AdoptionMissing, ArchiveBench, BenchArchived } from "../src/Move/ArchiveBench.command.ts"
-import { BenchEvacuated, EvacuateBench } from "../src/Move/EvacuateBench.command.ts"
+} from "../src/Move/AdoptRoom.command.ts"
+import { AdoptionMissing, ArchiveRoom, RoomArchived } from "../src/Move/ArchiveRoom.command.ts"
+import { RoomEvacuated, EvacuateRoom } from "../src/Move/EvacuateRoom.command.ts"
 
 const story = Story.make(MoveModel)
 const move = Move.ref("acme-web-dev-1575")
@@ -21,13 +21,13 @@ it.effect("a move adopts at the next generation, then archives; nothing deletes"
   story(
     Story.when(
       move,
-      new EvacuateBench({ benchId: move.id, to: "mini", fromGeneration: 1, sha: source }),
+      new EvacuateRoom({ roomId: move.id, to: "mini", fromGeneration: 1, sha: source }),
     ),
-    Story.then(move, new BenchEvacuated({ to: "mini", fromGeneration: 1, sha: source, at: T0 })),
-    Story.when(move, new AdoptBench({ benchId: move.id, toGeneration: 2, sha: source })),
-    Story.then(move, new BenchAdopted({ toGeneration: 2, sha: source, at: T0 })),
-    Story.when(move, new ArchiveBench({ benchId: move.id })),
-    Story.then(move, new BenchArchived({ at: T0 })),
+    Story.then(move, new RoomEvacuated({ to: "mini", fromGeneration: 1, sha: source, at: T0 })),
+    Story.when(move, new AdoptRoom({ roomId: move.id, toGeneration: 2, sha: source })),
+    Story.then(move, new RoomAdopted({ toGeneration: 2, sha: source, at: T0 })),
+    Story.when(move, new ArchiveRoom({ roomId: move.id })),
+    Story.then(move, new RoomArchived({ at: T0 })),
   ),
 )
 
@@ -37,25 +37,25 @@ it.effect(
     story(
       Story.when(
         move,
-        new EvacuateBench({ benchId: move.id, to: "mini", fromGeneration: 1, sha: source }),
+        new EvacuateRoom({ roomId: move.id, to: "mini", fromGeneration: 1, sha: source }),
       ),
-      Story.then(move, new BenchEvacuated({ to: "mini", fromGeneration: 1, sha: source, at: T0 })),
+      Story.then(move, new RoomEvacuated({ to: "mini", fromGeneration: 1, sha: source, at: T0 })),
 
       // A receipt at the source's generation is a copy, not a handoff.
-      Story.when(move, new AdoptBench({ benchId: move.id, toGeneration: 1, sha: source })),
+      Story.when(move, new AdoptRoom({ roomId: move.id, toGeneration: 1, sha: source })),
       Story.rejected(new StaleGeneration({ from: 1, to: 1 })),
 
       // Different bytes: both hashes are recorded, and the source is not archived.
-      Story.when(move, new AdoptBench({ benchId: move.id, toGeneration: 2, sha: other })),
+      Story.when(move, new AdoptRoom({ roomId: move.id, toGeneration: 2, sha: other })),
       Story.then(move, new MoveDiverged({ sourceSha: source, targetSha: other, at: T0 })),
-      Story.when(move, new ArchiveBench({ benchId: move.id })),
+      Story.when(move, new ArchiveRoom({ roomId: move.id })),
       Story.rejected(new AdoptionMissing()),
     ),
 )
 
 it.effect("refuses to adopt before the source has left", () =>
   story(
-    Story.when(move, new AdoptBench({ benchId: move.id, toGeneration: 2, sha: source })),
+    Story.when(move, new AdoptRoom({ roomId: move.id, toGeneration: 2, sha: source })),
     Story.rejected(new AdoptionMissing()),
   ),
 )

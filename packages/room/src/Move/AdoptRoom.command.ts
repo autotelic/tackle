@@ -1,10 +1,10 @@
 import * as Domain from "@alchemy.run/domain"
 import * as Schema from "effect/Schema"
-import { BenchId } from "../Bench/Bench.id.ts"
-import { AdoptionMissing } from "./ArchiveBench.command.ts"
+import { RoomId } from "../Room/Room.id.ts"
+import { AdoptionMissing } from "./ArchiveRoom.command.ts"
 
-export class BenchAdopted extends Domain.Event(
-  "BenchAdopted",
+export class RoomAdopted extends Domain.Event(
+  "RoomAdopted",
   { toGeneration: Schema.Int, sha: Schema.String, at: Schema.Int },
   { description: "The target holds the same bytes at the next generation." },
 ) {}
@@ -24,16 +24,16 @@ export class StaleGeneration extends Domain.Rejection(
   },
 ) {}
 
-export class AdoptBench extends Domain.Command(
-  "AdoptBench",
+export class AdoptRoom extends Domain.Command(
+  "AdoptRoom",
   {
-    target: BenchId,
+    target: RoomId,
     input: {
-      benchId: BenchId,
+      roomId: RoomId,
       toGeneration: Schema.Int,
       sha: Schema.String,
     },
-    events: [BenchAdopted, MoveDiverged],
+    events: [RoomAdopted, MoveDiverged],
     rejects: [StaleGeneration, AdoptionMissing],
   },
   { description: "Adopt the copy at the next generation, if the bytes match." },

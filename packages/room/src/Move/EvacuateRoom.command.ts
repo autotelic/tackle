@@ -1,9 +1,9 @@
 import * as Domain from "@alchemy.run/domain"
 import * as Schema from "effect/Schema"
-import { BenchId } from "../Bench/Bench.id.ts"
+import { RoomId } from "../Room/Room.id.ts"
 
-export class BenchEvacuated extends Domain.Event(
-  "BenchEvacuated",
+export class RoomEvacuated extends Domain.Event(
+  "RoomEvacuated",
   { to: Schema.String, fromGeneration: Schema.Int, sha: Schema.String, at: Schema.Int },
   { description: "The source sealed its journal and released the name at fromGeneration." },
 ) {}
@@ -11,21 +11,21 @@ export class BenchEvacuated extends Domain.Event(
 export class MoveAlreadyStarted extends Domain.Rejection(
   "MoveAlreadyStarted",
   {},
-  { httpApiStatus: 409, description: "This bench has already left its source." },
+  { httpApiStatus: 409, description: "This room has already left its source." },
 ) {}
 
-export class EvacuateBench extends Domain.Command(
-  "EvacuateBench",
+export class EvacuateRoom extends Domain.Command(
+  "EvacuateRoom",
   {
-    target: BenchId,
+    target: RoomId,
     input: {
-      benchId: BenchId,
+      roomId: RoomId,
       to: Schema.String,
       fromGeneration: Schema.Int,
       sha: Schema.String,
     },
-    events: [BenchEvacuated],
+    events: [RoomEvacuated],
     rejects: [MoveAlreadyStarted],
   },
-  { description: "Seal the source and record where the bench is going." },
+  { description: "Seal the source and record where the room is going." },
 ) {}

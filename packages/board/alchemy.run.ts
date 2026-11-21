@@ -7,7 +7,7 @@ import * as Layer from "effect/Layer"
  * resource and the Durable Object hosting arrive with the supervisor in C4.
  */
 export default Alchemy.Stack(
-  "bench-shop",
+  "room-shop",
   { providers: Layer.empty, state: Alchemy.localState() },
   Effect.succeed({}),
 )

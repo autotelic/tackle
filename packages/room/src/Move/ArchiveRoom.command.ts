@@ -1,9 +1,9 @@
 import * as Domain from "@alchemy.run/domain"
 import * as Schema from "effect/Schema"
-import { BenchId } from "../Bench/Bench.id.ts"
+import { RoomId } from "../Room/Room.id.ts"
 
-export class BenchArchived extends Domain.Event(
-  "BenchArchived",
+export class RoomArchived extends Domain.Event(
+  "RoomArchived",
   { at: Schema.Int },
   { description: "The source copy is in cold storage. Archiving is a move, never a delete." },
 ) {}
@@ -17,12 +17,12 @@ export class AdoptionMissing extends Domain.Rejection(
   },
 ) {}
 
-export class ArchiveBench extends Domain.Command(
-  "ArchiveBench",
+export class ArchiveRoom extends Domain.Command(
+  "ArchiveRoom",
   {
-    target: BenchId,
-    input: { benchId: BenchId },
-    events: [BenchArchived],
+    target: RoomId,
+    input: { roomId: RoomId },
+    events: [RoomArchived],
     rejects: [AdoptionMissing],
   },
   { description: "Archive the source after adoption. There is no delete command." },

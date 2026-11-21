@@ -6,7 +6,7 @@ import { promisify } from "node:util"
 
 const run = promisify(execFile)
 
-/** Where a bench's data lives. The provider owns the worktree, never the process. */
+/** Where a room's data lives. The provider owns the worktree, never the process. */
 export interface WorktreeService {
   readonly ensure: (input: {
     readonly root: string
@@ -28,7 +28,7 @@ export class WorktreeError extends Error {
 export class Worktree extends Context.Service<Worktree, WorktreeService>()("Worktree") {}
 
 /**
- * A git worktree per bench, so two benches never edit one checkout. The
+ * A git worktree per room, so two roomes never edit one checkout. The
  * directory is the unit; the supervisor owns the processes inside it.
  */
 export const WorktreeLive = Layer.effect(
@@ -38,7 +38,7 @@ export const WorktreeLive = Layer.effect(
       Effect.tryPromise({
         try: async () => {
           await mkdir(join(root, ".."), { recursive: true })
-          await run("git", ["worktree", "add", "-B", `bench/${base}`, root, base], { cwd: repo })
+          await run("git", ["worktree", "add", "-B", `room/${base}`, root, base], { cwd: repo })
           return root
         },
         catch: (cause) => new WorktreeError(String(cause)),
