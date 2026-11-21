@@ -38,6 +38,21 @@ first:
 
 Refusal tests take direct inputs and do not reuse a happy-path helper.
 
+## Reference implementation
+
+`alchemy-run/alchemy` PR **#3506** (open, pinned head `02e682f`), example
+`cloudflare-domain-board`: a Domain model on Cloudflare DOs serving a foldkit web app, an MCP
+server and a CLI derived from one `Api`.
+
+Borrow: the `Thread` aggregate's claim/renew/complete/release shape; `Leases` scheduling
+`ExpireLease` with a deterministic command id, a renewal replacing the deadline, and the expiry
+recording nothing if completed in time; typed rejections with `httpApiStatus`; the
+domain/server/cli/web layout and the story/server/integration test split; `toCli` and `toMcp`.
+
+Do not borrow: its lease is local to one DO (no cross-host fence or generation handover); its shared
+token + actor header is not per-channel authorization; `Thread` is `work.item`/desk, not the bench
+container; `toMcp` must not become a second implementation of a surface.
+
 ## Principles
 
 1. Every commit is format → typecheck → test → `mailbox verify` → build → push. If it cannot be
