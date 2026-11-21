@@ -1,8 +1,6 @@
 import { basename } from "node:path"
-import { isTurnPath, LogError, type Turn, type TurnLog } from "./log.ts"
+import { isTurnPath, LogError, senderOf, type Turn, type TurnLog } from "./log.ts"
 import { tidAt } from "./tid.ts"
-
-const SENDER = /^#\s+\d{4}\s+—\s+(\S+)\s+—/
 
 export interface AppendInput {
   readonly path: string
@@ -26,7 +24,7 @@ export const appendTurn = (
   if (log.turns.some((turn) => turn.path === path)) {
     throw new LogError(`${path}: already in the log; a turn is written once`)
   }
-  const sender = input.sender ?? SENDER.exec(input.body)?.[1]
+  const sender = input.sender ?? senderOf(input.body)
   if (sender === undefined)
     throw new LogError("no sender: pass --sender or write a '— SENDER —' heading")
   const previous = log.turns.at(-1)

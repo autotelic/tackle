@@ -153,3 +153,8 @@ export const serializeLog = (log: TurnLog): string => {
     "\n"
   )
 }
+
+const SENDER = /^#\s+\d{4}\s+—\s+(\S+)\s+—/
+
+/** The sender a turn heading names, if it names one. */
+export const senderOf = (body: string): string | undefined => SENDER.exec(body)?.[1]

@@ -187,6 +187,8 @@ const cli = Command.make("mailbox").pipe(
   Command.withSubcommands([exportCommand, writeCommand, renderCommand, verifyCommand]),
 )
 
-const program = Command.run(cli, { version: VERSION }).pipe(Effect.provide(NodeServices.layer))
+const mailboxProgram = Command.run(cli, { version: VERSION }).pipe(
+  Effect.provide(NodeServices.layer),
+)
 
-NodeRuntime.runMain(program, { disableErrorReporting: true })
+NodeRuntime.runMain(mailboxProgram, { disableErrorReporting: true })
