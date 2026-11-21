@@ -35,6 +35,7 @@ import { renderGithub, renderJson, renderText } from "./render.ts"
 import { harnessRun, type HarnessRun } from "./run.ts"
 import { initialise, initJson, onboardingFor, summaryFor } from "./init.ts"
 import { derivePin, pinMatches, type RepoPin } from "./pin.ts"
+import { isRoomInvocation, runRoom } from "./room.ts"
 import { VERSION } from "./version.ts"
 
 /**
@@ -834,6 +835,11 @@ const shipCommand = Command.make(
   Command.withShortDescription("Write one ship record."),
 )
 
+// `jig room` is a passthrough, not a subcommand: the room owns its flags and its help.
+if (isRoomInvocation(process.argv)) {
+  process.exit(runRoom(process.argv))
+}
+
 const pinCommand = Command.make(
   "pin",
   {
@@ -878,7 +884,7 @@ const pinCommand = Command.make(
 
 const cli = Command.make("jig").pipe(
   Command.withDescription(
-    "The harness: run every conformance engine in one pass, merge them into one report, and hold the ratchet.",
+    "The harness: run every conformance engine in one pass, merge them into one report, and hold the ratchet. `jig room` opens the room.",
   ),
   Command.withSubcommands([
     checkCommand,

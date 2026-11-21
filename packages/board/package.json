@@ -2,17 +2,33 @@
   "name": "@autotelic/board",
   "version": "0.0.0",
   "private": true,
-  "description": "The room host: the worktree provider, the Domain layers, and the Alchemy stack.",
+  "description": "The board: the shop supervisor, queue status and the one-owner lock.",
   "license": "MIT",
+  "bin": {
+    "board": "./bin/board.js"
+  },
+  "files": [
+    "dist",
+    "bin"
+  ],
   "type": "module",
   "sideEffects": false,
   "exports": {
+    ".": {
+      "development": "./src/index.ts",
+      "default": "./dist/index.js"
+    },
+    "./cli": {
+      "development": "./src/cli.ts",
+      "default": "./dist/cli.js"
+    },
     "./*": "./src/*.ts"
   },
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "build": "tsc -p tsconfig.build.json"
+    "build": "tsc -p tsconfig.build.json",
+    "board": "node --conditions=development src/cli.ts"
   },
   "dependencies": {
     "@alchemy.run/cloudflare": "2.0.0-beta.87",

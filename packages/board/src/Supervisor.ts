@@ -1,4 +1,4 @@
-import { Effect, Exit, Fiber, Queue, Ref } from "effect"
+import { Clock, Effect, Exit, Fiber, Queue, Ref } from "effect"
 import type { Scope } from "effect/Scope"
 
 /** How a child is restarted when it ends. */
@@ -35,9 +35,9 @@ export interface SupervisorStatus {
 export interface SupervisorHandle {
   /** Simulate a crash: interrupt the child; its watcher restarts it. */
   readonly crash: (name: string) => Effect.Effect<void>
-  readonly status: () => Effect.Effect<SupervisorStatus>
+  readonly status: Effect.Effect<SupervisorStatus>
   readonly desk: Queue.Dequeue<DeskItem>
-  readonly stop: () => Effect.Effect<void>
+  readonly stop: Effect.Effect<void>
 }
 
 /** A second supervisor for one shop is a bug, not a second owner. */
@@ -88,7 +88,7 @@ export const supervise = (
           Effect.gen(function* () {
             const exit = yield* Fiber.await(fiber)
             yield* onExit(spec, fiber, exit)
-          }).pipe(Effect.catchCause(() => Effect.void)),
+          }).pipe(Effect.catchCause((cause) => Effect.logDebug("supervisor watcher ended", cause))),
           scope,
         )
         return { spec, fiber }
@@ -119,7 +119,7 @@ export const supervise = (
         if (restart === "temporary") return
         if (restart === "transient" && Exit.isSuccess(exit)) return
 
-        const at = Date.now()
+        const at = yield* Clock.currentTimeMillis
         const recent = [...(yield* Ref.get(restarts)).filter((t) => at - t < periodMs), at]
         if (recent.length > maxRestarts) {
           yield* Ref.set(flags, { ...state, blocked: true })
@@ -157,26 +157,24 @@ export const supervise = (
           const child = (yield* Ref.get(children)).find((c) => c.spec.name === name)
           if (child !== undefined) yield* Fiber.interrupt(child.fiber)
         }),
-      status: () =>
-        Effect.gen(function* () {
-          const [state, times, cs] = yield* Effect.all([
-            Ref.get(flags),
-            Ref.get(restarts),
-            Ref.get(children),
-          ])
-          return {
-            shop: options.shop,
-            blocked: state.blocked,
-            restarts: times.length,
-            children: cs.map((c) => c.spec.name),
-          }
-        }),
+      status: Effect.gen(function* () {
+        const [state, times, cs] = yield* Effect.all([
+          Ref.get(flags),
+          Ref.get(restarts),
+          Ref.get(children),
+        ])
+        return {
+          shop: options.shop,
+          blocked: state.blocked,
+          restarts: times.length,
+          children: cs.map((c) => c.spec.name),
+        }
+      }),
       desk,
-      stop: () =>
-        Effect.gen(function* () {
-          yield* Ref.update(flags, (s) => ({ ...s, stopping: true }))
-          const all = yield* Ref.get(children)
-          yield* Effect.forEach(all, (c) => Fiber.interrupt(c.fiber), { discard: true })
-        }),
+      stop: Effect.gen(function* () {
+        yield* Ref.update(flags, (s) => ({ ...s, stopping: true }))
+        const all = yield* Ref.get(children)
+        yield* Effect.forEach(all, (c) => Fiber.interrupt(c.fiber), { discard: true })
+      }),
     }
   })

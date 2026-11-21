@@ -1,4 +1,4 @@
-import { Context, Effect, Layer } from "effect"
+import { Clock, Context, Effect, Layer } from "effect"
 import { execFile } from "node:child_process"
 import { mkdir, rename } from "node:fs/promises"
 import { join } from "node:path"
@@ -44,13 +44,16 @@ export const WorktreeLive = Layer.effect(
         catch: (cause) => new WorktreeError(String(cause)),
       }),
     archive: ({ root }) =>
-      Effect.tryPromise({
-        try: async () => {
-          const cold = join(root, "..", "cold", `${root.split("/").at(-1)}-${Date.now()}`)
-          await mkdir(join(root, "..", "cold"), { recursive: true })
-          await rename(root, cold)
-        },
-        catch: (cause) => new WorktreeError(String(cause)),
+      Effect.gen(function* () {
+        const at = yield* Clock.currentTimeMillis
+        yield* Effect.tryPromise({
+          try: async () => {
+            const cold = join(root, "..", "cold", `${root.split("/").at(-1)}-${at}`)
+            await mkdir(join(root, "..", "cold"), { recursive: true })
+            await rename(root, cold)
+          },
+          catch: (cause) => new WorktreeError(String(cause)),
+        })
       }),
   }),
 )

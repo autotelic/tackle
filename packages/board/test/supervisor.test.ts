@@ -1,8 +1,6 @@
 import { expect, test } from "vitest"
 import { Effect, Exit, Queue, Ref } from "effect"
-import { supervise, ShopBusy, type ChildSpec } from "../src/Supervisor.ts"
-
-const counts = () => Effect.runSync(Ref.make<Record<string, number>>({}))
+import { supervise, type ChildSpec } from "../src/Supervisor.ts"
 
 const spec = (name: string, counter: Ref.Ref<Record<string, number>>): ChildSpec => ({
   name,
@@ -27,7 +25,7 @@ test("one_for_one restarts only the crashed child", () =>
       yield* handle.crash("a")
       yield* Effect.sleep("20 millis")
       expect(yield* Ref.get(counter)).toEqual({ a: 2, b: 1 })
-      yield* handle.stop()
+      yield* handle.stop
     }),
   ))
 
@@ -44,7 +42,7 @@ test("rest_for_one restarts the crashed child and everything started after it", 
       yield* handle.crash("a")
       yield* Effect.sleep("20 millis")
       expect(yield* Ref.get(counter)).toEqual({ a: 2, b: 2, c: 2 })
-      yield* handle.stop()
+      yield* handle.stop
     }),
   ))
 
@@ -59,12 +57,12 @@ test("intensity exceeded stops the tree and writes one desk item", () =>
       yield* Effect.sleep("20 millis")
       yield* handle.crash("a")
       yield* Effect.sleep("20 millis")
-      const status = yield* handle.status()
+      const status = yield* handle.status
       expect(status.blocked).toBe(true)
       const item = yield* Queue.take(handle.desk)
       expect(item.reason).toBe("crash-looping")
       expect(item.child).toBe("a")
-      yield* handle.stop()
+      yield* handle.stop
     }),
   ))
 

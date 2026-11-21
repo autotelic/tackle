@@ -309,6 +309,30 @@ export default {
       rules: { "plumb-effect/guarded-op-must-return-effect": "off" },
     },
     {
+      // The one-supervisor-per-shop guard is a process-level registry. It is deliberately
+      // module-scoped and never exported; the rule reads any module mutation as exported state.
+      files: ["packages/board/src/Supervisor.ts"],
+      rules: { "plumb/no-exported-mutable-state": "off" },
+    },
+    {
+      // The CLIs are the process boundary: they mint the instant and pass it into the store.
+      files: ["packages/room/src/cli.ts", "packages/board/src/cli.ts"],
+      rules: { "plumb/no-nondeterministic-core": "off" },
+    },
+    {
+      // Room stories and the supervisor suite are ordered scenarios (given/when/then, crash then
+      // restart), not claims over arbitrary input; a property suite would test something else.
+      files: [
+        "packages/board/test/supervisor.test.ts",
+        "packages/room/test/worktree.test.ts",
+        "packages/room/test/Move.story.test.ts",
+        "packages/room/test/Room.story.test.ts",
+        "packages/room/test/cli.test.ts",
+        "packages/board/test/cli.test.ts",
+      ],
+      rules: { "plumb/prefer-property-tests": "off" },
+    },
+    {
       // These suites are Rat King's published fixtures and protocol examples, not general
       // claims about arbitrary input; a property suite would be a different suite.
       files: [

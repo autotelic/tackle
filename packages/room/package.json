@@ -2,17 +2,33 @@
   "name": "@autotelic/room",
   "version": "0.0.0",
   "private": true,
-  "description": "The room model: one aggregate per durable place, commands, events, views, and stories.",
+  "description": "The room: one durable place per scope, its worktree, and the room command line.",
   "license": "MIT",
+  "bin": {
+    "room": "./bin/room.js"
+  },
+  "files": [
+    "dist",
+    "bin"
+  ],
   "type": "module",
   "sideEffects": false,
   "exports": {
+    ".": {
+      "development": "./src/index.ts",
+      "default": "./dist/index.js"
+    },
+    "./cli": {
+      "development": "./src/cli.ts",
+      "default": "./dist/cli.js"
+    },
     "./*": "./src/*.ts"
   },
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "build": "tsc -p tsconfig.build.json"
+    "build": "tsc -p tsconfig.build.json",
+    "room": "node --conditions=development src/cli.ts"
   },
   "dependencies": {
     "@alchemy.run/domain": "2.0.0-beta.87",
