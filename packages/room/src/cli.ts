@@ -181,6 +181,8 @@ const main = async (): Promise<void> => {
   if (command === "down") {
     const run = await readRun({ root, id })
     if (run === undefined) return fail("room " + id + " has no process", EXIT.declined)
+    // Clear desire before the signal: the shop must not restart it during the stop.
+    await setRoomDesired({ root, id, desired: false })
     const outcome = await signalRun({ root, id, signal: "SIGTERM" })
     if (outcome === "no-process") return fail("room " + id + " has no process", EXIT.declined)
     for (let attempt = 0; attempt < 40; attempt++) {
@@ -188,7 +190,6 @@ const main = async (): Promise<void> => {
       await new Promise((resolve) => setTimeout(resolve, 50))
     }
     await removeRun({ root, id })
-    await setRoomDesired({ root, id, desired: false })
     console.log("room " + id + " stopped; supervisor " + run.pid)
     return
   }

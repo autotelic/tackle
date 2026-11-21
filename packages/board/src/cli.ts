@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process"
 import { createServer } from "node:http"
+import { existsSync } from "node:fs"
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { parseArgs } from "node:util"
@@ -257,6 +258,8 @@ const serve = async ({
       const wanted = room.desired ?? run !== undefined
       const exec = room.exec ?? run?.exec
       if (!wanted || exec === undefined) continue
+      // A missing worktree is not something the shop can repair; the room's own `up` is.
+      if (!existsSync(join(root, room.id, "worktree"))) continue
       const started = await startRoomRun({
         root,
         id: room.id,
