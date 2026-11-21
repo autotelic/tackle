@@ -120,6 +120,49 @@ An `Observed` record without `records: string[]` — the CIDs it read — is inv
 
 Encodes “observed at T” as a claim about bytes rather than about the world; without it a stale mirror
 looks identical to a fresh read.
+
+### 12. `generation-is-anchored` (plumb, shape)
+
+A field named `generation` may appear unqualified only in a record that also carries `leaseId`; otherwise it
+must be named `leaseGenerationHint` and accompanied by `leaseAuthority`.
+
+Encodes the correction that came out of the observability work: **a generation without its lease is a hint, a
+generation with its lease is a grant.** Without the rule, either direction rots — a span that says `…Hint`
+throws away a fact the command genuinely carried, and a presence file that says `generation` invites a
+takeover on something nobody granted.
+
+**Narrowing:** a record whose `generation` is not a lease generation (a schema version, a retry counter),
+with the reason saying which counter it is. The rule keys on the word, so the narrowing is how we say “this
+one is a different noun”.
+
+### 13. `no-cast-to-a-brand` (plumb, type-aware)
+
+A type assertion whose target is a branded or nominally-private type is an error, and **no `SAFETY:` comment
+justifies it.**
+
+A brand exists to be un-forgeable: `Grant`, `Hint`, `LeaseId`, a TID. Every one of them earns its keep by
+making an invalid value unrepresentable, and `as Grant` is the single line that undoes that. Elsewhere in
+this repo an assertion with a written invariant is acceptable — that is what
+`require-safety-comment-for-type-assertion` is for. A brand is the exception, because there is no invariant
+to state: its whole meaning is “this came through the constructor.”
+
+Three paths are legitimate, and none of them is an assertion:
+
+```ts
+const a = RoomId.make(value) // the constructor
+const b = Schema.decodeUnknownSync(RoomId)(value) // decode through the type's own schema
+const c = yield * parseAtBoundary(RoomId, input) // a parse where untrusted bytes enter
+
+value as RoomId // fires
+```
+
+**Fixture, both ways:** `value as RoomId` fires; `Schema.decodeUnknownSync(RoomId)(value)` passes;
+`RoomId.make(value)` passes. Three fixtures, because a rule with only a negative fixture cannot tell a
+bypass from a sanctioned path.
+
+**Narrowing:** none by design. If a value needs a brand and has no sanctioned path, the answer is a
+constructor or a schema — not a comment.
+
 ---
 
 ## Tier 3 — joggle questions, not mechanics
