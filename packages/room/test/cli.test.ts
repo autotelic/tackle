@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process"
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -58,7 +58,7 @@ describe("a verb that prints a completion is a claim", () => {
       expect(room(root, "pause", "--id", "dev-repo").status).toBe(0)
       const resumed = room(root, "resume", "--id", "dev-repo")
       expect(resumed.status).toBe(0)
-      expect(resumed.stdout).toBe("room dev-repo recorded ready; no process was started\n")
+      expect(resumed.stdout).toBe("room dev-repo recorded ready; no process was continued\n")
     } finally {
       close()
     }
@@ -78,4 +78,47 @@ describe("a verb that prints a completion is a claim", () => {
       close()
     }
   })
+
+  it("runs a command, freezes it on pause, continues it on resume, and stops it on down", async () => {
+    const { root, close } = scratch()
+    try {
+      expect(room(root, "new", "--repo", repository(root), "--scope", "dev").status).toBe(0)
+      const up = room(
+        root,
+        "up",
+        "--id",
+        "dev-repo",
+        "--exec",
+        "while true; do echo tick >> ticks; sleep 0.1; done",
+      )
+      expect(up.status).toBe(0)
+      expect(up.stdout).toContain("room dev-repo up; supervisor ")
+
+      const ticks = join(root, ".room", "dev-repo", "worktree", "ticks")
+      const count = (): number =>
+        existsSync(ticks) ? readFileSync(ticks, "utf8").split("\n").length : 0
+      await new Promise((resolve) => setTimeout(resolve, 400))
+      const beforePause = count()
+      expect(beforePause).toBeGreaterThan(0)
+      expect(room(root, "pause", "--id", "dev-repo").stdout).toContain(
+        "recorded paused; process group was signalled",
+      )
+      // The state write happens before the signal; let those last ticks land, then freeze is proven.
+      await new Promise((resolve) => setTimeout(resolve, 250))
+      const pausedCount = count()
+      await new Promise((resolve) => setTimeout(resolve, 400))
+      expect(count()).toBe(pausedCount)
+      expect(room(root, "resume", "--id", "dev-repo").stdout).toContain(
+        "recorded ready; process group was continued",
+      )
+      await new Promise((resolve) => setTimeout(resolve, 400))
+      expect(count()).toBeGreaterThan(pausedCount)
+      const down = room(root, "down", "--id", "dev-repo")
+      expect(down.status).toBe(0)
+      expect(down.stdout).toContain("stopped")
+    } finally {
+      room(root, "down", "--id", "dev-repo")
+      close()
+    }
+  }, 30_000)
 })

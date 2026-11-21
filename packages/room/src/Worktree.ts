@@ -1,7 +1,8 @@
 import { Clock, Context, Effect, Layer } from "effect"
 import { execFile } from "node:child_process"
+import { existsSync } from "node:fs"
 import { mkdir, rename } from "node:fs/promises"
-import { join } from "node:path"
+import { join, resolve } from "node:path"
 import { promisify } from "node:util"
 
 const run = promisify(execFile)
@@ -37,9 +38,15 @@ export const WorktreeLive = Layer.effect(
     ensure: ({ root, repo, base }) =>
       Effect.tryPromise({
         try: async () => {
-          await mkdir(join(root, ".."), { recursive: true })
-          await run("git", ["worktree", "add", "-B", `room/${base}`, root, base], { cwd: repo })
-          return root
+          // Git resolves a relative path against its own cwd (the repo), while the room's
+          // files live under the caller's root. Absolute is the only path both agree on.
+          const absolute = resolve(root)
+          // An existing worktree is the normal second `up`: git refuses to add the same branch
+          // twice, so presence is the answer, not another add.
+          if (existsSync(join(absolute, ".git"))) return absolute
+          await mkdir(join(absolute, ".."), { recursive: true })
+          await run("git", ["worktree", "add", "-B", `room/${base}`, absolute, base], { cwd: repo })
+          return absolute
         },
         catch: (cause) => new WorktreeError(String(cause)),
       }),

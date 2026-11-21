@@ -316,7 +316,11 @@ export default {
     },
     {
       // The CLIs are the process boundary: they mint the instant and pass it into the store.
-      files: ["packages/room/src/cli.ts", "packages/board/src/cli.ts"],
+      files: [
+        "packages/room/src/cli.ts",
+        "packages/room/src/supervise.ts",
+        "packages/board/src/cli.ts",
+      ],
       rules: { "plumb/no-nondeterministic-core": "off" },
     },
     {
