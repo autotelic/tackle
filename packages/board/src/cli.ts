@@ -7,6 +7,7 @@ import { parseArgs } from "node:util"
 import { listRooms } from "@autotelic/room/store"
 import { readRun, startRoomRun } from "@autotelic/room/run"
 import { discoverSessions, type Session } from "./sessions.ts"
+import { discoverTailnet } from "./tailnet.ts"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 
@@ -156,6 +157,7 @@ const observe = async (root: string) => {
     shop: root,
     observedAt: new Date().toISOString(),
     sessions: await discoverSessions(),
+    network: { tailscale: await discoverTailnet() },
     rooms: await Promise.all(
       rooms.map(async (room) => {
         const run = await readRun({ root, id: room.id })
@@ -176,6 +178,11 @@ const redact = (session: Session): Omit<Session, "cwd" | "labels"> => {
   return rest
 }
 
+const withoutIps = <A extends { readonly ips: ReadonlyArray<string> }>(peer: A) => {
+  const { ips: _ips, ...rest } = peer
+  return rest
+}
+
 const presence = async ({
   root,
   port,
@@ -188,6 +195,16 @@ const presence = async ({
   const snapshot = await observe(root)
   return {
     ...snapshot,
+    network: {
+      tailscale: {
+        ...snapshot.network.tailscale,
+        self:
+          snapshot.network.tailscale.self === undefined
+            ? undefined
+            : withoutIps(snapshot.network.tailscale.self),
+        peers: snapshot.network.tailscale.peers.map(withoutIps),
+      },
+    },
     sessions: {
       ...snapshot.sessions,
       herdr: {

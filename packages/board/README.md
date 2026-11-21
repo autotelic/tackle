@@ -37,6 +37,11 @@ served `/presence` drops both and keeps `roomId`/`joinedBy`.
 Rex blocks carry a session label, block id, creator, flavor, host and placement;
 they have no cwd, so they never join by path either.
 
+`network.tailscale` is the address book: self and peers from
+`tailscale status --json`, resolved from `TAILSCALE_BIN`, PATH, or the app
+bundle. It says which machines exist, not which sessions run on them. The
+served document omits peer IPs.
+
 `status` prints the rooms and the lock state: no lock, held by pid, stale, or
 unreadable. It never claims a lock it does not hold.
 
