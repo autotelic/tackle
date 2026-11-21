@@ -169,6 +169,7 @@ export const captureCheckpoint = (input: {
 export interface AdoptInput {
   readonly path: string
   readonly project: string
+  readonly linearProjectId?: string | undefined
   readonly label: string
   readonly pr: number
   readonly id: string
@@ -228,6 +229,7 @@ export const adopt = async (input: AdoptInput): Promise<Outcome<Workstream>> => 
     id: input.id,
     facts: {
       project: input.project,
+      linearProjectId: input.linearProjectId,
       label: input.label,
       repo: repo.value,
       path,

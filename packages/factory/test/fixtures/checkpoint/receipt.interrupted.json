@@ -1,0 +1,32 @@
+{
+  "$comment": "A pass that died before writing its checkpoint. It is still CHARGED, and it must not look like a completed pass with a zero-duration checkpoint. Written for the ruling that the charge happens at start.",
+  "receipt": {
+    "workstream": "enterprise-1854",
+    "pass": 3,
+    "startedAt": "2026-11-21T21:05:00.000Z",
+    "endedAt": "2026-11-21T21:07:12.000Z",
+    "charged": true,
+    "chargedAt": "startedAt",
+    "interrupted": true,
+    "workerExit": {
+      "kind": "crashed",
+      "signal": "SIGKILL",
+      "note": "host slept; the worker never returned"
+    },
+    "phase": { "from": "land", "to": "land" },
+    "headSha": "6e4f4ffc8",
+    "checkpointRef": null,
+    "checkpointSha": null,
+    "journal": null,
+    "cursors": { "github": "2026-11-21T21:02:40.000Z", "linear": "2026-11-21T21:01:02.000Z" },
+    "consumedEvents": [],
+    "checks": [],
+    "desk": []
+  },
+  "assertions": [
+    "charged true with checkpointSha null: a crash costs a pass and buys no checkpoint",
+    "the receipt carries the cursors from BEFORE the pass, so a restart re-reads exactly the events it lost",
+    "status computes freshness from the last COMPLETE checkpoint, so this pass does not make the workstream look younger",
+    "no code path may treat a null checkpointSha as an empty checkpoint"
+  ]
+}

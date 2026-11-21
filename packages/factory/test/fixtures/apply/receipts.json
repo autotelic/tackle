@@ -1,0 +1,87 @@
+{
+  "$comment": "`board apply --from` writes one receipt per applied issue, never one per run: the question a year later is 'why is P-AUT-241 Done', and that is per issue. Also shows partial application, which is normal, and the one refusal that matters.",
+  "report": {
+    "id": "report:perms-1862-2026-11-21T22-40Z",
+    "at": "2026-11-21T22:40:00.000Z",
+    "observed": { "linear": "2026-11-21T22:39:41.000Z", "github": "2026-11-21T22:39:12.000Z" }
+  },
+  "applied": [
+    {
+      "issue": "P-AUT-241",
+      "from": "Backlog",
+      "to": "Done",
+      "confidence": "evidence",
+      "evidence": { "commits": ["55aa5293a"], "pr": 1862 },
+      "appliedBy": "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK",
+      "at": "2026-11-21T23:05:00.000Z"
+    },
+    {
+      "issue": "P-AUT-242",
+      "from": "Backlog",
+      "to": "Done",
+      "confidence": "evidence",
+      "evidence": { "files": ["docs/permissions/refusals.md"] },
+      "appliedBy": "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK",
+      "at": "2026-11-21T23:05:00.000Z"
+    },
+    {
+      "issue": "P-AUT-246",
+      "from": "Done",
+      "to": "In Progress",
+      "confidence": "evidence",
+      "note": "reverse drift: tracker said Done, branch had no evidence",
+      "evidence": {},
+      "appliedBy": "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK",
+      "at": "2026-11-21T23:05:00.000Z"
+    }
+  ],
+  "partial": {
+    "applied": 3,
+    "of": 26,
+    "notApplied": [
+      { "issue": "P-AUT-244", "reason": "inference-only and --confidence evidence was passed" },
+      { "issue": "P-AUT-245", "reason": "unknown: no evidence either way" }
+    ],
+    "nextRun": "the un-applied proposals return as remaining, each quoting the earlier proposal so a human can see it was not forgotten"
+  },
+  "refusals": [
+    {
+      "name": "stale-report",
+      "given": {
+        "reportObserved": "2026-11-21T22:39:41.000Z",
+        "currentCursor": "2026-11-21T23:02:10.000Z"
+      },
+      "expected": {
+        "code": "StaleReport",
+        "exit": 1,
+        "message": "report is stale: observed 2026-11-21T22:39:41Z, cursor 2026-11-21T23:02:10Z",
+        "nothingWritten": true
+      }
+    },
+    {
+      "name": "no-evidence",
+      "given": { "issue": "P-AUT-243", "proposal": "done", "evidence": {} },
+      "expected": {
+        "code": "NoEvidence",
+        "exit": 1,
+        "message": "no evidence for P-AUT-243",
+        "nothingWritten": true
+      }
+    },
+    {
+      "name": "already-applied",
+      "given": { "report": "same", "issue": "P-AUT-241" },
+      "expected": {
+        "code": null,
+        "exit": 0,
+        "message": "idempotent: the receipt for (report, P-AUT-241) already exists; no second call"
+      }
+    }
+  ],
+  "rules": [
+    "one receipt per issue, naming the report id and its observed watermark",
+    "partial is normal; the next run re-proposes the rest with the earlier proposal quoted",
+    "a stale report writes nothing — not even the issues that are unchanged",
+    "idempotence is keyed by (reportId, issue), so re-running is free and never double-posts"
+  ]
+}

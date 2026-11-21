@@ -10,7 +10,12 @@
         "pr": 1854,
         "head": "6e4f4ffc8",
         "blockedBy": [],
-        "checkpoint": { "sha": "3d7e901", "pass": 5, "at": "2026-11-21T20:50:00.000Z", "ageSeconds": 7200 },
+        "checkpoint": {
+          "sha": "3d7e901",
+          "pass": 5,
+          "at": "2026-11-21T20:50:00.000Z",
+          "ageSeconds": 7200
+        },
         "observed": { "github": "2026-11-21T21:20:00.000Z", "linear": null, "ageSeconds": null },
         "freshness": "stale",
         "desk": { "open": 1 },

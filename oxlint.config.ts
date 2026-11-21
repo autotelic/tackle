@@ -333,6 +333,15 @@ export default {
       },
     },
     {
+      // The watch tests load trusted local fixtures; the fixture shape is the assertion, and
+      // decoding a hand-written table through a second schema would test the schema instead.
+      files: ["packages/factory/test/watch.test.ts"],
+      rules: {
+        "plumb/no-reinterpret-cast": "off",
+        "plumb/require-safety-comment-for-type-assertion": "off",
+      },
+    },
+    {
       // The CLIs are the process boundary: they mint the instant and pass it into the store.
       files: [
         "packages/room/src/cli.ts",

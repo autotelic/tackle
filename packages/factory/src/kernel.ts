@@ -1,11 +1,21 @@
 import { spawnSync } from "node:child_process"
+import { existsSync } from "node:fs"
 import { mkdir, readdir, writeFile } from "node:fs/promises"
 import { join } from "node:path"
+import * as Result from "effect/Result"
+import * as Schema from "effect/Schema"
 import { captureCheckpoint } from "./adopt.ts"
 import { consumeEvents, readEvents, type Event } from "./events.ts"
 import { readWorkstream, workstreamDir, writeWorkstream, type Workstream } from "./store.ts"
 
 /** One pass's receipt; written before the worker starts because the pass is charged then. */
+export interface Quality {
+  readonly available: boolean
+  readonly errors: number
+  readonly warnings: number
+  readonly note: string
+}
+
 export interface Receipt {
   readonly workstream: string
   readonly pass: number
@@ -15,6 +25,42 @@ export interface Receipt {
   readonly events: ReadonlyArray<string>
   readonly checkpoint: string | undefined
   readonly exit: number | undefined
+  readonly quality?: {
+    readonly before: Quality
+    readonly after: Quality
+    readonly regressed: boolean
+  }
+}
+
+const JigReport = Schema.Struct({
+  diagnostics: Schema.Array(Schema.Struct({ severity: Schema.String })),
+})
+
+const measureQuality = (input: { readonly path: string }): Quality => {
+  const local = join(input.path, "node_modules", ".bin", "jig")
+  const command = existsSync(local) ? local : "jig"
+  const result = spawnSync(command, ["check", "--format", "json"], {
+    cwd: input.path,
+    encoding: "utf8",
+    timeout: 120_000,
+  })
+  if (result.error !== undefined)
+    return { available: false, errors: 0, warnings: 0, note: String(result.error) }
+  const decoded = Schema.decodeResult(Schema.fromJsonString(JigReport))(result.stdout)
+  if (Result.isFailure(decoded))
+    return {
+      available: false,
+      errors: 0,
+      warnings: 0,
+      note: "jig output did not decode (exit " + result.status + ")",
+    }
+  let errors = 0
+  let warnings = 0
+  for (const diagnostic of decoded.success.diagnostics) {
+    if (diagnostic.severity === "error") errors += 1
+    if (diagnostic.severity === "warn") warnings += 1
+  }
+  return { available: true, errors, warnings, note: "jig check" }
 }
 
 /**
@@ -34,7 +80,13 @@ const receiptFile = (input: {
   readonly home?: string | undefined
 }): string => join(receiptsDir(input), String(input.pass).padStart(4, "0") + ".json")
 
-const passesUsed = async (input: {
+/**
+ * Count the charged passes for a workstream from its receipts.
+ *
+ * @param input - the workstream id and optional home.
+ * @returns the number of receipts, including interrupted passes.
+ */
+export const passesUsed = async (input: {
   readonly id: string
   readonly home?: string | undefined
 }): Promise<number> =>
@@ -89,6 +141,7 @@ export const runPass = async (input: {
   readonly worker: string
   readonly at: string
   readonly home?: string | undefined
+  readonly eventIds?: ReadonlyArray<string>
 }): Promise<PassOutcome> => {
   const record = await readWorkstream({ id: input.id, home: input.home })
   if (record === undefined) return { ok: false, reason: "WorkstreamNotFound" }
@@ -99,12 +152,14 @@ export const runPass = async (input: {
   if (used >= record.budgets.passesPerPhase)
     return { ok: false, reason: "budget: passesPerPhase " + record.budgets.passesPerPhase }
 
+  const only = input.eventIds === undefined ? undefined : new Set(input.eventIds)
   const events = (await readEvents({ id: input.id, home: input.home })).filter(
-    (event) => event.status === "pending",
+    (event) => event.status === "pending" && (only === undefined || only.has(event.id)),
   )
   if (events.length === 0) return { ok: false, reason: "NoPendingEvents" }
 
   const pass = used + 1
+  const before = measureQuality({ path: record.path })
   const receipt: Receipt = {
     workstream: record.id,
     pass,
@@ -137,6 +192,8 @@ export const runPass = async (input: {
     return { ok: false, reason: "worker exited " + (result.status ?? "signal"), receipt: failed }
   }
 
+  const after = measureQuality({ path: record.path })
+  const regressed = after.errors > before.errors || after.warnings > before.warnings
   const captured = captureCheckpoint({
     path: record.path,
     id: record.id,
@@ -153,6 +210,18 @@ export const runPass = async (input: {
     }
   }
 
+  if (regressed) {
+    const failed: Receipt = {
+      ...receipt,
+      status: "failed",
+      exit: 0,
+      checkpoint: captured.value.sha,
+      quality: { before, after, regressed },
+    }
+    await writeReceipt({ id: record.id, receipt: failed, home: input.home })
+    return { ok: false, reason: "quality-regressed", receipt: failed }
+  }
+
   await consumeEvents({
     id: record.id,
     ids: receipt.events,
@@ -163,6 +232,7 @@ export const runPass = async (input: {
     status: "done",
     exit: 0,
     checkpoint: captured.value.sha,
+    quality: { before, after, regressed },
   }
   await writeReceipt({ id: record.id, receipt: done, home: input.home })
   await writeWorkstream({

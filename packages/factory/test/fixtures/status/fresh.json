@@ -10,8 +10,17 @@
         "pr": 1862,
         "head": "55aa5293a",
         "blockedBy": [],
-        "checkpoint": { "sha": "9f1c2ab", "pass": 7, "at": "2026-11-21T22:38:00.000Z", "ageSeconds": 720 },
-        "observed": { "github": "2026-11-21T22:47:00.000Z", "linear": "2026-11-21T22:46:30.000Z", "ageSeconds": 180 },
+        "checkpoint": {
+          "sha": "9f1c2ab",
+          "pass": 7,
+          "at": "2026-11-21T22:38:00.000Z",
+          "ageSeconds": 720
+        },
+        "observed": {
+          "github": "2026-11-21T22:47:00.000Z",
+          "linear": "2026-11-21T22:46:30.000Z",
+          "ageSeconds": 180
+        },
         "freshness": "fresh",
         "desk": { "open": 2 },
         "budget": { "passes": { "used": 3, "of": 5 }, "capStop": null }

@@ -11,6 +11,19 @@ smaller than `shop.md`: `shop.md` is the destination, this is the route to the f
 
 No Pi goal mode. No autonomous-run budget. The workstream owns its lifetime; a worker session owns one turn.
 
+## The black hole of success
+
+The factory is not done when the project ships. Every pass must make the codebase harder to leave
+worse than it found it: jig, plumb, joggle, and cutlist are the event horizon, not optional report
+cards.
+
+- A pass records before/after conformance counts in its receipt.
+- A pass that increases errors or warnings is refused (quality-regressed), even if the ticket
+  looks complete.
+- A pass with no conformance evidence is “not looked at”, never “clean”.
+- cutlist is also a compression ratchet: duplicated components are surfaced and consolidated, not
+  copied into another route.
+
 ## Principles
 
 1. **Workstream owns life, worker owns a turn.** A worker is a Pi session that can exit. The workstream

@@ -4,6 +4,7 @@ import { adopt } from "./adopt.ts"
 import { appendEvent } from "./events.ts"
 import { runPass } from "./kernel.ts"
 import { listWorkstreams, Phase } from "./store.ts"
+import { watchOnce } from "./watch.ts"
 
 const usage = [
   "factory — adopt in-flight work as durable workstreams",
@@ -13,6 +14,7 @@ const usage = [
   "  factory status [--json]",
   "  factory event --id <id> --kind <kind> [--payload <json>] [--at <iso>]",
   "  factory run --id <id> --worker <command> [--at <iso>]",
+  "  factory watch --id <id> --worker <command> [--once] [--interval <ms>]",
   "",
   "FACTORY_HOME defaults to ~/.factory; records live outside the governed repository.",
 ].join("\n")
@@ -119,12 +121,50 @@ const main = async (): Promise<void> => {
     return
   }
 
+  if (command === "watch") {
+    const parsed = parseArgs({
+      args: process.argv.slice(3),
+      options: {
+        id: { type: "string" },
+        worker: { type: "string" },
+        once: { type: "boolean", default: false },
+        interval: { type: "string", default: "60000" },
+      },
+      allowPositionals: false,
+    })
+    if (parsed.values.id === undefined || parsed.values.worker === undefined)
+      return fail("watch needs --id and --worker")
+    const interval = Number(parsed.values.interval)
+    if (!Number.isInteger(interval) || interval < 1)
+      return fail("--interval must be a positive integer")
+    for (;;) {
+      const outcome = await watchOnce({
+        id: parsed.values.id,
+        worker: parsed.values.worker,
+        at: new Date().toISOString(),
+      })
+      console.log(
+        "factory: watch " +
+          parsed.values.id +
+          " appended " +
+          outcome.appended.length +
+          ", passes " +
+          outcome.passes.filter((pass) => pass.ok).length +
+          "/" +
+          outcome.passes.length,
+      )
+      if (parsed.values.once) return
+      await new Promise((resolve) => setTimeout(resolve, interval))
+    }
+  }
+
   if (command !== "adopt") return fail("unknown command " + command + " (see --help)")
   const parsed = parseArgs({
     args: process.argv.slice(3),
     options: {
       path: { type: "string" },
       project: { type: "string" },
+      "linear-project-id": { type: "string" },
       label: { type: "string" },
       pr: { type: "string" },
       id: { type: "string" },
@@ -150,6 +190,7 @@ const main = async (): Promise<void> => {
   const result = await adopt({
     path,
     project,
+    linearProjectId: parsed.values["linear-project-id"],
     label,
     pr: number,
     id,

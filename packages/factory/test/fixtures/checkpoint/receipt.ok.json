@@ -1,0 +1,49 @@
+{
+  "$comment": "A completed pass. Pins three things that are easy to lose: a pass is charged when it STARTS; the receipt carries the cursor watermarks the checkpoint was taken at (without them a restore replays work); and a check that did not run is not a zero.",
+  "receipt": {
+    "workstream": "perms-1862",
+    "pass": 7,
+    "startedAt": "2026-11-21T22:20:00.000Z",
+    "endedAt": "2026-11-21T22:38:00.000Z",
+    "charged": true,
+    "chargedAt": "startedAt",
+    "workerExit": { "kind": "completed", "exitCode": 0 },
+    "phase": { "from": "build", "to": "build" },
+    "headSha": "55aa5293a",
+    "checkpointRef": "refs/bench/perms-1862",
+    "checkpointSha": "9f1c2ab",
+    "journal": {
+      "vacuumInto": "~/.factory/journals/perms-1862-pass-7.db",
+      "sha256": "b6f0a5c1d2e3f40516273849506a7b8c9d0e1f2a3b4c5d6e7f8091a2b3c4d5e6"
+    },
+    "cursors": { "github": "2026-11-21T22:31:10.000Z", "linear": "2026-11-21T22:29:44.000Z" },
+    "consumedEvents": [
+      "github:review-comment:2048113377",
+      "linear:issue:3f2a1b9c-5d6e-4f70-8a91-b2c3d4e5f607:created"
+    ],
+    "checks": [
+      { "name": "jig", "ran": true, "ok": true, "durationMs": 41200 },
+      { "name": "unit", "ran": true, "ok": true, "durationMs": 180000 },
+      {
+        "name": "e2e",
+        "ran": false,
+        "ok": null,
+        "skippedBecause": "no app configured in bench.json"
+      }
+    ],
+    "desk": [
+      {
+        "id": "desk-3f2a",
+        "kind": "approval",
+        "state": "open",
+        "title": "Scope read policies to project membership"
+      }
+    ]
+  },
+  "assertions": [
+    "charged is true and chargedAt is startedAt, not endedAt — the pass is spend, not outcome",
+    "a restore from this receipt replays no consumed event and no cursor",
+    "a check with ran=false has ok=null and renders as not looked at, never as passing or failing",
+    "journal.sha256 matches the file the restore reads, or the receipt is refused (divergent.json)"
+  ]
+}
