@@ -7,7 +7,7 @@ At the close of the first factory goal, 2026-11-21.
 | id               | project   | path                                            | PR   | phase     | checkpoint |
 | ---------------- | --------- | ----------------------------------------------- | ---- | --------- | ---------- |
 | permissions-1862 | P-AUT-128 | `~/autotelic/shakti-perms`                      | 1862 | reconcile | 55aa5293a  |
-| enterprise-1854  | P-AUT-129 | `~/autotelic/feat/enterprise-readiness-alchemy` | 1854 | land      | 6e4f4ffc8  |
+| enterprise-1854  | P-AUT-129 | `~/autotelic/feat/enterprise-readiness-alchemy` | 1854 | land      | e5d6e030e  |
 
 Records are under `~/.factory/workstreams/`, outside both repos. A second owner for the same
 path or PR is refused.
@@ -31,14 +31,17 @@ path or PR is refused.
 
 - First pass was interrupted at its 10-minute bound; a second pass was run.
 - The pass merged `develop` into the branch and pushed `0c52e6ad4`.
-- PR 1854 is now `MERGEABLE`; merge state `BLOCKED` on `REVIEW_REQUIRED`, head
-  `0c52e6ad4`.
+- PR 1854 is `MERGEABLE`; merge state `BLOCKED` on `REVIEW_REQUIRED`, head
+  `e5d6e030e`.
+- The REST failures traced to `8d706f9b5`; readiness reverted it as `e5d6e030e`.
+  `pnpm test:rest`: 2328 passing, 15 pending, 0 failing. The conformance baseline is back
+  to 1772 entries rather than claiming the nullable keys fixed.
 - The pass did not merge and did not edit the SOW.
 - A live half-applied Alchemy stack remains in `forest-builder-demo-437619`; it is blocked on
   `roles/servicenetworking.networksAdmin` for `ted@autotelic.com`. No Cloud SQL or Memorystore;
   spend ~$0.
-- The second pass was stopped after the PR became mergeable; its receipt is `running`, not
-  `done`, and that is stated here rather than rounded up.
+- Pass 4 is a no-op receipt pass at the green head: checkpoint `e5d6e030e`, journal snapshot,
+  jig 0/0 before and after, receipt `done`.
 
 ## Kernel, watch, reports
 
