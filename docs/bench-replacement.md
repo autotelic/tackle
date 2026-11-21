@@ -1,7 +1,7 @@
 # Replacing room and board with bench and shop
 
-Status: **bought in by TAC-15 with three vetoes (bench 0013); the operator overrode V2 and approved
-bumping Effect to the latest across the workspace.** No destructive commit starts until the
+Status: **C1–C10 executed; the new pair is room and board.** The mailbox ledger is recorded
+as open debt. No destructive commit starts until the
 pre-flight protocol in “Roles” is followed.
 
 ## Goal
@@ -75,8 +75,8 @@ container; `toMcp` must not become a second implementation of a surface.
 ```
 packages/
   protocol/         AT wire lexicons + records (no runtime)
-  bench-domain/     pure: Bench, Message, Lease, Pin, DeskItem, sagas, policies, stories
-  bench-server/     hosting (DO), providers, Alchemy stack, bench + shop bins
+  room/     pure: Bench, Message, Lease, Pin, DeskItem, sagas, policies, stories
+  board/     hosting (DO), providers, Alchemy stack, room + board bins
   mailbox-domain/   mailbox/lease bounded context
   mailbox-server/   XRPC Api + HPKE + fixtures
   jig-cli/          check · baseline · pin · ship · verify
@@ -84,7 +84,7 @@ packages/
   — room/ board/ deleted —
 ```
 
-All packages on Effect 4.1.5 after C2. `bench-domain` and `mailbox-domain` import only
+All packages on Effect 4.1.5 after C2. `room` and `mailbox-domain` import only
 `@alchemy.run/domain` and `effect`; the server packages own Docker, GitHub, the filesystem, HPKE and
 DO hosting.
 
@@ -95,7 +95,7 @@ DO hosting.
 | C0  | this plan + the buy-in turn                                                                                                                                                                                                                                                                                                                                                     | `pnpm check`, thread verify                                                                                                            |
 | C1  | **`remove room and board`** — packages; `jig room` passthrough + `src/room.ts` + init branch/docs/table/tests; `skills/room` + project-run; `tsconfig.base.json` board path; `.jig-baseline.json` (prune by hand); `jig.config.json`; `oxlint.config.ts` + root `package.json` lint; `joggle.config.json`; `jig-cli/README`; `PUBLISHING`/`README`/`ONBOARD`; `docs/room*.html` | grep proof; no stale baseline identities; `jig init` no room; `jig room` unknown, not a crash                                          |
 | C2  | **`effect 4.1.5` across the workspace** — catalog pins only, no feature changes                                                                                                                                                                                                                                                                                                 | `pnpm -r why effect` shows 4.1.5 everywhere; `pnpm check` green; `jig check` on `examples/self`; `git show --name-only --format= <sha> | grep -E 'protocol/schema | /bin/ | config\.json |
-| C3  | **`bench-domain` + `bench-server`** — Bench aggregate, Create/Pause/Resume, worktree provider, `Domain.InMemory` stories                                                                                                                                                                                                                                                        | stories pass; `alchemy plan` works                                                                                                     |
+| C3  | **`room` + `board`** — Bench aggregate, Create/Pause/Resume, worktree provider, `Domain.InMemory` stories                                                                                                                                                                                                                                                                       | stories pass; `alchemy plan` works                                                                                                     |
 | C4  | **host on DOs + `shop`** — `DomainCloudflare.layerDurableObjects()`, child specs, intensity                                                                                                                                                                                                                                                                                     | kill a child → restart; crash loop → desk                                                                                              |
 | C5  | **move saga** — quiesce/release/seal/copy/acquire/countersign/archive; adoption                                                                                                                                                                                                                                                                                                 | **refusal:** stale writer has both hashes, nothing deleted                                                                             |
 | C6  | **`mailbox-domain` + `mailbox-server`** — his procedures, error names, fixtures                                                                                                                                                                                                                                                                                                 | **refusal:** four error names from his fixtures                                                                                        |
@@ -169,7 +169,7 @@ minutes, handover at gen+1; HPKE envelope; a record resolves by URI/CID from ano
 - C7 partner: **local Rat King checkout, pinned SHA**, with the hosted service as a non-gating smoke
   test; a hosted instance can change under a claim.
   ` is empty |
-  | C3  | **`bench-domain`+`bench-server`** — Bench aggregate, Create/Pause/Resume, worktree provider, `Domain.InMemory`stories                                             | stories pass;`alchemy plan`works                                                              |
+  | C3  | **`room`+`board`** — Bench aggregate, Create/Pause/Resume, worktree provider, `Domain.InMemory`stories                                             | stories pass;`alchemy plan`works                                                              |
   | C4  | **host on DOs +`shop`** — `DomainCloudflare.layerDurableObjects()`, child specs, intensity                                                                          | kill a child → restart; crash loop → desk                                                       |
   | C5  | **move saga** — quiesce/release/seal/copy/acquire/countersign/archive; adoption                                                                                      | **refusal:** stale writer has both hashes, nothing deleted                                      |
   | C6  | **`mailbox-domain`+`mailbox-server`** — his procedures, error names, fixtures                                                                                      | **refusal:** four error names from his fixtures; docs/mailbox-conformance-debt.md is zero |
