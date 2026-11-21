@@ -1,5 +1,7 @@
 import { execFileSync } from "node:child_process"
-import { existsSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
+import { mkdir } from "node:fs/promises"
+import { readFile, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { Console, Effect, FileSystem, Option, Path, Runtime } from "effect"
@@ -32,6 +34,7 @@ import { renderCodeClimate, renderJsonl, renderLsp, renderSarif } from "./projec
 import { renderGithub, renderJson, renderText } from "./render.ts"
 import { harnessRun, type HarnessRun } from "./run.ts"
 import { initialise, initJson, onboardingFor, summaryFor } from "./init.ts"
+import { derivePin, pinMatches, type RepoPin } from "./pin.ts"
 import { VERSION } from "./version.ts"
 
 /**
@@ -788,6 +791,91 @@ const menuCommand = Command.make(
   ]),
 )
 
+const shipCommand = Command.make(
+  "ship",
+  {
+    cwd: cwdFlag,
+    dryRun: Flag.Boolean("dry-run").pipe(
+      Flag.withDescription("Print the record without writing .jig/ship.json."),
+      Flag.withDefault(false),
+    ),
+  },
+  (options) =>
+    Effect.gen(function* () {
+      const { root } = yield* context({ cwd: options.cwd, config: Option.none() })
+      const commit = execFileSync("git", ["rev-parse", "HEAD"], { cwd: root }).toString().trim()
+      const branch = execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], { cwd: root })
+        .toString()
+        .trim()
+      const pinFile = join(root, "repo.pin.json")
+      const pin: RepoPin | undefined = existsSync(pinFile)
+        ? (JSON.parse(readFileSync(pinFile, "utf8")) as RepoPin)
+        : undefined
+      const record = {
+        commit,
+        branch,
+        at: new Date().toISOString(),
+        ...(pin === undefined ? {} : { pin }),
+      }
+      if (!options.dryRun) {
+        yield* Effect.promise(() => mkdir(join(root, ".jig"), { recursive: true }))
+        yield* Effect.promise(() =>
+          writeFile(join(root, ".jig", "ship.json"), JSON.stringify(record, null, 2) + "\n"),
+        )
+      }
+      yield* write(
+        `ship: ${branch}@${commit.slice(0, 7)}${pin === undefined ? "" : ` pin ${pin.name}@${pin.version}`}`,
+      )
+    }),
+).pipe(
+  Command.withDescription(
+    "Write the ship record: commit, branch, and the repo pin it was verified with.",
+  ),
+  Command.withShortDescription("Write one ship record."),
+)
+
+const pinCommand = Command.make(
+  "pin",
+  {
+    cwd: cwdFlag,
+    package: Flag.String("package").pipe(
+      Flag.withDescription("The dependency to pin, as the lockfile names it."),
+    ),
+    check: Flag.Boolean("check").pipe(
+      Flag.withDescription("Fail when repo.pin.json disagrees with the lockfile."),
+      Flag.withDefault(false),
+    ),
+  },
+  (options) =>
+    Effect.gen(function* () {
+      const { root } = yield* context({ cwd: options.cwd, config: Option.none() })
+      const lock = yield* Effect.promise(() => readFile(join(root, "pnpm-lock.yaml"), "utf8"))
+      const derived = derivePin(lock, options.package)
+      if (derived === undefined) {
+        process.exitCode = 1
+        return yield* Console.error(`pin: ${options.package} is not in pnpm-lock.yaml`)
+      }
+      const file = join(root, "repo.pin.json")
+      if (options.check) {
+        const stored = JSON.parse(yield* Effect.promise(() => readFile(file, "utf8"))) as RepoPin
+        if (!pinMatches(stored, derived)) {
+          process.exitCode = 1
+          return yield* Console.error(
+            `pin: ${derived.name} drifted (file ${stored.version}, lockfile ${derived.version})`,
+          )
+        }
+        return yield* write(`pin: ${derived.name}@${derived.version} verified`)
+      }
+      yield* Effect.promise(() => writeFile(file, JSON.stringify(derived, null, 2) + "\n"))
+      yield* write(
+        `pin: ${derived.name}@${derived.version} (${derived.integrity ?? "no integrity"})`,
+      )
+    }),
+).pipe(
+  Command.withDescription("Derive repo.pin.json from the lockfile; --check fails on drift."),
+  Command.withShortDescription("Derive or verify a repo pin."),
+)
+
 const cli = Command.make("jig").pipe(
   Command.withDescription(
     "The harness: run every conformance engine in one pass, merge them into one report, and hold the ratchet.",
@@ -802,6 +890,8 @@ const cli = Command.make("jig").pipe(
     explainCommand,
     promoteCommand,
     learnCommand,
+    pinCommand,
+    shipCommand,
   ]),
 )
 
