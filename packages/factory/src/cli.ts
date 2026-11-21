@@ -73,6 +73,8 @@ const main = async (): Promise<void> => {
           "checkpoint " + record.checkpoint.sha.slice(0, 8),
         ].join("  "),
       )
+    for (const item of await listDesk())
+      console.log("desk " + item.id + "  " + item.workstream + "  " + item.title)
     return
   }
 
