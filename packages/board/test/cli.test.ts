@@ -132,3 +132,37 @@ test("restarts a room supervisor that died", async () => {
     rmSync(root, { recursive: true, force: true })
   }
 }, 30_000)
+
+test("starts a room that is wanted but has no run record", async () => {
+  const root = mkdtempSync(join(tmpdir(), "board-want-"))
+  const rooms = join(root, "rooms")
+  try {
+    mkdirSync(join(rooms, "r2", "worktree"), { recursive: true })
+    writeFileSync(
+      join(rooms, "r2", "room.json"),
+      JSON.stringify({
+        id: "r2",
+        base: "main",
+        state: { _tag: "Ready", repo: "/r", scope: "dev", createdAt: 1 },
+        exec: "sleep 30",
+        desired: true,
+      }),
+    )
+    const port = 20_000 + Math.floor(Math.random() * 20_000)
+    expect(run(["up", "--root", "rooms", "--port", String(port), "--detach"], root).status).toBe(0)
+    const record = join(rooms, "r2", "run.json")
+    let pid = 0
+    for (let attempt = 0; attempt < 60; attempt++) {
+      if (existsSync(record)) pid = JSON.parse(readFileSync(record, "utf8")).pid
+      if (pid !== 0) break
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
+    expect(pid).toBeGreaterThan(0)
+    expect(() => process.kill(pid, 0)).not.toThrow()
+    expect(run(["down", "--root", "rooms"], root).status).toBe(0)
+    process.kill(-pid, "SIGTERM")
+  } finally {
+    run(["down", "--root", "rooms"], root)
+    rmSync(root, { recursive: true, force: true })
+  }
+}, 30_000)

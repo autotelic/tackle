@@ -8,6 +8,7 @@ import {
   pauseRoom,
   readRoom,
   resumeRoom,
+  setRoomDesired,
   setRoomExec,
   roomDir,
   RoomDecodeError,
@@ -170,6 +171,7 @@ const main = async (): Promise<void> => {
       log: join(roomDir({ root, id }), "room.log"),
     })
     if (!started.ok) return fail(started.reason, EXIT.infrastructure)
+    await setRoomDesired({ root, id, desired: true })
     console.log(
       "room " + id + " up; supervisor " + started.run.pid + " runs " + JSON.stringify(exec),
     )
@@ -186,6 +188,7 @@ const main = async (): Promise<void> => {
       await new Promise((resolve) => setTimeout(resolve, 50))
     }
     await removeRun({ root, id })
+    await setRoomDesired({ root, id, desired: false })
     console.log("room " + id + " stopped; supervisor " + run.pid)
     return
   }

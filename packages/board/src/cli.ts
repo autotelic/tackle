@@ -248,13 +248,18 @@ const serve = async ({
     for (const room of await listRooms(root)) {
       if (room.state._tag === "Paused") continue
       const run = await readRun({ root, id: room.id })
-      if (run === undefined || alive(run.pid)) continue
+      if (run !== undefined && alive(run.pid)) continue
+      // A room marked wanted is started even after its run record is gone; legacy records
+      // without the flag are restarted only because a supervisor already existed.
+      const wanted = room.desired ?? run !== undefined
+      const exec = room.exec ?? run?.exec
+      if (!wanted || exec === undefined) continue
       const started = await startRoomRun({
         root,
         id: room.id,
         worktree: join(root, room.id, "worktree"),
-        exec: run.exec,
-        log: run.log,
+        exec,
+        log: run?.log ?? join(root, room.id, "room.log"),
       })
       if (started.ok)
         console.log("board: restarted room " + room.id + " as supervisor " + started.run.pid)

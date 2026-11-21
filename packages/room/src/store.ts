@@ -14,6 +14,7 @@ const RoomFileSchema = Schema.Struct({
   base: Schema.String,
   state: RoomState,
   exec: Schema.optional(Schema.String),
+  desired: Schema.optional(Schema.Boolean),
 })
 
 /** The file a room is: its id, its base branch, and the control-plane state. */
@@ -147,6 +148,19 @@ export const setRoomExec = async (input: {
   const room = await readRoom(input)
   if (room === undefined) return { ok: false, error: "RoomNotFound" }
   const next: RoomFile = { ...room, exec: input.exec }
+  await write({ root: input.root, room: next })
+  return { ok: true, value: next }
+}
+
+/** Remember whether the shop should keep this room's command running. */
+export const setRoomDesired = async (input: {
+  readonly root: string
+  readonly id: string
+  readonly desired: boolean
+}): Promise<StoreResult<RoomFile>> => {
+  const room = await readRoom(input)
+  if (room === undefined) return { ok: false, error: "RoomNotFound" }
+  const next: RoomFile = { ...room, desired: input.desired }
   await write({ root: input.root, room: next })
   return { ok: true, value: next }
 }

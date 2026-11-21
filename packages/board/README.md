@@ -22,6 +22,12 @@ process is gone) and serves:
 `SIGTERM`, waits, then removes the lock.
 
 `status` prints the rooms and the lock state: no lock, held by pid, stale, or
-unreadable. It never claims a lock it does not hold. The supervisor library in
-`src/Supervisor.ts` is tested but not yet wired to room children; `up` is the
-shop's lock and presence service, not a process tree.
+unreadable. It never claims a lock it does not hold.
+
+Every five seconds the shop checks each room. A room that is not paused, is
+`desired`, and has a saved `exec` is started when it has no live supervisor — so
+`room down` (which clears `desired`) stays down, while a wanted room comes back
+after a reboot. `/presence` reports each room's process.
+
+The supervisor library in `src/Supervisor.ts` is a separate, tested tree for
+future multi-child specs.
