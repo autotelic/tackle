@@ -110,8 +110,13 @@ const slugOf = (remote: string): Option.Option<string> => {
 
 const WIP_INDEX = (): string => join(mkdtempSync(join(tmpdir(), "factory-index-")), "index")
 
-/** Capture dirty work without touching the real index or the worktree. */
-const checkpoint = (input: {
+/**
+ * Capture the worktree as a WIP commit at refs/bench/<id> without touching its index.
+ *
+ * @param input - the worktree, workstream id, HEAD and timestamp.
+ * @returns the checkpoint, whether the push succeeded, or the failing step.
+ */
+export const captureCheckpoint = (input: {
   readonly path: string
   readonly id: string
   readonly head: string
@@ -216,7 +221,7 @@ export const adopt = async (input: AdoptInput): Promise<Outcome<Workstream>> => 
         ")",
     })
 
-  const captured = checkpoint({ path, id: input.id, head: head.value, at: input.at })
+  const captured = captureCheckpoint({ path, id: input.id, head: head.value, at: input.at })
   if (!captured.ok) return captured
 
   const record = recordOf({

@@ -1,0 +1,30 @@
+{
+  "$comment": "Stale plus a cap stop: the two things that make a workstream look idle when it is not. The text must say what the cap was and how many passes, not the word 'blocked' alone.",
+  "json": {
+    "schema": 1,
+    "at": "2026-11-21T22:50:00.000Z",
+    "workstreams": [
+      {
+        "id": "enterprise-1854",
+        "phase": "blocked",
+        "pr": 1854,
+        "head": "6e4f4ffc8",
+        "blockedBy": [],
+        "checkpoint": { "sha": "3d7e901", "pass": 5, "at": "2026-11-21T20:50:00.000Z", "ageSeconds": 7200 },
+        "observed": { "github": "2026-11-21T21:20:00.000Z", "linear": null, "ageSeconds": null },
+        "freshness": "stale",
+        "desk": { "open": 1 },
+        "budget": { "passes": { "used": 5, "of": 5 }, "capStop": "passes" }
+      }
+    ]
+  },
+  "expectedText": [
+    "enterprise-1854 · blocked · PR 1854 · checkpoint 2h ago · observed 1h ago · 1 desk item",
+    "enterprise-1854 · cap stop: passes 5/5 · PR 1854 · checkpoint 2h ago · observed 1h ago"
+  ],
+  "assertions": [
+    "freshness stale renders as an age, never as the word stale alone",
+    "capStop names the dimension and the counts, so a capped workstream cannot read as idle",
+    "observed.linear null with ageSeconds null renders as 'linear: never', not as 0m"
+  ]
+}

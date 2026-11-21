@@ -13,20 +13,21 @@ into the repo: a config file appearing mid-pass dirties `git status`, and the ne
 Treadle's own `LoopConfig` (`packages/treadle/src/config.ts`) is the target type; the validator there is the
 contract, not this table.
 
-| workstream                     | treadle `LoopConfig`            | conversion                                                            |
-| ------------------------------ | ------------------------------- | --------------------------------------------------------------------- |
-| `worktree`                     | CLI `--repo`, not config        | absolute path, as adopted                                             |
-| `checks[]`                     | `checks: CheckStep[]`           | **↑ each string becomes `{ name, run, timeoutSeconds }`** — see §2    |
-| `desired.install`              | `install` (required)            | default `"true"` when absent, and the receipt records the default     |
-| `budgets.wallMinutesPerPass`   | `budgets.sessionTimeoutMinutes` | direct                                                                |
-| `desired.dollarCeilingPerPass` | `budgets.maxCostPerSessionUsd`  | direct, optional                                                      |
-| `desired.dollarCeilingPerDay`  | `budgets.maxCostPerNightUsd`    | direct, optional                                                      |
-| `desired.model`                | `model`                         | direct, optional; absent = pi's default                               |
-| `desired.integrationBranch`    | `integrationBranch`             | direct, optional; absent = per-PR flow                                |
-| `repo`                         | `issues.tracker`                | `"github"` when the workstream's PR lives on GitHub                   |
-| —                              | `issues.dir`                    | only for `tracker: "markdown"`, generated outside the tree            |
-| —                              | `protectedPaths`                | from `desired.protectedPaths`, default `[]`                           |
-| —                              | `featureDone`                   | `{ changedPaths: desired.changedPaths ?? [], requireNewTests: true }` |
+| workstream                     | treadle `LoopConfig`            | conversion                                                                                                               |
+| ------------------------------ | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `worktree`                     | CLI `--repo`, not config        | absolute path, as adopted                                                                                                |
+| `checks[]`                     | `checks: CheckStep[]`           | **↑ each string becomes `{ name, run, timeoutSeconds }`** — see §2                                                       |
+| `desired.install`              | `install` (required)            | default `"true"` when absent, and the receipt records the default                                                        |
+| `budgets.wallMinutesPerPass`   | `budgets.sessionTimeoutMinutes` | direct                                                                                                                   |
+| `desired.dollarCeilingPerPass` | `budgets.maxCostPerSessionUsd`  | direct, optional                                                                                                         |
+| `desired.dollarCeilingPerDay`  | `budgets.maxCostPerNightUsd`    | direct, optional                                                                                                         |
+| `desired.model`                | `model`                         | direct, optional; absent = pi's default                                                                                  |
+| `desired.integrationBranch`    | `integrationBranch`             | direct, optional; absent = per-PR flow                                                                                   |
+| `repo`                         | `issues.tracker`                | `"github"` when the workstream's PR lives on GitHub                                                                      |
+| `label`                        | `issues.ready/working/parked`   | **synthesized**: `<label>`, `<label>:working`, `<label>:parked` — treadle needs three states, a workstream has one label |
+| —                              | `issues.dir`                    | only for `tracker: "markdown"`, generated outside the tree                                                               |
+| —                              | `protectedPaths`                | from `desired.protectedPaths`, default `[]`                                                                              |
+| —                              | `featureDone`                   | `{ changedPaths: desired.changedPaths ?? [], requireNewTests: true }`                                                    |
 
 ---
 

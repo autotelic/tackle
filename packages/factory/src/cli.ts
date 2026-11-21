@@ -1,6 +1,8 @@
 import { parseArgs } from "node:util"
 import * as Schema from "effect/Schema"
 import { adopt } from "./adopt.ts"
+import { appendEvent } from "./events.ts"
+import { runPass } from "./kernel.ts"
 import { listWorkstreams, Phase } from "./store.ts"
 
 const usage = [
@@ -9,6 +11,8 @@ const usage = [
   "Usage:",
   "  factory adopt --path <worktree> --project <linear> --label <label> --pr <n> [--phase reconcile|build|land] [--id <id>]",
   "  factory status [--json]",
+  "  factory event --id <id> --kind <kind> [--payload <json>] [--at <iso>]",
+  "  factory run --id <id> --worker <command> [--at <iso>]",
   "",
   "FACTORY_HOME defaults to ~/.factory; records live outside the governed repository.",
 ].join("\n")
@@ -53,6 +57,65 @@ const main = async (): Promise<void> => {
           "checkpoint " + record.checkpoint.sha.slice(0, 8),
         ].join("  "),
       )
+    return
+  }
+
+  if (command === "event") {
+    const parsed = parseArgs({
+      args: process.argv.slice(3),
+      options: {
+        id: { type: "string" },
+        kind: { type: "string" },
+        payload: { type: "string", default: "{}" },
+        at: { type: "string" },
+      },
+      allowPositionals: false,
+    })
+    if (parsed.values.id === undefined || parsed.values.kind === undefined)
+      return fail("event needs --id and --kind")
+    const at = parsed.values.at ?? new Date().toISOString()
+    const id = parsed.values.kind + "-" + Date.parse(at)
+    await appendEvent({
+      id: parsed.values.id,
+      event: {
+        id,
+        kind: parsed.values.kind,
+        at,
+        payload: JSON.parse(parsed.values.payload),
+        status: "pending",
+      },
+    })
+    console.log("factory: event " + id + " queued for " + parsed.values.id)
+    return
+  }
+
+  if (command === "run") {
+    const parsed = parseArgs({
+      args: process.argv.slice(3),
+      options: {
+        id: { type: "string" },
+        worker: { type: "string" },
+        at: { type: "string" },
+      },
+      allowPositionals: false,
+    })
+    if (parsed.values.id === undefined || parsed.values.worker === undefined)
+      return fail("run needs --id and --worker")
+    const at = parsed.values.at ?? new Date().toISOString()
+    const result = await runPass({
+      id: parsed.values.id,
+      worker: parsed.values.worker,
+      at,
+    })
+    if (!result.ok) return fail(result.reason)
+    console.log(
+      "factory: " +
+        result.receipt.workstream +
+        " pass " +
+        result.receipt.pass +
+        " done; checkpoint " +
+        result.checkpoint.slice(0, 8),
+    )
     return
   }
 
