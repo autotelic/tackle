@@ -7,6 +7,7 @@ The shop: one owner per root, the queue, and a presence endpoint.
 ```sh
 board up [--root .room] [--host 127.0.0.1] [--port 4780] [--detach]
 board presence [--root .room] [--json]
+board fleet [--root .room] [--port 4780] [--json]
 board down [--root .room]
 board status [--root .room] [--json]
 board queue [--root .room] [--json]
@@ -41,6 +42,11 @@ they have no cwd, so they never join by path either.
 `tailscale status --json`, resolved from `TAILSCALE_BIN`, PATH, or the app
 bundle. It says which machines exist, not which sessions run on them. The
 served document omits peer IPs.
+
+`board fleet` pulls each online peer's `/.well-known/presence.json` (then
+`/presence`) on `--port`, merges rooms and sessions under the host label, and
+keeps offline or unreachable hosts with their reason. It is one-shot; it does not
+require a local shop.
 
 `status` prints the rooms and the lock state: no lock, held by pid, stale, or
 unreadable. It never claims a lock it does not hold.

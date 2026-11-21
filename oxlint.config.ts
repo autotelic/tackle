@@ -315,6 +315,24 @@ export default {
       rules: { "plumb/no-exported-mutable-state": "off" },
     },
     {
+      // Fleet is the outbound network boundary: it pulls untrusted presence JSON from tailnet
+      // peers, records per-host prose for the operator, and takes its fetcher as a parameter
+      // so the merge can be tested without HTTP. A typed service graph here would be a second
+      // HTTP client beside the one the CLI already owns.
+      files: ["packages/board/src/fleet.ts"],
+      rules: {
+        "plumb/no-boolean-field-signals": "off",
+        "plumb/no-unknown-returns": "off",
+        "plumb/no-unknown-parameters": "off",
+        "plumb/no-builtin-throws": "off",
+        "plumb/no-nondeterministic-core": "off",
+        "plumb-effect/no-direct-fetch": "off",
+        "plumb-effect/no-try-catch": "off",
+        "plumb-effect/guarded-op-must-return-option": "off",
+        "plumb-effect/no-raw-error-forwarding": "off",
+      },
+    },
+    {
       // The CLIs are the process boundary: they mint the instant and pass it into the store.
       files: [
         "packages/room/src/cli.ts",

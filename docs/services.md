@@ -4,6 +4,7 @@
 # one shop on this machine
 board up --detach --port 4780
 curl -s localhost:4780/presence | jq
+board fleet --json            # pull presence from online tailnet peers
 
 # one room with a process it owns
 room new --repo ~/code/app --scope dev-1575

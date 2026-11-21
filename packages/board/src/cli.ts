@@ -8,6 +8,7 @@ import { listRooms } from "@autotelic/room/store"
 import { readRun, startRoomRun } from "@autotelic/room/run"
 import { discoverSessions, type Session } from "./sessions.ts"
 import { discoverTailnet } from "./tailnet.ts"
+import { fleet } from "./fleet.ts"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 
@@ -18,6 +19,7 @@ const usage = [
   "  board up [--root .room] [--host 127.0.0.1] [--port 4780] [--detach]",
   "  board down [--root .room]",
   "  board presence [--root .room] [--json] (rooms, processes, sessions)",
+  "  board fleet [--root .room] [--port 4780] [--json]",
   "  board status [--root .room] [--json]   (rooms, lock, and the service)",
   "  board queue [--root .room] [--json]",
   "",
@@ -404,6 +406,30 @@ const main = async (): Promise<void> => {
         : "herdr: unavailable",
     )
     console.log(snapshot.sessions.rex.available ? "rex: available" : "rex: unavailable")
+    return
+  }
+
+  if (command === "fleet") {
+    const port = Number(values.port)
+    if (!Number.isInteger(port) || port < 1 || port > 65_535)
+      return fail("--port must be an integer between 1 and 65535", EXIT.usage)
+    const result = await fleet({
+      tailnet: await discoverTailnet(),
+      self: await observe(root),
+      port,
+    })
+    if (values.json) {
+      console.log(JSON.stringify(result, null, 2))
+      return
+    }
+    for (const host of result.hosts)
+      console.log(
+        host.host +
+          (host.self ? " (self)" : "") +
+          ": " +
+          (host.ok ? host.rooms + " rooms, " + host.sessions + " sessions" : host.error),
+      )
+    console.log(result.rooms.length + " rooms, " + result.sessions.length + " sessions total")
     return
   }
 
