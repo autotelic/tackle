@@ -1,0 +1,29 @@
+{
+  "name": "@autotelic/mailbox-server",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The Rat King mailbox surface: fixtures, XRPC procedures, and the errors clients retry on.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@autotelic/mailbox-domain": "workspace:*"
+  },
+  "devDependencies": {
+    "@effect/tsgo": "catalog:",
+    "@types/node": "catalog:",
+    "@typescript/native": "catalog:",
+    "vitest": "catalog:"
+  },
+  "engines": {
+    "node": ">=24.18.0"
+  }
+}
