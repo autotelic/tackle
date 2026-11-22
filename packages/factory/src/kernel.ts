@@ -3,9 +3,11 @@ import { existsSync } from "node:fs"
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { Match } from "effect"
+import * as Predicate from "effect/Predicate"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 import { captureCheckpoint } from "./adopt.ts"
+import { raiseDesk } from "./desk.ts"
 import { consumeEvents, readEvents, type Event } from "./events.ts"
 import { snapshotJournal } from "./journal.ts"
 import {
@@ -190,6 +192,15 @@ const promptOf = (input: {
     "Do not merge. Do not edit the SOW. Do not touch another workstream.",
   ].join("\n")
 
+/** Whether a path a pass changed matches one of the record's protected patterns. */
+export const isProtectedPath: Predicate.Predicate<{
+  readonly record: Workstream
+  readonly path: string
+}> = (input) =>
+  (input.record.protectedPaths ?? []).some((pattern) =>
+    pattern.endsWith("/**") ? input.path.startsWith(pattern.slice(0, -3)) : input.path === pattern,
+  )
+
 /**
  * Run one pass over the pending events. The pass is charged when it starts, not when it ends.
  *
@@ -295,11 +306,7 @@ export const runPass = async (input: {
       if (line.length > 3) files.add(line.slice(3).trim())
     return [...files]
   })()
-  const protectedTouched = changed.filter((file) =>
-    (record.protectedPaths ?? []).some((pattern) =>
-      pattern.endsWith("/**") ? file.startsWith(pattern.slice(0, -3)) : file === pattern,
-    ),
-  )
+  const protectedTouched = changed.filter((file) => isProtectedPath({ record, path: file }))
 
   const captured = captureCheckpoint({
     path: record.path,
@@ -340,6 +347,22 @@ export const runPass = async (input: {
         head: currentHead,
         checkpoint: captured.value,
         updatedAt: input.at,
+      },
+      home: input.home,
+    })
+    await raiseDesk({
+      item: {
+        id: "desk-" + record.id + "-gate-" + pass,
+        workstream: record.id,
+        kind: "decision",
+        title: "Unblock pass #" + pass + "?",
+        body:
+          "The pass touched protected paths: " +
+          protectedTouched.join(", ") +
+          ". Resume to keep the change and run the next pass, or defer to leave the workstream blocked.",
+        choices: ["resume", "defer"],
+        route: "live",
+        at: input.at,
       },
       home: input.home,
     })

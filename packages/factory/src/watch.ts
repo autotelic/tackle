@@ -5,7 +5,7 @@ import { join } from "node:path"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 import { appendEvent, consumeEvents, readEvents } from "./events.ts"
-import { passesUsed, runPass, type PassOutcome } from "./kernel.ts"
+import { isProtectedPath, passesUsed, runPass, type PassOutcome } from "./kernel.ts"
 import { readWorkstream, writeWorkstream, type Workstream } from "./store.ts"
 import { listAnswers, readDesk } from "./desk.ts"
 import { Report } from "./report.ts"
@@ -117,10 +117,13 @@ export const baseEvents = (input: {
   git(["fetch", "origin", input.record.base])
   const remote = git(["rev-parse", "--verify", "origin/" + input.record.base])
   const ref = Result.isSuccess(remote) ? "origin/" + input.record.base : input.record.base
-  const result = git(["log", "-1", "--format=%H%x00%cI%x00%s", ref])
+  const result = git(["log", "-1", "--format=%H%x00%cI%x00%an%x00%s", "--name-only", ref])
   if (Result.isFailure(result)) return []
-  const [sha, at, subject] = result.success.trim().split("\u0000")
+  // The header is one NUL-separated line; --name-only writes a blank line, then one path per line.
+  const [header, ...pathLines] = result.success.trim().split("\n")
+  const [sha, at, author, subject] = (header ?? "").split("\u0000")
   if (sha === undefined || at === undefined) return []
+  const paths = pathLines.map((line) => line.trim()).filter((line) => line !== "")
   const since = Date.parse(input.record.cursors.github || "1970-01-01T00:00:00.000Z")
   if (Date.parse(at) <= since) return []
   if (Result.isSuccess(git(["merge-base", "--is-ancestor", sha, "HEAD"]))) return []
@@ -129,8 +132,16 @@ export const baseEvents = (input: {
       id: "base:commit:" + sha,
       kind: "commit",
       at,
-      payload: { sha, subject: subject ?? "" },
+      payload: {
+        sha,
+        subject: subject ?? "",
+        author: author ?? "",
+        paths,
+        protected: paths.some((path) => isProtectedPath({ record: input.record, path })),
+      },
       headSha: sha,
+      // The author rides in the payload; the actor stays "base" so a bot identity in the
+      // commit does not silence the wake as self-authored.
       actor: "base",
     },
   ]
@@ -285,8 +296,9 @@ export const watchOnce = async (input: {
   readonly runGit?: ((args: ReadonlyArray<string>) => Result.Result<string, string>) | undefined
   readonly runLinear?: ((args: ReadonlyArray<string>) => Result.Result<string, string>) | undefined
 }): Promise<WatchOutcome> => {
-  const record = await readWorkstream({ id: input.id, home: input.home })
-  if (record === undefined) return { appended: [], passes: [] }
+  const found = await readWorkstream({ id: input.id, home: input.home })
+  if (found === undefined) return { appended: [], passes: [] }
+  let record = found
   const polled = [
     ...githubEvents({ record, runGh: input.runGh }),
     ...baseEvents({ record, runGit: input.runGit }),
@@ -328,6 +340,14 @@ export const watchOnce = async (input: {
   )) {
     const previous = known.get(event.id)
     if (previous?.status === "consumed") continue
+    if (
+      event.kind === "desk" &&
+      record.phase === "blocked" &&
+      (event.payload as { readonly choice?: unknown } | null)?.choice === "resume"
+    ) {
+      record = { ...record, phase: "build", updatedAt: event.at }
+      await writeWorkstream({ record, home: input.home })
+    }
     const decision = shouldWake({
       record,
       event,
