@@ -105,7 +105,16 @@ record is its authority — the same rule that keeps a report from rewriting a b
       "evidence": { "deploy": "7c9e…", "pr": 1862, "sampleSpans": 412 },
       "proposal": { "state": "regressed", "reason": "p95 3.9× the previous deploy, over SLO" },
       "confidence": "evidence",
-      "attribution": { "workstream": "perms-1862", "sha": "7c9e…" },
+      "attribution": [
+        {
+          "workstream": "perms-1862",
+          "observer": "shop",
+          "sha": "7c9e…",
+          "firstAt": "…",
+          "lastAt": "…",
+          "count": 1,
+        },
+      ],
     },
   ],
 }
@@ -113,6 +122,11 @@ record is its authority — the same rule that keeps a report from rewriting a b
 
 Four proposal states: `regressed · improved · stable · unknown`. `unknown` is a source that could not be read or a
 window too small to judge — never a zero, for the same reason `unobserved` never is.
+
+An entry of `issues[]` is the candidate record (`packages/factory/src/candidate.ts`), hoisted: `attribution`
+is a **list**, and `fingerprint` — the evidence identity — is the same for every observer of that evidence. A
+second window or a second workstream that sees the same regression appends an attribution entry and never a
+candidate (`docs/faucets-sinks.md`, "The answer").
 
 Its refusals are its own, and none of them is a Linear refusal:
 

@@ -150,6 +150,14 @@ same value is **idempotent** and returns the existing record, because a double c
 the interesting line as `output` (full text as a ref, never inline), `evidence`, `blocked`, and a stable
 **`fingerprint`** so a repeat is counted rather than re-triaged.
 
+## candidate/
+
+`self-observation.json` — one tooling complaint **reported by two observers**. It pins the answer to the
+attribution question: the fingerprint is `report.fingerprint` and therefore identical for both, while
+`attribution` is a list of two entries — so a second foreman reporting the same defect is a count on one
+candidate, not a second candidate. `count` and `firstAt`/`lastAt` are what make the repeat visible without
+re-triaging it.
+
 ## apply/
 
 `receipts.json` — `board apply --from` writes **one receipt per issue**, never one per run, because “why is

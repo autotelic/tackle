@@ -1,0 +1,29 @@
+{
+  "kind": "self-observation",
+  "fingerprint": "conformance:jig check:bf49d72626a9",
+  "subject": "conformance:jig check",
+  "evidence": ["report-permissions-1862-1795303302409"],
+  "proposal": {
+    "state": "reported",
+    "reason": "packages/factory/src/adopt.ts:41 require-jsdoc-on-exported"
+  },
+  "confidence": "evidence",
+  "attribution": [
+    {
+      "workstream": "tackle-factory",
+      "observer": "permissions-1862",
+      "firstAt": "2026-11-22T09:20:02.409Z",
+      "lastAt": "2026-11-22T12:41:10.000Z",
+      "count": 2
+    },
+    {
+      "workstream": "tackle-factory",
+      "observer": "enterprise-1854",
+      "firstAt": "2026-11-22T10:02:44.000Z",
+      "lastAt": "2026-11-22T10:02:44.000Z",
+      "count": 1
+    }
+  ],
+  "at": "2026-11-22T09:20:02.409Z",
+  "updatedAt": "2026-11-22T12:41:10.000Z"
+}

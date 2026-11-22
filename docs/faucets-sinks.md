@@ -41,9 +41,14 @@ Proposed shape:
   "evidence": [],
   "proposal": { "state": "regressed | stable | improved | unknown", "reason": "" },
   "confidence": "evidence | inference | unknown",
-  "attribution": { "workstream": "", "sha": "" },
+  "attribution": [
+    { "workstream": "", "observer": "", "sha": "", "firstAt": "", "lastAt": "", "count": 0 },
+  ],
 }
 ```
+
+Built as `packages/factory/src/candidate.ts`; see "The answer" at the end for what this proposed
+shape got wrong.
 
 State vocabulary is per kind, not global. `confidence` is the guard: only
 `evidence` applies without a human.
@@ -180,9 +185,86 @@ Agreed, and `desk.ts` shows the two cannot share one:
 
 No general desk channel. Agreed without qualification.
 
-### What this pass did not decide
+---
 
-Whether `attribution` becomes a list or the fingerprint gains an observer (both fix dedupe; only
-one is compatible with `report.fingerprint` staying stable). That is the question worth answering
-before the candidate record is written, because it is the one thing that cannot be added later
-without orphaning evidence already recorded.
+## The answer: attribution is a list, the fingerprint stays evidence
+
+Both fixes dedupe, and only one keeps `report.fingerprint` an identity. **Attribution is a list on
+the candidate; the observer is never encoded in the fingerprint.**
+
+The reasons, in the order they decide it:
+
+- **One observation can affect more than one workstream.** One report can be a `factory-defect` for
+  tackle and an `owner-repo` consequence for its reporter; a candidate with a single `workstream`
+  field has to pick one, and picking is a verdict the record is not entitled to.
+- **Two observers of one defect are one defect.** `fingerprintOf` is `kind + command + first failing
+  line`, so the same complaint from two foremen already shares a fingerprint — which is exactly what
+  the inbox dedupe wants. An observer in the fingerprint turns one defect into one candidate per
+  reporter and turns a count into two investigations.
+- **`report.fingerprint` already has a job.** It keys the report inbox (`reportEvents`) and the
+  feedback ledger (`docs/feedback.md`). A fingerprint whose meaning changes when a second workstream
+  reads the same report is two identities wearing one name.
+
+### The record
+
+`packages/factory/src/candidate.ts` is the built shape; `test/fixtures/candidate/self-observation.json`
+is the committed example — one fingerprint, two attribution entries.
+
+```jsonc
+{
+  "kind": "self-observation", // or "experience"
+  "fingerprint": "conformance:jig check:bf49d72626a9", // evidence identity, never shared state
+  "subject": "conformance:jig check", // fixed by the first sighting
+  "evidence": ["report-permissions-1862-1795303302409"], // what a reader can open
+  "proposal": { "state": "reported", "reason": "…" }, // the vocabulary is per kind
+  "confidence": "evidence",
+  "attribution": [
+    // ← the list
+    {
+      "workstream": "tackle-factory",
+      "observer": "permissions-1862",
+      "sha": "7c9e…",
+      "firstAt": "…",
+      "lastAt": "…",
+      "count": 2,
+    },
+    {
+      "workstream": "tackle-factory",
+      "observer": "enterprise-1854",
+      "firstAt": "…",
+      "lastAt": "…",
+      "count": 1,
+    },
+  ],
+  "at": "…",
+  "updatedAt": "…",
+}
+```
+
+- **`workstream` and `observer` are different facts**, so they are different fields of one entry:
+  _whose work this is_ and _who saw it_. `reportEvents` already skips reports addressed to its own
+  workstream, which is why the two are never the same value for a report.
+- **The merge is the dedupe.** `recordCandidate` reads by fingerprint, appends one attribution entry
+  per (workstream, observer, sha), unions evidence, keeps the newest proposal and the stronger
+  confidence, and never renames the fingerprint. A repeat increments `count`; it is not re-triaged.
+- **A candidate's id is its fingerprint's digest** (`cand-…`), so no observer, pass or clock can
+  produce a second record for the same evidence.
+
+### Two refinements the build forced
+
+- **`confidence: "evidence"` names its proof, per kind.** The earlier rule — "evidence with no
+  `attribution.sha` does not decode" — holds for `experience`, where the sha is the ship/deploy join.
+  A `self-observation` has no sha and never will: its proof is the report on disk, so its `evidence`
+  needs at least one report id to open. `inference` and `unknown` need nothing, which is what keeps
+  "build the candidate first" from committing proof the join can never upgrade.
+- **The proposal vocabulary is per kind, and enforced.** `self-observation` uses the feedback ledger's
+  endings (`reported · fixed · unknown`); `experience` uses the four measured states of
+  `docs/signals.md` §4. One global list would let `stable` describe a tooling report, which is a
+  measurement nobody took.
+
+### What is still not built
+
+The record, its merge and the report→candidate seam (`candidateOfReport`) exist and are tested;
+nothing in the watcher calls them yet. Open, in the order each unblocks the next: the
+`cursors.reports` watermark that `reportEvents` reads but nobody sets, `sources` for a PR-delivery
+workstream, one desk item per candidate, and the ship/deploy join that fills `sha`.
