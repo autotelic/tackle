@@ -2,57 +2,27 @@ import { Effect, Result, Schema } from "effect"
 import { Command, Runtime, Update } from "foldkit"
 import type { Document, Html, HtmlBuilder } from "foldkit/html"
 import { defineMessageUnion } from "foldkit/message"
-
-const Workstream = Schema.Struct({
-  id: Schema.String,
-  project: Schema.String,
-  label: Schema.String,
-  phase: Schema.String,
-  path: Schema.String,
-  repo: Schema.optional(Schema.String),
-  branch: Schema.optional(Schema.String),
-  head: Schema.optional(Schema.String),
-  pr: Schema.optional(Schema.Finite),
-  delivery: Schema.optional(Schema.String),
-  linearProjectId: Schema.optional(Schema.String),
-  checkpoint: Schema.Struct({ sha: Schema.String, at: Schema.String }),
-})
-const Desk = Schema.Struct({
-  id: Schema.String,
-  workstream: Schema.String,
-  title: Schema.String,
-  route: Schema.String,
-})
-const Report = Schema.Struct({
-  id: Schema.String,
-  workstream: Schema.String,
-  kind: Schema.String,
-  actual: Schema.String,
-  at: Schema.String,
-  blocked: Schema.Boolean,
-})
-const SessionSource = Schema.Union([Schema.Literal("herdr"), Schema.Literal("rex")])
-const Session = Schema.Struct({
-  source: SessionSource,
-  address: Schema.String,
-  agent: Schema.optional(Schema.String),
-  roomId: Schema.optional(Schema.String),
-  where: Schema.optional(Schema.String),
-  workstream: Schema.optional(Schema.String),
-})
-const SessionSourceView = Schema.Struct({
-  available: Schema.Boolean,
-  sessions: Schema.Array(Session),
-})
-const Presence = Schema.Struct({
-  factory: Schema.Struct({
-    workstreams: Schema.Array(Workstream),
-    desk: Schema.Array(Desk),
-    reports: Schema.Array(Report),
-  }),
-  sessions: Schema.Struct({ herdr: SessionSourceView, rex: SessionSourceView }),
-})
-type Presence = typeof Presence.Type
+import {
+  Presence,
+  SessionSource,
+  type Desk,
+  type Report,
+  type Session,
+  type Workstream,
+  sessionsOf,
+} from "./presence.ts"
+import {
+  GATE_MISSING,
+  PR_STATE_MISSING,
+  UNFILED,
+  checkpointAge,
+  groupByRepo,
+  isUnobserved,
+  observationLabel,
+  repoLine,
+  repoOf,
+  type RepoPanel,
+} from "./repos.ts"
 
 export const Model = Schema.Struct({
   presence: Schema.NullOr(Presence),
@@ -195,12 +165,10 @@ const phaseDetail = (phase: string): string => {
       return ""
   }
 }
-const repoName = (ws: typeof Workstream.Type): string => ws.repo ?? "unknown repository"
-
-const sessionCommand = (session: typeof Session.Type): string =>
+const sessionCommand = (session: Session): string =>
   session.source === "herdr" ? "hc attach " + session.address : "rex block focus " + session.address
 
-const sessionRow = (h: HtmlBuilder<Message>, session: typeof Session.Type) =>
+const sessionRow = (h: HtmlBuilder<Message>, session: Session) =>
   h.div(
     [h.Class("session")],
     [
@@ -227,10 +195,36 @@ const sessionRow = (h: HtmlBuilder<Message>, session: typeof Session.Type) =>
     ],
   )
 
+/** The commit, aged from the board's observation instant; no checkpoint is said, not zeroed. */
+const checkpointCell = (h: HtmlBuilder<Message>, ws: Workstream, observedAt: string) =>
+  ws.checkpoint === null
+    ? h.span([h.Class("mono")], ["no checkpoint yet"])
+    : h.span(
+        [h.Class("mono")],
+        [
+          "checkpoint " +
+            ws.checkpoint.sha.slice(0, 8) +
+            checkpointAge({ at: ws.checkpoint.at, observedAt }),
+        ],
+      )
+
+/** Freshness is three-valued; `unobserved` is the one that must not read as `stale`. */
+const observationCell = (
+  h: HtmlBuilder<Message>,
+  ws: Workstream,
+  observedAt: string,
+  live: boolean,
+) =>
+  h.span(
+    [h.Class("freshness " + (live ? "live" : isUnobserved(ws) ? "unobserved" : "observed"))],
+    [observationLabel({ workstream: ws, observedAt, live })],
+  )
+
 const workstreamCard = (
   h: HtmlBuilder<Message>,
-  ws: typeof Workstream.Type,
-  sessions: ReadonlyArray<typeof Session.Type>,
+  ws: Workstream,
+  sessions: ReadonlyArray<Session>,
+  observedAt: string,
 ) =>
   h.article(
     [h.Class("workstream"), h.Id(ws.id)],
@@ -245,24 +239,32 @@ const workstreamCard = (
       h.div(
         [h.Class("workstream-meta")],
         [
-          ws.repo === undefined
-            ? h.span([], ["unknown repo"])
+          repoOf(ws) === UNFILED
+            ? h.span([h.Class("muted")], ["no repo in /presence"])
             : h.a(
-                [h.Href("https://github.com/" + ws.repo), h.Target("_blank"), h.Rel("noreferrer")],
-                [ws.repo],
+                [
+                  h.Href("https://github.com/" + repoOf(ws)),
+                  h.Target("_blank"),
+                  h.Rel("noreferrer"),
+                ],
+                [repoOf(ws)],
               ),
           h.span([], [ws.branch ?? "no branch"]),
           ws.pr === undefined
             ? h.span([], ["trunk"])
-            : h.a(
-                [
-                  h.Href("https://github.com/" + (ws.repo ?? "") + "/pull/" + ws.pr),
-                  h.Target("_blank"),
-                  h.Rel("noreferrer"),
-                ],
-                ["PR #" + ws.pr],
-              ),
-          h.span([h.Class("mono")], ["checkpoint " + ws.checkpoint.sha.slice(0, 8)]),
+            : repoOf(ws) === UNFILED
+              ? // A PR number with no repo cannot be linked; it is still a fact worth showing.
+                h.span([], ["PR #" + ws.pr])
+              : h.a(
+                  [
+                    h.Href("https://github.com/" + repoOf(ws) + "/pull/" + ws.pr),
+                    h.Target("_blank"),
+                    h.Rel("noreferrer"),
+                  ],
+                  ["PR #" + ws.pr],
+                ),
+          checkpointCell(h, ws, observedAt),
+          observationCell(h, ws, observedAt, sessions.length > 0),
         ],
       ),
       sessions.length === 0
@@ -277,27 +279,28 @@ const workstreamCard = (
     ],
   )
 
+/**
+ * One repo panel: a sentence header, the gate slot it cannot fill, then the lanes.
+ *
+ * The header is a sentence because the operator reads it in one glance on a phone, and
+ * because a table of counts hides which counts are missing.
+ */
 const repoSection = (
   h: HtmlBuilder<Message>,
-  repo: string,
-  workstreams: ReadonlyArray<typeof Workstream.Type>,
-  sessions: ReadonlyArray<typeof Session.Type>,
+  panel: RepoPanel,
+  sessions: ReadonlyArray<Session>,
+  observedAt: string,
 ) =>
   h.section(
-    [h.Class("repo")],
+    [h.Class("repo"), h.Id("repo-" + panel.repo.replaceAll("/", "-"))],
     [
       h.div(
         [h.Class("repo-head")],
-        [
-          h.h2([], [repo]),
-          h.span(
-            [h.Class("muted")],
-            [workstreams.length + (workstreams.length === 1 ? " workstream" : " workstreams")],
-          ),
-        ],
+        [h.h2([], [panel.repo]), h.p([h.Class("repo-line")], [repoLine({ panel, observedAt })])],
       ),
+      h.p([h.Class("repo-missing")], [GATE_MISSING]),
       ...phaseOrder.flatMap((phase) => {
-        const inPhase = workstreams.filter((ws) => ws.phase === phase)
+        const inPhase = panel.workstreams.filter((ws) => ws.phase === phase)
         if (inPhase.length === 0) return []
         return [
           h.div(
@@ -312,6 +315,7 @@ const repoSection = (
                   h,
                   ws,
                   sessions.filter((session) => session.workstream === ws.id),
+                  observedAt,
                 ),
               ),
             ],
@@ -321,10 +325,7 @@ const repoSection = (
     ],
   )
 
-const stateMachine = (
-  h: HtmlBuilder<Message>,
-  workstreams: ReadonlyArray<typeof Workstream.Type>,
-) =>
+const stateMachine = (h: HtmlBuilder<Message>, workstreams: ReadonlyArray<Workstream>) =>
   h.section(
     [h.Class("state-machine")],
     [
@@ -360,7 +361,7 @@ const stateMachine = (
 const card = (h: HtmlBuilder<Message>, title: string, children: ReadonlyArray<Html>) =>
   h.div([h.Class("card")], [h.h2([], [title]), ...children])
 
-const deskRow = (h: HtmlBuilder<Message>, item: typeof Desk.Type) =>
+const deskRow = (h: HtmlBuilder<Message>, item: Desk) =>
   h.div(
     [h.Class("row")],
     [
@@ -370,7 +371,7 @@ const deskRow = (h: HtmlBuilder<Message>, item: typeof Desk.Type) =>
     ],
   )
 
-const reportRow = (h: HtmlBuilder<Message>, report: typeof Report.Type) =>
+const reportRow = (h: HtmlBuilder<Message>, report: Report) =>
   h.div(
     [h.Class("report")],
     [
@@ -389,6 +390,11 @@ const reportRow = (h: HtmlBuilder<Message>, report: typeof Report.Type) =>
 /** Render the factory state; every field comes from /presence. */
 export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
   const presence = model.presence
+  // Ages are measured from the board's observation instant, never from this browser's
+  // clock: two people looking at the same document must read the same ages.
+  const observedAt = presence?.observedAt ?? ""
+  const panels =
+    presence === null ? [] : groupByRepo(presence.factory.workstreams, sessionsOf(presence))
   return {
     title: "Software factory",
     body: h.div(
@@ -407,9 +413,9 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
                       [h.Class("muted")],
                       [
                         String(presence.factory.workstreams.length) +
-                          " workstreams across " +
-                          String(new Set(presence.factory.workstreams.map(repoName)).size) +
-                          " repos",
+                          " workstreams in " +
+                          String(panels.length) +
+                          (panels.length === 1 ? " panel" : " panels"),
                       ],
                     ),
               ],
@@ -428,14 +434,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
           ? []
           : [
               stateMachine(h, presence.factory.workstreams),
-              ...Array.from(new Set(presence.factory.workstreams.map(repoName))).map((repo) =>
-                repoSection(
-                  h,
-                  repo,
-                  presence.factory.workstreams.filter((ws) => repoName(ws) === repo),
-                  [...presence.sessions.herdr.sessions, ...presence.sessions.rex.sessions],
-                ),
-              ),
+              ...panels.map((panel) => repoSection(h, panel, sessionsOf(presence), observedAt)),
               card(
                 h,
                 "Desk",
@@ -446,19 +445,28 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
                 "Reports",
                 presence.factory.reports.map((item) => reportRow(h, item)),
               ),
+              card(h, "Not in /presence", [
+                h.p([h.Class("missing")], [GATE_MISSING]),
+                h.p([h.Class("missing")], [PR_STATE_MISSING]),
+                h.p(
+                  [h.Class("muted")],
+                  [
+                    "Nothing on this page is inferred: a panel shows the counts the document " +
+                      "carries and names the ones it does not.",
+                  ],
+                ),
+              ]),
               ...(() => {
-                const allSessions = [
-                  ...presence.sessions.herdr.sessions,
-                  ...presence.sessions.rex.sessions,
-                ]
-                const unmatched = allSessions.filter((session) => session.workstream === undefined)
+                const unmatched = sessionsOf(presence).filter(
+                  (session) => session.workstream === undefined,
+                )
                 return unmatched.length === 0
                   ? []
                   : [
                       card(
                         h,
                         "Sessions not joined to a workstream",
-                        unmatched.map((s) => sessionRow(h, s)),
+                        unmatched.map((session) => sessionRow(h, session)),
                       ),
                     ]
               })(),

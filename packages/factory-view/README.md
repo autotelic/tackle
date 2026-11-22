@@ -11,7 +11,8 @@ transition is a message, and the UI has no local source of truth.
 
 ```
 /presence  ──decode──▶  Presence
-                         ├─ factory.workstreams  id, repo, project, phase, pr, checkpoint
+                         ├─ observedAt           the instant the board read every source
+                         ├─ factory.workstreams  id, repo, phase, pr, cursors, checkpoint
                          ├─ factory.desk         id, title, workstream
                          ├─ factory.reports      kind, workstream, expected, actual
                          └─ sessions             herdr / rex addresses + workstream
@@ -19,6 +20,11 @@ transition is a message, and the UI has no local source of truth.
 
 The view never imports `board` or `factory`. The JSON is the seam; the local
 schema is the wire contract.
+
+`presence.ts` is that contract and `repos.ts` is the only projection of it: the
+repo panel, its counts, and the sentences that state them. Neither ages anything
+with the browser clock — every age is measured from `observedAt`, so two people
+reading the same document read the same ages.
 
 ## Run it
 
@@ -40,12 +46,37 @@ pnpm --filter @autotelic/factory-view dev
 ## What each row means
 
 The page starts with the kernel's state machine and the current count in each
-phase. Below it, workstreams are grouped by **repository**, then by **phase**,
-so a repo is a section and its lanes are the states it currently occupies.
+phase. Below it, workstreams are grouped by **repository**, and each repo is a
+panel with a sentence for a header:
 
+```
+acme/web · 2 workstreams (1 live, 2 unobserved since Tue) · 1 PR
+gate: not in /presence · missing baseline identity count, error and warning counts, newest accepted identity
+```
+
+- **The header sentence** counts the workstreams, how many have a live session,
+  and how many are **unobserved** — always with the denominator, so `all
+  observed` and `0 live` are stated rather than implied. The two counts are
+  disjoint: `live` is a session attached now, and a live workstream is being
+  looked at whatever its cursors say. A repo with no
+  workstreams named in the document is `unfiled`, sorted last: a workstream the
+  document does not name a repo for is a section, never a dropped row.
+- **Unobserved is not stale.** A workstream is unobserved when no cursor has
+  advanced since adoption (`cursors.github`, `cursors.linear`, `cursors.reports`
+  are the store's empty strings). It says `not observed — no cursor advanced` on
+  the card — `live now — no source read yet` when a session is attached — and
+  the header dates the bucket from the latest adoption in it: `since Tue`, or
+  `last looked 3h ago` within the day.
+- **The gate is named when it is missing.** `/presence` carries no gate today:
+  no baseline identity count, no error or warning counts, no newest accepted
+  identity. The panel says exactly that per repo instead of showing a number it
+  does not have. PR state is missing the same way: a PR number is on the wire,
+  whether it is open or merged is GitHub's. The report is filed against this
+  workstream; when `board` serves the fields, the sentence gains them.
 - **Workstreams** — one card per adopted workstream, in phase order. `phase` is
-  the kernel's state; `checkpoint` is the commit the last pass stopped at. The
-  matching live sessions sit inside the card, so the jump to the conversation
+  the kernel's state; `checkpoint` is the commit the last pass stopped at, aged
+  from `observedAt` (`checkpoint 9f1c2ab8 · 12m ago`), or `no checkpoint yet`.
+  The matching live sessions sit inside the card, so the jump to the conversation
   is on the workstream itself. A session joins by an explicit
   `workstream=<id>` label, by cwd inside the workstream path, or by the words in
   its tab title; an unmatched session stays in the bottom list rather than
@@ -63,3 +94,11 @@ so a repo is a section and its lanes are the states it currently occupies.
 The refresh button is deliberate: this is an observation surface, not a
 controller. The only action is `POST /open`, which validates the address and
 runs `rex block focus` or `hc attach`; factory state is never written here.
+
+## Tests
+
+`pnpm --filter @autotelic/factory-view test` runs the projection and the rendered
+view. `repos.test.ts` asserts the grouping as a partition over generated
+documents (fast-check), so "a workstream with no repo is not dropped" is a
+property, not three examples. `view.test.ts` renders the real view through
+Foldkit's scene harness and reads it as text — no browser.

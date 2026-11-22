@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -20,7 +21,9 @@
     "@effect/tsgo": "catalog:",
     "@types/node": "catalog:",
     "@typescript/native": "catalog:",
-    "vite": "catalog:"
+    "fast-check": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
   },
   "engines": {
     "node": ">=24.18.0"

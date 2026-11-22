@@ -130,10 +130,6 @@ button:hover {
   margin: 10px 0 0;
 }
 .repo-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 12px;
   padding-bottom: 10px;
   border-bottom: 1px solid #e8edf1;
 }
@@ -143,6 +139,32 @@ button:hover {
   text-transform: none;
   letter-spacing: 0;
   color: #17202a;
+}
+/* The panel header is a sentence, so it wraps rather than becoming a table on a phone. */
+.repo-line {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: #2b3946;
+  overflow-wrap: anywhere;
+}
+.repo-missing {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: #8a6a2f;
+}
+.missing {
+  margin: 4px 0;
+  font-size: 12px;
+  color: #7a4d16;
+}
+.freshness {
+  font-size: 12px;
+}
+.freshness.observed {
+  color: #236141;
+}
+.freshness.unobserved {
+  color: #963b2b;
 }
 .lane {
   margin-top: 14px;
