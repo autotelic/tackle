@@ -322,7 +322,18 @@ const environmentLine = (h: HtmlBuilder<Message>, environment: Environment | und
       : [h.span([h.Class("mono")], [runtime.kind + " " + runtime.path])]),
     ...(agent === null || agent === undefined
       ? []
-      : [h.span([], ["agent " + agent.session + " · " + agent.status])]),
+      : [
+          h.span(
+            [],
+            // A session the board could not read a status for names only itself; an empty
+            // status is not a word, and Herdr draws no badge for it either.
+            [
+              agent.status === ""
+                ? "agent " + agent.session
+                : "agent " + agent.session + " · " + agent.status,
+            ],
+          ),
+        ]),
   ]
   if (parts.length === 0) return h.span([], [])
   return h.div(
