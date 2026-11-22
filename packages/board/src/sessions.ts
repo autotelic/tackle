@@ -18,7 +18,7 @@ const HerdrTerminal = Schema.Struct({
   agent: Schema.optional(Schema.String),
   cwd: Schema.String,
   state: Schema.String,
-  status: Schema.String,
+  status: Schema.optional(Schema.String),
   turn: Schema.optional(Schema.Finite),
   where: Schema.optional(Schema.String),
 })
@@ -112,7 +112,7 @@ export const parseHerdr = (text: string): ReadonlyArray<Session> => {
     agent: terminal.agent,
     cwd: terminal.cwd,
     state: terminal.state,
-    status: terminal.status,
+    status: terminal.status ?? "",
     turn: terminal.turn,
     where: terminal.where,
   }))
