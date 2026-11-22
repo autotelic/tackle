@@ -54,6 +54,7 @@ const adoptIt = async (f: ReturnType<typeof fixture>) => {
   const result = await adopt({
     path: f.repo,
     project: "P-AUT-128",
+    delivery: "pr",
     label: "permissions-overhaul",
     pr: 1862,
     id: "permissions-1862",

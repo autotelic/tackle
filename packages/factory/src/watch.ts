@@ -1,9 +1,13 @@
 import { spawnSync } from "node:child_process"
+import { homedir } from "node:os"
+import { readFile, readdir } from "node:fs/promises"
+import { join } from "node:path"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 import { appendEvent, readEvents } from "./events.ts"
 import { passesUsed, runPass, type PassOutcome } from "./kernel.ts"
 import { readWorkstream, writeWorkstream, type Workstream } from "./store.ts"
+import { Report } from "./report.ts"
 
 /** A source event already normalized to the shape the kernel consumes. */
 export const WatchEvent = Schema.Struct({
@@ -57,6 +61,7 @@ export const githubEvents = (input: {
   readonly record: Workstream
   readonly runGh?: ((args: ReadonlyArray<string>) => Result.Result<string, string>) | undefined
 }): ReadonlyArray<WatchEvent> => {
+  if (input.record.pr === undefined) return []
   const gh = input.runGh ?? ((args) => run({ command: process.env.GH_BIN ?? "gh", args }))
   const result = gh([
     "pr",
@@ -95,6 +100,38 @@ export const githubEvents = (input: {
       headSha: decoded.success.headRefOid,
       actor: comment.author?.login,
     })
+  }
+  return events
+}
+
+const expand = (path: string): string =>
+  path.startsWith("~/") ? join(homedir(), path.slice(2)) : path
+
+/** Read report files declared as a source; a report is an event, not an inbox. */
+export const reportEvents = async (input: {
+  readonly record: Workstream
+}): Promise<ReadonlyArray<WatchEvent>> => {
+  const sources = (input.record.sources ?? []).filter((source) => source.kind === "reports")
+  const events: Array<WatchEvent> = []
+  for (const source of sources) {
+    const dir = expand(source.dir)
+    const names = await readdir(dir).catch(() => [])
+    for (const name of names) {
+      if (!name.endsWith(".json") || name.endsWith(".answer.json")) continue
+      const text = await readFile(join(dir, name), "utf8").catch(() => undefined)
+      if (text === undefined) continue
+      const decoded = Schema.decodeResult(Schema.fromJsonString(Report))(text)
+      if (Result.isFailure(decoded)) continue
+      const report = decoded.success
+      if (report.workstream === input.record.id) continue
+      events.push({
+        id: "report:" + report.id,
+        kind: "report",
+        at: report.at,
+        payload: report,
+        actor: report.workstream,
+      })
+    }
   }
   return events
 }
@@ -175,6 +212,7 @@ export const watchOnce = async (input: {
   const polled = [
     ...githubEvents({ record, runGh: input.runGh }),
     ...linearEvents({ record, runLinear: input.runLinear }),
+    ...(await reportEvents({ record })),
   ]
   const candidates = input.events ?? polled
   const existing = await readEvents({ id: input.id, home: input.home })

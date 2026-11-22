@@ -234,6 +234,30 @@ export const runPass = async (input: {
   const regressed = after.errors > before.errors || after.warnings > before.warnings
   const head = spawnSync("git", ["-C", record.path, "rev-parse", "HEAD"], { encoding: "utf8" })
   const currentHead = head.status === 0 ? head.stdout.trim() : record.head
+  const changed = (() => {
+    const diff = spawnSync(
+      "git",
+      ["-C", record.path, "diff", "--name-only", record.head + ".." + currentHead],
+      {
+        encoding: "utf8",
+      },
+    )
+    const status = spawnSync("git", ["-C", record.path, "status", "--porcelain"], {
+      encoding: "utf8",
+    })
+    const files = new Set<string>()
+    for (const line of (diff.stdout ?? "").split("\n"))
+      if (line.trim() !== "") files.add(line.trim())
+    for (const line of (status.stdout ?? "").split("\n"))
+      if (line.length > 3) files.add(line.slice(3).trim())
+    return [...files]
+  })()
+  const protectedTouched = changed.filter((file) =>
+    (record.protectedPaths ?? []).some((pattern) =>
+      pattern.endsWith("/**") ? file.startsWith(pattern.slice(0, -3)) : file === pattern,
+    ),
+  )
+
   const captured = captureCheckpoint({
     path: record.path,
     id: record.id,
@@ -248,6 +272,35 @@ export const runPass = async (input: {
       reason: captured.error.step + ": " + captured.error.detail,
       receipt: failed,
     }
+  }
+
+  if (protectedTouched.length > 0) {
+    const journal = await snapshotJournal({
+      id: record.id,
+      pass,
+      at: input.at,
+      status: "failed",
+      home: input.home,
+    })
+    const failed: Receipt = {
+      ...receipt,
+      status: "failed",
+      exit: 0,
+      checkpoint: captured.value.sha,
+      journal,
+    }
+    await writeReceipt({ id: record.id, receipt: failed, home: input.home })
+    await writeWorkstream({
+      record: {
+        ...record,
+        phase: "blocked",
+        head: currentHead,
+        checkpoint: captured.value,
+        updatedAt: input.at,
+      },
+      home: input.home,
+    })
+    return { ok: false, reason: "gate-protected: " + protectedTouched.join(", "), receipt: failed }
   }
 
   if (regressed) {

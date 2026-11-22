@@ -171,7 +171,9 @@ export interface AdoptInput {
   readonly project: string
   readonly linearProjectId?: string | undefined
   readonly label: string
-  readonly pr: number
+  readonly delivery?: "pr" | "trunk" | undefined
+  readonly reports?: string | undefined
+  readonly pr: number | undefined
   readonly id: string
   readonly phase: Phase
   readonly at: string
@@ -199,13 +201,34 @@ export const adopt = async (input: AdoptInput): Promise<Outcome<Workstream>> => 
   if (Option.isNone(repo))
     return fail({ step: "remote", detail: "origin is not a GitHub repository: " + remote.value })
 
-  const pr = pullRequest({ repo: repo.value, pr: input.pr, cwd: path })
-  if (!pr.ok) return pr
-  if (pr.value.headRefName !== branch.value)
+  const delivery =
+    input.delivery ??
+    (input.pr === undefined ? (input.reports === undefined ? undefined : "trunk") : "pr")
+  if (delivery === undefined)
     return fail({
-      step: "pull request",
-      detail: "PR head " + pr.value.headRefName + " is not the checked-out branch " + branch.value,
+      step: "delivery",
+      detail: "PrRequired: no PR and no trunk-shaped source; pass --pr or --reports",
     })
+
+  let base = branch.value
+  let baseSha = head.value
+  let prHead = head.value
+
+  if (delivery === "pr") {
+    if (input.pr === undefined)
+      return fail({ step: "pull request", detail: "PR delivery needs --pr" })
+    const pr = pullRequest({ repo: repo.value, pr: input.pr, cwd: path })
+    if (!pr.ok) return pr
+    if (pr.value.headRefName !== branch.value)
+      return fail({
+        step: "pull request",
+        detail:
+          "PR head " + pr.value.headRefName + " is not the checked-out branch " + branch.value,
+      })
+    base = pr.value.baseRefName
+    baseSha = pr.value.baseRefOid
+    prHead = pr.value.headRefOid
+  }
 
   const records = await listWorkstreams({ home: input.home })
   const owner = collision({ records, path, repo: repo.value, pr: input.pr })
@@ -235,10 +258,20 @@ export const adopt = async (input: AdoptInput): Promise<Outcome<Workstream>> => 
       path,
       branch: branch.value,
       head: head.value,
-      pr: pr.value.number,
-      base: pr.value.baseRefName,
-      baseSha: pr.value.baseRefOid,
-      prHead: pr.value.headRefOid,
+      delivery,
+      pr: input.pr,
+      sources:
+        delivery === "trunk"
+          ? [
+              {
+                kind: "reports" as const,
+                dir: input.reports === undefined ? "~/.factory/reports" : input.reports,
+              },
+            ]
+          : undefined,
+      base,
+      baseSha,
+      prHead,
       phase: input.phase,
       at: input.at,
       checkpoint: captured.value,

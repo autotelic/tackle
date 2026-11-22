@@ -16,6 +16,7 @@ const base = (): Workstream =>
     id: "perms-1862",
     facts: {
       project: "P-AUT-128",
+      delivery: "pr",
       label: "permissions-overhaul",
       repo: "Shakti-Reforestation/forestbuilder",
       path: "/tmp/perms",

@@ -67,7 +67,7 @@ const main = async (): Promise<void> => {
         [
           record.id,
           record.project,
-          "PR " + record.pr,
+          record.pr === undefined ? "trunk" : "PR " + record.pr,
           record.phase,
           record.path,
           "checkpoint " + record.checkpoint.sha.slice(0, 8),
@@ -420,6 +420,8 @@ const main = async (): Promise<void> => {
       project: { type: "string" },
       "linear-project-id": { type: "string" },
       label: { type: "string" },
+      delivery: { type: "string" },
+      reports: { type: "string" },
       pr: { type: "string" },
       id: { type: "string" },
       phase: { type: "string", default: "reconcile" },
@@ -432,10 +434,16 @@ const main = async (): Promise<void> => {
     return
   }
   const { path, project, label, pr } = parsed.values
-  if (path === undefined || project === undefined || label === undefined || pr === undefined)
-    return fail("adopt needs --path, --project, --label and --pr")
-  const number = Number(pr)
-  if (!Number.isInteger(number) || number < 1) return fail("--pr must be a positive integer")
+  if (path === undefined || project === undefined || label === undefined)
+    return fail("adopt needs --path, --project and --label")
+  const delivery = parsed.values.delivery
+  if (delivery !== undefined && delivery !== "pr" && delivery !== "trunk")
+    return fail("--delivery must be pr or trunk")
+  if (delivery === "pr" && pr === undefined) return fail("PR delivery needs --pr")
+  if (delivery === "trunk" && pr !== undefined) return fail("trunk delivery does not take --pr")
+  const number = pr === undefined ? undefined : Number(pr)
+  if (number !== undefined && (!Number.isInteger(number) || number < 1))
+    return fail("--pr must be a positive integer")
   const phase = parsed.values.phase
   if (!Schema.is(Phase)(phase))
     return fail("--phase must be one of reconcile, build, land, blocked, done")
@@ -446,6 +454,8 @@ const main = async (): Promise<void> => {
     project,
     linearProjectId: parsed.values["linear-project-id"],
     label,
+    delivery,
+    reports: parsed.values.reports,
     pr: number,
     id,
     phase,

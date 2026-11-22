@@ -20,7 +20,8 @@ export const Workstream = Schema.Struct({
   path: Schema.String,
   branch: Schema.String,
   head: Schema.String,
-  pr: Schema.Finite,
+  delivery: Schema.optional(Schema.Literals(["pr", "trunk"])),
+  pr: Schema.optional(Schema.Finite),
   base: Schema.String,
   baseSha: Schema.String,
   prHead: Schema.String,
@@ -32,7 +33,11 @@ export const Workstream = Schema.Struct({
     generation: Schema.Finite,
     expiresAt: Schema.optional(Schema.String),
   }),
-  cursors: Schema.Struct({ github: Schema.String, linear: Schema.String }),
+  cursors: Schema.Struct({
+    github: Schema.String,
+    linear: Schema.String,
+    reports: Schema.optional(Schema.String),
+  }),
   budgets: Schema.Struct({
     passesPerPhase: Schema.Finite,
     wallMinutesPerPass: Schema.Finite,
@@ -41,6 +46,10 @@ export const Workstream = Schema.Struct({
   }),
   autonomy: Schema.Array(Schema.String),
   desk: Schema.Array(Schema.Unknown),
+  sources: Schema.optional(
+    Schema.Array(Schema.Struct({ kind: Schema.Literal("reports"), dir: Schema.String })),
+  ),
+  protectedPaths: Schema.optional(Schema.Array(Schema.String)),
   checkpoint: Schema.Struct({
     sha: Schema.String,
     ref: Schema.String,
@@ -65,7 +74,9 @@ export interface Facts {
   readonly path: string
   readonly branch: string
   readonly head: string
-  readonly pr: number
+  readonly delivery: "pr" | "trunk"
+  readonly pr: number | undefined
+  readonly sources?: ReadonlyArray<{ readonly kind: "reports"; readonly dir: string }> | undefined
   readonly base: string
   readonly baseSha: string
   readonly prHead: string
@@ -173,12 +184,13 @@ export const collision = (input: {
   readonly records: ReadonlyArray<Workstream>
   readonly path: string
   readonly repo: string
-  readonly pr: number
+  readonly pr: number | undefined
 }): Collision => {
   const path = canonical(input.path)
   const found = input.records.find(
     (record) =>
-      canonical(record.path) === path || (record.repo === input.repo && record.pr === input.pr),
+      canonical(record.path) === path ||
+      (input.pr !== undefined && record.repo === input.repo && record.pr === input.pr),
   )
   return found === undefined ? Collision.Free() : Collision.Owned({ workstream: found })
 }
@@ -194,6 +206,7 @@ export const recordOf = (input: { readonly id: string; readonly facts: Facts }):
   path: resolve(input.facts.path),
   branch: input.facts.branch,
   head: input.facts.head,
+  delivery: input.facts.delivery,
   pr: input.facts.pr,
   base: input.facts.base,
   baseSha: input.facts.baseSha,
@@ -202,7 +215,11 @@ export const recordOf = (input: { readonly id: string; readonly facts: Facts }):
   phase: input.facts.phase,
   deps: [],
   lease: { holder: process.env.HOSTNAME ?? "local", generation: 1 },
-  cursors: { github: "", linear: "" },
+  cursors: {
+    github: "",
+    linear: "",
+    reports: input.facts.delivery === "trunk" ? input.facts.at : undefined,
+  },
   budgets: {
     passesPerPhase: 5,
     wallMinutesPerPass: 30,
@@ -211,6 +228,21 @@ export const recordOf = (input: { readonly id: string; readonly facts: Facts }):
   },
   autonomy: ["comment", "label", "push", "pr-body", "rebase", "ci-fix"],
   desk: [],
+  sources:
+    input.facts.delivery === "trunk"
+      ? (input.facts.sources ?? [{ kind: "reports" as const, dir: "~/.factory/reports" }])
+      : undefined,
+  protectedPaths:
+    input.facts.delivery === "trunk"
+      ? [
+          ".jig-baseline.json",
+          "jig.config.json",
+          "package.json",
+          "pnpm-workspace.yaml",
+          "oxlint.config.ts",
+          "packages/factory/**",
+        ]
+      : undefined,
   checkpoint: input.facts.checkpoint,
   createdAt: input.facts.at,
   updatedAt: input.facts.at,
