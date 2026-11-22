@@ -41,3 +41,6 @@ tools/foreman/*.sqlite-journal
 
 # celld dev state for the room bundle
 packages/room/.celld/
+
+# The shop's local lock and queue state; the workstreams live in ~/.factory.
+.room/

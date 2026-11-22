@@ -2,10 +2,12 @@ import { spawn } from "node:child_process"
 import { createServer } from "node:http"
 import { existsSync } from "node:fs"
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
 import { parseArgs } from "node:util"
 import { listRooms } from "@autotelic/room/store"
 import { readRun, startRoomRun } from "@autotelic/room/run"
+import { listDesk } from "@autotelic/factory/desk"
 import { listReports } from "@autotelic/factory/report"
 import { listWorkstreams } from "@autotelic/factory/store"
 import { discoverSessions, type Session } from "./sessions.ts"
@@ -166,7 +168,11 @@ const observe = async (root: string) => {
     observedAt: new Date().toISOString(),
     sessions: await discoverSessions(),
     network: { tailscale: await discoverTailnet() },
-    factory: { workstreams: await listWorkstreams(), reports: await listReports() },
+    factory: {
+      workstreams: await listWorkstreams(),
+      desk: await listDesk(),
+      reports: await listReports(),
+    },
     rooms: await Promise.all(
       rooms.map(async (room) => {
         const run = await readRun({ root, id: room.id })
@@ -225,6 +231,35 @@ const presence = async ({
   }
 }
 
+const viewDir = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "factory-view", "dist")
+
+const serveView = async ({
+  response,
+  path,
+}: {
+  readonly response: import("node:http").ServerResponse
+  readonly path: string
+}): Promise<void> => {
+  const relative =
+    path === "/" || path === "/factory" ? "index.html" : path.slice("/factory/".length)
+  if (relative.includes("..")) {
+    json({ response, status: 404, body: { error: "not found" } })
+    return
+  }
+  const file = await readFile(join(viewDir, relative)).catch(() => undefined)
+  if (file === undefined) {
+    json({ response, status: 404, body: { error: "factory view is not built" } })
+    return
+  }
+  const type = relative.endsWith(".js")
+    ? "text/javascript; charset=utf-8"
+    : relative.endsWith(".css")
+      ? "text/css; charset=utf-8"
+      : "text/html; charset=utf-8"
+  response.writeHead(200, { "content-type": type, "content-length": file.length })
+  response.end(file)
+}
+
 const serve = async ({
   root,
   host,
@@ -255,6 +290,10 @@ const serve = async ({
       )
       return
     }
+    if (path === "/" || path === "/factory" || path.startsWith("/factory/")) {
+      void serveView({ response, path })
+      return
+    }
     if (path === "/queue") {
       void listRooms(root).then(
         (rooms) =>
@@ -272,7 +311,7 @@ const serve = async ({
       status: 404,
       body: {
         error: "not found",
-        paths: ["/health", "/presence", "/.well-known/presence.json", "/queue"],
+        paths: ["/", "/factory", "/health", "/presence", "/.well-known/presence.json", "/queue"],
       },
     })
   })

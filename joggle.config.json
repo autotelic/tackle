@@ -174,6 +174,16 @@
       "rule": "joggle/reversal",
       "path": "packages/factory/src/desk.ts",
       "reason": "deskItemFile is one join(dir,id+\".json\") for a different record kind; a shared helper would couple desk, report and workstream storage layouts. The seam is the file bytes."
+    },
+    {
+      "rule": "joggle/reversal",
+      "path": "packages/factory-view/src/main.ts",
+      "reason": "The view decodes the board's /presence JSON with a local Schema; importing board's server schema would couple the browser bundle to board internals. The shared shape IS the wire contract."
+    },
+    {
+      "rule": "joggle/reversal",
+      "path": "packages/board/src/fleet.ts",
+      "reason": "RemoteSource is the board's decode of the served presence shape; the view has the same schema because it reads the same bytes in a browser. The duplication is the wire contract."
     }
   ],
   "architecture": {

@@ -333,6 +333,15 @@ export default {
       },
     },
     {
+      // Foldkit's runtime names these exports; the browser fetch is the UI boundary.
+      files: ["packages/factory-view/src/main.ts"],
+      rules: {
+        "plumb/no-generic-export-names": "off",
+        "plumb-effect/no-direct-fetch": "off",
+        "unicorn/no-useless-spread": "off",
+      },
+    },
+    {
       // The watch tests load trusted local fixtures; the fixture shape is the assertion, and
       // decoding a hand-written table through a second schema would test the schema instead.
       files: ["packages/factory/test/watch.test.ts"],
