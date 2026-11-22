@@ -50,7 +50,14 @@ const fakeGh = (root: string): string => {
   return path
 }
 
-type Overrides = { readonly id?: string; readonly phase?: "reconcile" | "build" | "land" }
+type Overrides = {
+  readonly id?: string
+  readonly phase?: "reconcile" | "build" | "land"
+  readonly delivery?: "pr" | "trunk"
+  readonly pr?: number | undefined
+  readonly repo?: string
+  readonly label?: string
+}
 
 const adoptInput = (root: string, path: string, overrides: Overrides = {}) => ({
   path,
@@ -87,6 +94,30 @@ test("adopts an existing worktree in place and checkpoints dirty work", async ()
       }),
     ).toBe("uncommitted\n")
     expect((await listWorkstreams({ home: join(root, "home") }))[0]?.id).toBe("permissions-1862")
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+}, 20_000)
+
+test("adopts a trunk worktree with no origin remote", async () => {
+  const root = mkdtempSync(join(tmpdir(), "factory-"))
+  try {
+    const repo = repository(root)
+    git(repo, "remote", "remove", "origin")
+    const result = await adopt(
+      adoptInput(root, repo, {
+        id: "tackle-factory",
+        label: "factory-feedback",
+        pr: undefined,
+        delivery: "trunk",
+      }),
+    )
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.delivery).toBe("trunk")
+    expect(result.value.pr).toBeUndefined()
+    expect(result.value.repo).toBe("local/repo")
+    expect(result.value.checkpoint.pushed).toBe(false)
   } finally {
     rmSync(root, { recursive: true, force: true })
   }

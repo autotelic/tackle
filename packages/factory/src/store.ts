@@ -216,7 +216,7 @@ export const recordOf = (input: { readonly id: string; readonly facts: Facts }):
   deps: [],
   lease: { holder: process.env.HOSTNAME ?? "local", generation: 1 },
   cursors: {
-    github: "",
+    github: input.facts.delivery === "trunk" ? input.facts.at : "",
     linear: "",
     reports: input.facts.delivery === "trunk" ? input.facts.at : undefined,
   },

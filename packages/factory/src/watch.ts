@@ -104,6 +104,36 @@ export const githubEvents = (input: {
   return events
 }
 
+/** Watch the base branch itself when the workstream has no PR to watch. */
+export const baseEvents = (input: {
+  readonly record: Workstream
+  readonly runGit?: ((args: ReadonlyArray<string>) => Result.Result<string, string>) | undefined
+}): ReadonlyArray<WatchEvent> => {
+  if (input.record.delivery !== "trunk") return []
+  const git =
+    input.runGit ?? ((args) => run({ command: "git", args: ["-C", input.record.path, ...args] }))
+  // A trunk has no PR notification; the base branch is the notification.
+  git(["fetch", "origin", input.record.base])
+  const remote = git(["rev-parse", "--verify", "origin/" + input.record.base])
+  const ref = Result.isSuccess(remote) ? "origin/" + input.record.base : input.record.base
+  const result = git(["log", "-1", "--format=%H%x00%cI%x00%s", ref])
+  if (Result.isFailure(result)) return []
+  const [sha, at, subject] = result.success.trim().split("\u0000")
+  if (sha === undefined || at === undefined) return []
+  const since = Date.parse(input.record.cursors.github || "1970-01-01T00:00:00.000Z")
+  if (Date.parse(at) <= since) return []
+  return [
+    {
+      id: "base:commit:" + sha,
+      kind: "commit",
+      at,
+      payload: { sha, subject: subject ?? "" },
+      headSha: sha,
+      actor: "base",
+    },
+  ]
+}
+
 const expand = (path: string): string =>
   path.startsWith("~/") ? join(homedir(), path.slice(2)) : path
 
@@ -205,12 +235,14 @@ export const watchOnce = async (input: {
   readonly home?: string | undefined
   readonly events?: ReadonlyArray<WatchEvent>
   readonly runGh?: ((args: ReadonlyArray<string>) => Result.Result<string, string>) | undefined
+  readonly runGit?: ((args: ReadonlyArray<string>) => Result.Result<string, string>) | undefined
   readonly runLinear?: ((args: ReadonlyArray<string>) => Result.Result<string, string>) | undefined
 }): Promise<WatchOutcome> => {
   const record = await readWorkstream({ id: input.id, home: input.home })
   if (record === undefined) return { appended: [], passes: [] }
   const polled = [
     ...githubEvents({ record, runGh: input.runGh }),
+    ...baseEvents({ record, runGit: input.runGit }),
     ...linearEvents({ record, runLinear: input.runLinear }),
     ...(await reportEvents({ record })),
   ]

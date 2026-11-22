@@ -2,7 +2,7 @@ import { Data, Option } from "effect"
 import { spawnSync } from "node:child_process"
 import { mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { join, resolve } from "node:path"
+import { basename, join, resolve } from "node:path"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 import {
@@ -174,6 +174,7 @@ export interface AdoptInput {
   readonly delivery?: "pr" | "trunk" | undefined
   readonly reports?: string | undefined
   readonly pr: number | undefined
+  readonly repo?: string | undefined
   readonly id: string
   readonly phase: Phase
   readonly at: string
@@ -195,20 +196,27 @@ export const adopt = async (input: AdoptInput): Promise<Outcome<Workstream>> => 
   const head = gitOk({ path, args: ["rev-parse", "HEAD"], step: "head" })
   if (!head.ok) return head
 
-  const remote = gitOk({ path, args: ["remote", "get-url", "origin"], step: "remote" })
-  if (!remote.ok) return remote
-  const repo = slugOf(remote.value)
-  if (Option.isNone(repo))
-    return fail({ step: "remote", detail: "origin is not a GitHub repository: " + remote.value })
-
   const delivery =
     input.delivery ??
     (input.pr === undefined ? (input.reports === undefined ? undefined : "trunk") : "pr")
   if (delivery === undefined)
     return fail({
       step: "delivery",
-      detail: "PrRequired: no PR and no trunk-shaped source; pass --pr or --reports",
+      detail: "PrRequired: pass --pr or --delivery trunk",
     })
+
+  const remote = git({ path, args: ["remote", "get-url", "origin"] })
+  const remoteSlug = remote.ok ? slugOf(remote.stdout) : Option.none<string>()
+  const repo = Option.isSome(remoteSlug)
+    ? remoteSlug.value
+    : (input.repo ?? (delivery === "trunk" ? "local/" + basename(path) : undefined))
+  if (repo === undefined)
+    return fail({
+      step: "remote",
+      detail: "PR delivery needs an origin remote; pass --repo for a local trunk",
+    })
+  if (remote.ok && Option.isNone(remoteSlug) && input.repo === undefined)
+    return fail({ step: "remote", detail: "origin is not a GitHub repository: " + remote.stdout })
 
   let base = branch.value
   let baseSha = head.value
@@ -217,7 +225,7 @@ export const adopt = async (input: AdoptInput): Promise<Outcome<Workstream>> => 
   if (delivery === "pr") {
     if (input.pr === undefined)
       return fail({ step: "pull request", detail: "PR delivery needs --pr" })
-    const pr = pullRequest({ repo: repo.value, pr: input.pr, cwd: path })
+    const pr = pullRequest({ repo, pr: input.pr, cwd: path })
     if (!pr.ok) return pr
     if (pr.value.headRefName !== branch.value)
       return fail({
@@ -231,7 +239,7 @@ export const adopt = async (input: AdoptInput): Promise<Outcome<Workstream>> => 
   }
 
   const records = await listWorkstreams({ home: input.home })
-  const owner = collision({ records, path, repo: repo.value, pr: input.pr })
+  const owner = collision({ records, path, repo, pr: input.pr })
   if (owner._tag === "Owned")
     return fail({
       step: "collision",
@@ -254,7 +262,7 @@ export const adopt = async (input: AdoptInput): Promise<Outcome<Workstream>> => 
       project: input.project,
       linearProjectId: input.linearProjectId,
       label: input.label,
-      repo: repo.value,
+      repo,
       path,
       branch: branch.value,
       head: head.value,

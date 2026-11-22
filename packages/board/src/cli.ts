@@ -2,6 +2,7 @@ import { execFile, spawn } from "node:child_process"
 import { createServer } from "node:http"
 import { existsSync } from "node:fs"
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
+import { homedir } from "node:os"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { parseArgs, promisify } from "node:util"
@@ -278,12 +279,15 @@ const openSession = async ({
     const binary = findHerdrBinary()
     // oxlint-disable-next-line plumb/no-builtin-throws -- this HTTP boundary turns it into a 400
     if (Option.isNone(binary)) throw new Error("hc is not installed")
-    const command = `${shellQuote(binary.value)} attach ${shellQuote(address)}`
-    await execFileAsync(
-      "/usr/bin/osascript",
-      ["-e", `tell application "Terminal"\nactivate\ndo script ${shellQuote(command)}\nend tell`],
-      { timeout: 5_000 },
+    const directory = join(homedir(), ".factory", "open")
+    await mkdir(directory, { recursive: true })
+    const script = join(directory, `attach-${address}-${Date.now()}.command`)
+    await writeFile(
+      script,
+      `#!/bin/sh\nexec ${shellQuote(binary.value)} attach ${shellQuote(address)}\n`,
+      { mode: 0o700 },
     )
+    await execFileAsync("/usr/bin/open", ["-a", "Terminal", script], { timeout: 5_000 })
     return
   }
   // oxlint-disable-next-line plumb/no-builtin-throws -- this HTTP boundary turns it into a 400

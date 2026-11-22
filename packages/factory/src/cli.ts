@@ -15,7 +15,7 @@ const usage = [
   "factory — adopt in-flight work as durable workstreams",
   "",
   "Usage:",
-  "  factory adopt --path <worktree> --project <linear> --label <label> --pr <n> [--phase reconcile|build|land] [--id <id>]",
+  "  factory adopt --path <worktree> --project <linear> --label <label> [--pr <n> | --delivery trunk] [--reports <dir>] [--repo <owner/name>] [--phase reconcile|build|land] [--id <id>]",
   "  factory status [--json]",
   "  factory event --id <id> --kind <kind> [--payload <json>] [--at <iso>]",
   "  factory run --id <id> --worker <command> [--at <iso>]",
@@ -67,7 +67,9 @@ const main = async (): Promise<void> => {
         [
           record.id,
           record.project,
-          record.pr === undefined ? "trunk" : "PR " + record.pr,
+          record.delivery === "trunk" || record.pr === undefined
+            ? "delivery trunk"
+            : "PR " + record.pr,
           record.phase,
           record.path,
           "checkpoint " + record.checkpoint.sha.slice(0, 8),
@@ -422,6 +424,7 @@ const main = async (): Promise<void> => {
       label: { type: "string" },
       delivery: { type: "string" },
       reports: { type: "string" },
+      repo: { type: "string" },
       pr: { type: "string" },
       id: { type: "string" },
       phase: { type: "string", default: "reconcile" },
@@ -447,7 +450,7 @@ const main = async (): Promise<void> => {
   const phase = parsed.values.phase
   if (!Schema.is(Phase)(phase))
     return fail("--phase must be one of reconcile, build, land, blocked, done")
-  const id = parsed.values.id ?? slug(label + "-" + number)
+  const id = parsed.values.id ?? slug(number === undefined ? label : label + "-" + number)
 
   const result = await adopt({
     path,
@@ -456,6 +459,7 @@ const main = async (): Promise<void> => {
     label,
     delivery,
     reports: parsed.values.reports,
+    repo: parsed.values.repo,
     pr: number,
     id,
     phase,
@@ -469,7 +473,11 @@ const main = async (): Promise<void> => {
       "  project    " + record.project,
       "  path       " + record.path,
       "  branch     " + record.branch + " @ " + record.head.slice(0, 8),
-      "  PR         " + record.pr + " -> " + record.base,
+      "  delivery   " +
+        (record.delivery ?? "pr") +
+        (record.pr === undefined
+          ? " -> " + record.base
+          : " PR " + record.pr + " -> " + record.base),
       "  phase      " + record.phase,
       "  checkpoint " + record.checkpoint.sha.slice(0, 8) + " (" + record.checkpoint.ref + ")",
       "  record     " + record.id + ".json",

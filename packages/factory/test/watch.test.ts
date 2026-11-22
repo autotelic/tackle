@@ -1,8 +1,9 @@
 import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
+import * as Result from "effect/Result"
 import { expect, test } from "vitest"
 import { recordOf, type Workstream } from "../src/store.ts"
-import { shouldWake, type WatchEvent } from "../src/watch.ts"
+import { baseEvents, shouldWake, type WatchEvent } from "../src/watch.ts"
 
 /* oxlint-disable plumb/prefer-property-tests, no-reinterpret-cast, require-safety-comment-for-type-assertion -- the fixtures are trusted local JSON and the test shape is the assertion. */
 
@@ -51,6 +52,34 @@ type WakeFixture = {
     readonly expected: { readonly wake: boolean }
   }>
 }
+
+test("a trunk workstream watches its base branch, not a PR", () => {
+  const record = {
+    ...base(),
+    delivery: "trunk" as const,
+    pr: undefined,
+    base: "main",
+    cursors: { ...base().cursors, github: "2026-11-21T23:00:00.000Z" },
+  }
+  const sha = "ab12cd34"
+  const at = "2026-11-21T23:30:00.000Z"
+  const runGit = (args: ReadonlyArray<string>) =>
+    args[0] === "rev-parse"
+      ? Result.succeed(sha)
+      : args[0] === "log"
+        ? Result.succeed(sha + "\u0000" + at + "\u0000base moved")
+        : Result.succeed("")
+  const events = baseEvents({ record, runGit })
+  expect(events).toHaveLength(1)
+  expect(events[0]?.id).toBe("base:commit:" + sha)
+  expect(events[0]?.headSha).toBe(sha)
+  expect(
+    baseEvents({
+      record: { ...record, cursors: { ...record.cursors, github: at } },
+      runGit,
+    }),
+  ).toEqual([])
+})
 
 test("the six wake cases agree with the decision", () => {
   const data = fixture<WakeFixture>("watch/wake-cases.json")
