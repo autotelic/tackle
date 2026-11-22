@@ -296,14 +296,23 @@ export const watchOnce = async (input: {
   ]
   const candidates = input.events ?? polled
   const readExisting = await readEvents({ id: input.id, home: input.home })
+  const staleDesk = readExisting
+    .filter(
+      (event) =>
+        event.status === "pending" &&
+        event.kind === "desk" &&
+        Date.parse(event.at) <= Date.parse(record.updatedAt),
+    )
+    .map((event) => event.id)
   const own = readExisting
     .filter(
       (event) => event.status === "pending" && ownCommit({ event, record, runGit: input.runGit }),
     )
     .map((event) => event.id)
-  if (own.length > 0) await consumeEvents({ id: input.id, ids: own, home: input.home })
+  const retired = [...own, ...staleDesk]
+  if (retired.length > 0) await consumeEvents({ id: input.id, ids: retired, home: input.home })
   const existing =
-    own.length === 0 ? readExisting : await readEvents({ id: input.id, home: input.home })
+    retired.length === 0 ? readExisting : await readEvents({ id: input.id, home: input.home })
   const known = new Map(existing.map((event) => [event.id, event]))
   const queued = new Map(candidates.map((event) => [event.id, event]))
   for (const event of existing) {
