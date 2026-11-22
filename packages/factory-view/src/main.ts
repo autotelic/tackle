@@ -2,7 +2,6 @@ import { Effect, Option, Result, Schema } from "effect"
 import { Command, Runtime, Update } from "foldkit"
 import type { Document, Html, HtmlBuilder } from "foldkit/html"
 import { defineMessageUnion } from "foldkit/message"
-import { copyText } from "foldkit-primitives/dom"
 import { ticks } from "foldkit-primitives/time"
 
 const Workstream = Schema.Struct({
@@ -111,9 +110,6 @@ export type Model = typeof Model.Type
 export const Message = defineMessageUnion({
   ClickedRefresh: {},
   Settled: { value: Schema.Unknown, error: Schema.NullOr(Schema.String) },
-  ClickedCopy: { command: Schema.String },
-  Copied: {},
-  CopyFailed: { message: Schema.String },
   Ticked: {},
   ClickedOpen: { source: SessionSource, address: Schema.String },
   Opened: { ok: Schema.Boolean, error: Schema.NullOr(Schema.String) },
@@ -137,18 +133,6 @@ export const update = (model: Model, message: Message): UpdateReturn =>
         ? { model: { ...model, presence: decoded.success, error: null, loading: false } }
         : { model: { ...model, presence: null, error: String(decoded.failure), loading: false } }
     },
-    ClickedCopy: ({ command }) => ({
-      model,
-      commands: [
-        Command.mapMessage(copyText(command), (result) =>
-          result._tag === "Copied"
-            ? Message.Copied()
-            : Message.CopyFailed({ message: result.message }),
-        ),
-      ],
-    }),
-    Copied: () => ({ model, notice: "Copied the open command" }),
-    CopyFailed: ({ message }) => ({ model, notice: "Could not copy: " + message }),
     ClickedOpen: ({ source, address }) => ({
       model,
       commands: [OpenSession({ source, address })],
@@ -237,26 +221,7 @@ const phaseLabel = (phase: string): string => {
       return phase
   }
 }
-const phaseDetail = (phase: string): string => {
-  switch (phase) {
-    case "reconcile":
-      return "Compare Linear, GitHub and the checkpoint. No code changes."
-    case "build":
-      return "A foreman pass makes the work mergeable."
-    case "land":
-      return "The PR is ready; a human merges it."
-    case "blocked":
-      return "Waiting on a desk answer or an external dependency."
-    case "done":
-      return "The factory has no work left for this workstream."
-    default:
-      return ""
-  }
-}
 const repoName = (ws: typeof Workstream.Type): string => ws.repo ?? "unknown repository"
-
-const sessionCommand = (session: typeof Session.Type): string =>
-  session.source === "herdr" ? "hc attach " + session.address : "rex block focus " + session.address
 
 const sessionRow = (h: HtmlBuilder<Message>, session: typeof Session.Type) =>
   h.div(
@@ -275,10 +240,6 @@ const sessionRow = (h: HtmlBuilder<Message>, session: typeof Session.Type) =>
           h.button(
             [h.OnClick(Message.ClickedOpen({ source: session.source, address: session.address }))],
             ["Open"],
-          ),
-          h.button(
-            [h.OnClick(Message.ClickedCopy({ command: sessionCommand(session) }))],
-            ["Copy"],
           ),
         ],
       ),
@@ -328,98 +289,49 @@ const queueTitle = (event: {
 }
 
 const activityBlock = (h: HtmlBuilder<Message>, activity: typeof Activity.Type | undefined) => {
-  if (activity === undefined)
-    return h.div([h.Class("activity")], [h.span([h.Class("muted")], ["No pass records yet"])])
+  if (activity === undefined) return h.span([], [])
   const pass = activity.lastPass
   const running = activity.state === "working"
   const waiting = activity.pending.length
   const capped = activity.blockedBy.some((reason) => reason.startsWith("budget:"))
-  const stale =
-    !running && activity.state !== "blocked" && waiting > 0 && (activity.ageMinutes ?? 0) >= 30
   const age = formatDuration(activity.ageMinutes)
-  const status = running
-    ? "Pass in flight"
-    : capped
-      ? "Blocked: pass budget"
-      : activity.state === "blocked"
-        ? "Blocked"
-        : activity.state === "done"
-          ? "Closed"
-          : activity.state === "queued"
-            ? "Waiting to start"
-            : pass === null
-              ? "No pass yet"
-              : "Nothing queued"
+  const last =
+    pass === null
+      ? ""
+      : running
+        ? "Pass #" + pass.pass + " running"
+        : "Pass #" + pass.pass + " · " + age + " ago"
   const gate =
     pass?.quality === undefined
-      ? "Gate: no quality record"
-      : "Gate " +
-        (pass.quality.after.errors === 0 ? "green" : "red") +
-        " · " +
-        pass.quality.after.errors +
-        " errors, " +
-        pass.quality.after.warnings +
-        " warnings"
+      ? ""
+      : pass.quality.after.errors === 0
+        ? "Gate green"
+        : "Gate red · " + pass.quality.after.errors + " errors"
+  if (last === "" && waiting === 0 && gate === "") return h.span([], [])
   return h.div(
+    [h.Class("activity" + (capped ? " capped" : "") + (running ? " running" : ""))],
     [
-      h.Class(
-        "activity" +
-          (stale ? " stale" : "") +
-          (running ? " running" : "") +
-          (capped ? " capped" : ""),
-      ),
-    ],
-    [
-      h.div(
-        [h.Class("activity-head")],
-        [
-          h.span([h.Class("activity-status")], [status]),
-          running
-            ? h.span([h.Class("muted")], ["no pass number until it finishes"])
-            : h.span(
-                [h.Class("muted")],
-                [pass === null ? "no pass has run" : "last pass #" + pass.pass],
-              ),
-        ],
-      ),
-      h.p(
-        [h.Class("activity-line")],
-        [
-          running
-            ? "A pass is running now. Its work appears here when it checkpoints."
-            : capped
-              ? "The " +
-                phaseLabel(activity.phase) +
-                " phase used " +
-                activity.budget.used +
-                " of " +
-                activity.budget.passesPerPhase +
-                " passes. Raise the budget to let the queue move: factory budget --id " +
-                activity.workstream +
-                " --passes-per-phase " +
-                (activity.budget.passesPerPhase + 5)
-              : waiting === 0
-                ? "No work is queued. " +
-                  phaseLabel(activity.phase) +
-                  " is not the same as done; close the phase only when its definition of done holds."
-                : stale
-                  ? "No pass is running. The queue has not moved for " + age + "."
-                  : "The workstream is caught up; the next event starts a pass.",
-        ],
-      ),
-      ...(activity.pending.length === 0
+      last === ""
+        ? h.span([], [])
+        : h.div(
+            [h.Class("activity-head")],
+            [
+              h.span([h.Class("activity-last")], [last]),
+              capped
+                ? h.span(
+                    [h.Class("stale-flag")],
+                    [activity.budget.used + "/" + activity.budget.passesPerPhase + " passes"],
+                  )
+                : h.span([], []),
+            ],
+          ),
+      ...(waiting === 0
         ? []
         : [
             h.div(
               [h.Class("activity-queue")],
               [
-                h.div(
-                  [h.Class("queue-count")],
-                  [
-                    activity.pending.length +
-                      (activity.pending.length === 1 ? " item is waiting" : " items are waiting"),
-                  ],
-                ),
+                h.div([h.Class("queue-count")], [waiting + " waiting"]),
                 ...activity.pending.map((event) =>
                   h.details(
                     [h.Class("queue-item")],
@@ -432,7 +344,7 @@ const activityBlock = (h: HtmlBuilder<Message>, activity: typeof Activity.Type |
               ],
             ),
           ]),
-      h.div([h.Class("activity-meta")], [h.span([], [gate])]),
+      gate === "" ? h.span([], []) : h.div([h.Class("activity-meta")], [h.span([], [gate])]),
     ],
   )
 }
@@ -453,7 +365,6 @@ const workstreamCard = (
           h.div(
             [h.Class("pills")],
             [
-              h.span([h.Class("phase-pill " + ws.phase)], [phaseLabel(ws.phase) ?? ws.phase]),
               activity === undefined
                 ? h.span([], [])
                 : h.span([h.Class("state-pill " + activity.state)], [stateName(activity.state)]),
@@ -486,10 +397,7 @@ const workstreamCard = (
       ),
       activityBlock(h, activity),
       sessions.length === 0
-        ? h.p(
-            [h.Class("empty muted")],
-            ["No live session matched. Label a terminal with workstream=" + ws.id + "."],
-          )
+        ? h.span([], [])
         : h.div(
             [h.Class("session-list")],
             sessions.map((session) => sessionRow(h, session)),
@@ -543,42 +451,6 @@ const repoSection = (
     ],
   )
 
-const stateMachine = (
-  h: HtmlBuilder<Message>,
-  workstreams: ReadonlyArray<typeof Workstream.Type>,
-) =>
-  h.section(
-    [h.Class("state-machine")],
-    [
-      h.h2([], ["State machine"]),
-      h.ol(
-        [h.Class("states")],
-        phaseOrder.map((phase) =>
-          h.li(
-            [h.Class("state " + phase)],
-            [
-              h.div(
-                [h.Class("state-head")],
-                [
-                  h.span([h.Class("state-name")], [phaseLabel(phase)]),
-                  h.span(
-                    [h.Class("state-count")],
-                    [String(workstreams.filter((ws) => ws.phase === phase).length)],
-                  ),
-                ],
-              ),
-              h.p([h.Class("state-detail")], [phaseDetail(phase)]),
-            ],
-          ),
-        ),
-      ),
-      h.p(
-        [h.Class("muted")],
-        ["reconcile → build → land; blocked and done are exits. Counts are current workstreams."],
-      ),
-    ],
-  )
-
 const card = (h: HtmlBuilder<Message>, title: string, children: ReadonlyArray<Html>) =>
   h.div([h.Class("card")], [h.h2([], [title]), ...children])
 
@@ -625,15 +497,25 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
                 h.h1([], ["Software factory"]),
                 presence === null
                   ? h.span([h.Class("muted")], ["waiting for presence"])
-                  : h.span(
-                      [h.Class("muted")],
-                      [
-                        String(presence.factory.workstreams.length) +
-                          " workstreams across " +
-                          String(new Set(presence.factory.workstreams.map(repoName)).size) +
-                          " repos",
-                      ],
-                    ),
+                  : (() => {
+                      const count = presence.factory.workstreams.length
+                      const repos = new Set(presence.factory.workstreams.map(repoName)).size
+                      const waiting = presence.factory.activity.reduce(
+                        (total, activity) => total + activity.pending.length,
+                        0,
+                      )
+                      return h.span(
+                        [h.Class("muted")],
+                        [
+                          count +
+                            (count === 1 ? " workstream" : " workstreams") +
+                            " · " +
+                            repos +
+                            (repos === 1 ? " repo" : " repos") +
+                            (waiting === 0 ? "" : " · " + waiting + " waiting"),
+                        ],
+                      )
+                    })(),
               ],
             ),
             h.button(
@@ -649,7 +531,6 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
         ...(presence === null
           ? []
           : [
-              stateMachine(h, presence.factory.workstreams),
               ...Array.from(new Set(presence.factory.workstreams.map(repoName))).map((repo) =>
                 repoSection(
                   h,
@@ -659,32 +540,26 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
                   [...presence.sessions.herdr.sessions, ...presence.sessions.rex.sessions],
                 ),
               ),
-              card(
-                h,
-                "Desk",
-                presence.factory.desk.map((item) => deskRow(h, item)),
-              ),
-              card(
-                h,
-                "Reports",
-                presence.factory.reports.map((item) => reportRow(h, item)),
-              ),
-              ...(() => {
-                const allSessions = [
-                  ...presence.sessions.herdr.sessions,
-                  ...presence.sessions.rex.sessions,
-                ]
-                const unmatched = allSessions.filter((session) => session.workstream === undefined)
-                return unmatched.length === 0
-                  ? []
-                  : [
-                      card(
-                        h,
-                        "Sessions not joined to a workstream",
-                        unmatched.map((s) => sessionRow(h, s)),
-                      ),
-                    ]
-              })(),
+              ...(presence.factory.desk.length === 0
+                ? []
+                : [
+                    card(
+                      h,
+                      "Desk",
+                      presence.factory.desk.map((item) => deskRow(h, item)),
+                    ),
+                  ]),
+              ...(presence.factory.reports.length === 0
+                ? []
+                : [
+                    h.details(
+                      [h.Class("card reports-card")],
+                      [
+                        h.summary([], ["Reports (" + presence.factory.reports.length + ")"]),
+                        ...presence.factory.reports.map((item) => reportRow(h, item)),
+                      ],
+                    ),
+                  ]),
             ]),
       ],
     ),

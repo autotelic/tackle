@@ -253,6 +253,17 @@ button:hover {
   color: #4c5a67;
   font-size: 12px;
 }
+.reports-card > summary {
+  cursor: pointer;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #5f6d7a;
+  font-weight: 600;
+}
+.reports-card[open] > summary {
+  margin-bottom: 8px;
+}
 .activity {
   margin-top: 10px;
   border: 1px solid #edf1f4;
