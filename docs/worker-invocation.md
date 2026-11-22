@@ -100,6 +100,13 @@ committed into `docs/permissions-overhaul-tree/05-audit.md` in workstream permis
 them replacing the body of section 16 (`report-permissions-1862-1795303503690`, `docs/feedback.md`
 §3).
 
+Another, for any pass that reads CI: an empty body is not an empty log. `gh api
+…/actions/jobs/<id>/logs` exits 1 and writes nothing when the log contains terminal escape sequences — pass
+`--allow-escape-sequences`, or read `gh run view --log --job <id>`, which sanitizes escapes and bounds the
+stream (a whole run was 13MB and its failed shard's summary sat past line 58,000, so a byte-bounded read ends in
+teardown). `report-enterprise-1854-1795303934346` lost a 171,705-byte body that way and reported its three
+failing assertions as unreadable (`docs/feedback.md` §3).
+
 ## 5. The gap this exposes: the human channel
 
 `run-session.ts` says it plainly: _“The human channel is the terminal until #14: answer ask_human questions on

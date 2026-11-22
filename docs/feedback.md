@@ -27,7 +27,7 @@ it is not a second investigation.
 | `waiting`        | a fix that exists                                  | name the blocker: a release, another workstream, an unmet gate                            |
 | `fixed`          | nothing — the tool already changed                 | cite the commit and verify on the artefact you have; do not re-fix it                     |
 
-## 2. Three rules that decide most reports
+## 2. Four rules that decide most reports
 
 **A red check is not a failing test.** A step killed at its bound exits with no test summary because
 no test failed. The factory's own runner already draws that line and pins it: `StepResult.timedOut`,
@@ -36,6 +36,14 @@ no test failed. The factory's own runner already draws that line and pins it: `S
 the guard is removed). So "the log has no test name" is read as _the red step does not say what
 happened_, not as _the runner lost the name_. That distinction is what decides whether a report
 describes a defect in the factory or in the workflow that ran the step.
+
+**An empty read is not an empty log.** `gh api …/actions/jobs/<id>/logs` exits 1 and writes **no**
+stdout when the body contains terminal escape sequences; the refusal goes to stderr, so a reader that
+measures a body sees `0 bytes` on a 171,705-byte archive (`report-enterprise-1854-1795303934346`). A
+missing body is not a conclusion — the exit code and the error channel are, and the bytes are usually one
+flag away: `--allow-escape-sequences`, or `gh run view --log --job <id>`, which sanitizes escapes and
+bounds a 13MB run stream to one job. Same shape as the truncation notice in §3: bytes the reader dropped,
+taken for content or for absence.
 
 **A report is about the factory the reporter ran, not about the world it observed.** `gh`, a job log
 and a Linear page are the reporter's tools; when the bytes are thin because CI killed the process,
@@ -50,12 +58,13 @@ reporter read the artefact it had, and the artefact was wrong for it.
 
 ## 3. The ledger
 
-| id                                      | fingerprint                                                                                                                                                | kind        | verdict      | route                                                               |
-| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------ | ------------------------------------------------------------------- |
-| `report-permissions-1862-1795303302409` | `conformance:gh run view --job 136075695353 --log:bf49d72626a9`                                                                                            | conformance | `owner-repo` | permissions-1862: its `test-rest` shard                             |
-| `report-permissions-1862-1795303401889` | `conformance:gh api .../actions/jobs/136075695353; cd services/rest; npx mocha <shard 2 files>:7712854710d8`                                               | conformance | `duplicate`  | cited: `report-permissions-1862-1795303302409` — same job           |
-| `report-permissions-1862-1795303503690` | `ergonomics:read a long file (docs/permissions-overhaul-tree/05-audit.md) through the agent's read tool, then paste the result into a commit:93a81a7d8cb3` | ergonomics  | `owner-repo` | permissions-1862: restore §16 from `580049816`, delete both notices |
-| `report-permissions-1862-1795303853012` | `ergonomics:node packages/factory/bin/factory.js --help:5997bc3147b1`                                                                                      | ergonomics  | `fixed`      | fixed in `559d8bcc`; the reported bytes predate `0173a342`          |
+| id                                      | fingerprint                                                                                                                                                | kind        | verdict      | route                                                                                |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------ | ------------------------------------------------------------------------------------ |
+| `report-permissions-1862-1795303302409` | `conformance:gh run view --job 136075695353 --log:bf49d72626a9`                                                                                            | conformance | `owner-repo` | permissions-1862: its `test-rest` shard                                              |
+| `report-permissions-1862-1795303401889` | `conformance:gh api .../actions/jobs/136075695353; cd services/rest; npx mocha <shard 2 files>:7712854710d8`                                               | conformance | `duplicate`  | cited: `report-permissions-1862-1795303302409` — same job                            |
+| `report-permissions-1862-1795303503690` | `ergonomics:read a long file (docs/permissions-overhaul-tree/05-audit.md) through the agent's read tool, then paste the result into a commit:93a81a7d8cb3` | ergonomics  | `owner-repo` | permissions-1862: restore §16 from `580049816`, delete both notices                  |
+| `report-permissions-1862-1795303853012` | `ergonomics:node packages/factory/bin/factory.js --help:5997bc3147b1`                                                                                      | ergonomics  | `fixed`      | fixed in `559d8bcc`; the reported bytes predate `0173a342`                           |
+| `report-enterprise-1854-1795303934346`  | `ergonomics:gh api …/jobs/137021854184/logs; gh run view 44961528061 --log:9827a001f031`                                                                   | ergonomics  | `owner-repo` | enterprise-1854: its `test-rest (3)` shard — re-read with `--allow-escape-sequences` |
 
 ### Case: the REST shard that named no test
 
@@ -178,6 +187,57 @@ not this pass's edit.
 
 **What would change it:** a `--help` that omits a command _after_ a clean `pnpm build` (the source
 drifted, and the row reopens as `factory-defect`); or a decision to lift the gate for the usage test.
+
+### Case: the job log that was never empty
+
+`report-enterprise-1854-1795303934346` says the failed `test-rest` shard's log body is empty: `0 bytes`,
+the run log carrying only that job's teardown lines, and nothing but `Process completed with exit code 3`
+in the annotation. The reading is wrong about the log and right about the reader. The archive was
+171,705 bytes, and had been since `23:27:40Z` — 94 seconds after the step ended, 4m34s before the report:
+
+```
+$ gh api repos/…/actions/jobs/137021854184/logs -i
+HTTP/1.1 200 OK
+Content-Length: 171705
+Content-Type: text/plain
+Last-Modified: Sat, 21 Nov 2026 23:27:40 GMT
+
+the response contains terminal escape sequences; pass --allow-escape-sequences to output it anyway
+```
+
+`gh` 2.102 refuses to render a response body carrying terminal escapes: exit 1, the refusal on stderr,
+**nothing on stdout**. A read that measures stdout — or a pipeline that let stderr go — has 0 bytes of a
+171,705-byte log. The same command with `--allow-escape-sequences` returns all of it, and it names what
+the report could not: `607 passing (39s)`, `3 failing`, and the three assertions in full.
+
+The escapes are the workflow's own: 871 log lines carry ANSI codes (1764 `ESC[0m`, 630 `ESC[32m`, 80
+`ESC[31m`), the first at line 346 in a composite action's colored command echo. The job is attempt 1 of
+run attempt 1, so no re-run had discarded anything, and `Run REST tests` ran `23:26:57–23:27:37` (40s): a
+real assertion failure, not the permissions shard's timeout kill.
+
+Verdict `owner-repo`, and not `not-a-defect`, because the expectation holds. The three failures are the
+enterprise workstream's own subject: `POST /api/inventory`, `GET /api/inventory/:id` and
+`GET /api/inventory-options` return `''`, `false` and `+0` where the expectation has `null` (`age`,
+`box_size`, `lift_status`, `nursery_key`, `plug_size`, `stock_type`, `trees_per_bundle`, `short_code`) —
+the inventory nullable-key drift that workstream is mid-way through. Nothing here reads a GitHub job log
+(`packages/*/src` has no `actions/jobs`), so the read was a Pi session's `gh`; the repair is a flag and
+three assertions, and no CI config is implicated.
+
+The second read carries the same lesson: `gh run view 44961528061 --log` without `--job` is 13,158,153
+bytes across 61,629 lines for this run's 26 jobs, and the failed shard's summary sits at line 58,532 — a
+read bounded by bytes ends in teardown. `--job 137021854184` is 245,386 bytes and starts at the step's
+first line. What cannot be recovered is which bound the reporter used; the whole-run read reproduces as a
+13MB stream, and the report does not say how it was cut. Bound by job before bounding by bytes.
+
+The permissions case predicted that a second repo reporting "the red check says nothing" would make the
+shape a shared rule. It happened, and the rule it bought is about the reader rather than the check: the
+two repos lost their evidence in different places — a timeout with no summary in one, a summary behind an
+escape guard in the other — so §2 gains the rule and no workflow rule follows from the pair.
+
+**What would change it:** an archive that is genuinely empty (`Content-Length: 0`) while the annotation
+names a failing step — then the runner lost the bytes and the rule becomes the workflow's; a tackle tool
+that reads job logs and swallows the refusal (the defect is here); or an enterprise CI change that stops
+emitting color, which reads the body plainly and closes this row as a config fix.
 
 ## 4. What a verdict is not
 
