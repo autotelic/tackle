@@ -281,13 +281,31 @@ const sessionRow = (h: HtmlBuilder<Message>, session: typeof Session.Type) =>
     ],
   )
 
-const formatAge = (minutes: number | null): string => {
+const formatDuration = (minutes: number | null): string => {
   if (minutes === null) return "unknown"
-  if (minutes < 1) return "just now"
-  if (minutes < 60) return minutes + "m ago"
+  if (minutes < 1) return "under a minute"
+  if (minutes < 60) return minutes + "m"
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return hours + "h " + (minutes % 60) + "m ago"
-  return Math.floor(hours / 24) + "d ago"
+  if (hours < 24) return hours + "h " + (minutes % 60) + "m"
+  return Math.floor(hours / 24) + "d"
+}
+
+const firstClause = (text: string): string => {
+  const sentence = text.split(/(?<=[.!?])\s/u)[0] ?? text
+  return sentence.length > 96 ? sentence.slice(0, 93) + "…" : sentence
+}
+
+const queueTitle = (event: {
+  readonly kind: string
+  readonly summary?: string | undefined
+}): string => {
+  if (event.kind === "report-backlog") return "Triage the factory report backlog"
+  if (event.kind === "report") {
+    if (event.summary?.toLowerCase().includes("gate field") === true)
+      return "Add gate data to /presence"
+    return "A report needs a pass: " + firstClause(event.summary ?? "")
+  }
+  return event.kind.split("-").join(" ")
 }
 
 const activityBlock = (h: HtmlBuilder<Message>, activity: typeof Activity.Type | undefined) => {
@@ -296,11 +314,24 @@ const activityBlock = (h: HtmlBuilder<Message>, activity: typeof Activity.Type |
   const pass = activity.lastPass
   const running = pass?.status === "running"
   const stale = !running && (activity.ageMinutes ?? 0) >= 30
+  const age = formatDuration(activity.ageMinutes)
   const status = running
-    ? "running"
+    ? "Working now"
     : pass === null
-      ? "no pass yet"
-      : "last pass #" + pass.pass + " " + pass.status
+      ? "No pass yet"
+      : stale
+        ? "Idle for " + age
+        : "Last pass finished " + age + " ago"
+  const gate =
+    pass?.quality === undefined
+      ? "Gate: no quality record"
+      : "Gate " +
+        (pass.quality.after.errors === 0 ? "green" : "red") +
+        " · " +
+        pass.quality.after.errors +
+        " errors, " +
+        pass.quality.after.warnings +
+        " warnings"
   return h.div(
     [h.Class("activity" + (stale ? " stale" : "") + (running ? " running" : ""))],
     [
@@ -308,53 +339,48 @@ const activityBlock = (h: HtmlBuilder<Message>, activity: typeof Activity.Type |
         [h.Class("activity-head")],
         [
           h.span([h.Class("activity-status")], [status]),
-          h.span([h.Class("muted")], [running ? "in flight" : formatAge(activity.ageMinutes)]),
-          stale ? h.span([h.Class("stale-flag")], ["stale"]) : h.span([], []),
+          running
+            ? h.span([h.Class("muted")], ["no pass number until it finishes"])
+            : h.span(
+                [h.Class("muted")],
+                [pass === null ? "no pass has run" : "last pass #" + pass.pass],
+              ),
         ],
       ),
-      h.div(
-        [h.Class("activity-meta")],
+      h.p(
+        [h.Class("activity-line")],
         [
-          pass?.quality === undefined
-            ? h.span([], ["no quality record"])
-            : h.span(
-                [],
+          running
+            ? "A pass is running now. Its work appears here when it checkpoints."
+            : stale
+              ? "No pass is running. The queue has not moved."
+              : "The workstream is caught up; the next event starts a pass.",
+        ],
+      ),
+      activity.pending.length === 0
+        ? h.p([h.Class("activity-empty")], ["Nothing is waiting."])
+        : h.div(
+            [h.Class("activity-queue")],
+            [
+              h.div(
+                [h.Class("queue-count")],
                 [
-                  "jig " +
-                    pass.quality.after.errors +
-                    " error / " +
-                    pass.quality.after.warnings +
-                    " warn",
+                  activity.pending.length +
+                    (activity.pending.length === 1 ? " item is waiting" : " items are waiting"),
                 ],
               ),
-          h.span(
-            [],
-            [
-              activity.pending.length === 0
-                ? "no queued events"
-                : "queued: " +
-                  activity.pending
-                    .map(
-                      (event) =>
-                        event.kind + (event.summary === undefined ? "" : ": " + event.summary),
-                    )
-                    .join(" · "),
+              ...activity.pending.map((event) =>
+                h.details(
+                  [h.Class("queue-item")],
+                  [
+                    h.summary([], [queueTitle(event)]),
+                    h.p([h.Class("queue-detail")], [event.summary ?? "No further detail."]),
+                  ],
+                ),
+              ),
             ],
           ),
-          activity.lastEvent === null
-            ? h.span([], ["no events yet"])
-            : h.span(
-                [],
-                [
-                  "last event " +
-                    activity.lastEvent.kind +
-                    (activity.lastEvent.summary === undefined
-                      ? ""
-                      : ": " + activity.lastEvent.summary),
-                ],
-              ),
-        ],
-      ),
+      h.div([h.Class("activity-meta")], [h.span([], [gate])]),
     ],
   )
 }
