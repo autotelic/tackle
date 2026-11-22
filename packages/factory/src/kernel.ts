@@ -4,6 +4,7 @@ import { homedir } from "node:os"
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { Match } from "effect"
+import * as Option from "effect/Option"
 import * as Predicate from "effect/Predicate"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
@@ -204,15 +205,16 @@ export const isProtectedPath: Predicate.Predicate<{
       : input.path === pattern,
   )
 
-const hcBinary = (): string | undefined => {
-  if (process.env.HC_BIN !== undefined && process.env.HC_BIN !== "") return process.env.HC_BIN
+const hcBinary = (): Option.Option<string> => {
+  if (process.env.HC_BIN !== undefined && process.env.HC_BIN !== "")
+    return Option.some(process.env.HC_BIN)
   for (const dir of (process.env.PATH ?? "").split(":")) {
     if (dir === "") continue
     const candidate = join(dir, "hc")
-    if (existsSync(candidate)) return candidate
+    if (existsSync(candidate)) return Option.some(candidate)
   }
   const local = join(homedir(), ".local", "bin", "hc")
-  return existsSync(local) ? local : undefined
+  return existsSync(local) ? Option.some(local) : Option.none()
 }
 
 const shellQuote = (value: string): string => "'" + value.replaceAll("'", "'\\''") + "'"
@@ -229,7 +231,7 @@ const runInTerminal = async (input: {
   readonly wallMs: number
 }) => {
   const hc = hcBinary()
-  if (hc === undefined) return undefined
+  if (Option.isNone(hc)) return undefined
   const directory = join(factoryHome(), "workers")
   await mkdir(directory, { recursive: true, mode: 0o700 })
   const script = join(directory, input.record.id + "-" + input.pass + ".sh")
@@ -242,7 +244,7 @@ const runInTerminal = async (input: {
   })
   const name = ("factory-" + input.record.id + "-" + input.pass).slice(0, 32)
   return spawnSync(
-    hc,
+    hc.value,
     [
       "run",
       "--name",
