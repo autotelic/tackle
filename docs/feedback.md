@@ -397,6 +397,48 @@ errors and 5 warnings from pass 1.
 
 Before: `pnpm jig check` 0 errors, 0 warnings (pass 8's receipt). After: 0 and 0.
 
+### Case: a base:commit event, read by hand
+
+`base:commit:3280f1db` is the first of this stream's two pending base events, and its whole payload is a sha and
+a subject — the shape `report-tackle-factory-1795326738246` is about. So the pass paid the cost the report names,
+once, and wrote it down: `git show --stat` says the commit is six files by `Ted Ogmundson`, two of them inside
+`packages/factory/**`, this workstream's protected path. The author is a human session outside any pass, so
+nothing was owed to it and nothing was refused. The event closes as **nothing owed** rather than as a verdict on a
+report: the commit is an ancestor of HEAD, and both halves of its claim hold there.
+
+- **Activity carries the budget and the phase.** `activityOf` against the live record:
+  `{"budget":{"used":10,"passesPerPhase":10},"phase":"build"}`. The cap is not hypothetical — this pass is the
+  tenth of ten.
+- **The served card names the cap.** `packages/factory-view/dist/assets/index-*.js` (built `04:23`, after its
+  source's `22:42`) carries `Paused: pass budget reached` and the `factory budget` line beside it, so the
+  document the board serves shows a capped queue as capped instead of idle.
+- **The remedy the card prints works.** In a throwaway `FACTORY_HOME` holding a copy of the record and its ten
+  receipts: `factory run --id tackle-factory --worker /bin/true` → `factory: budget: passesPerPhase 10`, exit 1;
+  `factory budget --id tackle-factory --passes-per-phase 15` → `passes per phase -> 15`; `run` again →
+  `factory: PassRunning: pass 10` — that is the guard `3a465cb1` added, not the budget; activity then reads
+  `{"used":10,"passesPerPhase":15}`. The live budget was not touched.
+
+Two document shapes answer "a capped workstream must not look idle", and only one of them is built.
+`docs/workstream.md` §7 specifies a status document whose cap is a `capStop` state (`"passes"` beside
+`used 5 of 5`), with `blockedBy`, three-valued `freshness` and `checkpoint.ageSeconds`. No code emits any of
+those four fields — a grep of `packages/*/src` finds none — and `factory status --json` prints the raw records.
+What the shop serves instead is `activity.budget` with `{used, passesPerPhase}` and `phase`, which is what the
+view reads. The spec's own fixtures, `packages/factory/test/fixtures/status/{fresh,stale,unobserved}.json`, are
+read by nothing, though the fixtures README says each is read "by a test that asserts on structure" and each file
+carries an `assertions[]` list. That is a rule that never looked: three files claiming coverage of a document that
+has no producer. They sit in the protected `packages/factory/**`, so the pass raised
+`desk-tackle-factory-status` instead of deleting them or building §7.
+
+What this pass leaves for a human: at 10/10 the queue is capped, so this was the phase's last pass. One event is
+still pending (`base:commit:466155c7…`) and four desk items are open — three that predate this pass, plus the
+status item it raised. Nothing wakes until the budget is raised; the desk items are what a human reads while
+deciding whether to.
+
+What would change it: a `factory status` that emits §7, which closes this section as built and turns the three
+fixtures into its tests; §7 shrunk to the activity document the shop serves, in which case the fixtures go and the
+spec stops describing a document nobody writes; or a `base:commit` payload carrying author and paths, which makes
+the first paragraph here one field.
+
 ## 4. What a verdict is not
 
 - **not a desk item.** A report is a tooling complaint; only `gate-defect` and a real choice produce a
