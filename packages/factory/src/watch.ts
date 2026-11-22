@@ -25,7 +25,7 @@ const Github = Schema.Struct({
   headRefOid: Schema.String,
   reviews: Schema.Array(
     Schema.Struct({
-      id: Schema.Finite,
+      id: Schema.String,
       state: Schema.String,
       body: Schema.optional(Schema.String),
       submittedAt: Schema.optional(Schema.String),
