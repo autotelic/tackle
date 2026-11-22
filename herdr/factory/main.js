@@ -6,7 +6,7 @@
 // line here — a phase, a state or a session is never inferred from a neighbour.
 import { View, div } from "gpui-kit"
 import { h_flex, v_flex } from "gpui-base"
-import { agents, appHome, checking, exec, run, terminals, theme, window } from "herdr"
+import { appHome, checking, exec, run, theme, window } from "herdr"
 import { readdir } from "fs/promises"
 import { environmentText, metaLine, readPresence } from "./presence.js"
 
@@ -193,11 +193,11 @@ export default class Factory extends View {
       )
   }
 
-  row(t, row, live) {
+  row(t, row) {
     const color = stateColor({ theme: t, state: row.state })
     const meta = metaLine(row)
     const environment = environmentText(row)
-    const canFocus = row.address !== null && live.has(row.address)
+    const canFocus = row.address !== null
     return h_flex()
       .id("factory-" + row.id)
       .flex_none()
@@ -371,10 +371,6 @@ export default class Factory extends View {
 
   render() {
     const t = theme()
-    const live = new Set([
-      ...agents().map((agent) => agent.address),
-      ...terminals().map((terminal) => terminal.address),
-    ])
     return v_flex()
       .id("factory-root")
       .size_full()
@@ -388,7 +384,7 @@ export default class Factory extends View {
           .overflow_y_scrollbar()
           .py(4)
           .when(this.rows.length === 0, (el) => el.child(this.empty(t)))
-          .children(this.rows.map((row) => this.row(t, row, live)))
+          .children(this.rows.map((row) => this.row(t, row)))
           .when(this.desk.length > 0, (el) => el.child(this.deskSection(t))),
       )
       .when(this.links.length > 0, (el) => el.child(this.linkRow(t)))
