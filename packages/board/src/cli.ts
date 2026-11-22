@@ -11,7 +11,13 @@ import { readRun, startRoomRun } from "@autotelic/room/run"
 import { listDesk } from "@autotelic/factory/desk"
 import { listReports } from "@autotelic/factory/report"
 import { listWorkstreams } from "@autotelic/factory/store"
-import { discoverSessions, findHerdrBinary, findRexBinary, type Session } from "./sessions.ts"
+import {
+  discoverSessions,
+  findHerdrBinary,
+  findRexBinary,
+  tagWorkstreams,
+  type Session,
+} from "./sessions.ts"
 import { discoverTailnet } from "./tailnet.ts"
 import { fleet } from "./fleet.ts"
 import * as Result from "effect/Result"
@@ -163,14 +169,20 @@ const json = ({
 
 const observe = async (root: string) => {
   const rooms = await listRooms(root)
+  const workstreams = await listWorkstreams()
+  const sessions = await discoverSessions()
   return {
     shop: root,
     authority: "observation" as const,
     observedAt: new Date().toISOString(),
-    sessions: await discoverSessions(),
+    sessions: {
+      ...sessions,
+      herdr: { ...sessions.herdr, sessions: tagWorkstreams(sessions.herdr.sessions, workstreams) },
+      rex: { ...sessions.rex, sessions: tagWorkstreams(sessions.rex.sessions, workstreams) },
+    },
     network: { tailscale: await discoverTailnet() },
     factory: {
-      workstreams: await listWorkstreams(),
+      workstreams,
       desk: await listDesk(),
       reports: await listReports(),
     },

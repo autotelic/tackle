@@ -59,7 +59,64 @@ export interface Session {
   readonly labels?: Readonly<Record<string, string>>
   readonly roomId?: string
   readonly joinedBy?: "label"
+  readonly workstream?: string
 }
+
+export interface WorkstreamPointer {
+  readonly id: string
+  readonly label: string
+  readonly repo: string
+  readonly path: string
+  readonly project: string
+}
+
+/**
+ * Join a live session to the workstream it is doing work for.
+ *
+ * An explicit `workstream` label wins; a factory desk belongs to the factory
+ * workstream; then the session's cwd and tab words are the only evidence left.
+ */
+export const workstreamFor = (
+  session: Session,
+  workstreams: ReadonlyArray<WorkstreamPointer>,
+): Option.Option<string> => {
+  const explicit = session.labels?.workstream
+  if (explicit !== undefined && workstreams.some((workstream) => workstream.id === explicit))
+    return Option.some(explicit)
+  if (session.labels?.factory === "desk") {
+    const factory = workstreams.find((workstream) => workstream.project === "factory")
+    return factory === undefined ? Option.none() : Option.some(factory.id)
+  }
+  if (session.cwd !== undefined) {
+    const byPath = workstreams.find(
+      (workstream) =>
+        session.cwd === workstream.path || session.cwd?.startsWith(workstream.path + "/") === true,
+    )
+    if (byPath !== undefined) return Option.some(byPath.id)
+  }
+  const words = new Set(
+    (session.where ?? "")
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .filter((word) => word.length > 0),
+  )
+  for (const workstream of workstreams) {
+    const labelWords = workstream.label.toLowerCase().split("-")
+    if (labelWords.some((word) => word.length >= 5 && words.has(word)))
+      return Option.some(workstream.id)
+  }
+  return Option.none()
+}
+
+/** Attach the workstream id without inventing one when no evidence matches. */
+export const tagWorkstreams = (
+  sessions: ReadonlyArray<Session>,
+  workstreams: ReadonlyArray<WorkstreamPointer>,
+): ReadonlyArray<Session> =>
+  sessions.map((session) => {
+    const workstream = Option.getOrUndefined(workstreamFor(session, workstreams))
+    return workstream === undefined ? session : { ...session, workstream }
+  })
 
 export interface SessionSource {
   readonly available: boolean
