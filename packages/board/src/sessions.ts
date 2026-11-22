@@ -4,7 +4,7 @@ import { existsSync } from "node:fs"
 import { homedir } from "node:os"
 import { join } from "node:path"
 import { promisify } from "node:util"
-import { Option } from "effect"
+import { Option, Predicate } from "effect"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 
@@ -339,3 +339,21 @@ export const discoverSessions = async (): Promise<SessionDiscovery> => ({
   herdr: await discoverHerdr(),
   rex: await discoverRex(),
 })
+
+/**
+ * Whether a source currently serves this address.
+ *
+ * The view's Open action posts an address, so the address is checked against discovery
+ * rather than trusted: a target that vanished between the snapshot and the click is refused
+ * instead of being handed to `hc attach` (the argv hazard in VISION.md), and a source is not
+ * exchangeable for the other one. Discovery is the same read `/presence` serves, so the two
+ * cannot drift.
+ */
+export const servesAddress: Predicate.Predicate<{
+  readonly discovery: SessionDiscovery
+  readonly source: Session["source"]
+  readonly address: string
+}> = (input) =>
+  (input.source === "herdr" ? input.discovery.herdr : input.discovery.rex).sessions.some(
+    (session) => session.address === input.address,
+  )

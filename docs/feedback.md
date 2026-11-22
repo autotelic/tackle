@@ -58,13 +58,15 @@ reporter read the artefact it had, and the artefact was wrong for it.
 
 ## 3. The ledger
 
-| id                                      | fingerprint                                                                                                                                                | kind        | verdict      | route                                                                                |
-| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------ | ------------------------------------------------------------------------------------ |
-| `report-permissions-1862-1795303302409` | `conformance:gh run view --job 136075695353 --log:bf49d72626a9`                                                                                            | conformance | `owner-repo` | permissions-1862: its `test-rest` shard                                              |
-| `report-permissions-1862-1795303401889` | `conformance:gh api .../actions/jobs/136075695353; cd services/rest; npx mocha <shard 2 files>:7712854710d8`                                               | conformance | `duplicate`  | cited: `report-permissions-1862-1795303302409` — same job                            |
-| `report-permissions-1862-1795303503690` | `ergonomics:read a long file (docs/permissions-overhaul-tree/05-audit.md) through the agent's read tool, then paste the result into a commit:93a81a7d8cb3` | ergonomics  | `owner-repo` | permissions-1862: restore §16 from `580049816`, delete both notices                  |
-| `report-permissions-1862-1795303853012` | `ergonomics:node packages/factory/bin/factory.js --help:5997bc3147b1`                                                                                      | ergonomics  | `fixed`      | fixed in `559d8bcc`; the reported bytes predate `0173a342`                           |
-| `report-enterprise-1854-1795303934346`  | `ergonomics:gh api …/jobs/137021854184/logs; gh run view 44961528061 --log:9827a001f031`                                                                   | ergonomics  | `owner-repo` | enterprise-1854: its `test-rest (3)` shard — re-read with `--allow-escape-sequences` |
+| id                                      | fingerprint                                                                                                                                                | kind        | verdict          | route                                                                                   |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ---------------- | --------------------------------------------------------------------------------------- |
+| `report-permissions-1862-1795303302409` | `conformance:gh run view --job 136075695353 --log:bf49d72626a9`                                                                                            | conformance | `owner-repo`     | permissions-1862: its `test-rest` shard                                                 |
+| `report-permissions-1862-1795303401889` | `conformance:gh api .../actions/jobs/136075695353; cd services/rest; npx mocha <shard 2 files>:7712854710d8`                                               | conformance | `duplicate`      | cited: `report-permissions-1862-1795303302409` — same job                               |
+| `report-permissions-1862-1795303503690` | `ergonomics:read a long file (docs/permissions-overhaul-tree/05-audit.md) through the agent's read tool, then paste the result into a commit:93a81a7d8cb3` | ergonomics  | `owner-repo`     | permissions-1862: restore §16 from `580049816`, delete both notices                     |
+| `report-permissions-1862-1795303853012` | `ergonomics:node packages/factory/bin/factory.js --help:5997bc3147b1`                                                                                      | ergonomics  | `fixed`          | fixed in `559d8bcc`; the reported bytes predate `0173a342`                              |
+| `report-enterprise-1854-1795303934346`  | `ergonomics:gh api …/jobs/137021854184/logs; gh run view 44961528061 --log:9827a001f031`                                                                   | ergonomics  | `owner-repo`     | enterprise-1854: its `test-rest (3)` shard — re-read with `--allow-escape-sequences`    |
+| `report-tackle-factory-1795311764988`   | `ergonomics:factory-view Open (herdr t18):54dd1b16c105`                                                                                                    | ergonomics  | `fixed`          | fixed in `3018aa4f`; the posted address is now checked against discovery, not a charset |
+| `report-tackle-view-1795312137685`      | `blocker:factory status:72d1a1d64468`                                                                                                                      | blocker     | `factory-defect` | routed to its own pending event: `packages/board` serves the gate it asks for           |
 
 ### Case: the REST shard that named no test
 
@@ -175,15 +177,19 @@ probe could not advance a live workstream:
 - the same command with `{"choice":"accept"}` advances it to `build`.
 
 Hence `fixed`, not `factory-defect`: re-cutting a fix that is already an ancestor of HEAD would be a
-second edit of a protected path for no gain. Two things remain true, and neither is repaired here:
+second edit of a protected path for no gain. Two things were still true when this row was written, and at
+`466155c7` one of them has shrunk:
 
-- the usage list is hand-maintained and nothing compares it to the dispatcher, so the next command can
-  land undocumented again; a fixture test is the guard, and the guard is a gate decision;
-- the `adopt` line still omits `--delivery`, `--reports` and `--linear-project-id`, so trunk delivery —
-  the shape this workstream runs — cannot be read off help at all.
+- the usage list is hand-maintained and nothing compares it to the dispatcher. Every top-level command
+  and subcommand the dispatcher handles is in it at HEAD; what it cannot promise is the next one, so a
+  fixture test is the guard — and the guard is a gate decision;
+- the `adopt` line omitted `--delivery`, `--reports` and `--linear-project-id`. `884cc3f6` documented
+  the first two for trunk delivery; `--linear-project-id` is still accepted (`cli.ts` line 449) and
+  still absent from `--help`, so adopting with a Linear project id cannot be read off help at all.
 
-Both live in `packages/factory/**`, protected for this workstream; they are the next gate's question,
-not this pass's edit.
+Both live in `packages/factory/**`, protected for this workstream, so the backlog pass raised
+`desk-tackle-factory-usage` instead of editing: accepting it grants the usage line and the dispatcher
+test. See "the backlog, verified at HEAD" below.
 
 **What would change it:** a `--help` that omits a command _after_ a clean `pnpm build` (the source
 drifted, and the row reopens as `factory-defect`); or a decision to lift the gate for the usage test.
@@ -238,6 +244,44 @@ escape guard in the other — so §2 gains the rule and no workflow rule follows
 names a failing step — then the runner lost the bytes and the rule becomes the workflow's; a tackle tool
 that reads job logs and swallows the refusal (the defect is here); or an enterprise CI change that stops
 emitting color, which reads the body plainly and closes this row as a config fix.
+
+### The backlog, verified at HEAD
+
+`report-backlog-1795306551000` fired at `00:15:51Z`, one second after the intake drained five report
+files into five `report` events, and the five then landed as five passes — `5a9edbd8` at `00:22:03Z`
+through `4d831808` at `00:40:46Z` — each with its verdict, its fix and its receipt. So this pass did not
+re-triage the five; it verified every verdict at `466155c7` rather than re-cutting a fix, and corrected
+the one line the tree had moved under. Evidence, in the order the runs produced it:
+
+- `--help` lists every command the dispatcher handles, `phase` among them with
+  `[--answer <desk-answer.json>]`; the one option it does not print is `--linear-project-id`, which the
+  `adopt` path accepts. That is the live drift, and the reason for `desk-tackle-factory-usage`;
+- in a throwaway `FACTORY_HOME` against a copy of a record, `phase --id probe --set build` on a
+  `reconcile` record exits 1 with `desk gate: reconcile -> build needs --answer` and leaves the phase
+  at `reconcile`; the same command with `{"choice":"accept"}` advances it to `build`. A probe cannot
+  advance a held workstream;
+- `docs/worker-invocation.md` §4 carries the truncation hazard and §2 above carries the
+  escape-sequence rule, so the two `owner-repo` rows point the next reader at the line that matters;
+- the REST-shard row stays `owner-repo` with no mail: the timeout is the workflow's own
+  `timeout-minutes`, and `docs/factory-receipt.md` had already measured the same kill.
+
+The two reports that arrived after the event are in the table, and only one of them is this pass's:
+
+- `report-tackle-factory-1795311764988` is `fixed` in `3018aa4f` — the board writes a `.command` file
+  and opens it, 5s bound, no AppleEvent — but the fix left the posted address checked by a charset
+  alone, so `POST /open {"address":"--help"}` reached `hc attach --help`. An allowlisted command taking
+  a request parameter is the argv hazard `VISION.md` refuses, so this pass finished the fix:
+  `servesAddress` decides from the same discovery `/presence` serves, so an address the shop does not
+  serve is a 400 rather than an `hc` argument, and a target that vanished between the snapshot and the
+  click is refused instead of attaching to a recycled id. Verified against a throwaway `board up`:
+  `--help` is charset-legal and no terminal has it, so the address check refuses it; an unknown source
+  and a shell-shaped address are refused at the schema; and `~/.factory/open` gains no file;
+- `report-tackle-view-1795312137685` is `factory-defect` and not this pass's work: its own event is
+  already pending. `packages/board` owns the document it reads and is not protected, so the field is
+  servable — the baseline count and newest identity from each record's `.jig-baseline.json` (read
+  through `@autotelic/protocol`'s `decodeBaseline`, the seam that owns that format) and the error and
+  warning counts from the newest receipt's `quality`, which `activityOf` already loads. The row is here
+  so that pass starts from the route instead of the report.
 
 ## 4. What a verdict is not
 

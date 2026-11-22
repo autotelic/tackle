@@ -18,6 +18,7 @@ import {
   discoverSessions,
   findHerdrBinary,
   findRexBinary,
+  servesAddress,
   tagWorkstreams,
   type Session,
 } from "./sessions.ts"
@@ -37,7 +38,7 @@ const usage = [
   "  board status [--root .room] [--json]   (rooms, lock, and the service)",
   "  board queue [--root .room] [--json]",
   "",
-  "board up serves /health, /presence and /queue while it holds the lock.",
+  "board up serves /health, /presence, /queue, /factory and /open while it holds the lock.",
   "Exit codes: 0 ok, 1 declined, 2 usage, 3 infrastructure.",
 ].join("\n")
 
@@ -273,6 +274,18 @@ const openSession = async ({
   readonly source: string
   readonly address: string
 }): Promise<void> => {
+  // An address from a POST is a claim, not a fact: only one discovery serves now is opened.
+  // Without this, `hc attach <post body>` is an allowlisted command taking a request
+  // parameter -- the argv hazard VISION.md names as the reason not to POST a command at all.
+  if (source !== "herdr" && source !== "rex") {
+    // oxlint-disable-next-line plumb/no-builtin-throws -- this HTTP boundary turns it into a 400
+    throw new Error("unknown session source")
+  }
+  const discovery = await discoverSessions()
+  if (!servesAddress({ discovery, source, address })) {
+    // oxlint-disable-next-line plumb/no-builtin-throws -- this HTTP boundary turns it into a 400
+    throw new Error("no live " + source + " session at " + address)
+  }
   if (source === "rex") {
     const binary = findRexBinary()
     // oxlint-disable-next-line plumb/no-builtin-throws -- this HTTP boundary turns it into a 400
@@ -295,10 +308,7 @@ const openSession = async ({
     )
     await execFileAsync("/usr/bin/open", ["-a", "Terminal", script], { timeout: 5_000 })
     setTimeout(() => void rm(script, { force: true }), 60_000).unref()
-    return
   }
-  // oxlint-disable-next-line plumb/no-builtin-throws -- this HTTP boundary turns it into a 400
-  throw new Error("unknown session source")
 }
 
 const serveView = async ({

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest"
-import { discoverHerdr, discoverRex, parseHerdr } from "../src/sessions.ts"
+import {
+  discoverHerdr,
+  discoverRex,
+  parseHerdr,
+  servesAddress,
+  type SessionDiscovery,
+} from "../src/sessions.ts"
 
 /* oxlint-disable plumb/prefer-property-tests -- these are two fixed wire shapes from another program. */
 
@@ -116,5 +122,39 @@ describe("a session source is read, not guessed", () => {
         },
       }),
     ).toEqual({ available: true, sessions: [] })
+  })
+})
+
+describe("the open action only takes an address discovery serves", () => {
+  const live = (address: string) => ({
+    source: "herdr" as const,
+    address,
+    agent: "pi",
+    cwd: undefined,
+    state: "live",
+    status: "working",
+    turn: undefined,
+    where: undefined,
+  })
+  const discovery: SessionDiscovery = {
+    herdr: { available: true, sessions: [live("t18")] },
+    rex: { available: false, sessions: [] },
+  }
+
+  it("opens an address that is in the snapshot", () => {
+    expect(servesAddress({ discovery, source: "herdr", address: "t18" })).toBe(true)
+  })
+
+  /* report-tackle-factory-1795311764988: a post body is not a terminal address. */
+  it("refuses a flag-shaped address no terminal has", () => {
+    expect(servesAddress({ discovery, source: "herdr", address: "--help" })).toBe(false)
+  })
+
+  it("does not carry an address across sources", () => {
+    expect(servesAddress({ discovery, source: "rex", address: "t18" })).toBe(false)
+  })
+
+  it("refuses everything when the source is unavailable", () => {
+    expect(servesAddress({ discovery, source: "rex", address: "block:1" })).toBe(false)
   })
 })
