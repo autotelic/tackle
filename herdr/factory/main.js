@@ -113,7 +113,15 @@ const deskRows = (desk) =>
       const title = textOf(record.title)
       return title === null
         ? null
-        : { id: textOf(record.id) ?? title, title, workstream: textOf(record.workstream) }
+        : {
+            id: textOf(record.id) ?? title,
+            title,
+            workstream: textOf(record.workstream),
+            body: textOf(record.body),
+            choices: listOf(record.choices)
+              .map((choice) => textOf(choice))
+              .filter((choice) => choice !== null),
+          }
     })
     .filter((row) => row !== null)
 
@@ -223,6 +231,7 @@ const emptyCopy = ({ loaded, online }) => {
 export default class Factory extends View {
   /** `herdr-app check` runs init for real, so it must not reach the network or the mods folder. */
   init(_props, cx) {
+    this.cx = cx
     this.rows = []
     this.desk = []
     this.reports = 0
@@ -373,6 +382,22 @@ export default class Factory extends View {
       .child(div().text_size(11).text_color(t.dim).child(copy.detail))
   }
 
+  answer(item, choice) {
+    exec("curl", [
+      "-sS",
+      "-X",
+      "POST",
+      "-H",
+      "content-type: application/json",
+      "--data",
+      JSON.stringify({ item, choice, by: "herdr" }),
+      "http://127.0.0.1:4780/desk/answer",
+    ])
+      .then(() => this.refresh(this.cx))
+      .catch(() => null)
+    return null
+  }
+
   deskSection(t) {
     return v_flex()
       .flex_none()
@@ -393,18 +418,36 @@ export default class Factory extends View {
       )
       .children(
         this.desk.map((item) =>
-          h_flex()
+          v_flex()
             .id("factory-desk-" + item.id)
-            .items_center()
-            .gap(8)
+            .gap(4)
             .px(12)
-            .py(6)
-            .cursor_pointer()
-            .hover((style) => style.bg(t.hover))
-            .on_click(() => openView(VIEW + "#" + item.id))
-            .child(div().flex_1().min_w(0).truncate().child(item.title))
-            .when(item.workstream !== null, (el) =>
-              el.child(div().text_size(11).text_color(t.dim).child(item.workstream)),
+            .py(8)
+            .border_t(1)
+            .border_color(t.border)
+            .child(div().font_semibold().truncate().child(item.title))
+            .when(item.body !== null, (el) =>
+              el.child(div().text_size(11).text_color(t.dim).truncate().child(item.body)),
+            )
+            .child(
+              h_flex()
+                .gap(6)
+                .wrap()
+                .children(
+                  item.choices.map((choice) =>
+                    h_flex()
+                      .id("factory-desk-choice-" + item.id + "-" + choice)
+                      .px(7)
+                      .py(3)
+                      .rounded(6)
+                      .border(1)
+                      .border_color(t.border)
+                      .cursor_pointer()
+                      .hover((style) => style.bg(t.hover))
+                      .on_click(() => this.answer(item.id, choice))
+                      .child(div().text_size(11).text_color(t.muted).child(choice)),
+                  ),
+                ),
             ),
         ),
       )

@@ -340,10 +340,14 @@ export const watchOnce = async (input: {
   )) {
     const previous = known.get(event.id)
     if (previous?.status === "consumed") continue
+    const answer = Schema.decodeUnknownResult(
+      Schema.Struct({ choice: Schema.optional(Schema.String) }),
+    )(event.payload)
     if (
       event.kind === "desk" &&
       record.phase === "blocked" &&
-      (event.payload as { readonly choice?: unknown } | null)?.choice === "resume"
+      Result.isSuccess(answer) &&
+      answer.success.choice === "resume"
     ) {
       record = { ...record, phase: "build", updatedAt: event.at }
       await writeWorkstream({ record, home: input.home })
