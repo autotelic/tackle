@@ -58,19 +58,20 @@ reporter read the artefact it had, and the artefact was wrong for it.
 
 ## 3. The ledger
 
-| id                                      | fingerprint                                                                                                                                                | kind        | verdict       | route                                                                                                                                         |
-| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `report-permissions-1862-1795303302409` | `conformance:gh run view --job 136075695353 --log:bf49d72626a9`                                                                                            | conformance | `owner-repo`  | permissions-1862: its `test-rest` shard                                                                                                       |
-| `report-permissions-1862-1795303401889` | `conformance:gh api .../actions/jobs/136075695353; cd services/rest; npx mocha <shard 2 files>:7712854710d8`                                               | conformance | `duplicate`   | cited: `report-permissions-1862-1795303302409` — same job                                                                                     |
-| `report-permissions-1862-1795303503690` | `ergonomics:read a long file (docs/permissions-overhaul-tree/05-audit.md) through the agent's read tool, then paste the result into a commit:93a81a7d8cb3` | ergonomics  | `owner-repo`  | permissions-1862: restore §16 from `580049816`, delete both notices                                                                           |
-| `report-permissions-1862-1795303853012` | `ergonomics:node packages/factory/bin/factory.js --help:5997bc3147b1`                                                                                      | ergonomics  | `fixed`       | fixed in `559d8bcc`; the reported bytes predate `0173a342`                                                                                    |
-| `report-enterprise-1854-1795303934346`  | `ergonomics:gh api …/jobs/137021854184/logs; gh run view 44961528061 --log:9827a001f031`                                                                   | ergonomics  | `owner-repo`  | enterprise-1854: its `test-rest (3)` shard — re-read with `--allow-escape-sequences`                                                          |
-| `report-tackle-factory-1795311764988`   | `ergonomics:factory-view Open (herdr t18):54dd1b16c105`                                                                                                    | ergonomics  | `fixed`       | fixed in `3018aa4f`; the posted address is now checked against discovery, not a charset                                                       |
-| `report-tackle-view-1795312137685`      | `blocker:factory status:72d1a1d64468`                                                                                                                      | blocker     | `fixed`       | fixed in `d04af66f`; the gate serves its counts and names each absent state — `newestAccepted: null` because the ledger records no timestamps |
-| `report-tackle-factory-1795326730977`   | `quality:factory daemon start --worker /tmp/factory-pi-worker.sh --interval 120000:0f06d08b9c68`                                                           | quality     | `gate-defect` | half fixed in `3a465cb1`; see `desk-tackle-factory-1795326754866` for the rest                                                                |
-| `report-tackle-factory-1795326738246`   | `ergonomics:factory watch --id tackle-factory (base:commit events):d35ba8ec354f`                                                                           | ergonomics  | `gate-defect` | `desk-tackle-factory-base-events`: author and paths are one `git log` away                                                                    |
-| `report-tackle-factory-1795326769939`   | `conformance:factory run --id tackle-factory --worker <worker> (change set):6d4bc28c96c0`                                                                  | conformance | `fixed`       | fixed in `3a465cb1`; the diff base is the pass's own `rev-parse HEAD`                                                                         |
-| `report-permissions-1862-1795367455336` | `conformance:node -e "require('./packages/domain/dist/permissions/conditions.js')" and grep -rn shared_with_my_company:52d5f75b7746`                       | conformance | `owner-repo`  | permissions-1862: its `packages/domain` conditions catalogue — one declared key, no body; queued behind `desk-r1862a`                         |
+| id                                      | fingerprint                                                                                                                                                | kind        | verdict       | route                                                                                                                                                         |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `report-permissions-1862-1795303302409` | `conformance:gh run view --job 136075695353 --log:bf49d72626a9`                                                                                            | conformance | `owner-repo`  | permissions-1862: its `test-rest` shard                                                                                                                       |
+| `report-permissions-1862-1795303401889` | `conformance:gh api .../actions/jobs/136075695353; cd services/rest; npx mocha <shard 2 files>:7712854710d8`                                               | conformance | `duplicate`   | cited: `report-permissions-1862-1795303302409` — same job                                                                                                     |
+| `report-permissions-1862-1795303503690` | `ergonomics:read a long file (docs/permissions-overhaul-tree/05-audit.md) through the agent's read tool, then paste the result into a commit:93a81a7d8cb3` | ergonomics  | `owner-repo`  | permissions-1862: restore §16 from `580049816`, delete both notices                                                                                           |
+| `report-permissions-1862-1795303853012` | `ergonomics:node packages/factory/bin/factory.js --help:5997bc3147b1`                                                                                      | ergonomics  | `fixed`       | fixed in `559d8bcc`; the reported bytes predate `0173a342`                                                                                                    |
+| `report-enterprise-1854-1795303934346`  | `ergonomics:gh api …/jobs/137021854184/logs; gh run view 44961528061 --log:9827a001f031`                                                                   | ergonomics  | `owner-repo`  | enterprise-1854: its `test-rest (3)` shard — re-read with `--allow-escape-sequences`                                                                          |
+| `report-tackle-factory-1795311764988`   | `ergonomics:factory-view Open (herdr t18):54dd1b16c105`                                                                                                    | ergonomics  | `fixed`       | fixed in `3018aa4f`; the posted address is now checked against discovery, not a charset                                                                       |
+| `report-tackle-view-1795312137685`      | `blocker:factory status:72d1a1d64468`                                                                                                                      | blocker     | `fixed`       | fixed in `d04af66f`; the gate serves its counts and names each absent state — `newestAccepted: null` because the ledger records no timestamps                 |
+| `report-tackle-factory-1795326730977`   | `quality:factory daemon start --worker /tmp/factory-pi-worker.sh --interval 120000:0f06d08b9c68`                                                           | quality     | `gate-defect` | half fixed in `3a465cb1`; see `desk-tackle-factory-1795326754866` for the rest                                                                                |
+| `report-tackle-factory-1795326738246`   | `ergonomics:factory watch --id tackle-factory (base:commit events):d35ba8ec354f`                                                                           | ergonomics  | `gate-defect` | `desk-tackle-factory-base-events`: author and paths are one `git log` away                                                                                    |
+| `report-tackle-factory-1795326769939`   | `conformance:factory run --id tackle-factory --worker <worker> (change set):6d4bc28c96c0`                                                                  | conformance | `fixed`       | fixed in `3a465cb1`; the diff base is the pass's own `rev-parse HEAD`                                                                                         |
+| `report-permissions-1862-1795367455336` | `conformance:node -e "require('./packages/domain/dist/permissions/conditions.js')" and grep -rn shared_with_my_company:52d5f75b7746`                       | conformance | `owner-repo`  | permissions-1862: its `packages/domain` conditions catalogue — one declared key, no body; queued behind `desk-r1862a`                                         |
+| `report-permissions-1862-1795381355167` | `ergonomics:read this session's 69 user messages and categorise the ones a guardrail should have caught:243cf011696f`                                      | ergonomics  | `gate-defect` | `desk-tackle-factory-branch-guard`: one `symbolic-ref` call from `runPass`; four mechanisms already ship, one shipped in this pass, the rest classified below |
 
 ### Case: the REST shard that named no test
 
@@ -468,6 +469,76 @@ filing. The row for `report-permissions-1862-1795367455336` is the durable route
 `jig`/`joggle` rule that says it catches a declared-but-unimplemented key (the miss is then a `factory-defect` in
 that rule); or a policy that ships `shared_with_my_company` and fails only at compile time, which turns a claim
 into an outage and hands the owner the fixture its body should be written against.
+
+### Case: the 69 messages, and which engine had already said it
+
+`report-permissions-1862-1795381355167` is not one defect; it is a session's self-audit — eight categories
+and twenty proposed mechanisms, ranked by what each would have cost. Triage therefore owes it a per-mechanism
+answer, and the first thing to say is the one the reporter could not see from another repository: **four of the
+mechanisms already ship here**, so for those the miss is the requesting repo's rulebook, not the rule. Verified
+at `1812ccd4` by reading the plugins' registrations and the kernel, not the README:
+
+| mechanism the report asks for                      | state at `1812ccd4`                                                                                                                                                         | verdict          |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| pre-push branch check against the record           | absent: `runPass` reads `HEAD`, `status` and `rev-parse`, and never asks which branch `HEAD` is on; `record.branch` is written at adopt and read only by the adopt printout | `gate-defect`    |
+| raw `<form>`/`<input>`/`<button>` on a route       | absent: `plumb-ui` ships one rule, `no-deprecated-parts`                                                                                                                    | `factory-defect` |
+| hand-rolled surface vocabulary on a route          | absent — and the palette rule the report assumes exists does not; no plumb rule reads a class string                                                                        | `factory-defect` |
+| a card list that does not compose the catalog card | half: `joggle/page-needs-composition` asks the consumer question; the producer half is in no engine                                                                         | `factory-defect` |
+| exported data interface without `Schema`           | ships: `plumb-effect/require-schema-type-derivation`                                                                                                                        | `fixed`          |
+| `try`/`catch` around an Effect                     | ships: `plumb-effect/no-try-catch`                                                                                                                                          | `fixed`          |
+| `Effect.runPromise` outside the seam               | was absent; shipped as `plumb-effect/no-run-promise-outside-seam` in `d79f8044`                                                                                             | `fixed`          |
+| an I/O module that declares no Service and Layer   | not mechanical: a deterministic rule would fire on every CLI edge                                                                                                           | `not-a-defect`   |
+| property coverage measured by branch count         | superseded: `plumb/prefer-property-tests` requires `fast-check` in every test file, which is the stronger claim                                                             | `not-a-defect`   |
+| identical AST shape differing only in literals     | ships as `joggle/duplicate-implementation`; whether a literal-only difference joins is a property of `shape`, which this pass did not measure                               | `waiting`        |
+| a docs budget per PR                               | absent: `jig` has no file-count engine, and `kind: "internal"` engines are host-owned and reported as skipped                                                               | `factory-defect` |
+| a stale-reference check                            | absent: no engine or rule resolves a markdown link or a comment's path                                                                                                      | `factory-defect` |
+| a vocabulary list of thinking metaphors            | absent; `plumb/no-generic-export-names` is the AST half, not a list                                                                                                         | `factory-defect` |
+| a regex over rendered Polar                        | absent; `plumb/no-sql-string-interpolation` is the shape it would take                                                                                                      | `factory-defect` |
+| report kinds that separate content from tooling    | the ledger has the verdicts, but `Report` carries no subject, though the section above reasons about one                                                                    | `gate-defect`    |
+| full output read rather than grepped; CI as a gate | an agent contract, and `docs/factory-receipt.md` already says it                                                                                                            | `not-a-defect`   |
+
+The rule this repo was actually missing is the seam one: it is one of the three Effect mechanisms the report
+names, and the only one of the three with no rule behind it. `no-run-promise-outside-seam` fires on
+`Effect.runPromise` and on the namespace and named-import aliases of it, exempts a file named in its `seams`
+option (a path or a segment-boundary suffix), and skips test files, because a test owns its runtime. Its RuleTester cases cover the
+seam option, the namespace and named-import aliases, and the test-file skip; its property suite pins the
+exemption itself — every prefix of a seam path is exempt, a lookalike tail is not, and an empty seam exempts
+nothing. In this
+workspace the rule is on through the root config's `plumbEffectRulesByMetaType`, so `packages/room/src/cli.ts`
+carries the file-scoped narrowing that says why it is the one entry point; `packages/treadle` is outside the
+plumb engine's scope, so its `runPromise` is unjudged rather than exempt.
+
+The gate mechanism is the report's first rank and this ledger's first `gate-defect` from it:
+`desk-tackle-factory-branch-guard` proposes one `symbolic-ref --short HEAD` check shared by `runPass` (refuse
+before the receipt is written, so no pass is charged) and a `factory guard` command that a `pre-push` hook can
+call. It is the same function in both places, so the kernel and the host hook cannot disagree about which branch
+the record owns. It cannot stop a hand session from editing a protected path — that is the lease's stated limit,
+and the two `packages/factory` edits this pass found in the worktree are that limit, measured.
+
+The counts for this pass are the reason to read that last sentence carefully. While pass 26 ran,
+`packages/factory/src/daemon.ts` and `packages/factory/src/kernel.ts` changed in this worktree (mtimes 14:18:50
+and 14:18:57 local) under another session, and were committed as `f8c81a96` mid-pass: the daemon gained
+per-workstream error isolation, and the kernel gained a promise-based `runProcess`. Neither is this pass's change set, yet both land in it, because the change set is
+the pass's diff from its starting `HEAD` — so a commit another session lands mid-pass is charged to the pass. The new `try`/`catch` at
+`packages/factory/src/daemon.ts:77` is also the single finding in this pass's `jig check` — the committed dist
+already carried `no-try-catch`, so the finding is the new code, not a rule this pass enabled. `report-tackle-factory-1795382603477`
+records it: a pass judged on paths it did not touch is the same defect as a push to a branch it did not choose.
+
+**Who did the work.** This case was written by pass 26, whose worker outlived the kernel's 30-minute
+bound by nine minutes: the receipt says `failed`, `exit 124`, while the worker went on to add the rule, the
+desk item and these paragraphs. The daemon, seeing a failed pass and a pending event, started pass 27 on the
+same event — so pass 27 landed what pass 26 left uncommitted (`d79f8044`) instead of re-deriving it. That is
+`desk-tackle-factory-1795326754866`'s lease-and-reap defect seen from the other side: a timed-out pass is
+charged, its work survives it, and nothing in the record says the worker was still writing.
+
+One artifact had to be forced past a `.gitignore`: `packages/plumb/dist` is ignored while 212 files under it
+are tracked, so the rule's two new dist files were invisible to `git add` and the committed
+`dist/effect/index.js` imported a module that did not ship. `git add -f` closed it here; the next plumb rule
+meets the same trap until the `dist` question in MIGRATION.md item 2 is settled.
+
+**What would change it:** the branch guard landing (the row closes as `fixed` with the commit and the two
+fixtures); a requesting repo enabling `plumb-effect` and closing four rows as `fixed` by configuration; or a
+`shape` key measured against a literal-only pair, which turns the one `waiting` row into evidence either way.
 
 ## 4. What a verdict is not
 
