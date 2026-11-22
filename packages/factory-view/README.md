@@ -18,6 +18,7 @@ a section and a phase is a lane rather than a widget with its own state.
 ```
 /presence  ──decode──▶  Presence
                          ├─ factory.workstreams  id, repo, project, phase, pr, checkpoint
+                         ├─ factory.activity     last pass, queue, timeline
                          ├─ factory.desk         id, title, workstream
                          ├─ factory.reports      kind, workstream, expected, actual
                          └─ sessions             herdr / rex addresses + workstream
@@ -60,6 +61,15 @@ so a repo is a section and its lanes are the states it currently occupies.
   what that pass quality was, and what events are queued with their own
   summary. A build that has not passed for two hours is visibly stale instead
   of looking identical to one that just ran.
+- **Time strip** — under the activity line, a narrow axis shows the last 24
+  hours: passes as ticks (green done, red failed, hollow running), checkpoints as
+  dots, and a `done` phase as a ship marker. The axis ends at the board's
+  `observedAt`, so the gap on the right is how long ago the work stopped. With
+  two cards open, one healthy and one parked for six hours, the difference is a
+  shape rather than a sentence. The data is `factory.activity[].timeline`,
+  projected by the factory from its own receipts; the view never opens the
+  journal. No marks in the window renders nothing at all — absence is not a
+  zero.
 - **Desk** — questions waiting for a human. The view does not answer them; it
   shows which workstream asked.
 - **Sessions** — Herdr and Rex addresses. `Open` asks the board to focus the

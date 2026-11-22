@@ -126,6 +126,7 @@ const main = async (): Promise<void> => {
       id: parsed.values.id,
       worker: parsed.values.worker,
       at,
+      clock: () => new Date().toISOString(),
     })
     if (!result.ok) return fail(result.reason)
     console.log(
@@ -398,6 +399,7 @@ const main = async (): Promise<void> => {
         id: parsed.values.id,
         worker: parsed.values.worker,
         at: new Date().toISOString(),
+        clock: () => new Date().toISOString(),
       })
       console.log(
         "factory: watch " +

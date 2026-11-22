@@ -4,6 +4,16 @@ import type { Document, Html, HtmlBuilder } from "foldkit/html"
 import { defineMessageUnion } from "foldkit/message"
 import { copyText } from "foldkit-primitives/dom"
 import { ticks } from "foldkit-primitives/time"
+import { formatAge } from "./age.ts"
+import {
+  axisOf,
+  describeEvent,
+  marksWithin,
+  Timeline,
+  timelineLabel,
+  WINDOW_HOURS,
+  type TimelineAxis,
+} from "./timeline.ts"
 
 const Workstream = Schema.Struct({
   id: Schema.String,
@@ -54,6 +64,7 @@ const ActivityPass = Schema.Struct({
 const Activity = Schema.Struct({
   workstream: Schema.String,
   lastPass: Schema.NullOr(ActivityPass),
+  timeline: Schema.optional(Timeline),
   pending: Schema.Array(
     Schema.Struct({
       id: Schema.String,
@@ -86,6 +97,7 @@ const SessionSourceView = Schema.Struct({
   sessions: Schema.Array(Session),
 })
 const Presence = Schema.Struct({
+  observedAt: Schema.optional(Schema.NullOr(Schema.String)),
   factory: Schema.Struct({
     workstreams: Schema.Array(Workstream),
     activity: Schema.Array(Activity),
@@ -281,13 +293,53 @@ const sessionRow = (h: HtmlBuilder<Message>, session: typeof Session.Type) =>
     ],
   )
 
-const formatAge = (minutes: number | null): string => {
-  if (minutes === null) return "unknown"
-  if (minutes < 1) return "just now"
-  if (minutes < 60) return minutes + "m ago"
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return hours + "h " + (minutes % 60) + "m ago"
-  return Math.floor(hours / 24) + "d ago"
+/**
+ * One narrow axis per workstream: passes above, checkpoints on, ships below.
+ *
+ * The strip is derived from the document it is given. No events in the window
+ * (or no timeline at all) renders nothing, never an error and never a zero.
+ */
+const timelineStrip = (
+  h: HtmlBuilder<Message>,
+  activity: typeof Activity.Type | undefined,
+  axis: TimelineAxis,
+) => {
+  if (axis._tag === "Unobserved") return h.empty
+  const marks = marksWithin({ events: activity?.timeline?.events ?? [], end: axis.at })
+  if (marks.length === 0) return h.empty
+  return h.div(
+    [
+      h.Class("timeline"),
+      h.Attribute("role", "img"),
+      h.Attribute("aria-label", timelineLabel(marks)),
+    ],
+    [
+      h.div(
+        [h.Class("timeline-track")],
+        [
+          h.span([h.Class("timeline-axis")], []),
+          ...marks.map(({ event, offset }) =>
+            h.span(
+              [
+                h.Class(
+                  "timeline-mark timeline-" +
+                    event.kind +
+                    (event.status === undefined ? "" : " " + event.status),
+                ),
+                h.Attribute("style", "left: " + Math.round(offset * 1000) / 10 + "%"),
+                h.DataAttribute("kind", event.kind),
+                ...(event.status === undefined ? [] : [h.DataAttribute("status", event.status)]),
+                h.DataAttribute("at", event.at),
+                h.Title(describeEvent(event, axis.at)),
+              ],
+              [],
+            ),
+          ),
+        ],
+      ),
+      h.span([h.Class("timeline-caption")], [WINDOW_HOURS + "h"]),
+    ],
+  )
 }
 
 const activityBlock = (h: HtmlBuilder<Message>, activity: typeof Activity.Type | undefined) => {
@@ -364,6 +416,7 @@ const workstreamCard = (
   ws: typeof Workstream.Type,
   activity: typeof Activity.Type | undefined,
   sessions: ReadonlyArray<typeof Session.Type>,
+  axis: TimelineAxis,
 ) =>
   h.article(
     [h.Class("workstream"), h.Id(ws.id)],
@@ -399,6 +452,7 @@ const workstreamCard = (
         ],
       ),
       activityBlock(h, activity),
+      timelineStrip(h, activity, axis),
       sessions.length === 0
         ? h.p(
             [h.Class("empty muted")],
@@ -417,6 +471,7 @@ const repoSection = (
   workstreams: ReadonlyArray<typeof Workstream.Type>,
   activities: ReadonlyArray<typeof Activity.Type>,
   sessions: ReadonlyArray<typeof Session.Type>,
+  axis: TimelineAxis,
 ) =>
   h.section(
     [h.Class("repo")],
@@ -448,6 +503,7 @@ const repoSection = (
                   ws,
                   activities.find((activity) => activity.workstream === ws.id),
                   sessions.filter((session) => session.workstream === ws.id),
+                  axis,
                 ),
               ),
             ],
@@ -525,6 +581,9 @@ const reportRow = (h: HtmlBuilder<Message>, report: typeof Report.Type) =>
 /** Render the factory state; every field comes from /presence. */
 export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
   const presence = model.presence
+  // The strip's right edge is the board's observation instant. Without one there
+  // is no honest "now" to put on the axis, so the strip is withheld.
+  const axis = axisOf(presence?.observedAt)
   return {
     title: "Software factory",
     body: h.div(
@@ -571,6 +630,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
                   presence.factory.workstreams.filter((ws) => repoName(ws) === repo),
                   presence.factory.activity,
                   [...presence.sessions.herdr.sessions, ...presence.sessions.rex.sessions],
+                  axis,
                 ),
               ),
               card(

@@ -92,11 +92,16 @@ test("a pass consumes its events, checkpoints the worktree, and survives worker 
       id: "permissions-1862",
       worker,
       at: "2026-11-21T00:02:00.000Z",
+      clock: () => "2026-11-21T00:03:00.000Z",
       home: f.home,
     })
     expect(result.ok).toBe(true)
     if (!result.ok) return
     expect(result.receipt.status).toBe("done")
+    expect(result.receipt.endedAt).toBeDefined()
+    expect(Date.parse(result.receipt.endedAt ?? "")).toBeGreaterThanOrEqual(
+      Date.parse(result.receipt.at),
+    )
     expect(result.receipt.journal).toBeDefined()
     if (result.receipt.journal !== undefined) expect(existsSync(result.receipt.journal)).toBe(true)
     expect(readFileSync(join(f.root, "prompt.txt"), "utf8")).toContain("review-1")
@@ -133,6 +138,7 @@ test("a failed worker is charged, leaves events pending, and writes a failed rec
       id: "permissions-1862",
       worker: "exit 7",
       at: "2026-11-21T00:02:00.000Z",
+      clock: () => "2026-11-21T00:03:00.000Z",
       home: f.home,
     })
     expect(result.ok).toBe(false)

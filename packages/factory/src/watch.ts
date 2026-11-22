@@ -225,13 +225,14 @@ export interface WatchOutcome {
 /**
  * Poll both sources once, append unseen events, and start one pass per waking event.
  *
- * @param input - the workstream, worker command, timestamp, and optional source overrides.
+ * @param input - the workstream, worker command, timestamp, clock and optional source overrides.
  * @returns the appended event ids and the pass outcomes.
  */
 export const watchOnce = async (input: {
   readonly id: string
   readonly worker: string
   readonly at: string
+  readonly clock: () => string
   readonly home?: string | undefined
   readonly events?: ReadonlyArray<WatchEvent>
   readonly runGh?: ((args: ReadonlyArray<string>) => Result.Result<string, string>) | undefined
@@ -274,6 +275,7 @@ export const watchOnce = async (input: {
       id: input.id,
       worker: input.worker,
       at: input.at,
+      clock: input.clock,
       home: input.home,
       eventIds: [event.id],
     })

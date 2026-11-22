@@ -28,6 +28,8 @@ export interface Receipt {
   readonly workstream: string
   readonly pass: number
   readonly at: string
+  /** When the worker stopped; absent while the pass is still running. */
+  readonly endedAt?: string | undefined
   readonly status: "running" | "done" | "failed"
   readonly phase: Workstream["phase"]
   readonly events: ReadonlyArray<string>
@@ -158,13 +160,15 @@ const promptOf = (input: {
 /**
  * Run one pass over the pending events. The pass is charged when it starts, not when it ends.
  *
- * @param input - the workstream, the worker command, and the timestamp.
+ * @param input - the workstream, the worker command, the start instant, and the
+ * clock that stamps the receipt's end.
  * @returns the receipt and checkpoint, or the refusal.
  */
 export const runPass = async (input: {
   readonly id: string
   readonly worker: string
   readonly at: string
+  readonly clock: () => string
   readonly home?: string | undefined
   readonly eventIds?: ReadonlyArray<string>
 }): Promise<PassOutcome> => {
@@ -223,6 +227,7 @@ export const runPass = async (input: {
     const failed: Receipt = {
       ...receipt,
       status: "failed",
+      endedAt: input.clock(),
       exit: result.status ?? -1,
       journal,
     }
@@ -265,7 +270,12 @@ export const runPass = async (input: {
     at: input.at,
   })
   if (!captured.ok) {
-    const failed: Receipt = { ...receipt, status: "failed", exit: 0 }
+    const failed: Receipt = {
+      ...receipt,
+      status: "failed",
+      endedAt: input.clock(),
+      exit: 0,
+    }
     await writeReceipt({ id: input.id, receipt: failed, home: input.home })
     return {
       ok: false,
@@ -285,6 +295,7 @@ export const runPass = async (input: {
     const failed: Receipt = {
       ...receipt,
       status: "failed",
+      endedAt: input.clock(),
       exit: 0,
       checkpoint: captured.value.sha,
       journal,
@@ -314,6 +325,7 @@ export const runPass = async (input: {
     const failed: Receipt = {
       ...receipt,
       status: "failed",
+      endedAt: input.clock(),
       exit: 0,
       checkpoint: captured.value.sha,
       quality: { before, after, regressed },
@@ -338,6 +350,7 @@ export const runPass = async (input: {
   const done: Receipt = {
     ...receipt,
     status: "done",
+    endedAt: input.clock(),
     exit: 0,
     checkpoint: captured.value.sha,
     quality: { before, after, regressed },

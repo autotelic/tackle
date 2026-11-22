@@ -18,6 +18,7 @@ const StoredPass = Schema.Struct({
   workstream: Schema.String,
   pass: Schema.Finite,
   at: Schema.String,
+  endedAt: Schema.optional(Schema.String),
   status: Schema.Literals(["running", "done", "failed"]),
   phase: Phase,
   events: Schema.Array(Schema.String),
@@ -51,9 +52,25 @@ const summaryOf = (event: Event): Option.Option<string> => {
 
 export type ActivityPass = Omit<Receipt, "workstream" | "journal">
 
+/** One mark on a workstream's time strip; the view never reads a receipt itself. */
+export interface TimelineEvent {
+  readonly kind: "pass" | "checkpoint" | "ship"
+  readonly at: string
+  readonly endedAt?: string | undefined
+  readonly status?: "running" | "done" | "failed" | undefined
+  readonly pass?: number | undefined
+  readonly sha?: string | undefined
+}
+
+/** Everything a one-day strip needs, in the order it happened. */
+export interface Timeline {
+  readonly events: ReadonlyArray<TimelineEvent>
+}
+
 export interface Activity {
   readonly workstream: string
   readonly lastPass: ActivityPass | null
+  readonly timeline: Timeline
   readonly pending: ReadonlyArray<{
     readonly id: string
     readonly kind: string
@@ -71,6 +88,50 @@ export interface Activity {
 
 const minutesSince = (at: string, now: number): number =>
   Math.max(0, Math.round((now - Date.parse(at)) / 60_000))
+
+const kindOrder = { pass: 0, checkpoint: 1, ship: 2 } as const
+
+/**
+ * Project receipts, the current checkpoint and a closed phase onto one axis.
+ *
+ * The kernel has no separate ship instant: `phase: done` is its closed flag and
+ * `updatedAt` is when the record was last written, so that is the marker.
+ */
+const timelineOf = (input: {
+  readonly record: Workstream
+  readonly passes: ReadonlyArray<ActivityPass>
+}): Timeline => {
+  const events: Array<TimelineEvent> = []
+  for (const pass of input.passes) {
+    events.push({
+      kind: "pass",
+      at: pass.at,
+      endedAt: pass.endedAt,
+      status: pass.status,
+      pass: pass.pass,
+      sha: pass.checkpoint,
+    })
+    if (pass.checkpoint !== undefined)
+      events.push({
+        kind: "checkpoint",
+        at: pass.endedAt ?? pass.at,
+        pass: pass.pass,
+        sha: pass.checkpoint,
+      })
+  }
+  const checkpoint = input.record.checkpoint
+  const carried = events.some(
+    (event) => event.kind === "checkpoint" && event.sha === checkpoint.sha,
+  )
+  if (!carried) events.push({ kind: "checkpoint", at: checkpoint.at, sha: checkpoint.sha })
+  if (input.record.phase === "done")
+    events.push({ kind: "ship", at: input.record.updatedAt, sha: checkpoint.sha })
+  events.sort(
+    (left, right) =>
+      left.at.localeCompare(right.at) || kindOrder[left.kind] - kindOrder[right.kind],
+  )
+  return { events }
+}
 
 /**
  * Summarize what a workstream is doing from its receipts and pending events.
@@ -96,6 +157,7 @@ export const activityOf = async (input: {
     const base = {
       pass: decoded.success.pass,
       at: decoded.success.at,
+      endedAt: decoded.success.endedAt,
       status: decoded.success.status,
       phase: decoded.success.phase,
       events: decoded.success.events,
@@ -121,6 +183,7 @@ export const activityOf = async (input: {
   return {
     workstream: input.record.id,
     lastPass,
+    timeline: timelineOf({ record: input.record, passes }),
     pending,
     lastEvent:
       latestEvent === undefined

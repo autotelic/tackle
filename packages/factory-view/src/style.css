@@ -256,6 +256,71 @@ button:hover {
   color: #65717e;
   font-size: 11px;
 }
+.timeline {
+  position: relative;
+  height: 40px;
+  margin-top: 10px;
+  border: 1px solid #edf1f4;
+  border-radius: 8px;
+  background: #fbfcfd;
+}
+.timeline-track {
+  position: absolute;
+  left: 10px;
+  right: 34px;
+  top: 0;
+  bottom: 12px;
+}
+.timeline-axis {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 16px;
+  border-top: 1px solid #dde4ea;
+}
+.timeline-mark {
+  position: absolute;
+  transform: translateX(-50%);
+}
+.timeline-pass {
+  top: 2px;
+  width: 3px;
+  height: 10px;
+  border-radius: 1px;
+  background: #7d8b98;
+}
+.timeline-pass.done {
+  background: #2f7a52;
+}
+.timeline-pass.failed {
+  background: #b5432f;
+}
+.timeline-pass.running {
+  background: transparent;
+  border: 1px solid #2f7a52;
+}
+.timeline-checkpoint {
+  top: 12px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #7d8b98;
+  border: 1px solid #fff;
+}
+.timeline-ship {
+  top: 20px;
+  width: 8px;
+  height: 8px;
+  background: #1d5f8a;
+  transform: translateX(-50%) rotate(45deg);
+}
+.timeline-caption {
+  position: absolute;
+  right: 6px;
+  bottom: 3px;
+  color: #93a0ab;
+  font-size: 10px;
+}
 .stale-flag {
   color: #a33a2b;
   font-size: 10px;

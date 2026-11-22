@@ -76,6 +76,7 @@ export const runDaemon = async (input: {
         id: record.id,
         worker: input.worker,
         at: new Date().toISOString(),
+        clock: () => new Date().toISOString(),
         home: input.home,
       })
       if (outcome.appended.length > 0)

@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
+import { recordOf } from "@autotelic/factory/store"
 import { expect, test } from "vitest"
 
 const cli = fileURLToPath(new URL("../src/cli.ts", import.meta.url))
@@ -116,6 +117,93 @@ test("board up serves presence and queue until down", async () => {
     rmSync(root, { recursive: true, force: true })
   }
 }, 30_000)
+
+test("presence carries the timeline the view's strip draws", () => {
+  const root = mkdtempSync(join(tmpdir(), "board-timeline-"))
+  try {
+    const home = join(root, "factory")
+    const workstreams = join(home, "workstreams")
+    const at = new Date(Date.now() - 10 * 60_000).toISOString()
+    const endedAt = new Date(Date.now() - 9 * 60_000).toISOString()
+    mkdirSync(join(workstreams, "tackle-5.receipts"), { recursive: true })
+    writeFileSync(
+      join(workstreams, "tackle-5.receipts", "0001.json"),
+      JSON.stringify({
+        workstream: "tackle-5",
+        pass: 1,
+        at,
+        endedAt,
+        status: "done",
+        phase: "build",
+        events: ["report:one"],
+        checkpoint: "abc12345",
+        exit: 0,
+      }),
+    )
+    writeFileSync(
+      join(workstreams, "tackle-5.json"),
+      JSON.stringify(
+        recordOf({
+          id: "tackle-5",
+          facts: {
+            project: "factory-view",
+            label: "tackle-5",
+            repo: "autotelic/tackle",
+            path: "/tmp/tackle-5",
+            branch: "loop/5",
+            head: "abc12345",
+            delivery: "trunk",
+            pr: undefined,
+            base: "main",
+            baseSha: "abc12345",
+            prHead: "abc12345",
+            phase: "build",
+            at,
+            checkpoint: {
+              sha: "abc12345",
+              ref: "refs/bench/tackle-5",
+              at: endedAt,
+              pushed: false,
+            },
+          },
+        }),
+      ),
+    )
+    const output = spawnSync(
+      process.execPath,
+      ["--conditions=development", cli, "presence", "--json", "--root", join(root, "rooms")],
+      {
+        cwd: root,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          FACTORY_HOME: home,
+          HERDR_BIN: "/bin/false",
+          REX_BIN: "/bin/false",
+        },
+      },
+    )
+    expect(output.status, output.stderr).toBe(0)
+    const presence = JSON.parse(output.stdout)
+    const activity = presence.factory.activity.find(
+      (entry: { readonly workstream: string }) => entry.workstream === "tackle-5",
+    )
+    expect(activity.timeline.events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "pass",
+          pass: 1,
+          status: "done",
+          endedAt,
+          sha: "abc12345",
+        }),
+        expect.objectContaining({ kind: "checkpoint", at: endedAt, sha: "abc12345" }),
+      ]),
+    )
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+}, 20_000)
 
 test("restarts a room supervisor that died", async () => {
   const root = mkdtempSync(join(tmpdir(), "board-watch-"))
