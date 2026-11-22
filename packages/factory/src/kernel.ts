@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process"
 import { existsSync } from "node:fs"
-import { mkdir, readdir, writeFile } from "node:fs/promises"
+import { mkdir, readFile, readdir, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { Match } from "effect"
 import * as Result from "effect/Result"
@@ -33,6 +33,7 @@ export interface Receipt {
   readonly events: ReadonlyArray<string>
   readonly checkpoint: string | undefined
   readonly exit: number | undefined
+  readonly pid?: number | undefined
   readonly quality?: {
     readonly before: Quality
     readonly after: Quality
@@ -101,6 +102,40 @@ export const passesUsed = async (input: {
 }): Promise<number> =>
   (await readdir(receiptsDir(input)).catch(() => [])).filter((name) => name.endsWith(".json"))
     .length
+
+const RunningReceipt = Schema.Struct({
+  pass: Schema.Finite,
+  status: Schema.String,
+  pid: Schema.optional(Schema.Finite),
+})
+
+const alive = (pid: number): boolean => {
+  // SAFETY: signalling a PID is a process boundary; ESRCH is the expected absence.
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** A pass already running in this home, if its receipt's process is alive. */
+const runningPass = async (input: {
+  readonly id: string
+  readonly home?: string | undefined
+}): Promise<number | undefined> => {
+  const names = (await readdir(receiptsDir(input)).catch(() => [])).filter((name) =>
+    name.endsWith(".json"),
+  )
+  for (const name of names.sort((left, right) => left.localeCompare(right)).reverse()) {
+    const text = await readFile(join(receiptsDir(input), name), "utf8").catch(() => undefined)
+    if (text === undefined) continue
+    const decoded = Schema.decodeResult(Schema.fromJsonString(RunningReceipt))(text)
+    if (Result.isFailure(decoded) || decoded.success.status !== "running") continue
+    if (decoded.success.pid !== undefined && alive(decoded.success.pid)) return decoded.success.pass
+  }
+  return undefined
+}
 
 const writeReceipt = async (input: {
   readonly id: string
@@ -176,6 +211,9 @@ export const runPass = async (input: {
   const used = await passesUsed({ id: input.id, home: input.home })
   if (used >= record.budgets.passesPerPhase)
     return { ok: false, reason: "budget: passesPerPhase " + record.budgets.passesPerPhase }
+  const alreadyRunning = await runningPass({ id: input.id, home: input.home })
+  if (alreadyRunning !== undefined)
+    return { ok: false, reason: "PassRunning: pass " + alreadyRunning }
 
   const only = input.eventIds === undefined ? undefined : new Set(input.eventIds)
   const events = (await readEvents({ id: input.id, home: input.home })).filter(
@@ -184,6 +222,10 @@ export const runPass = async (input: {
   if (events.length === 0) return { ok: false, reason: "NoPendingEvents" }
 
   const pass = used + 1
+  const startHeadResult = spawnSync("git", ["-C", record.path, "rev-parse", "HEAD"], {
+    encoding: "utf8",
+  })
+  const startHead = startHeadResult.status === 0 ? startHeadResult.stdout.trim() : record.head
   const before = measureQuality({ path: record.path })
   const receipt: Receipt = {
     workstream: record.id,
@@ -194,6 +236,7 @@ export const runPass = async (input: {
     events: events.map((event) => event.id),
     checkpoint: undefined,
     exit: undefined,
+    pid: process.pid,
   }
   await writeReceipt({ id: input.id, receipt, home: input.home })
 
@@ -237,7 +280,7 @@ export const runPass = async (input: {
   const changed = (() => {
     const diff = spawnSync(
       "git",
-      ["-C", record.path, "diff", "--name-only", record.head + ".." + currentHead],
+      ["-C", record.path, "diff", "--name-only", startHead + ".." + currentHead],
       {
         encoding: "utf8",
       },
