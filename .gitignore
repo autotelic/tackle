@@ -44,3 +44,6 @@ packages/room/.celld/
 
 # The shop's local lock and queue state; the workstreams live in ~/.factory.
 .room/
+
+# Treadle per-workstream state (test reports); local, never committed.
+.treadle/

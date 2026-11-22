@@ -8,8 +8,10 @@
   "sideEffects": false,
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "typecheck": "tsc --noEmit"
+    "build": "vitest run && vite build",
+    "typecheck": "tsc --noEmit",
+    "bundle": "vite build",
+    "test": "vitest run"
   },
   "dependencies": {
     "@effect/platform-browser": "catalog:",
@@ -21,7 +23,9 @@
     "@effect/tsgo": "catalog:",
     "@types/node": "catalog:",
     "@typescript/native": "catalog:",
-    "vite": "catalog:"
+    "fast-check": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
   },
   "engines": {
     "node": ">=24.18.0"

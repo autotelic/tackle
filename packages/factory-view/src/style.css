@@ -308,6 +308,10 @@ button:hover {
   .header {
     align-items: center;
   }
+  .header-status {
+    width: 100%;
+    justify-content: space-between;
+  }
   h1 {
     font-size: 21px;
   }
@@ -334,4 +338,114 @@ button:hover {
     flex: 1;
     min-height: 38px;
   }
+}
+
+.header-status {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.poll-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+}
+.poll-status.fresh {
+  background: #e8f3ec;
+  border-color: #bfdcc9;
+  color: #236141;
+}
+.poll-status.stale {
+  background: #fdf3e6;
+  border-color: #ead2b0;
+  color: #7a4d16;
+}
+.poll-status.unobserved {
+  background: #f1f3f5;
+  border-color: #d8dfe5;
+  color: #65717e;
+}
+.freshness {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+.freshness.fresh {
+  background: #e8f3ec;
+  border: 1px solid #bfdcc9;
+  color: #236141;
+}
+.freshness.stale {
+  background: #fdf3e6;
+  border: 1px solid #ead2b0;
+  color: #7a4d16;
+}
+.freshness.unobserved {
+  background: #f4f6f8;
+  border: 1px dashed #aab6c1;
+  color: #65717e;
+  font-style: italic;
+}
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.panel-head h2 {
+  margin: 0;
+}
+.panel-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.source-freshness {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.source {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 2px 7px;
+  border: 1px solid #dbe2e8;
+  border-radius: 999px;
+  font-size: 11px;
+}
+.source.fresh {
+  background: #f2f9f4;
+  border-color: #bfdcc9;
+}
+.source.stale {
+  background: #fdf6ec;
+  border-color: #ead2b0;
+}
+.source.unobserved {
+  background: #f6f7f9;
+  border-color: #cfd7de;
+  border-style: dashed;
+  color: #65717e;
+}
+.source-name {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.feed-lost {
+  border-width: 2px;
+  font-weight: 600;
 }
