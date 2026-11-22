@@ -16,6 +16,7 @@ import { listReports } from "@autotelic/factory/report"
 import { listWorkstreams } from "@autotelic/factory/store"
 import {
   discoverSessions,
+  findHerdrAppBinary,
   findHerdrBinary,
   findRexBinary,
   servesAddress,
@@ -279,7 +280,7 @@ const openSession = async ({
 }: {
   readonly source: string
   readonly address: string
-}): Promise<void> => {
+}): Promise<"rex" | "herdr-app" | "herdr-terminal"> => {
   // An address from a POST is a claim, not a fact: only one discovery serves now is opened.
   // Without this, `hc attach <post body>` is an allowlisted command taking a request
   // parameter -- the argv hazard VISION.md names as the reason not to POST a command at all.
@@ -297,9 +298,28 @@ const openSession = async ({
     // oxlint-disable-next-line plumb/no-builtin-throws -- this HTTP boundary turns it into a 400
     if (Option.isNone(binary)) throw new Error("Rex is not installed")
     await execFileAsync(binary.value, ["block", "focus", address], { timeout: 5_000 })
-    return
+    return "rex"
   }
   if (source === "herdr") {
+    const app = findHerdrAppBinary()
+    if (Option.isSome(app)) {
+      const focus = () =>
+        execFileAsync(app.value, ["do", "agent.focus", "--terminal", address], { timeout: 5_000 })
+      const focused = await focus().then(
+        () => true,
+        () => false,
+      )
+      if (focused) return "herdr-app"
+      await execFileAsync("/usr/bin/open", ["-a", "Herdr"], { timeout: 5_000 }).catch(
+        () => undefined,
+      )
+      await new Promise((resolve) => setTimeout(resolve, 500))
+      const retried = await focus().then(
+        () => true,
+        () => false,
+      )
+      if (retried) return "herdr-app"
+    }
     const binary = findHerdrBinary()
     // oxlint-disable-next-line plumb/no-builtin-throws -- this HTTP boundary turns it into a 400
     if (Option.isNone(binary)) throw new Error("hc is not installed")
@@ -314,7 +334,10 @@ const openSession = async ({
     )
     await execFileAsync("/usr/bin/open", ["-a", "Terminal", script], { timeout: 5_000 })
     setTimeout(() => void rm(script, { force: true }), 60_000).unref()
+    return "herdr-terminal"
   }
+  // oxlint-disable-next-line plumb/no-builtin-throws -- this HTTP boundary turns it into a 400
+  throw new Error("unknown session source")
 }
 
 const serveView = async ({
@@ -372,8 +395,8 @@ const serve = async ({
             json({ response, status: 400, body: { error: "expected {source, address}" } })
             return
           }
-          await openSession(decoded.success)
-          json({ response, status: 200, body: { ok: true } })
+          const rung = await openSession(decoded.success)
+          json({ response, status: 200, body: { ok: true, rung } })
         } catch (cause: unknown) {
           json({ response, status: 400, body: { error: String(cause) } })
         }

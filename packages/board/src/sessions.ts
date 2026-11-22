@@ -142,6 +142,21 @@ const run: Run = async ({ command, args }) => {
   return result.stdout
 }
 
+/** The Herdr app's control CLI, or none when the app is not installed. */
+export const findHerdrAppBinary = (): Option.Option<string> => {
+  if (process.env.HERDR_APP_BIN !== undefined && process.env.HERDR_APP_BIN !== "")
+    return Option.some(process.env.HERDR_APP_BIN)
+  for (const dir of (process.env.PATH ?? "").split(":")) {
+    if (dir === "") continue
+    const candidate = join(dir, "herdr-app")
+    if (existsSync(candidate)) return Option.some(candidate)
+  }
+  const local = join(homedir(), ".local", "bin", "herdr-app")
+  if (existsSync(local)) return Option.some(local)
+  const app = "/Applications/Herdr.app/Contents/MacOS/Herdr"
+  return existsSync(app) ? Option.some(app) : Option.none()
+}
+
 /** HERDR_BIN first, then PATH, then the installer's default location. */
 export const findHerdrBinary = (): Option.Option<string> => herdrBin(existsSync)
 
