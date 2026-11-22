@@ -19,7 +19,8 @@ One record per workstream, written **outside** the tree it governs.
   "path": "/Users/togmund/autotelic/shakti-perms", // adopted, never moved or rewritten
   "branch": "feature/permissions-overhaul",
   "head": "55aa5293a", // HEAD at last observation
-  "pr": 1862,
+  "pr": 1862, // null when delivery is "trunk"
+  "delivery": "pr" | "trunk", // how work reaches the mainline; see §9.1
   "baseSha": "<develop-at-adoption>", // the base COMMIT; a ref name is display only
   "deps": [], // workstream ids; the queue is a partial order
   "phase": "reconcile",
@@ -61,6 +62,7 @@ Each is a sentence a test can fail.
 | 7   | Events are the clock: poll cursors are the truth, webhooks only accelerate them.                          |
 | 8   | A cap-stop is a state (`blocked: budget`), not a crash and not a retry.                                   |
 | 9   | A pass is charged **when it starts**; one that dies before its checkpoint is a charged, interrupted pass. |
+| 10  | A **trunk** workstream declares a gate, and may never commit a change to that gate itself.                |
 
 ---
 
@@ -69,15 +71,18 @@ Each is a sentence a test can fail.
 Adoption is where a second writer is created by accident, so every refusal is named, exit-coded, and
 proved by a test. **One query per refusal** against the store.
 
-| code           | condition                                                        | message names        | exit |
-| -------------- | ---------------------------------------------------------------- | -------------------- | ---- |
-| `NotAWorktree` | `git rev-parse --is-inside-work-tree` fails at the path          | the path             | 1    |
-| `PathOwned`    | another live workstream names this `worktree`                    | that workstream's id | 1    |
-| `PrOwned`      | another live workstream names this `pr`                          | that workstream's id | 1    |
-| `ProjectBusy`  | another live workstream names this `project`                     | that workstream's id | 1    |
-| `HeadMismatch` | `branch` head ≠ the PR's `headRefOid`                            | both shas            | 1    |
-| `DirtyTree`    | uncommitted changes present **and** `--no-checkpoint` was passed | the file count       | 1    |
-| `DetachedHead` | HEAD is detached                                                 | the sha              | 1    |
+| code             | condition                                                        | message names         | exit |
+| ---------------- | ---------------------------------------------------------------- | --------------------- | ---- |
+| `NotAWorktree`   | `git rev-parse --is-inside-work-tree` fails at the path          | the path              | 1    |
+| `PathOwned`      | another live workstream names this `worktree`                    | that workstream's id  | 1    |
+| `PrOwned`        | another live workstream names this `pr`                          | that workstream's id  | 1    |
+| `ProjectBusy`    | another live workstream names this `project`                     | that workstream's id  | 1    |
+| `HeadMismatch`   | `branch` head ≠ the PR's `headRefOid`                            | both shas             | 1    |
+| `DirtyTree`      | uncommitted changes present **and** `--no-checkpoint` was passed | the file count        | 1    |
+| `DetachedHead`   | HEAD is detached                                                 | the sha               | 1    |
+| `PrRequired`     | `--delivery pr` with no `--pr`                                   | the workstream id     | 2    |
+| `TrunkNeedsGate` | `--delivery trunk` and the config declares no checks             | the config path       | 1    |
+| `GateProtected`  | a pass touches a declared protected path (the gate itself)       | the path and the rule | 1    |
 
 Two notes that are easy to get wrong:
 
@@ -262,6 +267,22 @@ Four rules:
 
 A crash loses everything after the last checkpoint, including an in-flight pass. Say so in `factory status`:
 the line is `checkpoint 12m ago`, not `durable`.
+
+### 9.1 Delivery modes
+
+| mode    | reaches mainline by              | the review is | requires                                                            |
+| ------- | -------------------------------- | ------------- | ------------------------------------------------------------------- |
+| `pr`    | one open PR, human merge         | the PR        | a PR number; one open artifact per workstream                       |
+| `trunk` | gated commits on the base branch | **the gate**  | a declared `checks` set, and a protected set that includes the gate |
+
+The one-PR invariant is _at most one open delivery artifact per workstream_; a trunk workstream has zero, so it is satisfied vacuously — the reviewability concern moves entirely into the gate. That trade is only legitimate where a human would accept the gate as review, which is why `TrunkNeedsGate` refuses a trunk workstream with no checks.
+
+And a trunk workstream's status line says what it is, or it reads as a PR workstream with a missing PR:
+
+```
+perms-1862 · build · delivery pr · PR 1862 · checkpoint 12m ago
+tackle     · build · delivery trunk · 3 commits today · jig 0/0 · tests green · checkpoint 4m ago
+```
 
 Failover becomes claimable when a second shop is running **and** the authority grants `g+1` without a human —
 both, not either. Until then, “assisted recovery” is the honest phrase.
