@@ -22,6 +22,12 @@ const STATES = {
   idle: "Idle",
   done: "Done",
 }
+const AGENT_STATES = {
+  working: "Agent working",
+  blocked: "Agent blocked",
+  done: "Agent done",
+  idle: "Agent idle",
+}
 const LINKS = { "branch-issue": "Branch Issue", "branch-pr": "Branch PR" }
 const OPENERS = { macos: "open", windows: "explorer", linux: "xdg-open" }
 
@@ -40,6 +46,11 @@ const stateOf = (value) => (typeof value === "string" && ATTENTION.includes(valu
 const stateColor = ({ theme: t, state }) => {
   const colors = { blocked: t.blocked, working: t.working, queued: t.accent, done: t.done }
   return colors[state] ?? t.idle
+}
+
+const agentColor = ({ theme: t, agent }) => {
+  const colors = { blocked: t.blocked, working: t.working, done: t.done }
+  return colors[agent] ?? t.muted
 }
 
 // Unknown and absent states sort after every known one rather than being given a rank.
@@ -91,6 +102,7 @@ const rowOf = ({ workstream, activity, sessions }) => {
     budget: used === null || cap === null ? null : used + "/" + cap,
     queued: pending === 0 ? null : String(pending) + " queued",
     address: matched === undefined ? null : textOf(matched.address),
+    agent: matched === undefined ? null : textOf(matched.status),
   }
 }
 
@@ -285,7 +297,7 @@ export default class Factory extends View {
             .cursor_pointer()
             .hover((style) => style.bg(t.hover))
             .on_click(() => openView(VIEW))
-            .child(div().text_size(11).text_color(t.accent).child("Desk"))
+            .child(div().text_size(11).text_color(t.accent).child("Needs you"))
             .child(div().text_size(11).font_semibold().child(String(this.desk.length))),
         ),
       )
@@ -318,6 +330,15 @@ export default class Factory extends View {
               .child(div().truncate().child(row.label))
               .when(row.state !== null, (el) =>
                 el.child(this.badge(t, STATES[row.state] ?? row.state, color)),
+              )
+              .when(row.agent !== null, (el) =>
+                el.child(
+                  this.badge(
+                    t,
+                    AGENT_STATES[row.agent] ?? row.agent,
+                    agentColor({ theme: t, agent: row.agent }),
+                  ),
+                ),
               ),
           )
           .when(meta !== "", (el) =>
@@ -362,12 +383,12 @@ export default class Factory extends View {
           .gap(6)
           .px(12)
           .py(7)
-          .child(div().text_size(11).font_semibold().text_color(t.muted).child("Desk"))
+          .child(div().text_size(11).font_semibold().text_color(t.muted).child("Needs you"))
           .child(
             div()
               .text_size(11)
               .text_color(t.dim)
-              .child(this.desk.length + " waiting"),
+              .child(this.desk.length + (this.desk.length === 1 ? " decision" : " decisions")),
           ),
       )
       .children(
