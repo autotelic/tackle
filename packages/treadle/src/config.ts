@@ -1,5 +1,5 @@
-import { readFile } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
+import { readFile } from 'node:fs/promises'
 import { pathToFileURL } from 'node:url'
 import type { Rule } from './loop/rules.ts'
 

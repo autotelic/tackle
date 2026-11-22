@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { assertConfigCurrent, hashConfigText, StaleConfigError } from '../src/config.ts'
-import { parseReceipt, renderReceipt, type Receipt } from '../src/receipt.ts'
+import { parseReceipt, type Receipt, renderReceipt } from '../src/receipt.ts'
 
 /**
  * The gate must be the gate that was loaded.
@@ -47,7 +47,9 @@ describe('the loaded gate', () => {
     const { path, hash } = await withConfig(configA)
     await writeFile(path, configB, 'utf8')
     await expect(assertConfigCurrent(path, hash)).rejects.toBeInstanceOf(StaleConfigError)
-    await expect(assertConfigCurrent(path, hash)).rejects.toThrow(/StaleConfig: .* changed since load/)
+    await expect(assertConfigCurrent(path, hash)).rejects.toThrow(
+      /StaleConfig: .* changed since load/,
+    )
   })
 
   it('carries the gate into the receipt, by hash and by check name', () => {

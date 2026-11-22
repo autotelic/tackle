@@ -198,7 +198,9 @@ export const isProtectedPath: Predicate.Predicate<{
   readonly path: string
 }> = (input) =>
   (input.record.protectedPaths ?? []).some((pattern) =>
-    pattern.endsWith("/**") ? input.path.startsWith(pattern.slice(0, -3)) : input.path === pattern,
+    pattern.endsWith("/**")
+      ? input.path.startsWith(pattern.slice(0, -3) + "/")
+      : input.path === pattern,
   )
 
 /**

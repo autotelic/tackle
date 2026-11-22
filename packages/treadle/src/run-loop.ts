@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { readFile } from 'node:fs/promises'
 /**
  * The Loop (#15): works through a repo's ready issues one after another,
  * escalating on Telegram when it gets stuck.
@@ -15,7 +16,6 @@ import { join, resolve } from 'node:path'
 import { createEffectActor, join as joinActor } from '@xstate/effect'
 import { Effect } from 'effect'
 import { createIssueAnswerHandler, watchAnswers } from './answer-watcher.ts'
-import { readFile } from 'node:fs/promises'
 import { hashConfigText, loadConfig } from './config.ts'
 import { createHumanChannel, type HumanChannel } from './human-channel.ts'
 import { makeEscalate } from './loop/escalate.ts'

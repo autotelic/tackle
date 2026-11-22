@@ -5,8 +5,8 @@ import { promisify } from 'node:util'
 import { Effect } from 'effect'
 import { passConsumesBudget } from '../budget.ts'
 import { runChecks } from '../checks.ts'
-import { assertConfigCurrent } from '../config.ts'
 import type { LoopConfig } from '../config.ts'
+import { assertConfigCurrent } from '../config.ts'
 import type { HumanChannel } from '../human-channel.ts'
 import { buildSessionPrompt } from '../prompt.ts'
 import { type Receipt, renderReceipt } from '../receipt.ts'
@@ -378,9 +378,9 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
         catch: (error) => (error instanceof Error ? error : new Error(String(error))),
       }).pipe(
         Effect.as<'ok'>('ok'),
-        Effect.catch((error) => Effect.succeed<'stale' | 'ok'>(
-          error.name === 'StaleConfigError' ? 'stale' : 'ok',
-        )),
+        Effect.catch((error) =>
+          Effect.succeed<'stale' | 'ok'>(error.name === 'StaleConfigError' ? 'stale' : 'ok'),
+        ),
       )
       if (drifted === 'stale') {
         yield* tryP(() =>
