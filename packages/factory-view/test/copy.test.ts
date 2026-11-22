@@ -7,13 +7,68 @@ const run = (request: CopyRequest) => Effect.runPromise(copyOrSelect(request))
 
 const attach = "hc attach t1d"
 
+test("a missing navigator.clipboard selects the command, never throws", async () => {
+  // Outside a secure context (plain http on the tailnet, before tailscale serve)
+  // the property is simply absent. The guard must absorb that, not the caller.
+  for (const clipboard of [undefined, null]) {
+    let selections = 0
+    const outcome = await run({
+      text: attach,
+      clipboard,
+      select: () => {
+        selections += 1
+        return true
+      },
+    })
+    expect(outcome).toBe("selected")
+    expect(selections).toBe(1)
+  }
+})
+
+test("a clipboard without writeText is guarded out too", async () => {
+  // Older Safari exposed a clipboard object whose write method was missing;
+  // calling it would be a TypeError in the tap handler.
+  let selections = 0
+  const outcome = await run({
+    text: attach,
+    clipboard: {},
+    select: () => {
+      selections += 1
+      return true
+    },
+  })
+  expect(outcome).toBe("selected")
+  expect(selections).toBe(1)
+})
+
+test("the guarded write keeps the clipboard as its receiver", async () => {
+  const written: string[] = []
+  const clipboard = {
+    writeText(text: string) {
+      written.push(text + (this === clipboard ? ":bound" : ":unbound"))
+      return Promise.resolve()
+    },
+  }
+  const outcome = await run({
+    text: attach,
+    clipboard,
+    select: () => {
+      throw new Error("the fallback must not run when the clipboard worked")
+    },
+  })
+  expect(outcome).toBe("copied")
+  expect(written).toEqual([attach + ":bound"])
+})
+
 test("a working clipboard copies the command and never selects the page", async () => {
   const written: string[] = []
   const outcome = await run({
     text: attach,
-    writeText: (text) => {
-      written.push(text)
-      return Promise.resolve()
+    clipboard: {
+      writeText: (text) => {
+        written.push(text)
+        return Promise.resolve()
+      },
     },
     select: () => {
       throw new Error("the fallback must not run when the clipboard worked")
@@ -40,7 +95,7 @@ test("a rejected clipboard write (iOS Safari outside a gesture) selects the comm
   let selections = 0
   const outcome = await run({
     text: attach,
-    writeText: () => Promise.reject(new Error("NotAllowedError")),
+    clipboard: { writeText: () => Promise.reject(new Error("NotAllowedError")) },
     select: () => {
       selections += 1
       return true
@@ -56,8 +111,10 @@ test("a clipboard that throws before returning a promise still selects the comma
   let selections = 0
   const outcome = await run({
     text: attach,
-    writeText: () => {
-      throw new Error("NotAllowedError")
+    clipboard: {
+      writeText: () => {
+        throw new Error("NotAllowedError")
+      },
     },
     select: () => {
       selections += 1
@@ -71,7 +128,7 @@ test("a clipboard that throws before returning a promise still selects the comma
 test("a clipboard with nothing to select is the one reported failure", async () => {
   const outcome = await run({
     text: attach,
-    writeText: () => Promise.reject(new Error("NotAllowedError")),
+    clipboard: { writeText: () => Promise.reject(new Error("NotAllowedError")) },
     select: () => false,
   })
   expect(outcome).toBe("unavailable")

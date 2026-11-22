@@ -11,6 +11,9 @@
   write rejects, or it throws synchronously (iOS Safari outside a secure context), the command text is
   selected instead and the notice says so. The fallback is `src/copy.ts` (pure, injectable) driven by
   `CopyCommand` in `src/main.ts`.
+- The board serves both `/factory` and `/factory/` as the page, because a phone URL with the trailing slash
+  is common; `board/test/cli.test.ts` also fetches the JS and CSS assets the page names, and builds the
+  view first when `dist` is absent so a fresh checkout does not get a false green.
 - `packages/factory-view/README.md` documents `board up --port 4780` and `tailscale serve --bg 4780`, and
   why the tailnet URL matters: `tailscale serve` gives the page the secure origin the clipboard API needs.
 - Tests run under **Vitest** (the loop's `unit` Check invokes `vitest run --root packages/factory-view` and
@@ -20,7 +23,8 @@
   id on the rendered command, rex and herdr attach commands, both notices, the presence error state,
   copied/selected/unavailable copy outcomes (including a synchronous clipboard throw), the 44px targets,
   hover-media containment, `user-select: all`, the 390px single column, wrapping rows, and
-  `overflow-wrap` on identifiers. `board/test/cli.test.ts` fetches `/factory` and the JS asset it references.
+  `overflow-wrap` on identifiers. `board/test/cli.test.ts` fetches `/factory` (with and without the trailing
+  slash) and the JS and CSS assets it references.
 
 ## Left
 

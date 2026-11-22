@@ -4,20 +4,34 @@ import { expect, test } from "vitest"
 
 const css = readFileSync(new URL("../src/style.css", import.meta.url), "utf8")
 
-/** The body of the first rule or at-rule whose header starts with `marker`. */
+/**
+ * The body of the first rule whose header is exactly `marker`: the marker must
+ * start a rule and be followed by `{`, so asking for `.session` does not return
+ * `.session-list`. At-rule headers work the same way.
+ */
 const blockAt = (source: string, marker: string): string => {
-  const start = source.indexOf(marker)
-  if (start === -1) return ""
-  const open = source.indexOf("{", start)
-  let depth = 0
-  for (let index = open; index < source.length; index += 1) {
-    if (source[index] === "{") depth += 1
-    else if (source[index] === "}") {
-      depth -= 1
-      if (depth === 0) return source.slice(open, index + 1)
+  let from = 0
+  while (from < source.length) {
+    const start = source.indexOf(marker, from)
+    if (start === -1) return ""
+    const before = start === 0 ? "\n" : (source[start - 1] ?? "")
+    const rest = source.slice(start + marker.length)
+    const next = rest.search(/\S/)
+    if (/[\s{}]/.test(before) && next !== -1 && rest[next] === "{") {
+      const open = start + marker.length + next
+      let depth = 0
+      for (let index = open; index < source.length; index += 1) {
+        if (source[index] === "{") depth += 1
+        else if (source[index] === "}") {
+          depth -= 1
+          if (depth === 0) return source.slice(open, index + 1)
+        }
+      }
+      return source.slice(open)
     }
+    from = start + marker.length
   }
-  return source.slice(open)
+  return ""
 }
 
 /*
@@ -32,7 +46,7 @@ test("hover is an enhancement: every :hover rule is inside @media (hover: hover)
 })
 
 test("a button is at least a 44px thumb target", () => {
-  const base = blockAt(css, "button {")
+  const base = blockAt(css, "button")
   expect(base).toMatch(/min-height:\s*44px/)
   expect(base).toMatch(/min-width:\s*44px/)
 })

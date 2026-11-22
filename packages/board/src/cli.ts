@@ -308,8 +308,12 @@ const serveView = async ({
   readonly response: import("node:http").ServerResponse
   readonly path: string
 }): Promise<void> => {
+  // Both spellings of the directory are the page: a phone URL with the trailing
+  // slash must not fall through to the "not built" 404.
   const relative =
-    path === "/" || path === "/factory" ? "index.html" : path.slice("/factory/".length)
+    path === "/" || path === "/factory" || path === "/factory/"
+      ? "index.html"
+      : path.slice("/factory/".length)
   if (relative.includes("..")) {
     json({ response, status: 404, body: { error: "not found" } })
     return

@@ -250,20 +250,6 @@ export const subscriptions = ticks<Model, Message>({
   onTick: () => Message.Ticked(),
 })
 
-type ClipboardHost = { readonly writeText?: (text: string) => Promise<void> }
-
-const hasWriteText = (
-  clipboard: ClipboardHost,
-): clipboard is ClipboardHost & { readonly writeText: (text: string) => Promise<void> } =>
-  clipboard.writeText !== undefined
-
-/** The guarded clipboard method: None when the API is absent, never a throw at import time. */
-const clipboardWriter = (): Option.Option<(text: string) => Promise<void>> =>
-  Option.fromNullishOr(navigator.clipboard).pipe(
-    Option.filter(hasWriteText),
-    Option.map((clipboard) => (text: string) => clipboard.writeText(text)),
-  )
-
 /** Selects the rendered command so iOS can copy it from the long-press menu. */
 const selectCopyTarget = (target: string): boolean => {
   const element = document.querySelector("#" + target)
@@ -287,7 +273,7 @@ export const CopyCommand = Command.define("FactoryView.CopyCommand", {
   execute: ({ text, target }: { readonly text: string; readonly target: string }) =>
     copyOrSelect({
       text,
-      writeText: Option.getOrUndefined(clipboardWriter()),
+      clipboard: navigator.clipboard,
       select: () => selectCopyTarget(target),
     }).pipe(Effect.map(copyOutcomeMessage)),
 })

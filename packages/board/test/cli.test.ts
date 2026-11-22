@@ -6,8 +6,24 @@ import { fileURLToPath } from "node:url"
 import { expect, test } from "vitest"
 
 const cli = fileURLToPath(new URL("../src/cli.ts", import.meta.url))
+const repo = fileURLToPath(new URL("../../..", import.meta.url))
+const viewIndex = fileURLToPath(new URL("../../factory-view/dist/index.html", import.meta.url))
 const run = (args: ReadonlyArray<string>, cwd: string) =>
   spawnSync(process.execPath, ["--conditions=development", cli, ...args], { cwd, encoding: "utf8" })
+
+/**
+ * The board serves the view's build output, and `pnpm test` runs before
+ * `pnpm build`: on a fresh checkout there is no dist yet. Build it once here
+ * rather than skipping the /factory assertions and reporting a false green.
+ */
+const ensureViewBuilt = () => {
+  if (existsSync(viewIndex)) return
+  const built = spawnSync("pnpm", ["--filter", "@autotelic/factory-view", "build"], {
+    cwd: repo,
+    encoding: "utf8",
+  })
+  expect(built.status, built.stderr).toBe(0)
+}
 
 test("presence is readable without a shop", () => {
   const root = mkdtempSync(join(tmpdir(), "board-presence-"))
@@ -82,6 +98,7 @@ test("board up serves presence and queue until down", async () => {
         state: { _tag: "Paused", repo: "/r", scope: "dev", createdAt: 1, pausedAt: 2 },
       }),
     )
+    ensureViewBuilt()
     const port = 20_000 + Math.floor(Math.random() * 20_000)
     const up = run(["up", "--root", "rooms", "--port", String(port), "--detach"], root)
     expect(up.status, up.stderr).toBe(0)
@@ -114,12 +131,28 @@ test("board up serves presence and queue until down", async () => {
     const document = await factory.text()
     expect(document).toContain('<div id="root">')
     expect(document).toContain('name="viewport"')
+    // The directory spelling with the trailing slash is what a browser and a
+    // pasted phone URL usually produce; it must be the same page, not a 404.
+    const trailing = await fetch("http://127.0.0.1:" + port + "/factory/")
+    expect(trailing.status).toBe(200)
+    expect(trailing.headers.get("content-type")).toContain("text/html")
+    expect(await trailing.text()).toContain('<div id="root">')
+
     const [, assetPath] = document.match(/src="\/factory\/(assets\/[^"]+\.js)"/) ?? []
     expect(assetPath).toBeDefined()
     if (assetPath === undefined) return
     const asset = await fetch("http://127.0.0.1:" + port + "/factory/" + assetPath)
     expect(asset.status).toBe(200)
     expect(asset.headers.get("content-type")).toContain("text/javascript")
+
+    // Every asset the page names must resolve on the same origin; a missing
+    // stylesheet is a console error on the phone even when the HTML is fine.
+    const [, stylePath] = document.match(/href="\/factory\/(assets\/[^"]+\.css)"/) ?? []
+    expect(stylePath).toBeDefined()
+    if (stylePath === undefined) return
+    const style = await fetch("http://127.0.0.1:" + port + "/factory/" + stylePath)
+    expect(style.status).toBe(200)
+    expect(style.headers.get("content-type")).toContain("text/css")
 
     expect(run(["status", "--root", "rooms"], root).stdout).toContain("shop: lock held by ")
     const down = run(["down", "--root", "rooms"], root)
