@@ -511,6 +511,15 @@ export const policy = {
     minTokens: 40,
   },
 
+  tableInvariants: {
+    maxClusters: 300,
+    /**
+     * Tokens below which a declaration cannot be carrying a write policy worth
+     * comparing. A two-line `knex("log").insert(...)` has no invariants to drift.
+     */
+    minTokens: 20,
+  },
+
   duplicateImplementation: {
     maxClusters: 500,
     /**
