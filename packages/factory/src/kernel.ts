@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process"
+import { spawn, spawnSync } from "node:child_process"
 import { existsSync } from "node:fs"
 import { homedir } from "node:os"
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises"
@@ -219,6 +219,45 @@ const hcBinary = (): Option.Option<string> => {
 
 const shellQuote = (value: string): string => "'" + value.replaceAll("'", "'\\''") + "'"
 
+type ProcessResult = {
+  readonly status: number | null
+  readonly signal: NodeJS.Signals | null
+  readonly error?: Error
+}
+
+/** Spawn a foreground process without blocking the daemon loop. */
+const runProcess = (
+  command: string,
+  args: ReadonlyArray<string>,
+  options: {
+    readonly cwd: string
+    readonly env: NodeJS.ProcessEnv
+    readonly timeout: number
+    readonly shell?: boolean
+  },
+): Promise<ProcessResult> =>
+  new Promise((resolve) => {
+    const child = spawn(command, [...args], {
+      cwd: options.cwd,
+      env: options.env,
+      shell: options.shell ?? false,
+      stdio: "inherit",
+    })
+    let settled = false
+    const finish = (result: ProcessResult) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      resolve(result)
+    }
+    const timer = setTimeout(() => {
+      child.kill("SIGTERM")
+      finish({ status: null, signal: "SIGTERM", error: new Error("ETIMEDOUT") })
+    }, options.timeout)
+    child.on("error", (error) => finish({ status: null, signal: null, error }))
+    child.on("close", (status, signal) => finish({ status, signal }))
+  })
+
 /**
  * Run the worker inside a Herdr terminal when hc is available. The terminal carries
  * the workstream label, so the factory panel can focus the live pass instead of guessing.
@@ -243,7 +282,7 @@ const runInTerminal = async (input: {
     mode: 0o700,
   })
   const name = ("factory-" + input.record.id + "-" + input.pass).slice(0, 32)
-  return spawnSync(
+  return runProcess(
     hc.value,
     [
       "run",
@@ -256,16 +295,12 @@ const runInTerminal = async (input: {
       "--cwd",
       input.record.path,
       "--no-parent",
-      "--outlive-parent",
+      "--timeout",
+      String(Math.ceil(input.wallMs / 1000) + 10),
       "--",
       script,
     ],
-    {
-      cwd: input.record.path,
-      stdio: "inherit",
-      timeout: input.wallMs,
-      killSignal: "SIGTERM",
-    },
+    { cwd: input.record.path, env: input.env, timeout: input.wallMs },
   )
 }
 
@@ -337,14 +372,12 @@ export const runPass = async (input: {
       env: workerEnv,
       wallMs,
     })) ??
-    spawnSync(input.worker, {
+    (await runProcess(input.worker, [], {
       cwd: record.path,
       shell: true,
-      stdio: "inherit",
       timeout: wallMs,
-      killSignal: "SIGTERM",
       env: workerEnv,
-    })
+    }))
 
   if (result.status !== 0) {
     const timedOut =

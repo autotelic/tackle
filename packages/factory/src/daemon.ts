@@ -71,21 +71,37 @@ export const runDaemon = async (input: {
   readonly once?: boolean
 }): Promise<void> => {
   for (;;) {
-    for (const record of await listWorkstreams({ home: input.home })) {
-      const outcome = await watchOnce({
-        id: record.id,
-        worker: input.worker,
-        at: new Date().toISOString(),
-        home: input.home,
-      })
-      if (outcome.appended.length > 0)
+    const records = await listWorkstreams({ home: input.home })
+    const outcomes = await Promise.all(
+      records.map(async (record) => {
+        try {
+          return {
+            record,
+            outcome: await watchOnce({
+              id: record.id,
+              worker: input.worker,
+              at: new Date().toISOString(),
+              home: input.home,
+            }),
+          }
+        } catch (cause: unknown) {
+          return { record, error: String(cause) }
+        }
+      }),
+    )
+    for (const result of outcomes) {
+      if (result.error !== undefined) {
+        console.error("factory daemon: " + result.record.id + " " + result.error)
+        continue
+      }
+      if (result.outcome.appended.length > 0)
         console.log(
           "factory daemon: " +
-            record.id +
+            result.record.id +
             " appended " +
-            outcome.appended.length +
+            result.outcome.appended.length +
             ", passes " +
-            outcome.passes.length,
+            result.outcome.passes.length,
         )
     }
     if (input.once === true) return
