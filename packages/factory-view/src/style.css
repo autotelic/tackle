@@ -7,30 +7,35 @@
 * {
   box-sizing: border-box;
 }
+html {
+  -webkit-text-size-adjust: 100%;
+}
 body {
   margin: 0;
+  overflow-wrap: break-word;
 }
 a {
   color: #1d5f8a;
   text-decoration: none;
 }
-a:hover {
-  text-decoration: underline;
-}
 .shell {
   max-width: 1240px;
   margin: 0 auto;
-  padding: 28px;
+  padding: 14px;
 }
 .header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 18px;
+  align-items: center;
+  gap: 10px 16px;
+  margin-bottom: 16px;
+}
+.header > div {
+  min-width: 0;
 }
 h1 {
-  font-size: 26px;
+  font-size: 21px;
   margin: 0 0 2px;
 }
 h2 {
@@ -44,18 +49,22 @@ h3 {
   font-size: 16px;
   margin: 0;
 }
+/* 44px is the smallest target a thumb can hit reliably; every button keeps it. */
 button {
   font: inherit;
-  min-height: 34px;
-  padding: 6px 12px;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 8px 14px;
   border: 1px solid #c7d0da;
   background: #fff;
-  border-radius: 7px;
+  color: #17202a;
+  border-radius: 8px;
   cursor: pointer;
 }
-button:hover {
-  border-color: #6b8295;
-  background: #f8fafc;
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid #1d5f8a;
+  outline-offset: 2px;
 }
 .mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -76,6 +85,15 @@ button:hover {
   border: 1px solid #bfdcc9;
   padding: 10px;
   border-radius: 8px;
+  /* The toast must be visible from the bottom of a long phone page, where the
+     copy button was tapped. */
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 10;
+  margin: 0;
+  box-shadow: 0 4px 16px rgba(23, 32, 42, 0.18);
 }
 .card,
 .state-machine,
@@ -83,18 +101,19 @@ button:hover {
   background: #fff;
   border: 1px solid #dbe2e8;
   border-radius: 12px;
-  padding: 16px;
-  margin: 18px 0;
+  padding: 14px;
+  margin: 16px 0;
 }
 .state-machine .states {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   list-style: none;
   margin: 0;
   padding: 0;
 }
 .state {
+  min-width: 0;
   border: 1px solid #dbe2e8;
   border-radius: 8px;
   padding: 10px;
@@ -129,20 +148,45 @@ button:hover {
 .state-machine p {
   margin: 10px 0 0;
 }
-.repo-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 12px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #e8edf1;
-}
-.repo-head h2 {
+/*
+ * A repo heading is a disclosure, not a link: the name, the count and the
+ * chevron are all one 44px-tall tap target and the chevron says which way it
+ * goes without waiting for a hover.
+ */
+.repo-heading {
   margin: 0;
   font-size: 16px;
   text-transform: none;
   letter-spacing: 0;
   color: #17202a;
+}
+.repo-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  padding: 8px 2px 12px;
+  border: 0;
+  border-bottom: 1px solid #e8edf1;
+  border-radius: 0;
+  background: none;
+  text-align: left;
+}
+.repo-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 16px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.repo-toggle .muted {
+  flex: 0 0 auto;
+}
+.chevron {
+  flex: 0 0 auto;
+  color: #6c7a87;
+  font-size: 12px;
 }
 .lane {
   margin-top: 14px;
@@ -170,21 +214,45 @@ button:hover {
 .workstream {
   border: 1px solid #e0e6eb;
   border-radius: 10px;
-  padding: 14px;
+  padding: 6px 12px 10px;
   margin: 8px 0;
   background: #fff;
+}
+.workstream.open {
+  border-color: #cbd6df;
 }
 .workstream:target {
   border-color: #1d5f8a;
   box-shadow: 0 0 0 2px #d6e8f3;
 }
-.workstream-head {
+.workstream-toggle {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
+  width: 100%;
+  min-width: 0;
+  padding: 10px 2px;
+  border: 0;
+  background: none;
+  text-align: left;
+}
+.workstream-title {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.workstream-name {
+  font-size: 16px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.workstream-id {
+  overflow-wrap: anywhere;
 }
 .phase-pill {
+  flex: 0 0 auto;
   border-radius: 999px;
   padding: 3px 9px;
   font-size: 11px;
@@ -218,9 +286,17 @@ button:hover {
   display: flex;
   flex-wrap: wrap;
   gap: 6px 14px;
-  margin: 10px 0 0;
+  margin: 2px 0 0;
   color: #4c5a67;
   font-size: 12px;
+  min-width: 0;
+}
+.workstream-meta > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.workstream-detail {
+  margin-top: 10px;
 }
 .activity {
   margin-top: 10px;
@@ -269,10 +345,10 @@ button:hover {
 }
 .session {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  padding: 8px 0;
   border-bottom: 1px solid #f1f4f6;
 }
 .session:last-child {
@@ -281,7 +357,7 @@ button:hover {
 .session-main {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 10px;
+  gap: 2px 10px;
   align-items: baseline;
   min-width: 0;
 }
@@ -290,32 +366,63 @@ button:hover {
   font-size: 12px;
   overflow-wrap: anywhere;
 }
+.session-owner {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+/*
+ * The command is visible, not just copied: iOS Safari can refuse the async
+ * clipboard, and the fallback selects this text so the long-press menu can copy
+ * it. `user-select: all` makes that selection the whole command, not a word.
+ */
+.session-command {
+  display: block;
+  margin: 2px 0;
+  padding: 8px 10px;
+  border: 1px solid #e6ecf1;
+  border-radius: 6px;
+  background: #f4f7f9;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  user-select: all;
+  -webkit-user-select: all;
+}
 .session-actions {
   display: flex;
-  gap: 6px;
-  flex: 0 0 auto;
+  gap: 8px;
 }
 .session-actions button {
-  min-height: 30px;
-  padding: 3px 9px;
+  flex: 1 1 0;
+  padding: 8px 12px;
 }
 .empty {
   margin: 10px 0 0;
 }
 .row {
   display: grid;
-  grid-template-columns: 1.4fr 1.2fr 1fr;
-  gap: 10px;
+  grid-template-columns: 1fr;
+  gap: 3px;
   align-items: center;
-  padding: 8px 0;
+  padding: 10px 0;
   border-top: 1px solid #eef2f5;
 }
 .row:first-of-type {
   border-top: 0;
 }
+.row a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  overflow-wrap: anywhere;
+}
+.row-title {
+  overflow-wrap: anywhere;
+}
 .id {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 12px;
+  overflow-wrap: anywhere;
 }
 .report {
   padding: 10px 0;
@@ -330,6 +437,12 @@ button:hover {
   align-items: baseline;
   flex-wrap: wrap;
 }
+.report-head a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  overflow-wrap: anywhere;
+}
 .report-body {
   margin: 4px 0 0;
   font-size: 13px;
@@ -341,37 +454,72 @@ button:hover {
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
+/*
+ * Hover is an enhancement for a pointer, never the only way to see a thing. On
+ * a touch screen (`hover: none`) none of these rules apply, so nothing is
+ * revealed or made reachable only by hovering.
+ */
+@media (hover: hover) {
+  a:hover {
+    text-decoration: underline;
+  }
+  button:hover {
+    border-color: #6b8295;
+    background: #f8fafc;
+  }
+  .repo-toggle:hover,
+  .workstream-toggle:hover {
+    background: #f5f8fa;
+  }
+}
 @media (max-width: 760px) {
   .shell {
     padding: 14px;
   }
-  .header {
-    align-items: center;
-  }
   h1 {
     font-size: 21px;
-  }
-  .state-machine .states {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .row {
-    grid-template-columns: 1fr;
-    gap: 3px;
-    padding: 10px 0;
   }
   .workstream-meta {
     display: grid;
     grid-template-columns: 1fr;
+    gap: 0;
   }
-  .session {
-    align-items: flex-start;
-    flex-direction: column;
+  .workstream-meta > * {
+    padding: 4px 0;
   }
-  .session-actions {
-    width: 100%;
+  .workstream-meta a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
   }
-  .session-actions button {
-    flex: 1;
-    min-height: 38px;
+}
+@media (max-width: 430px) {
+  .shell {
+    padding: 12px;
+  }
+  .state-machine .states {
+    grid-template-columns: 1fr;
+  }
+  .card,
+  .state-machine,
+  .repo {
+    padding: 12px;
+  }
+  .phase-pill {
+    font-size: 10px;
+    padding: 2px 8px;
+  }
+}
+@media (min-width: 761px) {
+  .state-machine .states {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  .row {
+    grid-template-columns: 1.4fr 1.2fr 1fr;
+    gap: 10px;
+  }
+  .row a,
+  .report-head a {
+    min-height: 0;
   }
 }

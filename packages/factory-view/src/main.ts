@@ -1,9 +1,9 @@
-import { Effect, Option, Result, Schema } from "effect"
+import { Effect, Match, Option, Result, Schema } from "effect"
 import { Command, Runtime, Update } from "foldkit"
 import type { Document, Html, HtmlBuilder } from "foldkit/html"
 import { defineMessageUnion } from "foldkit/message"
-import { copyText } from "foldkit-primitives/dom"
 import { ticks } from "foldkit-primitives/time"
+import { copyOrSelect, type CopyOutcome } from "./copy.ts"
 
 const Workstream = Schema.Struct({
   id: Schema.String,
@@ -94,25 +94,33 @@ const Presence = Schema.Struct({
   }),
   sessions: Schema.Struct({ herdr: SessionSourceView, rex: SessionSourceView }),
 })
-type Presence = typeof Presence.Type
+export type Presence = typeof Presence.Type
 
 export const Model = Schema.Struct({
   presence: Schema.NullOr(Presence),
   error: Schema.NullOr(Schema.String),
   loading: Schema.Boolean,
   notice: Schema.NullOr(Schema.String),
+  /** Repos start open; a closed repo is a name, so a refresh keeps the page as it was. */
+  closedRepos: Schema.Array(Schema.String),
+  /** Workstreams start closed: the phone shows the summaries and opens one. */
+  openWorkstreams: Schema.Array(Schema.String),
 })
 export type Model = typeof Model.Type
 
 export const Message = defineMessageUnion({
   ClickedRefresh: {},
   Settled: { value: Schema.Unknown, error: Schema.NullOr(Schema.String) },
-  ClickedCopy: { command: Schema.String },
+  ClickedCopy: { command: Schema.String, target: Schema.String },
   Copied: {},
+  Selected: {},
   CopyFailed: { message: Schema.String },
   Ticked: {},
   ClickedOpen: { source: SessionSource, address: Schema.String },
   Opened: { ok: Schema.Boolean, error: Schema.NullOr(Schema.String) },
+  ToggledWorkstream: { id: Schema.String },
+  OpenedWorkstream: { id: Schema.String },
+  ToggledRepo: { repo: Schema.String },
 })
 export type Message = typeof Message.Type
 
@@ -125,7 +133,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
     Ticked: () =>
       model.loading
         ? { model }
-        : { model: { ...model, loading: true }, commands: [FetchPresence()] },
+        : { model: { ...model, loading: true, notice: null }, commands: [FetchPresence()] },
     Settled: ({ value, error }) => {
       if (error !== null) return { model: { ...model, presence: null, error, loading: false } }
       const decoded = Schema.decodeUnknownResult(Presence)(value)
@@ -133,18 +141,37 @@ export const update = (model: Model, message: Message): UpdateReturn =>
         ? { model: { ...model, presence: decoded.success, error: null, loading: false } }
         : { model: { ...model, presence: null, error: String(decoded.failure), loading: false } }
     },
-    ClickedCopy: ({ command }) => ({
+    ClickedCopy: ({ command, target }) => ({
       model,
-      commands: [
-        Command.mapMessage(copyText(command), (result) =>
-          result._tag === "Copied"
-            ? Message.Copied()
-            : Message.CopyFailed({ message: result.message }),
-        ),
-      ],
+      commands: [CopyCommand({ text: command, target })],
     }),
-    Copied: () => ({ model, notice: "Copied the open command" }),
-    CopyFailed: ({ message }) => ({ model, notice: "Could not copy: " + message }),
+    Copied: () => ({ model: { ...model, notice: "Copied the attach command" } }),
+    Selected: () => ({
+      model: { ...model, notice: "Selected the command — copy it from the selection" },
+    }),
+    CopyFailed: ({ message }) => ({
+      model: { ...model, notice: "Could not copy: " + message },
+    }),
+    ToggledWorkstream: ({ id }) => ({
+      model: { ...model, openWorkstreams: toggle(model.openWorkstreams, id) },
+    }),
+    OpenedWorkstream: ({ id }) => {
+      const workstream = model.presence?.factory.workstreams.find((item) => item.id === id)
+      const repo = workstream === undefined ? undefined : repoName(workstream)
+      return {
+        model: {
+          ...model,
+          openWorkstreams: add(model.openWorkstreams, id),
+          closedRepos:
+            repo === undefined
+              ? model.closedRepos
+              : model.closedRepos.filter((item) => item !== repo),
+        },
+      }
+    },
+    ToggledRepo: ({ repo }) => ({
+      model: { ...model, closedRepos: toggle(model.closedRepos, repo) },
+    }),
     ClickedOpen: ({ source, address }) => ({
       model,
       commands: [OpenSession({ source, address })],
@@ -159,9 +186,23 @@ export const update = (model: Model, message: Message): UpdateReturn =>
 
 /** Start with a fetch and an empty model. */
 export const init: Runtime.ApplicationInit<Model, Message> = () => ({
-  model: { presence: null, error: null, loading: true, notice: null },
+  model: {
+    presence: null,
+    error: null,
+    loading: true,
+    notice: null,
+    closedRepos: [],
+    openWorkstreams: [],
+  },
   commands: [FetchPresence()],
 })
+
+/** Disclosure state is presentation, not factory data; it lives in the Model so a tap can change it. */
+const toggle = (values: ReadonlyArray<string>, value: string): ReadonlyArray<string> =>
+  values.includes(value) ? values.filter((item) => item !== value) : [...values, value]
+
+const add = (values: ReadonlyArray<string>, value: string): ReadonlyArray<string> =>
+  values.includes(value) ? values : [...values, value]
 
 export const FetchPresence = Command.define("FetchPresence", {
   messages: [Message.Settled],
@@ -209,6 +250,57 @@ export const subscriptions = ticks<Model, Message>({
   onTick: () => Message.Ticked(),
 })
 
+type ClipboardHost = { readonly writeText?: (text: string) => Promise<void> }
+
+const hasWriteText = (
+  clipboard: ClipboardHost,
+): clipboard is ClipboardHost & { readonly writeText: (text: string) => Promise<void> } =>
+  clipboard.writeText !== undefined
+
+/** The guarded clipboard method: None when the API is absent, never a throw at import time. */
+const clipboardWriter = (): Option.Option<(text: string) => Promise<void>> =>
+  Option.fromNullishOr(navigator.clipboard).pipe(
+    Option.filter(hasWriteText),
+    Option.map((clipboard) => (text: string) => clipboard.writeText(text)),
+  )
+
+/** Selects the rendered command so iOS can copy it from the long-press menu. */
+const selectCopyTarget = (target: string): boolean => {
+  const element = document.querySelector("#" + target)
+  if (element === null) return false
+  const selection = window.getSelection()
+  if (selection === null) return false
+  const range = document.createRange()
+  range.selectNodeContents(element)
+  selection.removeAllRanges()
+  selection.addRange(range)
+  return true
+}
+
+/**
+ * Copy runs as a Command: the clipboard write and the selection fallback are the
+ * effect, and the outcome comes back as a Message update reduces.
+ */
+export const CopyCommand = Command.define("FactoryView.CopyCommand", {
+  args: { text: Schema.String, target: Schema.String },
+  messages: [Message.Copied, Message.Selected, Message.CopyFailed],
+  execute: ({ text, target }: { readonly text: string; readonly target: string }) =>
+    copyOrSelect({
+      text,
+      writeText: Option.getOrUndefined(clipboardWriter()),
+      select: () => selectCopyTarget(target),
+    }).pipe(Effect.map(copyOutcomeMessage)),
+})
+
+const copyOutcomeMessage = Match.type<CopyOutcome>().pipe(
+  Match.when("copied", () => Message.Copied()),
+  Match.when("selected", () => Message.Selected()),
+  Match.when("unavailable", () =>
+    Message.CopyFailed({ message: "no clipboard API and nothing to select" }),
+  ),
+  Match.exhaustive,
+)
+
 const phaseOrder = ["reconcile", "build", "land", "blocked", "done"] as const
 const phaseName = {
   reconcile: "Reconcile",
@@ -254,32 +346,48 @@ const repoName = (ws: typeof Workstream.Type): string => ws.repo ?? "unknown rep
 const sessionCommand = (session: typeof Session.Type): string =>
   session.source === "herdr" ? "hc attach " + session.address : "rex block focus " + session.address
 
-const sessionRow = (h: HtmlBuilder<Message>, session: typeof Session.Type) =>
-  h.div(
+/** The command is rendered with this id; the selection fallback addresses it by name. */
+const copyTargetId = (session: typeof Session.Type): string =>
+  "copy-" + session.source + "-" + session.address.replace(/[^A-Za-z0-9_-]/g, "-")
+
+const sessionRow = (h: HtmlBuilder<Message>, session: typeof Session.Type) => {
+  const command = sessionCommand(session)
+  const target = copyTargetId(session)
+  return h.div(
     [h.Class("session")],
     [
       h.div(
         [h.Class("session-main")],
         [
           h.span([h.Class("session-id")], [session.source + " " + session.address]),
-          h.span([h.Class("muted")], [session.where ?? session.agent ?? ""]),
+          h.span([h.Class("session-owner muted")], [session.where ?? session.agent ?? ""]),
         ],
       ),
+      h.code([h.Class("session-command"), h.Id(target)], [command]),
       h.div(
         [h.Class("session-actions")],
         [
           h.button(
-            [h.OnClick(Message.ClickedOpen({ source: session.source, address: session.address }))],
+            [
+              h.Class("action"),
+              h.AriaLabel("Open " + session.source + " session " + session.address),
+              h.OnClick(Message.ClickedOpen({ source: session.source, address: session.address })),
+            ],
             ["Open"],
           ),
           h.button(
-            [h.OnClick(Message.ClickedCopy({ command: sessionCommand(session) }))],
+            [
+              h.Class("action copy"),
+              h.AriaLabel("Copy the attach command for " + session.address),
+              h.OnClick(Message.ClickedCopy({ command, target })),
+            ],
             ["Copy"],
           ),
         ],
       ),
     ],
   )
+}
 
 const formatAge = (minutes: number | null): string => {
   if (minutes === null) return "unknown"
@@ -364,15 +472,28 @@ const workstreamCard = (
   ws: typeof Workstream.Type,
   activity: typeof Activity.Type | undefined,
   sessions: ReadonlyArray<typeof Session.Type>,
+  open: boolean,
 ) =>
   h.article(
-    [h.Class("workstream"), h.Id(ws.id)],
+    [h.Class("workstream" + (open ? " open" : "")), h.Id(ws.id)],
     [
-      h.div(
-        [h.Class("workstream-head")],
+      h.button(
         [
-          h.div([], [h.h3([], [ws.label]), h.div([h.Class("mono muted")], [ws.id])]),
+          h.Class("workstream-toggle"),
+          h.AriaExpanded(open),
+          h.AriaLabel((open ? "Hide " : "Show ") + ws.label + " details"),
+          h.OnClick(Message.ToggledWorkstream({ id: ws.id })),
+        ],
+        [
+          h.span(
+            [h.Class("workstream-title")],
+            [
+              h.span([h.Class("workstream-name")], [ws.label]),
+              h.span([h.Class("mono muted workstream-id")], [ws.id]),
+            ],
+          ),
           h.span([h.Class("phase-pill " + ws.phase)], [phaseLabel(ws.phase) ?? ws.phase]),
+          h.span([h.Class("chevron"), h.AriaHidden(true)], [open ? "▾" : "▸"]),
         ],
       ),
       h.div(
@@ -398,16 +519,25 @@ const workstreamCard = (
           h.span([h.Class("mono")], ["checkpoint " + ws.checkpoint.sha.slice(0, 8)]),
         ],
       ),
-      activityBlock(h, activity),
-      sessions.length === 0
-        ? h.p(
-            [h.Class("empty muted")],
-            ["No live session matched. Label a terminal with workstream=" + ws.id + "."],
-          )
-        : h.div(
-            [h.Class("session-list")],
-            sessions.map((session) => sessionRow(h, session)),
-          ),
+      ...(open
+        ? [
+            h.div(
+              [h.Class("workstream-detail")],
+              [
+                activityBlock(h, activity),
+                sessions.length === 0
+                  ? h.p(
+                      [h.Class("empty muted")],
+                      ["No live session matched. Label a terminal with workstream=" + ws.id + "."],
+                    )
+                  : h.div(
+                      [h.Class("session-list")],
+                      sessions.map((session) => sessionRow(h, session)),
+                    ),
+              ],
+            ),
+          ]
+        : []),
     ],
   )
 
@@ -417,43 +547,59 @@ const repoSection = (
   workstreams: ReadonlyArray<typeof Workstream.Type>,
   activities: ReadonlyArray<typeof Activity.Type>,
   sessions: ReadonlyArray<typeof Session.Type>,
+  closed: boolean,
+  openWorkstreams: ReadonlyArray<string>,
 ) =>
   h.section(
-    [h.Class("repo")],
+    [h.Class("repo" + (closed ? " closed" : ""))],
     [
-      h.div(
-        [h.Class("repo-head")],
+      h.h2(
+        [h.Class("repo-heading")],
         [
-          h.h2([], [repo]),
-          h.span(
-            [h.Class("muted")],
-            [workstreams.length + (workstreams.length === 1 ? " workstream" : " workstreams")],
+          h.button(
+            [
+              h.Class("repo-toggle"),
+              h.AriaExpanded(!closed),
+              h.AriaLabel((closed ? "Show " : "Hide ") + repo + " workstreams"),
+              h.OnClick(Message.ToggledRepo({ repo })),
+            ],
+            [
+              h.span([h.Class("repo-name")], [repo]),
+              h.span(
+                [h.Class("muted")],
+                [workstreams.length + (workstreams.length === 1 ? " workstream" : " workstreams")],
+              ),
+              h.span([h.Class("chevron"), h.AriaHidden(true)], [closed ? "▸" : "▾"]),
+            ],
           ),
         ],
       ),
-      ...phaseOrder.flatMap((phase) => {
-        const inPhase = workstreams.filter((ws) => ws.phase === phase)
-        if (inPhase.length === 0) return []
-        return [
-          h.div(
-            [h.Class("lane")],
-            [
-              h.h3(
-                [h.Class("lane-title")],
-                [phaseLabel(phase), h.span([h.Class("count")], [String(inPhase.length)])],
+      ...(closed
+        ? []
+        : phaseOrder.flatMap((phase) => {
+            const inPhase = workstreams.filter((ws) => ws.phase === phase)
+            if (inPhase.length === 0) return []
+            return [
+              h.div(
+                [h.Class("lane")],
+                [
+                  h.h3(
+                    [h.Class("lane-title")],
+                    [phaseLabel(phase), h.span([h.Class("count")], [String(inPhase.length)])],
+                  ),
+                  ...inPhase.map((ws) =>
+                    workstreamCard(
+                      h,
+                      ws,
+                      activities.find((activity) => activity.workstream === ws.id),
+                      sessions.filter((session) => session.workstream === ws.id),
+                      openWorkstreams.includes(ws.id),
+                    ),
+                  ),
+                ],
               ),
-              ...inPhase.map((ws) =>
-                workstreamCard(
-                  h,
-                  ws,
-                  activities.find((activity) => activity.workstream === ws.id),
-                  sessions.filter((session) => session.workstream === ws.id),
-                ),
-              ),
-            ],
-          ),
-        ]
-      }),
+            ]
+          })),
     ],
   )
 
@@ -501,8 +647,14 @@ const deskRow = (h: HtmlBuilder<Message>, item: typeof Desk.Type) =>
     [h.Class("row")],
     [
       h.span([h.Class("id")], [item.id]),
-      h.span([], [item.title]),
-      h.a([h.Href("#" + item.workstream)], [item.workstream]),
+      h.span([h.Class("row-title")], [item.title]),
+      h.a(
+        [
+          h.Href("#" + item.workstream),
+          h.OnClick(Message.OpenedWorkstream({ id: item.workstream })),
+        ],
+        [item.workstream],
+      ),
     ],
   )
 
@@ -514,7 +666,13 @@ const reportRow = (h: HtmlBuilder<Message>, report: typeof Report.Type) =>
         [h.Class("report-head")],
         [
           h.span([h.Class("id")], [report.kind]),
-          h.a([h.Href("#" + report.workstream)], [report.workstream]),
+          h.a(
+            [
+              h.Href("#" + report.workstream),
+              h.OnClick(Message.OpenedWorkstream({ id: report.workstream })),
+            ],
+            [report.workstream],
+          ),
           report.blocked ? h.span([h.Class("blocked-flag")], ["blocked"]) : h.span([], []),
         ],
       ),
@@ -551,7 +709,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
               ],
             ),
             h.button(
-              [h.OnClick(Message.ClickedRefresh())],
+              [h.Class("refresh"), h.OnClick(Message.ClickedRefresh())],
               [model.loading ? "Refreshing…" : "Refresh"],
             ),
           ],
@@ -559,7 +717,9 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
         ...(model.error === null
           ? []
           : [h.p([h.Class("error")], ["Could not read /presence: " + model.error])]),
-        ...(model.notice === null ? [] : [h.p([h.Class("notice")], [model.notice])]),
+        ...(model.notice === null
+          ? []
+          : [h.p([h.Class("notice"), h.AriaLive("polite")], [model.notice])]),
         ...(presence === null
           ? []
           : [
@@ -571,6 +731,8 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
                   presence.factory.workstreams.filter((ws) => repoName(ws) === repo),
                   presence.factory.activity,
                   [...presence.sessions.herdr.sessions, ...presence.sessions.rex.sessions],
+                  model.closedRepos.includes(repo),
+                  model.openWorkstreams,
                 ),
               ),
               card(

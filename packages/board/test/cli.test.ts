@@ -106,6 +106,21 @@ test("board up serves presence and queue until down", async () => {
     const queue = await fetch("http://127.0.0.1:" + port + "/queue")
     expect(await queue.json()).toEqual(["r1"])
 
+    // The phone opens `/factory`: the built view is served there, and the assets
+    // it references come from the same origin rather than a dev server.
+    const factory = await fetch("http://127.0.0.1:" + port + "/factory")
+    expect(factory.status).toBe(200)
+    expect(factory.headers.get("content-type")).toContain("text/html")
+    const document = await factory.text()
+    expect(document).toContain('<div id="root">')
+    expect(document).toContain('name="viewport"')
+    const [, assetPath] = document.match(/src="\/factory\/(assets\/[^"]+\.js)"/) ?? []
+    expect(assetPath).toBeDefined()
+    if (assetPath === undefined) return
+    const asset = await fetch("http://127.0.0.1:" + port + "/factory/" + assetPath)
+    expect(asset.status).toBe(200)
+    expect(asset.headers.get("content-type")).toContain("text/javascript")
+
     expect(run(["status", "--root", "rooms"], root).stdout).toContain("shop: lock held by ")
     const down = run(["down", "--root", "rooms"], root)
     expect(down.status).toBe(0)
