@@ -6,7 +6,7 @@
 // line here — a phase, a state or a session is never inferred from a neighbour.
 import { View, div } from "gpui-kit"
 import { h_flex, v_flex } from "gpui-base"
-import { agents, appHome, checking, exec, run, theme, window } from "herdr"
+import { agents, appHome, checking, exec, run, terminals, theme, window } from "herdr"
 import { readdir } from "fs/promises"
 import { environmentText, metaLine, readPresence } from "./presence.js"
 
@@ -371,7 +371,10 @@ export default class Factory extends View {
 
   render() {
     const t = theme()
-    const live = new Set(agents().map((agent) => agent.address))
+    const live = new Set([
+      ...agents().map((agent) => agent.address),
+      ...terminals().map((terminal) => terminal.address),
+    ])
     return v_flex()
       .id("factory-root")
       .size_full()
