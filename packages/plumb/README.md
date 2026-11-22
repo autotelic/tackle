@@ -87,6 +87,48 @@ rules: {
 The manifest option is a path or an already-decoded manifest object; it defaults to `tools/ui-catalog/plumb-ui.config.json`. A part is a promise: the catalog records `status: deprecated` and `useInstead`, and the rule makes an unmigrated import visible at the call site. If the manifest cannot be read, the rule reports nothing rather than inventing a migration.
 
 
+## Repo-local guardrail plugins
+
+Some rules are nobody's package: they encode one repository's own decisions ("ask the
+policy engine, never the shared instance", "no role literals in a handler"). Write them
+as a local jsPlugin beside plumb, registered the same way:
+
+```ts
+jsPlugins: [
+  { name: "plumb", specifier: "@autotelic/plumb" },
+  { name: "authorization", specifier: "./tools/oxlint/guardrails/authorization.cjs" },
+],
+rules: { "authorization/no-direct-shared-client": "error" },
+```
+
+One rule of thumb, learned the hard way: **the rule's path scope is a policy decision,
+so it belongs in config, not in the rule.** A guardrail scoped with a hardcoded path
+test ("handlers only") permanently exempts every file outside the path — and the file
+that escapes is, in practice, the one with the bug the rule exists to catch. A real
+case: a "never read the shared `fastify.oso`" rule scoped to `handlers/` left a direct
+read in `shared/` live forever, because the ratchet could never collect it.
+
+Instead, take the scope from the config's `settings` and name the exemptions there, so
+the boundary is reviewable and the exempt file is at least written down somewhere:
+
+```js
+create(context) {
+  const options = context.options[0] ?? {}
+  const include = options.include ?? ["/handlers/"]
+  const exempt = new Set(options.exempt ?? [])
+  if (!include.some((part) => context.filename.includes(part))) return {}
+  if (exempt.has(context.filename)) return {}
+  // ...
+}
+```
+
+```ts
+rules: { "authorization/no-direct-shared-client": ["error", { include: ["/src/"], exempt: ["src/plugins/policy/index.ts"] }] }
+```
+
+The exempt list is where the debt lives in daylight: a file named there is a finding
+waiting for its zeroing batch, not a file the rule was never allowed to see.
+
 ## Using Plumb with ESLint
 
 Every plugin is ESLint-compatible, so the same rules run under ESLint with the same findings. Use this where Oxlint can't parse the files: Astro, Vue and Svelte templates. Pair ESLint's framework parser with `@typescript-eslint/parser` for the script parts, and keep Oxlint for plain TypeScript if you want its speed.
