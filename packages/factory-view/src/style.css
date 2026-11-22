@@ -238,7 +238,10 @@ button:hover {
 .session:last-child {
   border-bottom: 0;
 }
-.session-main {
+.session {
+  display: block;
+}
+.session-head {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 10px;
@@ -250,14 +253,76 @@ button:hover {
   font-size: 12px;
   overflow-wrap: anywhere;
 }
-.session-actions {
+.session-badge {
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: #eef2f5;
+  color: #43515f;
+}
+.session-badge.live {
+  background: #e8f3ec;
+  color: #236141;
+}
+.session-badge.blocked {
+  background: #fceae6;
+  color: #963b2b;
+}
+.session-badge.idle {
+  background: #f1f3f5;
+  color: #65717e;
+}
+.session-status {
+  color: #43515f;
+  overflow-wrap: anywhere;
+}
+.session-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 3px 14px;
+  margin-top: 7px;
+}
+.session-field {
   display: flex;
   gap: 6px;
-  flex: 0 0 auto;
+  align-items: baseline;
+  min-width: 0;
 }
-.session-actions button {
+.session-field-label {
+  color: #6c7a87;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+.session-field-value {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.session-command {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 6px 8px;
+  border: 1px solid #e0e6eb;
+  border-radius: 7px;
+  background: #f8fafc;
+}
+.session-command code {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.session-command button {
+  flex: 0 0 auto;
   min-height: 30px;
   padding: 3px 9px;
+}
+.unjoined {
+  border-style: dashed;
 }
 .empty {
   margin: 10px 0 0;
@@ -323,15 +388,15 @@ button:hover {
     display: grid;
     grid-template-columns: 1fr;
   }
-  .session {
+  .session-fields {
+    grid-template-columns: 1fr;
+  }
+  .session-command {
     align-items: flex-start;
     flex-direction: column;
   }
-  .session-actions {
+  .session-command button {
     width: 100%;
-  }
-  .session-actions button {
-    flex: 1;
     min-height: 38px;
   }
 }

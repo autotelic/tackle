@@ -38,14 +38,20 @@ const Session = Schema.Struct({
   source: SessionSource,
   address: Schema.String,
   agent: Schema.optional(Schema.String),
+  cwd: Schema.optional(Schema.String),
+  state: Schema.optional(Schema.String),
+  status: Schema.optional(Schema.String),
   roomId: Schema.optional(Schema.String),
   where: Schema.optional(Schema.String),
   workstream: Schema.optional(Schema.String),
+  /** How the join was made: label, factory desk, cwd, or tab title. */
+  joinedBy: Schema.optional(Schema.String),
 })
 const SessionSourceView = Schema.Struct({
   available: Schema.Boolean,
   sessions: Schema.Array(Session),
 })
+export type Session = typeof Session.Type
 const Presence = Schema.Struct({
   factory: Schema.Struct({
     workstreams: Schema.Array(Workstream),
@@ -54,7 +60,7 @@ const Presence = Schema.Struct({
   }),
   sessions: Schema.Struct({ herdr: SessionSourceView, rex: SessionSourceView }),
 })
-type Presence = typeof Presence.Type
+export type Presence = typeof Presence.Type
 
 export const Model = Schema.Struct({
   presence: Schema.NullOr(Presence),
@@ -71,8 +77,6 @@ export const Message = defineMessageUnion({
   Copied: {},
   CopyFailed: { message: Schema.String },
   Ticked: {},
-  ClickedOpen: { source: SessionSource, address: Schema.String },
-  Opened: { ok: Schema.Boolean, error: Schema.NullOr(Schema.String) },
 })
 export type Message = typeof Message.Type
 
@@ -103,18 +107,8 @@ export const update = (model: Model, message: Message): UpdateReturn =>
         ),
       ],
     }),
-    Copied: () => ({ model, notice: "Copied the open command" }),
-    CopyFailed: ({ message }) => ({ model, notice: "Could not copy: " + message }),
-    ClickedOpen: ({ source, address }) => ({
-      model,
-      commands: [OpenSession({ source, address })],
-    }),
-    Opened: ({ ok, error }) => ({
-      model: {
-        ...model,
-        notice: ok ? "Opened in its app" : "Could not open: " + (error ?? "unknown error"),
-      },
-    }),
+    Copied: () => ({ model: { ...model, notice: "Copied the attach command" } }),
+    CopyFailed: ({ message }) => ({ model: { ...model, notice: "Could not copy: " + message } }),
   })
 
 /** Start with a fetch and an empty model. */
@@ -138,29 +132,6 @@ export const FetchPresence = Command.define("FetchPresence", {
       onSuccess: (value) => Message.Settled({ value, error: null }),
     }),
   ),
-})
-
-export const OpenSession = Command.define("OpenSession", {
-  args: { source: SessionSource, address: Schema.String },
-  messages: [Message.Opened],
-  execute: ({ source, address }: { readonly source: "herdr" | "rex"; readonly address: string }) =>
-    Effect.tryPromise({
-      try: async () => {
-        const response = await fetch("/open", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ source, address }),
-        })
-        if (!response.ok) return Promise.reject((await response.text()) || "open failed")
-        return true
-      },
-      catch: (cause) => String(cause),
-    }).pipe(
-      Effect.match({
-        onFailure: (error) => Message.Opened({ ok: false, error }),
-        onSuccess: () => Message.Opened({ ok: true, error: null }),
-      }),
-    ),
 })
 
 /** Presence refreshes itself; the button is for impatience, not the only path. */
@@ -211,40 +182,124 @@ const phaseDetail = (phase: string): string => {
 }
 const repoName = (ws: typeof Workstream.Type): string => ws.repo ?? "unknown repository"
 
-const sessionCommand = (session: typeof Session.Type): string =>
-  session.source === "herdr" ? "hc attach " + session.address : "rex block focus " + session.address
+/** Quote only when a shell would split the word; the common address stays copy-pastable. */
+const shellWord = (value: string): string =>
+  value === "" || value.includes(" ") || value.includes("'")
+    ? "'" + value.replaceAll("'", "'\\''") + "'"
+    : value
 
-const sessionRow = (h: HtmlBuilder<Message>, session: typeof Session.Type) =>
-  h.div(
-    [h.Class("session")],
+/**
+ * The command a person runs to reach this session. Herdr attaches a terminal;
+ * Rex focuses the block in its own session, so the label is the argument.
+ */
+export const sessionCommand = (session: Session): string =>
+  session.source === "herdr"
+    ? "hc attach " + shellWord(session.address)
+    : "rex block focus -s " + shellWord(session.where ?? session.address)
+
+export type SessionLiveStatus = "live" | "idle" | "blocked" | "unknown"
+
+const statusWord = (value: string | undefined): string => (value ?? "").trim().toLowerCase()
+
+/**
+ * Our word for a session's state, beside the source's own word.
+ *
+ * Herdr's `done` is an idle pane that finished a turn, not a terminal that
+ * never worked: normalize it to idle but never overwrite the verbatim status.
+ */
+export const sessionLiveStatus = (session: Session): SessionLiveStatus => {
+  const status = statusWord(session.status)
+  if (status === "working" || status === "live" || status === "running") return "live"
+  if (status === "blocked" || status === "waiting" || status === "paused") return "blocked"
+  if (status === "idle" || status === "done" || status === "finished") return "idle"
+  const state = statusWord(session.state)
+  if (state === "live" || state === "placed") return "live"
+  if (state === "blocked") return "blocked"
+  if (state === "idle") return "idle"
+  return "unknown"
+}
+
+const sessionField = (input: {
+  readonly h: HtmlBuilder<Message>
+  readonly label: string
+  readonly value: string
+  readonly mono?: boolean
+}) =>
+  input.h.div(
+    [input.h.Class("session-field")],
+    [
+      input.h.span([input.h.Class("session-field-label")], [input.label]),
+      input.h.span(
+        [input.h.Class(input.mono !== false ? "session-field-value mono" : "session-field-value")],
+        [input.value],
+      ),
+    ],
+  )
+
+const sessionRow = (h: HtmlBuilder<Message>, session: Session) => {
+  const command = sessionCommand(session)
+  const live = sessionLiveStatus(session)
+  return h.div(
+    [h.Class("session"), h.DataAttribute("session", session.source + ":" + session.address)],
     [
       h.div(
-        [h.Class("session-main")],
+        [h.Class("session-head")],
         [
           h.span([h.Class("session-id")], [session.source + " " + session.address]),
-          h.span([h.Class("muted")], [session.where ?? session.agent ?? ""]),
+          h.span([h.Class("session-badge " + live)], [live]),
+          h.span(
+            [h.Class("session-status mono")],
+            [
+              session.status === undefined || session.status === ""
+                ? "status unknown"
+                : session.status,
+            ],
+          ),
         ],
       ),
       h.div(
-        [h.Class("session-actions")],
+        [h.Class("session-fields")],
         [
+          sessionField({
+            h,
+            label: session.source === "herdr" ? "tab" : "rex label",
+            value: session.where ?? "unknown",
+            mono: false,
+          }),
+          sessionField({ h, label: "agent", value: session.agent ?? "unknown", mono: false }),
+          sessionField({ h, label: "cwd", value: session.cwd ?? "no cwd" }),
+          sessionField({ h, label: "state", value: session.state ?? "unknown", mono: false }),
+          sessionField({ h, label: "workstream", value: session.workstream ?? "unjoined" }),
+          sessionField({
+            h,
+            label: "joined by",
+            value: session.joinedBy ?? "no evidence",
+            mono: false,
+          }),
+        ],
+      ),
+      h.div(
+        [h.Class("session-command")],
+        [
+          h.code([h.Class("mono")], [command]),
           h.button(
-            [h.OnClick(Message.ClickedOpen({ source: session.source, address: session.address }))],
-            ["Open"],
-          ),
-          h.button(
-            [h.OnClick(Message.ClickedCopy({ command: sessionCommand(session) }))],
+            [
+              h.OnClick(Message.ClickedCopy({ command })),
+              h.DataAttribute("copy-command", command),
+              h.AriaLabel("Copy " + command),
+            ],
             ["Copy"],
           ),
         ],
       ),
     ],
   )
+}
 
 const workstreamCard = (
   h: HtmlBuilder<Message>,
   ws: typeof Workstream.Type,
-  sessions: ReadonlyArray<typeof Session.Type>,
+  sessions: ReadonlyArray<Session>,
 ) =>
   h.article(
     [h.Class("workstream"), h.Id(ws.id)],
@@ -295,7 +350,7 @@ const repoSection = (
   h: HtmlBuilder<Message>,
   repo: string,
   workstreams: ReadonlyArray<typeof Workstream.Type>,
-  sessions: ReadonlyArray<typeof Session.Type>,
+  sessions: ReadonlyArray<Session>,
 ) =>
   h.section(
     [h.Class("repo")],
@@ -469,10 +524,12 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
                 return unmatched.length === 0
                   ? []
                   : [
-                      card(
-                        h,
-                        "Sessions not joined to a workstream",
-                        unmatched.map((s) => sessionRow(h, s)),
+                      h.div(
+                        [h.Class("card unjoined"), h.Id("unjoined")],
+                        [
+                          h.h2([], ["Sessions not joined to a workstream"]),
+                          ...unmatched.map((s) => sessionRow(h, s)),
+                        ],
                       ),
                     ]
               })(),

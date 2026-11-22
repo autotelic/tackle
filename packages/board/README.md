@@ -33,11 +33,18 @@ running".
 A session joins a room only by the explicit Herdr label `room=<id>`, set with
 `hc label <terminal> room=<id>`; `joinedBy: "label"` records the join. The
 terminal's `cwd` is the shell's directory, not the agent's, so it is never used
-as a room identity. The one-shot command keeps `cwd` and labels as evidence; the
-served `/presence` drops both and keeps `roomId`/`joinedBy`.
+as a room identity. A workstream join is `label`, `factory`, `cwd`, or `title`,
+and the same `joinedBy` field records which evidence matched. The served
+`/presence` keeps `cwd` (the view renders it) and the join result, and drops the
+raw label map.
 
 Rex blocks carry a session label, block id, creator, flavor, host and placement;
 they have no cwd, so they never join by path either.
+
+There is no POST endpoint that runs a command. The view renders a copyable
+`hc attach …` / `rex block focus -s …` command instead: a browser cannot attach
+a TTY, and an exec endpoint behind the tailnet would be a shell with a web front
+end.
 
 `network.tailscale` is the address book: self and peers from
 `tailscale status --json`, resolved from `TAILSCALE_BIN`, PATH, or the app

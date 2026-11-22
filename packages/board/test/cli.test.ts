@@ -106,6 +106,15 @@ test("board up serves presence and queue until down", async () => {
     const queue = await fetch("http://127.0.0.1:" + port + "/queue")
     expect(await queue.json()).toEqual(["r1"])
 
+    // v1 executes nothing: there is no POST that runs a command, and the view
+    // cannot turn an address into argv.
+    const open = await fetch("http://127.0.0.1:" + port + "/open", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ source: "herdr", address: "t1d" }),
+    })
+    expect(open.status).toBe(405)
+
     expect(run(["status", "--root", "rooms"], root).stdout).toContain("shop: lock held by ")
     const down = run(["down", "--root", "rooms"], root)
     expect(down.status).toBe(0)

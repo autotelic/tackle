@@ -1,25 +1,16 @@
-import { execFile, spawn } from "node:child_process"
-import { randomUUID } from "node:crypto"
+import { spawn } from "node:child_process"
 import { createServer } from "node:http"
 import { existsSync } from "node:fs"
-import { chmod, mkdir, readFile, rm, writeFile } from "node:fs/promises"
-import { homedir } from "node:os"
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { parseArgs, promisify } from "node:util"
-import { Option } from "effect"
+import { parseArgs } from "node:util"
 import { listRooms } from "@autotelic/room/store"
 import { readRun, startRoomRun } from "@autotelic/room/run"
 import { listDesk } from "@autotelic/factory/desk"
 import { listReports } from "@autotelic/factory/report"
 import { listWorkstreams } from "@autotelic/factory/store"
-import {
-  discoverSessions,
-  findHerdrBinary,
-  findRexBinary,
-  tagWorkstreams,
-  type Session,
-} from "./sessions.ts"
+import { discoverSessions, sessionOnWire, tagWorkstreams } from "./sessions.ts"
 import { discoverTailnet } from "./tailnet.ts"
 import { fleet } from "./fleet.ts"
 import * as Result from "effect/Result"
@@ -202,12 +193,6 @@ const observe = async (root: string) => {
   }
 }
 
-/** The served document keeps the join result and drops the path evidence. */
-const redact = (session: Session): Omit<Session, "cwd" | "labels"> => {
-  const { cwd: _cwd, labels: _labels, ...rest } = session
-  return rest
-}
-
 const withoutIps = <A extends { readonly ips: ReadonlyArray<string> }>(peer: A) => {
   const { ips: _ips, ...rest } = peer
   return rest
@@ -239,7 +224,11 @@ const presence = async ({
       ...snapshot.sessions,
       herdr: {
         ...snapshot.sessions.herdr,
-        sessions: snapshot.sessions.herdr.sessions.map(redact),
+        sessions: snapshot.sessions.herdr.sessions.map(sessionOnWire),
+      },
+      rex: {
+        ...snapshot.sessions.rex,
+        sessions: snapshot.sessions.rex.sessions.map(sessionOnWire),
       },
     },
     service: { pid: process.pid, host, port },
@@ -247,56 +236,6 @@ const presence = async ({
 }
 
 const viewDir = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "factory-view", "dist")
-const execFileAsync = promisify(execFile)
-const SessionAddress = Schema.String.check(
-  Schema.makeFilter((value) => /^[A-Za-z0-9:._-]+$/.test(value), {
-    message: "invalid session address",
-  }),
-)
-const OpenRequest = Schema.Struct({
-  source: Schema.Union([Schema.Literal("herdr"), Schema.Literal("rex")]),
-  address: SessionAddress,
-})
-
-const shellQuote = (value: string): string =>
-  `"${value.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`
-
-/** Open an existing session in its owning app; addresses are never shell fragments. */
-const openSession = async ({
-  source,
-  address,
-}: {
-  readonly source: string
-  readonly address: string
-}): Promise<void> => {
-  if (source === "rex") {
-    const binary = findRexBinary()
-    // oxlint-disable-next-line plumb/no-builtin-throws -- this HTTP boundary turns it into a 400
-    if (Option.isNone(binary)) throw new Error("Rex is not installed")
-    await execFileAsync(binary.value, ["block", "focus", address], { timeout: 5_000 })
-    return
-  }
-  if (source === "herdr") {
-    const binary = findHerdrBinary()
-    // oxlint-disable-next-line plumb/no-builtin-throws -- this HTTP boundary turns it into a 400
-    if (Option.isNone(binary)) throw new Error("hc is not installed")
-    const directory = join(homedir(), ".factory", "open")
-    await mkdir(directory, { recursive: true, mode: 0o700 })
-    await chmod(directory, 0o700).catch(() => undefined)
-    const script = join(directory, `attach-${randomUUID()}.command`)
-    await writeFile(
-      script,
-      `#!/bin/sh\nexec ${shellQuote(binary.value)} attach ${shellQuote(address)}\n`,
-      { mode: 0o700 },
-    )
-    await execFileAsync("/usr/bin/open", ["-a", "Terminal", script], { timeout: 5_000 })
-    setTimeout(() => void rm(script, { force: true }), 60_000).unref()
-    return
-  }
-  // oxlint-disable-next-line plumb/no-builtin-throws -- this HTTP boundary turns it into a 400
-  throw new Error("unknown session source")
-}
-
 const serveView = async ({
   response,
   path,
@@ -335,31 +274,6 @@ const serve = async ({
 }): Promise<void> => {
   const server = createServer((request, response) => {
     const path = new URL(request.url ?? "/", "http://" + host).pathname
-    if (path === "/open" && request.method === "POST") {
-      void (async () => {
-        // oxlint-disable-next-line plumb-effect/no-try-catch -- the HTTP handler consumes JSON.parse and child-process failures here
-        try {
-          let body = ""
-          for await (const chunk of request) {
-            body += String(chunk)
-            if (body.length > 4_096) {
-              json({ response, status: 400, body: { error: "request body is too large" } })
-              return
-            }
-          }
-          const decoded = Schema.decodeResult(Schema.fromJsonString(OpenRequest))(body)
-          if (Result.isFailure(decoded)) {
-            json({ response, status: 400, body: { error: "expected {source, address}" } })
-            return
-          }
-          await openSession(decoded.success)
-          json({ response, status: 200, body: { ok: true } })
-        } catch (cause: unknown) {
-          json({ response, status: 400, body: { error: String(cause) } })
-        }
-      })()
-      return
-    }
     if (request.method !== "GET") {
       json({ response, status: 405, body: { error: "method not allowed" } })
       return
@@ -400,15 +314,7 @@ const serve = async ({
       status: 404,
       body: {
         error: "not found",
-        paths: [
-          "/",
-          "/factory",
-          "/health",
-          "/presence",
-          "/.well-known/presence.json",
-          "/queue",
-          "/open",
-        ],
+        paths: ["/", "/factory", "/health", "/presence", "/.well-known/presence.json", "/queue"],
       },
     })
   })

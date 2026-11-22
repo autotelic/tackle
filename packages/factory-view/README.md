@@ -58,14 +58,17 @@ so a repo is a section and its lanes are the states it currently occupies.
   being guessed onto a workstream.
 - **Desk** — questions waiting for a human. The view does not answer them; it
   shows which workstream asked.
-- **Sessions** — Herdr and Rex addresses. `Open` asks the board to focus the
-  session in its app: a Rex block is focused by block id, and a Herdr terminal
-  is attached in Terminal with `hc attach …`. `Copy` gives the command instead.
-  Sessions with no evidence of a workstream are listed separately, never
-  assigned by guesswork.
+- **Sessions** — Herdr addresses and Rex labels, with the agent, cwd, source
+  state, the source's own status word beside our normalized `live` / `idle` /
+  `blocked` badge, and the workstream plus the evidence that joined it
+  (`label`, `factory`, `cwd`, or `title`). Each row shows a copyable command —
+  `hc attach <address>` for Herdr, `rex block focus -s <label>` for Rex — and
+  `Copy` puts exactly that command on the clipboard. There is no `Open` button:
+  the browser cannot attach a TTY, and v1 executes nothing. Sessions with no
+  evidence of a workstream render under `unjoined`, never assigned by guesswork.
 - **Reports** — structured feedback the factory consumed, with expected and
   actual text side by side.
 
 The refresh button is deliberate: this is an observation surface, not a
-controller. The only action is `POST /open`, which validates the address and
-runs `rex block focus` or `hc attach`; factory state is never written here.
+controller. The only action is copying a command; the view makes no POST and
+factory state is never written here.

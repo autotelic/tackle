@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest"
-import { discoverHerdr, discoverRex, parseHerdr } from "../src/sessions.ts"
+import {
+  discoverHerdr,
+  discoverRex,
+  joinFor,
+  parseHerdr,
+  sessionOnWire,
+  tagWorkstreams,
+} from "../src/sessions.ts"
+import { Option } from "effect"
 
 /* oxlint-disable plumb/prefer-property-tests -- these are two fixed wire shapes from another program. */
 
@@ -18,6 +26,11 @@ const listing = JSON.stringify({
     { address: "t11", cwd: "/repo/b", state: "live", status: "working" },
   ],
 })
+
+const parsed = parseHerdr(listing)
+const first = parsed[0]
+const second = parsed[1]
+if (first === undefined || second === undefined) throw new Error("fixture terminals are missing")
 
 describe("a session source is read, not guessed", () => {
   it("normalizes Herdr terminals", () => {
@@ -116,5 +129,67 @@ describe("a session source is read, not guessed", () => {
         },
       }),
     ).toEqual({ available: true, sessions: [] })
+  })
+})
+
+const workstreams = [
+  {
+    id: "tackle-3",
+    label: "factory-view",
+    repo: "autotelic/tackle",
+    path: "/work/tackle",
+    project: "P-AUT-3",
+  },
+  {
+    id: "nested",
+    label: "nested-worktree",
+    repo: "autotelic/tackle",
+    path: "/work/tackle/packages/nested",
+    project: "P-AUT-4",
+  },
+]
+
+describe("a workstream join says how it joined", () => {
+  it("records cwd evidence and takes the longest matching worktree", () => {
+    const session = { ...first, cwd: "/work/tackle/packages/nested/src" }
+    expect(joinFor(session, workstreams)).toEqual(
+      Option.some({ workstream: "nested", joinedBy: "cwd" }),
+    )
+  })
+
+  it("records the explicit label rather than a path", () => {
+    const session = { ...first, labels: { workstream: "tackle-3" } }
+    expect(joinFor(session, workstreams)).toEqual(
+      Option.some({ workstream: "tackle-3", joinedBy: "label" }),
+    )
+  })
+
+  it("records a tab-title join, and leaves an unmatched terminal unjoined", () => {
+    const matched = { ...first, where: "factory view / sessions" }
+    expect(tagWorkstreams([matched], workstreams)[0]).toMatchObject({
+      workstream: "tackle-3",
+      joinedBy: "title",
+    })
+    const unmatched = { ...second, cwd: "/Users/t/scratch", where: "scratch" }
+    expect(joinFor(unmatched, workstreams)).toEqual(Option.none())
+  })
+})
+
+describe("the served session", () => {
+  it("keeps cwd and the join evidence, and drops the local label map", () => {
+    const session = {
+      ...first,
+      labels: { workstream: "tackle-3", room: "r1" },
+      workstream: "tackle-3",
+      joinedBy: "label" as const,
+    }
+    const wire = sessionOnWire(session)
+    expect(wire).toMatchObject({
+      cwd: "/repo/a",
+      workstream: "tackle-3",
+      joinedBy: "label",
+      address: "t10",
+    })
+    expect(wire).not.toHaveProperty("labels")
   })
 })

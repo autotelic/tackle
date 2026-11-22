@@ -58,8 +58,15 @@ export interface Session {
   readonly where: string | undefined
   readonly labels?: Readonly<Record<string, string>>
   readonly roomId?: string
-  readonly joinedBy?: "label"
+  /** How the session joined: its workstream evidence, or a room label when there is none. */
+  readonly joinedBy?: "label" | "factory" | "cwd" | "title"
   readonly workstream?: string
+}
+
+/** A workstream join and the evidence that produced it; never a guess without a word. */
+export interface WorkstreamJoin {
+  readonly workstream: string
+  readonly joinedBy: "label" | "factory" | "cwd" | "title"
 }
 
 export interface WorkstreamPointer {
@@ -71,28 +78,35 @@ export interface WorkstreamPointer {
 }
 
 /**
- * Join a live session to the workstream it is doing work for.
+ * Join a live session to the workstream it is doing work for, and say how.
  *
  * An explicit `workstream` label wins; a factory desk belongs to the factory
  * workstream; then the session's cwd and tab words are the only evidence left.
+ * The evidence is part of the answer because a cwd join is provisional: the
+ * terminal may have `cd`-ed into a worktree without working on it.
  */
-export const workstreamFor = (
+export const joinFor = (
   session: Session,
   workstreams: ReadonlyArray<WorkstreamPointer>,
-): Option.Option<string> => {
+): Option.Option<WorkstreamJoin> => {
   const explicit = session.labels?.workstream
   if (explicit !== undefined && workstreams.some((workstream) => workstream.id === explicit))
-    return Option.some(explicit)
+    return Option.some({ workstream: explicit, joinedBy: "label" })
   if (session.labels?.factory === "desk") {
     const factory = workstreams.find((workstream) => workstream.project === "factory")
-    return factory === undefined ? Option.none() : Option.some(factory.id)
+    return factory === undefined
+      ? Option.none()
+      : Option.some({ workstream: factory.id, joinedBy: "factory" })
   }
   if (session.cwd !== undefined) {
-    const byPath = workstreams.find(
-      (workstream) =>
-        session.cwd === workstream.path || session.cwd?.startsWith(workstream.path + "/") === true,
-    )
-    if (byPath !== undefined) return Option.some(byPath.id)
+    const byPath = workstreams
+      .filter(
+        (workstream) =>
+          session.cwd === workstream.path ||
+          session.cwd?.startsWith(workstream.path + "/") === true,
+      )
+      .sort((left, right) => right.path.length - left.path.length)[0]
+    if (byPath !== undefined) return Option.some({ workstream: byPath.id, joinedBy: "cwd" })
   }
   const words = new Set(
     (session.where ?? "")
@@ -103,19 +117,37 @@ export const workstreamFor = (
   for (const workstream of workstreams) {
     const labelWords = workstream.label.toLowerCase().split("-")
     if (labelWords.some((word) => word.length >= 5 && words.has(word)))
-      return Option.some(workstream.id)
+      return Option.some({ workstream: workstream.id, joinedBy: "title" })
   }
   return Option.none()
 }
 
-/** Attach the workstream id without inventing one when no evidence matches. */
+/**
+ * The served session keeps the fields the view renders, including cwd (the
+ * session's own evidence) and the join result. Labels stay local: `joinedBy`
+ * already names the join, so the raw label map need not leave the machine.
+ */
+export const sessionOnWire = (session: Session): Omit<Session, "labels"> => {
+  const { labels: _labels, ...rest } = session
+  return rest
+}
+
+/** The joined workstream id, for callers that do not need the evidence. */
+export const workstreamFor = (
+  session: Session,
+  workstreams: ReadonlyArray<WorkstreamPointer>,
+): Option.Option<string> => Option.map(joinFor(session, workstreams), (join) => join.workstream)
+
+/** Attach the workstream id and its evidence without inventing one when no evidence matches. */
 export const tagWorkstreams = (
   sessions: ReadonlyArray<Session>,
   workstreams: ReadonlyArray<WorkstreamPointer>,
 ): ReadonlyArray<Session> =>
   sessions.map((session) => {
-    const workstream = Option.getOrUndefined(workstreamFor(session, workstreams))
-    return workstream === undefined ? session : { ...session, workstream }
+    const join = Option.getOrUndefined(joinFor(session, workstreams))
+    return join === undefined
+      ? session
+      : { ...session, workstream: join.workstream, joinedBy: join.joinedBy }
   })
 
 export interface SessionSource {
