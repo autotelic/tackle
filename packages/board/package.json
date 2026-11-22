@@ -34,6 +34,7 @@
     "@alchemy.run/cloudflare": "2.0.0-beta.87",
     "@alchemy.run/domain": "2.0.0-beta.87",
     "@autotelic/factory": "workspace:*",
+    "@autotelic/protocol": "workspace:*",
     "@autotelic/room": "workspace:*",
     "alchemy": "2.0.0-beta.87",
     "effect": "catalog:"

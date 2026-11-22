@@ -22,6 +22,7 @@ import {
   tagWorkstreams,
   type Session,
 } from "./sessions.ts"
+import { workstreamsWithGates } from "./gate.ts"
 import { discoverTailnet } from "./tailnet.ts"
 import { fleet } from "./fleet.ts"
 import * as Result from "effect/Result"
@@ -173,23 +174,28 @@ const json = ({
 
 const observe = async (root: string) => {
   const rooms = await listRooms(root)
-  const workstreams = await listWorkstreams()
+  const records = await listWorkstreams()
   const sessions = await discoverSessions()
+  const observedAt = new Date().toISOString()
+  const now = Date.now()
+  const activity = await Promise.all(records.map((record) => activityOf({ record, now })))
   return {
     shop: root,
     authority: "observation" as const,
-    observedAt: new Date().toISOString(),
+    observedAt,
     sessions: {
       ...sessions,
-      herdr: { ...sessions.herdr, sessions: tagWorkstreams(sessions.herdr.sessions, workstreams) },
-      rex: { ...sessions.rex, sessions: tagWorkstreams(sessions.rex.sessions, workstreams) },
+      herdr: { ...sessions.herdr, sessions: tagWorkstreams(sessions.herdr.sessions, records) },
+      rex: { ...sessions.rex, sessions: tagWorkstreams(sessions.rex.sessions, records) },
     },
     network: { tailscale: await discoverTailnet() },
     factory: {
-      workstreams,
-      activity: await Promise.all(
-        workstreams.map((record) => activityOf({ record, now: Date.now() })),
-      ),
+      workstreams: await workstreamsWithGates({
+        workstreams: records,
+        activities: activity,
+        observedAt,
+      }),
+      activity,
       desk: await listDesk(),
       reports: await listReports(),
     },

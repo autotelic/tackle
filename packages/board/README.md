@@ -24,7 +24,14 @@ process is gone) and serves:
 `SIGTERM`, waits, then removes the lock.
 
 `presence` is the same document one-shot, without running the shop. It also carries the factory's
-workstreams and reports under `factory`, so the board is the read surface for both places. It includes
+workstreams and reports under `factory`, so the board is the read surface for both places. Each
+served workstream carries `gate`: `baseline` counts the identities in the committed baseline named
+by `gate.baseline` in `jig.config.json` (read through `@autotelic/protocol`'s decoder, the package
+that owns the format) and `quality` carries the newest receipt's jig counts. Absence is named rather
+than zeroed: `baseline.state` is `absent` or `unreadable` with `identities: null`, and
+`quality.state` is `unmeasured` when no pass recorded counts. `baseline.newestAccepted` is always
+`null` — the baseline is an unordered identity set with no timestamps, so the newest accepted
+identity is not in the file, and the field and its note say so instead of being omitted. It includes
 local Herdr terminals via `hc ls --json`, and Rex sessions/blocks via the
 server binary bundled with the Rex app (`REX_BIN`, then PATH, then the app
 support path). A missing source is `available: false`, never "nothing is

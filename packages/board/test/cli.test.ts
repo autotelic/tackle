@@ -6,8 +6,16 @@ import { fileURLToPath } from "node:url"
 import { expect, test } from "vitest"
 
 const cli = fileURLToPath(new URL("../src/cli.ts", import.meta.url))
-const run = (args: ReadonlyArray<string>, cwd: string) =>
-  spawnSync(process.execPath, ["--conditions=development", cli, ...args], { cwd, encoding: "utf8" })
+const run = (
+  args: ReadonlyArray<string>,
+  cwd: string,
+  env: Readonly<Record<string, string>> = {},
+) =>
+  spawnSync(process.execPath, ["--conditions=development", cli, ...args], {
+    cwd,
+    encoding: "utf8",
+    env: { ...process.env, ...env },
+  })
 
 test("presence is readable without a shop", () => {
   const root = mkdtempSync(join(tmpdir(), "board-presence-"))
@@ -20,6 +28,103 @@ test("presence is readable without a shop", () => {
     expect(Array.isArray(presence.sessions.rex.sessions)).toBe(true)
     expect(presence.sessions.herdr).toHaveProperty("available")
     expect(presence.sessions.rex).toHaveProperty("available")
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test("presence serves each workstream's repo gate", () => {
+  const root = mkdtempSync(join(tmpdir(), "board-gate-"))
+  try {
+    const checkout = join(root, "checkout")
+    mkdirSync(checkout, { recursive: true })
+    writeFileSync(
+      join(checkout, ".jig-baseline.json"),
+      JSON.stringify({
+        lexicon: { name: "baseline", version: 1 },
+        identities: ["plumb/no-raw-html:src/a.ts"],
+      }),
+    )
+    const factoryHome = join(root, "factory")
+    const workstreams = join(factoryHome, "workstreams")
+    mkdirSync(join(workstreams, "gate-probe.receipts"), { recursive: true })
+    writeFileSync(
+      join(workstreams, "gate-probe.json"),
+      JSON.stringify({
+        version: 1,
+        id: "gate-probe",
+        project: "factory",
+        label: "factory-feedback",
+        repo: "autotelic/tackle",
+        path: checkout,
+        branch: "main",
+        head: "0".repeat(40),
+        delivery: "trunk",
+        base: "main",
+        baseSha: "0".repeat(40),
+        prHead: "0".repeat(40),
+        diverged: false,
+        phase: "build",
+        deps: [],
+        lease: { holder: "test", generation: 1 },
+        cursors: { github: "", linear: "" },
+        budgets: {
+          passesPerPhase: 5,
+          wallMinutesPerPass: 30,
+          tokensPerDay: 0,
+          roundsOfChanges: 2,
+        },
+        autonomy: [],
+        desk: [],
+        protectedPaths: [],
+        checkpoint: {
+          sha: "0".repeat(40),
+          ref: "refs/bench/gate-probe",
+          at: "2026-11-22T10:00:00.000Z",
+          pushed: false,
+        },
+        createdAt: "2026-11-22T09:00:00.000Z",
+        updatedAt: "2026-11-22T10:00:00.000Z",
+      }),
+    )
+    const quality = { available: true, errors: 0, warnings: 0, note: "jig check" }
+    writeFileSync(
+      join(workstreams, "gate-probe.receipts", "0002.json"),
+      JSON.stringify({
+        workstream: "gate-probe",
+        pass: 2,
+        at: "2026-11-22T10:30:00.000Z",
+        status: "done",
+        phase: "build",
+        events: [],
+        quality: {
+          before: quality,
+          after: { ...quality, errors: 3, warnings: 1 },
+          regressed: false,
+        },
+      }),
+    )
+
+    const output = run(["presence", "--json", "--root", "rooms"], root, {
+      FACTORY_HOME: factoryHome,
+    })
+    expect(output.status).toBe(0)
+    const presence = JSON.parse(output.stdout)
+    const served = presence.factory.workstreams.find(
+      (workstream: { id: string }) => workstream.id === "gate-probe",
+    )
+    expect(served.gate).toMatchObject({
+      repo: "autotelic/tackle",
+      path: checkout,
+      baseline: {
+        state: "present",
+        file: ".jig-baseline.json",
+        identities: 1,
+        newestAccepted: null,
+      },
+      quality: { state: "measured", pass: 2, errors: 3, warnings: 1 },
+    })
+    expect(served.gate.baseline.note).toContain("newest accepted is not recorded")
   } finally {
     rmSync(root, { recursive: true, force: true })
   }

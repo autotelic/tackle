@@ -256,6 +256,9 @@ importers:
       '@autotelic/factory':
         specifier: workspace:*
         version: link:../factory
+      '@autotelic/protocol':
+        specifier: workspace:*
+        version: link:../protocol
       '@autotelic/room':
         specifier: workspace:*
         version: link:../room
