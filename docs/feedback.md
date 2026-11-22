@@ -58,18 +58,18 @@ reporter read the artefact it had, and the artefact was wrong for it.
 
 ## 3. The ledger
 
-| id                                      | fingerprint                                                                                                                                                | kind        | verdict          | route                                                                                     |
-| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ---------------- | ----------------------------------------------------------------------------------------- |
-| `report-permissions-1862-1795303302409` | `conformance:gh run view --job 136075695353 --log:bf49d72626a9`                                                                                            | conformance | `owner-repo`     | permissions-1862: its `test-rest` shard                                                   |
-| `report-permissions-1862-1795303401889` | `conformance:gh api .../actions/jobs/136075695353; cd services/rest; npx mocha <shard 2 files>:7712854710d8`                                               | conformance | `duplicate`      | cited: `report-permissions-1862-1795303302409` — same job                                 |
-| `report-permissions-1862-1795303503690` | `ergonomics:read a long file (docs/permissions-overhaul-tree/05-audit.md) through the agent's read tool, then paste the result into a commit:93a81a7d8cb3` | ergonomics  | `owner-repo`     | permissions-1862: restore §16 from `580049816`, delete both notices                       |
-| `report-permissions-1862-1795303853012` | `ergonomics:node packages/factory/bin/factory.js --help:5997bc3147b1`                                                                                      | ergonomics  | `fixed`          | fixed in `559d8bcc`; the reported bytes predate `0173a342`                                |
-| `report-enterprise-1854-1795303934346`  | `ergonomics:gh api …/jobs/137021854184/logs; gh run view 44961528061 --log:9827a001f031`                                                                   | ergonomics  | `owner-repo`     | enterprise-1854: its `test-rest (3)` shard — re-read with `--allow-escape-sequences`      |
-| `report-tackle-factory-1795311764988`   | `ergonomics:factory-view Open (herdr t18):54dd1b16c105`                                                                                                    | ergonomics  | `fixed`          | fixed in `3018aa4f`; the posted address is now checked against discovery, not a charset   |
-| `report-tackle-view-1795312137685`      | `blocker:factory status:72d1a1d64468`                                                                                                                      | blocker     | `factory-defect` | pending in this stream as `report:report-tackle-view-1795312137685`; not this pass's work |
-| `report-tackle-factory-1795326730977`   | `quality:factory daemon start --worker /tmp/factory-pi-worker.sh --interval 120000:0f06d08b9c68`                                                           | quality     | `gate-defect`    | half fixed in `3a465cb1`; see `desk-tackle-factory-1795326754866` for the rest            |
-| `report-tackle-factory-1795326738246`   | `ergonomics:factory watch --id tackle-factory (base:commit events):d35ba8ec354f`                                                                           | ergonomics  | `gate-defect`    | `desk-tackle-factory-base-events`: author and paths are one `git log` away                |
-| `report-tackle-factory-1795326769939`   | `conformance:factory run --id tackle-factory --worker <worker> (change set):6d4bc28c96c0`                                                                  | conformance | `fixed`          | fixed in `3a465cb1`; the diff base is the pass's own `rev-parse HEAD`                     |
+| id                                      | fingerprint                                                                                                                                                | kind        | verdict       | route                                                                                                                                         |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `report-permissions-1862-1795303302409` | `conformance:gh run view --job 136075695353 --log:bf49d72626a9`                                                                                            | conformance | `owner-repo`  | permissions-1862: its `test-rest` shard                                                                                                       |
+| `report-permissions-1862-1795303401889` | `conformance:gh api .../actions/jobs/136075695353; cd services/rest; npx mocha <shard 2 files>:7712854710d8`                                               | conformance | `duplicate`   | cited: `report-permissions-1862-1795303302409` — same job                                                                                     |
+| `report-permissions-1862-1795303503690` | `ergonomics:read a long file (docs/permissions-overhaul-tree/05-audit.md) through the agent's read tool, then paste the result into a commit:93a81a7d8cb3` | ergonomics  | `owner-repo`  | permissions-1862: restore §16 from `580049816`, delete both notices                                                                           |
+| `report-permissions-1862-1795303853012` | `ergonomics:node packages/factory/bin/factory.js --help:5997bc3147b1`                                                                                      | ergonomics  | `fixed`       | fixed in `559d8bcc`; the reported bytes predate `0173a342`                                                                                    |
+| `report-enterprise-1854-1795303934346`  | `ergonomics:gh api …/jobs/137021854184/logs; gh run view 44961528061 --log:9827a001f031`                                                                   | ergonomics  | `owner-repo`  | enterprise-1854: its `test-rest (3)` shard — re-read with `--allow-escape-sequences`                                                          |
+| `report-tackle-factory-1795311764988`   | `ergonomics:factory-view Open (herdr t18):54dd1b16c105`                                                                                                    | ergonomics  | `fixed`       | fixed in `3018aa4f`; the posted address is now checked against discovery, not a charset                                                       |
+| `report-tackle-view-1795312137685`      | `blocker:factory status:72d1a1d64468`                                                                                                                      | blocker     | `fixed`       | fixed in `d04af66f`; the gate serves its counts and names each absent state — `newestAccepted: null` because the ledger records no timestamps |
+| `report-tackle-factory-1795326730977`   | `quality:factory daemon start --worker /tmp/factory-pi-worker.sh --interval 120000:0f06d08b9c68`                                                           | quality     | `gate-defect` | half fixed in `3a465cb1`; see `desk-tackle-factory-1795326754866` for the rest                                                                |
+| `report-tackle-factory-1795326738246`   | `ergonomics:factory watch --id tackle-factory (base:commit events):d35ba8ec354f`                                                                           | ergonomics  | `gate-defect` | `desk-tackle-factory-base-events`: author and paths are one `git log` away                                                                    |
+| `report-tackle-factory-1795326769939`   | `conformance:factory run --id tackle-factory --worker <worker> (change set):6d4bc28c96c0`                                                                  | conformance | `fixed`       | fixed in `3a465cb1`; the diff base is the pass's own `rev-parse HEAD`                                                                         |
 
 ### Case: the REST shard that named no test
 
@@ -371,6 +371,31 @@ side, and it lives in the same protected `runPass`.
 lease and the reap become a branch with a human merge); a `base:commit` payload carrying author and
 paths, which closes the ergonomics row as `fixed` on the commit that ships it; or two passes running
 at once after `3a465cb1`, which would say the guard is not the fix and reopen the row.
+
+### Case: the repo gate nobody served
+
+`report-tackle-view-1795312137685` asked `/presence` for a gate on every workstream: baseline
+identity count, error and warning counts, newest accepted identity. `factory.workstreams[].repo` was
+served, so the view had a repo to hang the panel on and no gate to render.
+
+Two of the three were already facts about files the shop reads. `baseline.identities` is the committed
+ledger named by `gate.baseline` in `jig.config.json`, decoded through `@autotelic/protocol` — the
+package owns the format, so the board reads the same bytes `jig` writes instead of re-spelling the
+reader. `quality` is the newest receipt's `after` counts, the same record `activityOf` loads for
+the activity panel. The third is not a field: the ledger is an unordered set of identities with no
+timestamps, so "newest accepted" from it would be a file mtime — a claim about the file, not about
+acceptance. It is served as `newestAccepted: null` with its reason in `note`, so a renderer says
+"not recorded", and a format that timestamps an acceptance later changes one field, not the document.
+
+Absence is named rather than zeroed, for the reason a quiet census is not a clean one:
+`baseline.state` is `present | absent | unreadable` and `identities` is null unless the ledger
+decoded, and `quality.state` is `measured | unmeasured` — a running pass has not measured the gate.
+The fixture tests in `packages/board/test/gate.test.ts` and `packages/board/test/cli.test.ts` cover
+each state. Read live through `board presence --json`: `tackle-factory` carries 48 baseline
+identities and pass 9 `unmeasured` because it was still running; `permissions-1862` carries 15
+errors and 5 warnings from pass 1.
+
+Before: `pnpm jig check` 0 errors, 0 warnings (pass 8's receipt). After: 0 and 0.
 
 ## 4. What a verdict is not
 
