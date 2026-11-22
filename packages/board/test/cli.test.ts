@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process"
+import { createServer } from "node:http"
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -216,6 +217,37 @@ test("board up serves presence and queue until down", async () => {
     expect(down.status).toBe(0)
     expect(down.stdout).toContain("stopped")
     expect(run(["status", "--root", "rooms"], root).stdout).toContain("shop: no lock")
+  } finally {
+    run(["down", "--root", "rooms"], root)
+    rmSync(root, { recursive: true, force: true })
+  }
+}, 30_000)
+
+test("board up on another address also answers on loopback", async () => {
+  const root = mkdtempSync(join(tmpdir(), "board-loopback-"))
+  try {
+    mkdirSync(join(root, "rooms"), { recursive: true })
+    // ::1 stands in for a tailnet address: it binds without privileges and is not loopback.
+    const bindable = await new Promise<boolean>((resolve) => {
+      const probe = createServer()
+      probe.once("error", () => resolve(false))
+      probe.listen(0, "::1", () => probe.close(() => resolve(true)))
+    })
+    if (!bindable) return
+    const port = 20_000 + Math.floor(Math.random() * 20_000)
+    const up = run(
+      ["up", "--root", "rooms", "--host", "::1", "--port", String(port), "--detach"],
+      root,
+    )
+    expect(up.status, up.stderr).toBe(0)
+    for (const origin of ["http://[::1]:", "http://127.0.0.1:"]) {
+      const health = await fetch(origin + port + "/health")
+      expect(health.status, origin).toBe(200)
+      expect(await health.json()).toMatchObject({ ok: true, shop: "rooms" })
+    }
+    const presence = await fetch("http://127.0.0.1:" + port + "/presence")
+    expect(presence.status).toBe(200)
+    expect(await presence.json()).toMatchObject({ shop: "rooms" })
   } finally {
     run(["down", "--root", "rooms"], root)
     rmSync(root, { recursive: true, force: true })

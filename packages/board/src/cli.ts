@@ -23,6 +23,7 @@ import {
   tagWorkstreams,
   type Session,
 } from "./sessions.ts"
+import { loopbackHostFor } from "./bind.ts"
 import { workstreamsWithGates } from "./gate.ts"
 import { discoverTailnet } from "./tailnet.ts"
 import { fleet } from "./fleet.ts"
@@ -376,8 +377,11 @@ const serve = async ({
   readonly host: string
   readonly port: number
 }): Promise<void> => {
-  const server = createServer((request, response) => {
-    const path = new URL(request.url ?? "/", "http://" + host).pathname
+  // One handler, up to two listeners: the address the operator asked for, and loopback so the
+  // tools on this machine can read the shop (the factory panel reads /presence there).
+  const handle: import("node:http").RequestListener = (request, response) => {
+    // Only the path matters, and a hostname here would have to survive IPv6 brackets.
+    const path = new URL(request.url ?? "/", "http://board.invalid").pathname
     if (path === "/open" && request.method === "POST") {
       void (async () => {
         // oxlint-disable-next-line plumb-effect/no-try-catch -- the HTTP handler consumes JSON.parse and child-process failures here
@@ -454,12 +458,32 @@ const serve = async ({
         ],
       },
     })
-  })
+  }
 
-  await new Promise<void>((resolve, reject) => {
-    server.once("error", reject)
-    server.listen(port, host, resolve)
-  })
+  const server = createServer(handle)
+  const loopback = Option.getOrUndefined(loopbackHostFor(host))
+  const also = loopback === undefined ? undefined : createServer(handle)
+  // SAFETY: serve() owns both listeners and the shop lock; a bind failure has already closed
+  // both servers and released the lock, and main() turns the rethrow into exit 3. A loopback bind
+  // that fails means something else answers there, so this refuses rather than read another shop.
+  try {
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject)
+      server.listen(port, host, resolve)
+    })
+    if (also !== undefined)
+      await new Promise<void>((resolve, reject) => {
+        also.once("error", reject)
+        also.listen(port, loopback, resolve)
+      })
+  } catch (cause: unknown) {
+    // Both listeners are gone and so is this run: an unbound port must not keep the shop locked.
+    server.close()
+    also?.close()
+    await rm(lockPath(root), { force: true })
+    // oxlint-disable-next-line plumb/no-builtin-throws -- main() turns the bind failure into exit 3
+    throw cause
+  }
 
   const startedAt = Date.now()
   console.log(
@@ -473,6 +497,10 @@ const serve = async ({
       process.pid +
       ")",
   )
+  if (also !== undefined)
+    console.log(
+      "board: also listening on http://" + loopback + ":" + port + " for this machine's tools",
+    )
   console.log("board: press Ctrl-C, or run `board down --root " + root + "`")
 
   /** Restart a room supervisor that died while its room is not paused. */
@@ -510,6 +538,7 @@ const serve = async ({
     server.close(() => {
       void rm(lockPath(root), { force: true }).finally(() => process.exit(EXIT.clean))
     })
+    also?.close()
     setTimeout(() => process.exit(EXIT.clean), 2_000).unref()
   }
   process.once("SIGINT", shutdown)
