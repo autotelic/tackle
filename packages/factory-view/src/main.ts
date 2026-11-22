@@ -73,6 +73,8 @@ const Activity = Schema.Struct({
   ageMinutes: Schema.NullOr(Schema.Finite),
   budget: Schema.Struct({ used: Schema.Finite, passesPerPhase: Schema.Finite }),
   phase: Schema.String,
+  state: Schema.Literals(["working", "queued", "blocked", "idle", "done"]),
+  blockedBy: Schema.Array(Schema.String),
 })
 const SessionSource = Schema.Union([Schema.Literal("herdr"), Schema.Literal("rex")])
 const Session = Schema.Struct({
@@ -283,6 +285,21 @@ const sessionRow = (h: HtmlBuilder<Message>, session: typeof Session.Type) =>
     ],
   )
 
+const stateName = (state: typeof Activity.Type.state): string => {
+  switch (state) {
+    case "working":
+      return "Working"
+    case "queued":
+      return "Queued"
+    case "blocked":
+      return "Blocked"
+    case "idle":
+      return "Idle"
+    case "done":
+      return "Done"
+  }
+}
+
 const formatDuration = (minutes: number | null): string => {
   if (minutes === null) return "unknown"
   if (minutes < 1) return "under a minute"
@@ -314,22 +331,25 @@ const activityBlock = (h: HtmlBuilder<Message>, activity: typeof Activity.Type |
   if (activity === undefined)
     return h.div([h.Class("activity")], [h.span([h.Class("muted")], ["No pass records yet"])])
   const pass = activity.lastPass
-  const running = pass?.status === "running"
+  const running = activity.state === "working"
   const waiting = activity.pending.length
-  const capped = waiting > 0 && activity.budget.used >= activity.budget.passesPerPhase
-  const stale = !running && !capped && waiting > 0 && (activity.ageMinutes ?? 0) >= 30
+  const capped = activity.blockedBy.some((reason) => reason.startsWith("budget:"))
+  const stale =
+    !running && activity.state !== "blocked" && waiting > 0 && (activity.ageMinutes ?? 0) >= 30
   const age = formatDuration(activity.ageMinutes)
   const status = running
-    ? "Working now"
+    ? "Pass in flight"
     : capped
-      ? "Paused: pass budget reached"
-      : pass === null
-        ? "No pass yet"
-        : waiting === 0
-          ? "Caught up"
-          : stale
-            ? "Idle for " + age
-            : "Last pass finished " + age + " ago"
+      ? "Blocked: pass budget"
+      : activity.state === "blocked"
+        ? "Blocked"
+        : activity.state === "done"
+          ? "Closed"
+          : activity.state === "queued"
+            ? "Waiting to start"
+            : pass === null
+              ? "No pass yet"
+              : "Nothing queued"
   const gate =
     pass?.quality === undefined
       ? "Gate: no quality record"
@@ -379,9 +399,11 @@ const activityBlock = (h: HtmlBuilder<Message>, activity: typeof Activity.Type |
                 " --passes-per-phase " +
                 (activity.budget.passesPerPhase + 5)
               : waiting === 0
-                ? "No pass is running. Nothing is waiting."
+                ? "No work is queued. " +
+                  phaseLabel(activity.phase) +
+                  " is not the same as done; close the phase only when its definition of done holds."
                 : stale
-                  ? "No pass is running. The queue has not moved."
+                  ? "No pass is running. The queue has not moved for " + age + "."
                   : "The workstream is caught up; the next event starts a pass.",
         ],
       ),
@@ -428,7 +450,15 @@ const workstreamCard = (
         [h.Class("workstream-head")],
         [
           h.div([], [h.h3([], [ws.label]), h.div([h.Class("mono muted")], [ws.id])]),
-          h.span([h.Class("phase-pill " + ws.phase)], [phaseLabel(ws.phase) ?? ws.phase]),
+          h.div(
+            [h.Class("pills")],
+            [
+              h.span([h.Class("phase-pill " + ws.phase)], [phaseLabel(ws.phase) ?? ws.phase]),
+              activity === undefined
+                ? h.span([], [])
+                : h.span([h.Class("state-pill " + activity.state)], [stateName(activity.state)]),
+            ],
+          ),
         ],
       ),
       h.div(

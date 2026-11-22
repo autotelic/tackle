@@ -45,6 +45,8 @@ const activity = (input: {
   ageMinutes: 1,
   budget: { used: 1, passesPerPhase: 5 },
   phase: "build",
+  state: "idle",
+  blockedBy: [],
 })
 
 const serve = (path: string, at = "2026-11-22T12:00:00.000Z") =>

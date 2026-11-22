@@ -184,6 +184,37 @@ button:hover {
   align-items: flex-start;
   gap: 10px;
 }
+.pills {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.state-pill {
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  background: #f1f3f5;
+  color: #43515f;
+  white-space: nowrap;
+}
+.state-pill.working {
+  background: #e8f3ec;
+  color: #236141;
+}
+.state-pill.queued {
+  background: #fdf3e6;
+  color: #7a4d16;
+}
+.state-pill.blocked {
+  background: #fceae6;
+  color: #963b2b;
+}
+.state-pill.done {
+  background: #e8f0fa;
+  color: #24537d;
+}
 .phase-pill {
   border-radius: 999px;
   padding: 3px 9px;

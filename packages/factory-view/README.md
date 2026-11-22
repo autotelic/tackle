@@ -56,6 +56,11 @@ so a repo is a section and its lanes are the states it currently occupies.
   `workstream=<id>` label, by cwd inside the workstream path, or by the words in
   its tab title; an unmatched session stays in the bottom list rather than
   being guessed onto a workstream.
+- **Phase vs state** — `phase` is the workstream's lifecycle (`reconcile`,
+  `build`, `land`, `done`). `state` is what is happening now: `working`,
+  `queued`, `blocked`, `idle`, or `done`. A build with no queued work is
+  `build · idle`, not budget-blocked; a build with queued work and no passes
+  left is `build · blocked` with `budget:passes 10/10`.
 - **Activity** — each card says when its last pass ran, whether it is stale,
   what that pass quality was, and what events are queued with their own
   summary. A build that has not passed for two hours is visibly stale instead

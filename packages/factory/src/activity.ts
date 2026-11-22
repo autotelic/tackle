@@ -69,6 +69,8 @@ export interface Activity {
   readonly ageMinutes: number | null
   readonly budget: { readonly used: number; readonly passesPerPhase: number }
   readonly phase: Workstream["phase"]
+  readonly state: "working" | "queued" | "blocked" | "idle" | "done"
+  readonly blockedBy: ReadonlyArray<string>
 }
 
 const minutesSince = (at: string, now: number): number =>
@@ -121,6 +123,23 @@ export const activityOf = async (input: {
   const latestEvent = events.at(-1)
   const lastAt = lastPass?.at ?? latestEvent?.at ?? input.record.checkpoint.at
   const used = await passesUsed({ id: input.record.id, home: input.home })
+  const capped = pending.length > 0 && used >= input.record.budgets.passesPerPhase
+  const state =
+    input.record.phase === "done"
+      ? ("done" as const)
+      : lastPass?.status === "running"
+        ? ("working" as const)
+        : input.record.phase === "blocked" || capped
+          ? ("blocked" as const)
+          : pending.length > 0
+            ? ("queued" as const)
+            : ("idle" as const)
+  const blockedBy =
+    input.record.phase === "blocked"
+      ? ["phase:blocked"]
+      : capped
+        ? ["budget:passes " + used + "/" + input.record.budgets.passesPerPhase]
+        : []
   return {
     workstream: input.record.id,
     lastPass,
@@ -137,5 +156,7 @@ export const activityOf = async (input: {
     ageMinutes: minutesSince(lastAt, input.now),
     budget: { used, passesPerPhase: input.record.budgets.passesPerPhase },
     phase: input.record.phase,
+    state,
+    blockedBy,
   }
 }
