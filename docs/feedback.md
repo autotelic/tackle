@@ -43,10 +43,11 @@ by a workflow's own `timeout-minutes` is that workflow's to fix.
 
 ## 3. The ledger
 
-| id                                      | fingerprint                                                                                                  | kind        | verdict      | route                                                     |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ----------- | ------------ | --------------------------------------------------------- |
-| `report-permissions-1862-1795303302409` | `conformance:gh run view --job 136075695353 --log:bf49d72626a9`                                              | conformance | `owner-repo` | permissions-1862: its `test-rest` shard                   |
-| `report-permissions-1862-1795303401889` | `conformance:gh api .../actions/jobs/136075695353; cd services/rest; npx mocha <shard 2 files>:7712854710d8` | conformance | `duplicate`  | cited: `report-permissions-1862-1795303302409` — same job |
+| id                                      | fingerprint                                                                                                                                                | kind        | verdict      | route                                                               |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------ | ------------------------------------------------------------------- |
+| `report-permissions-1862-1795303302409` | `conformance:gh run view --job 136075695353 --log:bf49d72626a9`                                                                                            | conformance | `owner-repo` | permissions-1862: its `test-rest` shard                             |
+| `report-permissions-1862-1795303401889` | `conformance:gh api .../actions/jobs/136075695353; cd services/rest; npx mocha <shard 2 files>:7712854710d8`                                               | conformance | `duplicate`  | cited: `report-permissions-1862-1795303302409` — same job           |
+| `report-permissions-1862-1795303503690` | `ergonomics:read a long file (docs/permissions-overhaul-tree/05-audit.md) through the agent's read tool, then paste the result into a commit:93a81a7d8cb3` | ergonomics  | `owner-repo` | permissions-1862: restore §16 from `580049816`, delete both notices |
 
 ### Case: the REST shard that named no test
 
@@ -101,6 +102,40 @@ wrong, and `docs/factory-plan.md` §Phase 4 makes the fix the workflow's.
 and this closes as a diagnosis); an `--exit` found in the workflow or a local wrapper (candidate one
 goes live again and the note reverses); or a second repo reporting the same "the red check says
 nothing" shape.
+
+### Case: the audit that pasted its own truncation notice
+
+`report-permissions-1862-1795303503690` asks for two different things at once: that a truncation
+notice never be taken for content, and that the tool mark it as metadata. The bytes are Pi's. The
+notice in the document — `[Showing lines 1-346 of 361 (50.0KB limit). Use offset=347 to continue.]`
+— is formatted by
+`node_modules/@earendil-works/pi-coding-agent/dist/core/tools/read.js`, against a 50KB
+`DEFAULT_MAX_BYTES`. A grep for `Showing lines` across this repo's `packages/*/src` finds nothing:
+no tool here reads a file on an agent's behalf, and a factory worker is a Pi session
+(`docs/worker-invocation.md` §1), so the notice was never ours to shape. "Clearly marked as tool
+metadata" is a change to the harness.
+
+Verdict `owner-repo`. The damaged artefact is the workstream's own evidence document, and the pass
+that pasted into it was its own; this repo read nothing wrongly and edits neither the document nor
+its commit. The repair needs no investigation, because the reconcile pass had already measured it —
+`docs/factory-receipt.md` records "two pasted truncation notices; section 16 is recoverable from
+`580049816`, sections 17–20 never existed" — and the report names the same mechanical repair:
+restore §16 from `580049816`, delete both notices. No mail was sent: the reporter is the owner, so a
+second copy of its own sentence is not a route, and `blocked: false` says it is proceeding.
+
+Not `not-a-defect`: the damage is real and sits in a governed document. Only its emitter is outside
+every tree.
+
+The one surface tackle owns is the prompt the kernel writes (`promptOf` in
+`packages/factory/src/kernel.ts`). A line there — a read of a long file ends in a notice, and the
+notice is not content — would blunt the class in every pass. `packages/factory/**` is a protected
+path in this workstream's record, so that is a gate decision rather than a trunk edit; the hazard is
+written into `docs/worker-invocation.md` §4 so the line is there when the prompt is next opened.
+
+**What would change it:** a second repo pasting the same notice (a shared hazard, which makes the
+prompt line the fix and the gate the place to decide it); a Pi release that machine-marks the
+truncation (this row closes as shipped upstream); or an owner regenerating the document from
+`580049816` instead of patching §16, which needs no ledger change.
 
 ## 4. What a verdict is not
 

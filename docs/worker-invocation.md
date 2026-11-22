@@ -94,6 +94,12 @@ What it must **not** contain: credentials (the environment carries them, and the
 conversation, an instruction to merge, or any lease/generation value — a worker that knows the generation will try
 to use it (`docs/seam.md` §3).
 
+One thing it **should** say when the task rewrites a document: a read of a long file ends in
+`[Showing lines …]`, a notice about the tool and never part of the file. Two of those notices were
+committed into `docs/permissions-overhaul-tree/05-audit.md` in workstream permissions-1862, one of
+them replacing the body of section 16 (`report-permissions-1862-1795303503690`, `docs/feedback.md`
+§3).
+
 ## 5. The gap this exposes: the human channel
 
 `run-session.ts` says it plainly: _“The human channel is the terminal until #14: answer ask_human questions on
