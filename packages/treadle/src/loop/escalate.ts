@@ -25,12 +25,19 @@ export function makeEscalate(deps: {
   return (issue, reason) =>
     Effect.gen(function* () {
       const url = yield* tryP(() => issueUrl(repoDir, config, issue.number))
-      const choice = yield* tryP(() =>
-        human.askWithOptions(
-          `Treadle parked issue #${issue.number} "${issue.title}" (${reason}).` +
-            (url ? `\n${url}` : ''),
-          ['Retry with a hint', 'Skip', 'Stop'],
+      // An unavailable human is not a stop. On an unattended run the channel rejects (stdin
+      // closed, Telegram unreachable); treating that as a failure killed the whole loop, so one
+      // unanswered question took down every other issue in the queue. A human who is not there
+      // is the Skip case: the issue stays parked and the loop moves on.
+      const choice: string | undefined = yield* Effect.catch(
+        tryP(() =>
+          human.askWithOptions(
+            `Treadle parked issue #${issue.number} "${issue.title}" (${reason}).` +
+              (url ? `\n${url}` : ''),
+            ['Retry with a hint', 'Skip', 'Stop'],
+          ),
         ),
+        () => Effect.succeed<string | undefined>(undefined),
       )
       if (choice === 'Stop') {
         deps.requestStop(`You chose Stop on issue #${issue.number}.`)
