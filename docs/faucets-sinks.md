@@ -87,3 +87,102 @@ home; `live` means a session exists now, otherwise fall back to a desk item.
   the item; never a general channel.)
 - What is the smallest first slice: one candidate record, one producer, one desk
   route?
+
+---
+
+## The factory's answer
+
+A read of `watch.ts`, `desk.ts`, `report.ts` and `journal.ts`. The roles hold. Two of the claims
+do not, and the gap in the last section is one field smaller than it looks. No code until the
+shape is accepted.
+
+### 1. The four classes are right about roles and silent about the real axis
+
+`watch.ts` is organised by **watermark discipline**, and the four classes cut across it:
+
+| class            | producer       | watermark                   | enforced where                           |
+| ---------------- | -------------- | --------------------------- | ---------------------------------------- |
+| ledger watcher   | `githubEvents` | `cursors.github`            | read at the top, advanced when `pass.ok` |
+| ledger watcher   | `baseEvents`   | `cursors.github` — same key | same                                     |
+| ledger watcher   | `linearEvents` | `cursors.linear`            | same                                     |
+| self-observation | `reportEvents` | **none**                    | the consumed-id set and nothing else     |
+| return edge      | `deskEvents`   | `updatedAt` fence           | `answer.at > record.updatedAt`           |
+
+Three local corrections:
+
+- **`baseEvents` shares one cursor with `githubEvents`.** They are mutually exclusive by accident
+  (`pr === undefined` versus `delivery === "trunk"`), not by construction, and `watchOnce` writes
+  the same `github` key for both `github:` and `base:` ids. Two cursors — or one watcher matching
+  on `delivery` — would say what the code already means.
+- **`reportEvents` fails `docs/signals.md` §2's own test**: "a faucet that cannot say when it last
+  looked is not a faucet." It re-reads every `.json` in `~/.factory/reports` on every poll and
+  leans on event ids already being consumed. The watermark it should use exists, is set by
+  `recordOf`, and is read by nobody: this workstream's record carries
+  `cursors.reports: "2026-11-22T00:15:42.381Z"`. One line makes the class true.
+- **The reports source is only wired for trunk delivery.** `recordOf` sets `sources` only when
+  `delivery === "trunk"`, so a PR-delivery workstream has no self-observation at all. That is a
+  leftover, not a decision; the map should not describe the class as available.
+
+`shouldWake` is also not a row, and it is where the classes actually diverge. `deskEvents` is the
+only producer that mutates `record.phase` _before_ the decision (`choice === "resume"` unblocks),
+which is the concrete evidence that it is not a faucet. And `baseEvents` sets `actor: "base"` so
+a bot-authored commit cannot silence its own wake — a ledger watcher whose actor is unusable as
+provenance.
+
+### 2. Candidate first — but `confidence` has to be a validator, not a field
+
+Agreed, and the code says why: the pipeline is already `WatchEvent → shouldWake → pass`, and
+`payload` is exactly the slot a candidate goes in. A candidate is the payload that has stopped
+being an observation. Nothing else moves.
+
+Four conditions on "first", or the shortcut costs more than it saves:
+
+- **One shape, or the fork returns.** `docs/signals.md` §4 already proposes a candidate — nested as
+  `experience.report.issues[]`. A shared candidate _beside_ it means the experience faucet ships
+  with two shapes, which is the outcome this document exists to prevent. The shared candidate is
+  `issues[]` hoisted to a record; `report` is already most of it.
+- **`confidence` must reject, not record.** Before the ship join, a candidate can only be
+  `inference` or `unknown`; `confidence: "evidence"` with no `attribution.sha` should be a decode
+  failure. Otherwise "candidate first" commits a body of weaker evidence the join can never
+  upgrade, and §5's ratchet (`subject + metric + threshold`) silently spans two kinds of proof.
+- **`fingerprint` must absorb the baseline identity and the observer.** `fingerprintOf` is
+  `kind + command + first failing line` and omits `workstream`, so the same complaint from two
+  foremen collapses to one candidate with one `attribution` and no record of the second sighting.
+  Either `attribution` is a list, or the observer is in the fingerprint. `report` has this problem
+  today and hides it.
+- **About versus observed-by.** `reportEvents` skips reports addressed to its own workstream, so
+  `attribution.workstream` ("whose work this is") and the observer ("who saw it") are never the
+  same value, and only the first is in the record — the second arrives as `event.actor`.
+
+The join is expensive to build first, not after: `work.ship` is docs-only (`signals.md`,
+`shop.md`, `at-seam.md`; the only code occurrence is a string in `mailbox-server` fixtures). So
+building it first means building a producer _and_ a record type before anything is attributable.
+Smallest first slice: **one candidate record, `reportEvents` as its first producer (it already
+runs, unlike OTLP), one desk item per candidate.**
+
+### 3. Attended in the session, unattended in the item — via different mechanisms
+
+Agreed, and `desk.ts` shows the two cannot share one:
+
+- **`answerDesk` is the wall that keeps the return edge clean.** `DeskAnswer.choice` is required and
+  checked against `item.choices`. That check — not `deskEvents` — is what makes "only answers
+  return as events" true today. Free text must never be added to `DeskAnswer`.
+- **An unattended open question cannot be a desk item yet.** An item is answerable only with one of
+  its `choices`; a zero-choice item raises fine and can never be closed. That is the one schema
+  change this class needs — and it must land on the item, not on the answer.
+- **Notes cannot live in the answer file.** `deskAnswerFile` is a single slot: `answerDesk`
+  overwrites it and preserves only `supersedes: previous.at`. "Later notes attach to the closed
+  item" needs an append-only sibling (`.notes.jsonl`, the discipline `events.ts` already uses), and
+  `listDesk` must keep deciding openness by answer presence, or closed items reappear as pending.
+- **Attended questions need a table, not a file.** `journal.ts` has exactly one table,
+  `passes(pass, at, status)`. Recording an ask/answer pair so attribution survives is
+  `create table if not exists questions(...)` in the same database — not a second journal.
+
+No general desk channel. Agreed without qualification.
+
+### What this pass did not decide
+
+Whether `attribution` becomes a list or the fingerprint gains an observer (both fix dedupe; only
+one is compatible with `report.fingerprint` staying stable). That is the question worth answering
+before the candidate record is written, because it is the one thing that cannot be added later
+without orphaning evidence already recorded.
