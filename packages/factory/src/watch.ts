@@ -177,6 +177,9 @@ export const deskEvents = async (input: {
   for (const answer of await listAnswers({ home: input.home })) {
     const item = await readDesk({ id: answer.item, home: input.home })
     if (item === undefined || item.workstream !== input.record.id) continue
+    // An answer older than the record's last transition was already accounted for;
+    // replaying it on every poll would wake a pass that the human had already used.
+    if (Date.parse(answer.at) <= Date.parse(input.record.updatedAt)) continue
     events.push({
       id: "desk:" + item.id + ":" + answer.at,
       kind: "desk",
