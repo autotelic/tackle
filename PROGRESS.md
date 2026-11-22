@@ -20,6 +20,15 @@
   `factory-view/test/{timeline,view}.test.ts` (offsets, labels, healthy vs
   stalled, ship, degradation).
 
+## Harness note
+
+- This dogfood's `loop.config.ts` had no vitest Check step, so the Feature-done
+  guard (`requireNewTests`) looked for an absent `.treadle/reports/unit.json`
+  and counted a green pass as no work. The report is now built from the
+  factory-view suite (9 tests, all passing) and the excluded loop config carries
+  a `unit` step that writes it. A regenerated config must keep that step, or the
+  guard will see the same empty branch.
+
 ## Left
 
 - A ship marker uses the done phase's `updatedAt`; the kernel has no dedicated
