@@ -17,6 +17,7 @@ import { Effect } from 'effect'
 import { createIssueAnswerHandler, watchAnswers } from './answer-watcher.ts'
 import { loadConfig } from './config.ts'
 import { createHumanChannel, type HumanChannel } from './human-channel.ts'
+import { telePiConfigExists } from './telepi.ts'
 import { makeEscalate } from './loop/escalate.ts'
 import { appendQa, pickNextIssue, runIssueLoop } from './loop/issue-loop.ts'
 import { buildLoopMachine, type LoopMachineDeps } from './loop/machine.ts'
@@ -69,8 +70,14 @@ const liveQuestionIds = new Set<string>()
 const human: HumanChannel = await createHumanChannel(args.channel, undefined, {
   liveIds: liveQuestionIds,
 })
+// Telegram only when it is the chosen channel. `--channel terminal` still tried to send, so every
+// unattended run logged `telegram notify failed: ENOENT ~/.config/telepi/config.env` on every
+// notification — noise that trains people to ignore the log line that would matter.
+const telegramEnabled =
+  args.channel === 'telepi' || (args.channel === undefined && (await telePiConfigExists()))
 const notify = async (text: string) => {
   console.log(`[notify] ${text}`)
+  if (!telegramEnabled) return
   try {
     const telePi = await loadTelePiConfig()
     await sendTelegramMessage(telePi, text)

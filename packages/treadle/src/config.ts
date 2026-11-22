@@ -99,6 +99,14 @@ export type LoopConfig = {
    */
   model?: { provider: string; id: string }
   checks: CheckStep[]
+  /**
+   * Run after `install` and before the Checks, in the issue's worktree.
+   *
+   * A fresh worktree has no build output — `dist/` is gitignored in most repos — so a check that
+   * runs a tool from its own `bin/` fails until the workspace is built. Building is not a check:
+   * a check asks whether the work is good, this asks whether the harness can run at all.
+   */
+  build?: string
   protectedPaths: string[]
   featureDone: FeatureDoneGuard
   budgets: Budgets

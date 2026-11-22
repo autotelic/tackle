@@ -315,7 +315,10 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
         yield* tryP(() => rm(join(worktreeDir, 'PROGRESS.md'), { force: true }))
       }
     }
-    yield* tryP(() => installDeps(worktreeDir))
+    yield* tryP(() => runStep(worktreeDir, config.install ?? 'true'))
+    // Hoisted: the narrowing does not survive into the arrow.
+    const build = config.build
+    if (build !== undefined) yield* tryP(() => runStep(worktreeDir, build))
     const vision = yield* tryP(() => readFile(join(worktreeDir, 'VISION.md'), 'utf8'))
 
     // Where the branch stands, deterministically from git: sessions burn
@@ -805,8 +808,16 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
   })
 }
 
-async function installDeps(worktreeDir: string): Promise<void> {
-  await execFileAsync('zsh', ['-lic', 'pnpm install --frozen-lockfile'], {
+/**
+ * Run a step from the config in the issue's worktree.
+ *
+ * `sh -c`, never `zsh -lic`: a login interactive shell needs a terminal it does not have on an
+ * unattended run, and its startup files leak `can't change option: zle` into every log. The command
+ * is the repo's own — hardcoding `pnpm install` made `install` in the config a lie, which is how a
+ * repo that has to build before its checks could never say so.
+ */
+async function runStep(worktreeDir: string, command: string): Promise<void> {
+  await execFileAsync('sh', ['-c', command], {
     cwd: worktreeDir,
     env: { ...process.env, CI: 'true' },
   })
