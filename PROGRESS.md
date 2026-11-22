@@ -7,16 +7,20 @@
   opens on a tap. Hover styling lives inside `@media (hover: hover)`, so no touch device depends on it.
 - A workstream's detail holds its activity and its live sessions. Each session shows its attach command
   (`hc attach …` / `rex block focus …`) as selectable text beside `Open` / `Copy`.
-- `Copy` tries `navigator.clipboard.writeText` through a guarded `Option`. When the API is missing or the
-  write rejects (iOS Safari outside a secure context), the command text is selected instead and the notice
-  says so. The fallback is `src/copy.ts` (pure, injectable) driven by `CopyCommand` in `src/main.ts`.
-- `packages/factory-view/README.md` documents `board up --port 4780` and `tailscale serve --bg 4780`, and why
-  the tailnet URL matters: `tailscale serve` gives the page the secure origin the clipboard API needs.
-- Tests run with `node --test` (no new dependency): `packages/factory-view/test/{view,copy,mobile}.test.ts`.
-  The view tests drive the real `view`/`update` through Foldkit Scene (repo panel, workstream toggle, desk
-  link, `Copy` dispatch, both notices). The copy tests cover copied / selected / unavailable. The mobile
-  tests assert the shipped stylesheet's 44px targets, hover media query, `user-select: all` and 390px
-  single-column rule. `board/test/cli.test.ts` fetches `/factory` and the JS asset it references.
+- `Copy` tries `navigator.clipboard.writeText` through a guarded `Option`. When the API is missing, the
+  write rejects, or it throws synchronously (iOS Safari outside a secure context), the command text is
+  selected instead and the notice says so. The fallback is `src/copy.ts` (pure, injectable) driven by
+  `CopyCommand` in `src/main.ts`.
+- `packages/factory-view/README.md` documents `board up --port 4780` and `tailscale serve --bg 4780`, and
+  why the tailnet URL matters: `tailscale serve` gives the page the secure origin the clipboard API needs.
+- Tests run under **Vitest** (the loop's `unit` Check invokes `vitest run --root packages/factory-view` and
+  reads `.treadle/reports/unit.json`). The package declares `vitest` from the workspace catalog, so
+  `pnpm --filter @autotelic/factory-view test` and the loop's unit Check are the same runner.
+  `test/{view,copy,mobile}.test.ts` cover: repo panel, workstream open/collapse, desk link, the copy-target
+  id on the rendered command, rex and herdr attach commands, both notices, the presence error state,
+  copied/selected/unavailable copy outcomes (including a synchronous clipboard throw), the 44px targets,
+  hover-media containment, `user-select: all`, the 390px single column, wrapping rows, and
+  `overflow-wrap` on identifiers. `board/test/cli.test.ts` fetches `/factory` and the JS asset it references.
 
 ## Left
 
@@ -31,7 +35,7 @@
 
 ## Next session
 
-- The loop's Checks here are `build`, `jig` and `view-build`; they do not run package tests. Run
-  `pnpm --filter @autotelic/factory-view test` before merging.
+- Run `pnpm --filter @autotelic/factory-view test` (Vitest) before merging; the loop's `unit` Check runs the
+  same files and writes `.treadle/reports/unit.json`.
 - `packages/factory-view/dist` is generated and untracked; the board serves it, so rebuild the view after
   changing `src/` (`pnpm --filter @autotelic/factory-view build`).

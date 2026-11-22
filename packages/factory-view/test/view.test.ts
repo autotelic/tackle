@@ -1,12 +1,15 @@
 /* oxlint-disable plumb/prefer-property-tests -- one fixed presence document renders the disclosure states. */
-import { test } from "node:test"
 import { Scene } from "foldkit/test"
+import { test } from "vitest"
 import { CopyCommand, Message, init, update, view, type Model } from "../src/main.ts"
 
 /**
  * A presence document shaped like the board's `/presence`: two repos, one
  * workstream each, one matched Herdr session, one reply-less desk question.
  */
+const rexSession = { source: "rex", address: "b7", where: "perms-1862", workstream: "perms-1862" }
+const noRexSessions: ReadonlyArray<typeof rexSession> = []
+
 const presence = {
   factory: {
     workstreams: [
@@ -70,14 +73,24 @@ const presence = {
         { source: "herdr", address: "t1d", where: "perms-1862", workstream: "perms-1862" },
       ],
     },
-    rex: { available: true, sessions: [] },
+    rex: { available: true, sessions: noRexSessions },
   },
 }
 
 const modelAt = (value: typeof presence): Model =>
   update(init().model, Message.Settled({ value, error: null })).model
 
-void test("a phone sees the repo panels, and a workstream's detail is one tap away", () => {
+const withRex = {
+  ...presence,
+  sessions: {
+    ...presence.sessions,
+    rex: { available: true, sessions: [rexSession] },
+  },
+}
+
+const openDetail = Scene.click(Scene.role("button", { name: "Show Permissions overhaul details" }))
+
+test("a phone sees the repo panels, and a workstream's detail is one tap away", () => {
   Scene.scene(
     { update, view },
     Scene.given(modelAt(presence)),
@@ -94,7 +107,7 @@ void test("a phone sees the repo panels, and a workstream's detail is one tap aw
       "aria-expanded",
       "false",
     ),
-    Scene.click(Scene.role("button", { name: "Show Permissions overhaul details" })),
+    openDetail,
     Scene.expect(Scene.role("button", { name: "Hide Permissions overhaul details" })).toHaveAttr(
       "aria-expanded",
       "true",
@@ -104,7 +117,7 @@ void test("a phone sees the repo panels, and a workstream's detail is one tap aw
   )
 })
 
-void test("a repo collapses on a tap, with no hover in the path", () => {
+test("a repo collapses on a tap, with no hover in the path", () => {
   Scene.scene(
     { update, view },
     Scene.given(modelAt(presence)),
@@ -119,7 +132,7 @@ void test("a repo collapses on a tap, with no hover in the path", () => {
   )
 })
 
-void test("a desk question opens the workstream it names", () => {
+test("a desk question opens the workstream it names", () => {
   Scene.scene(
     { update, view },
     Scene.given(modelAt(presence)),
@@ -130,11 +143,34 @@ void test("a desk question opens the workstream it names", () => {
   )
 })
 
-void test("Copy dispatches the attach command, and the outcome lands in the notice", () => {
+test("the copy fallback targets the command the Copy button shows", () => {
+  // The selection fallback addresses the rendered command by id, so the id on
+  // the code element and the target in ClickedCopy must be the same string.
   Scene.scene(
     { update, view },
     Scene.given(modelAt(presence)),
-    Scene.click(Scene.role("button", { name: "Show Permissions overhaul details" })),
+    openDetail,
+    Scene.expect(Scene.selector("#copy-herdr-t1d")).toExist(),
+    Scene.expect(Scene.selector("#copy-herdr-t1d")).toHaveText("hc attach t1d"),
+  )
+})
+
+test("a rex session shows its own attach command, not the herdr one", () => {
+  Scene.scene(
+    { update, view },
+    Scene.given(modelAt(withRex)),
+    openDetail,
+    Scene.expect(Scene.text("rex block focus b7")).toExist(),
+    Scene.expect(Scene.role("button", { name: "Copy the attach command for b7" })).toExist(),
+    Scene.expect(Scene.selector("#copy-rex-b7")).toHaveText("rex block focus b7"),
+  )
+})
+
+test("Copy dispatches the attach command, and the outcome lands in the notice", () => {
+  Scene.scene(
+    { update, view },
+    Scene.given(modelAt(presence)),
+    openDetail,
     Scene.click(Scene.role("button", { name: "Copy the attach command for t1d" })),
     Scene.Command.resolve(
       CopyCommand({ text: "hc attach t1d", target: "copy-herdr-t1d" }),
@@ -144,16 +180,24 @@ void test("Copy dispatches the attach command, and the outcome lands in the noti
   )
 })
 
-void test("a selection fallback is reported as a selection, not a copy", () => {
+test("a selection fallback is reported as a selection, not a copy", () => {
   Scene.scene(
     { update, view },
     Scene.given(modelAt(presence)),
-    Scene.click(Scene.role("button", { name: "Show Permissions overhaul details" })),
+    openDetail,
     Scene.click(Scene.role("button", { name: "Copy the attach command for t1d" })),
     Scene.Command.resolve(
       CopyCommand({ text: "hc attach t1d", target: "copy-herdr-t1d" }),
       Message.Selected(),
     ),
     Scene.expect(Scene.text("Selected the command — copy it from the selection")).toExist(),
+  )
+})
+
+test("a failed presence read renders the error instead of a blank page", () => {
+  Scene.scene(
+    { update, view },
+    Scene.given(update(init().model, Message.Settled({ value: null, error: "HTTP 500" })).model),
+    Scene.expect(Scene.text("Could not read /presence: HTTP 500")).toExist(),
   )
 })

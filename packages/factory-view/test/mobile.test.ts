@@ -1,7 +1,6 @@
 /* oxlint-disable plumb/prefer-property-tests -- the subject is one committed stylesheet, not a generated input. */
-import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
-import { test } from "node:test"
+import { expect, test } from "vitest"
 
 const css = readFileSync(new URL("../src/style.css", import.meta.url), "utf8")
 
@@ -26,33 +25,63 @@ const blockAt = (source: string, marker: string): string => {
  * asserted where it lives: the stylesheet that ships. These rules are the ones
  * the issue turns on, and each would fail if the rule were dropped.
  */
-void test("hover is an enhancement: every :hover rule is inside @media (hover: hover)", () => {
+test("hover is an enhancement: every :hover rule is inside @media (hover: hover)", () => {
   const pointer = blockAt(css, "@media (hover: hover)")
-  assert.ok(pointer.includes(":hover"), "the pointer block is where hover lives")
-  assert.equal(css.replace(pointer, "").includes(":hover"), false)
+  expect(pointer).toContain(":hover")
+  expect(css.replace(pointer, "")).not.toContain(":hover")
 })
 
-void test("a button is at least a 44px thumb target", () => {
+test("a button is at least a 44px thumb target", () => {
   const base = blockAt(css, "button {")
-  assert.match(base, /min-height:\s*44px/)
-  assert.match(base, /min-width:\s*44px/)
+  expect(base).toMatch(/min-height:\s*44px/)
+  expect(base).toMatch(/min-width:\s*44px/)
 })
 
-void test("the command is selectable text, which is the iOS copy fallback", () => {
+test("the command is selectable text, which is the iOS copy fallback", () => {
   const command = blockAt(css, ".session-command")
-  assert.match(command, /user-select:\s*all/)
-  assert.match(command, /-webkit-user-select:\s*all/)
+  expect(command).toMatch(/user-select:\s*all/)
+  expect(command).toMatch(/-webkit-user-select:\s*all/)
 })
 
-void test("390px is one column", () => {
+test("390px is one column", () => {
+  expect(css).toContain("@media (max-width: 430px)")
   const narrow = blockAt(css, "@media (max-width: 430px)")
-  assert.ok(narrow.length > 0)
-  assert.match(blockAt(narrow, ".state-machine .states"), /grid-template-columns:\s*1fr/)
-  assert.match(blockAt(narrow, ".shell"), /padding:\s*12px/)
+  expect(narrow.length).toBeGreaterThan(0)
+  expect(blockAt(narrow, ".state-machine .states")).toMatch(/grid-template-columns:\s*1fr/)
+  expect(blockAt(narrow, ".shell")).toMatch(/padding:\s*12px/)
 })
 
-void test("nothing overflows its column silently", () => {
-  for (const selector of [".repo-name", ".workstream-name", ".session-command", ".report-body"]) {
-    assert.match(blockAt(css, selector), /overflow-wrap:\s*anywhere/, selector)
+test("at 390px the workstream metadata is a column, not a wide flex row", () => {
+  // 760px is where the summary's repo/branch/PR/checkpoint row stops fitting.
+  // Below it the fields stack, so a long repo or branch name cannot push the
+  // page sideways.
+  const tablet = blockAt(css, "@media (max-width: 760px)")
+  expect(blockAt(tablet, ".workstream-meta")).toMatch(/grid-template-columns:\s*1fr/)
+})
+
+test("every horizontal row wraps or stacks, so nothing scrolls sideways", () => {
+  // A flex row that neither wraps nor shrinks to a column overflows the
+  // viewport as soon as one identifier is longer than the phone is wide.
+  for (const selector of [
+    ".header",
+    ".activity-head",
+    ".activity-meta",
+    ".session-main",
+    ".report-head",
+  ]) {
+    expect(blockAt(css, selector), selector).toMatch(/flex-wrap:\s*wrap/)
+  }
+  expect(blockAt(css, ".session")).toMatch(/flex-direction:\s*column/)
+})
+
+test("nothing overflows its column silently", () => {
+  for (const selector of [
+    ".repo-name",
+    ".workstream-name",
+    ".workstream-meta > *",
+    ".session-command",
+    ".report-body",
+  ]) {
+    expect(blockAt(css, selector), selector).toMatch(/overflow-wrap:\s*anywhere/)
   }
 })
