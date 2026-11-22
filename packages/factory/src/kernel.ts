@@ -1,7 +1,7 @@
 import { spawn, spawnSync } from "node:child_process"
 import { existsSync } from "node:fs"
 import { homedir } from "node:os"
-import { mkdir, readFile, readdir, writeFile } from "node:fs/promises"
+import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { Match } from "effect"
 import * as Option from "effect/Option"
@@ -349,13 +349,39 @@ const runInTerminal = async (input: {
  * @param input - the workstream, the worker command, and the timestamp.
  * @returns the receipt and checkpoint, or the refusal.
  */
-export const runPass = async (input: {
+interface RunPassInput {
   readonly id: string
   readonly worker: string
   readonly at: string
   readonly home?: string | undefined
   readonly eventIds?: ReadonlyArray<string>
-}): Promise<PassOutcome> => {
+}
+
+const passLock = (input: { readonly id: string; readonly home?: string | undefined }): string =>
+  join(workstreamDir(input.home), input.id + ".pass.lock")
+
+/** Acquire the per-workstream pass lock; a live holder is a refusal, a dead one is stale. */
+const acquirePassLock = async (input: {
+  readonly id: string
+  readonly home?: string | undefined
+}): Promise<number | undefined> => {
+  const path = passLock(input)
+  await mkdir(workstreamDir(input.home), { recursive: true })
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const acquired = await writeFile(path, String(process.pid), { flag: "wx" }).then(
+      () => true,
+      () => false,
+    )
+    if (acquired) return undefined
+    const text = await readFile(path, "utf8").catch(() => undefined)
+    const pid = text === undefined ? NaN : Number(text)
+    if (Number.isFinite(pid) && alive(pid)) return pid
+    await rm(path, { force: true })
+  }
+  return process.pid
+}
+
+const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
   const record = await readWorkstream({ id: input.id, home: input.home })
   if (record === undefined) return { ok: false, reason: "WorkstreamNotFound" }
   if (record.phase === "done") return { ok: false, reason: "WorkstreamDone" }
@@ -580,4 +606,14 @@ export const runPass = async (input: {
     home: input.home,
   })
   return { ok: true, receipt: done, checkpoint: captured.value.sha }
+}
+
+export const runPass = async (input: RunPassInput): Promise<PassOutcome> => {
+  const held = await acquirePassLock({ id: input.id, home: input.home })
+  if (held !== undefined) return { ok: false, reason: "PassRunning: lock held by " + held }
+  try {
+    return await runPassInner(input)
+  } finally {
+    await rm(passLock(input), { force: true })
+  }
 }
