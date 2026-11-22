@@ -248,27 +248,35 @@ export const watchOnce = async (input: {
   ]
   const candidates = input.events ?? polled
   const existing = await readEvents({ id: input.id, home: input.home })
-  const known = new Set(existing.map((event) => event.id))
+  const known = new Map(existing.map((event) => [event.id, event]))
+  const queued = new Map(candidates.map((event) => [event.id, event]))
+  for (const event of existing) {
+    if (event.status !== "pending" || queued.has(event.id)) continue
+    queued.set(event.id, { id: event.id, kind: event.kind, at: event.at, payload: event.payload })
+  }
   const consumed = existing.filter((event) => event.status === "consumed").map((event) => event.id)
   const used = await passesUsed({ id: input.id, home: input.home })
   const appended: Array<string> = []
   const passes: Array<PassOutcome> = []
-  for (const event of [...candidates].sort(
+  for (const event of [...queued.values()].sort(
     (left, right) => Date.parse(left.at) - Date.parse(right.at),
   )) {
-    if (known.has(event.id)) continue
+    const previous = known.get(event.id)
+    if (previous?.status === "consumed") continue
     const decision = shouldWake({
       record,
       event,
       consumed,
       passesUsed: used + passes.length,
     })
-    await appendEvent({
-      id: input.id,
-      home: input.home,
-      event: { ...event, status: "pending" },
-    })
-    appended.push(event.id)
+    if (previous === undefined) {
+      await appendEvent({
+        id: input.id,
+        home: input.home,
+        event: { ...event, status: "pending" },
+      })
+      appended.push(event.id)
+    }
     if (!decision.wake) continue
     const pass = await runPass({
       id: input.id,
