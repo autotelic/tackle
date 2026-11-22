@@ -283,11 +283,6 @@ button:hover {
   color: #5f6d7a;
   overflow-wrap: anywhere;
 }
-.activity-empty {
-  margin: 4px 0;
-  font-size: 12px;
-  color: #65717e;
-}
 .activity-meta {
   display: flex;
   flex-wrap: wrap;

@@ -385,29 +385,31 @@ const activityBlock = (h: HtmlBuilder<Message>, activity: typeof Activity.Type |
                   : "The workstream is caught up; the next event starts a pass.",
         ],
       ),
-      activity.pending.length === 0
-        ? h.p([h.Class("activity-empty")], ["Nothing is waiting."])
-        : h.div(
-            [h.Class("activity-queue")],
-            [
-              h.div(
-                [h.Class("queue-count")],
-                [
-                  activity.pending.length +
-                    (activity.pending.length === 1 ? " item is waiting" : " items are waiting"),
-                ],
-              ),
-              ...activity.pending.map((event) =>
-                h.details(
-                  [h.Class("queue-item")],
+      ...(activity.pending.length === 0
+        ? []
+        : [
+            h.div(
+              [h.Class("activity-queue")],
+              [
+                h.div(
+                  [h.Class("queue-count")],
                   [
-                    h.summary([], [queueTitle(event)]),
-                    h.p([h.Class("queue-detail")], [event.summary ?? "No further detail."]),
+                    activity.pending.length +
+                      (activity.pending.length === 1 ? " item is waiting" : " items are waiting"),
                   ],
                 ),
-              ),
-            ],
-          ),
+                ...activity.pending.map((event) =>
+                  h.details(
+                    [h.Class("queue-item")],
+                    [
+                      h.summary([], [queueTitle(event)]),
+                      h.p([h.Class("queue-detail")], [event.summary ?? "No further detail."]),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ]),
       h.div([h.Class("activity-meta")], [h.span([], [gate])]),
     ],
   )
