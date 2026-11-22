@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process"
 import { existsSync } from "node:fs"
+import { homedir } from "node:os"
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { Match } from "effect"
@@ -203,6 +204,69 @@ export const isProtectedPath: Predicate.Predicate<{
       : input.path === pattern,
   )
 
+const hcBinary = (): string | undefined => {
+  if (process.env.HC_BIN !== undefined && process.env.HC_BIN !== "") return process.env.HC_BIN
+  for (const dir of (process.env.PATH ?? "").split(":")) {
+    if (dir === "") continue
+    const candidate = join(dir, "hc")
+    if (existsSync(candidate)) return candidate
+  }
+  const local = join(homedir(), ".local", "bin", "hc")
+  return existsSync(local) ? local : undefined
+}
+
+const shellQuote = (value: string): string => "'" + value.replaceAll("'", "'\\''") + "'"
+
+/**
+ * Run the worker inside a Herdr terminal when hc is available. The terminal carries
+ * the workstream label, so the factory panel can focus the live pass instead of guessing.
+ */
+const runInTerminal = async (input: {
+  readonly record: Workstream
+  readonly pass: number
+  readonly worker: string
+  readonly env: NodeJS.ProcessEnv
+  readonly wallMs: number
+}) => {
+  const hc = hcBinary()
+  if (hc === undefined) return undefined
+  const directory = join(factoryHome(), "workers")
+  await mkdir(directory, { recursive: true, mode: 0o700 })
+  const script = join(directory, input.record.id + "-" + input.pass + ".sh")
+  const exports = Object.entries(input.env)
+    .filter((entry): entry is [string, string] => entry[1] !== undefined)
+    .map(([key, value]) => "export " + key + "=" + shellQuote(value))
+    .join("\n")
+  await writeFile(script, "#!/bin/sh\n" + exports + "\nexec " + input.worker + "\n", {
+    mode: 0o700,
+  })
+  const name = ("factory-" + input.record.id + "-" + input.pass).slice(0, 32)
+  return spawnSync(
+    hc,
+    [
+      "run",
+      "--name",
+      name,
+      "--label",
+      "workstream=" + input.record.id,
+      "--label",
+      "factory=worker",
+      "--cwd",
+      input.record.path,
+      "--no-parent",
+      "--outlive-parent",
+      "--",
+      script,
+    ],
+    {
+      cwd: input.record.path,
+      stdio: "inherit",
+      timeout: input.wallMs,
+      killSignal: "SIGTERM",
+    },
+  )
+}
+
 /**
  * Run one pass over the pending events. The pass is charged when it starts, not when it ends.
  *
@@ -254,22 +318,31 @@ export const runPass = async (input: {
   await writeReceipt({ id: input.id, receipt, home: input.home })
 
   const wallMs = record.budgets.wallMinutesPerPass * 60_000
-  const result = spawnSync(input.worker, {
-    cwd: record.path,
-    shell: true,
-    stdio: "inherit",
-    timeout: wallMs,
-    killSignal: "SIGTERM",
-    env: {
-      ...process.env,
-      FACTORY_WORKSTREAM: record.id,
-      FACTORY_PROJECT: record.project,
-      FACTORY_PHASE: record.phase,
-      FACTORY_EVENTS: JSON.stringify(events),
-      FACTORY_REPORT_DIR: join(factoryHome(), "reports"),
-      FACTORY_PROMPT: promptOf({ record, events }),
-    },
-  })
+  const workerEnv = {
+    ...process.env,
+    FACTORY_WORKSTREAM: record.id,
+    FACTORY_PROJECT: record.project,
+    FACTORY_PHASE: record.phase,
+    FACTORY_EVENTS: JSON.stringify(events),
+    FACTORY_REPORT_DIR: join(factoryHome(), "reports"),
+    FACTORY_PROMPT: promptOf({ record, events }),
+  }
+  const result =
+    (await runInTerminal({
+      record,
+      pass,
+      worker: input.worker,
+      env: workerEnv,
+      wallMs,
+    })) ??
+    spawnSync(input.worker, {
+      cwd: record.path,
+      shell: true,
+      stdio: "inherit",
+      timeout: wallMs,
+      killSignal: "SIGTERM",
+      env: workerEnv,
+    })
 
   if (result.status !== 0) {
     const timedOut =
