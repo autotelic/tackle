@@ -222,6 +222,46 @@ button:hover {
   color: #4c5a67;
   font-size: 12px;
 }
+.activity {
+  margin-top: 10px;
+  border: 1px solid #edf1f4;
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #fbfcfd;
+  display: grid;
+  gap: 4px;
+}
+.activity.stale {
+  border-color: #e7c4bc;
+  background: #fff8f6;
+}
+.activity.running {
+  border-color: #bfdcc9;
+  background: #f3faf6;
+}
+.activity-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.activity-status {
+  font-size: 13px;
+  font-weight: 600;
+}
+.activity-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  color: #65717e;
+  font-size: 11px;
+}
+.stale-flag {
+  color: #a33a2b;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
 .session-list {
   margin-top: 12px;
   border-top: 1px solid #edf1f4;

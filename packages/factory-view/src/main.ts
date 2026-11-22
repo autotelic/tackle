@@ -33,6 +33,45 @@ const Report = Schema.Struct({
   at: Schema.String,
   blocked: Schema.Boolean,
 })
+const Quality = Schema.Struct({
+  available: Schema.Boolean,
+  errors: Schema.Finite,
+  warnings: Schema.Finite,
+  note: Schema.String,
+})
+const ActivityPass = Schema.Struct({
+  pass: Schema.Finite,
+  at: Schema.String,
+  status: Schema.String,
+  phase: Schema.String,
+  events: Schema.Array(Schema.String),
+  checkpoint: Schema.optional(Schema.String),
+  exit: Schema.optional(Schema.Finite),
+  quality: Schema.optional(
+    Schema.Struct({ before: Quality, after: Quality, regressed: Schema.Boolean }),
+  ),
+})
+const Activity = Schema.Struct({
+  workstream: Schema.String,
+  lastPass: Schema.NullOr(ActivityPass),
+  pending: Schema.Array(
+    Schema.Struct({
+      id: Schema.String,
+      kind: Schema.String,
+      at: Schema.String,
+      summary: Schema.optional(Schema.String),
+    }),
+  ),
+  lastEvent: Schema.NullOr(
+    Schema.Struct({
+      id: Schema.String,
+      kind: Schema.String,
+      at: Schema.String,
+      summary: Schema.optional(Schema.String),
+    }),
+  ),
+  ageMinutes: Schema.NullOr(Schema.Finite),
+})
 const SessionSource = Schema.Union([Schema.Literal("herdr"), Schema.Literal("rex")])
 const Session = Schema.Struct({
   source: SessionSource,
@@ -49,6 +88,7 @@ const SessionSourceView = Schema.Struct({
 const Presence = Schema.Struct({
   factory: Schema.Struct({
     workstreams: Schema.Array(Workstream),
+    activity: Schema.Array(Activity),
     desk: Schema.Array(Desk),
     reports: Schema.Array(Report),
   }),
@@ -241,9 +281,88 @@ const sessionRow = (h: HtmlBuilder<Message>, session: typeof Session.Type) =>
     ],
   )
 
+const formatAge = (minutes: number | null): string => {
+  if (minutes === null) return "unknown"
+  if (minutes < 1) return "just now"
+  if (minutes < 60) return minutes + "m ago"
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return hours + "h " + (minutes % 60) + "m ago"
+  return Math.floor(hours / 24) + "d ago"
+}
+
+const activityBlock = (h: HtmlBuilder<Message>, activity: typeof Activity.Type | undefined) => {
+  if (activity === undefined)
+    return h.div([h.Class("activity")], [h.span([h.Class("muted")], ["No pass records yet"])])
+  const pass = activity.lastPass
+  const running = pass?.status === "running"
+  const stale = !running && (activity.ageMinutes ?? 0) >= 30
+  const status = running
+    ? "running"
+    : pass === null
+      ? "no pass yet"
+      : "last pass #" + pass.pass + " " + pass.status
+  return h.div(
+    [h.Class("activity" + (stale ? " stale" : "") + (running ? " running" : ""))],
+    [
+      h.div(
+        [h.Class("activity-head")],
+        [
+          h.span([h.Class("activity-status")], [status]),
+          h.span([h.Class("muted")], [running ? "in flight" : formatAge(activity.ageMinutes)]),
+          stale ? h.span([h.Class("stale-flag")], ["stale"]) : h.span([], []),
+        ],
+      ),
+      h.div(
+        [h.Class("activity-meta")],
+        [
+          pass?.quality === undefined
+            ? h.span([], ["no quality record"])
+            : h.span(
+                [],
+                [
+                  "jig " +
+                    pass.quality.after.errors +
+                    " error / " +
+                    pass.quality.after.warnings +
+                    " warn",
+                ],
+              ),
+          h.span(
+            [],
+            [
+              activity.pending.length === 0
+                ? "no queued events"
+                : "queued: " +
+                  activity.pending
+                    .map(
+                      (event) =>
+                        event.kind + (event.summary === undefined ? "" : ": " + event.summary),
+                    )
+                    .join(" · "),
+            ],
+          ),
+          activity.lastEvent === null
+            ? h.span([], ["no events yet"])
+            : h.span(
+                [],
+                [
+                  "last event " +
+                    activity.lastEvent.kind +
+                    (activity.lastEvent.summary === undefined
+                      ? ""
+                      : ": " + activity.lastEvent.summary),
+                ],
+              ),
+        ],
+      ),
+    ],
+  )
+}
+
 const workstreamCard = (
   h: HtmlBuilder<Message>,
   ws: typeof Workstream.Type,
+  activity: typeof Activity.Type | undefined,
   sessions: ReadonlyArray<typeof Session.Type>,
 ) =>
   h.article(
@@ -279,6 +398,7 @@ const workstreamCard = (
           h.span([h.Class("mono")], ["checkpoint " + ws.checkpoint.sha.slice(0, 8)]),
         ],
       ),
+      activityBlock(h, activity),
       sessions.length === 0
         ? h.p(
             [h.Class("empty muted")],
@@ -295,6 +415,7 @@ const repoSection = (
   h: HtmlBuilder<Message>,
   repo: string,
   workstreams: ReadonlyArray<typeof Workstream.Type>,
+  activities: ReadonlyArray<typeof Activity.Type>,
   sessions: ReadonlyArray<typeof Session.Type>,
 ) =>
   h.section(
@@ -325,6 +446,7 @@ const repoSection = (
                 workstreamCard(
                   h,
                   ws,
+                  activities.find((activity) => activity.workstream === ws.id),
                   sessions.filter((session) => session.workstream === ws.id),
                 ),
               ),
@@ -447,6 +569,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
                   h,
                   repo,
                   presence.factory.workstreams.filter((ws) => repoName(ws) === repo),
+                  presence.factory.activity,
                   [...presence.sessions.herdr.sessions, ...presence.sessions.rex.sessions],
                 ),
               ),

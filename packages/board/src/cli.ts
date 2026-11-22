@@ -10,6 +10,7 @@ import { parseArgs, promisify } from "node:util"
 import { Option } from "effect"
 import { listRooms } from "@autotelic/room/store"
 import { readRun, startRoomRun } from "@autotelic/room/run"
+import { activityOf } from "@autotelic/factory/activity"
 import { listDesk } from "@autotelic/factory/desk"
 import { listReports } from "@autotelic/factory/report"
 import { listWorkstreams } from "@autotelic/factory/store"
@@ -185,6 +186,9 @@ const observe = async (root: string) => {
     network: { tailscale: await discoverTailnet() },
     factory: {
       workstreams,
+      activity: await Promise.all(
+        workstreams.map((record) => activityOf({ record, now: Date.now() })),
+      ),
       desk: await listDesk(),
       reports: await listReports(),
     },

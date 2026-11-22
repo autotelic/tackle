@@ -56,6 +56,10 @@ so a repo is a section and its lanes are the states it currently occupies.
   `workstream=<id>` label, by cwd inside the workstream path, or by the words in
   its tab title; an unmatched session stays in the bottom list rather than
   being guessed onto a workstream.
+- **Activity** — each card says when its last pass ran, whether it is stale,
+  what that pass quality was, and what events are queued with their own
+  summary. A build that has not passed for two hours is visibly stale instead
+  of looking identical to one that just ran.
 - **Desk** — questions waiting for a human. The view does not answer them; it
   shows which workstream asked.
 - **Sessions** — Herdr and Rex addresses. `Open` asks the board to focus the
