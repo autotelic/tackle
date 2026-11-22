@@ -56,6 +56,11 @@ export const Workstream = Schema.Struct({
     at: Schema.String,
     pushed: Schema.Boolean,
   }),
+  // Source-owned closed flags, kept separate from the kernel's phase. They are optional
+  // because an older record (or a host with no source read yet) genuinely does not know.
+  prState: Schema.optional(Schema.Literals(["open", "merged", "closed"])),
+  projectState: Schema.optional(Schema.Literals(["planned", "started", "completed", "canceled"])),
+  projectUrl: Schema.optional(Schema.String),
   createdAt: Schema.String,
   updatedAt: Schema.String,
 })

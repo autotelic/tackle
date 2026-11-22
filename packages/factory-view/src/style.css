@@ -301,6 +301,86 @@ button:hover {
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
+.panel {
+  background: #fff;
+  border: 1px solid #dbe2e8;
+  border-radius: 12px;
+  padding: 18px;
+  margin: 18px 0;
+}
+.back {
+  font-size: 12px;
+}
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 10px;
+}
+.panel-head h1 {
+  font-size: 24px;
+  margin: 0 0 2px;
+}
+.panel-flags {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px solid #e3e9ee;
+  border-radius: 8px;
+  background: #fbfcfd;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.warning {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border: 1px solid #ecc9a8;
+  border-radius: 8px;
+  background: #fff8ee;
+  color: #7a4d16;
+  font-size: 13px;
+}
+.panel-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  margin-top: 14px;
+  border: 1px solid #e3e9ee;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #e3e9ee;
+}
+.panel-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 12px;
+  background: #fff;
+  min-width: 0;
+}
+.panel-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #6c7a87;
+}
+.panel-value {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.panel-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  align-items: baseline;
+  margin-top: 14px;
+  font-size: 13px;
+}
+.panel-section {
+  margin-top: 18px;
+  border-top: 1px solid #edf1f4;
+  padding-top: 8px;
+}
 @media (max-width: 760px) {
   .shell {
     padding: 14px;
@@ -321,6 +401,9 @@ button:hover {
   }
   .workstream-meta {
     display: grid;
+    grid-template-columns: 1fr;
+  }
+  .panel-grid {
     grid-template-columns: 1fr;
   }
   .session {

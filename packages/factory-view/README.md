@@ -18,10 +18,18 @@ a section and a phase is a lane rather than a widget with its own state.
 ```
 /presence  ──decode──▶  Presence
                          ├─ factory.workstreams  id, repo, project, phase, pr, checkpoint
+                         │                       observed, freshness, freshnessBySource,
+                         │                       budget, blockedBy, prState, projectState
                          ├─ factory.desk         id, title, workstream
                          ├─ factory.reports      kind, workstream, expected, actual
                          └─ sessions             herdr / rex addresses + workstream
 ```
+
+The board computes `observed`, `freshness`, `freshnessBySource`, `budget` and
+`blockedBy` from the workstream record and its receipts, so the view renders one
+document instead of recomputing a second source. `prState` and `projectState` are
+the owners' flags (GitHub, Linear); when the record does not carry one the panel
+says `unknown` and names the missing comparison rather than guessing.
 
 The view never imports `board` or `factory`. The JSON is the seam; the local
 schema is the wire contract.
@@ -42,6 +50,24 @@ For UI work, run Vite with the board already up:
 pnpm --filter @autotelic/factory-view dev
 # http://127.0.0.1:4782/ — proxies /presence to 4780
 ```
+
+## Panels
+
+The overview links each workstream to `/factory/workstream/<id>`. That path is a
+filter over the same `/presence` document: the panel renders one workstream's
+phase, checkpoint age, per-source freshness, budget, `blockedBy` ids, the PR and
+Linear project links, its sessions, desk items and reports.
+
+The three closed flags stay separate, because their disagreement is the useful
+state:
+
+```
+phase done · PR 1862 open · project started
+phase done · PR 1862 open — ready for a person, not finished
+```
+
+`no checkpoint yet` and `observed: never` are words, not zeros; a budget always
+carries its denominator (`3/5 passes`) or a reason (`cap stop: passes 5/5`).
 
 ## What each row means
 

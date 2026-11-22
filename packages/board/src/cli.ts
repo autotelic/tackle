@@ -22,6 +22,7 @@ import {
 } from "./sessions.ts"
 import { discoverTailnet } from "./tailnet.ts"
 import { fleet } from "./fleet.ts"
+import { observeWorkstreams } from "./workstreams.ts"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 
@@ -171,12 +172,13 @@ const json = ({
 
 const observe = async (root: string) => {
   const rooms = await listRooms(root)
+  const observedAt = new Date().toISOString()
   const workstreams = await listWorkstreams()
   const sessions = await discoverSessions()
   return {
     shop: root,
     authority: "observation" as const,
-    observedAt: new Date().toISOString(),
+    observedAt,
     sessions: {
       ...sessions,
       herdr: { ...sessions.herdr, sessions: tagWorkstreams(sessions.herdr.sessions, workstreams) },
@@ -184,7 +186,7 @@ const observe = async (root: string) => {
     },
     network: { tailscale: await discoverTailnet() },
     factory: {
-      workstreams,
+      workstreams: await observeWorkstreams({ records: workstreams, observedAt }),
       desk: await listDesk(),
       reports: await listReports(),
     },
@@ -312,6 +314,20 @@ const serveView = async ({
   }
   const file = await readFile(join(viewDir, relative)).catch(() => undefined)
   if (file === undefined) {
+    // A panel is a path, so `/factory/workstream/<id>` is the same application with a
+    // filter. Only a route without an extension falls back to the shell; a missing asset
+    // stays a 404 rather than pretending HTML is JavaScript.
+    if (path.startsWith("/factory/") && !relative.includes(".")) {
+      const shell = await readFile(join(viewDir, "index.html")).catch(() => undefined)
+      if (shell !== undefined) {
+        response.writeHead(200, {
+          "content-type": "text/html; charset=utf-8",
+          "content-length": shell.length,
+        })
+        response.end(shell)
+        return
+      }
+    }
     json({ response, status: 404, body: { error: "factory view is not built" } })
     return
   }

@@ -4,63 +4,35 @@ import type { Document, Html, HtmlBuilder } from "foldkit/html"
 import { defineMessageUnion } from "foldkit/message"
 import { copyText } from "foldkit-primitives/dom"
 import { ticks } from "foldkit-primitives/time"
-
-const Workstream = Schema.Struct({
-  id: Schema.String,
-  project: Schema.String,
-  label: Schema.String,
-  phase: Schema.String,
-  path: Schema.String,
-  repo: Schema.optional(Schema.String),
-  branch: Schema.optional(Schema.String),
-  head: Schema.optional(Schema.String),
-  pr: Schema.optional(Schema.Finite),
-  delivery: Schema.optional(Schema.String),
-  linearProjectId: Schema.optional(Schema.String),
-  checkpoint: Schema.Struct({ sha: Schema.String, at: Schema.String }),
-})
-const Desk = Schema.Struct({
-  id: Schema.String,
-  workstream: Schema.String,
-  title: Schema.String,
-  route: Schema.String,
-})
-const Report = Schema.Struct({
-  id: Schema.String,
-  workstream: Schema.String,
-  kind: Schema.String,
-  actual: Schema.String,
-  at: Schema.String,
-  blocked: Schema.Boolean,
-})
-const SessionSource = Schema.Union([Schema.Literal("herdr"), Schema.Literal("rex")])
-const Session = Schema.Struct({
-  source: SessionSource,
-  address: Schema.String,
-  agent: Schema.optional(Schema.String),
-  roomId: Schema.optional(Schema.String),
-  where: Schema.optional(Schema.String),
-  workstream: Schema.optional(Schema.String),
-})
-const SessionSourceView = Schema.Struct({
-  available: Schema.Boolean,
-  sessions: Schema.Array(Session),
-})
-const Presence = Schema.Struct({
-  factory: Schema.Struct({
-    workstreams: Schema.Array(Workstream),
-    desk: Schema.Array(Desk),
-    reports: Schema.Array(Report),
-  }),
-  sessions: Schema.Struct({ herdr: SessionSourceView, rex: SessionSourceView }),
-})
-type Presence = typeof Presence.Type
+import {
+  Presence,
+  SessionSource,
+  sessionsOf,
+  type Desk,
+  type Report,
+  type Session,
+  type Workstream,
+} from "./presence.ts"
+import { workstreamOfPath, workstreamPath } from "./route.ts"
+import {
+  blockedByLabel,
+  budgetLabel,
+  checkpointLabel,
+  closedFlags,
+  freshnessLabel,
+  observedLabel,
+  sessionCommand,
+  sourceAgeLabel,
+  sourceFreshnessLabel,
+} from "./status.ts"
 
 export const Model = Schema.Struct({
   presence: Schema.NullOr(Presence),
   error: Schema.NullOr(Schema.String),
   loading: Schema.Boolean,
   notice: Schema.NullOr(Schema.String),
+  /** The path selects a panel; it is a filter over the one presence document. */
+  route: Schema.optional(Schema.String),
 })
 export type Model = typeof Model.Type
 
@@ -117,11 +89,23 @@ export const update = (model: Model, message: Message): UpdateReturn =>
     }),
   })
 
-/** Start with a fetch and an empty model. */
-export const init: Runtime.ApplicationInit<Model, Message> = () => ({
-  model: { presence: null, error: null, loading: true, notice: null },
-  commands: [FetchPresence()],
-})
+const initial =
+  (route: string): Runtime.ApplicationInit<Model, Message> =>
+  () => ({
+    model: { presence: null, error: null, loading: true, notice: null, route },
+    commands: [FetchPresence()],
+  })
+
+/** Start on the overview with an empty model and one presence fetch. */
+export const init: Runtime.ApplicationInit<Model, Message> = initial("")
+
+/**
+ * Start on the panel a shared path names.
+ *
+ * @param route - the browser path, read once at the I/O boundary in `entry.ts`.
+ * @returns the application init for that path.
+ */
+export const initAt = (route: string): Runtime.ApplicationInit<Model, Message> => initial(route)
 
 export const FetchPresence = Command.define("FetchPresence", {
   messages: [Message.Settled],
@@ -209,12 +193,39 @@ const phaseDetail = (phase: string): string => {
       return ""
   }
 }
-const repoName = (ws: typeof Workstream.Type): string => ws.repo ?? "unknown repository"
+const repoName = (ws: Workstream): string => ws.repo ?? "unknown repository"
 
-const sessionCommand = (session: typeof Session.Type): string =>
-  session.source === "herdr" ? "hc attach " + session.address : "rex block focus " + session.address
+const repoHref = (ws: Workstream): Option.Option<string> =>
+  ws.repo === undefined ? Option.none() : Option.some("https://github.com/" + ws.repo)
 
-const sessionRow = (h: HtmlBuilder<Message>, session: typeof Session.Type) =>
+const prHref = (ws: Workstream): Option.Option<string> =>
+  ws.repo === undefined || ws.pr === undefined
+    ? Option.none()
+    : Option.some("https://github.com/" + ws.repo + "/pull/" + ws.pr)
+
+/**
+ * The Linear project link. `/presence` carries the project id (and, when a source read
+ * supplied one, the project URL); the generic project path is only built from the id,
+ * never guessed from a label.
+ */
+const projectHref = (ws: Workstream): Option.Option<string> =>
+  ws.projectUrl === undefined
+    ? ws.linearProjectId === undefined
+      ? Option.none()
+      : Option.some("https://linear.app/project/" + encodeURIComponent(ws.linearProjectId))
+    : Option.some(ws.projectUrl)
+
+const external = (input: {
+  readonly h: HtmlBuilder<Message>
+  readonly href: string
+  readonly text: string
+}) =>
+  input.h.a(
+    [input.h.Href(input.href), input.h.Target("_blank"), input.h.Rel("noreferrer")],
+    [input.text],
+  )
+
+const sessionRow = (h: HtmlBuilder<Message>, session: Session) =>
   h.div(
     [h.Class("session")],
     [
@@ -241,10 +252,33 @@ const sessionRow = (h: HtmlBuilder<Message>, session: typeof Session.Type) =>
     ],
   )
 
+const sessionList = (h: HtmlBuilder<Message>, sessions: ReadonlyArray<Session>, empty: string) =>
+  sessions.length === 0
+    ? h.p([h.Class("empty muted")], [empty])
+    : h.div(
+        [h.Class("session-list")],
+        sessions.map((session) => sessionRow(h, session)),
+      )
+
+/** A labelled value on the panel; the label is the JSON path a reader can check. */
+const panelRow = (input: {
+  readonly h: HtmlBuilder<Message>
+  readonly label: string
+  readonly value: string
+}) =>
+  input.h.div(
+    [input.h.Class("panel-row")],
+    [
+      input.h.span([input.h.Class("panel-label")], [input.label]),
+      input.h.span([input.h.Class("panel-value")], [input.value]),
+    ],
+  )
+
 const workstreamCard = (
   h: HtmlBuilder<Message>,
-  ws: typeof Workstream.Type,
-  sessions: ReadonlyArray<typeof Session.Type>,
+  ws: Workstream,
+  sessions: ReadonlyArray<Session>,
+  observedAt: string,
 ) =>
   h.article(
     [h.Class("workstream"), h.Id(ws.id)],
@@ -252,66 +286,67 @@ const workstreamCard = (
       h.div(
         [h.Class("workstream-head")],
         [
-          h.div([], [h.h3([], [ws.label]), h.div([h.Class("mono muted")], [ws.id])]),
-          h.span([h.Class("phase-pill " + ws.phase)], [phaseLabel(ws.phase) ?? ws.phase]),
+          h.div(
+            [],
+            [
+              h.h3([], [h.a([h.Href(workstreamPath(ws.id))], [ws.label])]),
+              h.div([h.Class("mono muted")], [ws.id]),
+            ],
+          ),
+          h.span([h.Class("phase-pill " + ws.phase)], [phaseLabel(ws.phase)]),
         ],
       ),
       h.div(
         [h.Class("workstream-meta")],
         [
-          ws.repo === undefined
-            ? h.span([], ["unknown repo"])
-            : h.a(
-                [h.Href("https://github.com/" + ws.repo), h.Target("_blank"), h.Rel("noreferrer")],
-                [ws.repo],
-              ),
+          Option.match(repoHref(ws), {
+            onNone: () => h.span([], ["no repo in /presence"]),
+            onSome: (href) => external({ h, href, text: repoName(ws) }),
+          }),
           h.span([], [ws.branch ?? "no branch"]),
-          ws.pr === undefined
-            ? h.span([], ["trunk"])
-            : h.a(
-                [
-                  h.Href("https://github.com/" + (ws.repo ?? "") + "/pull/" + ws.pr),
-                  h.Target("_blank"),
-                  h.Rel("noreferrer"),
-                ],
-                ["PR #" + ws.pr],
-              ),
-          h.span([h.Class("mono")], ["checkpoint " + ws.checkpoint.sha.slice(0, 8)]),
+          Option.match(prHref(ws), {
+            onNone: () => h.span([], [ws.delivery === "trunk" ? "delivery trunk" : "no PR"]),
+            onSome: (href) => external({ h, href, text: "PR #" + ws.pr }),
+          }),
+          h.span([h.Class("mono")], [checkpointLabel({ checkpoint: ws.checkpoint, observedAt })]),
+          h.span([], [budgetLabel(ws.budget)]),
+          h.span([], ["freshness " + freshnessLabel(ws.freshness)]),
         ],
       ),
-      sessions.length === 0
-        ? h.p(
-            [h.Class("empty muted")],
-            ["No live session matched. Label a terminal with workstream=" + ws.id + "."],
-          )
-        : h.div(
-            [h.Class("session-list")],
-            sessions.map((session) => sessionRow(h, session)),
-          ),
+      sessionList(
+        h,
+        sessions,
+        "No live session matched. Label a terminal with workstream=" + ws.id + ".",
+      ),
     ],
   )
 
-const repoSection = (
-  h: HtmlBuilder<Message>,
-  repo: string,
-  workstreams: ReadonlyArray<typeof Workstream.Type>,
-  sessions: ReadonlyArray<typeof Session.Type>,
-) =>
-  h.section(
+const repoSection = (input: {
+  readonly h: HtmlBuilder<Message>
+  readonly repo: string
+  readonly workstreams: ReadonlyArray<Workstream>
+  readonly sessions: ReadonlyArray<Session>
+  readonly observedAt: string
+}) => {
+  const h = input.h
+  return h.section(
     [h.Class("repo")],
     [
       h.div(
         [h.Class("repo-head")],
         [
-          h.h2([], [repo]),
+          h.h2([], [input.repo]),
           h.span(
             [h.Class("muted")],
-            [workstreams.length + (workstreams.length === 1 ? " workstream" : " workstreams")],
+            [
+              input.workstreams.length +
+                (input.workstreams.length === 1 ? " workstream" : " workstreams"),
+            ],
           ),
         ],
       ),
       ...phaseOrder.flatMap((phase) => {
-        const inPhase = workstreams.filter((ws) => ws.phase === phase)
+        const inPhase = input.workstreams.filter((ws) => ws.phase === phase)
         if (inPhase.length === 0) return []
         return [
           h.div(
@@ -325,7 +360,8 @@ const repoSection = (
                 workstreamCard(
                   h,
                   ws,
-                  sessions.filter((session) => session.workstream === ws.id),
+                  input.sessions.filter((session) => session.workstream === ws.id),
+                  input.observedAt,
                 ),
               ),
             ],
@@ -334,11 +370,9 @@ const repoSection = (
       }),
     ],
   )
+}
 
-const stateMachine = (
-  h: HtmlBuilder<Message>,
-  workstreams: ReadonlyArray<typeof Workstream.Type>,
-) =>
+const stateMachine = (h: HtmlBuilder<Message>, workstreams: ReadonlyArray<Workstream>) =>
   h.section(
     [h.Class("state-machine")],
     [
@@ -374,17 +408,17 @@ const stateMachine = (
 const card = (h: HtmlBuilder<Message>, title: string, children: ReadonlyArray<Html>) =>
   h.div([h.Class("card")], [h.h2([], [title]), ...children])
 
-const deskRow = (h: HtmlBuilder<Message>, item: typeof Desk.Type) =>
+const deskRow = (h: HtmlBuilder<Message>, item: Desk) =>
   h.div(
     [h.Class("row")],
     [
       h.span([h.Class("id")], [item.id]),
       h.span([], [item.title]),
-      h.a([h.Href("#" + item.workstream)], [item.workstream]),
+      h.a([h.Href(workstreamPath(item.workstream))], [item.workstream]),
     ],
   )
 
-const reportRow = (h: HtmlBuilder<Message>, report: typeof Report.Type) =>
+const reportRow = (h: HtmlBuilder<Message>, report: Report) =>
   h.div(
     [h.Class("report")],
     [
@@ -392,7 +426,7 @@ const reportRow = (h: HtmlBuilder<Message>, report: typeof Report.Type) =>
         [h.Class("report-head")],
         [
           h.span([h.Class("id")], [report.kind]),
-          h.a([h.Href("#" + report.workstream)], [report.workstream]),
+          h.a([h.Href(workstreamPath(report.workstream))], [report.workstream]),
           report.blocked ? h.span([h.Class("blocked-flag")], ["blocked"]) : h.span([], []),
         ],
       ),
@@ -400,11 +434,188 @@ const reportRow = (h: HtmlBuilder<Message>, report: typeof Report.Type) =>
     ],
   )
 
+/**
+ * One workstream's panel: the detail a person needs before deciding whether to care.
+ * Every value is a field on the workstream; a missing field says so rather than zeroing.
+ */
+const workstreamPanel = (
+  h: HtmlBuilder<Message>,
+  ws: Workstream,
+  sessions: ReadonlyArray<Session>,
+  desk: ReadonlyArray<Desk>,
+  reports: ReadonlyArray<Report>,
+  observedAt: string,
+) => {
+  const flags = closedFlags(ws)
+  const project = projectHref(ws)
+  return h.article(
+    [h.Class("panel"), h.Id("workstream-" + ws.id)],
+    [
+      h.a([h.Class("back"), h.Href("/factory")], ["← All workstreams"]),
+      h.div(
+        [h.Class("panel-head")],
+        [
+          h.div([], [h.h1([], [ws.label]), h.div([h.Class("mono muted")], [ws.id])]),
+          h.span([h.Class("phase-pill " + ws.phase)], [phaseLabel(ws.phase)]),
+        ],
+      ),
+      h.div([h.Class("panel-flags")], [flags.line]),
+      flags.warning === null
+        ? h.p([h.Class("muted")], ["the three closed flags agree"])
+        : h.p([h.Class("warning")], [flags.warning]),
+      h.div(
+        [h.Class("panel-grid")],
+        [
+          panelRow({ h, label: "phase", value: ws.phase }),
+          panelRow({
+            h,
+            label: "checkpoint",
+            value: checkpointLabel({ checkpoint: ws.checkpoint, observedAt }),
+          }),
+          panelRow({ h, label: "freshness", value: freshnessLabel(ws.freshness) }),
+          panelRow({ h, label: "sources", value: sourceFreshnessLabel(ws) }),
+          panelRow({
+            h,
+            label: "observed",
+            value: observedLabel({ observed: ws.observed, observedAt }),
+          }),
+          panelRow({
+            h,
+            label: "github age",
+            value: sourceAgeLabel({ at: ws.observed?.github, observedAt }),
+          }),
+          panelRow({
+            h,
+            label: "linear age",
+            value: sourceAgeLabel({ at: ws.observed?.linear, observedAt }),
+          }),
+          panelRow({
+            h,
+            label: "reports age",
+            value: sourceAgeLabel({ at: ws.observed?.reports, observedAt }),
+          }),
+          panelRow({ h, label: "budget", value: budgetLabel(ws.budget) }),
+          panelRow({ h, label: "blockedBy", value: blockedByLabel(ws.blockedBy) }),
+        ],
+      ),
+      h.div(
+        [h.Class("panel-links")],
+        [
+          h.span([h.Class("panel-label")], ["links"]),
+          Option.match(repoHref(ws), {
+            onNone: () => h.span([], ["repo: not in /presence"]),
+            onSome: (href) => external({ h, href, text: "repo " + repoName(ws) }),
+          }),
+          Option.match(prHref(ws), {
+            onNone: () =>
+              h.span(
+                [],
+                ["PR: " + (ws.delivery === "trunk" ? "delivery trunk" : "not in /presence")],
+              ),
+            onSome: (href) => external({ h, href, text: "PR " + ws.pr }),
+          }),
+          Option.match(project, {
+            onNone: () => h.span([], ["Linear project: no project id in /presence"]),
+            onSome: (href) => external({ h, href, text: "Linear " + ws.project }),
+          }),
+          h.span([h.Class("mono")], [ws.branch ?? "no branch"]),
+        ],
+      ),
+      h.section(
+        [h.Class("panel-section")],
+        [
+          h.h2([], ["Sessions"]),
+          sessionList(
+            h,
+            sessions,
+            "No live session matched. Label a terminal with workstream=" + ws.id + ".",
+          ),
+        ],
+      ),
+      ...(desk.length === 0
+        ? []
+        : [
+            h.section(
+              [h.Class("panel-section")],
+              [h.h2([], ["Desk"]), ...desk.map((item) => deskRow(h, item))],
+            ),
+          ]),
+      ...(reports.length === 0
+        ? []
+        : [
+            h.section(
+              [h.Class("panel-section")],
+              [h.h2([], ["Reports"]), ...reports.map((item) => reportRow(h, item))],
+            ),
+          ]),
+    ],
+  )
+}
+
+const missingPanel = (h: HtmlBuilder<Message>, id: string) =>
+  h.article(
+    [h.Class("panel")],
+    [
+      h.a([h.Class("back"), h.Href("/factory")], ["← All workstreams"]),
+      h.h1([], ["Workstream not in /presence"]),
+      h.p(
+        [h.Class("muted")],
+        ["The path names " + id + "; the board served no workstream with that id."],
+      ),
+    ],
+  )
+
+/** The overview: one section per repository, then the desk, reports and unmatched sessions. */
+const overview = (h: HtmlBuilder<Message>, presence: Presence): ReadonlyArray<Html> => {
+  const allSessions = sessionsOf(presence)
+  const repos = Array.from(new Set(presence.factory.workstreams.map(repoName)))
+  const unmatched = allSessions.filter((session) => session.workstream === undefined)
+  return [
+    stateMachine(h, presence.factory.workstreams),
+    ...repos.map((repo) =>
+      repoSection({
+        h,
+        repo,
+        workstreams: presence.factory.workstreams.filter((ws) => repoName(ws) === repo),
+        sessions: allSessions,
+        observedAt: presence.observedAt,
+      }),
+    ),
+    card(
+      h,
+      "Desk",
+      presence.factory.desk.map((item) => deskRow(h, item)),
+    ),
+    card(
+      h,
+      "Reports",
+      presence.factory.reports.map((item) => reportRow(h, item)),
+    ),
+    ...(unmatched.length === 0
+      ? []
+      : [
+          card(
+            h,
+            "Sessions not joined to a workstream",
+            unmatched.map((session) => sessionRow(h, session)),
+          ),
+        ]),
+  ]
+}
+
 /** Render the factory state; every field comes from /presence. */
 export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
   const presence = model.presence
+  const selected = workstreamOfPath(model.route ?? "")
+  const selectedId = selected._tag === "Panel" ? selected.id : undefined
+  const workstream =
+    selectedId === undefined || presence === null
+      ? undefined
+      : presence.factory.workstreams.find((candidate) => candidate.id === selectedId)
+  const title =
+    workstream === undefined ? "Software factory" : workstream.label + " · software factory"
   return {
-    title: "Software factory",
+    title,
     body: h.div(
       [h.Class("shell")],
       [
@@ -414,7 +625,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
             h.div(
               [],
               [
-                h.h1([], ["Software factory"]),
+                h.h1([], [workstream === undefined ? "Software factory" : workstream.label]),
                 presence === null
                   ? h.span([h.Class("muted")], ["waiting for presence"])
                   : h.span(
@@ -440,43 +651,20 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
         ...(model.notice === null ? [] : [h.p([h.Class("notice")], [model.notice])]),
         ...(presence === null
           ? []
-          : [
-              stateMachine(h, presence.factory.workstreams),
-              ...Array.from(new Set(presence.factory.workstreams.map(repoName))).map((repo) =>
-                repoSection(
-                  h,
-                  repo,
-                  presence.factory.workstreams.filter((ws) => repoName(ws) === repo),
-                  [...presence.sessions.herdr.sessions, ...presence.sessions.rex.sessions],
-                ),
-              ),
-              card(
-                h,
-                "Desk",
-                presence.factory.desk.map((item) => deskRow(h, item)),
-              ),
-              card(
-                h,
-                "Reports",
-                presence.factory.reports.map((item) => reportRow(h, item)),
-              ),
-              ...(() => {
-                const allSessions = [
-                  ...presence.sessions.herdr.sessions,
-                  ...presence.sessions.rex.sessions,
-                ]
-                const unmatched = allSessions.filter((session) => session.workstream === undefined)
-                return unmatched.length === 0
-                  ? []
-                  : [
-                      card(
-                        h,
-                        "Sessions not joined to a workstream",
-                        unmatched.map((s) => sessionRow(h, s)),
-                      ),
-                    ]
-              })(),
-            ]),
+          : selected._tag === "None"
+            ? overview(h, presence)
+            : workstream === undefined
+              ? [missingPanel(h, selected.id)]
+              : [
+                  workstreamPanel(
+                    h,
+                    workstream,
+                    sessionsOf(presence).filter((session) => session.workstream === workstream.id),
+                    presence.factory.desk.filter((item) => item.workstream === workstream.id),
+                    presence.factory.reports.filter((item) => item.workstream === workstream.id),
+                    presence.observedAt,
+                  ),
+                ]),
       ],
     ),
   }

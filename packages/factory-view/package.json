@@ -8,7 +8,9 @@
   "sideEffects": false,
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vitest run && vite build",
+    "bundle": "vite build",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -21,7 +23,8 @@
     "@effect/tsgo": "catalog:",
     "@types/node": "catalog:",
     "@typescript/native": "catalog:",
-    "vite": "catalog:"
+    "vite": "catalog:",
+    "vitest": "catalog:"
   },
   "engines": {
     "node": ">=24.18.0"

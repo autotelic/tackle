@@ -24,7 +24,10 @@ process is gone) and serves:
 `SIGTERM`, waits, then removes the lock.
 
 `presence` is the same document one-shot, without running the shop. It also carries the factory's
-workstreams and reports under `factory`, so the board is the read surface for both places. It includes
+workstreams and reports under `factory`, so the board is the read surface for both places.
+Each workstream carries the computed `observed`, `freshness`, `freshnessBySource`, `budget` and
+`blockedBy` fields; `prState` and `projectState` pass through from the record when a source read
+has supplied them. It includes
 local Herdr terminals via `hc ls --json`, and Rex sessions/blocks via the
 server binary bundled with the Rex app (`REX_BIN`, then PATH, then the app
 support path). A missing source is `available: false`, never "nothing is
