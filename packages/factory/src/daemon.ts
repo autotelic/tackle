@@ -70,41 +70,68 @@ export const runDaemon = async (input: {
   readonly home?: string | undefined
   readonly once?: boolean
 }): Promise<void> => {
-  for (;;) {
-    const records = await listWorkstreams({ home: input.home })
-    const outcomes = await Promise.all(
+  const watch = async (record: { readonly id: string }): Promise<void> => {
+    for (;;) {
+      try {
+        const outcome = await watchOnce({
+          id: record.id,
+          worker: input.worker,
+          at: new Date().toISOString(),
+          home: input.home,
+        })
+        if (outcome.appended.length > 0)
+          console.log(
+            "factory daemon: " +
+              record.id +
+              " appended " +
+              outcome.appended.length +
+              ", passes " +
+              outcome.passes.length,
+          )
+      } catch (cause: unknown) {
+        console.error("factory daemon: " + record.id + " " + String(cause))
+      }
+      await new Promise((resolve) => setTimeout(resolve, input.intervalMs))
+    }
+  }
+
+  const records = await listWorkstreams({ home: input.home })
+  if (input.once === true) {
+    await Promise.all(
       records.map(async (record) => {
         try {
-          return {
-            record,
-            outcome: await watchOnce({
-              id: record.id,
-              worker: input.worker,
-              at: new Date().toISOString(),
-              home: input.home,
-            }),
-          }
+          const outcome = await watchOnce({
+            id: record.id,
+            worker: input.worker,
+            at: new Date().toISOString(),
+            home: input.home,
+          })
+          if (outcome.appended.length > 0)
+            console.log(
+              "factory daemon: " +
+                record.id +
+                " appended " +
+                outcome.appended.length +
+                ", passes " +
+                outcome.passes.length,
+            )
         } catch (cause: unknown) {
-          return { record, error: String(cause) }
+          console.error("factory daemon: " + record.id + " " + String(cause))
         }
       }),
     )
-    for (const result of outcomes) {
-      if (result.error !== undefined) {
-        console.error("factory daemon: " + result.record.id + " " + result.error)
-        continue
-      }
-      if (result.outcome.appended.length > 0)
-        console.log(
-          "factory daemon: " +
-            result.record.id +
-            " appended " +
-            result.outcome.appended.length +
-            ", passes " +
-            result.outcome.passes.length,
-        )
+    return
+  }
+
+  // One loop per workstream: a 30-minute pass in one repo must not stop another
+  // repo from polling, appending events, or starting its own pass.
+  const started = new Set<string>()
+  for (;;) {
+    for (const record of await listWorkstreams({ home: input.home })) {
+      if (started.has(record.id)) continue
+      started.add(record.id)
+      void watch(record)
     }
-    if (input.once === true) return
     await new Promise((resolve) => setTimeout(resolve, input.intervalMs))
   }
 }
