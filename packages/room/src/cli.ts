@@ -1,3 +1,4 @@
+/* oxlint-disable plumb-effect/no-run-promise-outside-seam -- the CLI is the package's one entry point: it owns argv, the exit code and the process lifetime, so its two command helpers are the seam rather than service modules. */
 import { Effect, Option } from "effect"
 import { spawnSync } from "node:child_process"
 import { existsSync } from "node:fs"

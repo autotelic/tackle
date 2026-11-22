@@ -26,6 +26,7 @@ import { noCascadingLayerProvideRule } from "./rules/no-cascading-layer-provide.
 import { noStaticEffectServiceForwardersRule } from "./rules/no-static-effect-service-forwarders.ts";
 import { noRawErrorForwardingRule } from "./rules/no-raw-error-forwarding.ts";
 import { noNullishDefaultOnPartialInputRule } from "./rules/no-nullish-default-on-partial-input.ts";
+import { noRunPromiseOutsideSeamRule } from "./rules/no-run-promise-outside-seam.ts";
 
 /** Opt-in Oxlint rules for Effect service and Layer architecture. */
 const plumbEffectPlugin = eslintCompatPlugin({
@@ -57,6 +58,7 @@ const plumbEffectPlugin = eslintCompatPlugin({
 		"no-static-effect-service-forwarders": noStaticEffectServiceForwardersRule,
 		"no-raw-error-forwarding": noRawErrorForwardingRule,
 		"no-nullish-default-on-partial-input": noNullishDefaultOnPartialInputRule,
+		"no-run-promise-outside-seam": noRunPromiseOutsideSeamRule,
 	},
 });
 
