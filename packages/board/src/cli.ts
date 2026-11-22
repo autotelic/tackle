@@ -1,7 +1,8 @@
 import { execFile, spawn } from "node:child_process"
+import { randomUUID } from "node:crypto"
 import { createServer } from "node:http"
 import { existsSync } from "node:fs"
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
+import { chmod, mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import { homedir } from "node:os"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -280,14 +281,16 @@ const openSession = async ({
     // oxlint-disable-next-line plumb/no-builtin-throws -- this HTTP boundary turns it into a 400
     if (Option.isNone(binary)) throw new Error("hc is not installed")
     const directory = join(homedir(), ".factory", "open")
-    await mkdir(directory, { recursive: true })
-    const script = join(directory, `attach-${address}-${Date.now()}.command`)
+    await mkdir(directory, { recursive: true, mode: 0o700 })
+    await chmod(directory, 0o700).catch(() => undefined)
+    const script = join(directory, `attach-${randomUUID()}.command`)
     await writeFile(
       script,
       `#!/bin/sh\nexec ${shellQuote(binary.value)} attach ${shellQuote(address)}\n`,
       { mode: 0o700 },
     )
     await execFileAsync("/usr/bin/open", ["-a", "Terminal", script], { timeout: 5_000 })
+    setTimeout(() => void rm(script, { force: true }), 60_000).unref()
     return
   }
   // oxlint-disable-next-line plumb/no-builtin-throws -- this HTTP boundary turns it into a 400
