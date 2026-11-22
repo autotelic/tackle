@@ -70,6 +70,7 @@ reporter read the artefact it had, and the artefact was wrong for it.
 | `report-tackle-factory-1795326730977`   | `quality:factory daemon start --worker /tmp/factory-pi-worker.sh --interval 120000:0f06d08b9c68`                                                           | quality     | `gate-defect` | half fixed in `3a465cb1`; see `desk-tackle-factory-1795326754866` for the rest                                                                |
 | `report-tackle-factory-1795326738246`   | `ergonomics:factory watch --id tackle-factory (base:commit events):d35ba8ec354f`                                                                           | ergonomics  | `gate-defect` | `desk-tackle-factory-base-events`: author and paths are one `git log` away                                                                    |
 | `report-tackle-factory-1795326769939`   | `conformance:factory run --id tackle-factory --worker <worker> (change set):6d4bc28c96c0`                                                                  | conformance | `fixed`       | fixed in `3a465cb1`; the diff base is the pass's own `rev-parse HEAD`                                                                         |
+| `report-permissions-1862-1795367455336` | `conformance:node -e "require('./packages/domain/dist/permissions/conditions.js')" and grep -rn shared_with_my_company:52d5f75b7746`                       | conformance | `owner-repo`  | permissions-1862: its `packages/domain` conditions catalogue — one declared key, no body; queued behind `desk-r1862a`                         |
 
 ### Case: the REST shard that named no test
 
@@ -438,6 +439,35 @@ What would change it: a `factory status` that emits §7, which closes this secti
 fixtures into its tests; §7 shrunk to the activity document the shop serves, in which case the fixtures go and the
 spec stops describing a document nobody writes; or a `base:commit` payload carrying author and paths, which makes
 the first paragraph here one field.
+
+### Case: the condition the catalogue offers and the compiler refuses
+
+`report-permissions-1862-1795367455336` is a report about a workstream's own domain model, and the first thing
+triage owes it is the check that the thing it names is not here. The command runs
+`require('./packages/domain/dist/permissions/conditions.js')` — `packages/domain` is not a package in this
+workspace (tackle has `mailbox-domain`, a different tree), and a grep of every package's sources for
+`CONDITION_KEYS` or `shared_with_my_company` finds nothing. Neither `jig` nor `joggle` claims to judge a
+catalogue's completeness: `jig` runs a repo's declared checks, and `joggle` judges duplication and naming. The
+expectation the report holds the code to — SOW leaf 3.3's fourteen conditions, each with a rule, a filter and a
+parity test — is that workstream's own. So the verdict is `owner-repo`.
+
+What it reports is a defect of shape, and the report is careful to say so: fourteen `CONDITION_KEYS` against
+thirteen `CONDITION_RULES`, with `ConditionKeySchema` decoding all fourteen and `grantRule` rendering a call the
+compiler refuses afterwards. Its sharpest line is the test —
+`packages/domain/test/permissions/service.test.ts:42` asserts `conditionRule('shared_with_my_company')` is
+`None` — because a test that pins the gap makes the gap a declared intent, and intent is the owner's to keep or
+to replace. Both repairs it names (write the Polar body, or delete the key and AUT-379's "13 of 14" with it) are
+edits to that workstream, and the factory has no line in either.
+
+Its timing is the owner's queue rather than this ledger's: permissions-1862 is in `reconcile` with `desk-r1862a`
+open, so its record cannot take a code change until that desk item is answered. No mail was sent — the reporter is
+the owner, so a second copy of its own sentence is not a route, and `blocked: false` says the reporter is only
+filing. The row for `report-permissions-1862-1795367455336` is the durable route.
+
+**What would change it:** a `packages/domain` catalogue inside tackle (the claim becomes ours to keep); a
+`jig`/`joggle` rule that says it catches a declared-but-unimplemented key (the miss is then a `factory-defect` in
+that rule); or a policy that ships `shared_with_my_company` and fails only at compile time, which turns a claim
+into an outage and hands the owner the fixture its body should be written against.
 
 ## 4. What a verdict is not
 
