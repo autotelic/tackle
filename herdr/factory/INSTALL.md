@@ -24,10 +24,11 @@ then Branch Issue / Branch PR when those mods are installed.
 - Every meta part is optional: repo, `pass N`, `Nm ago`, `4/20`, `2 queued` —
   each appears only when the projection sent it.
 - The environment line comes from `factory.environments[]`: the machine host, the
-  runtime (`worktree /path`), the declared services, and the preview URL. A
-  workstream with no entry draws no line; a workstream with no declared service
-  draws no service text; `preview: null` draws nothing. The panel never invents a
-  container, a port, a health state or a route.
+  runtime (`worktree /path`), the port a room leased (`port 4400`), the declared
+  services, and the preview URL. A workstream with no entry draws no line; a
+  workstream with no leased port, no declared service or `preview: null` draws no
+  text for it. The panel never invents a container, a port, a health state or a
+  route.
 - `presence.js` is the decode and `main.js` only draws what it produced, so the row
   model can be read without the app: `pnpm herdr:test` runs `presence.test.mjs`,
   which starts from the board's own document and pins the empty and half-served

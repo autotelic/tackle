@@ -95,6 +95,27 @@ const EnvironmentMachine = Schema.Struct({
 })
 /** How the workstream's code is held. Slice 1 can only say worktree. */
 const EnvironmentRuntime = Schema.Struct({ kind: Schema.String, path: Schema.String })
+/** The room's one port lease for this workstream, once a room leases it. */
+const EnvironmentPort = Schema.Struct({
+  room: Schema.String,
+  number: Schema.Finite,
+  leasedAt: Schema.String,
+})
+/**
+ * A service a room declared, with the status a probe observed for it.
+ *
+ * `status` is a word the board observed; this view draws it and never upgrades it. The rest is
+ * optional so a board that serves a smaller declaration still renders a card.
+ */
+const EnvironmentService = Schema.Struct({
+  name: Schema.String,
+  command: Schema.optional(Schema.String),
+  port: Schema.optional(Schema.Finite),
+  healthPath: Schema.optional(Schema.String),
+  status: Schema.String,
+  detail: Schema.optional(Schema.NullOr(Schema.String)),
+  checkedAt: Schema.optional(Schema.String),
+})
 /** The session the board matched to the workstream, when one claimed it. */
 const EnvironmentAgent = Schema.Struct({ session: Schema.String, status: Schema.String })
 /**
@@ -108,9 +129,12 @@ export const Environment = Schema.Struct({
   workstream: Schema.String,
   machine: Schema.optional(Schema.NullOr(EnvironmentMachine)),
   runtime: Schema.optional(EnvironmentRuntime),
-  // No service has a declared shape yet (docs/environment-plan.md, slice 2), so the list
-  // decodes without claiming what a member holds.
-  services: Schema.optional(Schema.Array(Schema.Unknown)),
+  // A room's lease is a fact the board may not have served yet; absent and null both mean no
+  // port to draw, never a port guessed from a neighbour.
+  port: Schema.optional(Schema.NullOr(EnvironmentPort)),
+  // A room's declared services, each with the status the board observed. Absent means no
+  // declaration, which draws no service at all.
+  services: Schema.optional(Schema.Array(EnvironmentService)),
   agent: Schema.optional(Schema.NullOr(EnvironmentAgent)),
   preview: Schema.optional(Schema.NullOr(Schema.String)),
   observedAt: Schema.optional(Schema.String),

@@ -312,6 +312,8 @@ const environmentLine = (h: HtmlBuilder<Message>, environment: Environment | und
   if (environment === undefined) return h.span([], [])
   const machine = environment.machine
   const runtime = environment.runtime
+  const port = environment.port
+  const services = environment.services ?? []
   const agent = environment.agent
   const parts = [
     ...(machine === null || machine === undefined
@@ -320,6 +322,23 @@ const environmentLine = (h: HtmlBuilder<Message>, environment: Environment | und
     ...(runtime === undefined
       ? []
       : [h.span([h.Class("mono")], [runtime.kind + " " + runtime.path])]),
+    ...(port === null || port === undefined
+      ? []
+      : [h.span([h.Class("mono")], ["port " + port.number])]),
+    // One span, because a service is one fact: the name the room declared and the word the probe
+    // earned. The card never says "healthy" for a service the board did not observe answering.
+    ...(services.length === 0
+      ? []
+      : [
+          h.span(
+            [h.Class("mono")],
+            [
+              services
+                .map((service) => "service " + service.name + " " + service.status)
+                .join(", "),
+            ],
+          ),
+        ]),
     ...(agent === null || agent === undefined
       ? []
       : [

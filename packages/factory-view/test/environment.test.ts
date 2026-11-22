@@ -44,6 +44,7 @@ const environment = JSON.stringify({
   workstream: "shakti-perms",
   machine: { host: "macbook-pro", dnsName: "macbook-pro.tailbd1623.ts.net" },
   runtime: { kind: "worktree", path: "/Users/togmund/autotelic/shakti-perms" },
+  port: { room: "shakti-perms-dev", number: 4400, leasedAt: "2026-11-22T11:00:00.000Z" },
   services: [],
   agent: { session: "t19", status: "working" },
   preview: null,
@@ -73,7 +74,18 @@ test("the card draws the served machine, runtime and agent", () => {
   expect(markup).toContain('"Environment"')
   expect(markup).toContain('"machine macbook-pro"')
   expect(markup).toContain('"worktree /Users/togmund/autotelic/shakti-perms"')
+  expect(markup).toContain('"port 4400"')
   expect(markup).toContain('"agent t19 · working"')
+})
+
+test("an environment with no leased port draws no port", () => {
+  const nullPort = JSON.stringify({ ...JSON.parse(environment), port: null })
+  const { port: _port, ...withoutPort } = JSON.parse(environment)
+  for (const served of ["[" + nullPort + "]", "[" + JSON.stringify(withoutPort) + "]"]) {
+    const markup = draw(served)
+    expect(markup).toContain('"Environment"')
+    expect(markup).not.toContain('"port ')
+  }
 })
 
 test("a board that serves no environments draws no Environment line", () => {
@@ -84,6 +96,31 @@ test("a board that serves no environments draws no Environment line", () => {
 
 test("a half-served environment draws no Environment line", () => {
   expect(draw('[{"workstream":"shakti-perms"}]')).not.toContain('"Environment"')
+})
+
+test("a served service draws the status the board observed", () => {
+  const withService = JSON.stringify({
+    ...JSON.parse(environment),
+    services: [
+      {
+        name: "web",
+        command: "pnpm dev",
+        port: 4400,
+        healthPath: "/healthz",
+        status: "unhealthy",
+        detail: "HTTP 503",
+        checkedAt: "2026-11-22T12:00:00.000Z",
+      },
+    ],
+  })
+  const markup = draw("[" + withService + "]")
+  expect(markup).toContain('"service web unhealthy"')
+  // The card repeats the observed word; it never upgrades one to a health nobody saw.
+  expect(markup).not.toMatch(/service web healthy/u)
+})
+
+test("an empty service list draws no service", () => {
+  expect(draw("[" + environment + "]")).not.toContain('"service ')
 })
 
 test("an agent with no status names only its session", () => {

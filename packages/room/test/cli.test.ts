@@ -12,6 +12,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
+import { readRoom } from "../src/store.ts"
 
 /* oxlint-disable plumb/prefer-property-tests -- the subject is the printed sentence over one scratch repository. */
 
@@ -93,6 +94,33 @@ describe("a verb that prints a completion is a claim", () => {
       expect(moved.stderr).toContain(
         "move is not implemented; refusing to record a move that does not happen",
       )
+    } finally {
+      close()
+    }
+  })
+
+  it("leases one port on up, keeps it across pause and resume, and releases it on down", async () => {
+    const { root, close } = scratch()
+    const shop = join(root, ".room")
+    const leaseOf = async () => (await readRoom({ root: shop, id: "dev-repo" }))?.port
+    try {
+      expect(room(root, "new", "--repo", repository(root), "--scope", "dev").status).toBe(0)
+      const up = room(root, "up", "--id", "dev-repo")
+      expect(up.status).toBe(0)
+      expect(up.stdout).toContain("port 4400")
+      expect(await leaseOf()).toEqual({ number: 4400, leasedAt: expect.any(Number) })
+      expect(room(root, "status", "--id", "dev-repo").stdout).toContain("port 4400")
+      // A frozen room still owns its port: pause and resume change the process, not the lease.
+      expect(room(root, "pause", "--id", "dev-repo").status).toBe(0)
+      expect((await leaseOf())?.number).toBe(4400)
+      expect(room(root, "resume", "--id", "dev-repo").status).toBe(0)
+      const down = room(root, "down", "--id", "dev-repo")
+      expect(down.status).toBe(0)
+      expect(down.stdout).toContain("released port 4400")
+      expect(await leaseOf()).toBeUndefined()
+      expect(existsSync(join(shop, "ports", "4400.json"))).toBe(false)
+      // A second down has nothing to release, so it refuses instead of claiming a stop.
+      expect(room(root, "down", "--id", "dev-repo").status).toBe(1)
     } finally {
       close()
     }

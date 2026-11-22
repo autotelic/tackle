@@ -52,6 +52,7 @@ const environment = {
   workstream: "shakti-perms",
   machine: { host: "macbook-pro", dnsName: "macbook-pro.tail.ts.net" },
   runtime: { kind: "worktree", path: "/Users/togmund/autotelic/shakti-perms" },
+  port: { room: "shakti-perms-dev", number: 4400, leasedAt: "2026-11-22T11:00:00.000Z" },
   services: [],
   agent: { session: "t19", status: "working" },
   preview: null,
@@ -62,7 +63,10 @@ test("the environment line draws machine, runtime, services and preview", () => 
   const [row] = readPresence(presence({ environments: [environment] })).rows
   assert.equal(row.machine, "macbook-pro")
   assert.equal(row.agent, "working")
-  assert.equal(environmentText(row), "macbook-pro · worktree /Users/togmund/autotelic/shakti-perms")
+  assert.equal(
+    environmentText(row),
+    "macbook-pro · worktree /Users/togmund/autotelic/shakti-perms · port 4400",
+  )
 })
 
 test("a workstream with no declared service and no preview draws no service or preview text", () => {
@@ -70,6 +74,12 @@ test("a workstream with no declared service and no preview draws no service or p
   assert.deepEqual(row.services, [])
   assert.equal(row.preview, null)
   assert.equal(environmentText(row).includes("null"), false)
+})
+
+test("a workstream with no leased port draws no port text", () => {
+  const [row] = readPresence(presence({ environments: [{ ...environment, port: null }] })).rows
+  assert.equal(row.port, null)
+  assert.equal(environmentText(row).includes("port"), false)
 })
 
 test("a board that serves no environments still reads, and draws no environment line", () => {

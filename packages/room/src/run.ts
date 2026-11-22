@@ -96,7 +96,8 @@ const supervisorPath = (): string => {
 /**
  * Start the detached supervisor for one room and wait until its run record is live.
  *
- * @param input - the room root and id, the worktree, the command, and its log path.
+ * @param input - the room root and id, the worktree, the command, its log path, and the port
+ * the room leases for it.
  * @returns the live run record, or the reason no supervisor claimed the room.
  */
 export const startRoomRun = async (input: {
@@ -105,6 +106,7 @@ export const startRoomRun = async (input: {
   readonly worktree: string
   readonly exec: string
   readonly log: string
+  readonly port?: number | undefined
 }): Promise<StartOutcome> => {
   await removeRun(input)
   const child = spawn(
@@ -122,6 +124,9 @@ export const startRoomRun = async (input: {
       input.exec,
       "--log",
       input.log,
+      // The lease is the one owner of the number: the command is told which port it has so the
+      // probe and the process cannot answer on different ones.
+      ...(input.port === undefined ? [] : ["--port", String(input.port)]),
     ],
     { detached: true, stdio: "ignore" },
   )

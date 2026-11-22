@@ -2,14 +2,15 @@ import { execFile, spawn } from "node:child_process"
 import { randomUUID } from "node:crypto"
 import { createServer } from "node:http"
 import { existsSync } from "node:fs"
-import { chmod, mkdir, readFile, rm, writeFile } from "node:fs/promises"
+import { chmod, mkdir, readFile, realpath, rm, writeFile } from "node:fs/promises"
 import { homedir } from "node:os"
-import { dirname, join } from "node:path"
+import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { parseArgs, promisify } from "node:util"
 import { Option } from "effect"
 import { listRooms } from "@autotelic/room/store"
 import { readRun, startRoomRun } from "@autotelic/room/run"
+import { observeService } from "@autotelic/room/Service"
 import { activityOf } from "@autotelic/factory/activity"
 import { answerDesk, listDesk } from "@autotelic/factory/desk"
 import { listReports } from "@autotelic/factory/report"
@@ -24,7 +25,7 @@ import {
   type Session,
 } from "./sessions.ts"
 import { loopbackHostFor } from "./bind.ts"
-import { environmentsOf } from "./environment.ts"
+import { environmentsOf, type RoomPortLease, type RoomServiceObservation } from "./environment.ts"
 import { workstreamsWithGates } from "./gate.ts"
 import { discoverTailnet } from "./tailnet.ts"
 import { fleet } from "./fleet.ts"
@@ -188,6 +189,54 @@ const observe = async (root: string) => {
     herdr: { ...sessions.herdr, sessions: tagWorkstreams(sessions.herdr.sessions, records) },
     rex: { ...sessions.rex, sessions: tagWorkstreams(sessions.rex.sessions, records) },
   }
+  // A room's lease reaches the projection only through the worktree both records name. Both
+  // sides go through realpath so a symlinked root cannot split one directory into two names.
+  const canonical = new Map<string, string>()
+  const canonicalOf = async (path: string): Promise<string> => {
+    const resolved = await realpath(path).catch(() => resolve(path))
+    canonical.set(path, resolved)
+    return resolved
+  }
+  const roomFacts = await Promise.all(
+    rooms.map(async (room) => ({
+      room,
+      run: await readRun({ root, id: room.id }),
+      worktree: await canonicalOf(join(root, room.id, "worktree")),
+    })),
+  )
+  const leases: ReadonlyArray<RoomPortLease> = roomFacts.flatMap(({ room, worktree }) => {
+    const port = room.port
+    return port === undefined
+      ? []
+      : [
+          {
+            worktree,
+            room: room.id,
+            number: port.number,
+            leasedAt: new Date(port.leasedAt).toISOString(),
+          },
+        ]
+  })
+  // A service is observed, not assumed: one probe per declaration, run together so a slow
+  // service costs one timeout rather than one per room. A room that declares nothing
+  // contributes no element, so the field stays empty instead of naming a service nobody saw.
+  const services = (
+    await Promise.all(
+      roomFacts.map(async ({ room, run, worktree }) => {
+        const port = room.port
+        if (room.service === undefined || port === undefined) return undefined
+        const observed = await observeService({
+          service: room.service,
+          port: port.number,
+          run,
+          checkedAt: observedAt,
+        })
+        return { worktree, ...observed }
+      }),
+    )
+  ).filter((service): service is RoomServiceObservation => service !== undefined)
+  for (const record of records) await canonicalOf(record.path)
+  const pathKey = (path: string): string => canonical.get(path) ?? resolve(path)
   return {
     shop: root,
     authority: "observation" as const,
@@ -206,23 +255,20 @@ const observe = async (root: string) => {
         workstreams: records,
         sessions: [...tagged.herdr.sessions, ...tagged.rex.sessions],
         tailnet,
+        leases,
+        services,
+        pathKey,
         observedAt,
       }),
       activity,
       desk: await listDesk(),
       reports: await listReports(),
     },
-    rooms: await Promise.all(
-      rooms.map(async (room) => {
-        const run = await readRun({ root, id: room.id })
-        return {
-          id: room.id,
-          state: room.state._tag,
-          process:
-            run === undefined ? null : { pid: run.pid, alive: alive(run.pid), exec: run.exec },
-        }
-      }),
-    ),
+    rooms: roomFacts.map(({ room, run }) => ({
+      id: room.id,
+      state: room.state._tag,
+      process: run === undefined ? null : { pid: run.pid, alive: alive(run.pid), exec: run.exec },
+    })),
   }
 }
 
@@ -561,7 +607,9 @@ const serve = async ({
       // A room marked wanted is started even after its run record is gone; legacy records
       // without the flag are restarted only because a supervisor already existed.
       const wanted = room.desired ?? run !== undefined
-      const exec = room.exec ?? run?.exec
+      // A declared service owns the command; a room without one may still carry the plain
+      // command an earlier `up` recorded.
+      const exec = room.service?.command ?? room.exec ?? run?.exec
       if (!wanted || exec === undefined) continue
       // A missing worktree is not something the shop can repair; the room's own `up` is.
       if (!existsSync(join(root, room.id, "worktree"))) continue
@@ -571,6 +619,7 @@ const serve = async ({
         worktree: join(root, room.id, "worktree"),
         exec,
         log: run?.log ?? join(root, room.id, "room.log"),
+        port: room.port?.number,
       })
       if (started.ok)
         console.log("board: restarted room " + room.id + " as supervisor " + started.run.pid)

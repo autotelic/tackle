@@ -40,10 +40,20 @@ running".
 Each served workstream also carries an environment under `factory.environments`: the
 `machine` from `network.tailscale.self` (null when the daemon is unavailable — no hostname is
 guessed from anywhere else), `runtime` as `{kind: "worktree", path}` from the record's own
-checkout, `agent` as the tagged session's address and status (null when no session claimed the
-workstream), `services: []`, `preview: null` and the scan's `observedAt`. There is no container,
-port, health check or route to report yet — those are slices 2 and 3 of
-`docs/environment-plan.md` — and the fields are served empty rather than inferred.
+checkout, `port` as the room lease `{room, number, leasedAt}` whose worktree resolves to that
+same path (null when no room leases one), `agent` as the tagged session's address and status
+(null when no session claimed the workstream), and the scan's `observedAt`.
+
+`services` carries one entry per room that declares the one service it may run
+(`room up --exec <command> --health <path>`): `{name, command, port, healthPath, status,
+detail, checkedAt}`. The board does not derive the status — it asks `@autotelic/room`'s
+`observeService` while it builds the document, once per declaration and in parallel against the
+room's leased port. `healthy` is only the health path's own 2xx answer; `unhealthy` carries the
+evidence in `detail` (`HTTP 503`, `ECONNREFUSED`, a timeout); `stopped` is a declared service
+whose room has no live supervisor, decided before any socket is opened. A workstream whose room
+declares nothing serves `services: []` rather than a service with an unknown health, and
+`preview` stays null until a real route exists — a container and a preview router are later
+slices of `docs/environment-plan.md`.
 
 A session joins a room only by the explicit Herdr label `room=<id>`, set with
 `hc label <terminal> room=<id>`; `joinedBy: "label"` records the join. The

@@ -18,10 +18,11 @@ const main = (): void => {
     cwd: { type: "string" },
     exec: { type: "string" },
     log: { type: "string" },
+    port: { type: "string" },
   } as const
 
   const parsed = parseArgs({ args: process.argv.slice(2), options, allowPositionals: false })
-  const { root, id, cwd, exec, log } = parsed.values
+  const { root, id, cwd, exec, log, port } = parsed.values
   if (
     root === undefined ||
     id === undefined ||
@@ -38,6 +39,10 @@ const main = (): void => {
   let child: ChildProcess | undefined
   let restarts: Array<number> = []
 
+  // A declared service is told its leased port as `PORT`, the name every dev server and
+  // framework already reads. The supervisor invents nothing: with no lease there is no port.
+  const env = port === undefined ? process.env : { ...process.env, PORT: port }
+
   const record = (childPid: number): RoomRun => ({
     pid: process.pid,
     child: childPid,
@@ -51,6 +56,7 @@ const main = (): void => {
     child = spawn("/bin/sh", ["-c", exec], {
       cwd,
       stdio: ["ignore", fd, fd],
+      env,
     })
     closeSync(fd)
     if (child.pid !== undefined) void writeRun({ ...runPath, run: record(child.pid) })

@@ -1,13 +1,16 @@
 import { DateTime } from "effect"
 import { Schema } from "effect"
-import { mkdir, readFile, readdir, writeFile } from "node:fs/promises"
+import * as Result from "effect/Result"
+import { mkdir, readFile, readdir, unlink, writeFile } from "node:fs/promises"
 import { join } from "node:path"
+import { PortClaim, PortLease, portClaimFile, portRange, portsDir } from "./PortLease.ts"
 import { Room } from "./Room/Room.aggregate.ts"
 import { RoomId } from "./Room/Room.id.ts"
 import { CreateRoom } from "./Room/CreateRoom.command.ts"
 import { PauseRoom } from "./Room/PauseRoom.command.ts"
 import { ResumeRoom } from "./Room/ResumeRoom.command.ts"
 import { RoomState } from "./Room/Room.aggregate.ts"
+import { ServiceDeclaration } from "./Service.ts"
 
 const RoomFileSchema = Schema.Struct({
   id: Schema.String,
@@ -15,6 +18,8 @@ const RoomFileSchema = Schema.Struct({
   state: RoomState,
   exec: Schema.optional(Schema.String),
   desired: Schema.optional(Schema.Boolean),
+  port: Schema.optional(PortLease),
+  service: Schema.optional(ServiceDeclaration),
 })
 
 /** The file a room is: its id, its base branch, and the control-plane state. */
@@ -119,6 +124,136 @@ export const createRoom = async (input: {
   return { ok: true, value: room }
 }
 
+/** Read one port claim; a malformed claim is debris, not an error, because a crash wrote it. */
+const readPortClaim = async (input: {
+  readonly root: string
+  readonly port: number
+}): Promise<PortClaim | undefined> => {
+  const text = await readFile(portClaimFile(input), "utf8").catch(() => undefined)
+  if (text === undefined) return undefined
+  const decoded = Schema.decodeResult(Schema.fromJsonString(PortClaim))(text)
+  return Result.isSuccess(decoded) ? decoded.success : undefined
+}
+
+type ClaimOutcome = "claimed" | "adopted" | "held"
+
+/**
+ * Take the exclusive claim file for one port, reclaiming a claim whose room no longer holds it.
+ *
+ * "held" is the refusal the caller turns into the next candidate. An unreadable holder counts as
+ * live: taking a port from a room this process cannot see is the one failure a lease prevents.
+ */
+const claimPort = async (input: {
+  readonly root: string
+  readonly port: number
+  readonly room: string
+  readonly at: number
+}): Promise<ClaimOutcome> => {
+  await mkdir(portsDir(input.root), { recursive: true })
+  const file = portClaimFile(input)
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const written = await writeFile(
+      file,
+      JSON.stringify({ room: input.room, at: input.at }, null, 2) + "\n",
+      { flag: "wx" },
+    ).then(
+      () => true,
+      (cause: unknown) => {
+        if (cause instanceof Error && "code" in cause && cause.code === "EEXIST") return false
+        throw cause
+      },
+    )
+    if (written) return "claimed"
+    const holder = await readPortClaim(input)
+    // A malformed claim names no owner to ask, so it is a crash's debris.
+    if (holder === undefined) {
+      await unlink(file).catch(() => undefined)
+      continue
+    }
+    if (holder.room === input.room) return "adopted"
+    let holderRoom: RoomFile | undefined | "unreadable"
+    // SAFETY: an unreadable holder is treated as live, never stolen from.
+    try {
+      holderRoom = await readRoom({ root: input.root, id: holder.room })
+    } catch {
+      holderRoom = "unreadable"
+    }
+    if (holderRoom === "unreadable") return "held"
+    if (holderRoom !== undefined && holderRoom.port?.number === input.port) return "held"
+    // The claim outlived the room's lease; the port is free again.
+    await unlink(file).catch(() => undefined)
+  }
+  return "held"
+}
+
+/** Remove a claim file, but only while it still names the room asking to release it. */
+const releasePortClaim = async (input: {
+  readonly root: string
+  readonly port: number
+  readonly room: string
+}): Promise<void> => {
+  const holder = await readPortClaim(input)
+  if (holder !== undefined && holder.room !== input.room) return
+  await unlink(portClaimFile(input)).catch(() => undefined)
+}
+
+/**
+ * Lease one port to a room, idempotently.
+ *
+ * A port another room's file already names is skipped before a claim is attempted, so a room
+ * whose claim file was lost still owns its number. The lowest free port wins; a full range is a
+ * refusal, never a second owner.
+ */
+export const leaseRoomPort = async (input: {
+  readonly root: string
+  readonly id: string
+  readonly at: number
+}): Promise<StoreResult<RoomFile>> => {
+  const room = await readRoom({ root: input.root, id: input.id })
+  if (room === undefined) return { ok: false, error: "RoomNotFound" }
+  if (room.port !== undefined) return { ok: true, value: room }
+  const claimedElsewhere = new Set<number>()
+  for (const other of await listRooms(input.root)) {
+    if (other.id === input.id || other.port === undefined) continue
+    claimedElsewhere.add(other.port.number)
+  }
+  for (let port = portRange.first; port <= portRange.last; port++) {
+    if (claimedElsewhere.has(port)) continue
+    const next: RoomFile = { ...room, port: { number: port, leasedAt: input.at } }
+    // The room names the port before the claim file is created. Another allocator asks the
+    // room whether a claim is live, so writing in this order means it can never mistake a claim
+    // that is still being taken for a crashed one and hand the same port to a second room.
+    await write({ root: input.root, room: next })
+    let outcome: ClaimOutcome
+    // SAFETY: a failed claim must give the room its previous, portless record back.
+    try {
+      outcome = await claimPort({ root: input.root, port, room: input.id, at: input.at })
+    } catch (cause) {
+      await write({ root: input.root, room })
+      throw cause
+    }
+    if (outcome !== "held") return { ok: true, value: next }
+    // Another room won the claim between the scan and the write: give it back and move on.
+    await write({ root: input.root, room })
+  }
+  return { ok: false, error: "PortsExhausted" }
+}
+
+/** Release the room's port: the room stops naming it before the claim file disappears. */
+export const releaseRoomPort = async (input: {
+  readonly root: string
+  readonly id: string
+}): Promise<StoreResult<RoomFile>> => {
+  const room = await readRoom(input)
+  if (room === undefined) return { ok: false, error: "RoomNotFound" }
+  if (room.port === undefined) return { ok: true, value: room }
+  const { port: _port, ...rest } = room
+  const next: RoomFile = rest
+  await write({ root: input.root, room: next })
+  await releasePortClaim({ root: input.root, port: room.port.number, room: input.id })
+  return { ok: true, value: next }
+}
+
 /** Pause a ready room through the aggregate; any other state is a refusal. */
 export const pauseRoom = async (input: {
   readonly root: string
@@ -148,6 +283,25 @@ export const setRoomExec = async (input: {
   const room = await readRoom(input)
   if (room === undefined) return { ok: false, error: "RoomNotFound" }
   const next: RoomFile = { ...room, exec: input.exec }
+  await write({ root: input.root, room: next })
+  return { ok: true, value: next }
+}
+
+/**
+ * Declare the room's one service.
+ *
+ * A service supersedes the bare `exec`: two fields naming one command would eventually name two
+ * different ones, and the projection could not say which process it was observing.
+ */
+export const setRoomService = async (input: {
+  readonly root: string
+  readonly id: string
+  readonly service: ServiceDeclaration
+}): Promise<StoreResult<RoomFile>> => {
+  const room = await readRoom({ root: input.root, id: input.id })
+  if (room === undefined) return { ok: false, error: "RoomNotFound" }
+  const { exec: _exec, ...rest } = room
+  const next: RoomFile = { ...rest, service: input.service }
   await write({ root: input.root, room: next })
   return { ok: true, value: next }
 }

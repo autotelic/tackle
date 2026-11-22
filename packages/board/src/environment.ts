@@ -1,4 +1,6 @@
 import { Option } from "effect"
+import { resolve } from "node:path"
+import type { ServiceObservation } from "@autotelic/room/Service"
 import type { Session } from "./sessions.ts"
 import type { Tailnet } from "./tailnet.ts"
 
@@ -6,10 +8,11 @@ import type { Tailnet } from "./tailnet.ts"
  * Where a workstream runs, as much as /presence can honestly say today.
  *
  * Slice 1 of docs/environment-plan.md: a machine from the tailnet document the board already
- * serves, the worktree the record points at, and the session that is working it. Nothing else
- * exists to report yet, so the fields that will hold a container, a port, a health state or a
- * preview are served with their empty value instead of being omitted. A renderer can then show
- * "not recorded" — or nothing — rather than a fact a neighbour suggested.
+ * serves, the worktree the record points at, and the session that is working it. Slice 2a adds
+ * the room's leased port, and slice 2b the one service a room may declare, with the status a
+ * probe observed rather than a status anybody assumed. The fields that will hold a container or
+ * a preview are served with their empty value instead of being omitted, so a renderer shows
+ * "not recorded" rather than a fact a neighbour suggested.
  */
 
 /** The machine a workstream runs on, named the way the tailnet document names it. */
@@ -27,11 +30,32 @@ export interface EnvironmentRuntime {
 /**
  * A declared service on the workstream's runtime.
  *
- * Slice 2 gives a service a name, a command, a port and a health check; until a declaration
- * exists there is no element to describe, and `never` says that rather than guessing a shape
- * a renderer would then draw.
+ * The shape is the room's, not a second one: `room` owns the declaration and runs the probe, so
+ * the board serves what it observed instead of re-deriving a health state from a port being set.
  */
-export type EnvironmentService = never
+export type EnvironmentService = ServiceObservation
+
+/**
+ * The port lease a room holds for the workstream that runs in it.
+ *
+ * It is the room's lease, not a service declaration: a workstream gets one port before it has a
+ * service to put on it. `room` is served so a reader can check the claim in that room's file.
+ */
+export interface EnvironmentPort {
+  readonly room: string
+  readonly number: number
+  readonly leasedAt: string
+}
+
+/** One leased port, named by the worktree the room owns. */
+export interface RoomPortLease extends EnvironmentPort {
+  readonly worktree: string
+}
+
+/** One observed service, named by the worktree the room owns. */
+export interface RoomServiceObservation extends EnvironmentService {
+  readonly worktree: string
+}
 
 /** The session working this workstream: the projection's own match, not a guess. */
 export interface EnvironmentAgent {
@@ -44,6 +68,7 @@ export interface Environment {
   readonly workstream: string
   readonly machine: EnvironmentMachine | null
   readonly runtime: EnvironmentRuntime
+  readonly port: EnvironmentPort | null
   readonly services: ReadonlyArray<EnvironmentService>
   readonly agent: EnvironmentAgent | null
   readonly preview: null
@@ -96,19 +121,43 @@ export const environmentsOf = (input: {
   readonly workstreams: ReadonlyArray<{ readonly id: string; readonly path: string }>
   readonly sessions: ReadonlyArray<Session>
   readonly tailnet: Tailnet
+  readonly leases?: ReadonlyArray<RoomPortLease> | undefined
+  readonly services?: ReadonlyArray<RoomServiceObservation> | undefined
+  /**
+   * How two names for the same directory are compared; a plain resolve by default.
+   *
+   * The board passes a realpath-backed key: a room's worktree and a factory record can name
+   * one directory through different symlinks, and a lease must not be lost to that.
+   */
+  readonly pathKey?: ((path: string) => string) | undefined
   readonly observedAt: string
 }): ReadonlyArray<Environment> => {
   const machine = Option.getOrNull(machineOf(input.tailnet))
-  return input.workstreams.map((record) => ({
-    workstream: record.id,
-    machine,
-    runtime: { kind: "worktree", path: record.path },
-    // Slice 2 owns service declarations; until then there is nothing to declare, not a
-    // service with an unknown health.
-    services: [],
-    agent: Option.getOrNull(agentOf(input.sessions, record.id)),
-    // Slice 2 owns routes to a workstream's web service; there is no route to name yet.
-    preview: null,
-    observedAt: input.observedAt,
-  }))
+  const leases = input.leases ?? []
+  const services = input.services ?? []
+  const pathKey = input.pathKey ?? resolve
+  return input.workstreams.map((record) => {
+    // The worktree is the join: both documents observe a path, so a match is evidence rather
+    // than an assumption that a workstream id and a room id happen to be the same string.
+    const lease = leases.find((candidate) => pathKey(candidate.worktree) === pathKey(record.path))
+    const observed = services.filter(
+      (candidate) => pathKey(candidate.worktree) === pathKey(record.path),
+    )
+    return {
+      workstream: record.id,
+      machine,
+      runtime: { kind: "worktree", path: record.path },
+      port:
+        lease === undefined
+          ? null
+          : { room: lease.room, number: lease.number, leasedAt: lease.leasedAt },
+      // A room that declares no service contributes no element, and an observed service keeps
+      // the status the probe earned. The worktree is the join's evidence, not a served field.
+      services: observed.map(({ worktree: _worktree, ...service }) => service),
+      agent: Option.getOrNull(agentOf(input.sessions, record.id)),
+      // Slice 2 owns routes to a workstream's web service; there is no route to name yet.
+      preview: null,
+      observedAt: input.observedAt,
+    }
+  })
 }

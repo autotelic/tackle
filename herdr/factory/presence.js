@@ -73,6 +73,7 @@ const rowOf = ({ workstream, activity, sessions, environment }) => {
     machine: textOf(machine.host),
     runtime: textOf(runtime.kind),
     runtimePath: textOf(runtime.path),
+    port: numberOrNull(recordOf(facts.port).number),
     services: listOf(facts.services)
       .map((service) => textOf(recordOf(service).name))
       .filter((name) => name !== null),
@@ -149,9 +150,9 @@ const metaLine = (row) =>
     .join(" · ")
 
 /**
- * The line under the meta line: machine, runtime, declared services and preview, each only
- * when the projection sent it. No declaration means no service text — a port or a health
- * state is never inferred from a neighbour's.
+ * The line under the meta line: machine, runtime, the room's leased port, declared services
+ * and preview, each only when the projection sent it. No declaration means no service text —
+ * a health state is never inferred from a neighbour's.
  *
  * @param {Record<string, any>} row - one drawn row.
  * @returns {string} the joined line, possibly empty.
@@ -164,6 +165,7 @@ const environmentText = (row) =>
       : row.runtimePath === null
         ? row.runtime
         : row.runtime + " " + row.runtimePath,
+    row.port === null ? null : "port " + row.port,
     row.services.length === 0 ? null : row.services.join(", "),
     row.preview,
   ]

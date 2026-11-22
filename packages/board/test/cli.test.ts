@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process"
+import { spawn, spawnSync } from "node:child_process"
 import { createServer } from "node:http"
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -371,9 +371,23 @@ test("presence carries an environment for every workstream", () => {
     const factoryHome = join(root, "factory")
     const workstreams = join(factoryHome, "workstreams")
     mkdirSync(workstreams, { recursive: true })
+    // One workstream runs in a room whose lease is live, so the port join has a fact to find.
+    const roomWorktree = join(root, "rooms", "feedback-room", "worktree")
+    mkdirSync(roomWorktree, { recursive: true })
+    mkdirSync(join(root, "rooms", "feedback-room"), { recursive: true })
+    const leasedAt = 1_760_000_000_000
+    writeFileSync(
+      join(root, "rooms", "feedback-room", "room.json"),
+      JSON.stringify({
+        id: "feedback-room",
+        base: "main",
+        state: { _tag: "Ready", repo: "/r", scope: "dev", createdAt: 1 },
+        port: { number: 4400, leasedAt },
+      }),
+    )
     const records = [
       { id: "shakti-perms", path: join(root, "shakti-perms"), label: "shakti-perms" },
-      { id: "factory-feedback", path: join(root, "factory-feedback"), label: "factory-feedback" },
+      { id: "factory-feedback", path: roomWorktree, label: "factory-feedback" },
     ]
     for (const record of records)
       writeFileSync(join(workstreams, record.id + ".json"), workstreamRecord(record))
@@ -399,6 +413,16 @@ test("presence carries an environment for every workstream", () => {
             ? null
             : { host: environment.machine.host, dnsName: environment.machine.dnsName },
         runtime: { kind: "worktree", path: ordered[index]?.path },
+        // A port is served only when a room's lease names this worktree; a null here is the
+        // honest answer for a workstream that no room holds.
+        port:
+          environment.port === null
+            ? null
+            : {
+                room: environment.port.room,
+                number: environment.port.number,
+                leasedAt: environment.port.leasedAt,
+              },
         // Nothing declares a service and nothing routes to a preview, so both stay at their
         // empty value rather than being filled by a neighbour.
         services: [],
@@ -419,7 +443,129 @@ test("presence carries an environment for every workstream", () => {
       expect(environment).not.toHaveProperty("container")
       expect(environment).not.toHaveProperty("health")
     }
+    // The room's lease reaches the document through its worktree, and the other workstream
+    // stays null rather than sharing it.
+    expect(environments[0]?.port).toEqual({
+      room: "feedback-room",
+      number: 4400,
+      leasedAt: new Date(leasedAt).toISOString(),
+    })
+    expect(environments[1]?.port).toBeNull()
   } finally {
     rmSync(root, { recursive: true, force: true })
+  }
+})
+
+/**
+ * The one-shot command, awaited rather than spawned synchronously: a fixture server in this
+ * process cannot answer a probe while the event loop is blocked on a child.
+ */
+const runAsync = async (
+  args: ReadonlyArray<string>,
+  cwd: string,
+  env: Readonly<Record<string, string>> = {},
+): Promise<{
+  readonly status: number | null
+  readonly stdout: string
+  readonly stderr: string
+}> => {
+  const child = spawn(process.execPath, ["--conditions=development", cli, ...args], {
+    cwd,
+    env: { ...process.env, ...env },
+  })
+  let stdout = ""
+  let stderr = ""
+  child.stdout.setEncoding("utf8")
+  child.stdout.on("data", (chunk: string) => (stdout += chunk))
+  child.stderr.setEncoding("utf8")
+  child.stderr.on("data", (chunk: string) => (stderr += chunk))
+  const status = await new Promise<number | null>((resolve) => child.once("close", resolve))
+  return { status, stdout, stderr }
+}
+
+test("presence serves the status a probe observed for a declared service", async () => {
+  const root = mkdtempSync(join(tmpdir(), "board-service-"))
+  const server = createServer((request, response) => {
+    const answering = request.url === "/healthz"
+    response.writeHead(answering ? 200 : 500, { "content-type": "text/plain" })
+    response.end("answer\n")
+  })
+  try {
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve))
+    const address = server.address()
+    const port = address === null || typeof address === "string" ? 0 : address.port
+    expect(port).toBeGreaterThan(0)
+    const factoryHome = join(root, "factory")
+    const workstreams = join(factoryHome, "workstreams")
+    mkdirSync(workstreams, { recursive: true })
+    const declared = { name: "web", command: "node server.js", healthPath: "/healthz" }
+    const rooms = join(root, "rooms")
+    // One room's supervisor is alive and its service answers the health path. The other
+    // declares the same service but has no run record, so the probe opens no socket at all.
+    const fixtures = [
+      {
+        id: "answering",
+        port,
+        run: { pid: process.pid, exec: "node server.js", startedAt: 1, log: "/tmp/room.log" },
+      },
+      { id: "idle", port: port + 1, run: undefined },
+    ]
+    for (const fixture of fixtures) {
+      const worktree = join(rooms, fixture.id, "worktree")
+      mkdirSync(worktree, { recursive: true })
+      writeFileSync(
+        join(rooms, fixture.id, "room.json"),
+        JSON.stringify({
+          id: fixture.id,
+          base: "main",
+          state: { _tag: "Ready", repo: "/r", scope: "dev", createdAt: 1 },
+          port: { number: fixture.port, leasedAt: 1_760_000_000_000 },
+          service: declared,
+        }),
+      )
+      if (fixture.run !== undefined)
+        writeFileSync(join(rooms, fixture.id, "run.json"), JSON.stringify(fixture.run))
+      writeFileSync(
+        join(workstreams, fixture.id + ".json"),
+        workstreamRecord({ id: fixture.id, path: worktree, label: fixture.id }),
+      )
+    }
+
+    const output = await runAsync(["presence", "--json", "--root", "rooms"], root, {
+      FACTORY_HOME: factoryHome,
+    })
+    expect(output.status, output.stderr).toBe(0)
+    const presence = JSON.parse(output.stdout)
+    const environments = new Map<string, { services: Array<unknown> }>(
+      presence.factory.environments.map((environment: { workstream: string }) => [
+        environment.workstream,
+        environment,
+      ]),
+    )
+    expect(environments.get("answering")?.services).toEqual([
+      {
+        name: "web",
+        command: "node server.js",
+        port,
+        healthPath: "/healthz",
+        status: "healthy",
+        detail: null,
+        checkedAt: presence.observedAt,
+      },
+    ])
+    expect(environments.get("idle")?.services).toEqual([
+      {
+        name: "web",
+        command: "node server.js",
+        port: port + 1,
+        healthPath: "/healthz",
+        status: "stopped",
+        detail: "no supervisor is running for this room",
+        checkedAt: presence.observedAt,
+      },
+    ])
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+    await new Promise<void>((resolve) => server.close(() => resolve()))
   }
 })
