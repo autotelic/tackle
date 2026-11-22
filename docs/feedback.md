@@ -25,8 +25,9 @@ it is not a second investigation.
 | `duplicate`      | nothing new                                        | increment the count on the first row and cite it; nothing else                            |
 | `not-a-defect`   | not in the tool                                    | record why the expectation cannot hold, so the next identical report closes in one line   |
 | `waiting`        | a fix that exists                                  | name the blocker: a release, another workstream, an unmet gate                            |
+| `fixed`          | nothing — the tool already changed                 | cite the commit and verify on the artefact you have; do not re-fix it                     |
 
-## 2. Two rules that decide most reports
+## 2. Three rules that decide most reports
 
 **A red check is not a failing test.** A step killed at its bound exits with no test summary because
 no test failed. The factory's own runner already draws that line and pins it: `StepResult.timedOut`,
@@ -41,6 +42,12 @@ and a Linear page are the reporter's tools; when the bytes are thin because CI k
 the fix belongs where the process runs. Triage asks which config produced the line; a line produced
 by a workflow's own `timeout-minutes` is that workflow's to fix.
 
+**A report can arrive before the build it is about.** `bin/factory.js` runs `dist/`, which is
+gitignored and rebuilt by `pnpm build`; a line that landed in source seconds ago is invisible to
+anyone holding the previous build. Compare the report's timestamp with `git log` before reading a
+missing command as missing code — the fix may already be in the tree. That is not a dismissal: the
+reporter read the artefact it had, and the artefact was wrong for it.
+
 ## 3. The ledger
 
 | id                                      | fingerprint                                                                                                                                                | kind        | verdict      | route                                                               |
@@ -48,6 +55,7 @@ by a workflow's own `timeout-minutes` is that workflow's to fix.
 | `report-permissions-1862-1795303302409` | `conformance:gh run view --job 136075695353 --log:bf49d72626a9`                                                                                            | conformance | `owner-repo` | permissions-1862: its `test-rest` shard                             |
 | `report-permissions-1862-1795303401889` | `conformance:gh api .../actions/jobs/136075695353; cd services/rest; npx mocha <shard 2 files>:7712854710d8`                                               | conformance | `duplicate`  | cited: `report-permissions-1862-1795303302409` — same job           |
 | `report-permissions-1862-1795303503690` | `ergonomics:read a long file (docs/permissions-overhaul-tree/05-audit.md) through the agent's read tool, then paste the result into a commit:93a81a7d8cb3` | ergonomics  | `owner-repo` | permissions-1862: restore §16 from `580049816`, delete both notices |
+| `report-permissions-1862-1795303853012` | `ergonomics:node packages/factory/bin/factory.js --help:5997bc3147b1`                                                                                      | ergonomics  | `fixed`      | fixed in `559d8bcc`; the reported bytes predate `0173a342`          |
 
 ### Case: the REST shard that named no test
 
@@ -137,6 +145,40 @@ prompt line the fix and the gate the place to decide it); a Pi release that mach
 truncation (this row closes as shipped upstream); or an owner regenerating the document from
 `580049816` instead of patching §16, which needs no ledger change.
 
+### Case: the help that hid its own phase command
+
+`report-permissions-1862-1795303853012` is accurate about the binary it ran and stale about the tree.
+`factory phase` and its usage line landed in `0173a342` at 16:30:21; the report was filed at
+16:30:53 against a `--help` that matches the _pre-`0173a342`_ list exactly — `adopt`, `status`,
+`event`, `run`, `watch`, `report`. So the reporter read a `dist/` built before the line existed;
+`bin/factory.js` runs `dist/` and `dist/` is gitignored, so source seconds old is invisible until the
+next build. Eight minutes later `559d8bcc` did the second thing the report asked for and wrote the
+reason into the code: leaving `reconcile` or `blocked` needs an answer record, "(a probe did exactly
+that)".
+
+At HEAD both asks hold. Verified in a throwaway `FACTORY_HOME` against a copy of a record, so the
+probe could not advance a live workstream:
+
+- `--help` lists all ten commands, `phase` among them with `[--answer <desk-answer.json>]`;
+- `phase --id tmp-probe --set build` on a `reconcile` record exits 1 with
+  `desk gate: reconcile -> build needs --answer <desk-answer.json>` and leaves the phase at
+  `reconcile`;
+- the same command with `{"choice":"accept"}` advances it to `build`.
+
+Hence `fixed`, not `factory-defect`: re-cutting a fix that is already an ancestor of HEAD would be a
+second edit of a protected path for no gain. Two things remain true, and neither is repaired here:
+
+- the usage list is hand-maintained and nothing compares it to the dispatcher, so the next command can
+  land undocumented again; a fixture test is the guard, and the guard is a gate decision;
+- the `adopt` line still omits `--delivery`, `--reports` and `--linear-project-id`, so trunk delivery —
+  the shape this workstream runs — cannot be read off help at all.
+
+Both live in `packages/factory/**`, protected for this workstream; they are the next gate's question,
+not this pass's edit.
+
+**What would change it:** a `--help` that omits a command _after_ a clean `pnpm build` (the source
+drifted, and the row reopens as `factory-defect`); or a decision to lift the gate for the usage test.
+
 ## 4. What a verdict is not
 
 - **not a desk item.** A report is a tooling complaint; only `gate-defect` and a real choice produce a
@@ -149,7 +191,8 @@ truncation (this row closes as shipped upstream); or an owner regenerating the d
 ## 5. Filing a verdict
 
 1. Read the report's own lines first; do not re-run the command to learn what it said.
-2. Choose the verdict from §1 and write the evidence, not the conclusion.
+2. Choose the verdict from §1 and write the evidence, not the conclusion. For `fixed`, cite the
+   commit that closed it and the artefact you verified; do not re-fix a line that is already on trunk.
 3. For `factory-defect`, the pass carries a fixture test and the before/after counts.
 4. For `gate-defect`, raise the desk item before touching the path.
 5. A repeat — by fingerprint, or by subject through another command — is a `duplicate` row, not
