@@ -17,7 +17,6 @@ import { Effect } from 'effect'
 import { createIssueAnswerHandler, watchAnswers } from './answer-watcher.ts'
 import { loadConfig } from './config.ts'
 import { createHumanChannel, type HumanChannel } from './human-channel.ts'
-import { telePiConfigExists } from './telepi.ts'
 import { makeEscalate } from './loop/escalate.ts'
 import { appendQa, pickNextIssue, runIssueLoop } from './loop/issue-loop.ts'
 import { buildLoopMachine, type LoopMachineDeps } from './loop/machine.ts'
@@ -25,7 +24,7 @@ import { createNightlyBudget } from './loop/nightly.ts'
 import { reconcile } from './loop/reconcile.ts'
 import { lintRules } from './loop/rules.ts'
 import { maintenance } from './maintenance.ts'
-import { loadTelePiConfig, sendTelegramMessage } from './telepi.ts'
+import { loadTelePiConfig, sendTelegramMessage, telePiConfigExists } from './telepi.ts'
 
 function parseArgs(argv: string[]): { repo: string; channel?: 'terminal' | 'telepi' } {
   const args: Record<string, string> = {}
