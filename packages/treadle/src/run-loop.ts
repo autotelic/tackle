@@ -15,7 +15,8 @@ import { join, resolve } from 'node:path'
 import { createEffectActor, join as joinActor } from '@xstate/effect'
 import { Effect } from 'effect'
 import { createIssueAnswerHandler, watchAnswers } from './answer-watcher.ts'
-import { loadConfig } from './config.ts'
+import { readFile } from 'node:fs/promises'
+import { hashConfigText, loadConfig } from './config.ts'
 import { createHumanChannel, type HumanChannel } from './human-channel.ts'
 import { makeEscalate } from './loop/escalate.ts'
 import { appendQa, pickNextIssue, runIssueLoop } from './loop/issue-loop.ts'
@@ -51,7 +52,10 @@ function parseArgs(argv: string[]): { repo: string; channel?: 'terminal' | 'tele
 
 const args = parseArgs(process.argv.slice(2))
 const repoDir = args.repo
-const config = await loadConfig(join(repoDir, 'loop.config.ts'))
+const configPath = join(repoDir, 'loop.config.ts')
+const configText = await readFile(configPath, 'utf8')
+const configHash = hashConfigText(configText)
+const config = await loadConfig(configPath)
 
 for (const warning of lintRules(config.rules ?? [])) console.warn(`rules: ${warning}`)
 
@@ -170,6 +174,7 @@ const machineDeps: LoopMachineDeps = {
   },
   makeIssueLoop: (issue) =>
     runIssueLoop({
+      configHash,
       repoDir,
       config,
       issue,

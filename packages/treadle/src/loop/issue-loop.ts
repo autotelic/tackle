@@ -5,6 +5,7 @@ import { promisify } from 'node:util'
 import { Effect } from 'effect'
 import { passConsumesBudget } from '../budget.ts'
 import { runChecks } from '../checks.ts'
+import { assertConfigCurrent } from '../config.ts'
 import type { LoopConfig } from '../config.ts'
 import type { HumanChannel } from '../human-channel.ts'
 import { buildSessionPrompt } from '../prompt.ts'
@@ -106,6 +107,8 @@ export type IssueLoopDeps = {
   runSessionFn?: typeof runSession
   runChecksFn?: typeof runChecks
   sleepFn?: (ms: number) => Effect.Effect<void>
+  /** The config's hash at load. Absent in unit tests, which have no config file. */
+  configHash?: string
 }
 
 const INFRA_BACKOFF_MINUTES = [1, 5, 15]
@@ -254,6 +257,7 @@ function sessionWithPause(args: {
 export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult, Error> {
   const { repoDir, config, issue, human, notify } = deps
   const runChecksFn = deps.runChecksFn ?? runChecks
+  const configHash = deps.configHash
   const runSessionFn = deps.runSessionFn ?? runSession
   const sleepFn = deps.sleepFn ?? ((ms: number) => Effect.sleep(ms))
   const budget = config.budgets.passesPerIssue
@@ -364,6 +368,51 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
     }
     let passSeq = history.length
     let costSoFarUsd = history.reduce((sum, r) => sum + (r.costUsd ?? 0), 0)
+
+    // ── The gate must be the gate that was loaded ──────────────────────
+    // A config read at startup is not the config running this pass: a checks list edited while the loop
+    // was alive never ran, and the pass still reported green. Refuse instead of under-running the review.
+    if (deps.configHash !== undefined) {
+      const drifted = yield* Effect.tryPromise({
+        try: () => assertConfigCurrent(join(repoDir, 'loop.config.ts'), deps.configHash as string),
+        catch: (error) => (error instanceof Error ? error : new Error(String(error))),
+      }).pipe(
+        Effect.as<'ok'>('ok'),
+        Effect.catch((error) => Effect.succeed<'stale' | 'ok'>(
+          error.name === 'StaleConfigError' ? 'stale' : 'ok',
+        )),
+      )
+      if (drifted === 'stale') {
+        yield* tryP(() =>
+          notify(
+            `#${issue.number}: the loop config changed since it was loaded — refusing to run checks ` +
+              'under a gate that did not run. Restart the loop.',
+          ),
+        )
+        yield* tryP(() =>
+          postReceipt({
+            issue: issue.number,
+            pass: 0,
+            budget,
+            terminal: 'stale-config',
+            reason: 'StaleConfig',
+            turns: 0,
+            sessionLogPath: '',
+            checkpoint: issue.number.toString(),
+            checks: {
+              infrastructureFailure:
+                'StaleConfig: loop.config.ts changed since load; no check from the new file has run',
+              reportDir: '',
+            },
+          }),
+        )
+        yield* tryP(() =>
+          relabel(repoDir, config, issue.number, config.issues.working, config.issues.parked),
+        )
+        yield* tryP(() => git(repoDir, 'worktree', 'remove', worktreeDir, '--force'))
+        return { kind: 'parked', issue: issue.number, passesUsed: 0, reason: 'no-rule' }
+      }
+    }
 
     // ── Baseline Checks before spending budget (#13) ────────────────────
     // The baseline guards the HARNESS, not the issue: it bounces only on a
@@ -757,7 +806,21 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
 
     // ── Helpers ─────────────────────────────────────────────────────────
     async function postReceipt(receipt: Receipt): Promise<void> {
-      await comment(repoDir, config, issue.number, renderReceipt(receipt))
+      // Every receipt names the gate it passed: the hash and the checks as loaded.
+      await comment(
+        repoDir,
+        config,
+        issue.number,
+        renderReceipt({
+          ...receipt,
+          ...(configHash === undefined ? {} : { configHash }),
+          declaredChecks: config.checks.map((check) => ({
+            name: check.name,
+            run: check.run,
+            timeoutSeconds: check.timeoutSeconds,
+          })),
+        }),
+      )
     }
 
     async function parkWithSummary(

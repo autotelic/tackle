@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
 import { pathToFileURL } from 'node:url'
 import type { Rule } from './loop/rules.ts'
 
@@ -267,6 +269,31 @@ export function assertLoopConfig(
         fail(configPath, `rules[${i}].action.type must be session or effect`)
       }
     }
+  }
+}
+
+/**
+ * Which gate a pass was reviewed under.
+ *
+ * A config read once at startup is not the config running a pass: a checks list edited while the loop was
+ * alive silently did not run, and the pass reported green. The hash makes that a refusal instead of a quiet
+ * under-run, and the receipt names the gate it actually passed.
+ */
+export const hashConfigText = (text: string): string =>
+  createHash('sha256').update(text).digest('hex').slice(0, 16)
+
+export class StaleConfigError extends Error {}
+
+/** Refuse to run anything when the file on disk is no longer the file that was loaded. */
+export const assertConfigCurrent = async (
+  configPath: string,
+  loadedHash: string,
+): Promise<void> => {
+  const current = hashConfigText(await readFile(configPath, 'utf8'))
+  if (current !== loadedHash) {
+    throw new StaleConfigError(
+      `StaleConfig: ${configPath} changed since load (loaded ${loadedHash}, now ${current}); restart the loop`,
+    )
   }
 }
 

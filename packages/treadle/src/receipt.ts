@@ -19,6 +19,10 @@ export type Receipt = {
   /** Dollar cost of the Session, when recorded (#16). */
   costUsd?: number
   sessionLogPath: string
+  /** Hash of the config file at load: which gate this pass was reviewed under. */
+  configHash?: string
+  /** The checks the loaded config declared, by name and command, so a receipt names its gate. */
+  declaredChecks?: ReadonlyArray<{ name: string; run: string; timeoutSeconds: number }>
   /** The Checkpoint commit the Receipt names. */
   checkpoint: string
   checks:
@@ -47,6 +51,10 @@ export function renderReceipt(receipt: Receipt): string {
   const reason = receipt.reason ? ` — ${receipt.reason}` : ''
   const cost = receipt.costUsd !== undefined ? `, $${receipt.costUsd.toFixed(2)}` : ''
   lines.push(`- Session: **${receipt.terminal}**${reason} (${receipt.turns} turns${cost})`)
+  if (receipt.configHash !== undefined) {
+    const names = (receipt.declaredChecks ?? []).map((check) => check.name).join(', ')
+    lines.push(`- Gate: \`${receipt.configHash}\`${names === '' ? '' : ` — checks: ${names}`}`)
+  }
   if (receipt.checks === null) {
     lines.push('- Checks: not run (Session blocked-on-human)')
   } else if ('infrastructureFailure' in receipt.checks) {
