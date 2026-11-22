@@ -26,6 +26,7 @@ const usage = [
   "  factory daemon run --worker <command> [--interval <ms>]",
   "  factory daemon stop",
   "  factory cursor --id <id> --github <iso> --linear <iso>",
+  "  factory budget --id <id> --passes-per-phase <n>",
   "  factory desk list [--json]",
   "  factory desk answer --item <id> --choice <choice> --by <did-or-name>",
   "  factory desk raise --workstream <id> --title <text> [--body <text>] [--choices <a,b>] [--route live|github|slack]",
@@ -323,6 +324,31 @@ const main = async (): Promise<void> => {
       record: { ...record, phase: parsed.values.set, updatedAt: new Date().toISOString() },
     })
     console.log("factory: " + record.id + " phase " + parsed.values.set)
+    return
+  }
+
+  if (command === "budget") {
+    const parsed = parseArgs({
+      args: process.argv.slice(3),
+      options: { id: { type: "string" }, "passes-per-phase": { type: "string" } },
+      allowPositionals: false,
+    })
+    const { id } = parsed.values
+    const passes = Number(parsed.values["passes-per-phase"])
+    if (id === undefined || parsed.values["passes-per-phase"] === undefined)
+      return fail("budget needs --id and --passes-per-phase")
+    if (!Number.isInteger(passes) || passes < 1)
+      return fail("--passes-per-phase must be a positive integer")
+    const record = await readWorkstream({ id })
+    if (record === undefined) return fail("unknown workstream " + id)
+    await writeWorkstream({
+      record: {
+        ...record,
+        budgets: { ...record.budgets, passesPerPhase: passes },
+        updatedAt: new Date().toISOString(),
+      },
+    })
+    console.log("factory: " + id + " passes per phase -> " + passes)
     return
   }
 

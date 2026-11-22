@@ -62,6 +62,7 @@ test("activity reports the last pass and the queued event's own words", async ()
     })
     expect(activity.lastPass?.pass).toBe(1)
     expect(activity.ageMinutes).toBe(30)
+    expect(activity.budget).toEqual({ used: 1, passesPerPhase: 5 })
     expect(activity.pending[0]?.summary).toBe("the queue should say this")
   } finally {
     rmSync(root, { recursive: true, force: true })

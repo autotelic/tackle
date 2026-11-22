@@ -4,7 +4,7 @@ import { join } from "node:path"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 import { readEvents, type Event } from "./events.ts"
-import { receiptsDir, type Receipt } from "./kernel.ts"
+import { passesUsed, receiptsDir, type Receipt } from "./kernel.ts"
 import { Phase, type Workstream } from "./store.ts"
 
 const Quality = Schema.Struct({
@@ -67,6 +67,8 @@ export interface Activity {
     readonly summary: string | undefined
   } | null
   readonly ageMinutes: number | null
+  readonly budget: { readonly used: number; readonly passesPerPhase: number }
+  readonly phase: Workstream["phase"]
 }
 
 const minutesSince = (at: string, now: number): number =>
@@ -118,6 +120,7 @@ export const activityOf = async (input: {
     }))
   const latestEvent = events.at(-1)
   const lastAt = lastPass?.at ?? latestEvent?.at ?? input.record.checkpoint.at
+  const used = await passesUsed({ id: input.record.id, home: input.home })
   return {
     workstream: input.record.id,
     lastPass,
@@ -132,5 +135,7 @@ export const activityOf = async (input: {
             summary: Option.getOrUndefined(summaryOf(latestEvent)),
           },
     ageMinutes: minutesSince(lastAt, input.now),
+    budget: { used, passesPerPhase: input.record.budgets.passesPerPhase },
+    phase: input.record.phase,
   }
 }

@@ -71,6 +71,8 @@ const Activity = Schema.Struct({
     }),
   ),
   ageMinutes: Schema.NullOr(Schema.Finite),
+  budget: Schema.Struct({ used: Schema.Finite, passesPerPhase: Schema.Finite }),
+  phase: Schema.String,
 })
 const SessionSource = Schema.Union([Schema.Literal("herdr"), Schema.Literal("rex")])
 const Session = Schema.Struct({
@@ -313,15 +315,18 @@ const activityBlock = (h: HtmlBuilder<Message>, activity: typeof Activity.Type |
     return h.div([h.Class("activity")], [h.span([h.Class("muted")], ["No pass records yet"])])
   const pass = activity.lastPass
   const running = pass?.status === "running"
-  const stale = !running && (activity.ageMinutes ?? 0) >= 30
+  const capped = activity.budget.used >= activity.budget.passesPerPhase
+  const stale = !running && !capped && (activity.ageMinutes ?? 0) >= 30
   const age = formatDuration(activity.ageMinutes)
   const status = running
     ? "Working now"
-    : pass === null
-      ? "No pass yet"
-      : stale
-        ? "Idle for " + age
-        : "Last pass finished " + age + " ago"
+    : capped
+      ? "Paused: pass budget reached"
+      : pass === null
+        ? "No pass yet"
+        : stale
+          ? "Idle for " + age
+          : "Last pass finished " + age + " ago"
   const gate =
     pass?.quality === undefined
       ? "Gate: no quality record"
@@ -333,7 +338,14 @@ const activityBlock = (h: HtmlBuilder<Message>, activity: typeof Activity.Type |
         pass.quality.after.warnings +
         " warnings"
   return h.div(
-    [h.Class("activity" + (stale ? " stale" : "") + (running ? " running" : ""))],
+    [
+      h.Class(
+        "activity" +
+          (stale ? " stale" : "") +
+          (running ? " running" : "") +
+          (capped ? " capped" : ""),
+      ),
+    ],
     [
       h.div(
         [h.Class("activity-head")],
@@ -352,9 +364,20 @@ const activityBlock = (h: HtmlBuilder<Message>, activity: typeof Activity.Type |
         [
           running
             ? "A pass is running now. Its work appears here when it checkpoints."
-            : stale
-              ? "No pass is running. The queue has not moved."
-              : "The workstream is caught up; the next event starts a pass.",
+            : capped
+              ? "The " +
+                phaseLabel(activity.phase) +
+                " phase used " +
+                activity.budget.used +
+                " of " +
+                activity.budget.passesPerPhase +
+                " passes. Raise the budget to let the queue move: factory budget --id " +
+                activity.workstream +
+                " --passes-per-phase " +
+                (activity.budget.passesPerPhase + 5)
+              : stale
+                ? "No pass is running. The queue has not moved."
+                : "The workstream is caught up; the next event starts a pass.",
         ],
       ),
       activity.pending.length === 0

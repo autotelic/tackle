@@ -239,6 +239,10 @@ button:hover {
   border-color: #bfdcc9;
   background: #f3faf6;
 }
+.activity.capped {
+  border-color: #e7c4bc;
+  background: #fff8f6;
+}
 .activity-head {
   display: flex;
   align-items: baseline;
