@@ -1,4 +1,6 @@
 import { spawnSync } from "node:child_process"
+import { Data } from "effect"
+import * as Option from "effect/Option"
 import { listWorkstreams, ownerOfPath, type Workstream } from "./store.ts"
 
 /** What git answers when it cannot name a branch; the refusal still has to name both sides. */
@@ -12,35 +14,45 @@ const NO_BRANCH = "(no branch: detached HEAD or not a git worktree)"
  * on several branches, so the sha cannot answer it. A detached HEAD and a path that is not
  * a repository both answer no branch, and neither can be the branch a record adopted.
  *
+ * Kept internal on purpose: the guard's public answer is the tagged verdict below, so no
+ * caller can read git's silence as a branch name.
+ *
  * @param path - the worktree root (a subdirectory answers the same branch).
- * @returns the short branch name, or undefined when git cannot name one.
+ * @returns the short branch name, or none when git cannot name one.
  */
-export const branchOf = (path: string): string | undefined => {
+const branchOf = (path: string): Option.Option<string> => {
   const result = spawnSync("git", ["-C", path, "symbolic-ref", "--short", "HEAD"], {
     encoding: "utf8",
   })
-  if (result.status !== 0) return undefined
+  if (result.status !== 0) return Option.none()
   const branch = result.stdout.trim()
-  return branch === "" ? undefined : branch
+  return branch === "" ? Option.none() : Option.some(branch)
 }
 
-export type BranchVerdict =
-  | {
-      readonly ok: true
-      readonly record: Workstream | undefined
-      readonly branch: string | undefined
-    }
-  | { readonly ok: false; readonly record: Workstream; readonly reason: string }
+/**
+ * The guard's three answers, kept apart so no caller reads absence as a branch.
+ *
+ * `Ungoverned` is not a refusal (the factory governs workstreams, not the machine),
+ * `OnBranch` carries the branch it confirmed, and `Mismatch` is the only one with a price.
+ */
+export type BranchVerdict = Data.TaggedEnum<{
+  readonly Ungoverned: {}
+  readonly OnBranch: { readonly record: Workstream; readonly branch: string }
+  readonly Mismatch: { readonly record: Workstream; readonly reason: string }
+}>
+
+const BranchVerdict = Data.taggedEnum<BranchVerdict>()
 
 /** The record that owns a worktree path, through the lookup adoption refuses a second owner with. */
 const ownerOf = async (input: {
   readonly path: string
   readonly home?: string | undefined
-}): Promise<Workstream | undefined> => {
-  return ownerOfPath({
+}): Promise<Option.Option<Workstream>> => {
+  const found = ownerOfPath({
     records: await listWorkstreams({ home: input.home }),
     path: input.path,
   })
+  return found._tag === "Owned" ? Option.some(found.workstream) : Option.none()
 }
 
 /**
@@ -54,20 +66,27 @@ const ownerOf = async (input: {
  * A path no record owns is not a refusal: the factory governs workstreams, not the machine.
  *
  * @param input - the worktree path, the record (read from the store when absent), and the home.
- * @returns ok with the observed branch, or the refusal naming both branches.
+ * @returns the owning record and its branch, the refusal naming both branches, or ungoverned.
  */
 export const branchGuard = async (input: {
   readonly path: string
   readonly record?: Workstream | undefined
   readonly home?: string | undefined
 }): Promise<BranchVerdict> => {
-  const owner = input.record ?? (await ownerOf({ path: input.path, home: input.home }))
-  if (owner === undefined) return { ok: true, record: undefined, branch: undefined }
+  const owner =
+    input.record === undefined
+      ? await ownerOf({ path: input.path, home: input.home })
+      : Option.some(input.record)
+  if (Option.isNone(owner)) return BranchVerdict.Ungoverned()
   const branch = branchOf(input.path)
-  if (branch === owner.branch) return { ok: true, record: owner, branch }
-  return {
-    ok: false,
-    record: owner,
-    reason: "BranchMismatch: expected " + owner.branch + ", found " + (branch ?? NO_BRANCH),
-  }
+  if (Option.isSome(branch) && branch.value === owner.value.branch)
+    return BranchVerdict.OnBranch({ record: owner.value, branch: branch.value })
+  return BranchVerdict.Mismatch({
+    record: owner.value,
+    reason:
+      "BranchMismatch: expected " +
+      owner.value.branch +
+      ", found " +
+      Option.getOrElse(branch, () => NO_BRANCH),
+  })
 }

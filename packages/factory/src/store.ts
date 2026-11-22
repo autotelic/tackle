@@ -179,17 +179,19 @@ const Collision = Data.taggedEnum<Collision>()
  *
  * The branch guard asks only this question — which record governs this worktree — and
  * adoption asks it before a second owner exists, so both compare paths one way: realpath,
- * not string equality.
+ * not string equality. It answers in the collision vocabulary both callers already match on,
+ * so no caller has to read an absence out of a second shape.
  *
  * @param input - the records and the worktree path.
- * @returns the owning workstream, or none when the path is ungoverned.
+ * @returns Owned with the record, or Free when no record governs the path.
  */
 export const ownerOfPath = (input: {
   readonly records: ReadonlyArray<Workstream>
   readonly path: string
-}): Workstream | undefined => {
+}): Collision => {
   const path = canonical(input.path)
-  return input.records.find((record) => canonical(record.path) === path)
+  const found = input.records.find((record) => canonical(record.path) === path)
+  return found === undefined ? Collision.Free() : Collision.Owned({ workstream: found })
 }
 
 /**
@@ -204,11 +206,11 @@ export const collision = (input: {
   readonly repo: string
   readonly pr: number | undefined
 }): Collision => {
-  const found =
-    ownerOfPath({ records: input.records, path: input.path }) ??
-    input.records.find(
-      (record) => input.pr !== undefined && record.repo === input.repo && record.pr === input.pr,
-    )
+  const pathOwner = ownerOfPath({ records: input.records, path: input.path })
+  if (pathOwner._tag === "Owned") return pathOwner
+  const found = input.records.find(
+    (record) => input.pr !== undefined && record.repo === input.repo && record.pr === input.pr,
+  )
   return found === undefined ? Collision.Free() : Collision.Owned({ workstream: found })
 }
 

@@ -344,12 +344,7 @@ const runInTerminal = async (input: {
   )
 }
 
-/**
- * Run one pass over the pending events. The pass is charged when it starts, not when it ends.
- *
- * @param input - the workstream, the worker command, and the timestamp.
- * @returns the receipt and checkpoint, or the refusal.
- */
+/** What one pass is given: the record, the worker, the time, and an optional event filter. */
 interface RunPassInput {
   readonly id: string
   readonly worker: string
@@ -391,8 +386,8 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
   // The lease stops a second pass, not a hand session: HEAD can be switched under a worktree
   // between adopt and a pass. Refuse before the receipt exists, so a pass that could not have
   // run is not charged and its events stay pending for whoever fixes the branch.
-  const branch = await branchGuard({ path: record.path, record, home: input.home })
-  if (!branch.ok) return { ok: false, reason: branch.reason }
+  const guard = await branchGuard({ path: record.path, record, home: input.home })
+  if (guard._tag === "Mismatch") return { ok: false, reason: guard.reason }
 
   const used = await passesUsed({ id: input.id, home: input.home })
   if (used >= record.budgets.passesPerPhase)
@@ -615,9 +610,20 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
   return { ok: true, receipt: done, checkpoint: captured.value.sha }
 }
 
+/**
+ * Run one pass over the pending events. The pass is charged when it starts, not when it ends.
+ *
+ * The branch guard inside refuses before the receipt exists, so a pass that could not have
+ * run costs neither a charge nor an event.
+ *
+ * @param input - the workstream, the worker command, the timestamp, and an optional event filter.
+ * @returns the receipt and checkpoint, or the refusal; a charged pass always has a receipt.
+ */
 export const runPass = async (input: RunPassInput): Promise<PassOutcome> => {
   const held = await acquirePassLock({ id: input.id, home: input.home })
   if (held !== undefined) return { ok: false, reason: "PassRunning: lock held by " + held }
+  // SAFETY: the lock has to be released on every exit path, including a pass that throws, and
+  // the kernel's channel is the receipt plus PassOutcome rather than an Effect failure.
   try {
     return await runPassInner(input)
   } finally {

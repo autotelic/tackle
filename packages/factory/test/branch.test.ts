@@ -5,7 +5,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { expect, test } from "vitest"
 import { adopt } from "../src/adopt.ts"
-import { branchOf } from "../src/branch.ts"
+import { branchGuard } from "../src/branch.ts"
 import { appendEvent, readEvents } from "../src/events.ts"
 import { passesUsed, runPass } from "../src/kernel.ts"
 
@@ -105,7 +105,10 @@ test("a pass on the record's own branch runs", async () => {
     const worker = join(f.root, "worker.sh")
     writeFileSync(worker, "#!/bin/sh\necho handled > handled.txt\n")
     chmodSync(worker, 0o755)
-    expect(branchOf(f.repo)).toBe(BRANCH)
+    const verdict = await branchGuard({ path: f.repo, home: f.home })
+    expect(verdict._tag).toBe("OnBranch")
+    if (verdict._tag !== "OnBranch") return
+    expect(verdict.branch).toBe(BRANCH)
 
     const result = await runPass({
       id: ID,

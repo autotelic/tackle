@@ -150,10 +150,10 @@ const main = async (): Promise<void> => {
     })
     const path = parsed.values.path ?? process.cwd()
     const verdict = await branchGuard({ path })
-    if (!verdict.ok) return fail(verdict.reason)
+    if (verdict._tag === "Mismatch") return fail(verdict.reason)
     console.log(
       "factory: guard " +
-        (verdict.record === undefined
+        (verdict._tag === "Ungoverned"
           ? "no record owns " + path
           : verdict.record.id + " is on its branch " + verdict.branch),
     )
