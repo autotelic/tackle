@@ -185,3 +185,21 @@ answer a decision or edit the SOW.
   route never blocks a correctness fix.
 - **The receipt gains a line:** `signals: { pulled: 4, proposed: 2, suppressedByBaseline: 1, unknown: 1 }` — the
   quiet-number rule applied to the faucet itself.
+
+## 9. The faucet is a proposal
+
+A workstream may ask for a source it does not have. `factory source propose --kind http-webhook
+  --args '{...}' --ttl 7d` creates a **candidate**, not a source: one desk item naming the kind, the
+args, the owner, the expected observations and the expiry. Nothing pulls until a human accepts it. On
+acceptance the kernel writes a source record with its own cursor and expiry; on refusal the item is
+the only trace. `source propose` is deliberately not an execution surface: a kind must already be
+installed or be a reviewed module, and an agent cannot turn a proposal into arbitrary shell by naming
+one.
+
+This is the second step after the candidate record, not a third faucet. The candidate says _what was
+observed_; the source record says _what to keep watching_. They share the event envelope and the
+watermark discipline (`docs/workstream.md` §8) but not a lifetime: a candidate is evidence, a source
+is a subscription that expires. Sources are capped by `maxSources` and a TTL, and their receipts gain
+`signals: { pulled, proposed, suppressedByBaseline, unknown }` so a quiet source is visibly quiet.
+The first workstream that needs an unbuilt faucet gets this path; until then, the built-in sources in
+§2 remain the only ones the kernel starts on its own.
