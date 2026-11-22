@@ -315,9 +315,9 @@ const activityBlock = (h: HtmlBuilder<Message>, activity: typeof Activity.Type |
     return h.div([h.Class("activity")], [h.span([h.Class("muted")], ["No pass records yet"])])
   const pass = activity.lastPass
   const running = pass?.status === "running"
-  const capped =
-    activity.pending.length > 0 && activity.budget.used >= activity.budget.passesPerPhase
-  const stale = !running && !capped && (activity.ageMinutes ?? 0) >= 30
+  const waiting = activity.pending.length
+  const capped = waiting > 0 && activity.budget.used >= activity.budget.passesPerPhase
+  const stale = !running && !capped && waiting > 0 && (activity.ageMinutes ?? 0) >= 30
   const age = formatDuration(activity.ageMinutes)
   const status = running
     ? "Working now"
@@ -325,9 +325,11 @@ const activityBlock = (h: HtmlBuilder<Message>, activity: typeof Activity.Type |
       ? "Paused: pass budget reached"
       : pass === null
         ? "No pass yet"
-        : stale
-          ? "Idle for " + age
-          : "Last pass finished " + age + " ago"
+        : waiting === 0
+          ? "Caught up"
+          : stale
+            ? "Idle for " + age
+            : "Last pass finished " + age + " ago"
   const gate =
     pass?.quality === undefined
       ? "Gate: no quality record"
@@ -376,9 +378,11 @@ const activityBlock = (h: HtmlBuilder<Message>, activity: typeof Activity.Type |
                 activity.workstream +
                 " --passes-per-phase " +
                 (activity.budget.passesPerPhase + 5)
-              : stale
-                ? "No pass is running. The queue has not moved."
-                : "The workstream is caught up; the next event starts a pass.",
+              : waiting === 0
+                ? "No pass is running. Nothing is waiting."
+                : stale
+                  ? "No pass is running. The queue has not moved."
+                  : "The workstream is caught up; the next event starts a pass.",
         ],
       ),
       activity.pending.length === 0
