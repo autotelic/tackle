@@ -146,6 +146,35 @@ test("a declared service is served with the status the probe observed", () => {
   ])
 })
 
+test("a healthy service exposes the board's stable preview route", () => {
+  const [served] = serve({
+    services: [observed({ worktree: "/Users/togmund/shakti-perms" })],
+  })
+  expect(served?.preview).toBe("/preview/shakti-perms/")
+})
+
+test("an unhealthy or stopped service advertises no preview", () => {
+  for (const status of ["unhealthy", "stopped"] as const) {
+    const [served] = serve({
+      services: [observed({ worktree: "/Users/togmund/shakti-perms", status })],
+    })
+    // The service is still reported — it exists — but the route stays null because no probe saw
+    // it answer. A preview that cannot be opened is not a preview.
+    expect(served?.services).toHaveLength(1)
+    expect(served?.preview).toBeNull()
+  }
+})
+
+test("the preview names the workstream, so a new lease keeps the same route", () => {
+  const preview = (number: number) =>
+    serve({
+      leases: [{ worktree: "/Users/togmund/shakti-perms", room: "room", number, leasedAt: at }],
+      services: [observed({ worktree: "/Users/togmund/shakti-perms" })],
+    })[0]?.preview
+  expect(preview(4400)).toBe("/preview/shakti-perms/")
+  expect(preview(4401)).toBe(preview(4400))
+})
+
 test("an unhealthy service keeps the evidence, and a stopped one is not healthy", () => {
   const [served] = serve({
     services: [

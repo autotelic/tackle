@@ -56,6 +56,10 @@ so a repo is a section and its lanes are the states it currently occupies.
   `workstream=<id>` label, by cwd inside the workstream path, or by the words in
   its tab title; an unmatched session stays in the bottom list rather than
   being guessed onto a workstream.
+- **Environment** — each card also carries the parts of `factory.environments` the board
+  sent: the machine, the worktree, the room's leased port, each declared service with the status a
+  probe observed, and the preview route. A missing field draws nothing; a preview is drawn only
+  when the board advertised one, and the link resolves against this view's own origin.
 - **Phase vs state** — `phase` is the workstream's lifecycle (`reconcile`,
   `build`, `land`, `done`). `state` is what is happening now: `working`,
   `queued`, `blocked`, `idle`, or `done`. A build with no queued work is

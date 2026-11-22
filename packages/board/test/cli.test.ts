@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
+import { Option, Schema } from "effect"
 import { expect, test } from "vitest"
 
 const cli = fileURLToPath(new URL("../src/cli.ts", import.meta.url))
@@ -483,6 +484,25 @@ const runAsync = async (
   return { status, stdout, stderr }
 }
 
+/**
+ * A port nothing listens on, as nearly as a test can know: bind one and hand it straight back.
+ * A refused connection is what a room with no service running in it actually produces, and it
+ * is the case a preview route must report rather than pass off as an empty answer.
+ */
+const releasedPort = async (): Promise<number> => {
+  const probe = createServer()
+  await new Promise<void>((resolve) => probe.listen(0, "127.0.0.1", resolve))
+  // `address()` is a union of null, a string and an object; decoding it keeps that union out of
+  // the assertion instead of reading its shape by hand. The rule against decodeUnknownOption is
+  // about production callers losing issue trees; here None is the only possible outcome of a
+  // successful bind, and the assertion below fails loudly if it happens.
+  const bound = Schema.decodeUnknownOption(Schema.Struct({ port: Schema.Int }))(probe.address())
+  await new Promise<void>((resolve) => probe.close(() => resolve()))
+  const port = Option.getOrElse(bound, () => ({ port: 0 })).port
+  expect(port).toBeGreaterThan(0)
+  return port
+}
+
 test("presence serves the status a probe observed for a declared service", async () => {
   const root = mkdtempSync(join(tmpdir(), "board-service-"))
   const server = createServer((request, response) => {
@@ -491,10 +511,11 @@ test("presence serves the status a probe observed for a declared service", async
     response.end("answer\n")
   })
   try {
-    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve))
-    const address = server.address()
-    const port = address === null || typeof address === "string" ? 0 : address.port
-    expect(port).toBeGreaterThan(0)
+    const port = 20_000 + Math.floor(Math.random() * 20_000)
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject)
+      server.listen(port, "127.0.0.1", resolve)
+    })
     const factoryHome = join(root, "factory")
     const workstreams = join(factoryHome, "workstreams")
     mkdirSync(workstreams, { recursive: true })
@@ -536,7 +557,7 @@ test("presence serves the status a probe observed for a declared service", async
     })
     expect(output.status, output.stderr).toBe(0)
     const presence = JSON.parse(output.stdout)
-    const environments = new Map<string, { services: Array<unknown> }>(
+    const environments = new Map<string, { services: Array<unknown>; preview: string | null }>(
       presence.factory.environments.map((environment: { workstream: string }) => [
         environment.workstream,
         environment,
@@ -564,8 +585,137 @@ test("presence serves the status a probe observed for a declared service", async
         checkedAt: presence.observedAt,
       },
     ])
+    // Only the observed 2xx earns a route; the stopped service keeps a null preview even
+    // though its lease names a port.
+    expect(environments.get("answering")?.preview).toBe("/preview/answering/")
+    expect(environments.get("idle")?.preview).toBeNull()
   } finally {
     rmSync(root, { recursive: true, force: true })
     await new Promise<void>((resolve) => server.close(() => resolve()))
   }
 })
+
+test("board up routes a workstream's preview to its room's leased service", async () => {
+  const root = mkdtempSync(join(tmpdir(), "board-preview-"))
+  const server = createServer((request, response) => {
+    response.writeHead(200, { "content-type": "text/plain" })
+    response.end("path " + (request.url ?? "") + "\n")
+  })
+  try {
+    // A chosen port rather than a read-back one: the address union is a representation this
+    // test does not need to narrow, and the range is the same random one the other cases use.
+    const servicePort = 20_000 + Math.floor(Math.random() * 20_000)
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject)
+      server.listen(servicePort, "127.0.0.1", resolve)
+    })
+    // Three rooms beside one another, because the route's two refusals are the claim as much as
+    // its one answer: a service that answers, a room that declares none, and a declared service
+    // nothing listens on. The rooms are not named after their workstreams, so the lease reaches
+    // each record through the worktree alone.
+    const service = { name: "web", command: "node server.js", healthPath: "/healthz" }
+    const fixtures = [
+      { room: "preview-room", workstream: "preview-probe", port: servicePort, service },
+      { room: "silent-room", workstream: "preview-silent", port: servicePort, service: undefined },
+      { room: "refusing-room", workstream: "preview-refused", port: await releasedPort(), service },
+    ]
+    const rooms = join(root, "rooms")
+    const factoryHome = join(root, "factory")
+    const workstreams = join(factoryHome, "workstreams")
+    mkdirSync(workstreams, { recursive: true })
+    for (const fixture of fixtures) {
+      const worktree = join(rooms, fixture.room, "worktree")
+      mkdirSync(worktree, { recursive: true })
+      // A room that declares no service leaves the key out rather than naming an empty one.
+      const record = {
+        id: fixture.room,
+        base: "main",
+        state: { _tag: "Ready", repo: "/r", scope: "dev", createdAt: 1 },
+        port: { number: fixture.port, leasedAt: 1_760_000_000_000 },
+      }
+      writeFileSync(
+        join(rooms, fixture.room, "room.json"),
+        JSON.stringify(
+          fixture.service === undefined ? record : { ...record, service: fixture.service },
+        ),
+      )
+      // A live supervisor is what lets a probe reach a socket at all: without a run record the
+      // room reports `stopped` before any connection is attempted.
+      writeFileSync(
+        join(rooms, fixture.room, "run.json"),
+        JSON.stringify({
+          pid: process.pid,
+          exec: "node server.js",
+          startedAt: 1,
+          log: "/tmp/room.log",
+        }),
+      )
+      writeFileSync(
+        join(workstreams, fixture.workstream + ".json"),
+        workstreamRecord({
+          id: fixture.workstream,
+          path: worktree,
+          label: fixture.workstream,
+        }),
+      )
+    }
+
+    const boardPort = 20_000 + Math.floor(Math.random() * 20_000)
+    const up = run(["up", "--root", "rooms", "--port", String(boardPort), "--detach"], root, {
+      FACTORY_HOME: factoryHome,
+    })
+    expect(up.status, up.stderr).toBe(0)
+    try {
+      const origin = "http://127.0.0.1:" + boardPort
+      // Decode the served bytes rather than asserting their shape: the document is the seam.
+      const { factory } = Schema.decodeUnknownSync(
+        Schema.Struct({
+          factory: Schema.Struct({
+            environments: Schema.Array(
+              Schema.Struct({
+                workstream: Schema.String,
+                preview: Schema.NullOr(Schema.String),
+                services: Schema.Array(Schema.Struct({ status: Schema.String })),
+              }),
+            ),
+          }),
+        }),
+      )(await (await fetch(origin + "/presence")).json())
+      const environments = new Map(
+        factory.environments.map((environment) => [environment.workstream, environment]),
+      )
+      // One route, for the one service a probe saw answer. A room that declares nothing serves
+      // no service at all, and a service whose port refuses still has its observation — which
+      // is exactly why neither advertises a preview.
+      expect(environments.get("preview-probe")?.preview).toBe("/preview/preview-probe/")
+      expect(environments.get("preview-probe")?.services.map((each) => each.status)).toEqual([
+        "healthy",
+      ])
+      expect(environments.get("preview-silent")?.services).toEqual([])
+      expect(environments.get("preview-silent")?.preview).toBeNull()
+      expect(environments.get("preview-refused")?.services.map((each) => each.status)).toEqual([
+        "unhealthy",
+      ])
+      expect(environments.get("preview-refused")?.preview).toBeNull()
+
+      // The advertised route answers with the service's own bytes, path and query intact.
+      const preview = await fetch(origin + "/preview/preview-probe/assets/app.js?v=2")
+      expect(preview.status).toBe(200)
+      expect(await preview.text()).toBe("path /assets/app.js?v=2\n")
+
+      // A workstream whose room declares no service is refused here rather than forwarded to a
+      // port the room does not own — even though a server happens to answer on that number.
+      expect((await fetch(origin + "/preview/preview-silent/")).status).toBe(404)
+      // A service that does not answer is a 502, never an empty 200 that looks like an answer.
+      expect((await fetch(origin + "/preview/preview-refused/")).status).toBe(502)
+      // A workstream no room holds is refused the same way.
+      expect((await fetch(origin + "/preview/stranger/")).status).toBe(404)
+    } finally {
+      run(["down", "--root", "rooms"], root)
+    }
+  } finally {
+    run(["down", "--root", "rooms"], root)
+    rmSync(root, { recursive: true, force: true })
+    await new Promise<void>((resolve) => server.close(() => resolve()))
+  }
+}, 30_000)

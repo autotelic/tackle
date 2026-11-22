@@ -18,6 +18,7 @@ process is gone) and serves:
 
 - `GET /health` — pid, shop, since
 - `GET /presence` — shop, observedAt, rooms, service address
+- `GET /preview/<workstream>/` — the room's leased service
 - `GET /queue` — paused room ids
 
 `--detach` starts the same process detached and waits for the lock. `down` sends
@@ -51,9 +52,18 @@ detail, checkedAt}`. The board does not derive the status — it asks `@autoteli
 room's leased port. `healthy` is only the health path's own 2xx answer; `unhealthy` carries the
 evidence in `detail` (`HTTP 503`, `ECONNREFUSED`, a timeout); `stopped` is a declared service
 whose room has no live supervisor, decided before any socket is opened. A workstream whose room
-declares nothing serves `services: []` rather than a service with an unknown health, and
-`preview` stays null until a real route exists — a container and a preview router are later
-slices of `docs/environment-plan.md`.
+declares nothing serves `services: []` rather than a service with an unknown health.
+
+`preview` is the board's one stable route for that service — `/preview/<workstream>/` — and it
+is served only when the probe observed a 2xx answer. Unhealthy and stopped services keep a null
+preview: a route that cannot be opened is not a route. The value is a same-origin path, not an
+absolute URL, because the one-shot `board presence` has no bind to name; a renderer resolves it
+against the origin that served the document. While the shop is up, that path forwards a GET to the
+room's leased port, resolving the workstream's worktree to the room at request time so a room
+recreated on another port keeps the URL. An unknown workstream or a room with no service is a
+404, an unreachable service is 502, and the service's own status and bytes pass through. There is
+one service and one route per workstream in this slice — no container, no database and no
+multi-service routing, which remain later slices of `docs/environment-plan.md`.
 
 A session joins a room only by the explicit Herdr label `room=<id>`, set with
 `hc label <terminal> room=<id>`; `joinedBy: "label"` records the join. The

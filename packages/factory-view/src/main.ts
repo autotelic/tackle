@@ -314,6 +314,7 @@ const environmentLine = (h: HtmlBuilder<Message>, environment: Environment | und
   const runtime = environment.runtime
   const port = environment.port
   const services = environment.services ?? []
+  const preview = environment.preview
   const agent = environment.agent
   const parts = [
     ...(machine === null || machine === undefined
@@ -337,6 +338,16 @@ const environmentLine = (h: HtmlBuilder<Message>, environment: Environment | und
                 .map((service) => "service " + service.name + " " + service.status)
                 .join(", "),
             ],
+          ),
+        ]),
+    // The route is the board's own path, so it is resolved against the origin that served the
+    // card. A null preview is no route: the card never links to a service nobody saw answering.
+    ...(preview === null || preview === undefined
+      ? []
+      : [
+          h.a(
+            [h.Href(preview), h.Target("_blank"), h.Rel("noreferrer"), h.Class("mono")],
+            ["preview " + preview],
           ),
         ]),
     ...(agent === null || agent === undefined

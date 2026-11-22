@@ -123,6 +123,21 @@ test("an empty service list draws no service", () => {
   expect(draw("[" + environment + "]")).not.toContain('"service ')
 })
 
+test("a served preview draws a link to the board's route", () => {
+  const withPreview = JSON.stringify({
+    ...JSON.parse(environment),
+    preview: "/preview/shakti-perms/",
+  })
+  const markup = draw("[" + withPreview + "]")
+  expect(markup).toContain('"/preview/shakti-perms/"')
+  expect(markup).toContain('"preview /preview/shakti-perms/"')
+})
+
+test("a null preview draws no link", () => {
+  const markup = draw("[" + environment + "]")
+  expect(markup).not.toContain('"preview ')
+})
+
 test("an agent with no status names only its session", () => {
   const statusless = JSON.stringify({
     ...JSON.parse(environment),

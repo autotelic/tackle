@@ -1,6 +1,7 @@
 import { Option } from "effect"
 import { resolve } from "node:path"
 import type { ServiceObservation } from "@autotelic/room/Service"
+import { previewOf } from "./preview.ts"
 import type { Session } from "./sessions.ts"
 import type { Tailnet } from "./tailnet.ts"
 
@@ -9,10 +10,11 @@ import type { Tailnet } from "./tailnet.ts"
  *
  * Slice 1 of docs/environment-plan.md: a machine from the tailnet document the board already
  * serves, the worktree the record points at, and the session that is working it. Slice 2a adds
- * the room's leased port, and slice 2b the one service a room may declare, with the status a
- * probe observed rather than a status anybody assumed. The fields that will hold a container or
- * a preview are served with their empty value instead of being omitted, so a renderer shows
- * "not recorded" rather than a fact a neighbour suggested.
+ * the room's leased port, slice 2b the one service a room may declare, with the status a
+ * probe observed rather than a status anybody assumed, and slice 2c the stable route to that
+ * service when the probe found it answering. The field that will hold a container is served with
+ * its empty value instead of being omitted, so a renderer shows "not recorded" rather than a
+ * fact a neighbour suggested.
  */
 
 /** The machine a workstream runs on, named the way the tailnet document names it. */
@@ -71,7 +73,13 @@ export interface Environment {
   readonly port: EnvironmentPort | null
   readonly services: ReadonlyArray<EnvironmentService>
   readonly agent: EnvironmentAgent | null
-  readonly preview: null
+  /**
+   * The board's preview route for the workstream's service, as a same-origin path.
+   *
+   * Null until a probe observed the service healthy: the route names a place a request can go,
+   * and there is no place until something answered. A renderer resolves it against its own origin.
+   */
+  readonly preview: string | null
   readonly observedAt: string
 }
 
@@ -155,8 +163,9 @@ export const environmentsOf = (input: {
       // the status the probe earned. The worktree is the join's evidence, not a served field.
       services: observed.map(({ worktree: _worktree, ...service }) => service),
       agent: Option.getOrNull(agentOf(input.sessions, record.id)),
-      // Slice 2 owns routes to a workstream's web service; there is no route to name yet.
-      preview: null,
+      // The rule lives with the route: a preview is advertised only for a service a probe found
+      // answering, never for one that merely declared itself.
+      preview: Option.getOrNull(previewOf({ workstream: record.id, services: observed })),
       observedAt: input.observedAt,
     }
   })

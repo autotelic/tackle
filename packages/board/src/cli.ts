@@ -1,6 +1,11 @@
 import { execFile, spawn } from "node:child_process"
 import { randomUUID } from "node:crypto"
-import { createServer } from "node:http"
+import {
+  createServer,
+  request as requestUpstream,
+  type IncomingMessage,
+  type ServerResponse,
+} from "node:http"
 import { existsSync } from "node:fs"
 import { chmod, mkdir, readFile, realpath, rm, writeFile } from "node:fs/promises"
 import { homedir } from "node:os"
@@ -26,6 +31,7 @@ import {
 } from "./sessions.ts"
 import { loopbackHostFor } from "./bind.ts"
 import { environmentsOf, type RoomPortLease, type RoomServiceObservation } from "./environment.ts"
+import { previewPrefix, previewRequestOf } from "./preview.ts"
 import { workstreamsWithGates } from "./gate.ts"
 import { discoverTailnet } from "./tailnet.ts"
 import { fleet } from "./fleet.ts"
@@ -43,7 +49,8 @@ const usage = [
   "  board status [--root .room] [--json]   (rooms, lock, and the service)",
   "  board queue [--root .room] [--json]",
   "",
-  "board up serves /health, /presence, /queue, /factory and /open while it holds the lock.",
+  "board up serves /health, /presence, /queue, /factory, /preview/<workstream>/ and /open",
+  "while it holds the lock.",
   "Exit codes: 0 ok, 1 declined, 2 usage, 3 infrastructure.",
 ].join("\n")
 
@@ -430,6 +437,109 @@ const serveView = async ({
   response.end(file)
 }
 
+/**
+ * The port a workstream's preview forwards to.
+ *
+ * Resolved at request time from the same two facts `observe` joins on: the workstream's path and
+ * the room whose worktree is that directory. The room must declare a service and hold the lease —
+ * a workstream no room holds has no route, so the board refuses instead of forwarding to a
+ * number some other room owns.
+ *
+ * @param input - the shop root and the workstream's recorded checkout.
+ * @returns the leased port, or undefined when no room with a service owns this worktree.
+ */
+const previewPortOf = async (input: {
+  readonly root: string
+  readonly path: string
+}): Promise<number | undefined> => {
+  const wanted = await realpath(input.path).catch(() => resolve(input.path))
+  for (const room of await listRooms(input.root)) {
+    if (room.service === undefined || room.port === undefined) continue
+    const worktree = join(input.root, room.id, "worktree")
+    const candidate = await realpath(worktree).catch(() => resolve(worktree))
+    if (candidate === wanted) return room.port.number
+  }
+  return undefined
+}
+
+/** Headers a proxy never forwards: they describe one connection, not the request. */
+const hopByHopHeaders = new Set([
+  "connection",
+  "host",
+  "keep-alive",
+  "proxy-authenticate",
+  "proxy-authorization",
+  "te",
+  "trailer",
+  "transfer-encoding",
+  "upgrade",
+])
+
+/**
+ * Forward one GET to the service the workstream's room leases.
+ *
+ * The route is a path on the board, so the board is the only thing that resolves it: a reader
+ * that kept an old preview URL reaches whatever lease the room holds now, and a workstream with
+ * no service gets 404 rather than a neighbour's port. The answer streams through untouched —
+ * the service owns its bytes, status and content type. A refused port is 502, not an empty 200.
+ */
+const servePreview = async ({
+  root,
+  request,
+  response,
+}: {
+  readonly root: string
+  readonly request: IncomingMessage
+  readonly response: ServerResponse
+}): Promise<void> => {
+  const preview = previewRequestOf(request.url ?? "/")
+  if (Option.isNone(preview)) {
+    json({ response, status: 404, body: { error: "not found" } })
+    return
+  }
+  // Compared in the encoded form `previewRoute` writes, so an id with a space or a slash needs
+  // no decoding here and a malformed escape names nothing.
+  const record = (await listWorkstreams()).find(
+    (candidate) => encodeURIComponent(candidate.id) === preview.value.segment,
+  )
+  if (record === undefined) {
+    json({ response, status: 404, body: { error: "no workstream " + preview.value.segment } })
+    return
+  }
+  const port = await previewPortOf({ root, path: record.path })
+  if (port === undefined) {
+    json({ response, status: 404, body: { error: "no service is leased for " + record.id } })
+    return
+  }
+  const upstream = requestUpstream(
+    {
+      host: "127.0.0.1",
+      port,
+      path: preview.value.path,
+      method: "GET",
+      // One connection per preview request, closed with the answer: no pool outlives the page.
+      agent: false,
+      headers: Object.fromEntries(
+        Object.entries(request.headers).filter(
+          ([name, value]) => value !== undefined && !hopByHopHeaders.has(name.toLowerCase()),
+        ),
+      ),
+    },
+    (answer) => {
+      response.writeHead(answer.statusCode ?? 502, answer.headers)
+      answer.pipe(response)
+    },
+  )
+  // SAFETY: a refused or reset connection is the observation this route exists to report; it
+  // becomes a 502 unless the answer already began, in which case the stream is truncated.
+  upstream.on("error", () => {
+    if (response.headersSent) response.destroy()
+    else json({ response, status: 502, body: { error: "preview did not answer" } })
+  })
+  response.once("close", () => upstream.destroy())
+  upstream.end()
+}
+
 const serve = async ({
   root,
   host,
@@ -520,6 +630,10 @@ const serve = async ({
       )
       return
     }
+    if (path.startsWith(previewPrefix)) {
+      void servePreview({ root, request, response })
+      return
+    }
     if (path === "/" || path === "/factory" || path.startsWith("/factory/")) {
       void serveView({ response, path })
       return
@@ -548,6 +662,7 @@ const serve = async ({
           "/presence",
           "/.well-known/presence.json",
           "/queue",
+          "/preview/<workstream>/",
           "/open",
           "/desk/answer",
         ],

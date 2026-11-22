@@ -76,6 +76,16 @@ test("a workstream with no declared service and no preview draws no service or p
   assert.equal(environmentText(row).includes("null"), false)
 })
 
+test("a served preview is drawn, and a null one draws nothing", () => {
+  const withPreview = { ...environment, preview: "/preview/shakti-perms/" }
+  const [served] = readPresence(presence({ environments: [withPreview] })).rows
+  assert.equal(served.preview, "/preview/shakti-perms/")
+  assert.equal(environmentText(served).endsWith("/preview/shakti-perms/"), true)
+  const [nullPreview] = readPresence(presence({ environments: [environment] })).rows
+  assert.equal(nullPreview.preview, null)
+  assert.equal(environmentText(nullPreview).includes("/preview/"), false)
+})
+
 test("a workstream with no leased port draws no port text", () => {
   const [row] = readPresence(presence({ environments: [{ ...environment, port: null }] })).rows
   assert.equal(row.port, null)

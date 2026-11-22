@@ -136,6 +136,8 @@ export const Environment = Schema.Struct({
   // declaration, which draws no service at all.
   services: Schema.optional(Schema.Array(EnvironmentService)),
   agent: Schema.optional(Schema.NullOr(EnvironmentAgent)),
+  // The board's same-origin preview route, served only after a probe found the service healthy.
+  // Absent or null draws no link: this view never composes a route for a service it did not see.
   preview: Schema.optional(Schema.NullOr(Schema.String)),
   observedAt: Schema.optional(Schema.String),
 })
