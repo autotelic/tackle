@@ -33,8 +33,11 @@ The board serves the built view at `/factory`:
 ```sh
 pnpm --filter @autotelic/factory-view build
 board up --root .room --host 127.0.0.1 --port 4780
-open http://127.0.0.1:4780/
+open http://127.0.0.1:4780/factory
 ```
+
+`build` runs the suite and then bundles; `bundle` is the bundle alone when you only
+want `dist/`.
 
 For UI work, run Vite with the board already up:
 
@@ -102,3 +105,10 @@ view. `repos.test.ts` asserts the grouping as a partition over generated
 documents (fast-check), so "a workstream with no repo is not dropped" is a
 property, not three examples. `view.test.ts` renders the real view through
 Foldkit's scene harness and reads it as text — no browser.
+
+The suite also writes vitest's JSON report to `.treadle/reports/unit.json`, and
+`build` runs it before bundling. That is deliberate: the treadle loop's Checks run
+only jig and this build, while its Feature-done guard counts new tests from that
+report. A build that skipped the suite would leave the guard reading zero, so the
+view's build gate is the tests plus the bundle. `.treadle/` is local state and
+gitignored; the report never enters the branch.

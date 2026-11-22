@@ -44,3 +44,7 @@ packages/room/.celld/
 
 # The shop's local lock and queue state; the workstreams live in ~/.factory.
 .room/
+
+# Treadle's per-workstream state: the test-count baseline, check reports and the
+# vitest JSON report its Feature-done guard reads. Local, never the repository's.
+.treadle/
