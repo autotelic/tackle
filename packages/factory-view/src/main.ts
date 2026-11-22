@@ -22,6 +22,8 @@ const Desk = Schema.Struct({
   id: Schema.String,
   workstream: Schema.String,
   title: Schema.String,
+  body: Schema.String,
+  choices: Schema.Array(Schema.String),
   route: Schema.String,
 })
 const Report = Schema.Struct({
@@ -113,6 +115,8 @@ export const Message = defineMessageUnion({
   Ticked: {},
   ClickedOpen: { source: SessionSource, address: Schema.String },
   Opened: { ok: Schema.Boolean, error: Schema.NullOr(Schema.String) },
+  ClickedAnswer: { item: Schema.String, choice: Schema.String },
+  Answered: { ok: Schema.Boolean, error: Schema.NullOr(Schema.String) },
 })
 export type Message = typeof Message.Type
 
@@ -143,6 +147,17 @@ export const update = (model: Model, message: Message): UpdateReturn =>
         notice: ok ? "Opened in its app" : "Could not open: " + (error ?? "unknown error"),
       },
     }),
+    ClickedAnswer: ({ item, choice }) => ({
+      model,
+      commands: [AnswerDesk({ item, choice })],
+    }),
+    Answered: ({ ok, error }) => ({
+      model: {
+        ...model,
+        notice: ok ? "Decision recorded" : "Could not record: " + (error ?? "unknown error"),
+      },
+      commands: ok ? [FetchPresence()] : [],
+    }),
   })
 
 /** Start with a fetch and an empty model. */
@@ -166,6 +181,29 @@ export const FetchPresence = Command.define("FetchPresence", {
       onSuccess: (value) => Message.Settled({ value, error: null }),
     }),
   ),
+})
+
+export const AnswerDesk = Command.define("AnswerDesk", {
+  args: { item: Schema.String, choice: Schema.String },
+  messages: [Message.Answered],
+  execute: ({ item, choice }: { readonly item: string; readonly choice: string }) =>
+    Effect.tryPromise({
+      try: async () => {
+        const response = await fetch("/desk/answer", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ item, choice, by: "web" }),
+        })
+        if (!response.ok) return Promise.reject((await response.text()) || "answer failed")
+        return true
+      },
+      catch: (cause) => String(cause),
+    }).pipe(
+      Effect.match({
+        onFailure: (error) => Message.Answered({ ok: false, error }),
+        onSuccess: () => Message.Answered({ ok: true, error: null }),
+      }),
+    ),
 })
 
 export const OpenSession = Command.define("OpenSession", {
@@ -451,16 +489,37 @@ const repoSection = (
     ],
   )
 
-const card = (h: HtmlBuilder<Message>, title: string, children: ReadonlyArray<Html>) =>
-  h.div([h.Class("card")], [h.h2([], [title]), ...children])
+const card = (
+  h: HtmlBuilder<Message>,
+  input: {
+    readonly title: string
+    readonly children: ReadonlyArray<Html>
+    readonly id?: string
+  },
+) =>
+  h.div(
+    [h.Class("card"), ...(input.id === undefined ? [] : [h.Id(input.id)])],
+    [h.h2([], [input.title]), ...input.children],
+  )
 
 const deskRow = (h: HtmlBuilder<Message>, item: typeof Desk.Type) =>
   h.div(
-    [h.Class("row")],
+    [h.Class("desk-item"), h.Id(item.id)],
     [
-      h.span([h.Class("id")], [item.id]),
-      h.span([], [item.title]),
-      h.a([h.Href("#" + item.workstream)], [item.workstream]),
+      h.div(
+        [h.Class("desk-head")],
+        [
+          h.span([h.Class("desk-title")], [item.title]),
+          h.a([h.Href("#" + item.workstream)], [item.workstream]),
+        ],
+      ),
+      h.p([h.Class("desk-body")], [item.body]),
+      h.div(
+        [h.Class("desk-choices")],
+        item.choices.map((choice) =>
+          h.button([h.OnClick(Message.ClickedAnswer({ item: item.id, choice }))], [choice]),
+        ),
+      ),
     ],
   )
 
@@ -543,11 +602,11 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
               ...(presence.factory.desk.length === 0
                 ? []
                 : [
-                    card(
-                      h,
-                      "Desk",
-                      presence.factory.desk.map((item) => deskRow(h, item)),
-                    ),
+                    card(h, {
+                      title: "Needs you",
+                      children: presence.factory.desk.map((item) => deskRow(h, item)),
+                      id: "desk",
+                    }),
                   ]),
               ...(presence.factory.reports.length === 0
                 ? []

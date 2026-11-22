@@ -378,6 +378,36 @@ button:hover {
 .empty {
   margin: 10px 0 0;
 }
+.desk-item {
+  padding: 12px 0;
+  border-top: 1px solid #eef2f5;
+}
+.desk-item:first-of-type {
+  border-top: 0;
+}
+.desk-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+.desk-title {
+  font-weight: 600;
+}
+.desk-body {
+  margin: 5px 0 8px;
+  font-size: 13px;
+  color: #4c5a67;
+}
+.desk-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.desk-choices button {
+  min-height: 30px;
+  padding: 3px 9px;
+}
 .row {
   display: grid;
   grid-template-columns: 1.4fr 1.2fr 1fr;

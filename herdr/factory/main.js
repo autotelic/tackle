@@ -401,7 +401,7 @@ export default class Factory extends View {
             .py(6)
             .cursor_pointer()
             .hover((style) => style.bg(t.hover))
-            .on_click(() => openView(VIEW))
+            .on_click(() => openView(VIEW + "#" + item.id))
             .child(div().flex_1().min_w(0).truncate().child(item.title))
             .when(item.workstream !== null, (el) =>
               el.child(div().text_size(11).text_color(t.dim).child(item.workstream)),

@@ -11,7 +11,7 @@ import { Option } from "effect"
 import { listRooms } from "@autotelic/room/store"
 import { readRun, startRoomRun } from "@autotelic/room/run"
 import { activityOf } from "@autotelic/factory/activity"
-import { listDesk } from "@autotelic/factory/desk"
+import { answerDesk, listDesk } from "@autotelic/factory/desk"
 import { listReports } from "@autotelic/factory/report"
 import { listWorkstreams } from "@autotelic/factory/store"
 import {
@@ -270,6 +270,11 @@ const OpenRequest = Schema.Struct({
   source: Schema.Union([Schema.Literal("herdr"), Schema.Literal("rex")]),
   address: SessionAddress,
 })
+const DeskAnswerRequest = Schema.Struct({
+  item: Schema.String,
+  choice: Schema.String,
+  by: Schema.optional(Schema.String),
+})
 
 const shellQuote = (value: string): string =>
   `"${value.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`
@@ -407,6 +412,38 @@ const serve = async ({
       })()
       return
     }
+    if (path === "/desk/answer" && request.method === "POST") {
+      void (async () => {
+        // oxlint-disable-next-line plumb-effect/no-try-catch -- the HTTP handler consumes JSON.parse and desk errors here
+        try {
+          let body = ""
+          for await (const chunk of request) {
+            body += String(chunk)
+            if (body.length > 4_096) {
+              json({ response, status: 400, body: { error: "request body is too large" } })
+              return
+            }
+          }
+          const decoded = Schema.decodeResult(Schema.fromJsonString(DeskAnswerRequest))(body)
+          if (Result.isFailure(decoded)) {
+            json({ response, status: 400, body: { error: "expected {item, choice}" } })
+            return
+          }
+          await answerDesk({
+            answer: {
+              item: decoded.success.item,
+              choice: decoded.success.choice,
+              by: decoded.success.by ?? "web",
+              at: new Date().toISOString(),
+            },
+          })
+          json({ response, status: 200, body: { ok: true } })
+        } catch (cause: unknown) {
+          json({ response, status: 400, body: { error: String(cause) } })
+        }
+      })()
+      return
+    }
     if (request.method !== "GET") {
       json({ response, status: 405, body: { error: "method not allowed" } })
       return
@@ -455,6 +492,7 @@ const serve = async ({
           "/.well-known/presence.json",
           "/queue",
           "/open",
+          "/desk/answer",
         ],
       },
     })
