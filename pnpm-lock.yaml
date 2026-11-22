@@ -149,6 +149,9 @@ catalogs:
     foldkit:
       specifier: 0.171.0
       version: 0.171.0
+    foldkit-primitives:
+      specifier: 0.23.0
+      version: 0.23.0
     oxc-parser:
       specifier: 0.150.0
       version: 0.150.0
@@ -349,6 +352,9 @@ importers:
       foldkit:
         specifier: 'catalog:'
         version: 0.171.0(@effect/platform-browser@4.1.5(effect@4.1.5))(effect@4.1.5)
+      foldkit-primitives:
+        specifier: 'catalog:'
+        version: 0.23.0(effect@4.1.5)(foldkit@0.171.0(@effect/platform-browser@4.1.5(effect@4.1.5))(effect@4.1.5))
     devDependencies:
       '@effect/tsgo':
         specifier: 'catalog:'
@@ -3213,6 +3219,22 @@ packages:
 
   flatted@3.4.4:
     resolution: {integrity: sha512-5+ybhBZANEJxaH3X5evAFatUxLfEHSr7n6kYJ+1Qd0mUqr4eu9gIf6GDbWHf8RJijHrjjO8G+la14SlL2SeS1Q==}
+
+  foldkit-bundle@0.14.0:
+    resolution: {integrity: sha512-odo6MuWoISpJOsrd4IkhDJRRQdWVLBw8k7xRS6OpI8SWVRTJ3Pm3JcAx7ZC1PokqpX+1q35LjaU1F+uro9AaYA==}
+    peerDependencies:
+      effect: 4.1.5
+      foldkit: ^0.170.0
+
+  foldkit-primitives@0.23.0:
+    resolution: {integrity: sha512-wPQ/rbdT82CO9+5fqIB77z6qAJYwJm12QbC5IJjnIz5ou9kP6TiNDFcHD/iz+KkBgMGz4Wwc4eg6OuGqZR8NZA==}
+    peerDependencies:
+      effect: 4.1.5
+      foldkit: ^0.170.0
+      foldkit-mixins: ^0.28.0
+    peerDependenciesMeta:
+      foldkit-mixins:
+        optional: true
 
   foldkit@0.171.0:
     resolution: {integrity: sha512-85T5T69XJd8S6hcjU9d8uXje8UmPf+WIvQvQVYyQvJYPo3L8iLl+W62Req7PxOiQtCw0AuSNPJfiyy+A1OBucA==}
@@ -6925,6 +6947,17 @@ snapshots:
       hookified: 1.15.1
 
   flatted@3.4.4: {}
+
+  foldkit-bundle@0.14.0(effect@4.1.5)(foldkit@0.171.0(@effect/platform-browser@4.1.5(effect@4.1.5))(effect@4.1.5)):
+    dependencies:
+      effect: 4.1.5
+      foldkit: 0.171.0(@effect/platform-browser@4.1.5(effect@4.1.5))(effect@4.1.5)
+
+  foldkit-primitives@0.23.0(effect@4.1.5)(foldkit@0.171.0(@effect/platform-browser@4.1.5(effect@4.1.5))(effect@4.1.5)):
+    dependencies:
+      effect: 4.1.5
+      foldkit: 0.171.0(@effect/platform-browser@4.1.5(effect@4.1.5))(effect@4.1.5)
+      foldkit-bundle: 0.14.0(effect@4.1.5)(foldkit@0.171.0(@effect/platform-browser@4.1.5(effect@4.1.5))(effect@4.1.5))
 
   foldkit@0.171.0(@effect/platform-browser@4.1.5(effect@4.1.5))(effect@4.1.5):
     dependencies:

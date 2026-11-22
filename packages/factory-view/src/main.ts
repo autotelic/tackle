@@ -1,7 +1,9 @@
-import { Effect, Result, Schema } from "effect"
+import { Effect, Option, Result, Schema } from "effect"
 import { Command, Runtime, Update } from "foldkit"
 import type { Document, Html, HtmlBuilder } from "foldkit/html"
 import { defineMessageUnion } from "foldkit/message"
+import { copyText } from "foldkit-primitives/dom"
+import { ticks } from "foldkit-primitives/time"
 
 const Workstream = Schema.Struct({
   id: Schema.String,
@@ -67,6 +69,8 @@ export const Message = defineMessageUnion({
   Settled: { value: Schema.Unknown, error: Schema.NullOr(Schema.String) },
   ClickedCopy: { command: Schema.String },
   Copied: {},
+  CopyFailed: { message: Schema.String },
+  Ticked: {},
   ClickedOpen: { source: SessionSource, address: Schema.String },
   Opened: { ok: Schema.Boolean, error: Schema.NullOr(Schema.String) },
 })
@@ -78,6 +82,10 @@ type UpdateReturn = Update.Return<Model, Message>
 export const update = (model: Model, message: Message): UpdateReturn =>
   Message.match<UpdateReturn>(message, {
     ClickedRefresh: () => ({ model: { ...model, loading: true }, commands: [FetchPresence()] }),
+    Ticked: () =>
+      model.loading
+        ? { model }
+        : { model: { ...model, loading: true }, commands: [FetchPresence()] },
     Settled: ({ value, error }) => {
       if (error !== null) return { model: { ...model, presence: null, error, loading: false } }
       const decoded = Schema.decodeUnknownResult(Presence)(value)
@@ -85,8 +93,18 @@ export const update = (model: Model, message: Message): UpdateReturn =>
         ? { model: { ...model, presence: decoded.success, error: null, loading: false } }
         : { model: { ...model, presence: null, error: String(decoded.failure), loading: false } }
     },
-    ClickedCopy: ({ command }) => ({ model, commands: [CopyCommand({ command })] }),
+    ClickedCopy: ({ command }) => ({
+      model,
+      commands: [
+        Command.mapMessage(copyText(command), (result) =>
+          result._tag === "Copied"
+            ? Message.Copied()
+            : Message.CopyFailed({ message: result.message }),
+        ),
+      ],
+    }),
     Copied: () => ({ model, notice: "Copied the open command" }),
+    CopyFailed: ({ message }) => ({ model, notice: "Could not copy: " + message }),
     ClickedOpen: ({ source, address }) => ({
       model,
       commands: [OpenSession({ source, address })],
@@ -145,14 +163,10 @@ export const OpenSession = Command.define("OpenSession", {
     ),
 })
 
-export const CopyCommand = Command.define("CopyCommand", {
-  args: { command: Schema.String },
-  messages: [Message.Copied],
-  execute: ({ command }: { readonly command: string }) =>
-    Effect.tryPromise({
-      try: () => navigator.clipboard.writeText(command),
-      catch: () => undefined,
-    }).pipe(Effect.ignore, Effect.as(Message.Copied())),
+/** Presence refreshes itself; the button is for impatience, not the only path. */
+export const subscriptions = ticks<Model, Message>({
+  intervalMs: () => Option.some(20_000),
+  onTick: () => Message.Ticked(),
 })
 
 const phaseOrder = ["reconcile", "build", "land", "blocked", "done"] as const

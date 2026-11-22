@@ -7,6 +7,12 @@ the reports the factory has consumed.
 It is a Foldkit application. State arrives as one `/presence` read; every
 transition is a message, and the UI has no local source of truth.
 
+It is assembled from **primitives**, not a component kit: `ticks` from
+`foldkit-primitives/time` refreshes presence every 20 seconds, and `copyText`
+from `foldkit-primitives/dom` is a Command whose `Copied`/`CopyFailed` result
+is reduced by `update`. The layout is plain Foldkit HTML and CSS, so a repo is
+a section and a phase is a lane rather than a widget with its own state.
+
 ## Shape
 
 ```
