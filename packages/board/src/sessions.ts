@@ -73,39 +73,18 @@ export interface WorkstreamPointer {
 /**
  * Join a live session to the workstream it is doing work for.
  *
- * An explicit `workstream` label wins; a factory desk belongs to the factory
- * workstream; then the session's cwd and tab words are the only evidence left.
+ * The only evidence is an explicit `workstream=<id>` label. A cwd, a tab name
+ * and a project word are shared by every session in the repo; using them
+ * focuses the wrong agent, which is worse than offering no Focus at all.
  */
 export const workstreamFor = (
   session: Session,
   workstreams: ReadonlyArray<WorkstreamPointer>,
 ): Option.Option<string> => {
   const explicit = session.labels?.workstream
-  if (explicit !== undefined && workstreams.some((workstream) => workstream.id === explicit))
-    return Option.some(explicit)
-  if (session.labels?.factory === "desk") {
-    const factory = workstreams.find((workstream) => workstream.project === "factory")
-    return factory === undefined ? Option.none() : Option.some(factory.id)
-  }
-  if (session.cwd !== undefined) {
-    const byPath = workstreams.find(
-      (workstream) =>
-        session.cwd === workstream.path || session.cwd?.startsWith(workstream.path + "/") === true,
-    )
-    if (byPath !== undefined) return Option.some(byPath.id)
-  }
-  const words = new Set(
-    (session.where ?? "")
-      .toLowerCase()
-      .split(/[^a-z0-9]+/)
-      .filter((word) => word.length > 0),
-  )
-  for (const workstream of workstreams) {
-    const labelWords = workstream.label.toLowerCase().split("-")
-    if (labelWords.some((word) => word.length >= 5 && words.has(word)))
-      return Option.some(workstream.id)
-  }
-  return Option.none()
+  return explicit !== undefined && workstreams.some((workstream) => workstream.id === explicit)
+    ? Option.some(explicit)
+    : Option.none()
 }
 
 /** Attach the workstream id without inventing one when no evidence matches. */

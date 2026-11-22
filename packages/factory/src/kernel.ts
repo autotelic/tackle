@@ -253,10 +253,13 @@ export const runPass = async (input: {
   }
   await writeReceipt({ id: input.id, receipt, home: input.home })
 
+  const wallMs = record.budgets.wallMinutesPerPass * 60_000
   const result = spawnSync(input.worker, {
     cwd: record.path,
     shell: true,
     stdio: "inherit",
+    timeout: wallMs,
+    killSignal: "SIGTERM",
     env: {
       ...process.env,
       FACTORY_WORKSTREAM: record.id,
@@ -269,6 +272,8 @@ export const runPass = async (input: {
   })
 
   if (result.status !== 0) {
+    const timedOut =
+      result.signal === "SIGTERM" || (result.error?.message ?? "").includes("ETIMEDOUT")
     const journal = await snapshotJournal({
       id: record.id,
       pass,
@@ -283,7 +288,13 @@ export const runPass = async (input: {
       journal,
     }
     await writeReceipt({ id: input.id, receipt: failed, home: input.home })
-    return { ok: false, reason: "worker exited " + (result.status ?? "signal"), receipt: failed }
+    return {
+      ok: false,
+      reason: timedOut
+        ? "WorkerTimeout: wallMinutesPerPass " + record.budgets.wallMinutesPerPass
+        : "worker exited " + (result.status ?? "signal"),
+      receipt: failed,
+    }
   }
 
   const after = measureQuality({ path: record.path })
