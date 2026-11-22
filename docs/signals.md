@@ -123,10 +123,12 @@ record is its authority — the same rule that keeps a report from rewriting a b
 Four proposal states: `regressed · improved · stable · unknown`. `unknown` is a source that could not be read or a
 window too small to judge — never a zero, for the same reason `unobserved` never is.
 
-An entry of `issues[]` is the candidate record (`packages/factory/src/candidate.ts`), hoisted: `attribution`
-is a **list**, and `fingerprint` — the evidence identity — is the same for every observer of that evidence. A
-second window or a second workstream that sees the same regression appends an attribution entry and never a
-candidate (`docs/faucets-sinks.md`, "The answer").
+The `attribution` in an `issues[]` entry is the candidate record's (`packages/factory/src/candidate.ts`),
+and it is one shape: a **list**, never a field. The entry itself is not the candidate — `signal`, `before`,
+`after` and `slo` stay in the window report that measured them, and the experience faucet adds `fingerprint`,
+`subject`, `evidence` as a `string[]` and the timestamps when it lands. A second window or a second workstream
+that sees the same regression appends an attribution entry and never a candidate, and `fingerprint` — the
+evidence identity — is the same for every observer (`docs/faucets-sinks.md`, "The answer").
 
 Its refusals are its own, and none of them is a Linear refusal:
 
