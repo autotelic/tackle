@@ -9,6 +9,7 @@ import * as Predicate from "effect/Predicate"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 import { captureCheckpoint } from "./adopt.ts"
+import { branchGuard } from "./branch.ts"
 import { raiseDesk } from "./desk.ts"
 import { consumeEvents, readEvents, type Event } from "./events.ts"
 import { snapshotJournal } from "./journal.ts"
@@ -386,6 +387,12 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
   if (record === undefined) return { ok: false, reason: "WorkstreamNotFound" }
   if (record.phase === "done") return { ok: false, reason: "WorkstreamDone" }
   if (record.phase === "blocked") return { ok: false, reason: "WorkstreamBlocked" }
+
+  // The lease stops a second pass, not a hand session: HEAD can be switched under a worktree
+  // between adopt and a pass. Refuse before the receipt exists, so a pass that could not have
+  // run is not charged and its events stay pending for whoever fixes the branch.
+  const branch = await branchGuard({ path: record.path, record, home: input.home })
+  if (!branch.ok) return { ok: false, reason: branch.reason }
 
   const used = await passesUsed({ id: input.id, home: input.home })
   if (used >= record.budgets.passesPerPhase)

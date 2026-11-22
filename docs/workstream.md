@@ -83,8 +83,9 @@ proved by a test. **One query per refusal** against the store.
 | `PrRequired`     | `--delivery pr` with no `--pr`                                   | the workstream id     | 2    |
 | `TrunkNeedsGate` | `--delivery trunk` and the config declares no checks             | the config path       | 1    |
 | `GateProtected`  | a pass touches a declared protected path (the gate itself)       | the path and the rule | 1    |
+| `BranchMismatch` | the worktree has a different branch checked out than `branch`    | both branches         | 1    |
 
-Two notes that are easy to get wrong:
+Three notes that are easy to get wrong:
 
 - **Same path or same PR is the same bug** (two owners), but they are separate refusals because the message
   must name _which_ owner was found. A single “already owned” error sends the operator looking in two places.
@@ -92,6 +93,10 @@ Two notes that are easy to get wrong:
   uncommitted work is how you train people to stash before adopting, which loses the evidence of what they
   were doing. The refusal exists only for `--no-checkpoint`, where the operator explicitly asked for a clean
   copy.
+- **`BranchMismatch` is asked twice, by one function.** `factory run` refuses the pass before its receipt
+  exists (nothing charged, the event stays pending) and `factory guard` exits 1 on the same answer, so a push
+  can be held too: `printf '#!/bin/sh\nexec factory guard\n' > .git/hooks/pre-push && chmod +x
+  .git/hooks/pre-push`. The hook lives in the host's `.git`, not in this repo, so nothing here installs it.
 
 Adoption then captures, in one record: `head`, `dirtyFiles[]` (paths + status), `prHead`, `label`, `baseSha`,
 and the inferred phase (see §5).

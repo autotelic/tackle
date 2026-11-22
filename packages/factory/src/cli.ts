@@ -3,6 +3,7 @@ import { parseArgs } from "node:util"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 import { adopt } from "./adopt.ts"
+import { branchGuard } from "./branch.ts"
 import { appendEvent } from "./events.ts"
 import { runPass } from "./kernel.ts"
 import { listWorkstreams, Phase, readWorkstream, writeWorkstream } from "./store.ts"
@@ -19,6 +20,7 @@ const usage = [
   "  factory status [--json]",
   "  factory event --id <id> --kind <kind> [--payload <json>] [--at <iso>]",
   "  factory run --id <id> --worker <command> [--at <iso>]",
+  "  factory guard [--path <dir>]",
   "  factory watch --id <id> --worker <command> [--once] [--interval <ms>]",
   "  factory report --workstream <id> --kind <kind> --command <cmd> --expected <text> --actual <text> [--output <text>] [--blocked] [--deliver <session>]",
   "  factory phase --id <id> --set reconcile|build|land|blocked|done [--answer <desk-answer.json>]",
@@ -136,6 +138,24 @@ const main = async (): Promise<void> => {
         result.receipt.pass +
         " done; checkpoint " +
         result.checkpoint.slice(0, 8),
+    )
+    return
+  }
+
+  if (command === "guard") {
+    const parsed = parseArgs({
+      args: process.argv.slice(3),
+      options: { path: { type: "string" } },
+      allowPositionals: false,
+    })
+    const path = parsed.values.path ?? process.cwd()
+    const verdict = await branchGuard({ path })
+    if (!verdict.ok) return fail(verdict.reason)
+    console.log(
+      "factory: guard " +
+        (verdict.record === undefined
+          ? "no record owns " + path
+          : verdict.record.id + " is on its branch " + verdict.branch),
     )
     return
   }

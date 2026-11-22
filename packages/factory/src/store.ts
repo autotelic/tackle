@@ -151,7 +151,7 @@ export const writeWorkstream = async (input: {
   await rename(temporary, path)
 }
 
-/** A path or PR already owned is a refusal, and the owner is named. */
+/** One worktree, one spelling: a path reached through a symlink is still the same worktree. */
 const canonical = (path: string): string => {
   // SAFETY: realpath is a filesystem boundary; a missing path is resolved lexically.
   try {
@@ -175,6 +175,24 @@ export type Collision = Data.TaggedEnum<{
 const Collision = Data.taggedEnum<Collision>()
 
 /**
+ * The workstream that owns a worktree path, if any.
+ *
+ * The branch guard asks only this question — which record governs this worktree — and
+ * adoption asks it before a second owner exists, so both compare paths one way: realpath,
+ * not string equality.
+ *
+ * @param input - the records and the worktree path.
+ * @returns the owning workstream, or none when the path is ungoverned.
+ */
+export const ownerOfPath = (input: {
+  readonly records: ReadonlyArray<Workstream>
+  readonly path: string
+}): Workstream | undefined => {
+  const path = canonical(input.path)
+  return input.records.find((record) => canonical(record.path) === path)
+}
+
+/**
  * Find a workstream that already owns this path or this PR.
  *
  * @param input - the records and the candidate path, repo and PR.
@@ -186,12 +204,11 @@ export const collision = (input: {
   readonly repo: string
   readonly pr: number | undefined
 }): Collision => {
-  const path = canonical(input.path)
-  const found = input.records.find(
-    (record) =>
-      canonical(record.path) === path ||
-      (input.pr !== undefined && record.repo === input.repo && record.pr === input.pr),
-  )
+  const found =
+    ownerOfPath({ records: input.records, path: input.path }) ??
+    input.records.find(
+      (record) => input.pr !== undefined && record.repo === input.repo && record.pr === input.pr,
+    )
   return found === undefined ? Collision.Free() : Collision.Owned({ workstream: found })
 }
 
