@@ -24,6 +24,7 @@ import {
   type Session,
 } from "./sessions.ts"
 import { loopbackHostFor } from "./bind.ts"
+import { environmentsOf } from "./environment.ts"
 import { workstreamsWithGates } from "./gate.ts"
 import { discoverTailnet } from "./tailnet.ts"
 import { fleet } from "./fleet.ts"
@@ -181,20 +182,30 @@ const observe = async (root: string) => {
   const observedAt = new Date().toISOString()
   const now = Date.now()
   const activity = await Promise.all(records.map((record) => activityOf({ record, now })))
+  const tailnet = await discoverTailnet()
+  const tagged = {
+    ...sessions,
+    herdr: { ...sessions.herdr, sessions: tagWorkstreams(sessions.herdr.sessions, records) },
+    rex: { ...sessions.rex, sessions: tagWorkstreams(sessions.rex.sessions, records) },
+  }
   return {
     shop: root,
     authority: "observation" as const,
     observedAt,
-    sessions: {
-      ...sessions,
-      herdr: { ...sessions.herdr, sessions: tagWorkstreams(sessions.herdr.sessions, records) },
-      rex: { ...sessions.rex, sessions: tagWorkstreams(sessions.rex.sessions, records) },
-    },
-    network: { tailscale: await discoverTailnet() },
+    sessions: tagged,
+    network: { tailscale: tailnet },
     factory: {
       workstreams: await workstreamsWithGates({
         workstreams: records,
         activities: activity,
+        observedAt,
+      }),
+      // Where each workstream runs, from the same tailnet read the document already carries.
+      // The join is the tagging above, so this does not look for a session a second way.
+      environments: environmentsOf({
+        workstreams: records,
+        sessions: [...tagged.herdr.sessions, ...tagged.rex.sessions],
+        tailnet,
         observedAt,
       }),
       activity,

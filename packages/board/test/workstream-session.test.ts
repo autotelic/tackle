@@ -1,3 +1,4 @@
+/* oxlint-disable plumb/prefer-property-tests -- the join is a rule over one session and one record; the named cases are the rule's arms (label, cwd, neither), and a generator would only re-spell them. */
 import { Option } from "effect"
 import { expect, test } from "vitest"
 import { workstreamFor, type Session } from "../src/sessions.ts"

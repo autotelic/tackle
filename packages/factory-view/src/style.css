@@ -253,6 +253,25 @@ button:hover {
   color: #4c5a67;
   font-size: 12px;
 }
+.environment {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 8px 0 0;
+  padding: 6px 8px;
+  border: 1px solid #edf1f4;
+  border-radius: 8px;
+  color: #4c5a67;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.environment-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #5f6d7a;
+}
 .reports-card > summary {
   cursor: pointer;
   font-size: 13px;
@@ -466,6 +485,10 @@ button:hover {
     padding: 10px 0;
   }
   .workstream-meta {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .environment {
     display: grid;
     grid-template-columns: 1fr;
   }

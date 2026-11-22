@@ -37,6 +37,14 @@ server binary bundled with the Rex app (`REX_BIN`, then PATH, then the app
 support path). A missing source is `available: false`, never "nothing is
 running".
 
+Each served workstream also carries an environment under `factory.environments`: the
+`machine` from `network.tailscale.self` (null when the daemon is unavailable — no hostname is
+guessed from anywhere else), `runtime` as `{kind: "worktree", path}` from the record's own
+checkout, `agent` as the tagged session's address and status (null when no session claimed the
+workstream), `services: []`, `preview: null` and the scan's `observedAt`. There is no container,
+port, health check or route to report yet — those are slices 2 and 3 of
+`docs/environment-plan.md` — and the fields are served empty rather than inferred.
+
 A session joins a room only by the explicit Herdr label `room=<id>`, set with
 `hc label <terminal> room=<id>`; `joinedBy: "label"` records the join. The
 terminal's `cwd` is the shell's directory, not the agent's, so it is never used

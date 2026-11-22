@@ -8,8 +8,9 @@ person, reading the board's `/presence` projection.
 A 320 px column on the right of the window, beside the panes: a `Factory`
 header with the blocked count, the report count and a desk badge; then one row
 per workstream — a state dot, the workstream label, a state badge, and a meta
-line of repo, last pass, age, `used/cap` passes and queued events; then the desk
-items; then Branch Issue / Branch PR when those mods are installed.
+line of repo, last pass, age, `used/cap` passes and queued events, with an
+environment line under it when the projection sends one; then the desk items;
+then Branch Issue / Branch PR when those mods are installed.
 
 ## How it behaves
 
@@ -22,6 +23,16 @@ items; then Branch Issue / Branch PR when those mods are installed.
   last and shows no badge — a missing field renders nothing, it is not guessed.
 - Every meta part is optional: repo, `pass N`, `Nm ago`, `4/20`, `2 queued` —
   each appears only when the projection sent it.
+- The environment line comes from `factory.environments[]`: the machine host, the
+  runtime (`worktree /path`), the declared services, and the preview URL. A
+  workstream with no entry draws no line; a workstream with no declared service
+  draws no service text; `preview: null` draws nothing. The panel never invents a
+  container, a port, a health state or a route.
+- `presence.js` is the decode and `main.js` only draws what it produced, so the row
+  model can be read without the app: `pnpm herdr:test` runs `presence.test.mjs`,
+  which starts from the board's own document and pins the empty and half-served
+  cases. Both files live inside the mod folder, so the copy or symlink below
+  carries them.
 - **Focus** appears on a workstream only when `factory` matched it to a Herdr
   session _and_ the app still shows that terminal; it runs
   `agent.focus {terminal: address}`. One action, no Linear or PR internals.

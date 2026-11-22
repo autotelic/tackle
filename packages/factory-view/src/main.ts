@@ -4,102 +4,17 @@ import type { Document, Html, HtmlBuilder } from "foldkit/html"
 import { defineMessageUnion } from "foldkit/message"
 import { ticks } from "foldkit-primitives/time"
 
-const Workstream = Schema.Struct({
-  id: Schema.String,
-  project: Schema.String,
-  label: Schema.String,
-  phase: Schema.String,
-  path: Schema.String,
-  repo: Schema.optional(Schema.String),
-  branch: Schema.optional(Schema.String),
-  head: Schema.optional(Schema.String),
-  pr: Schema.optional(Schema.Finite),
-  delivery: Schema.optional(Schema.String),
-  linearProjectId: Schema.optional(Schema.String),
-  checkpoint: Schema.Struct({ sha: Schema.String, at: Schema.String }),
-})
-const Desk = Schema.Struct({
-  id: Schema.String,
-  workstream: Schema.String,
-  title: Schema.String,
-  body: Schema.String,
-  choices: Schema.Array(Schema.String),
-  route: Schema.String,
-})
-const Report = Schema.Struct({
-  id: Schema.String,
-  workstream: Schema.String,
-  kind: Schema.String,
-  actual: Schema.String,
-  at: Schema.String,
-  blocked: Schema.Boolean,
-})
-const Quality = Schema.Struct({
-  available: Schema.Boolean,
-  errors: Schema.Finite,
-  warnings: Schema.Finite,
-  note: Schema.String,
-})
-const ActivityPass = Schema.Struct({
-  pass: Schema.Finite,
-  at: Schema.String,
-  status: Schema.String,
-  phase: Schema.String,
-  events: Schema.Array(Schema.String),
-  checkpoint: Schema.optional(Schema.String),
-  exit: Schema.optional(Schema.Finite),
-  quality: Schema.optional(
-    Schema.Struct({ before: Quality, after: Quality, regressed: Schema.Boolean }),
-  ),
-})
-const Activity = Schema.Struct({
-  workstream: Schema.String,
-  lastPass: Schema.NullOr(ActivityPass),
-  pending: Schema.Array(
-    Schema.Struct({
-      id: Schema.String,
-      kind: Schema.String,
-      at: Schema.String,
-      summary: Schema.optional(Schema.String),
-    }),
-  ),
-  lastEvent: Schema.NullOr(
-    Schema.Struct({
-      id: Schema.String,
-      kind: Schema.String,
-      at: Schema.String,
-      summary: Schema.optional(Schema.String),
-    }),
-  ),
-  ageMinutes: Schema.NullOr(Schema.Finite),
-  budget: Schema.Struct({ used: Schema.Finite, passesPerPhase: Schema.Finite }),
-  phase: Schema.String,
-  state: Schema.Literals(["working", "queued", "blocked", "idle", "done"]),
-  blockedBy: Schema.Array(Schema.String),
-})
-const SessionSource = Schema.Union([Schema.Literal("herdr"), Schema.Literal("rex")])
-const Session = Schema.Struct({
-  source: SessionSource,
-  address: Schema.String,
-  agent: Schema.optional(Schema.String),
-  roomId: Schema.optional(Schema.String),
-  where: Schema.optional(Schema.String),
-  workstream: Schema.optional(Schema.String),
-})
-const SessionSourceView = Schema.Struct({
-  available: Schema.Boolean,
-  sessions: Schema.Array(Session),
-})
-const Presence = Schema.Struct({
-  factory: Schema.Struct({
-    workstreams: Schema.Array(Workstream),
-    activity: Schema.Array(Activity),
-    desk: Schema.Array(Desk),
-    reports: Schema.Array(Report),
-  }),
-  sessions: Schema.Struct({ herdr: SessionSourceView, rex: SessionSourceView }),
-})
-type Presence = typeof Presence.Type
+import {
+  Activity,
+  Desk,
+  type Environment,
+  Presence,
+  Report,
+  Session,
+  SessionSource,
+  Workstream,
+  environmentsByWorkstream,
+} from "./presence.ts"
 
 export const Model = Schema.Struct({
   presence: Schema.NullOr(Presence),
@@ -387,11 +302,41 @@ const activityBlock = (h: HtmlBuilder<Message>, activity: typeof Activity.Type |
   )
 }
 
+/**
+ * The Environment line: machine, runtime and the agent working the card.
+ *
+ * Each part is drawn only when the projection sent it, and a card with no environment at all
+ * draws no line. A worktree is named by its path because that is what "runtime" means today.
+ */
+const environmentLine = (h: HtmlBuilder<Message>, environment: Environment | undefined) => {
+  if (environment === undefined) return h.span([], [])
+  const machine = environment.machine
+  const runtime = environment.runtime
+  const agent = environment.agent
+  const parts = [
+    ...(machine === null || machine === undefined
+      ? []
+      : [h.span([h.Class("mono")], ["machine " + machine.host])]),
+    ...(runtime === undefined
+      ? []
+      : [h.span([h.Class("mono")], [runtime.kind + " " + runtime.path])]),
+    ...(agent === null || agent === undefined
+      ? []
+      : [h.span([], ["agent " + agent.session + " · " + agent.status])]),
+  ]
+  if (parts.length === 0) return h.span([], [])
+  return h.div(
+    [h.Class("environment")],
+    [h.span([h.Class("environment-label")], ["Environment"]), ...parts],
+  )
+}
+
 const workstreamCard = (
   h: HtmlBuilder<Message>,
   ws: typeof Workstream.Type,
   activity: typeof Activity.Type | undefined,
   sessions: ReadonlyArray<typeof Session.Type>,
+  environment: Environment | undefined,
 ) =>
   h.article(
     [h.Class("workstream"), h.Id(ws.id)],
@@ -433,6 +378,7 @@ const workstreamCard = (
           h.span([h.Class("mono")], ["checkpoint " + ws.checkpoint.sha.slice(0, 8)]),
         ],
       ),
+      environmentLine(h, environment),
       activityBlock(h, activity),
       sessions.length === 0
         ? h.span([], [])
@@ -449,6 +395,7 @@ const repoSection = (
   workstreams: ReadonlyArray<typeof Workstream.Type>,
   activities: ReadonlyArray<typeof Activity.Type>,
   sessions: ReadonlyArray<typeof Session.Type>,
+  environments: Readonly<Record<string, Environment>>,
 ) =>
   h.section(
     [h.Class("repo")],
@@ -480,6 +427,7 @@ const repoSection = (
                   ws,
                   activities.find((activity) => activity.workstream === ws.id),
                   sessions.filter((session) => session.workstream === ws.id),
+                  environments[ws.id],
                 ),
               ),
             ],
@@ -597,6 +545,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
                   presence.factory.workstreams.filter((ws) => repoName(ws) === repo),
                   presence.factory.activity,
                   [...presence.sessions.herdr.sessions, ...presence.sessions.rex.sessions],
+                  environmentsByWorkstream(presence.factory.environments),
                 ),
               ),
               ...(presence.factory.desk.length === 0

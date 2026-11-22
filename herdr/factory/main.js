@@ -1,5 +1,5 @@
-/* oxlint-disable plumb/no-runtime-typeof -- a Herdr mod has no Schema and no build step, so the
-   /presence document is decoded here, at the seam where it arrives. */
+// The decode lives in ./presence.js: a Herdr mod has no Schema and no build step, so the
+// /presence document is decoded there, at the seam where it arrives.
 
 // The factory's attention panel: one row per workstream, ordered by what needs a person,
 // read from the board's /presence projection. A field the projection did not send gets no
@@ -8,13 +8,13 @@ import { View, div } from "gpui-kit"
 import { h_flex, v_flex } from "gpui-base"
 import { agents, appHome, checking, exec, run, theme, window } from "herdr"
 import { readdir } from "fs/promises"
+import { environmentText, metaLine, readPresence } from "./presence.js"
 
 // One seam, one address. The board binds loopback by default and adds a loopback listener
 // beside a tailnet address, so the panel carries no address book of its own.
 const PRESENCE = "http://127.0.0.1:4780/presence"
 const VIEW = "http://127.0.0.1:4780/factory"
 const POLL = 15000
-const ATTENTION = ["blocked", "working", "queued", "idle", "done"]
 const STATES = {
   blocked: "Blocked",
   working: "Working",
@@ -31,12 +31,6 @@ const AGENT_STATES = {
 const LINKS = { "branch-issue": "Branch Issue", "branch-pr": "Branch PR" }
 const OPENERS = { macos: "open", windows: "explorer", linux: "xdg-open" }
 
-const listOf = (value) => (Array.isArray(value) ? value : [])
-const recordOf = (value) => (value !== null && typeof value === "object" ? value : {})
-const textOf = (value) => (typeof value === "string" && value !== "" ? value : null)
-const numberOrNull = (value) => (typeof value === "number" && Number.isFinite(value) ? value : null)
-const stateOf = (value) => (typeof value === "string" && ATTENTION.includes(value) ? value : null)
-
 /**
  * The color a state wears, from the theme's own state names.
  *
@@ -51,104 +45,6 @@ const stateColor = ({ theme: t, state }) => {
 const agentColor = ({ theme: t, agent }) => {
   const colors = { blocked: t.blocked, working: t.working, done: t.done }
   return colors[agent] ?? t.muted
-}
-
-// Unknown and absent states sort after every known one rather than being given a rank.
-const rank = (state) => {
-  const index = state === null ? -1 : ATTENTION.indexOf(state)
-  return index === -1 ? ATTENTION.length : index
-}
-
-const ageText = (minutes) => {
-  const value = numberOrNull(minutes)
-  if (value === null) return null
-  if (value < 1) return "under a minute"
-  if (value < 60) return Math.round(value) + "m"
-  const hours = Math.floor(value / 60)
-  if (hours < 24) return hours + "h " + Math.round(value % 60) + "m"
-  return Math.floor(hours / 24) + "d"
-}
-
-const repoName = (repo) => {
-  const name = textOf(repo)
-  return name === null ? null : (name.split("/").filter(Boolean).pop() ?? name)
-}
-
-/**
- * One drawn row, holding only what the projection actually said.
- *
- * @param {{ workstream: Record<string, any>, activity: Record<string, any>, sessions: Record<string, any>[] }} input
- * @returns {Record<string, any> | null} the row, or null when the workstream has no identity.
- */
-const rowOf = ({ workstream, activity, sessions }) => {
-  const id = textOf(workstream.id)
-  if (id === null) return null
-  const live = recordOf(activity)
-  const pass = recordOf(live.lastPass)
-  const budget = recordOf(live.budget)
-  const used = numberOrNull(budget.used)
-  const cap = numberOrNull(budget.passesPerPhase)
-  const pending = listOf(live.pending).length
-  const matched = sessions.find(
-    (session) => session.workstream === id && textOf(session.address) !== null,
-  )
-  return {
-    id,
-    label: textOf(workstream.label) ?? id,
-    repo: repoName(workstream.repo),
-    state: stateOf(live.state),
-    pass: numberOrNull(pass.pass),
-    age: ageText(live.ageMinutes),
-    budget: used === null || cap === null ? null : used + "/" + cap,
-    queued: pending === 0 ? null : String(pending) + " queued",
-    address: matched === undefined ? null : textOf(matched.address),
-    agent: matched === undefined ? null : textOf(matched.status),
-  }
-}
-
-const deskRows = (desk) =>
-  listOf(desk)
-    .map((item) => {
-      const record = recordOf(item)
-      const title = textOf(record.title)
-      return title === null
-        ? null
-        : {
-            id: textOf(record.id) ?? title,
-            title,
-            workstream: textOf(record.workstream),
-            body: textOf(record.body),
-            choices: listOf(record.choices)
-              .map((choice) => textOf(choice))
-              .filter((choice) => choice !== null),
-          }
-    })
-    .filter((row) => row !== null)
-
-/**
- * Turn a /presence body into what the panel draws. A field that is missing stays missing: it is
- * never filled from a neighbour, so no row invents a phase, a state or a session.
- *
- * @param {any} body - the decoded /presence document.
- * @returns {{ rows: Record<string, any>[], desk: Record<string, any>[], reports: number }} the panel model.
- */
-const readPresence = (body) => {
-  const root = recordOf(body)
-  const factory = recordOf(root.factory)
-  const sessions = listOf(recordOf(recordOf(root.sessions).herdr).sessions).map(recordOf)
-  const activities = listOf(factory.activity).map(recordOf)
-  const rows = listOf(factory.workstreams)
-    .map((workstream) => {
-      const record = recordOf(workstream)
-      const activity = activities.find((candidate) => candidate.workstream === record.id)
-      return rowOf({ workstream: record, activity: recordOf(activity), sessions })
-    })
-    .filter((row) => row !== null)
-    .sort(
-      (left, right) =>
-        rank(left.state) - rank(right.state) || left.label.localeCompare(right.label),
-    )
-  return { rows, desk: deskRows(factory.desk), reports: listOf(factory.reports).length }
 }
 
 /**
@@ -190,24 +86,6 @@ const installedLinks = async () => {
   const names = await readdir(appHome() + "/mods").catch(() => [])
   return Object.keys(LINKS).filter((name) => names.includes(name))
 }
-
-/**
- * The line under a row's label: repo, last pass, age, budget and queued count, each only when
- * the projection sent it.
- *
- * @param {Record<string, any>} row - one drawn row.
- * @returns {string} the joined line, possibly empty.
- */
-const metaLine = (row) =>
-  [
-    row.repo,
-    row.pass === null ? null : "pass " + row.pass,
-    row.age === null ? null : row.age + " ago",
-    row.budget,
-    row.queued,
-  ]
-    .filter((part) => part !== null && part !== undefined && part !== "")
-    .join(" · ")
 
 /**
  * The empty state's words.
@@ -318,6 +196,7 @@ export default class Factory extends View {
   row(t, row, live) {
     const color = stateColor({ theme: t, state: row.state })
     const meta = metaLine(row)
+    const environment = environmentText(row)
     const canFocus = row.address !== null && live.has(row.address)
     return h_flex()
       .id("factory-" + row.id)
@@ -352,6 +231,9 @@ export default class Factory extends View {
           )
           .when(meta !== "", (el) =>
             el.child(div().text_size(11).text_color(t.dim).truncate().child(meta)),
+          )
+          .when(environment !== "", (el) =>
+            el.child(div().text_size(11).text_color(t.dim).truncate().child(environment)),
           ),
       )
       .when(canFocus, (el) =>

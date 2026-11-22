@@ -323,3 +323,103 @@ test("starts a room that is wanted but has no run record", async () => {
     rmSync(root, { recursive: true, force: true })
   }
 }, 30_000)
+
+const workstreamRecord = (input: {
+  readonly id: string
+  readonly path: string
+  readonly label: string
+}): string =>
+  JSON.stringify({
+    version: 1,
+    id: input.id,
+    project: "factory",
+    label: input.label,
+    repo: "autotelic/tackle",
+    path: input.path,
+    branch: "main",
+    head: "0".repeat(40),
+    delivery: "trunk",
+    base: "main",
+    baseSha: "0".repeat(40),
+    prHead: "0".repeat(40),
+    diverged: false,
+    phase: "build",
+    deps: [],
+    lease: { holder: "test", generation: 1 },
+    cursors: { github: "", linear: "" },
+    budgets: {
+      passesPerPhase: 5,
+      wallMinutesPerPass: 30,
+      tokensPerDay: 0,
+      roundsOfChanges: 2,
+    },
+    autonomy: [],
+    desk: [],
+    checkpoint: {
+      sha: "0".repeat(40),
+      ref: "refs/bench/" + input.id,
+      at: "2026-11-22T10:00:00.000Z",
+      pushed: false,
+    },
+    createdAt: "2026-11-22T09:00:00.000Z",
+    updatedAt: "2026-11-22T10:00:00.000Z",
+  })
+
+test("presence carries an environment for every workstream", () => {
+  const root = mkdtempSync(join(tmpdir(), "board-env-"))
+  try {
+    const factoryHome = join(root, "factory")
+    const workstreams = join(factoryHome, "workstreams")
+    mkdirSync(workstreams, { recursive: true })
+    const records = [
+      { id: "shakti-perms", path: join(root, "shakti-perms"), label: "shakti-perms" },
+      { id: "factory-feedback", path: join(root, "factory-feedback"), label: "factory-feedback" },
+    ]
+    for (const record of records)
+      writeFileSync(join(workstreams, record.id + ".json"), workstreamRecord(record))
+
+    const output = run(["presence", "--json", "--root", "rooms"], root, {
+      FACTORY_HOME: factoryHome,
+    })
+    expect(output.status, output.stderr).toBe(0)
+    const presence = JSON.parse(output.stdout)
+    const environments = presence.factory.environments
+    // Records are listed in file-name order, so the served order is the id order.
+    const ordered = records.toSorted((left, right) => left.id.localeCompare(right.id))
+    expect(
+      environments.map((environment: { workstream: string }) => environment.workstream),
+    ).toEqual(ordered.map((record) => record.id))
+    for (const [index, environment] of environments.entries()) {
+      expect(environment).toEqual({
+        workstream: ordered[index]?.id,
+        // The machine is the tailnet's self entry. A host without the daemon has no self, and
+        // the field is then null rather than a hostname from somewhere else.
+        machine:
+          environment.machine === null
+            ? null
+            : { host: environment.machine.host, dnsName: environment.machine.dnsName },
+        runtime: { kind: "worktree", path: ordered[index]?.path },
+        // Nothing declares a service and nothing routes to a preview, so both stay at their
+        // empty value rather than being filled by a neighbour.
+        services: [],
+        preview: null,
+        observedAt: presence.observedAt,
+        // A live session on this machine may legitimately claim the workstream by its label or
+        // cwd, so the agent is either no session at all or one the board actually observed. It
+        // is never a placeholder (the unit test pins the null case deterministically).
+        agent:
+          environment.agent === null
+            ? null
+            : {
+                session: environment.agent.session,
+                status: environment.agent.status,
+              },
+      })
+      if (environment.agent !== null) expect(environment.agent.session.length).toBeGreaterThan(0)
+      expect(environment).not.toHaveProperty("container")
+      expect(environment).not.toHaveProperty("health")
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
