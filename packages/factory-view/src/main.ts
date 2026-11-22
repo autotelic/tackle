@@ -27,8 +27,9 @@ const Report = Schema.Struct({
   at: Schema.String,
   blocked: Schema.Boolean,
 })
+const SessionSource = Schema.Union([Schema.Literal("herdr"), Schema.Literal("rex")])
 const Session = Schema.Struct({
-  source: Schema.String,
+  source: SessionSource,
   address: Schema.String,
   agent: Schema.optional(Schema.String),
   roomId: Schema.optional(Schema.String),
@@ -52,6 +53,7 @@ export const Model = Schema.Struct({
   presence: Schema.NullOr(Presence),
   error: Schema.NullOr(Schema.String),
   loading: Schema.Boolean,
+  notice: Schema.NullOr(Schema.String),
 })
 export type Model = typeof Model.Type
 
@@ -60,6 +62,8 @@ export const Message = defineMessageUnion({
   Settled: { value: Schema.Unknown, error: Schema.NullOr(Schema.String) },
   ClickedCopy: { command: Schema.String },
   Copied: {},
+  ClickedOpen: { source: SessionSource, address: Schema.String },
+  Opened: { ok: Schema.Boolean, error: Schema.NullOr(Schema.String) },
 })
 export type Message = typeof Message.Type
 
@@ -77,12 +81,22 @@ export const update = (model: Model, message: Message): UpdateReturn =>
         : { model: { ...model, presence: null, error: String(decoded.failure), loading: false } }
     },
     ClickedCopy: ({ command }) => ({ model, commands: [CopyCommand({ command })] }),
-    Copied: () => ({ model }),
+    Copied: () => ({ model, notice: "Copied the open command" }),
+    ClickedOpen: ({ source, address }) => ({
+      model,
+      commands: [OpenSession({ source, address })],
+    }),
+    Opened: ({ ok, error }) => ({
+      model: {
+        ...model,
+        notice: ok ? "Opened in its app" : "Could not open: " + (error ?? "unknown error"),
+      },
+    }),
   })
 
 /** Start with a fetch and an empty model. */
 export const init: Runtime.ApplicationInit<Model, Message> = () => ({
-  model: { presence: null, error: null, loading: true },
+  model: { presence: null, error: null, loading: true, notice: null },
   commands: [FetchPresence()],
 })
 
@@ -101,6 +115,29 @@ export const FetchPresence = Command.define("FetchPresence", {
       onSuccess: (value) => Message.Settled({ value, error: null }),
     }),
   ),
+})
+
+export const OpenSession = Command.define("OpenSession", {
+  args: { source: SessionSource, address: Schema.String },
+  messages: [Message.Opened],
+  execute: ({ source, address }: { readonly source: "herdr" | "rex"; readonly address: string }) =>
+    Effect.tryPromise({
+      try: async () => {
+        const response = await fetch("/open", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ source, address }),
+        })
+        if (!response.ok) return Promise.reject((await response.text()) || "open failed")
+        return true
+      },
+      catch: (cause) => String(cause),
+    }).pipe(
+      Effect.match({
+        onFailure: (error) => Message.Opened({ ok: false, error }),
+        onSuccess: () => Message.Opened({ ok: true, error: null }),
+      }),
+    ),
 })
 
 export const CopyCommand = Command.define("CopyCommand", {
@@ -139,7 +176,11 @@ const sessionRow = (h: HtmlBuilder<Message>, session: typeof Session.Type) => {
       h.span([h.Class("id")], [session.source + " " + session.address]),
       h.span([], [session.agent ?? ""]),
       h.span([h.Class("muted")], [session.where ?? ""]),
-      h.button([h.OnClick(Message.ClickedCopy({ command }))], ["Copy open"]),
+      h.button(
+        [h.OnClick(Message.ClickedOpen({ source: session.source, address: session.address }))],
+        ["Open"],
+      ),
+      h.button([h.OnClick(Message.ClickedCopy({ command }))], ["Copy"]),
     ],
   )
 }
@@ -163,6 +204,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
       ...(model.error === null
         ? []
         : [h.p([h.Class("error")], ["Could not read /presence: " + model.error])]),
+      ...(model.notice === null ? [] : [h.p([h.Class("notice")], [model.notice])]),
       ...(model.presence === null
         ? []
         : [

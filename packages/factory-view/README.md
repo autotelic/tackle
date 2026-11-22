@@ -44,11 +44,12 @@ pnpm --filter @autotelic/factory-view dev
   commit the last pass stopped at.
 - **Desk** — questions waiting for a human. The view does not answer them; it
   shows which workstream asked.
-- **Sessions** — Herdr and Rex addresses. `Copy open` copies the exact command
-  (`hc attach …` or `rex block focus …`) so the pane can be opened without
-  guessing an address.
+- **Sessions** — Herdr and Rex addresses. `Open` asks the board to focus the
+  session in its app: a Rex block is focused by block id, and a Herdr terminal
+  is attached in Terminal with `hc attach …`. `Copy` gives the command instead.
 - **Reports** — structured feedback the factory consumed, with expected and
   actual text side by side.
 
 The refresh button is deliberate: this is an observation surface, not a
-controller. Writes remain in the CLI and the desk protocol.
+controller. The only action is `POST /open`, which validates the address and
+runs `rex block focus` or `hc attach`; factory state is never written here.

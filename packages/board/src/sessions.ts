@@ -1,3 +1,4 @@
+/* oxlint-disable plumb-effect/guarded-op-must-return-effect -- binary lookup returns Option because absence is a normal host state, not a failure reason */
 import { execFile } from "node:child_process"
 import { existsSync } from "node:fs"
 import { homedir } from "node:os"
@@ -85,6 +86,8 @@ const run: Run = async ({ command, args }) => {
 }
 
 /** HERDR_BIN first, then PATH, then the installer's default location. */
+export const findHerdrBinary = (): Option.Option<string> => herdrBin(existsSync)
+
 const herdrBin = (exists: (path: string) => boolean): Option.Option<string> => {
   if (process.env.HERDR_BIN !== undefined && process.env.HERDR_BIN !== "")
     return Option.some(process.env.HERDR_BIN)
@@ -190,6 +193,8 @@ const REX_SERVER = join(
 )
 
 /** REX_BIN first, then PATH, then the server bundled with the app. */
+export const findRexBinary = (): Option.Option<string> => rexBin(existsSync)
+
 const rexBin = (exists: (path: string) => boolean): Option.Option<string> => {
   if (process.env.REX_BIN !== undefined && process.env.REX_BIN !== "")
     return Option.some(process.env.REX_BIN)

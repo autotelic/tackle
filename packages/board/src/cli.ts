@@ -1,16 +1,17 @@
-import { spawn } from "node:child_process"
+import { execFile, spawn } from "node:child_process"
 import { createServer } from "node:http"
 import { existsSync } from "node:fs"
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { parseArgs } from "node:util"
+import { parseArgs, promisify } from "node:util"
+import { Option } from "effect"
 import { listRooms } from "@autotelic/room/store"
 import { readRun, startRoomRun } from "@autotelic/room/run"
 import { listDesk } from "@autotelic/factory/desk"
 import { listReports } from "@autotelic/factory/report"
 import { listWorkstreams } from "@autotelic/factory/store"
-import { discoverSessions, type Session } from "./sessions.ts"
+import { discoverSessions, findHerdrBinary, findRexBinary, type Session } from "./sessions.ts"
 import { discoverTailnet } from "./tailnet.ts"
 import { fleet } from "./fleet.ts"
 import * as Result from "effect/Result"
@@ -232,6 +233,50 @@ const presence = async ({
 }
 
 const viewDir = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "factory-view", "dist")
+const execFileAsync = promisify(execFile)
+const SessionAddress = Schema.String.check(
+  Schema.makeFilter((value) => /^[A-Za-z0-9:._-]+$/.test(value), {
+    message: "invalid session address",
+  }),
+)
+const OpenRequest = Schema.Struct({
+  source: Schema.Union([Schema.Literal("herdr"), Schema.Literal("rex")]),
+  address: SessionAddress,
+})
+
+const shellQuote = (value: string): string =>
+  `"${value.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`
+
+/** Open an existing session in its owning app; addresses are never shell fragments. */
+const openSession = async ({
+  source,
+  address,
+}: {
+  readonly source: string
+  readonly address: string
+}): Promise<void> => {
+  if (source === "rex") {
+    const binary = findRexBinary()
+    // oxlint-disable-next-line plumb/no-builtin-throws -- this HTTP boundary turns it into a 400
+    if (Option.isNone(binary)) throw new Error("Rex is not installed")
+    await execFileAsync(binary.value, ["block", "focus", address], { timeout: 5_000 })
+    return
+  }
+  if (source === "herdr") {
+    const binary = findHerdrBinary()
+    // oxlint-disable-next-line plumb/no-builtin-throws -- this HTTP boundary turns it into a 400
+    if (Option.isNone(binary)) throw new Error("hc is not installed")
+    const command = `${shellQuote(binary.value)} attach ${shellQuote(address)}`
+    await execFileAsync(
+      "/usr/bin/osascript",
+      ["-e", `tell application "Terminal"\nactivate\ndo script ${shellQuote(command)}\nend tell`],
+      { timeout: 5_000 },
+    )
+    return
+  }
+  // oxlint-disable-next-line plumb/no-builtin-throws -- this HTTP boundary turns it into a 400
+  throw new Error("unknown session source")
+}
 
 const serveView = async ({
   response,
@@ -271,6 +316,31 @@ const serve = async ({
 }): Promise<void> => {
   const server = createServer((request, response) => {
     const path = new URL(request.url ?? "/", "http://" + host).pathname
+    if (path === "/open" && request.method === "POST") {
+      void (async () => {
+        // oxlint-disable-next-line plumb-effect/no-try-catch -- the HTTP handler consumes JSON.parse and child-process failures here
+        try {
+          let body = ""
+          for await (const chunk of request) {
+            body += String(chunk)
+            if (body.length > 4_096) {
+              json({ response, status: 400, body: { error: "request body is too large" } })
+              return
+            }
+          }
+          const decoded = Schema.decodeResult(Schema.fromJsonString(OpenRequest))(body)
+          if (Result.isFailure(decoded)) {
+            json({ response, status: 400, body: { error: "expected {source, address}" } })
+            return
+          }
+          await openSession(decoded.success)
+          json({ response, status: 200, body: { ok: true } })
+        } catch (cause: unknown) {
+          json({ response, status: 400, body: { error: String(cause) } })
+        }
+      })()
+      return
+    }
     if (request.method !== "GET") {
       json({ response, status: 405, body: { error: "method not allowed" } })
       return
@@ -311,7 +381,15 @@ const serve = async ({
       status: 404,
       body: {
         error: "not found",
-        paths: ["/", "/factory", "/health", "/presence", "/.well-known/presence.json", "/queue"],
+        paths: [
+          "/",
+          "/factory",
+          "/health",
+          "/presence",
+          "/.well-known/presence.json",
+          "/queue",
+          "/open",
+        ],
       },
     })
   })
