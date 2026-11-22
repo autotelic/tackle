@@ -115,6 +115,22 @@ export const readAnswer = async (input: {
   return Result.isSuccess(decoded) ? decoded.success : undefined
 }
 
+/** Every answer on disk, including answers whose item is no longer pending. */
+export const listAnswers = async (input?: {
+  readonly home?: string | undefined
+}): Promise<ReadonlyArray<DeskAnswer>> => {
+  const names = await readdir(deskDir(input?.home)).catch(() => [])
+  const answers: Array<DeskAnswer> = []
+  for (const name of names.sort((left, right) => left.localeCompare(right))) {
+    if (!name.endsWith(".answer.json")) continue
+    const text = await readFile(join(deskDir(input?.home), name), "utf8").catch(() => undefined)
+    if (text === undefined) continue
+    const decoded = Schema.decodeResult(Schema.fromJsonString(DeskAnswer))(text)
+    if (Result.isSuccess(decoded)) answers.push(decoded.success)
+  }
+  return answers
+}
+
 /** Every pending desk item. */
 export const listDesk = async (input?: {
   readonly home?: string | undefined

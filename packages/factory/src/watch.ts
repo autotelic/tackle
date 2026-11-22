@@ -7,6 +7,7 @@ import * as Schema from "effect/Schema"
 import { appendEvent, consumeEvents, readEvents } from "./events.ts"
 import { passesUsed, runPass, type PassOutcome } from "./kernel.ts"
 import { readWorkstream, writeWorkstream, type Workstream } from "./store.ts"
+import { listAnswers, readDesk } from "./desk.ts"
 import { Report } from "./report.ts"
 
 /** A source event already normalized to the shape the kernel consumes. */
@@ -167,6 +168,32 @@ export const reportEvents = async (input: {
   return events
 }
 
+/** Read human answers to this workstream's desk items; an answer is an event. */
+export const deskEvents = async (input: {
+  readonly record: Workstream
+  readonly home?: string | undefined
+}): Promise<ReadonlyArray<WatchEvent>> => {
+  const events: Array<WatchEvent> = []
+  for (const answer of await listAnswers({ home: input.home })) {
+    const item = await readDesk({ id: answer.item, home: input.home })
+    if (item === undefined || item.workstream !== input.record.id) continue
+    events.push({
+      id: "desk:" + item.id + ":" + answer.at,
+      kind: "desk",
+      at: answer.at,
+      payload: {
+        item: item.id,
+        title: item.title,
+        choice: answer.choice,
+        by: answer.by,
+        body: item.body,
+      },
+      actor: answer.by,
+    })
+  }
+  return events
+}
+
 /** Read Linear issue changes for this workstream's project after the cursor. */
 export const linearEvents = (input: {
   readonly record: Workstream
@@ -262,6 +289,7 @@ export const watchOnce = async (input: {
     ...baseEvents({ record, runGit: input.runGit }),
     ...linearEvents({ record, runLinear: input.runLinear }),
     ...(await reportEvents({ record })),
+    ...(await deskEvents({ record, home: input.home })),
   ]
   const candidates = input.events ?? polled
   const readExisting = await readEvents({ id: input.id, home: input.home })
@@ -314,15 +342,20 @@ export const watchOnce = async (input: {
     if (pass.ok) {
       const current = await readWorkstream({ id: input.id, home: input.home })
       if (current !== undefined) {
-        const key = event.id.startsWith("linear:") ? "linear" : "github"
-        await writeWorkstream({
-          record: {
-            ...current,
-            cursors: { ...current.cursors, [key]: event.at },
-            updatedAt: input.at,
-          },
-          home: input.home,
-        })
+        const key = event.id.startsWith("linear:")
+          ? "linear"
+          : event.id.startsWith("github:") || event.id.startsWith("base:")
+            ? "github"
+            : null
+        if (key !== null)
+          await writeWorkstream({
+            record: {
+              ...current,
+              cursors: { ...current.cursors, [key]: event.at },
+              updatedAt: input.at,
+            },
+            home: input.home,
+          })
       }
     }
   }

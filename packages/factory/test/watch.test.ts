@@ -1,9 +1,11 @@
-import { readFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import * as Result from "effect/Result"
 import { expect, test } from "vitest"
 import { recordOf, type Workstream } from "../src/store.ts"
-import { baseEvents, shouldWake, type WatchEvent } from "../src/watch.ts"
+import { baseEvents, deskEvents, shouldWake, type WatchEvent } from "../src/watch.ts"
 
 /* oxlint-disable plumb/prefer-property-tests, no-reinterpret-cast, require-safety-comment-for-type-assertion -- the fixtures are trusted local JSON and the test shape is the assertion. */
 
@@ -81,6 +83,42 @@ test("a trunk workstream watches its base branch, not a PR", () => {
       runGit,
     }),
   ).toEqual([])
+})
+
+test("a desk answer becomes an event for its own workstream", async () => {
+  const root = mkdtempSync(join(tmpdir(), "factory-desk-event-"))
+  try {
+    const desk = join(root, "desk")
+    mkdirSync(desk, { recursive: true })
+    writeFileSync(
+      join(desk, "d1.json"),
+      JSON.stringify({
+        id: "d1",
+        workstream: "perms-1862",
+        kind: "decision",
+        title: "Choose",
+        body: "Test",
+        choices: ["yes"],
+        route: "live",
+        at: "2026-11-22T00:00:00.000Z",
+      }),
+    )
+    writeFileSync(
+      join(desk, "d1.answer.json"),
+      JSON.stringify({
+        item: "d1",
+        choice: "yes",
+        by: "human",
+        at: "2026-11-22T00:05:00.000Z",
+      }),
+    )
+    const events = await deskEvents({ record: base(), home: root })
+    expect(events[0]?.kind).toBe("desk")
+    expect(events[0]?.id).toContain("d1")
+    expect(events[0]?.payload).toMatchObject({ choice: "yes", by: "human" })
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
 })
 
 test("the six wake cases agree with the decision", () => {
