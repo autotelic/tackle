@@ -315,7 +315,8 @@ const activityBlock = (h: HtmlBuilder<Message>, activity: typeof Activity.Type |
     return h.div([h.Class("activity")], [h.span([h.Class("muted")], ["No pass records yet"])])
   const pass = activity.lastPass
   const running = pass?.status === "running"
-  const capped = activity.budget.used >= activity.budget.passesPerPhase
+  const capped =
+    activity.pending.length > 0 && activity.budget.used >= activity.budget.passesPerPhase
   const stale = !running && !capped && (activity.ageMinutes ?? 0) >= 30
   const age = formatDuration(activity.ageMinutes)
   const status = running

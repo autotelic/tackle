@@ -4,7 +4,7 @@ import { readFile, readdir } from "node:fs/promises"
 import { join } from "node:path"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
-import { appendEvent, readEvents } from "./events.ts"
+import { appendEvent, consumeEvents, readEvents } from "./events.ts"
 import { passesUsed, runPass, type PassOutcome } from "./kernel.ts"
 import { readWorkstream, writeWorkstream, type Workstream } from "./store.ts"
 import { Report } from "./report.ts"
@@ -122,6 +122,7 @@ export const baseEvents = (input: {
   if (sha === undefined || at === undefined) return []
   const since = Date.parse(input.record.cursors.github || "1970-01-01T00:00:00.000Z")
   if (Date.parse(at) <= since) return []
+  if (Result.isSuccess(git(["merge-base", "--is-ancestor", sha, "HEAD"]))) return []
   return [
     {
       id: "base:commit:" + sha,
@@ -217,6 +218,22 @@ export const shouldWake = (input: {
   return { wake: true, reason: "event" }
 }
 
+const CommitPayload = Schema.Struct({ sha: Schema.String })
+
+/** A commit already in the worktree's history is not new work for this workstream. */
+const ownCommit = (input: {
+  readonly event: WatchEvent
+  readonly record: Workstream
+  readonly runGit?: ((args: ReadonlyArray<string>) => Result.Result<string, string>) | undefined
+}): boolean => {
+  if (input.event.kind !== "commit") return false
+  const decoded = Schema.decodeUnknownResult(CommitPayload)(input.event.payload)
+  if (Result.isFailure(decoded)) return false
+  const git =
+    input.runGit ?? ((args) => run({ command: "git", args: ["-C", input.record.path, ...args] }))
+  return Result.isSuccess(git(["merge-base", "--is-ancestor", decoded.success.sha, "HEAD"]))
+}
+
 export interface WatchOutcome {
   readonly appended: ReadonlyArray<string>
   readonly passes: ReadonlyArray<PassOutcome>
@@ -247,7 +264,15 @@ export const watchOnce = async (input: {
     ...(await reportEvents({ record })),
   ]
   const candidates = input.events ?? polled
-  const existing = await readEvents({ id: input.id, home: input.home })
+  const readExisting = await readEvents({ id: input.id, home: input.home })
+  const own = readExisting
+    .filter(
+      (event) => event.status === "pending" && ownCommit({ event, record, runGit: input.runGit }),
+    )
+    .map((event) => event.id)
+  if (own.length > 0) await consumeEvents({ id: input.id, ids: own, home: input.home })
+  const existing =
+    own.length === 0 ? readExisting : await readEvents({ id: input.id, home: input.home })
   const known = new Map(existing.map((event) => [event.id, event]))
   const queued = new Map(candidates.map((event) => [event.id, event]))
   for (const event of existing) {

@@ -64,11 +64,13 @@ test("a trunk workstream watches its base branch, not a PR", () => {
   const sha = "ab12cd34"
   const at = "2026-11-21T23:30:00.000Z"
   const runGit = (args: ReadonlyArray<string>) =>
-    args[0] === "rev-parse"
-      ? Result.succeed(sha)
-      : args[0] === "log"
-        ? Result.succeed(sha + "\u0000" + at + "\u0000base moved")
-        : Result.succeed("")
+    args[0] === "merge-base"
+      ? Result.fail("not an ancestor")
+      : args[0] === "rev-parse"
+        ? Result.succeed(sha)
+        : args[0] === "log"
+          ? Result.succeed(sha + "\u0000" + at + "\u0000base moved")
+          : Result.succeed("")
   const events = baseEvents({ record, runGit })
   expect(events).toHaveLength(1)
   expect(events[0]?.id).toBe("base:commit:" + sha)
