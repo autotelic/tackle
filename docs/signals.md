@@ -198,8 +198,15 @@ one.
 
 This is the second step after the candidate record, not a third faucet. The candidate says _what was
 observed_; the source record says _what to keep watching_. They share the event envelope and the
-watermark discipline (`docs/workstream.md` §8) but not a lifetime: a candidate is evidence, a source
-is a subscription that expires. Sources are capped by `maxSources` and a TTL, and their receipts gain
-`signals: { pulled, proposed, suppressedByBaseline, unknown }` so a quiet source is visibly quiet.
-The first workstream that needs an unbuilt faucet gets this path; until then, the built-in sources in
-§2 remain the only ones the kernel starts on its own.
+watermark discipline (`docs/workstream.md` §8) but not a lifetime. The rule that makes the split safe:
+**a candidate snapshots the source's identity and window** — `sourceId`, `kind`, `windowFrom`,
+`windowTo` — never a live pointer. The day the listener expires, its candidates remain citable; a
+regression nobody can cite is a regression nobody can fix.
+
+An expiring source is not a silent stop. A source that expires with unconsumed observations raises a
+desk item naming the source and the unread count; otherwise a dead faucet looks exactly like a quiet
+world. `factory status` carries `sources: { active, expired }` beside
+`signals: { pulled, proposed, suppressedByBaseline, unknown }`. Sources are capped by `maxSources` and
+`ttl`, with explicit refusals `TooManySources` and `TTLTooLong`; a cap that drops the fourth request
+without a named refusal is not a cap. The first workstream that needs an unbuilt faucet gets this path;
+until then, the built-in sources in §2 remain the only ones the kernel starts on its own.
