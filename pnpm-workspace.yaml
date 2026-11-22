@@ -131,10 +131,14 @@ minimumReleaseAgeExclude:
 # pnpm 12 defaults `strictDepBuilds` to true, so a package whose build scripts nobody has
 # ruled on fails the install. These three are the rulings: esbuild needs its postinstall to
 # fetch its binary; the other two arrive transitively through pi-durable and neither script is
-# needed to run a room, so they are denied rather than left unreviewed. The placeholder text
-# pnpm's prompt leaves behind is not a boolean and does not count as a decision.
+# needed to run a room, so they are denied rather than left unreviewed.
+#
+# workerd was the one nobody had ruled on: pnpm's prompt leaves the literal string "set this
+# to true or false" behind, which strictDepBuilds reads as unruled, so every fresh clone and
+# every fresh worktree failed with ERR_PNPM_IGNORED_BUILDS. Approved, because the package's own
+# install expects its binary and a denial is not a decision pnpm can act on.
 allowBuilds:
   "@google/genai": false
   esbuild: true
   protobufjs: false
-  workerd: set this to true or false
+  workerd: true
