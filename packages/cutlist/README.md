@@ -74,6 +74,14 @@ have a `components/ui`, a `routes/`, and a `~/*` alias. An alias target is an ar
 own root. `ownership.entries` declares the entry points nothing imports by design
 (`entry.client.tsx`, `root.tsx`), so they read as routes rather than orphans.
 
+## Renderers
+
+The same parse pass reads JSX and FoldKit's explicit builder. In a FoldKit view, `h.div(...)`
+is a host element and a local function that receives the builder — `card(h, ...)` or
+`factoryView(model, h)` — is a render edge and a `view:` fact in the signature. A view is
+therefore a component even though it has no JSX, and a FoldKit app is not read as a directory
+of empty modules. Attribute builders such as `h.Class` are not elements.
+
 ## The signature is the whole point
 
 The proposal this project comes from claimed `Combobox`/`ComboBoxV2` would surface via

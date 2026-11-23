@@ -4,6 +4,7 @@ import type { Document, Html, HtmlBuilder } from "foldkit/html"
 import { defineMessageUnion } from "foldkit/message"
 import { ticks } from "foldkit-primitives/time"
 
+import { Atlas, type AtlasPackage } from "./atlas.ts"
 import {
   Activity,
   Desk,
@@ -16,8 +17,13 @@ import {
   environmentsByWorkstream,
 } from "./presence.ts"
 
+export const Route = Schema.Literals(["factory", "tackle"])
+export type Route = typeof Route.Type
+
 export const Model = Schema.Struct({
+  route: Route,
   presence: Schema.NullOr(Presence),
+  atlas: Schema.NullOr(Atlas),
   error: Schema.NullOr(Schema.String),
   loading: Schema.Boolean,
   notice: Schema.NullOr(Schema.String),
@@ -27,6 +33,7 @@ export type Model = typeof Model.Type
 export const Message = defineMessageUnion({
   ClickedRefresh: {},
   Settled: { value: Schema.Unknown, error: Schema.NullOr(Schema.String) },
+  AtlasSettled: { value: Schema.Unknown, error: Schema.NullOr(Schema.String) },
   Ticked: {},
   ClickedOpen: { source: SessionSource, address: Schema.String },
   Opened: { ok: Schema.Boolean, error: Schema.NullOr(Schema.String) },
@@ -40,17 +47,30 @@ type UpdateReturn = Update.Return<Model, Message>
 /** The Foldkit update function: every transition is explicit here. */
 export const update = (model: Model, message: Message): UpdateReturn =>
   Message.match<UpdateReturn>(message, {
-    ClickedRefresh: () => ({ model: { ...model, loading: true }, commands: [FetchPresence()] }),
+    ClickedRefresh: () => ({
+      model: { ...model, loading: true },
+      commands: [model.route === "tackle" ? FetchAtlas() : FetchPresence()],
+    }),
     Ticked: () =>
       model.loading
         ? { model }
-        : { model: { ...model, loading: true }, commands: [FetchPresence()] },
+        : {
+            model: { ...model, loading: true },
+            commands: [model.route === "tackle" ? FetchAtlas() : FetchPresence()],
+          },
     Settled: ({ value, error }) => {
       if (error !== null) return { model: { ...model, presence: null, error, loading: false } }
       const decoded = Schema.decodeUnknownResult(Presence)(value)
       return Result.isSuccess(decoded)
         ? { model: { ...model, presence: decoded.success, error: null, loading: false } }
         : { model: { ...model, presence: null, error: String(decoded.failure), loading: false } }
+    },
+    AtlasSettled: ({ value, error }) => {
+      if (error !== null) return { model: { ...model, atlas: null, error, loading: false } }
+      const decoded = Schema.decodeUnknownResult(Atlas)(value)
+      return Result.isSuccess(decoded)
+        ? { model: { ...model, atlas: decoded.success, error: null, loading: false } }
+        : { model: { ...model, atlas: null, error: String(decoded.failure), loading: false } }
     },
     ClickedOpen: ({ source, address }) => ({
       model,
@@ -76,10 +96,18 @@ export const update = (model: Model, message: Message): UpdateReturn =>
   })
 
 /** Start with a fetch and an empty model. */
-export const init: Runtime.ApplicationInit<Model, Message> = () => ({
-  model: { presence: null, error: null, loading: true, notice: null },
-  commands: [FetchPresence()],
-})
+const routeOf = (): Route =>
+  typeof window !== "undefined" && window.location.pathname.startsWith("/tackle")
+    ? "tackle"
+    : "factory"
+
+export const init: Runtime.ApplicationInit<Model, Message> = () => {
+  const route = routeOf()
+  return {
+    model: { route, presence: null, atlas: null, error: null, loading: true, notice: null },
+    commands: [route === "tackle" ? FetchAtlas() : FetchPresence()],
+  }
+}
 
 export const FetchPresence = Command.define("FetchPresence", {
   messages: [Message.Settled],
@@ -94,6 +122,23 @@ export const FetchPresence = Command.define("FetchPresence", {
     Effect.match({
       onFailure: (error) => Message.Settled({ value: null, error: String(error) }),
       onSuccess: (value) => Message.Settled({ value, error: null }),
+    }),
+  ),
+})
+
+export const FetchAtlas = Command.define("FetchAtlas", {
+  messages: [Message.AtlasSettled],
+  execute: Effect.tryPromise({
+    try: async () => {
+      const response = await fetch("/atlas")
+      if (!response.ok) return Promise.reject("HTTP " + response.status)
+      return await response.json()
+    },
+    catch: (cause) => String(cause),
+  }).pipe(
+    Effect.match({
+      onFailure: (error) => Message.AtlasSettled({ value: null, error: String(error) }),
+      onSuccess: (value) => Message.AtlasSettled({ value, error: null }),
     }),
   ),
 })
@@ -528,50 +573,55 @@ const reportRow = (h: HtmlBuilder<Message>, report: typeof Report.Type) =>
     ],
   )
 
+const routeNav = (h: HtmlBuilder<Message>, active: Route) =>
+  h.div(
+    [h.Class("nav")],
+    [
+      h.a([h.Href("/"), ...(active === "factory" ? [h.Class("active")] : [])], ["Factory"]),
+      h.a([h.Href("/tackle"), ...(active === "tackle" ? [h.Class("active")] : [])], ["Tackle"]),
+    ],
+  )
+
+const appHeader = (h: HtmlBuilder<Message>, model: Model, title: string, summary: string) =>
+  h.header(
+    [h.Class("header")],
+    [
+      h.div(
+        [],
+        [h.h1([], [title]), h.span([h.Class("muted")], [summary]), routeNav(h, model.route)],
+      ),
+      h.button([h.OnClick(Message.ClickedRefresh())], [model.loading ? "Refreshing…" : "Refresh"]),
+    ],
+  )
+
 /** Render the factory state; every field comes from /presence. */
-export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
+const factoryView = (model: Model, h: HtmlBuilder<Message>): Document => {
   const presence = model.presence
+  const summary =
+    presence === null
+      ? "waiting for presence"
+      : (() => {
+          const count = presence.factory.workstreams.length
+          const repos = new Set(presence.factory.workstreams.map(repoName)).size
+          const waiting = presence.factory.activity.reduce(
+            (total, activity) => total + activity.pending.length,
+            0,
+          )
+          return (
+            count +
+            (count === 1 ? " workstream" : " workstreams") +
+            " · " +
+            repos +
+            (repos === 1 ? " repo" : " repos") +
+            (waiting === 0 ? "" : " · " + waiting + " waiting")
+          )
+        })()
   return {
     title: "Software factory",
     body: h.div(
       [h.Class("shell")],
       [
-        h.header(
-          [h.Class("header")],
-          [
-            h.div(
-              [],
-              [
-                h.h1([], ["Software factory"]),
-                presence === null
-                  ? h.span([h.Class("muted")], ["waiting for presence"])
-                  : (() => {
-                      const count = presence.factory.workstreams.length
-                      const repos = new Set(presence.factory.workstreams.map(repoName)).size
-                      const waiting = presence.factory.activity.reduce(
-                        (total, activity) => total + activity.pending.length,
-                        0,
-                      )
-                      return h.span(
-                        [h.Class("muted")],
-                        [
-                          count +
-                            (count === 1 ? " workstream" : " workstreams") +
-                            " · " +
-                            repos +
-                            (repos === 1 ? " repo" : " repos") +
-                            (waiting === 0 ? "" : " · " + waiting + " waiting"),
-                        ],
-                      )
-                    })(),
-              ],
-            ),
-            h.button(
-              [h.OnClick(Message.ClickedRefresh())],
-              [model.loading ? "Refreshing…" : "Refresh"],
-            ),
-          ],
-        ),
+        appHeader(h, model, "Software factory", summary),
         ...(model.error === null
           ? []
           : [h.p([h.Class("error")], ["Could not read /presence: " + model.error])]),
@@ -614,3 +664,204 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
     ),
   }
 }
+
+interface AtlasLayer {
+  readonly id: string
+  readonly title: string
+  readonly note: string
+  readonly names: ReadonlyArray<string>
+}
+
+const ATLAS_LAYERS: ReadonlyArray<AtlasLayer> = [
+  {
+    id: "seam",
+    title: "Format seam",
+    note: "The wire contract. No runtime, no dependencies.",
+    names: ["@autotelic/protocol"],
+  },
+  {
+    id: "conformance",
+    title: "Conformance",
+    note: "The tools that check the tools, and the one that drives them.",
+    names: ["@autotelic/plumb", "@autotelic/joggle", "@autotelic/cutlist", "@autotelic/jig-cli"],
+  },
+  {
+    id: "factory",
+    title: "Factory and runtime",
+    note: "Passes, worktrees, one port, one service, one read surface.",
+    names: ["@autotelic/factory", "@autotelic/room", "@autotelic/board", "@autotelic/factory-view"],
+  },
+  {
+    id: "separate",
+    title: "Separate systems",
+    note: "Own processes and contracts; not on the factory's execution path.",
+    names: [
+      "@autotelic/mailbox-domain",
+      "@autotelic/mailbox",
+      "@autotelic/mailbox-server",
+      "@autotelic/treadle",
+    ],
+  },
+]
+
+const layerOf = (name: string): AtlasLayer | undefined =>
+  ATLAS_LAYERS.find((layer) => layer.names.includes(name))
+
+const shortName = (name: string): string => name.replace("@autotelic/", "")
+const githubUrl = (path: string): string => "https://github.com/autotelic/tackle/tree/main/" + path
+
+const chip = (h: HtmlBuilder<Message>, text: string) => h.span([h.Class("chip")], [text])
+
+const atlasPackageCard = (
+  h: HtmlBuilder<Message>,
+  entry: AtlasPackage,
+  edges: ReadonlyArray<{ readonly from: string; readonly to: string }>,
+) => {
+  const dependencies = entry.workspaceDependencies ?? []
+  const description = entry.description?.trim() ?? ""
+  const summary = entry.summary?.trim() ?? ""
+  // The manifest description is already the short answer; the README paragraph is the
+  // fallback for a package that has none, not a second first paragraph.
+  const showSummary = description === "" && summary !== ""
+  const usedBy = edges.filter((edge) => edge.to === entry.name).map((edge) => shortName(edge.from))
+  return h.div(
+    [h.Class("package-card")],
+    [
+      h.div(
+        [h.Class("package-head")],
+        [
+          h.h3([], [h.a([h.Href(githubUrl(entry.path))], [shortName(entry.name)])]),
+          h.span([h.Class("package-version")], [entry.version ?? "0.0.0"]),
+        ],
+      ),
+      entry.description === undefined || entry.description === ""
+        ? h.span([], [])
+        : h.p([h.Class("package-description")], [entry.description]),
+      showSummary ? h.p([h.Class("package-summary")], [summary]) : h.span([], []),
+      h.div(
+        [h.Class("package-meta")],
+        [
+          h.span([h.Class("mono")], [entry.path]),
+          entry.private === true ? chip(h, "private") : chip(h, "published"),
+          ...(entry.scripts ?? []).slice(0, 4).map((script) => chip(h, script)),
+        ],
+      ),
+      h.div(
+        [h.Class("package-deps")],
+        dependencies.length === 0
+          ? [h.span([h.Class("muted")], ["no workspace dependencies"])]
+          : [
+              h.span([h.Class("muted")], ["depends on"]),
+              ...dependencies.map((dependency) => chip(h, shortName(dependency))),
+            ],
+      ),
+      usedBy.length === 0
+        ? h.span([], [])
+        : h.div(
+            [h.Class("package-deps")],
+            [h.span([h.Class("muted")], ["used by"]), ...usedBy.map((name) => chip(h, name))],
+          ),
+    ],
+  )
+}
+
+const atlasLayer = (
+  h: HtmlBuilder<Message>,
+  layer: AtlasLayer,
+  packages: ReadonlyArray<AtlasPackage>,
+  edges: ReadonlyArray<{ readonly from: string; readonly to: string }>,
+) =>
+  packages.length === 0
+    ? h.span([], [])
+    : h.section(
+        [h.Id(layer.id), h.Class("atlas-layer")],
+        [
+          h.div(
+            [h.Class("atlas-layer-head")],
+            [h.h2([], [layer.title]), h.span([h.Class("count")], [String(packages.length)])],
+          ),
+          h.p([h.Class("atlas-layer-note")], [layer.note]),
+          h.div(
+            [h.Class("package-grid")],
+            packages.map((entry) => atlasPackageCard(h, entry, edges)),
+          ),
+        ],
+      )
+
+const atlasView = (model: Model, h: HtmlBuilder<Message>): Document => {
+  const atlas = model.atlas
+  const packages = atlas?.packages ?? []
+  const edges = atlas?.edges ?? []
+  const known = new Set(ATLAS_LAYERS.flatMap((layer) => layer.names))
+  const other = packages.filter((entry) => !known.has(entry.name))
+  const summary =
+    atlas === null
+      ? "waiting for the package atlas"
+      : packages.length +
+        (packages.length === 1 ? " package" : " packages") +
+        " · " +
+        edges.length +
+        (edges.length === 1 ? " workspace edge" : " workspace edges")
+  return {
+    title: "Tackle overview",
+    body: h.div(
+      [h.Class("shell")],
+      [
+        appHeader(h, model, "Tackle", summary),
+        ...(model.error === null
+          ? []
+          : [h.p([h.Class("error")], ["Could not read /atlas: " + model.error])]),
+        ...(atlas === null
+          ? []
+          : [
+              card(h, {
+                title: "What this is",
+                children: [
+                  h.p(
+                    [],
+                    [
+                      "The workspace is a set of small tools that agree on formats, not a monolith. " +
+                        "The seam is @autotelic/protocol; everything else is a role that reads or writes a format.",
+                    ],
+                  ),
+                  h.p(
+                    [h.Class("muted")],
+                    [
+                      "Every card is read from its package.json and README at request time. " +
+                        "The dependency chips are workspace edges; external packages are deliberately left out.",
+                    ],
+                  ),
+                ],
+              }),
+              ...ATLAS_LAYERS.map((layer) =>
+                atlasLayer(
+                  h,
+                  layer,
+                  packages.filter((entry) => layer.names.includes(entry.name)),
+                  edges,
+                ),
+              ),
+              ...(other.length === 0
+                ? []
+                : [
+                    atlasLayer(
+                      h,
+                      {
+                        id: "other",
+                        title: "Other",
+                        note: "Packages this page has not classified yet.",
+                        names: [],
+                      },
+                      other,
+                      edges,
+                    ),
+                  ]),
+            ]),
+      ],
+    ),
+  }
+}
+
+/** The route selector: /tackle is the workspace atlas, everything else is the factory. */
+export const view = (model: Model, h: HtmlBuilder<Message>): Document =>
+  model.route === "tackle" ? atlasView(model, h) : factoryView(model, h)

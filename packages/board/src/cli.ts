@@ -29,6 +29,7 @@ import {
   tagWorkstreams,
   type Session,
 } from "./sessions.ts"
+import { atlasOf } from "./atlas.ts"
 import { loopbackHostFor } from "./bind.ts"
 import { environmentsOf, type RoomPortLease, type RoomServiceObservation } from "./environment.ts"
 import { previewPrefix, previewRequestOf } from "./preview.ts"
@@ -418,7 +419,9 @@ const serveView = async ({
   readonly path: string
 }): Promise<void> => {
   const relative =
-    path === "/" || path === "/factory" ? "index.html" : path.slice("/factory/".length)
+    path === "/" || path === "/factory" || path === "/tackle" || path === "/tackle/"
+      ? "index.html"
+      : path.slice("/factory/".length)
   if (relative.includes("..")) {
     json({ response, status: 404, body: { error: "not found" } })
     return
@@ -630,11 +633,24 @@ const serve = async ({
       )
       return
     }
+    if (path === "/atlas") {
+      void atlasOf(root).then(
+        (body) => json({ response, status: 200, body }),
+        (cause: unknown) => json({ response, status: 500, body: { error: String(cause) } }),
+      )
+      return
+    }
     if (path.startsWith(previewPrefix)) {
       void servePreview({ root, request, response })
       return
     }
-    if (path === "/" || path === "/factory" || path.startsWith("/factory/")) {
+    if (
+      path === "/" ||
+      path === "/factory" ||
+      path === "/tackle" ||
+      path === "/tackle/" ||
+      path.startsWith("/factory/")
+    ) {
       void serveView({ response, path })
       return
     }
@@ -658,6 +674,8 @@ const serve = async ({
         paths: [
           "/",
           "/factory",
+          "/tackle",
+          "/atlas",
           "/health",
           "/presence",
           "/.well-known/presence.json",

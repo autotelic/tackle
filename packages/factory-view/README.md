@@ -2,10 +2,13 @@
 
 The software factory's view: one page that shows every open workstream, its
 phase, its checkpoint, the pending desk item, the sessions that can open it, and
-the reports the factory has consumed.
+the reports the factory has consumed. `/tackle` is the same Foldkit application's
+workspace atlas: every package, its README summary, and its internal dependency
+edges, read from `/atlas`.
 
-It is a Foldkit application. State arrives as one `/presence` read; every
-transition is a message, and the UI has no local source of truth.
+It is a Foldkit application. The factory route arrives as one `/presence` read and
+the tackle route as one `/atlas` read; every transition is a message, and the UI
+has no local source of truth.
 
 It is assembled from **primitives**, not a component kit: `ticks` from
 `foldkit-primitives/time` refreshes presence every 20 seconds, and `copyText`

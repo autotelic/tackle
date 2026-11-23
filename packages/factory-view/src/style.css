@@ -504,3 +504,107 @@ button:hover {
     min-height: 38px;
   }
 }
+
+.nav {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.nav a {
+  border: 1px solid #dbe2e8;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  color: #43515f;
+  background: #fff;
+}
+.nav a.active {
+  border-color: #1d5f8a;
+  background: #e8f1f8;
+  color: #174b6d;
+}
+.atlas-layer {
+  margin: 26px 0;
+}
+.atlas-layer-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.atlas-layer-head h2 {
+  margin: 0;
+  font-size: 16px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: #17202a;
+}
+.atlas-layer-note {
+  margin: 4px 0 12px;
+  color: #65717e;
+  font-size: 12px;
+}
+.package-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+}
+.package-card {
+  border: 1px solid #e0e6eb;
+  border-radius: 10px;
+  background: #fff;
+  padding: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.package-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.package-head h3 {
+  font-size: 15px;
+  margin: 0;
+}
+.package-version {
+  color: #65717e;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+}
+.package-description {
+  margin: 0;
+  font-size: 13px;
+  color: #2d3b48;
+}
+.package-summary {
+  margin: 0;
+  font-size: 12px;
+  color: #5f6d7a;
+}
+.package-meta,
+.package-deps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+}
+.package-meta .mono {
+  overflow-wrap: anywhere;
+}
+.chip {
+  border-radius: 999px;
+  background: #eef2f5;
+  color: #43515f;
+  padding: 2px 7px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+@media (max-width: 760px) {
+  .package-grid {
+    grid-template-columns: 1fr;
+  }
+  .nav {
+    margin-top: 6px;
+  }
+}

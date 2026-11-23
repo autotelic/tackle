@@ -18,6 +18,8 @@ process is gone) and serves:
 
 - `GET /health` — pid, shop, since
 - `GET /presence` — shop, observedAt, rooms, service address
+- `GET /atlas` — the workspace's packages, README summaries, and internal dependency edges
+- `GET /tackle` — the package atlas page (the same built view as `/factory`)
 - `GET /preview/<workstream>/` — the room's leased service
 - `GET /queue` — paused room ids
 

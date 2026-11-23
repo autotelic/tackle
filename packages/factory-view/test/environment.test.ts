@@ -37,7 +37,14 @@ const model = (environments?: string): Model => {
   const decoded = Schema.decodeResult(Schema.fromJsonString(Presence))(served(environments))
   if (Result.isFailure(decoded))
     throw new Error("presence did not decode: " + String(decoded.failure))
-  return { presence: decoded.success, error: null, loading: false, notice: null }
+  return {
+    route: "factory",
+    presence: decoded.success,
+    atlas: null,
+    error: null,
+    loading: false,
+    notice: null,
+  }
 }
 
 const environment = JSON.stringify({
