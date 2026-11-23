@@ -677,6 +677,7 @@ const factoryFloor = (
   h: HtmlBuilder<Message>,
   environments: ReadonlyArray<Environment>,
   tailnet: import("./presence.ts").Tailnet | undefined,
+  workstreams: ReadonlyArray<typeof Workstream.Type>,
 ) => {
   if (environments.length === 0 && tailnet === undefined) return h.span([], [])
   const machines = new Map<
@@ -755,6 +756,9 @@ const factoryFloor = (
                       const preview = environment.preview
                       const port = environment.port
                       const agent = environment.agent
+                      const storedWorker = workstreams.find(
+                        (entry) => entry.id === environment.workstream,
+                      )?.worker
                       return h.div(
                         [h.Class("floor-workstream")],
                         [
@@ -793,6 +797,9 @@ const factoryFloor = (
                                     (agent.status === "" ? "" : " · " + agent.status),
                                 ],
                               ),
+                          ...(storedWorker === undefined
+                            ? []
+                            : [h.span([h.Class("floor-service")], ["worker " + storedWorker])]),
                           preview === null || preview === undefined
                             ? h.span([], [])
                             : h.a(
@@ -844,7 +851,12 @@ const factoryView = (model: Model, h: HtmlBuilder<Message>): Document => {
         ...(presence === null
           ? []
           : [
-              factoryFloor(h, presence.factory.environments ?? [], presence.network?.tailscale),
+              factoryFloor(
+                h,
+                presence.factory.environments ?? [],
+                presence.network?.tailscale,
+                presence.factory.workstreams,
+              ),
               ...Array.from(new Set(presence.factory.workstreams.map(repoName))).map((repo) =>
                 repoSection(
                   h,

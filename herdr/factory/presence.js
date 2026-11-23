@@ -70,6 +70,7 @@ const rowOf = ({ workstream, activity, sessions, environment }) => {
     age: ageText(live.ageMinutes),
     budget: used === null || cap === null ? null : used + "/" + cap,
     queued: pending === 0 ? null : String(pending) + " queued",
+    worker: textOf(workstream.worker),
     machine: textOf(machine.host),
     runtime: textOf(runtime.kind),
     runtimePath: textOf(runtime.path),
@@ -145,6 +146,7 @@ const metaLine = (row) =>
     row.age === null ? null : row.age + " ago",
     row.budget,
     row.queued,
+    row.worker === null ? null : "worker " + row.worker,
   ]
     .filter((part) => part !== null && part !== undefined && part !== "")
     .join(" · ")

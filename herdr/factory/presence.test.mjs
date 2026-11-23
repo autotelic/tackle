@@ -59,6 +59,14 @@ const environment = {
   observedAt: "2026-11-22T12:00:00.000Z",
 }
 
+test("a stored worker is drawn in the meta line", () => {
+  const doc = presence()
+  doc.factory.workstreams[0].worker = "intercom:t19"
+  const [row] = readPresence(doc).rows
+  assert.equal(row.worker, "intercom:t19")
+  assert.match(metaLine(row), /worker intercom:t19/)
+})
+
 test("the environment line draws machine, runtime, services and preview", () => {
   const [row] = readPresence(presence({ environments: [environment] })).rows
   assert.equal(row.machine, "macbook-pro")
