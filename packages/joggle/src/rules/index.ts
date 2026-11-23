@@ -35,6 +35,7 @@ import { inferredOverRecorded } from "./inferred-over-recorded.ts"
 import { appendOnlyHonoured } from "./append-only-honoured.ts"
 import { declaredStaleness } from "./declared-staleness.ts"
 import { deviationHasAConcept } from "./deviation-has-a-shape.ts"
+import { tableInvariants } from "./table-invariants.ts"
 import { factOrDerivation } from "./fact-or-derivation.ts"
 import { invariantHasAReconciler } from "./invariant-has-a-reconciler.ts"
 import { intentDrift } from "./intent-drift.ts"
@@ -93,6 +94,7 @@ export const allRules: ReadonlyArray<Rule | PlannedRule> = [
   declaredStaleness,
   appendOnlyHonoured,
   deviationHasAConcept,
+  tableInvariants,
   invariantHasAReconciler,
   intentDrift,
 ]

@@ -79,6 +79,7 @@ it.effect("refuses to persist judgements for code outside the analysis root", ()
       "joggle/shallow-module",
       "joggle/single-path",
       "joggle/structural-collapse",
+      "joggle/table-invariants",
       "joggle/temporal-coupling",
       "joggle/types-over-logic",
       "joggle/unaccounted-drop",
