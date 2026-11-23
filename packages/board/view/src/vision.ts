@@ -162,64 +162,56 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
                 ),
                 machine(h, "room A", "worktree · process · port · service", "room-zone room-a"),
                 machine(h, "room B", "another worktree · another service", "room-zone room-b"),
-                h.span(
-                  [h.Class("floor-label")],
-                  ["one Mac · one host · shared filesystem and network"],
-                ),
               ],
             ),
           ],
         ),
         h.section(
-          [h.Class("vision-scene custody-scene")],
+          [h.Class("vision-scene substrate-scene")],
           [
             sceneHeader(
               h,
-              "The custody arrangement",
-              "Cloudflare runs the new control plane; the mailbox, the PDS and V1 stay local. The wake bridge is the handoff.",
+              "Alchemy is the substrate seam",
+              "The same desired state can point at this tailnet, a Fly app, or another provider. Today it points at local machines.",
             ),
             h.div(
-              [h.Class("custody-map")],
+              [h.Class("substrate-map")],
               [
                 h.div(
-                  [h.Class("custody-cloud")],
+                  [h.Class("substrate-local")],
                   [
-                    h.span([h.Class("zone-label cloud-label")], ["CLOUDFLARE"]),
-                    machine(h, "Board web app", "board.ratking.dev · Access", "cloud-node web"),
-                    machine(h, "Board service", "Worker · Domain", "cloud-node service"),
-                    machine(h, "Channel + Task DOs", "SQLite · alarms", "cloud-node dos"),
-                    machine(h, "Outbox", "wake events DO", "cloud-node outbox"),
-                    machine(h, "Identity edge", "ratking.dev · did:web", "cloud-node identity"),
+                    h.span([h.Class("zone-label local-label")], ["TODAY · TAILNET"]),
+                    machine(h, "Board", "factory kernel · daemon · presence", "local-node"),
+                    machine(h, "Room", "worktree · process · port · service", "local-node"),
+                    machine(h, "Mailbox", "local · E2EE · turn log", "local-node"),
                   ],
                 ),
                 h.div(
-                  [h.Class("custody-bridge")],
+                  [h.Class("substrate-core")],
                   [
-                    h.span([h.Class("bridge-label")], ["commands"]),
-                    h.span([h.Class("bridge-line")], []),
-                    h.span([h.Class("bridge-arrow")], ["↕"]),
-                    h.span([h.Class("bridge-label")], ["wake events"]),
-                    h.span([h.Class("bridge-line")], []),
-                    h.span([h.Class("bridge-label")], ["pulls"]),
+                    h.span([h.Class("zone-label")], ["ALCHEMY"]),
+                    h.span([h.Class("substrate-title")], ["desired state"]),
+                    h.span([h.Class("substrate-detail")], ["providers, not a place"]),
+                    h.span([h.Class("provider-chip")], ["tailnet"]),
+                    h.span([h.Class("provider-chip")], ["Fly"]),
+                    h.span([h.Class("provider-chip")], ["Cloudflare"]),
                   ],
                 ),
                 h.div(
-                  [h.Class("custody-local")],
+                  [h.Class("substrate-later")],
                   [
-                    h.span([h.Class("zone-label local-label")], ["LOCAL · TAILNET"]),
-                    machine(h, "Agents", "fleet hosts · DID JWT", "local-node agents"),
-                    machine(h, "Mailbox", "celld · tailnet · E2EE", "local-node mailbox"),
-                    machine(h, "Wake bridge", "local · rats-nest/board", "local-node bridge"),
-                    machine(h, "Rooms + worktrees", "bench runtime", "local-node rooms"),
-                    machine(h, "V1 viewer", "pennywise:8444", "local-node viewer"),
+                    h.span([h.Class("zone-label cloud-label")], ["LATER · OPTIONAL"]),
+                    machine(h, "control plane", "same entities, hosted", "cloud-node"),
+                    machine(h, "rooms", "same bench contract", "cloud-node"),
+                    machine(h, "mailbox", "stays private", "cloud-node"),
                   ],
                 ),
               ],
             ),
             h.div(
-              [h.Class("custody-note")],
+              [h.Class("substrate-note")],
               [
-                "This is a target split, not what runs today: board is still local, the mailbox is a protocol plus a local relay, and the Cloudflare Durable Objects are not deployed. The spatial claim is the important one: the execution plane and the private mailbox should not move to the cloud by accident.",
+                "No cloud migration yet. Alchemy is the layer that lets the same definitions be pointed at local machines now and another provider later; the mailbox and the execution plane remain a separate, private choice.",
               ],
             ),
           ],
@@ -229,8 +221,8 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
           [
             sceneHeader(
               h,
-              "The tailnet is the floor plan",
-              "Tailscale is the reachability layer; Linear, GitHub and Slack are outside it; Herdr and Rex are the local session layer.",
+              "The tailnet is the intranet",
+              "Phones and laptops are the contact surface; the factory is distributed across machines; services sit outside the tailnet.",
             ),
             h.div(
               [h.Class("network-map")],
@@ -255,12 +247,12 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
                   [h.Class("network-tailnet")],
                   [
                     h.span([h.Class("zone-label tailnet-label")], ["TAILNET · taila38bf7.ts.net"]),
-                    machine(h, "MacBook Pro", "board · factory UI · daemon", "machine-node shop"),
-                    machine(h, "Mac mini", "always-on shop candidate", "machine-node mini"),
-                    machine(h, "laptop 1", "room · agent", "machine-node laptop"),
-                    machine(h, "laptop 2", "room · agent", "machine-node laptop"),
-                    machine(h, "laptop 3", "room · agent", "machine-node laptop"),
-                    machine(h, "laptop 4", "room · agent", "machine-node laptop"),
+                    machine(h, "MacBook Pro", "board · factory UI · Herdr", "machine-node shop"),
+                    machine(h, "Mac mini", "daemon · always-on shop", "machine-node mini"),
+                    machine(h, "laptop 1", "2 rooms · services · agent", "machine-node laptop"),
+                    machine(h, "laptop 2", "room · services · agent", "machine-node laptop"),
+                    machine(h, "laptop 3", "room · services · agent", "machine-node laptop"),
+                    machine(h, "laptop 4", "phone contact · Rex", "machine-node laptop"),
                   ],
                 ),
                 h.div(
@@ -342,7 +334,7 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
           [
             sceneHeader(
               h,
-              "Two Shakti apps, one Mac",
+              "Two Shakti apps on the tailnet",
               "the tabs are real; the wall between them is not",
             ),
             h.div(
@@ -381,7 +373,6 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
             h.div(
               [h.Class("host-boundary")],
               [
-                h.span([h.Class("host-label")], ["one Mac · shared services"]),
                 h.div(
                   [h.Class("room-row")],
                   [

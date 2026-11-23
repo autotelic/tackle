@@ -631,6 +631,85 @@ const appHeader = (h: HtmlBuilder<Message>, model: Model, title: string, summary
   )
 
 /** Render the factory state; every field comes from /presence. */
+
+const factoryFloor = (h: HtmlBuilder<Message>, environments: ReadonlyArray<Environment>) => {
+  if (environments.length === 0) return h.span([], [])
+  const groups = new Map<string, Array<Environment>>()
+  for (const environment of environments) {
+    const host = environment.machine?.host ?? "unplaced"
+    const list = groups.get(host) ?? []
+    list.push(environment)
+    groups.set(host, list)
+  }
+  return h.section(
+    [h.Class("factory-floor")],
+    [
+      h.div(
+        [h.Class("floor-head")],
+        [h.h2([], ["Factory floor"]), h.span([h.Class("muted")], ["workstreams by machine"])],
+      ),
+      h.div(
+        [h.Class("floor-grid")],
+        [...groups.entries()]
+          .sort(([left], [right]) => left.localeCompare(right))
+          .map(([host, entries]) =>
+            h.div(
+              [h.Class("floor-machine")],
+              [
+                h.div(
+                  [h.Class("floor-machine-head")],
+                  [
+                    h.h3([], [host]),
+                    h.span(
+                      [h.Class("muted")],
+                      [entries.length + (entries.length === 1 ? " workstream" : " workstreams")],
+                    ),
+                  ],
+                ),
+                ...entries.map((environment) => {
+                  const services = environment.services ?? []
+                  const preview = environment.preview
+                  return h.div(
+                    [h.Class("floor-workstream")],
+                    [
+                      h.a([h.Href("#" + environment.workstream)], [environment.workstream]),
+                      h.span(
+                        [h.Class("muted")],
+                        [
+                          environment.runtime === undefined
+                            ? "no runtime"
+                            : environment.runtime.kind +
+                              " · " +
+                              environment.runtime.path.split("/").at(-1),
+                        ],
+                      ),
+                      h.span(
+                        [h.Class("floor-service")],
+                        [
+                          services.length === 0
+                            ? "no service"
+                            : services
+                                .map((service) => service.name + " · " + service.status)
+                                .join(", "),
+                        ],
+                      ),
+                      preview === null || preview === undefined
+                        ? h.span([], [])
+                        : h.a(
+                            [h.Href(preview), h.Target("_blank"), h.Rel("noreferrer")],
+                            ["preview"],
+                          ),
+                    ],
+                  )
+                }),
+              ],
+            ),
+          ),
+      ),
+    ],
+  )
+}
+
 const factoryView = (model: Model, h: HtmlBuilder<Message>): Document => {
   const presence = model.presence
   const summary =
@@ -665,6 +744,7 @@ const factoryView = (model: Model, h: HtmlBuilder<Message>): Document => {
         ...(presence === null
           ? []
           : [
+              factoryFloor(h, presence.factory.environments ?? []),
               ...Array.from(new Set(presence.factory.workstreams.map(repoName))).map((repo) =>
                 repoSection(
                   h,
