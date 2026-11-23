@@ -1,6 +1,6 @@
 {
   "name": "@autotelic/board",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "private": true,
   "description": "The board: the shop supervisor, queue status and the one-owner lock.",
   "license": "MIT",

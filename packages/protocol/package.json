@@ -1,6 +1,6 @@
 {
   "name": "@autotelic/protocol",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "The four seams — config, report, baseline, catalog/doc — as pure types, JSON Schema, and pure helpers. Not a tool.",
   "homepage": "https://github.com/autotelic/tackle/tree/main/packages/protocol#readme",
   "bugs": {
