@@ -5,6 +5,7 @@
   "description": "The room: one durable place per scope, its worktree, and the room command line.",
   "license": "MIT",
   "bin": {
+    "mailbox": "./bin/mailbox.js",
     "room": "./bin/room.js"
   },
   "files": [
@@ -32,7 +33,10 @@
   },
   "dependencies": {
     "@alchemy.run/domain": "2.0.0-beta.87",
-    "effect": "catalog:"
+    "@effect/platform-node": "catalog:",
+    "@ipld/dag-cbor": "11.0.0",
+    "effect": "catalog:",
+    "safe-stable-stringify": "3.0.1"
   },
   "devDependencies": {
     "@effect/platform-node": "catalog:",

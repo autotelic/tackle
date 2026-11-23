@@ -1,6 +1,7 @@
 # room
 
-One durable place per scope: a git worktree plus the control-plane state that names it.
+One durable place per scope: a git worktree plus the control-plane state that names it,
+and the room's side of the Rat King mail seam.
 
 ## Commands
 
@@ -73,3 +74,10 @@ copy the worktree.
 
 The room store asks the `Room` aggregate for every transition; the CLI is not a
 second state machine.
+
+## Mailbox
+
+The room owns the canonical turn log and the thin `mailbox` command in `src/Mailbox/`:
+`export`, `render`, `append`, and `verify`. The wire decisions themselves live in
+`@autotelic/protocol`; the board owns the relay and HTTP surface. The log is a projection
+of the same turns the wire carries, not a second mailbox.

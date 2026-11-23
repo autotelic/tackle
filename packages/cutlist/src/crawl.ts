@@ -108,8 +108,6 @@ const walk = (root: unknown, visit: (node: Ast) => void): void => {
   step(root)
 }
 
-/** A JSX element's name: `Combobox`, `Combobox.Input`. */
-
 /**
  * FoldKit's HTML builder names, as written after `h.`.
  *

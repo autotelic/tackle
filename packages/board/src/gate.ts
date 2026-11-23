@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises"
 import { join } from "node:path"
 import { decodeBaseline, decodeHarnessConfig, parseJson } from "@autotelic/protocol"
-import type { Activity } from "@autotelic/factory/activity"
+import type { Activity } from "./factory/activity.ts"
 
 /*
  * The repo gate, as a projection of files that already exist.

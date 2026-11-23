@@ -5,7 +5,9 @@
   "description": "The board: the shop supervisor, queue status and the one-owner lock.",
   "license": "MIT",
   "bin": {
-    "board": "./bin/board.js"
+    "board": "./bin/board.js",
+    "factory": "./bin/factory.js",
+    "mailbox-server": "./bin/mailbox-server.js"
   },
   "files": [
     "dist",
@@ -33,9 +35,10 @@
   "dependencies": {
     "@alchemy.run/cloudflare": "2.0.0-beta.87",
     "@alchemy.run/domain": "2.0.0-beta.87",
-    "@autotelic/factory": "workspace:*",
     "@autotelic/protocol": "workspace:*",
     "@autotelic/room": "workspace:*",
+    "@hpke/core": "1.10.1",
+    "@ipld/dag-cbor": "11.0.0",
     "alchemy": "2.0.0-beta.87",
     "effect": "catalog:"
   },

@@ -10,7 +10,7 @@
     "typecheck": "pnpm -r run typecheck",
     "test": "pnpm -r run test",
     "herdr:test": "node --test herdr/factory/presence.test.mjs",
-    "lint": "oxlint --ignore-pattern 'examples/**' --ignore-pattern 'packages/plumb/**' --ignore-pattern 'packages/joggle/**' --ignore-pattern 'tools/**' packages/protocol packages/cutlist packages/jig-cli packages/mailbox packages/room packages/board packages/mailbox-domain packages/mailbox-server scripts oxlint.config.ts",
+    "lint": "oxlint --ignore-pattern 'examples/**' --ignore-pattern 'packages/plumb/**' --ignore-pattern 'packages/joggle/**' --ignore-pattern 'tools/**' packages/protocol packages/cutlist packages/jig-cli packages/room packages/board packages/board/view scripts oxlint.config.ts",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
     "lexicon:compat": "pnpm --filter @autotelic/protocol lexicon:compat",
@@ -25,7 +25,7 @@
     "changeset": "changeset",
     "version": "changeset version && oxfmt --write packages/*/CHANGELOG.md",
     "release": "node --conditions=development scripts/release.ts",
-    "mailbox:verify": "for log in docs/threads/*/log.jsonl; do node --conditions=development packages/mailbox/src/cli.ts verify --log \"$log\" --dir \"$(dirname \"$log\")\" || exit 1; done"
+    "mailbox:verify": "for log in docs/threads/*/log.jsonl; do node --conditions=development packages/room/src/Mailbox/cli.ts verify --log \"$log\" --dir \"$(dirname \"$log\")\" || exit 1; done"
   },
   "devDependencies": {
     "@autotelic/cutlist": "workspace:*",

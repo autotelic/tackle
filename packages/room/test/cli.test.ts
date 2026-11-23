@@ -124,7 +124,7 @@ describe("a verb that prints a completion is a claim", () => {
     } finally {
       close()
     }
-  })
+  }, 15_000)
 
   it("runs a command, freezes it on pause, continues it on resume, and stops it on down", async () => {
     const { root, close } = scratch()

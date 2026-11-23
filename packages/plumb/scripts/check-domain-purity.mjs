@@ -12,7 +12,6 @@ import { fileURLToPath } from "node:url";
 
 const root = join(fileURLToPath(new URL("..", import.meta.url)), "..", "..");
 const domainRoots = [
-  "packages/mailbox-domain/src",
   "packages/room/src/Room",
   "packages/room/src/Move",
 ];

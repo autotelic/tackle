@@ -253,15 +253,18 @@ importers:
       '@alchemy.run/domain':
         specifier: 2.0.0-beta.87
         version: 2.0.0-beta.87(@alchemy.run/cloudflare@2.0.0-beta.87(@effect/platform-node@4.1.5(effect@4.1.5)(redis@6.3.0(@opentelemetry/api@1.9.0)))(@types/node@24.13.5)(alchemy@2.0.0-beta.87(@effect/platform-node@4.1.5(effect@4.1.5)(redis@6.3.0(@opentelemetry/api@1.9.0)))(effect@4.1.5)(vite@8.3.4(@types/node@24.13.5)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))(ws@8.22.0))(effect@4.1.5)(typescript@7.0.2)(vite@8.3.4(@types/node@24.13.5)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)))(@distilled.cloud/cloudflare@1.0.0-rc.20(effect@4.1.5))(alchemy@2.0.0-beta.87(@effect/platform-node@4.1.5(effect@4.1.5)(redis@6.3.0(@opentelemetry/api@1.9.0)))(effect@4.1.5)(vite@8.3.4(@types/node@24.13.5)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))(ws@8.22.0))(effect@4.1.5)
-      '@autotelic/factory':
-        specifier: workspace:*
-        version: link:../factory
       '@autotelic/protocol':
         specifier: workspace:*
         version: link:../protocol
       '@autotelic/room':
         specifier: workspace:*
         version: link:../room
+      '@hpke/core':
+        specifier: 1.10.1
+        version: 1.10.1
+      '@ipld/dag-cbor':
+        specifier: 11.0.0
+        version: 11.0.0
       alchemy:
         specifier: 2.0.0-beta.87
         version: 2.0.0-beta.87(@effect/platform-node@4.1.5(effect@4.1.5)(redis@6.3.0(@opentelemetry/api@1.9.0)))(effect@4.1.5)(vite@8.3.4(@types/node@24.13.5)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))(ws@8.22.0)
@@ -287,6 +290,37 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 5.0.1(@opentelemetry/api@1.9.0)(@types/node@24.13.5)(vite@8.3.4(@types/node@24.13.5)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+
+  packages/board/view:
+    dependencies:
+      '@effect/platform-browser':
+        specifier: 'catalog:'
+        version: 4.1.5(effect@4.1.5)
+      effect:
+        specifier: 4.1.5
+        version: 4.1.5
+      foldkit:
+        specifier: 'catalog:'
+        version: 0.171.0(@effect/platform-browser@4.1.5(effect@4.1.5))(effect@4.1.5)
+      foldkit-primitives:
+        specifier: 'catalog:'
+        version: 0.23.0(effect@4.1.5)(foldkit@0.171.0(@effect/platform-browser@4.1.5(effect@4.1.5))(effect@4.1.5))
+    devDependencies:
+      '@effect/tsgo':
+        specifier: 'catalog:'
+        version: 0.56.0
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.13.5
+      '@typescript/native':
+        specifier: 'catalog:'
+        version: typescript@7.0.2
+      vite:
+        specifier: 'catalog:'
+        version: 8.3.1(@types/node@24.13.5)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.1(@opentelemetry/api@1.9.0)(@types/node@24.13.5)(vite@8.3.1(@types/node@24.13.5)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
 
   packages/cutlist:
     dependencies:
@@ -324,56 +358,6 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 5.0.1(@opentelemetry/api@1.9.0)(@types/node@24.13.5)(vite@8.3.4(@types/node@24.13.5))
-
-  packages/factory:
-    dependencies:
-      effect:
-        specifier: 4.1.5
-        version: 4.1.5
-    devDependencies:
-      '@effect/tsgo':
-        specifier: 'catalog:'
-        version: 0.56.0
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.13.5
-      '@typescript/native':
-        specifier: 'catalog:'
-        version: typescript@7.0.2
-      vitest:
-        specifier: 'catalog:'
-        version: 5.0.1(@opentelemetry/api@1.9.0)(@types/node@24.13.5)(vite@8.3.4(@types/node@24.13.5))
-
-  packages/factory-view:
-    dependencies:
-      '@effect/platform-browser':
-        specifier: 'catalog:'
-        version: 4.1.5(effect@4.1.5)
-      effect:
-        specifier: 4.1.5
-        version: 4.1.5
-      foldkit:
-        specifier: 'catalog:'
-        version: 0.171.0(@effect/platform-browser@4.1.5(effect@4.1.5))(effect@4.1.5)
-      foldkit-primitives:
-        specifier: 'catalog:'
-        version: 0.23.0(effect@4.1.5)(foldkit@0.171.0(@effect/platform-browser@4.1.5(effect@4.1.5))(effect@4.1.5))
-    devDependencies:
-      '@effect/tsgo':
-        specifier: 'catalog:'
-        version: 0.56.0
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.13.5
-      '@typescript/native':
-        specifier: 'catalog:'
-        version: typescript@7.0.2
-      vite:
-        specifier: 'catalog:'
-        version: 8.3.1(@types/node@24.13.5)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)
-      vitest:
-        specifier: 'catalog:'
-        version: 5.0.1(@opentelemetry/api@1.9.0)(@types/node@24.13.5)(vite@8.3.1(@types/node@24.13.5)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
 
   packages/jig-cli:
     dependencies:
@@ -464,87 +448,6 @@ importers:
         specifier: 'catalog:'
         version: 5.0.1(@opentelemetry/api@1.9.0)(@types/node@24.13.5)(vite@8.3.4(@types/node@24.13.5))
 
-  packages/mailbox:
-    dependencies:
-      '@effect/platform-node':
-        specifier: 4.1.5
-        version: 4.1.5(effect@4.1.5)(redis@6.3.0(@opentelemetry/api@1.9.0))
-      '@effect/platform-node-shared':
-        specifier: 4.1.5
-        version: 4.1.5(effect@4.1.5)
-      '@ipld/dag-cbor':
-        specifier: 11.0.0
-        version: 11.0.0
-      effect:
-        specifier: 4.1.5
-        version: 4.1.5
-      safe-stable-stringify:
-        specifier: 3.0.1
-        version: 3.0.1
-    devDependencies:
-      '@effect/tsgo':
-        specifier: 'catalog:'
-        version: 0.56.0
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.13.5
-      '@typescript/native':
-        specifier: 'catalog:'
-        version: typescript@7.0.2
-      vitest:
-        specifier: 'catalog:'
-        version: 5.0.1(@opentelemetry/api@1.9.0)(@types/node@24.13.5)(vite@8.3.4(@types/node@24.13.5))
-
-  packages/mailbox-domain:
-    dependencies:
-      safe-stable-stringify:
-        specifier: 3.0.1
-        version: 3.0.1
-    devDependencies:
-      '@effect/tsgo':
-        specifier: 'catalog:'
-        version: 0.56.0
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.13.5
-      '@typescript/native':
-        specifier: 'catalog:'
-        version: typescript@7.0.2
-      fast-check:
-        specifier: 'catalog:'
-        version: 4.10.2
-      vitest:
-        specifier: 'catalog:'
-        version: 5.0.1(@opentelemetry/api@1.9.0)(@types/node@24.13.5)(vite@8.3.4(@types/node@24.13.5))
-
-  packages/mailbox-server:
-    dependencies:
-      '@autotelic/mailbox-domain':
-        specifier: workspace:*
-        version: link:../mailbox-domain
-      '@hpke/core':
-        specifier: 1.10.1
-        version: 1.10.1
-      '@ipld/dag-cbor':
-        specifier: 11.0.0
-        version: 11.0.0
-      effect:
-        specifier: 4.1.5
-        version: 4.1.5
-    devDependencies:
-      '@effect/tsgo':
-        specifier: 'catalog:'
-        version: 0.56.0
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.13.5
-      '@typescript/native':
-        specifier: 'catalog:'
-        version: typescript@7.0.2
-      vitest:
-        specifier: 'catalog:'
-        version: 5.0.1(@opentelemetry/api@1.9.0)(@types/node@24.13.5)(vite@8.3.4(@types/node@24.13.5))
-
   packages/plumb:
     dependencies:
       '@oxlint/plugins':
@@ -602,13 +505,19 @@ importers:
       '@alchemy.run/domain':
         specifier: 2.0.0-beta.87
         version: 2.0.0-beta.87(@alchemy.run/cloudflare@2.0.0-beta.87(@effect/platform-node@4.1.5(effect@4.1.5)(redis@6.3.0(@opentelemetry/api@1.9.0)))(@types/node@24.13.5)(alchemy@2.0.0-beta.87(@effect/platform-node@4.1.5(effect@4.1.5)(redis@6.3.0(@opentelemetry/api@1.9.0)))(effect@4.1.5)(vite@8.3.4(@types/node@24.13.5)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))(ws@8.22.0))(effect@4.1.5)(typescript@7.0.2)(vite@8.3.4(@types/node@24.13.5)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)))(@distilled.cloud/cloudflare@1.0.0-rc.20(effect@4.1.5))(alchemy@2.0.0-beta.87(@effect/platform-node@4.1.5(effect@4.1.5)(redis@6.3.0(@opentelemetry/api@1.9.0)))(effect@4.1.5)(vite@8.3.4(@types/node@24.13.5)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))(ws@8.22.0))(effect@4.1.5)
-      effect:
-        specifier: 4.1.5
-        version: 4.1.5
-    devDependencies:
       '@effect/platform-node':
         specifier: 4.1.5
         version: 4.1.5(effect@4.1.5)(redis@6.3.0(@opentelemetry/api@1.9.0))
+      '@ipld/dag-cbor':
+        specifier: 11.0.0
+        version: 11.0.0
+      effect:
+        specifier: 4.1.5
+        version: 4.1.5
+      safe-stable-stringify:
+        specifier: 3.0.1
+        version: 3.0.1
+    devDependencies:
       '@effect/tsgo':
         specifier: 'catalog:'
         version: 0.56.0

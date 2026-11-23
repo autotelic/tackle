@@ -2,7 +2,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
-import type { Activity } from "@autotelic/factory/activity"
+import type { Activity } from "../src/factory/activity.ts"
 import { expect, test } from "vitest"
 import { workstreamsWithGates } from "../src/gate.ts"
 

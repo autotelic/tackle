@@ -1,6 +1,6 @@
 # board
 
-The shop: one owner per root, the queue, and a presence endpoint.
+The shop: one owner per root, the queue, the presence endpoint, and the factory kernel.
 
 ## Commands
 
@@ -11,7 +11,15 @@ board fleet [--root .room] [--port 4780] [--json]
 board down [--root .room]
 board status [--root .room] [--json]
 board queue [--root .room] [--json]
+board adopt --path <worktree> --project <linear> --label <label> [factory options]
+board event --id <id> --kind <kind> [--payload <json>] [--at <iso>]
+board daemon start|run|stop --worker <command> [--interval <ms>]
+board run|watch|report|phase|cursor|budget|desk …
 ```
+
+The factory commands live in this package under `src/factory/`. The `factory` binary is a
+compatibility shim: it forwards to the same command surface, so an existing daemon or
+script does not need to change on the day the package moved.
 
 `up` claims `.room/shop.lock` with `wx` (a stale pid is replaced only after its
 process is gone) and serves:

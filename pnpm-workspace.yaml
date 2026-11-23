@@ -9,6 +9,7 @@
 
 packages:
   - "packages/*"
+  - "packages/board/view"
   - "examples/*"
   # The foreman's own harness. Deliberately outside `packages/`: it is not a fifth
   # tool, it drives the four. It joins the workspace only so `pnpm check` reaches it.

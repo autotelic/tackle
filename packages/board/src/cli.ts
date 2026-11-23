@@ -13,13 +13,15 @@ import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { parseArgs, promisify } from "node:util"
 import { Option } from "effect"
+import { alive } from "./alive.ts"
 import { listRooms } from "@autotelic/room/store"
 import { readRun, startRoomRun } from "@autotelic/room/run"
 import { observeService } from "@autotelic/room/Service"
-import { activityOf } from "@autotelic/factory/activity"
-import { answerDesk, listDesk } from "@autotelic/factory/desk"
-import { listReports } from "@autotelic/factory/report"
-import { listWorkstreams } from "@autotelic/factory/store"
+import { activityOf } from "./factory/activity.ts"
+import { answerDesk, listDesk } from "./factory/desk.ts"
+import { listReports } from "./factory/report.ts"
+import { listWorkstreams } from "./factory/store.ts"
+import { factoryMain } from "./factory/cli.ts"
 import {
   discoverSessions,
   findHerdrAppBinary,
@@ -47,7 +49,11 @@ const usage = [
   "  board down [--root .room]",
   "  board presence [--root .room] [--json] (rooms, processes, sessions)",
   "  board fleet [--root .room] [--port 4780] [--json]",
-  "  board status [--root .room] [--json]   (rooms, lock, and the service)",
+  "  board status [--root .room] [--json]   (rooms, shop, workstreams)",
+  "  board adopt --path <worktree> --project <linear> --label <label> [factory options]",
+  "  board event --id <id> --kind <kind> [--payload <json>] [--at <iso>]",
+  "  board daemon start|run|stop --worker <command> [--interval <ms>]",
+  "  board run|watch|report|phase|cursor|budget|desk … (factory commands)",
   "  board queue [--root .room] [--json]",
   "",
   "board up serves /health, /presence, /queue, /factory, /preview/<workstream>/ and /open",
@@ -73,16 +79,6 @@ const options = {
   detach: { type: "boolean", default: false },
   help: { type: "boolean", short: "h", default: false },
 } as const
-
-const alive = (pid: number): boolean => {
-  // SAFETY: signalling a PID is a process boundary; ESRCH is the expected absence.
-  try {
-    process.kill(pid, 0)
-    return true
-  } catch {
-    return false
-  }
-}
 
 type Shop =
   | { readonly state: "none" }
@@ -324,7 +320,7 @@ const presence = async ({
   }
 }
 
-const viewDir = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "factory-view", "dist")
+const viewDir = join(dirname(fileURLToPath(import.meta.url)), "..", "view", "dist")
 const execFileAsync = promisify(execFile)
 const SessionAddress = Schema.String.check(
   Schema.makeFilter((value) => /^[A-Za-z0-9:._-]+$/.test(value), {
@@ -634,7 +630,7 @@ const serve = async ({
       return
     }
     if (path === "/atlas") {
-      void atlasOf(root).then(
+      void atlasOf({ root, generatedAt: new Date().toISOString() }).then(
         (body) => json({ response, status: 200, body }),
         (cause: unknown) => json({ response, status: 500, body: { error: String(cause) } }),
       )
@@ -822,10 +818,32 @@ const detach = async ({
   return fail("detached board did not claim the shop", EXIT.infrastructure)
 }
 
+const factoryCommands = new Set([
+  "adopt",
+  "event",
+  "run",
+  "watch",
+  "report",
+  "phase",
+  "cursor",
+  "budget",
+  "daemon",
+  "desk",
+])
+
 const main = async (): Promise<void> => {
   const command = process.argv[2]
   if (command === undefined || command === "--help" || command === "-h") {
     console.log(usage)
+    return
+  }
+  // Factory commands take their own flags; delegate before board's parser sees them.
+  if (command === "factory") {
+    await factoryMain(process.argv.slice(3))
+    return
+  }
+  if (factoryCommands.has(command)) {
+    await factoryMain(process.argv.slice(2))
     return
   }
   const parsed = parseArgs({ args: process.argv.slice(3), options, allowPositionals: false })
@@ -884,12 +902,25 @@ const main = async (): Promise<void> => {
   if (command === "status") {
     const rooms = await listRooms(root)
     const shop = await readShop(root)
+    const workstreams = await listWorkstreams()
     if (values.json) {
-      console.log(JSON.stringify({ shop, rooms }, null, 2))
+      console.log(JSON.stringify({ shop, rooms, workstreams }, null, 2))
       return
     }
     for (const room of rooms) console.log(room.id + " " + room.state._tag)
     console.log(describeShop(shop))
+    for (const record of workstreams)
+      console.log(
+        [
+          record.id,
+          record.project,
+          record.delivery === "trunk" || record.pr === undefined
+            ? "delivery trunk"
+            : "PR " + record.pr,
+          record.phase,
+          "checkpoint " + record.checkpoint.sha.slice(0, 8),
+        ].join("  "),
+      )
     return
   }
 

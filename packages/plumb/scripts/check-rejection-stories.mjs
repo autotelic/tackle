@@ -11,8 +11,8 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(fileURLToPath(new URL("..", import.meta.url)), "..", "..");
-const sources = ["packages/room/src", "packages/mailbox-domain/src"];
-const tests = ["packages/room/test", "packages/mailbox-domain/test"];
+const sources = ["packages/room/src"];
+const tests = ["packages/room/test"];
 
 async function files(dir) {
   const out = [];

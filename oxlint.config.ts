@@ -271,14 +271,14 @@ export default {
     {
       // The mailbox log reports the offending line as a sentence; the rule reads the template
       // as a query. There is no SQL in this file, only an error message.
-      files: ["packages/mailbox/src/log.ts"],
+      files: ["packages/room/src/Mailbox/log.ts"],
       rules: { "plumb/no-sql-string-interpolation": "off" },
     },
     {
       // A receipt's state is Rat King's wire string, not a local dispatch tag. The envelope
       // predicate takes unknown because it is the boundary parser, and returns a Schema.is
       // refinement rather than a cast.
-      files: ["packages/mailbox-domain/src/procedures.ts"],
+      files: ["packages/protocol/src/mailbox.ts"],
       rules: {
         "plumb-effect/prefer-tagged-enum": "off",
         "plumb/no-unknown-parameters": "off",
@@ -287,25 +287,25 @@ export default {
     {
       // did:web is a plain JSON read any browser can do; Effect HttpClient would force a
       // platform service into a module the server and the tests both use directly.
-      files: ["packages/mailbox-server/src/did.ts", "packages/mailbox-server/src/cli.ts"],
+      files: ["packages/board/src/mailbox/did.ts", "packages/board/src/mailbox/cli.ts"],
       rules: { "plumb-effect/no-direct-fetch": "off" },
     },
     {
       // The host lookup is a pure two-map read used by sync tests; making it an Effect would
       // put a runtime between a fixture and the record it resolves.
-      files: ["packages/mailbox-server/src/records.ts"],
+      files: ["packages/board/src/mailbox/records.ts"],
       rules: { "plumb-effect/guarded-op-must-return-effect": "off" },
     },
     {
       // Schema.is is the discriminant here: the union is Backfill | Turn, and the predicate is
       // the schema's own refinement, not an ad-hoc field check.
-      files: ["packages/mailbox/src/log.ts"],
+      files: ["packages/room/src/Mailbox/log.ts"],
       rules: { "plumb-effect/no-manual-field-guards": "off" },
     },
     {
       // senderInBody is a pure Option extraction from a regex, not an effectful guarded
       // operation; the Option is the contract, not a missing Effect.
-      files: ["packages/mailbox/src/log.ts"],
+      files: ["packages/room/src/Mailbox/log.ts"],
       rules: { "plumb-effect/guarded-op-must-return-effect": "off" },
     },
     {
@@ -334,7 +334,7 @@ export default {
     },
     {
       // Foldkit's runtime names these exports; the browser fetch is the UI boundary.
-      files: ["packages/factory-view/src/main.ts"],
+      files: ["packages/board/view/src/main.ts"],
       rules: {
         "plumb/no-generic-export-names": "off",
         "plumb-effect/no-direct-fetch": "off",
@@ -344,7 +344,7 @@ export default {
     {
       // The watch tests load trusted local fixtures; the fixture shape is the assertion, and
       // decoding a hand-written table through a second schema would test the schema instead.
-      files: ["packages/factory/test/watch.test.ts"],
+      files: ["packages/board/test/watch.test.ts"],
       rules: {
         "plumb/no-reinterpret-cast": "off",
         "plumb/require-safety-comment-for-type-assertion": "off",
@@ -356,10 +356,10 @@ export default {
         "packages/room/src/cli.ts",
         "packages/room/src/supervise.ts",
         "packages/board/src/cli.ts",
-        "packages/factory/src/cli.ts",
-        "packages/factory/src/daemon.ts",
-        "packages/mailbox-server/src/service.ts",
-        "packages/mailbox-server/src/cli.ts",
+        "packages/board/src/factory/cli.ts",
+        "packages/board/src/factory/daemon.ts",
+        "packages/board/src/mailbox/service.ts",
+        "packages/board/src/mailbox/cli.ts",
       ],
       rules: { "plumb/no-nondeterministic-core": "off" },
     },
@@ -391,20 +391,20 @@ export default {
       // These suites are Rat King's published fixtures and protocol examples, not general
       // claims about arbitrary input; a property suite would be a different suite.
       files: [
-        "packages/mailbox-server/test/cutover.test.ts",
-        "packages/mailbox-server/test/envelope.test.ts",
-        "packages/mailbox-server/test/federation.test.ts",
-        "packages/mailbox-server/test/fixtures.test.ts",
-        "packages/mailbox/src/render.test.ts",
+        "packages/board/test/mailbox-cutover.test.ts",
+        "packages/board/test/mailbox-envelope.test.ts",
+        "packages/board/test/mailbox-federation.test.ts",
+        "packages/board/test/mailbox-fixtures.test.ts",
+        "packages/room/test/mailbox-render.test.ts",
         "packages/jig-cli/src/pin.test.ts",
-        "packages/mailbox-server/test/rat-king.test.ts",
+        "packages/board/test/mailbox-rat-king.test.ts",
       ],
       rules: { "plumb/prefer-property-tests": "off" },
     },
     {
       // The CLI is the process boundary: it mints the instant and passes it into the core.
       // No core byte depends on a clock.
-      files: ["packages/mailbox/src/cli.ts"],
+      files: ["packages/room/src/Mailbox/cli.ts"],
       rules: { "plumb/no-nondeterministic-core": "off" },
     },
     {

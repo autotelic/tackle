@@ -34,7 +34,7 @@ describe("the atlas reads the workspace", () => {
   it("keeps a package even when its README is missing", async () => {
     const root = scratch()
     try {
-      const atlas = await atlasOf(root)
+      const atlas = await atlasOf({ root, generatedAt: "2026-11-23T00:00:00.000Z" })
       expect(atlas.packages.map((entry) => entry.name)).toEqual([
         "@autotelic/alpha",
         "@autotelic/beta",
@@ -48,7 +48,7 @@ describe("the atlas reads the workspace", () => {
   it("keeps only workspace-internal dependency edges", async () => {
     const root = scratch()
     try {
-      const atlas = await atlasOf(root)
+      const atlas = await atlasOf({ root, generatedAt: "2026-11-23T00:00:00.000Z" })
       expect(atlas.edges).toEqual([{ from: "@autotelic/alpha", to: "@autotelic/beta" }])
       expect(atlas.packages[0]?.workspaceDependencies).toEqual(["@autotelic/beta"])
       expect(atlas.packages[0]?.scripts).toEqual(["build", "test"])
