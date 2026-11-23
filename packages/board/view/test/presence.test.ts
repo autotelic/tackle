@@ -66,6 +66,48 @@ test("a served environment decodes and reaches the card", () => {
   expect(found?.preview).toBeNull()
 })
 
+test("two workstreams and their isolated environments both reach the card model", () => {
+  const ids = ["permissions-1862", "enterprise-1854"]
+  const environments = ids.map((id, index) =>
+    JSON.stringify({
+      workstream: id,
+      machine: { host: "macbook-pro", dnsName: "macbook-pro.tail.ts.net" },
+      runtime: { kind: "worktree", path: "/Users/togmund/autotelic/" + id },
+      port: { room: id + "-room", number: 4400 + index, leasedAt: "2026-11-22T12:00:00.000Z" },
+      services: [
+        {
+          name: "web",
+          command: "pnpm dev",
+          port: 4400 + index,
+          healthPath: "/healthz",
+          status: "healthy",
+          detail: null,
+          checkedAt: "2026-11-22T12:00:00.000Z",
+        },
+      ],
+      agent: null,
+      preview: "/preview/" + id + "/",
+      observedAt: "2026-11-22T12:00:00.000Z",
+    }),
+  )
+  const document =
+    '{"factory":{"workstreams":[' +
+    ids.map((id) => workstream(id)).join(",") +
+    '],"activity":[],"desk":[],"reports":[],"environments":[' +
+    environments.join(",") +
+    ']},"sessions":{"herdr":{"available":false,"sessions":[]},"rex":{"available":false,"sessions":[]}}}'
+  const decoded = decode(document)
+  if (Result.isFailure(decoded)) throw new Error("presence did not decode")
+  const byId = environmentsByWorkstream(decoded.success.factory.environments)
+  expect(Object.keys(byId).sort((left, right) => left.localeCompare(right))).toEqual(
+    [...ids].sort((left, right) => left.localeCompare(right)),
+  )
+  expect(byId["permissions-1862"]?.port?.number).toBe(4400)
+  expect(byId["enterprise-1854"]?.port?.number).toBe(4401)
+  expect(byId["permissions-1862"]?.preview).toBe("/preview/permissions-1862/")
+  expect(byId["enterprise-1854"]?.preview).toBe("/preview/enterprise-1854/")
+})
+
 test("a board that serves no environments still decodes, and the card draws no line", () => {
   expect(environmentOf(served(), "shakti-perms")).toBeUndefined()
 })
