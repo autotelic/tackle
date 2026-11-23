@@ -12,7 +12,7 @@ import * as Schema from "effect/Schema"
 import { captureCheckpoint } from "./adopt.ts"
 import { branchGuard } from "./branch.ts"
 import { raiseDesk } from "./desk.ts"
-import { consumeEvents, readEvents, type Event } from "./events.ts"
+import { appendEvent, consumeEvents, readEvents, type Event } from "./events.ts"
 import { snapshotJournal } from "./journal.ts"
 import {
   factoryHome,
@@ -187,6 +187,75 @@ const writeReceipt = async (input: {
 export type PassOutcome =
   | { readonly ok: true; readonly receipt: Receipt; readonly checkpoint: string }
   | { readonly ok: false; readonly reason: string; readonly receipt?: Receipt }
+
+const eventState = (event: Event): Option.Option<string> => {
+  const decoded = Schema.decodeUnknownResult(Schema.Struct({ state: Schema.String }))(event.payload)
+  return Result.isSuccess(decoded) ? Option.some(decoded.success.state) : Option.none()
+}
+
+/**
+ * A pass that improved local quality but is not at zero asks for another pass. A pass that
+ * did not improve does not loop: it raises a desk item instead, so a human decides whether
+ * to keep spending passes. A pass at zero is silent here; the check event opens the merge
+ * handoff.
+ */
+export const followUpEvent = (input: {
+  readonly record: Workstream
+  readonly receipt: Receipt
+  readonly events: ReadonlyArray<Event>
+}): ReadonlyArray<Event> => {
+  const noFollowUp: ReadonlyArray<Event> = []
+  const quality = input.receipt.quality
+  if (quality === undefined || !quality.after.available) return noFollowUp
+  if (quality.after.errors === 0) return noFollowUp
+  const improved =
+    quality.after.errors < quality.before.errors ||
+    (quality.after.errors === quality.before.errors &&
+      quality.after.warnings < quality.before.warnings)
+  if (!improved) return noFollowUp
+  return [
+    {
+      id:
+        "quality:" +
+        input.record.id +
+        ":" +
+        input.receipt.pass +
+        ":" +
+        quality.after.errors +
+        ":" +
+        quality.after.warnings,
+      kind: "quality",
+      at: input.receipt.at,
+      payload: {
+        pass: input.receipt.pass,
+        errors: quality.after.errors,
+        warnings: quality.after.warnings,
+        note: quality.after.note,
+      },
+      status: "pending",
+    },
+  ]
+}
+
+/** A green check plus a clean local gate is the explicit point where a human can land. */
+export const readyForHuman: Predicate.Predicate<{
+  readonly record: Workstream
+  readonly receipt: Receipt
+  readonly events: ReadonlyArray<Event>
+}> = (input) => {
+  const quality = input.receipt.quality?.after
+  return (
+    quality !== undefined &&
+    quality.available &&
+    quality.errors === 0 &&
+    input.record.delivery === "pr" &&
+    input.record.pr !== undefined &&
+    input.events.some((event) => {
+      const state = eventState(event)
+      return event.kind === "check" && Option.isSome(state) && state.value === "passed"
+    })
+  )
+}
 
 const promptOf = (input: {
   readonly record: Workstream
@@ -686,6 +755,60 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
     },
     home: input.home,
   })
+
+  const [followUp] = followUpEvent({ record, receipt: done, events })
+  if (followUp !== undefined)
+    await appendEvent({ id: record.id, event: followUp, home: input.home })
+
+  const afterQuality = done.quality?.after
+  if (
+    followUp === undefined &&
+    afterQuality !== undefined &&
+    afterQuality.available &&
+    afterQuality.errors > 0
+  )
+    await raiseDesk({
+      item: {
+        id: "desk-" + record.id + "-stalled-" + pass,
+        workstream: record.id,
+        kind: "decision",
+        title: "Quality did not improve in pass #" + pass,
+        body:
+          "The pass left " +
+          afterQuality.errors +
+          " errors and " +
+          afterQuality.warnings +
+          " warnings, with no improvement over the start. Continue to spend another pass, or done to retire.",
+        choices: ["continue", "done"],
+        route: "live",
+        at: input.at,
+      },
+      home: input.home,
+    })
+
+  if (readyForHuman({ record, receipt: done, events })) {
+    await raiseDesk({
+      item: {
+        id: "desk-" + record.id + "-ready-" + pass,
+        workstream: record.id,
+        kind: "decision",
+        title: "Ready to merge PR #" + record.pr,
+        body:
+          "Pass " +
+          pass +
+          " finished with 0 errors and " +
+          (done.quality?.after.warnings ?? 0) +
+          " warnings at " +
+          captured.value.sha.slice(0, 8) +
+          ". Answer done to retire this workstream, or continue to keep it active.",
+        choices: ["done", "continue"],
+        route: "live",
+        at: input.at,
+      },
+      home: input.home,
+    })
+  }
+
   return { ok: true, receipt: done, checkpoint: captured.value.sha }
 }
 

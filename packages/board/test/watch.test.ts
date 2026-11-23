@@ -4,12 +4,14 @@ import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import * as Result from "effect/Result"
 import { expect, test } from "vitest"
-import { recordOf, type Workstream } from "../src/factory/store.ts"
+import { answerDesk, raiseDesk } from "../src/factory/desk.ts"
+import { readWorkstream, recordOf, writeWorkstream, type Workstream } from "../src/factory/store.ts"
 import {
   baseEvents,
   deskEvents,
   githubEvents,
   shouldWake,
+  watchOnce,
   type WatchEvent,
 } from "../src/factory/watch.ts"
 
@@ -156,6 +158,68 @@ test("a fully green check rollup becomes one check event", () => {
   expect(events[0]?.kind).toBe("check")
   expect(events[0]?.id).toContain(":passed:")
   expect(events[0]?.payload).toMatchObject({ state: "passed", failed: [] })
+})
+
+test("a merged PR becomes a retirement event and nothing else", () => {
+  const sha = base().head
+  const events = githubEvents({
+    record: base(),
+    at: "2026-11-21T23:30:00.000Z",
+    runGh: () =>
+      Result.succeed(
+        JSON.stringify({
+          headRefOid: sha,
+          reviews: [],
+          comments: [],
+          state: "MERGED",
+          mergedAt: "2026-11-21T23:29:00.000Z",
+          mergeCommit: { oid: "abc123" },
+        }),
+      ),
+  })
+  expect(events).toHaveLength(1)
+  expect(events[0]?.kind).toBe("merged")
+  expect(events[0]?.id).toBe("github:merged:1862:abc123")
+})
+
+test("a done desk answer retires the workstream without a pass", async () => {
+  const root = mkdtempSync(join(tmpdir(), "factory-done-"))
+  try {
+    const record = { ...base(), phase: "build" as const }
+    await writeWorkstream({ record, home: root })
+    await raiseDesk({
+      home: root,
+      item: {
+        id: "ready-1",
+        workstream: record.id,
+        kind: "decision",
+        title: "Ready to merge",
+        body: "Land it?",
+        choices: ["done", "continue"],
+        route: "live",
+        at: "2026-11-22T00:00:00.000Z",
+      },
+    })
+    await answerDesk({
+      home: root,
+      answer: {
+        item: "ready-1",
+        choice: "done",
+        by: "human",
+        at: "2026-11-22T00:05:00.000Z",
+      },
+    })
+    const outcome = await watchOnce({
+      id: record.id,
+      home: root,
+      at: "2026-11-22T00:06:00.000Z",
+      runGh: githubChecks([]),
+    })
+    expect(outcome.passes).toEqual([])
+    expect((await readWorkstream({ id: record.id, home: root }))?.phase).toBe("done")
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
 })
 
 test("a check rollup without timestamps keeps a stable event id", () => {

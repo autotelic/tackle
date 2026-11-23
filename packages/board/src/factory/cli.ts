@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process"
 import { readFile } from "node:fs/promises"
 import { pathToFileURL } from "node:url"
 import { parseArgs } from "node:util"
@@ -24,6 +25,7 @@ const usage = [
   "  factory watch --id <id> --worker <command> [--once] [--interval <ms>]",
   "  factory report --workstream <id> --kind <kind> --command <cmd> --expected <text> --actual <text> [--output <text>] [--blocked] [--deliver <session>]",
   "  factory phase --id <id> --set reconcile|build|land|blocked|done [--answer <desk-answer.json>]",
+  "  factory retire --id <id> [--close-pr]",
   "  factory daemon start --worker <command> [--interval <ms>]",
   "  factory daemon run --worker <command> [--interval <ms>]",
   "  factory daemon stop",
@@ -329,6 +331,37 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
       return
     }
     await runDaemon({ worker: parsed.values.worker, intervalMs: interval })
+    return
+  }
+
+  if (command === "retire") {
+    const parsed = parseArgs({
+      args: argv.slice(1),
+      options: { id: { type: "string" }, "close-pr": { type: "boolean", default: false } },
+      allowPositionals: false,
+    })
+    if (parsed.values.id === undefined) return fail("retire needs --id")
+    const record = await readWorkstream({ id: parsed.values.id })
+    if (record === undefined) return fail("WorkstreamNotFound")
+    if (parsed.values["close-pr"]) {
+      if (record.pr === undefined) return fail("--close-pr needs a PR workstream")
+      const closed = spawnSync(
+        process.env.GH_BIN ?? "gh",
+        ["pr", "close", String(record.pr), "--repo", record.repo],
+        { encoding: "utf8" },
+      )
+      if (closed.status !== 0)
+        return fail("gh pr close failed: " + (closed.stderr || closed.stdout).trim())
+    }
+    await writeWorkstream({
+      record: { ...record, phase: "done", updatedAt: new Date().toISOString() },
+    })
+    console.log(
+      "factory: " +
+        record.id +
+        " retired" +
+        (record.pr === undefined ? "" : " (PR #" + record.pr + ")"),
+    )
     return
   }
 

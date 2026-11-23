@@ -12,11 +12,11 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { expect, test } from "vitest"
 import { adopt } from "../src/factory/adopt.ts"
-import { appendEvent, readEvents } from "../src/factory/events.ts"
-import { runPass } from "../src/factory/kernel.ts"
+import { appendEvent, readEvents, type Event } from "../src/factory/events.ts"
+import { followUpEvent, readyForHuman, runPass, type Receipt } from "../src/factory/kernel.ts"
 import { readWorkstream } from "../src/factory/store.ts"
 
-/* oxlint-disable plumb/prefer-property-tests -- fixed scratch repo and fixed fake worker. */
+/* oxlint-disable plumb/prefer-property-tests, plumb/no-known-value-widening -- fixed scratch repo and fixture builder. */
 
 const git = (cwd: string, ...args: ReadonlyArray<string>): string =>
   execFileSync("git", args, { cwd, encoding: "utf8" }).trim()
@@ -111,6 +111,91 @@ test("a pass consumes its events, checkpoints the worktree, and survives worker 
         encoding: "utf8",
       }),
     ).toBe("handled\n")
+  } finally {
+    rmSync(f.root, { recursive: true, force: true })
+  }
+}, 20_000)
+
+const receiptWith = (input: {
+  readonly record: Awaited<ReturnType<typeof readWorkstream>>
+  readonly before: number
+  readonly after: number
+  readonly events?: ReadonlyArray<{ readonly kind: string; readonly payload: unknown }>
+}): {
+  readonly receipt: Receipt
+  readonly events: ReadonlyArray<Event>
+} => {
+  if (input.record === undefined) throw new Error("workstream missing")
+  const quality = (errors: number) => ({
+    available: true,
+    errors,
+    warnings: 0,
+    note: "jig check",
+  })
+  return {
+    events: (input.events ?? []).map((event, index) => ({
+      id: "event-" + index,
+      kind: event.kind,
+      at: "2026-11-21T00:01:00.000Z",
+      payload: event.payload,
+      status: "consumed" as const,
+    })),
+    receipt: {
+      workstream: input.record.id,
+      pass: 2,
+      at: "2026-11-21T00:02:00.000Z",
+      status: "done",
+      phase: input.record.phase,
+      events: [],
+      checkpoint: input.record.head,
+      exit: 0,
+      quality: {
+        before: quality(input.before),
+        after: quality(input.after),
+        regressed: false,
+      },
+    },
+  }
+}
+
+test("an improving red pass queues one quality follow-up", async () => {
+  const f = fixture()
+  try {
+    await adoptIt(f)
+    const record = await readWorkstream({ id: "permissions-1862", home: f.home })
+    const { receipt, events } = receiptWith({ record, before: 5, after: 2 })
+    const [followUp] = followUpEvent({ record: record!, receipt, events })
+    expect(followUp?.kind).toBe("quality")
+    expect(followUp?.payload).toMatchObject({ pass: 2, errors: 2, warnings: 0 })
+  } finally {
+    rmSync(f.root, { recursive: true, force: true })
+  }
+}, 20_000)
+
+test("a stalled red pass does not queue a follow-up", async () => {
+  const f = fixture()
+  try {
+    await adoptIt(f)
+    const record = await readWorkstream({ id: "permissions-1862", home: f.home })
+    const { receipt, events } = receiptWith({ record, before: 2, after: 2 })
+    expect(followUpEvent({ record: record!, receipt, events })).toEqual([])
+  } finally {
+    rmSync(f.root, { recursive: true, force: true })
+  }
+}, 20_000)
+
+test("a clean check pass is ready for a human", async () => {
+  const f = fixture()
+  try {
+    await adoptIt(f)
+    const record = await readWorkstream({ id: "permissions-1862", home: f.home })
+    const { receipt, events } = receiptWith({
+      record,
+      before: 1,
+      after: 0,
+      events: [{ kind: "check", payload: { state: "passed" } }],
+    })
+    expect(readyForHuman({ record: record!, receipt, events })).toBe(true)
   } finally {
     rmSync(f.root, { recursive: true, force: true })
   }

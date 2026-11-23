@@ -44,6 +44,9 @@ const Github = Schema.Struct({
   baseRefOid: Schema.optional(Schema.String),
   mergeable: Schema.optional(Schema.String),
   mergeStateStatus: Schema.optional(Schema.String),
+  state: Schema.optional(Schema.NullOr(Schema.String)),
+  mergedAt: Schema.optional(Schema.NullOr(Schema.String)),
+  mergeCommit: Schema.optional(Schema.NullOr(Schema.Struct({ oid: Schema.String }))),
   statusCheckRollup: Schema.optional(Schema.NullOr(Schema.Array(Check))),
   reviews: Schema.Array(
     Schema.Struct({
@@ -94,13 +97,36 @@ export const githubEvents = (input: {
     "--repo",
     input.record.repo,
     "--json",
-    "reviews,comments,headRefOid,baseRefOid,mergeable,mergeStateStatus,statusCheckRollup",
+    "reviews,comments,headRefOid,baseRefOid,mergeable,mergeStateStatus,state,mergedAt,mergeCommit,statusCheckRollup",
   ])
   if (Result.isFailure(result)) return []
   const json = Schema.decodeResult(Schema.fromJsonString(Schema.Unknown))(result.success)
   if (Result.isFailure(json)) return []
   const decoded = Schema.decodeUnknownResult(Github)(json.success)
   if (Result.isFailure(decoded)) return []
+  // A merge is the one PR state that retires the workstream. Return only that event:
+  // replaying the comments and checks that led to it after the merge would ask a worker
+  // to change a branch whose landing is already decided.
+  if (decoded.success.state === "MERGED")
+    return [
+      {
+        id:
+          "github:merged:" +
+          input.record.pr +
+          ":" +
+          (decoded.success.mergeCommit?.oid ?? decoded.success.headRefOid),
+        kind: "merged",
+        at: decoded.success.mergedAt ?? input.at,
+        payload: {
+          pr: input.record.pr,
+          headRefOid: decoded.success.headRefOid,
+          mergedAt: decoded.success.mergedAt ?? input.at,
+        },
+        headSha: decoded.success.headRefOid,
+        actor: "github",
+      },
+    ]
+
   const since = Date.parse(input.record.cursors.github || "1970-01-01T00:00:00.000Z")
   const events: Array<WatchEvent> = []
   for (const review of decoded.success.reviews) {
@@ -468,12 +494,27 @@ export const watchOnce = async (input: {
     const answer = Schema.decodeUnknownResult(
       Schema.Struct({ choice: Schema.optional(Schema.String) }),
     )(event.payload)
-    if (
-      event.kind === "desk" &&
-      record.phase === "blocked" &&
-      Result.isSuccess(answer) &&
-      answer.success.choice === "resume"
-    ) {
+    const choice = Result.isSuccess(answer) ? answer.success.choice : undefined
+
+    // Merge and the explicit done answer retire without spending a pass. Both are
+    // lifecycle events, not work: the branch is already landed or the human said stop.
+    if (event.kind === "merged" || (event.kind === "desk" && choice === "done")) {
+      if (record.phase !== "done") {
+        record = { ...record, phase: "done", updatedAt: event.at }
+        await writeWorkstream({ record, home: input.home })
+      }
+      if (previous === undefined)
+        await appendEvent({
+          id: input.id,
+          home: input.home,
+          event: { ...event, status: "consumed" },
+        })
+      else await consumeEvents({ id: input.id, ids: [event.id], home: input.home })
+      appended.push(event.id)
+      continue
+    }
+
+    if (event.kind === "desk" && record.phase === "blocked" && choice === "resume") {
       record = { ...record, phase: "build", updatedAt: event.at }
       await writeWorkstream({ record, home: input.home })
     }
