@@ -840,6 +840,7 @@ const factoryCommands = new Set([
   "desk",
   "link",
   "worker",
+  "guard",
 ])
 
 const main = async (): Promise<void> => {

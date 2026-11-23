@@ -4,6 +4,7 @@ import { parseArgs } from "node:util"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 import { adopt } from "./adopt.ts"
+import { branchGuard } from "./branch.ts"
 import { appendEvent } from "./events.ts"
 import { runPass } from "./kernel.ts"
 import { listWorkstreams, Phase, readWorkstream, writeWorkstream } from "./store.ts"
@@ -27,6 +28,7 @@ const usage = [
   "  factory daemon run --worker <command> [--interval <ms>]",
   "  factory daemon stop",
   "  factory link --id <id> --linear-url <https://linear.app/...>",
+  "  factory guard [--path <dir>]",
   "  factory worker --id <id> --worker <command|intercom:session>",
   "  factory cursor --id <id> --github <iso> --linear <iso>",
   "  factory budget --id <id> --passes-per-phase <n>",
@@ -218,6 +220,24 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
       return
     }
     return fail("desk needs list, answer or raise")
+  }
+
+  if (command === "guard") {
+    const parsed = parseArgs({
+      args: argv.slice(1),
+      options: { path: { type: "string" } },
+      allowPositionals: false,
+    })
+    const path = parsed.values.path ?? process.cwd()
+    const verdict = await branchGuard({ path })
+    if (verdict._tag === "Mismatch") return fail(verdict.reason)
+    console.log(
+      "factory: guard " +
+        (verdict._tag === "Ungoverned"
+          ? "no record owns " + path
+          : verdict.record.id + " is on its branch " + verdict.branch),
+    )
+    return
   }
 
   if (command === "worker") {

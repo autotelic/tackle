@@ -179,6 +179,22 @@ export type Collision = Data.TaggedEnum<{
 const Collision = Data.taggedEnum<Collision>()
 
 /**
+ * The workstream that owns a worktree path, if any. Adoption and the branch guard both ask
+ * this question, so they compare paths one way: realpath, not string equality.
+ *
+ * @param input - the records and the worktree path.
+ * @returns Owned with the record, or Free when no record governs the path.
+ */
+export const ownerOfPath = (input: {
+  readonly records: ReadonlyArray<Workstream>
+  readonly path: string
+}): Collision => {
+  const path = canonical(input.path)
+  const found = input.records.find((record) => canonical(record.path) === path)
+  return found === undefined ? Collision.Free() : Collision.Owned({ workstream: found })
+}
+
+/**
  * Find a workstream that already owns this path or this PR.
  *
  * @param input - the records and the candidate path, repo and PR.
@@ -190,11 +206,10 @@ export const collision = (input: {
   readonly repo: string
   readonly pr: number | undefined
 }): Collision => {
-  const path = canonical(input.path)
+  const pathOwner = ownerOfPath({ records: input.records, path: input.path })
+  if (pathOwner._tag === "Owned") return pathOwner
   const found = input.records.find(
-    (record) =>
-      canonical(record.path) === path ||
-      (input.pr !== undefined && record.repo === input.repo && record.pr === input.pr),
+    (record) => input.pr !== undefined && record.repo === input.repo && record.pr === input.pr,
   )
   return found === undefined ? Collision.Free() : Collision.Owned({ workstream: found })
 }

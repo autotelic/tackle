@@ -1,3 +1,4 @@
+/* oxlint-disable plumb/no-reinterpret-cast -- DecisionAnswers erases each plan's own result type; the read function is where the plan's shape is restored. */
 import { Effect, Order, Schema } from "effect"
 import { Decision } from "effect/ai"
 
@@ -9,7 +10,7 @@ import { locator, messages, reporter, type Reporter } from "../reporting.ts"
 import type { Diagnostic, Drop, JudgementPanel } from "../schema.ts"
 import type { Unit, Workspace } from "../workspace.ts"
 
-/**
+/*
  * Same table, two writers.
  *
  * The finding this rule hunts came out of a real review: one endpoint checked
@@ -242,9 +243,7 @@ export const tableInvariants: PlannedRule = {
         const diagnostics: Array<Diagnostic> = []
         const drops: Array<Drop> = []
         kept.forEach((entry, index) => {
-          // SAFETY: the plans were built here, so each answer is the TableVerdict
-          // its own plan's read produced. The engine erased the type only so the
-          // plans could be answered together.
+          // SAFETY: each answer is the TableVerdict its own plan read produced; the engine erased the type only so the plans could be answered together.
           const verdict = answers[index] as TableVerdict | undefined
           const report = review
           const subject = `writers of \`${entry.table}\``
