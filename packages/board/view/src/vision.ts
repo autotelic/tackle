@@ -41,6 +41,56 @@ const badge = (h: HtmlBuilder<Message>, tone: "built" | "partial" | "missing") =
     [tone === "built" ? "WORKS" : tone === "partial" ? "PARTIAL" : "NOT BUILT"],
   )
 
+const deviceChip = (h: HtmlBuilder<Message>, text: string) =>
+  h.span([h.Class("device-chip")], [text])
+
+const chipRow = (h: HtmlBuilder<Message>, items: ReadonlyArray<string>) =>
+  h.div(
+    [h.Class("device-chips")],
+    items.map((item) => deviceChip(h, item)),
+  )
+
+const workstreamTile = (h: HtmlBuilder<Message>, name: string, repo: string, service: string) =>
+  h.div(
+    [h.Class("device-workstream")],
+    [
+      h.span([h.Class("device-workstream-name")], [name]),
+      h.span([h.Class("device-workstream-repo")], [repo]),
+      h.span([h.Class("device-workstream-service")], [service]),
+    ],
+  )
+
+const deviceCard = (
+  h: HtmlBuilder<Message>,
+  title: string,
+  subtitle: string,
+  children: ReadonlyArray<Html>,
+  tone = "",
+) =>
+  h.div(
+    [h.Class("device-card " + tone)],
+    [
+      h.div(
+        [h.Class("device-head")],
+        [
+          h.span([h.Class("device-title")], [title]),
+          h.span([h.Class("device-subtitle")], [subtitle]),
+        ],
+      ),
+      ...children,
+    ],
+  )
+
+const phoneCard = (h: HtmlBuilder<Message>, title: string, surface: string) =>
+  h.div(
+    [h.Class("phone-card")],
+    [
+      h.span([h.Class("phone-notch")], []),
+      h.span([h.Class("device-title")], [title]),
+      h.span([h.Class("device-subtitle")], [surface]),
+    ],
+  )
+
 const sceneHeader = (h: HtmlBuilder<Message>, title: string, caption: string) =>
   h.div([h.Class("scene-head")], [h.h2([], [title]), h.p([], [caption])])
 
@@ -222,45 +272,87 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
             sceneHeader(
               h,
               "The tailnet is the intranet",
-              "Phones and laptops are the contact surface; the factory is distributed across machines; services sit outside the tailnet.",
+              "Three MacBook Pros, one Mac mini, and two phones. The smaller cards are the running surfaces inside each machine.",
             ),
             h.div(
-              [h.Class("network-map")],
+              [h.Class("tailnet-board")],
               [
                 h.div(
-                  [h.Class("network-services")],
+                  [h.Class("outside-strip")],
                   [
-                    h.span([h.Class("zone-label")], ["SERVICES · OUTSIDE"]),
-                    machine(h, "Linear", "project + issues · polled", "service-node linear"),
-                    machine(h, "GitHub", "PR · reviews · comments", "service-node github"),
-                    machine(h, "Slack", "future context · not wired", "service-node slack"),
+                    h.span([h.Class("zone-label")], ["OUTSIDE"]),
+                    deviceChip(h, "Linear"),
+                    deviceChip(h, "GitHub"),
+                    deviceChip(h, "Slack"),
                   ],
                 ),
                 h.div(
-                  [h.Class("network-human")],
-                  [
-                    h.span([h.Class("zone-label")], ["YOU"]),
-                    machine(h, "phone / laptop", "monitor and review", "human-node"),
-                  ],
-                ),
-                h.div(
-                  [h.Class("network-tailnet")],
+                  [h.Class("tailnet-frame")],
                   [
                     h.span([h.Class("zone-label tailnet-label")], ["TAILNET · taila38bf7.ts.net"]),
-                    machine(h, "MacBook Pro", "board · factory UI · Herdr", "machine-node shop"),
-                    machine(h, "Mac mini", "daemon · always-on shop", "machine-node mini"),
-                    machine(h, "laptop 1", "2 rooms · services · agent", "machine-node laptop"),
-                    machine(h, "laptop 2", "room · services · agent", "machine-node laptop"),
-                    machine(h, "laptop 3", "room · services · agent", "machine-node laptop"),
-                    machine(h, "laptop 4", "phone contact · Rex", "machine-node laptop"),
-                  ],
-                ),
-                h.div(
-                  [h.Class("network-sessions")],
-                  [
-                    h.span([h.Class("zone-label")], ["LOCAL SESSIONS"]),
-                    machine(h, "Herdr", "terminals · focus · labels", "session-node herdr"),
-                    machine(h, "Rex", "blocks · sessions · focus", "session-node rex"),
+                    h.div(
+                      [h.Class("device-grid")],
+                      [
+                        deviceCard(
+                          h,
+                          "MacBook Pro 1",
+                          "shop · board · factory UI",
+                          [
+                            chipRow(h, ["board", "factory UI", "Herdr"]),
+                            workstreamTile(
+                              h,
+                              "permissions-1862",
+                              "forestbuilder",
+                              "web :4400 · healthy",
+                            ),
+                            workstreamTile(
+                              h,
+                              "enterprise-1854",
+                              "forestbuilder",
+                              "web :4401 · healthy",
+                            ),
+                          ],
+                          "shop",
+                        ),
+                        deviceCard(h, "MacBook Pro 2", "Herdr + Rex", [
+                          chipRow(h, ["Herdr", "Rex"]),
+                          workstreamTile(
+                            h,
+                            "tackle-factory",
+                            "autotelic/tackle",
+                            "trunk · daemon · preview",
+                          ),
+                        ]),
+                        deviceCard(h, "MacBook Pro 3", "Herdr + Rex", [
+                          chipRow(h, ["Herdr", "Rex"]),
+                          workstreamTile(
+                            h,
+                            "factory-view",
+                            "autotelic/tackle",
+                            "web :4402 · review",
+                          ),
+                        ]),
+                        deviceCard(
+                          h,
+                          "Mac mini",
+                          "always-on shop",
+                          [
+                            chipRow(h, ["board daemon", "factory records", "mailbox"]),
+                            workstreamTile(
+                              h,
+                              "durable source",
+                              "records + events",
+                              "no service · always on",
+                            ),
+                          ],
+                          "mini",
+                        ),
+                      ],
+                    ),
+                    h.div(
+                      [h.Class("phone-row")],
+                      [phoneCard(h, "Phone A", "Herdr"), phoneCard(h, "Phone B", "Rex")],
+                    ),
                   ],
                 ),
               ],
@@ -269,21 +361,15 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
               [h.Class("network-flow")],
               [
                 h.span([h.Class("flow-tag")], ["KICK OFF"]),
-                machine(h, "you", "open Herdr + Pi", "flow-node"),
+                machine(h, "you", "Herdr or Rex", "flow-node"),
                 h.span([h.Class("bridge-arrow")], ["→"]),
                 machine(h, "factory UI", "/factory · /tackle · /vision", "flow-node"),
                 h.span([h.Class("bridge-arrow")], ["→"]),
-                machine(h, "board service", "adopt · event · daemon", "flow-node"),
+                machine(h, "board", "adopt · event · daemon", "flow-node"),
                 h.span([h.Class("bridge-arrow")], ["→"]),
                 machine(h, "room", "worktree · port · service", "flow-node"),
                 h.span([h.Class("bridge-arrow")], ["→"]),
                 machine(h, "preview tab", "review the work", "flow-node"),
-              ],
-            ),
-            h.div(
-              [h.Class("network-return")],
-              [
-                "activity · presence · receipts · events return to the factory UI; the board is the service underneath, not another name for the page.",
               ],
             ),
           ],

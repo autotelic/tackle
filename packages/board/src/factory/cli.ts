@@ -26,6 +26,7 @@ const usage = [
   "  factory daemon start --worker <command> [--interval <ms>]",
   "  factory daemon run --worker <command> [--interval <ms>]",
   "  factory daemon stop",
+  "  factory link --id <id> --linear-url <https://linear.app/...>",
   "  factory cursor --id <id> --github <iso> --linear <iso>",
   "  factory budget --id <id> --passes-per-phase <n>",
   "  factory desk list [--json]",
@@ -217,6 +218,26 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
       return
     }
     return fail("desk needs list, answer or raise")
+  }
+
+  if (command === "link") {
+    const parsed = parseArgs({
+      args: argv.slice(1),
+      options: { id: { type: "string" }, "linear-url": { type: "string" } },
+      allowPositionals: false,
+    })
+    const { id } = parsed.values
+    const url = parsed.values["linear-url"]
+    if (id === undefined || url === undefined) return fail("link needs --id and --linear-url")
+    if (!url.startsWith("https://linear.app/"))
+      return fail("--linear-url must start with https://linear.app/")
+    const record = await readWorkstream({ id })
+    if (record === undefined) return fail("WorkstreamNotFound")
+    await writeWorkstream({
+      record: { ...record, linearUrl: url, updatedAt: new Date().toISOString() },
+    })
+    console.log("factory: " + record.id + " linear link set")
+    return
   }
 
   if (command === "cursor") {
@@ -448,6 +469,7 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
       path: { type: "string" },
       project: { type: "string" },
       "linear-project-id": { type: "string" },
+      "linear-url": { type: "string" },
       label: { type: "string" },
       delivery: { type: "string" },
       reports: { type: "string" },
@@ -464,6 +486,9 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
     return
   }
   const { path, project, label, pr } = parsed.values
+  const linearUrl = parsed.values["linear-url"]
+  if (linearUrl !== undefined && !linearUrl.startsWith("https://linear.app/"))
+    return fail("--linear-url must start with https://linear.app/")
   if (path === undefined || project === undefined || label === undefined)
     return fail("adopt needs --path, --project and --label")
   const delivery = parsed.values.delivery
@@ -483,6 +508,7 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
     path,
     project,
     linearProjectId: parsed.values["linear-project-id"],
+    linearUrl,
     label,
     delivery,
     reports: parsed.values.reports,

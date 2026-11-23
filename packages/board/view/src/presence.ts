@@ -19,6 +19,7 @@ export const Workstream = Schema.Struct({
   pr: Schema.optional(Schema.Finite),
   delivery: Schema.optional(Schema.String),
   linearProjectId: Schema.optional(Schema.String),
+  linearUrl: Schema.optional(Schema.String),
   checkpoint: Schema.Struct({ sha: Schema.String, at: Schema.String }),
 })
 export const Desk = Schema.Struct({
@@ -143,6 +144,21 @@ export const Environment = Schema.Struct({
 })
 export type Environment = typeof Environment.Type
 
+const TailnetPeer = Schema.Struct({
+  host: Schema.String,
+  dnsName: Schema.optional(Schema.String),
+  online: Schema.Boolean,
+  os: Schema.optional(Schema.String),
+})
+
+export const Tailnet = Schema.Struct({
+  available: Schema.Boolean,
+  state: Schema.optional(Schema.String),
+  self: Schema.optional(TailnetPeer),
+  peers: Schema.Array(TailnetPeer),
+})
+export type Tailnet = typeof Tailnet.Type
+
 export const Presence = Schema.Struct({
   factory: Schema.Struct({
     workstreams: Schema.Array(Workstream),
@@ -153,6 +169,7 @@ export const Presence = Schema.Struct({
     reports: Schema.Array(Report),
   }),
   sessions: Schema.Struct({ herdr: SessionSourceView, rex: SessionSourceView }),
+  network: Schema.optional(Schema.Struct({ tailscale: Tailnet })),
 })
 type Presence = typeof Presence.Type
 

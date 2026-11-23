@@ -266,8 +266,11 @@ const sessionRow = (h: HtmlBuilder<Message>, session: typeof Session.Type) =>
         [h.Class("session-actions")],
         [
           h.button(
-            [h.OnClick(Message.ClickedOpen({ source: session.source, address: session.address }))],
-            ["Open"],
+            [
+              h.Class("brand " + session.source),
+              h.OnClick(Message.ClickedOpen({ source: session.source, address: session.address })),
+            ],
+            [session.source === "herdr" ? "Herdr" : "Rex"],
           ),
         ],
       ),
@@ -447,6 +450,38 @@ const environmentLine = (h: HtmlBuilder<Message>, environment: Environment | und
   )
 }
 
+const githubRepoUrl = (repo: string): string => "https://github.com/" + repo
+
+const githubPrUrl = (repo: string, pr: number): string =>
+  "https://github.com/" + repo + "/pull/" + String(pr)
+
+const githubLabelUrl = (repo: string, label: string): string =>
+  "https://github.com/" + repo + "/issues?q=label%3A" + encodeURIComponent(label)
+
+const brandLink = (h: HtmlBuilder<Message>, kind: string, label: string, href: string) =>
+  h.a([h.Class("brand " + kind), h.Href(href), h.Target("_blank"), h.Rel("noreferrer")], [label])
+
+const workstreamBrands = (h: HtmlBuilder<Message>, ws: typeof Workstream.Type) => {
+  const repo = ws.repo
+  return h.div(
+    [h.Class("brand-row")],
+    [
+      ...(repo === undefined
+        ? []
+        : [brandLink(h, "github", "GitHub · " + repo, githubRepoUrl(repo))]),
+      ...(repo === undefined || ws.pr === undefined
+        ? []
+        : [brandLink(h, "github", "PR #" + ws.pr, githubPrUrl(repo, ws.pr))]),
+      ...(repo === undefined
+        ? []
+        : [brandLink(h, "label", "Label · " + ws.label, githubLabelUrl(repo, ws.label))]),
+      ...(ws.linearUrl === undefined
+        ? []
+        : [brandLink(h, "linear", "Linear · " + ws.project, ws.linearUrl)]),
+    ],
+  )
+}
+
 const workstreamCard = (
   h: HtmlBuilder<Message>,
   ws: typeof Workstream.Type,
@@ -494,6 +529,7 @@ const workstreamCard = (
           h.span([h.Class("mono")], ["checkpoint " + ws.checkpoint.sha.slice(0, 8)]),
         ],
       ),
+      workstreamBrands(h, ws),
       environmentLine(h, environment),
       activityBlock(h, activity),
       sessions.length === 0
@@ -632,27 +668,53 @@ const appHeader = (h: HtmlBuilder<Message>, model: Model, title: string, summary
 
 /** Render the factory state; every field comes from /presence. */
 
-const factoryFloor = (h: HtmlBuilder<Message>, environments: ReadonlyArray<Environment>) => {
-  if (environments.length === 0) return h.span([], [])
-  const groups = new Map<string, Array<Environment>>()
+const factoryFloor = (
+  h: HtmlBuilder<Message>,
+  environments: ReadonlyArray<Environment>,
+  tailnet: import("./presence.ts").Tailnet | undefined,
+) => {
+  if (environments.length === 0 && tailnet === undefined) return h.span([], [])
+  const machines = new Map<
+    string,
+    { readonly online: boolean | undefined; readonly entries: Array<Environment> }
+  >()
+  for (const peer of [
+    ...(tailnet?.self === undefined ? [] : [tailnet.self]),
+    ...(tailnet?.peers ?? []),
+  ])
+    machines.set(peer.host, { online: peer.online, entries: [] })
   for (const environment of environments) {
     const host = environment.machine?.host ?? "unplaced"
-    const list = groups.get(host) ?? []
-    list.push(environment)
-    groups.set(host, list)
+    const current = machines.get(host) ?? { online: undefined, entries: [] }
+    current.entries.push(environment)
+    machines.set(host, current)
   }
+  const online = [...machines.values()].filter((machine) => machine.online === true).length
   return h.section(
     [h.Class("factory-floor")],
     [
       h.div(
         [h.Class("floor-head")],
-        [h.h2([], ["Factory floor"]), h.span([h.Class("muted")], ["workstreams by machine"])],
+        [
+          h.h2([], ["Factory floor"]),
+          h.span(
+            [h.Class("muted")],
+            [
+              (tailnet === undefined || !tailnet.available
+                ? "tailnet unavailable"
+                : online + " online · " + machines.size + " machines") +
+                " · " +
+                environments.length +
+                (environments.length === 1 ? " workstream" : " workstreams"),
+            ],
+          ),
+        ],
       ),
       h.div(
         [h.Class("floor-grid")],
-        [...groups.entries()]
+        [...machines.entries()]
           .sort(([left], [right]) => left.localeCompare(right))
-          .map(([host, entries]) =>
+          .map(([host, machine]) =>
             h.div(
               [h.Class("floor-machine")],
               [
@@ -661,47 +723,80 @@ const factoryFloor = (h: HtmlBuilder<Message>, environments: ReadonlyArray<Envir
                   [
                     h.h3([], [host]),
                     h.span(
-                      [h.Class("muted")],
-                      [entries.length + (entries.length === 1 ? " workstream" : " workstreams")],
+                      [
+                        h.Class(
+                          "floor-status " +
+                            (machine.online === true
+                              ? "online"
+                              : machine.online === false
+                                ? "offline"
+                                : "unknown"),
+                        ),
+                      ],
+                      [
+                        machine.online === true
+                          ? "online"
+                          : machine.online === false
+                            ? "offline"
+                            : "observed",
+                      ],
                     ),
                   ],
                 ),
-                ...entries.map((environment) => {
-                  const services = environment.services ?? []
-                  const preview = environment.preview
-                  return h.div(
-                    [h.Class("floor-workstream")],
-                    [
-                      h.a([h.Href("#" + environment.workstream)], [environment.workstream]),
-                      h.span(
-                        [h.Class("muted")],
+                ...(machine.entries.length === 0
+                  ? [h.span([h.Class("muted")], ["no workstream observed"])]
+                  : machine.entries.map((environment) => {
+                      const services = environment.services ?? []
+                      const preview = environment.preview
+                      const port = environment.port
+                      const agent = environment.agent
+                      return h.div(
+                        [h.Class("floor-workstream")],
                         [
-                          environment.runtime === undefined
-                            ? "no runtime"
-                            : environment.runtime.kind +
-                              " · " +
-                              environment.runtime.path.split("/").at(-1),
-                        ],
-                      ),
-                      h.span(
-                        [h.Class("floor-service")],
-                        [
-                          services.length === 0
-                            ? "no service"
-                            : services
-                                .map((service) => service.name + " · " + service.status)
-                                .join(", "),
-                        ],
-                      ),
-                      preview === null || preview === undefined
-                        ? h.span([], [])
-                        : h.a(
-                            [h.Href(preview), h.Target("_blank"), h.Rel("noreferrer")],
-                            ["preview"],
+                          h.a([h.Href("#" + environment.workstream)], [environment.workstream]),
+                          h.span(
+                            [h.Class("muted")],
+                            [
+                              environment.runtime === undefined
+                                ? "no runtime"
+                                : environment.runtime.kind +
+                                  " · " +
+                                  environment.runtime.path.split("/").at(-1),
+                            ],
                           ),
-                    ],
-                  )
-                }),
+                          h.span(
+                            [h.Class("floor-service")],
+                            [
+                              port === null || port === undefined
+                                ? "no port"
+                                : "port " + port.number,
+                              " · ",
+                              services.length === 0
+                                ? "no service"
+                                : services
+                                    .map((service) => service.name + " · " + service.status)
+                                    .join(", "),
+                            ],
+                          ),
+                          agent === null || agent === undefined
+                            ? h.span([], [])
+                            : h.span(
+                                [h.Class("floor-service")],
+                                [
+                                  "agent " +
+                                    agent.session +
+                                    (agent.status === "" ? "" : " · " + agent.status),
+                                ],
+                              ),
+                          preview === null || preview === undefined
+                            ? h.span([], [])
+                            : h.a(
+                                [h.Href(preview), h.Target("_blank"), h.Rel("noreferrer")],
+                                ["preview " + preview],
+                              ),
+                        ],
+                      )
+                    })),
               ],
             ),
           ),
@@ -744,7 +839,7 @@ const factoryView = (model: Model, h: HtmlBuilder<Message>): Document => {
         ...(presence === null
           ? []
           : [
-              factoryFloor(h, presence.factory.environments ?? []),
+              factoryFloor(h, presence.factory.environments ?? [], presence.network?.tailscale),
               ...Array.from(new Set(presence.factory.workstreams.map(repoName))).map((repo) =>
                 repoSection(
                   h,

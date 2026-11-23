@@ -15,6 +15,7 @@ export const Workstream = Schema.Struct({
   id: Schema.String,
   project: Schema.String,
   linearProjectId: Schema.optional(Schema.String),
+  linearUrl: Schema.optional(Schema.String),
   label: Schema.String,
   repo: Schema.String,
   path: Schema.String,
@@ -69,6 +70,7 @@ export class WorkstreamDecodeError extends Data.TaggedError("WorkstreamDecodeErr
 export interface Facts {
   readonly project: string
   readonly linearProjectId?: string | undefined
+  readonly linearUrl?: string | undefined
   readonly label: string
   readonly repo: string
   readonly path: string
@@ -201,6 +203,7 @@ export const recordOf = (input: { readonly id: string; readonly facts: Facts }):
   id: input.id,
   project: input.facts.project,
   linearProjectId: input.facts.linearProjectId,
+  linearUrl: input.facts.linearUrl,
   label: input.facts.label,
   repo: input.facts.repo,
   path: resolve(input.facts.path),

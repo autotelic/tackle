@@ -170,6 +170,7 @@ export interface AdoptInput {
   readonly path: string
   readonly project: string
   readonly linearProjectId?: string | undefined
+  readonly linearUrl?: string | undefined
   readonly label: string
   readonly delivery?: "pr" | "trunk" | undefined
   readonly reports?: string | undefined
@@ -261,6 +262,7 @@ export const adopt = async (input: AdoptInput): Promise<Outcome<Workstream>> => 
     facts: {
       project: input.project,
       linearProjectId: input.linearProjectId,
+      linearUrl: input.linearUrl,
       label: input.label,
       repo,
       path,
