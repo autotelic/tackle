@@ -39,7 +39,7 @@ export function classifyWorkType(role: ProjectRole | null): WorkType {
 }
 ```
 
-The model was reading "takes a value, handles its null case" as a boundary. The
+The model read "takes a value, handles its null case" as a boundary. The
 criteria now say a boundary is a function whose **own job** is to turn untrusted
 input into a typed value, and that a parameter typed `T | null`,
 `string | number` or `unknown` that the guard narrows is the common shape of the

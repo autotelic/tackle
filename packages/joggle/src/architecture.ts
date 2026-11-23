@@ -5,8 +5,8 @@ import type { ImportGraph } from "./imports.ts"
 /**
  * A codebase's architecture, where it is decidable.
  *
- * Most of what people call architecture is a judgement: should this be a
- * provider, is this abstraction earning its keep. One part of it is not. The
+ * Architecture is mostly judgement: should this be a provider, does this
+ * abstraction pay for itself. One part is not. The
  * direction of dependencies is a property of the import graph, it is decidable
  * with certainty, and it costs nothing to check -- so it is checked here, on
  * every run, with no model and no key, rather than argued about in review.

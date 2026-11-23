@@ -70,8 +70,8 @@ const catalogPins = (workspace) => {
 /**
  * The pins in one manifest that bypass the catalog.
  *
- * A peer range of `*` says "whatever the host provides", which is the point of an optional
- * peer. A peer range whose floor IS the catalog pin says "this package was tested at the
+ * A peer range of `*` says "whatever the host provides", the shape of an optional peer. A
+ * peer range whose floor IS the catalog pin says "this package was tested at the
  * workspace's version and accepts the host's newer one" — the contract a shared runtime needs,
  * because two copies of Effect cannot talk to each other. Any other literal is a version that
  * escaped the catalog.

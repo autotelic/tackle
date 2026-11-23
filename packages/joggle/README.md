@@ -30,9 +30,9 @@ Every finding proposes one of three moves, and the report groups by them:
 
 The order is a ratchet, and the report prints it that way: **the copies hide the
 primitives**, so contract first, composing makes them explicit, and a new primitive
-is built out of the ones you can now see. A live repository *should* be full of
-these, because each is a place the code ran ahead of its vocabulary. **The number
-is not the product.** [Why, and the three moves](./docs/thesis.md).
+is built out of the ones you can now see. A live repository holds many of these:
+each is a place the code ran ahead of its vocabulary. The moves matter more than the
+count. [Why, and the three moves](./docs/thesis.md).
 
 One rule is about promises rather than duplicates: `intent-drift` reads `@deprecated`
 tags, checks that the replacement they name exists, and asks the model whether a live

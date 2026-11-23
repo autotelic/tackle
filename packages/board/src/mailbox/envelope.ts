@@ -1,12 +1,7 @@
+import type { Aad } from "@autotelic/protocol"
 import { Aes128Gcm, CipherSuite, DhkemP256HkdfSha256, HkdfSha256 } from "@hpke/core"
 
-export interface Aad {
-  readonly senderDid: string
-  readonly recipientDid: string
-  readonly messageId: string
-  readonly recipientKeyId: string
-  readonly expiresAt: string
-}
+// The AAD is the protocol's wire shape: this module seals it, it does not define it.
 
 export interface EncryptedEnvelope {
   readonly version: 1

@@ -147,6 +147,12 @@ const checkCommand = Command.make(
       Flag.withDescription("Scope to files changed since the stored run (machine-local)."),
       Flag.withDefault(false),
     ),
+    prose: Flag.String("prose").pipe(
+      Flag.withDescription(
+        "Read these files as prose whatever their extension: a commit message, a pull request body. Comma-separated.",
+      ),
+      Flag.optional,
+    ),
     since: Flag.String("since").pipe(
       Flag.withDescription("Scope to files changed since a git revision (for example origin/main)."),
       Flag.optional,
@@ -221,6 +227,13 @@ const checkCommand = Command.make(
       const repositoryCache = yield* cacheDirFor(cwd, declaredCacheDir)
       const apiKey = yield* Config.option(Config.String("TYPESAFE_API_KEY"))
       const ruleFlag = Option.getOrUndefined(config.rule)
+      const proseInputs = (value: string | undefined): ReadonlyArray<string> | undefined =>
+        value === undefined
+          ? undefined
+          : value
+              .split(",")
+              .map((input) => input.trim())
+              .filter((input) => input.length > 0)
       const rules =
         ruleFlag === undefined
           ? undefined
@@ -282,6 +295,7 @@ const checkCommand = Command.make(
         paths: config.paths,
         rules,
         typecheck: config.typecheck,
+        prose: proseInputs(Option.getOrUndefined(config.prose)),
         types: config.types ? "trace" : "off",
         maxInputTokens:
           Option.getOrUndefined(config.maxTokens) ?? effective.decision?.maxInputTokens,
@@ -376,6 +390,98 @@ const checkCommand = Command.make(
       description: "Replay committed judgements; never call the model.",
     },
     { command: "joggle check --format github", description: "Emit GitHub Actions annotations." },
+  ]),
+)
+
+const proseCommand = Command.make(
+  "prose",
+  {
+    paths: Argument.String("paths").pipe(
+      Argument.withDescription(
+        "Files read as prose, whatever their extension: a commit message, a pull request body, a Markdown document.",
+      ),
+      Argument.variadic(),
+    ),
+    format: Flag.Literals("format", ["text", "stylish", "unix", "json", "github"]).pipe(
+      Flag.withDescription("How to render the report."),
+      Flag.withDefault("stylish"),
+    ),
+    cwd: Flag.String("cwd").pipe(
+      Flag.withDescription("Project root to analyse (default: the current directory)."),
+      Flag.optional,
+    ),
+    config: Flag.String("config").pipe(
+      Flag.withDescription("Config file, relative to the project root (default joggle.config.json)."),
+      Flag.optional,
+    ),
+    cacheDir: Flag.String("cache-dir").pipe(
+      Flag.withDescription(
+        "Where the answer cache lives: <cwd>/.joggle when it exists (an onboarded repository), otherwise the machine cache.",
+      ),
+      Flag.optional,
+    ),
+    maxTokens: Flag.Int("max-tokens").pipe(
+      Flag.withDescription("Input-token budget for judgement in this run."),
+      Flag.withDefault(policy.decision.maxInputTokens),
+    ),
+    offline: Flag.Boolean("offline").pipe(
+      Flag.withDescription("Answer only from the committed judgement cache; never call the model."),
+      Flag.withDefault(false),
+    ),
+  },
+  (config) =>
+    Effect.gen(function* () {
+      const path = yield* Path.Path
+      const cwd = path.resolve(Option.getOrUndefined(config.cwd) ?? process.cwd())
+      const cacheDir = yield* cacheDirFor(cwd, Option.getOrUndefined(config.cacheDir))
+      const apiKey = yield* Config.option(Config.String("TYPESAFE_API_KEY"))
+      const ruleSet = yield* ruleSetFor(cwd, Option.getOrUndefined(config.config))
+      const machineCache = yield* runCacheDirFor(cwd)
+      const report = yield* checkRepository({
+        config: ruleSet.effective,
+        plugins: ruleSet.loaded,
+        cwd,
+        paths: [],
+        rules: ["joggle/prose-voice"],
+        typecheck: false,
+        types: "off",
+        prose: config.paths.map((file) => path.resolve(cwd, file)),
+        proseOnly: true,
+        maxInputTokens: config.maxTokens,
+        useTsgo: false,
+        cacheDirExplicit: Option.isSome(config.cacheDir),
+        cacheDir,
+        runCacheDir: machineCache,
+        replayUnchanged: false,
+        changed: false,
+        baselinePath: undefined,
+        updateBaselinePath: undefined,
+      }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            ruleSet.layer,
+            decisionLayer({ cacheDir, wireCacheDir: machineCache, offline: config.offline, apiKey }),
+            tsgoLayer(cwd, { runExternalCode: false }),
+          ),
+        ),
+      )
+      yield* write(render(report, config.format, { color: process.stdout.isTTY === true }))
+      // A gate, not a report: a warning fails the run and an info notice does not.
+      yield* Effect.sync(() => {
+        process.exitCode = exitCodeFor(report, 0)
+      })
+    }).pipe(Effect.provide(gitLayer)),
+).pipe(
+  Command.withDescription(
+    "Judge prose that is not source: a commit message, a pull request body, a Markdown document. Runs only joggle/prose-voice, walks no repository, and exits non-zero on a warning, so a commit-msg hook can use it.",
+  ),
+  Command.withShortDescription("Judge a commit message or a PR body for the agentic register."),
+  Command.withExamples([
+    { command: "joggle prose .git/COMMIT_EDITMSG", description: "Judge the message being committed." },
+    {
+      command: "joggle prose pr-body.md --format json",
+      description: "Read the findings for a pull request body as JSON.",
+    },
   ]),
 )
 
@@ -1079,7 +1185,15 @@ const cli = Command.make("joggle").pipe(
     { command: "joggle check --since origin/main", description: "Check only what this branch changed." },
     { command: "joggle rules", description: "See what is enforced here." },
   ]),
-  Command.withSubcommands([checkCommand, askCommand, rules, calibrateCommand, cacheCommand, mergeAnswers]),
+  Command.withSubcommands([
+    checkCommand,
+    proseCommand,
+    askCommand,
+    rules,
+    calibrateCommand,
+    cacheCommand,
+    mergeAnswers,
+  ]),
 )
 
 const services = Layer.mergeAll(NodeServices.layer, FetchHttpClient.layer, builtIn)

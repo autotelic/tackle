@@ -511,7 +511,7 @@ export default function (pi: ExtensionAPI): void {
     name: "jig_baseline",
     label: "jig Baseline",
     description:
-      "Accept the current findings into the ledger (`jig baseline`). This WRITES the baseline, so a human decides it, not a tool call: run it only after they have read the report. It does not judge anything, and it refuses findings no judgement reached; judging needs a model key in the host's environment and is shell-only.",
+      "Accept the current findings into the ledger (`jig baseline`). This WRITES the baseline, so a human decides it, not a tool call: run it only after they have read the report. It does not judge anything, and a finding no judgement reached is rejected; judging needs a model key in the host's environment and is shell-only.",
     promptSnippet: "Accept the current findings into the jig ledger",
     promptGuidelines: [
       "Do not run jig_baseline to make a run green without reading what it accepts.",

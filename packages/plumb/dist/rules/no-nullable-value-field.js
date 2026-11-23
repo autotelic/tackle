@@ -60,9 +60,9 @@ function propertyKey(property) {
  * A value is certain, or it is not a value.
  *
  * Nullability from a `left join` is a retrieval artifact. When it becomes a
- * field of the concept, the concept starts saying the business is unsure about
- * something it knows. The partiality belongs in the derivation that read the
- * row, and the exception ("this field is absent by nature") needs a comment.
+ * field of the concept, the field says the business is unsure about a value its
+ * own model treats as known. The partiality belongs in the derivation that read
+ * the row, and the exception ("this field is absent by nature") needs a comment.
  */
 export const noNullableValueFieldRule = defineRule({
     meta: {

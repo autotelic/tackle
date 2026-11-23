@@ -5,10 +5,9 @@ import { shortHash } from "./state.ts"
 /**
  * The id of a fact: its content, hashed.
  *
- * Content-addressed rather than positional, and that is the whole point. The same
- * declaration is the same atom in every rule and every run, so two rules that
- * judge it send it once, and a question's answer can be cached against the atoms
- * it referenced rather than against whichever request happened to carry them.
+ * The id is a hash of the content, so the same declaration is the same atom in
+ * every rule and every run. Two rules that judge it send it once, and a
+ * question's answer is cached against the atoms it read.
  *
  * A positional id (`a0`, `a1`) would make the id depend on the order rules ran,
  * which is exactly the instability a cache cannot survive.

@@ -314,7 +314,8 @@ export const recordCandidate = async (input: {
     home: input.home,
   })
   // One identity, two faucets: a report fingerprint that also names an experience candidate is a
-  // collision the store cannot arbitrate, so it refuses rather than mixing two vocabularies.
+  // collision the store cannot arbitrate, so recordCandidate throws rather than mixing two
+  // vocabularies.
   if (existing !== undefined && existing.kind !== input.observation.kind)
     throw new CandidateRefused({
       path: candidateFile({ fingerprint: input.observation.fingerprint, home: input.home }),

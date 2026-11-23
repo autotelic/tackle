@@ -268,8 +268,8 @@ export const policy = {
    * Orchestration comparison (kept for the call-pattern rule below).
    *
    * `minCalls` is what makes a shared call sequence mean something: two functions
-   * that each make one call are not "the same orchestration", they are two
-   * functions with one call. It is a search bound, and the only number here.
+   * that each make one call are two functions with one call, not a shared
+   * orchestration. It is a search bound, and the only number here.
    */
   callPattern: {
     minCalls: 4,
@@ -490,12 +490,30 @@ export const policy = {
     /**
      * Measured, not guessed: this workspace has 679 documented declarations, and at 400 the
      * overflow was 279 candidates that no run could ever judge — the slice is deterministic,
-     * so a second run asks the same 400 again. A baseline that refuses to be written while
-     * candidates are unjudged cannot exist for a repository this size at that ceiling.
+     * so a second run asks the same 400 again. At that ceiling a repository this size has no
+     * baseline to write while candidates go unjudged.
      */
     maxDeclarations: 1000,
     /** Tokens below which a declaration has nothing for a doc to describe. */
     minTokens: 40,
+  },
+
+  /**
+   * Sentences the prose-voice rule may send for judgement, per source.
+   *
+   * Three budgets rather than one: a JSDoc sentence, a sentence in a Markdown
+   * document and a string literal are different corpora, and one shared cap would
+   * let the largest take every slot. `maxChars` bounds the atom; `minChars` and
+   * `minStringWords` drop a label or a fragment, which no judgement can use.
+   */
+  proseVoice: {
+    maxDocSentences: 120,
+    maxProseSentences: 120,
+    maxStringSentences: 200,
+    /** Words below which a literal is a token, a path or a selector, not prose. */
+    minStringWords: 5,
+    minChars: 30,
+    maxChars: 600,
   },
 
   /**

@@ -10,7 +10,7 @@ import { finding } from "./rule.ts"
  * A rule's messages, declared once and referenced by id.
  *
  * Borrowed from oxlint's `meta.messages` + `context.report({ messageId, data })`.
- * The point is the same one we already apply to questions: the wording of a
+ * The same principle applies to questions: the wording of a
  * rule's output lives in one place, so it can be reviewed, enumerated, and pinned
  * by a test, instead of being assembled inline at every report site where nothing
  * can see the whole vocabulary.
@@ -158,8 +158,8 @@ const PLACEHOLDER = /\{\{(\w+)\}\}/g
  * Fill a message template, and say so when it cannot be filled.
  *
  * A missing id or a missing datum is a bug in the rule, not a condition of the
- * code under analysis, so it throws rather than reporting a partial sentence.
- * Tests catch it where it belongs.
+ * code under analysis, so it throws rather than reporting a partial sentence. A
+ * test catches it at the authoring site.
  */
 const fill = (input: {
   readonly template: string

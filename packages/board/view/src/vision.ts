@@ -1,3 +1,4 @@
+import { Match } from "effect"
 import type { Document, Html, HtmlBuilder } from "foldkit/html"
 import { Message, type Model } from "./main.ts"
 
@@ -7,10 +8,15 @@ import { Message, type Model } from "./main.ts"
  * host, a feedback cycle, and a horizon. The live facts stay on /factory and /tackle.
  */
 
+/** The three status words; the page's whole tone vocabulary. */
+type Tone = "built" | "partial" | "missing"
+/** The two preview routes the browser scene can focus. */
+type Focus = "permissions" | "enterprise"
+
 interface Stage {
   readonly title: string
   readonly detail: string
-  readonly tone: "built" | "partial" | "missing"
+  readonly tone: Tone
 }
 
 const STAGES: ReadonlyArray<Stage> = [
@@ -22,72 +28,37 @@ const STAGES: ReadonlyArray<Stage> = [
   { title: "receipt", detail: "quality + cursor", tone: "built" },
 ]
 
-const stageClass = (index: number, active: number): string =>
-  "orbit-node orbit-" + index + (index === active ? " active" : index < active ? " done" : "")
+const stageClass = (input: { readonly index: number; readonly active: number }): string =>
+  "orbit-node orbit-" +
+  input.index +
+  (input.index === input.active ? " active" : input.index < input.active ? " done" : "")
 
-const stageNode = (h: HtmlBuilder<Message>, stage: Stage, index: number, active: number): Html =>
+const stageNode = (
+  h: HtmlBuilder<Message>,
+  input: { readonly stage: Stage; readonly index: number; readonly active: number },
+): Html =>
   h.button(
-    [h.Class(stageClass(index, active)), h.OnClick(Message.VisionStep({ step: index }))],
     [
-      h.span([h.Class("node-kicker")], [String(index + 1).padStart(2, "0")]),
-      h.span([h.Class("node-title")], [stage.title]),
-      h.span([h.Class("node-detail")], [stage.detail]),
+      h.Class(stageClass({ index: input.index, active: input.active })),
+      h.OnClick(Message.VisionStep({ step: input.index })),
+    ],
+    [
+      h.span([h.Class("node-kicker")], [String(input.index + 1).padStart(2, "0")]),
+      h.span([h.Class("node-title")], [input.stage.title]),
+      h.span([h.Class("node-detail")], [input.stage.detail]),
     ],
   )
 
-const badge = (h: HtmlBuilder<Message>, tone: "built" | "partial" | "missing") =>
+const badge = (h: HtmlBuilder<Message>, tone: Tone): Html =>
   h.span(
     [h.Class("scene-badge " + tone)],
-    [tone === "built" ? "WORKS" : tone === "partial" ? "PARTIAL" : "NOT BUILT"],
-  )
-
-const deviceChip = (h: HtmlBuilder<Message>, text: string) =>
-  h.span([h.Class("device-chip")], [text])
-
-const chipRow = (h: HtmlBuilder<Message>, items: ReadonlyArray<string>) =>
-  h.div(
-    [h.Class("device-chips")],
-    items.map((item) => deviceChip(h, item)),
-  )
-
-const workstreamTile = (h: HtmlBuilder<Message>, name: string, repo: string, service: string) =>
-  h.div(
-    [h.Class("device-workstream")],
     [
-      h.span([h.Class("device-workstream-name")], [name]),
-      h.span([h.Class("device-workstream-repo")], [repo]),
-      h.span([h.Class("device-workstream-service")], [service]),
-    ],
-  )
-
-const deviceCard = (
-  h: HtmlBuilder<Message>,
-  title: string,
-  subtitle: string,
-  children: ReadonlyArray<Html>,
-  tone = "",
-) =>
-  h.div(
-    [h.Class("device-card " + tone)],
-    [
-      h.div(
-        [h.Class("device-head")],
-        [
-          h.span([h.Class("device-title")], [title]),
-          h.span([h.Class("device-subtitle")], [subtitle]),
-        ],
+      Match.value(tone).pipe(
+        Match.when("built", () => "WORKS"),
+        Match.when("partial", () => "PARTIAL"),
+        Match.when("missing", () => "NOT BUILT"),
+        Match.exhaustive,
       ),
-      ...children,
-    ],
-  )
-
-const phoneCard = (h: HtmlBuilder<Message>, title: string, surface: string) =>
-  h.div(
-    [h.Class("phone-card")],
-    [
-      h.span([h.Class("phone-notch")], []),
-      h.span([h.Class("device-title")], [title]),
-      h.span([h.Class("device-subtitle")], [surface]),
     ],
   )
 
@@ -272,64 +243,86 @@ const tailnetMap = (h: HtmlBuilder<Message>, selected: string) => {
   )
 }
 
-const sceneHeader = (h: HtmlBuilder<Message>, title: string, caption: string) =>
-  h.div([h.Class("scene-head")], [h.h2([], [title]), h.p([], [caption])])
+const sceneHeader = (
+  h: HtmlBuilder<Message>,
+  input: { readonly title: string; readonly caption: string },
+): Html => h.div([h.Class("scene-head")], [h.h2([], [input.title]), h.p([], [input.caption])])
 
 const focusNode = (
   h: HtmlBuilder<Message>,
-  focus: "permissions" | "enterprise",
-  active: "permissions" | "enterprise",
-) =>
+  input: { readonly focus: Focus; readonly active: Focus },
+): Html =>
   h.button(
     [
-      h.Class("tab" + (focus === active ? " active" : "")),
-      h.OnClick(Message.VisionFocus({ focus })),
+      h.Class("tab" + (input.focus === input.active ? " active" : "")),
+      h.OnClick(Message.VisionFocus({ focus: input.focus })),
     ],
     [
-      h.span([h.Class("tab-title")], [focus === "permissions" ? "Tab 1" : "Tab 2"]),
+      h.span([h.Class("tab-title")], [input.focus === "permissions" ? "Tab 1" : "Tab 2"]),
       h.span(
         [h.Class("tab-route")],
-        [focus === "permissions" ? "permissions-1862" : "enterprise-1854"],
+        [input.focus === "permissions" ? "permissions-1862" : "enterprise-1854"],
       ),
     ],
   )
 
-const arrowLabel = (h: HtmlBuilder<Message>, text: string) =>
-  h.span([h.Class("scene-arrow-label")], [text])
-
-const machine = (h: HtmlBuilder<Message>, title: string, detail: string, className: string) =>
+const machine = (
+  h: HtmlBuilder<Message>,
+  input: { readonly title: string; readonly detail: string; readonly zone: string },
+): Html =>
   h.div(
-    [h.Class("machine " + className)],
-    [h.span([h.Class("machine-title")], [title]), h.span([h.Class("machine-detail")], [detail])],
+    [h.Class("machine " + input.zone)],
+    [
+      h.span([h.Class("machine-title")], [input.title]),
+      h.span([h.Class("machine-detail")], [input.detail]),
+    ],
   )
 
-const room = (h: HtmlBuilder<Message>, title: string, detail: string, active: boolean) =>
+const room = (
+  h: HtmlBuilder<Message>,
+  input: { readonly title: string; readonly detail: string; readonly active: boolean },
+): Html =>
   h.div(
-    [h.Class("room-bench" + (active ? " active" : ""))],
-    [h.span([h.Class("room-title")], [title]), h.span([h.Class("room-detail")], [detail])],
+    [h.Class("room-bench" + (input.active ? " active" : ""))],
+    [
+      h.span([h.Class("room-title")], [input.title]),
+      h.span([h.Class("room-detail")], [input.detail]),
+    ],
   )
 
-const cycleNode = (h: HtmlBuilder<Message>, title: string, detail: string, className: string) =>
+const cycleNode = (
+  h: HtmlBuilder<Message>,
+  input: { readonly title: string; readonly detail: string; readonly zone: string },
+): Html =>
   h.div(
-    [h.Class("cycle-node " + className)],
-    [h.span([h.Class("node-title")], [title]), h.span([h.Class("node-detail")], [detail])],
+    [h.Class("cycle-node " + input.zone)],
+    [
+      h.span([h.Class("node-title")], [input.title]),
+      h.span([h.Class("node-detail")], [input.detail]),
+    ],
   )
 
 const horizonItem = (
   h: HtmlBuilder<Message>,
-  tone: "built" | "partial" | "missing",
-  title: string,
-  detail: string,
-) =>
+  input: { readonly tone: Tone; readonly title: string; readonly detail: string },
+): Html =>
   h.div(
-    [h.Class("horizon-item " + tone)],
+    [h.Class("horizon-item " + input.tone)],
     [
-      badge(h, tone),
-      h.span([h.Class("node-title")], [title]),
-      h.span([h.Class("node-detail")], [detail]),
+      badge(h, input.tone),
+      h.span([h.Class("node-title")], [input.title]),
+      h.span([h.Class("node-detail")], [input.detail]),
     ],
   )
 
+/**
+ * Render the vision map: the place, the substrate seam, the tailnet, one workstream's orbit,
+ * the browser over two preview routes, the feedback cycle, and the horizon.
+ *
+ * @param model - the selected stage, the focused preview route, and the selected machine.
+ * @param h - the HTML builder the page is assembled with.
+ * @returns the /vision document.
+ */
 export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
   const active = Math.min(Math.max(model.visionStep ?? 0, 0), STAGES.length - 1)
   const focus = model.visionFocus ?? "permissions"
@@ -374,16 +367,20 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
         h.section(
           [h.Class("vision-scene shop-scene")],
           [
-            sceneHeader(
-              h,
-              "The factory is a place",
-              "board is the control plane. room is the bench. protocol is the floor they stand on.",
-            ),
+            sceneHeader(h, {
+              title: "The factory is a place",
+              caption:
+                "board is the control plane. room is the bench. protocol is the floor they stand on.",
+            }),
             h.div(
               [h.Class("shop-floor")],
               [
-                machine(h, "you + Pi", "Herdr terminal", "human-zone"),
-                machine(h, "board", "factory kernel · daemon · queue · relay", "board-zone"),
+                machine(h, { title: "you + Pi", detail: "Herdr terminal", zone: "human-zone" }),
+                machine(h, {
+                  title: "board",
+                  detail: "factory kernel · daemon · queue · relay",
+                  zone: "board-zone",
+                }),
                 h.div(
                   [h.Class("seam-zone")],
                   [
@@ -391,8 +388,16 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
                     h.span([h.Class("seam-detail")], ["formats + mailbox decisions · no runtime"]),
                   ],
                 ),
-                machine(h, "room A", "worktree · process · port · service", "room-zone room-a"),
-                machine(h, "room B", "another worktree · another service", "room-zone room-b"),
+                machine(h, {
+                  title: "room A",
+                  detail: "worktree · process · port · service",
+                  zone: "room-zone room-a",
+                }),
+                machine(h, {
+                  title: "room B",
+                  detail: "another worktree · another service",
+                  zone: "room-zone room-b",
+                }),
               ],
             ),
           ],
@@ -400,11 +405,11 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
         h.section(
           [h.Class("vision-scene substrate-scene")],
           [
-            sceneHeader(
-              h,
-              "Alchemy is the substrate seam",
-              "The same desired state can point at this tailnet, a Fly app, or another provider. Today it points at local machines.",
-            ),
+            sceneHeader(h, {
+              title: "Alchemy is the substrate seam",
+              caption:
+                "The same desired state can point at this tailnet, a Fly app, or another provider. Today it points at local machines.",
+            }),
             h.div(
               [h.Class("substrate-map")],
               [
@@ -412,9 +417,21 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
                   [h.Class("substrate-local")],
                   [
                     h.span([h.Class("zone-label local-label")], ["TODAY · TAILNET"]),
-                    machine(h, "Board", "factory kernel · daemon · presence", "local-node"),
-                    machine(h, "Room", "worktree · process · port · service", "local-node"),
-                    machine(h, "Mailbox", "local · E2EE · turn log", "local-node"),
+                    machine(h, {
+                      title: "Board",
+                      detail: "factory kernel · daemon · presence",
+                      zone: "local-node",
+                    }),
+                    machine(h, {
+                      title: "Room",
+                      detail: "worktree · process · port · service",
+                      zone: "local-node",
+                    }),
+                    machine(h, {
+                      title: "Mailbox",
+                      detail: "local · E2EE · turn log",
+                      zone: "local-node",
+                    }),
                   ],
                 ),
                 h.div(
@@ -432,9 +449,17 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
                   [h.Class("substrate-later")],
                   [
                     h.span([h.Class("zone-label cloud-label")], ["LATER · OPTIONAL"]),
-                    machine(h, "control plane", "same entities, hosted", "cloud-node"),
-                    machine(h, "rooms", "same bench contract", "cloud-node"),
-                    machine(h, "mailbox", "stays private", "cloud-node"),
+                    machine(h, {
+                      title: "control plane",
+                      detail: "same entities, hosted",
+                      zone: "cloud-node",
+                    }),
+                    machine(h, {
+                      title: "rooms",
+                      detail: "same bench contract",
+                      zone: "cloud-node",
+                    }),
+                    machine(h, { title: "mailbox", detail: "stays private", zone: "cloud-node" }),
                   ],
                 ),
               ],
@@ -450,26 +475,27 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
         h.section(
           [h.Class("vision-scene network-scene")],
           [
-            sceneHeader(
-              h,
-              "The tailnet is the intranet",
-              "Three MacBook Pros, one Mac mini, two phones. Select a machine; its workstreams and services open in place.",
-            ),
+            sceneHeader(h, {
+              title: "The tailnet is the intranet",
+              caption:
+                "Three MacBook Pros, one Mac mini, two phones. Select a machine; its workstreams and services open in place.",
+            }),
             tailnetMap(h, model.visionMachine ?? "mbp1"),
           ],
         ),
         h.section(
           [h.Class("vision-scene orbit-scene")],
           [
-            sceneHeader(
-              h,
-              "One workstream is an orbit",
-              "the stage you select becomes the center of gravity",
-            ),
+            sceneHeader(h, {
+              title: "One workstream is an orbit",
+              caption: "the stage you select becomes the center of gravity",
+            }),
             h.div(
               [h.Class("orbit")],
               [
-                ...STAGES.flatMap((entry, index) => [stageNode(h, entry, index, active)]),
+                ...STAGES.flatMap((entry, index) => [
+                  stageNode(h, { stage: entry, index, active }),
+                ]),
                 h.div(
                   [h.Class("orbit-center")],
                   [
@@ -502,11 +528,10 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
         h.section(
           [h.Class("vision-scene shakti-scene")],
           [
-            sceneHeader(
-              h,
-              "Two Shakti apps on the tailnet",
-              "the tabs are real; the wall between them is not",
-            ),
+            sceneHeader(h, {
+              title: "Two Shakti apps on the tailnet",
+              caption: "the tabs are real; the wall between them is not",
+            }),
             h.div(
               [h.Class("browser")],
               [
@@ -526,7 +551,10 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
                 ),
                 h.div(
                   [h.Class("browser-tabs")],
-                  [focusNode(h, "permissions", focus), focusNode(h, "enterprise", focus)],
+                  [
+                    focusNode(h, { focus: "permissions", active: focus }),
+                    focusNode(h, { focus: "enterprise", active: focus }),
+                  ],
                 ),
                 h.div(
                   [h.Class("browser-page")],
@@ -546,8 +574,16 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
                 h.div(
                   [h.Class("room-row")],
                   [
-                    room(h, "room A", "worktree · :4400 · web", focus === "permissions"),
-                    room(h, "room B", "worktree · :4401 · web", focus === "enterprise"),
+                    room(h, {
+                      title: "room A",
+                      detail: "worktree · :4400 · web",
+                      active: focus === "permissions",
+                    }),
+                    room(h, {
+                      title: "room B",
+                      detail: "worktree · :4401 · web",
+                      active: focus === "enterprise",
+                    }),
                   ],
                 ),
                 h.div(
@@ -563,19 +599,26 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
         h.section(
           [h.Class("vision-scene cycle-scene")],
           [
-            sceneHeader(
-              h,
-              "Feedback comes back",
-              "a review enters at the edge; the next pass leaves from the center",
-            ),
+            sceneHeader(h, {
+              title: "Feedback comes back",
+              caption: "a review enters at the edge; the next pass leaves from the center",
+            }),
             h.div(
               [h.Class("feedback-cycle")],
               [
-                cycleNode(h, "review", "GitHub review or comment", "cycle-review"),
-                cycleNode(h, "event", "cursor advances", "cycle-event"),
-                cycleNode(h, "pass", "worker addresses it", "cycle-pass"),
-                cycleNode(h, "commit", "pushed to the PR", "cycle-commit"),
-                cycleNode(h, "receipt", "next cursor + evidence", "cycle-receipt"),
+                cycleNode(h, {
+                  title: "review",
+                  detail: "GitHub review or comment",
+                  zone: "cycle-review",
+                }),
+                cycleNode(h, { title: "event", detail: "cursor advances", zone: "cycle-event" }),
+                cycleNode(h, { title: "pass", detail: "worker addresses it", zone: "cycle-pass" }),
+                cycleNode(h, { title: "commit", detail: "pushed to the PR", zone: "cycle-commit" }),
+                cycleNode(h, {
+                  title: "receipt",
+                  detail: "next cursor + evidence",
+                  zone: "cycle-receipt",
+                }),
                 h.div(
                   [h.Class("cycle-center")],
                   [
@@ -590,11 +633,10 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
         h.section(
           [h.Class("vision-scene horizon-scene")],
           [
-            sceneHeader(
-              h,
-              "The horizon",
-              "today is a directory; the target is a VM with a preview network",
-            ),
+            sceneHeader(h, {
+              title: "The horizon",
+              caption: "today is a directory; the target is a VM with a preview network",
+            }),
             h.div(
               [h.Class("horizon-stack")],
               [
@@ -602,50 +644,58 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
                   [h.Class("horizon-layer today")],
                   [
                     h.span([h.Class("horizon-title")], ["today"]),
-                    horizonItem(h, "built", "directory", "worktree + process + port"),
-                    horizonItem(h, "partial", "room", "one service, shared host"),
+                    horizonItem(h, {
+                      tone: "built",
+                      title: "directory",
+                      detail: "worktree + process + port",
+                    }),
+                    horizonItem(h, {
+                      tone: "partial",
+                      title: "room",
+                      detail: "one service, shared host",
+                    }),
                   ],
                 ),
                 h.div(
                   [h.Class("horizon-layer next")],
                   [
                     h.span([h.Class("horizon-title")], ["next"]),
-                    horizonItem(
-                      h,
-                      "missing",
-                      "container",
-                      "Docker · published port · private home",
-                    ),
+                    horizonItem(h, {
+                      tone: "missing",
+                      title: "container",
+                      detail: "Docker · published port · private home",
+                    }),
                   ],
                 ),
                 h.div(
                   [h.Class("horizon-layer target")],
                   [
                     h.span([h.Class("horizon-title")], ["target"]),
-                    horizonItem(
-                      h,
-                      "missing",
-                      "agentOS",
-                      "VM · durable fs · network.preview · digest software",
-                    ),
+                    horizonItem(h, {
+                      tone: "missing",
+                      title: "agentOS",
+                      detail: "VM · durable fs · network.preview · digest software",
+                    }),
                   ],
                 ),
                 h.div(
                   [h.Class("horizon-outside")],
                   [
-                    horizonItem(h, "partial", "Linear dependencies", "events, not a queue gate"),
-                    horizonItem(
-                      h,
-                      "missing",
-                      "telemetry / Slack",
-                      "no listener or product-context feed",
-                    ),
-                    horizonItem(
-                      h,
-                      "partial",
-                      "Rat King transport",
-                      "procedures + relay fixtures; no live delivery",
-                    ),
+                    horizonItem(h, {
+                      tone: "partial",
+                      title: "Linear dependencies",
+                      detail: "events, not a queue gate",
+                    }),
+                    horizonItem(h, {
+                      tone: "missing",
+                      title: "telemetry / Slack",
+                      detail: "no listener or product-context feed",
+                    }),
+                    horizonItem(h, {
+                      tone: "partial",
+                      title: "Rat King transport",
+                      detail: "procedures + relay fixtures; no live delivery",
+                    }),
                   ],
                 ),
               ],

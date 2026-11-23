@@ -1,5 +1,8 @@
 import { eslintCompatPlugin } from "@oxlint/plugins";
 import { preferPropertyTestsRule } from "./rules/prefer-property-tests.js";
+import { noAnthropomorphicProgramRule } from "./rules/no-anthropomorphic-program.js";
+import { noAntithesisClauseRule } from "./rules/no-antithesis-clause.js";
+import { noProseVerdictRule } from "./rules/no-prose-verdict.js";
 import { noChainedTypeAssertionsRule } from "./rules/no-chained-type-assertions.js";
 import { noConditionalEmptyObjectSpreadRule } from "./rules/no-conditional-empty-object-spread.js";
 import { effectTestCannotFloatRule } from "./rules/effect-test-cannot-float.js";
@@ -58,6 +61,9 @@ import { noStringInstantRule } from "./rules/no-string-instant.js";
 const plumbPlugin = eslintCompatPlugin({
     meta: { name: "plumb" },
     rules: {
+        "no-anthropomorphic-program": noAnthropomorphicProgramRule,
+        "no-antithesis-clause": noAntithesisClauseRule,
+        "no-prose-verdict": noProseVerdictRule,
         "no-chained-type-assertions": noChainedTypeAssertionsRule,
         "no-boolean-field-signals": noBooleanFieldSignalsRule,
         "no-conditional-empty-object-spread": noConditionalEmptyObjectSpreadRule,

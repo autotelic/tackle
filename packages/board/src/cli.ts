@@ -13,7 +13,7 @@ import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { parseArgs, promisify } from "node:util"
 import { Option } from "effect"
-import { alive } from "./alive.ts"
+import { alive } from "@autotelic/room/run"
 import { listRooms } from "@autotelic/room/store"
 import { readRun, startRoomRun } from "@autotelic/room/run"
 import { observeService } from "@autotelic/room/Service"
@@ -697,7 +697,8 @@ const serve = async ({
   const also = loopback === undefined ? undefined : createServer(handle)
   // SAFETY: serve() owns both listeners and the shop lock; a bind failure has already closed
   // both servers and released the lock, and main() turns the rethrow into exit 3. A loopback bind
-  // that fails means something else answers there, so this refuses rather than read another shop.
+  // that fails means something else answers there, so the run fails rather than read another
+  // shop.
   try {
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject)

@@ -52,7 +52,13 @@ import {
   type Structure,
 } from "./schema.ts"
 import { Service as Tsgo } from "./tsgo.ts"
-import { applyDeclarationTypes, discoverFiles, loadWorkspace, type Unit } from "./workspace.ts"
+import {
+  applyDeclarationTypes,
+  discoverFiles,
+  loadWorkspace,
+  type Discovery,
+  type Unit,
+} from "./workspace.ts"
 import type { ChangedSet } from "./git.ts"
 import { contentMappersOf } from "./content-mappers.ts"
 import { looksLikeSource } from "./source.ts"
@@ -100,6 +106,22 @@ export interface Options {
   readonly maxInputTokens?: number | undefined
   /** Use tsgo for project discovery instead of walking directories. */
   readonly useTsgo: boolean
+  /**
+   * Files to read as prose whatever their extension.
+   *
+   * A commit message has no extension and a pull request body arrives from an
+   * API, so neither can be discovered. Named here, they are judged beside the
+   * documentation they belong with.
+   */
+  readonly prose?: ReadonlyArray<string> | undefined
+  /**
+   * Judge the named documents and nothing else.
+   *
+   * A commit-msg hook runs on every commit, so the walk and the parser are a cost
+   * a gate cannot pay. With this set, discovery is skipped and only the named
+   * documents reach the workspace.
+   */
+  readonly proseOnly?: boolean | undefined
   /**
    * Allow `tsc` to execute content-mapper packages declared in tsconfig.
    *
@@ -302,7 +324,7 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
   // The rule set comes from the context, where a plugin's rules have already
   // been merged with the built-in ones. A run does not know or care where a rule
   // came from: a plugin rule is selectable, configurable, severable and ignorable
-  // like any other, which is the whole point of a registry rather than an array.
+  // like any other, which is what a registry buys over an array.
   const universe: ReadonlyArray<Rule | PlannedRule> = yield* Rules
   const selected = (
     options.rules === undefined
@@ -315,12 +337,23 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
   const path = yield* Path.Path
 
   const discovered =
-    options.paths.length === 0 && options.useTsgo
+    options.proseOnly !== true && options.paths.length === 0 && options.useTsgo
       ? yield* (yield* Tsgo).listFiles(options.cwd).pipe(Effect.orElseSucceed(() => undefined))
       : undefined
 
   const discoverStarted = yield* Clock.currentTimeMillis
-  const discovery = yield* discoverFiles(options.cwd, options.paths, discovered)
+  // A prose-only run skips the walk and the parser: it happens on every commit.
+  const discovery: Discovery =
+    options.proseOnly === true
+      ? {
+          files: [],
+          prose: [],
+          skippedExtensions: [],
+          truncated: false,
+          ignored: 0,
+          ignoredDirectories: 0,
+        }
+      : yield* discoverFiles(options.cwd, options.paths, discovered)
   const files = discovery.files
 
   // A run that found no source files did not pass. Reporting "0 problems" for an
@@ -328,7 +361,10 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
   // exactly like success -- and that is how the architecture rules measured
   // nothing at all while appearing clean, when the tool was invoked with no path
   // argument and TypeScript discovery came back empty.
-  if (files.length === 0) {
+  // A run given prose to judge is not empty even when the tree has no source: a
+  // commit message is the whole input, and the guard below exists to stop a run
+  // reporting "0 problems" over an empty file set.
+  if (files.length === 0 && (options.prose ?? []).length === 0) {
     // Name the source of the emptiness. The old message blamed a missing path
     // argument even when one was given, and even when the real cause was tsgo
     // returning a list that did not survive the root comparison.
@@ -563,6 +599,13 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
     contents,
     parses: parseCache.parses,
     types,
+    // Discovery's Markdown and the caller's named files read in one place. The
+    // walk's own list is passed here because a caller that supplies `discovered`
+    // skips the walk that would have carried it.
+    proseFiles: [
+      ...discovery.prose,
+      ...(options.prose ?? []).map((file) => path.resolve(options.cwd, file)),
+    ],
   })
   // Written after the load, and only when something was actually parsed.
   yield* parseCache.save
@@ -749,7 +792,7 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
     )
 
     // A plan is judged only when one of its files is in the run's scope. This is
-    // the enforcement, not a convention: a rule that forgets to filter still
+    // the enforcement, not a convention: a rule that filters nothing still
     // cannot spend a token on a candidate the run is not about, because the
     // engine never sends it and its answer is never read.
     const inScopePlan = (plan: Plan<unknown>): boolean =>

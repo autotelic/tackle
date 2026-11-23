@@ -70,7 +70,8 @@ export const changedSince = (input: {
 }): Effect.Effect<ReadonlySet<string> | undefined, never, Spawner> =>
   Effect.gen(function* () {
     // A revision that does not resolve is a typo or an uncompleted clone; degrading to the
-    // whole tree would answer a different question, so this refuses and the caller says why.
+    // whole tree would answer a different question, so the answer is undefined and the caller
+    // says why.
     const resolved = yield* git(input.root, ["rev-parse", "--verify", `${input.revision}^{commit}`])
     if (resolved === undefined) return undefined
     const changed = yield* git(input.root, ["diff", "--name-only", "--relative", input.revision])

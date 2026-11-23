@@ -64,7 +64,7 @@ const run = (input: { readonly command: string; readonly args: ReadonlyArray<str
 export const githubEvents = (input: {
   readonly record: Workstream
   readonly runGh?: ((args: ReadonlyArray<string>) => Result.Result<string, string>) | undefined
-  readonly at?: string | undefined
+  readonly at: string
 }): ReadonlyArray<WatchEvent> => {
   if (input.record.pr === undefined) return []
   const gh = input.runGh ?? ((args) => run({ command: process.env.GH_BIN ?? "gh", args }))
@@ -116,7 +116,7 @@ export const githubEvents = (input: {
     events.push({
       id: "github:conflict:" + decoded.success.headRefOid + ":" + base,
       kind: "merge-conflict",
-      at: input.at ?? new Date().toISOString(),
+      at: input.at,
       payload: {
         pr: input.record.pr,
         headRefOid: decoded.success.headRefOid,

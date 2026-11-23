@@ -4,6 +4,7 @@ import { duplicateMeaning } from "./duplicate-meaning.ts"
 import { importArchitectureRules } from "./import-architecture.ts"
 import { dependencyFit } from "./dependency-fit.ts"
 import { docMatchesCode } from "./doc-matches-code.ts"
+import { proseVoice } from "./prose-voice.ts"
 import { fieldTypeDrift } from "./field-type-drift.ts"
 import { languageDrift } from "./language-drift.ts"
 import { callPattern } from "./call-pattern.ts"
@@ -43,8 +44,8 @@ import type { PlannedRule, Rule } from "../rule.ts"
 /**
  * The registry. Add a rule by writing one file and one line here.
  *
- * The rules that run without being asked for. The composition pattern is not
- * here. It is a preset -- five rules that encode one starter repository's
+ * The rules that run without being asked for. The composition pattern is a
+ * preset: five rules that encode one starter repository's
  * architecture, plus the page rule that judges whether a page follows it. A tool
  * that runs somebody's opinions by default is a tool that gets switched off by
  * the first team whose architecture differs, which is most of them.
@@ -66,6 +67,7 @@ export const allRules: ReadonlyArray<Rule | PlannedRule> = [
   temporalCoupling,
   dependencyFit,
   docMatchesCode,
+  proseVoice,
   fieldTypeDrift,
   hoistToDomain,
   languageDrift,

@@ -5,7 +5,7 @@ import { underAnyRoot } from "./paths.ts"
 /*
  * Pass 4 — tier.
  *
- * Trivial GIVEN the graph, which is the point: the hard part is the owner attribution
+ * Trivial GIVEN the graph: the hard part is the owner attribution
  * in owners.ts, not this. A component under a primitive root is a primitive whatever
  * imports it. Otherwise two or more route owners make it shared, one makes it local, and
  * a component under a shared root with no route owners is shared (it is where shared

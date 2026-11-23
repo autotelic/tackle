@@ -32,7 +32,7 @@ export type Move = typeof Move.Type
  * Contract first: the copies hide the primitives, so nothing else is legible
  * until they are gone. Then combine, because composing makes the primitives
  * explicit. Then expand, because a new primitive has to be built out of the ones
- * you can now see. This is "clean the leaves first" applied to the report.
+ * you can now see.
  */
 export const moveOrder: ReadonlyArray<Move> = ["contract", "combine", "expand"]
 

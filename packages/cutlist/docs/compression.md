@@ -7,8 +7,8 @@ this one is what the artifact is for. Nothing here is implemented.
 ## The sentence
 
 The catalog is a heap. A walk allocates freely. A duplicate is garbage. `joggle` is the
-marking phase and compression is compaction. A collector that optimizes by discouraging
-allocation has misunderstood its job.
+marking phase and compression is compaction. Discouraging allocation to reduce garbage
+defeats the purpose.
 
 ## The walk is not a violation
 
@@ -71,8 +71,7 @@ report's vocabulary:
 | `combine`       | `split` or `move`                               | neither is the primitive; the combination is the thing to write  | write it, then contract           |
 | `keep_variants` | `keep_variants` + `share_a_contract`/`leave_it` | a boundary makes sharing wrong (deployables, framework-required) | leave both, record why            |
 
-`promote` is the reason the walk pays, and it is the one case where "duplicate" is not the
-right word. It is not `merge`: `merge` keeps the incumbent, `promote` is `merge` with the
+`promote` is the one case where "duplicate" is the wrong word. It is not `merge`: `merge` keeps the incumbent, `promote` is `merge` with the
 survivor chosen by the evidence and a migration order attached. The _classification_ — is
 the new shape truer? — is a meaning question and belongs to the model, with the evidence
 above in its state. The _consequences_ are facts and belong to code: how many importers
@@ -111,7 +110,7 @@ What the numbers say:
   signature; 367 of the no-tag modules are route files. The menu is the right place for
   them, but not as _components_.
 - **The candidate mass is trivial.** Of 362 candidates, 131 score exactly 1.0 and 173 have a
-  side with signature ≤ 2. A `<span>` wrapper is not a duplicate, it is an unnamed
+  side with signature ≤ 2. A `<span>` wrapper is an unnamed
   primitive — a different move.
 - **The pair graph is not a partition.** 49 connected components, 8 with ≥5 members. The
   largest is a **chain**, not a family: `Tooltip.tsx`, `useTableState.ts` and
@@ -122,8 +121,7 @@ What the numbers say:
   tiny. Not 21 copies of one thing: one unnamed pattern repeated 21 times.
 - **The combobox family is the case.** 15 files match `*combobox*` outside tests (including
   one hook), one of them spelled `ComboxBox`, and the candidate graph groups ten. None is
-  the shared primitive. This is the `contract`/`promote` case, and it is why a walk is worth
-  measuring.
+  the shared primitive. This is the `contract`/`promote` case.
 - **The rendering is expensive.** 857 files, 9.7 MB: 425 diagram panels, `catalog.json`
   901 KB, `menu.json` 488 KB, `plumb-ui.config.json` 784 KB, `MENU.md` 250 KB / 1,375 lines.
 - **The tokens are partly noise.** 27 colors including `DEFAULT`, `alpha`, `beta`; 0 type
@@ -136,11 +134,10 @@ What the numbers say:
 
 ## What the artifact must carry
 
-Most of this is artifact.md's list; the loop is what makes each item load-bearing.
+Most of this list is artifact.md's; each item matters because of the loop.
 
 - **A stable id.** Without it, "rebuilt X" is indistinguishable from "renamed X" and
-  "deleted X, added Y". The diff needs identity. This is now the linchpin for compression,
-  not only for the atlas.
+  "deleted X, added Y". The diff needs identity, for compression as much as for the atlas.
 - **A snapshot and a diff.** `catalog@base` and `catalog@head`, compared by id, not by
   position. The diff is an operation over the artifact, not a second definition of "changed".
 - **A candidate with both sides and the delta.** The score alone cannot answer "which
@@ -161,11 +158,11 @@ Most of this is artifact.md's list; the loop is what makes each item load-bearin
 - **A heuristic for "which survives".** If it has a threshold, it is a person's taste wearing
   the costume of a fact. Put the evidence in the state and ask.
 - **Optimizing for zero.** The number is not the product; the move is. A live repository
-  should be full of these.
+  holds many of these.
 - **Treating silence as a miss.** A genuinely new primitive that matches nothing is the
-  vocabulary growing. Manufacturing a finding to look useful is the failure.
-- **Collecting during the walk.** Stopping the world at every allocation is how exploration
-  gets discouraged.
+  vocabulary growing. Manufacturing a finding to fill the report is the failure.
+- **Collecting during the walk.** Stopping the world at every allocation discourages
+  exploration.
 
 ## Open
 

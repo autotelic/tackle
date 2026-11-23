@@ -7,7 +7,7 @@ import { plural, some } from "./text.ts"
  *
  * The menu answers "what exists?"; this view answers "what is the shape, why does it hold,
  * and what is it connected to?". The Markdown is the human reading; the JSON is the same
- * view for an agent that wants to sort or filter without re-deriving stability.
+ * view for an agent that sorts or filters without re-deriving stability.
  */
 
 const factorLine = (pattern: Pattern): string =>
