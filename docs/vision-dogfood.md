@@ -20,10 +20,10 @@ double; this dogfood did not open or merge a real pull request.
 
 ## Passes
 
-| workstream | branch | checkpoint | receipts | local gate |
-| --- | --- | --- | --- | --- |
-| `permissions-dog` | `dogfood/permissions` | `320f1eac` | 3 | `jig check` 0 |
-| `enterprise-dog` | `dogfood/enterprise` | `ab215095` | 3 | `jig check` 0 |
+| workstream        | branch                | checkpoint | receipts | local gate    |
+| ----------------- | --------------------- | ---------- | -------- | ------------- |
+| `permissions-dog` | `dogfood/permissions` | `320f1eac` | 3        | `jig check` 0 |
+| `enterprise-dog`  | `dogfood/enterprise`  | `ab215095` | 3        | `jig check` 0 |
 
 The first pass for each workstream ran concurrently in its own process:
 
