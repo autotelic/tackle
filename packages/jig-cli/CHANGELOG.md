@@ -1,5 +1,13 @@
 # @autotelic/jig-cli
 
+## 0.7.2
+
+### Patch Changes
+
+- fa81ac9: The room door resolves the project's own room before PATH, and room's pause, resume, move, and board's up/down no longer claim completions they did not perform.
+- Updated dependencies [260ee08]
+  - @autotelic/protocol@0.1.2
+
 ## 0.7.1
 
 ### Patch Changes
