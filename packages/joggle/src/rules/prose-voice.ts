@@ -40,6 +40,12 @@ const VIOLATIONS = {
     "overgeneralisation",
     "false_certainty",
     "restatement",
+    "compression",
+    "stacked_nouns",
+    "reduced_relative",
+    "inanimate_subject",
+    "denominal",
+    "long_dependency",
   ],
 } as const
 
@@ -78,6 +84,12 @@ const voiceReview = (id: string, hasNeighbour: boolean) => {
     synonym_rotation: "Two words in the sentence name one thing.",
     overgeneralisation: "The claim is wider than the case, and a counterexample exists.",
     false_certainty: "A claim asserted without doubt that nobody measured.",
+    compression: "Two facts are fused into one clause and the word that relates them is missing.",
+    stacked_nouns: "Three or more nouns in a row, with the relation between them unmarked.",
+    reduced_relative: "A noun is followed by a clause whose relative pronoun or auxiliary is missing.",
+    inanimate_subject: "An inanimate thing is the subject of a verb that normally takes a person or animal.",
+    denominal: "A noun is used as a verb ad hoc, so the reader must first re-read it as a verb.",
+    long_dependency: "A subject and its verb are separated by a clause that must be resolved first.",
     no_issue: "The sentence states a fact or a constraint a reader can use.",
   }
   const withRestatement = {
@@ -97,6 +109,12 @@ const voiceReview = (id: string, hasNeighbour: boolean) => {
       "- `synonym_rotation`: two words in the sentence name one thing because the writer avoided repeating a word. \"the artefact ... the doc ... the block\".",
       "- `overgeneralisation`: the claim is wider than the case it describes, and a counterexample exists in this repository. \"a linter reads syntax\".",
       "- `false_certainty`: a claim asserted without doubt that nobody measured. \"no list makes a heuristic correct\".",
+      "- `compression`: two facts are fused in one clause and the word that states their relation is missing, so the reader has to supply it. \"A stale artifact degrades to silence, never false findings.\" A sentence that states one fact, however densely, is not compression: \"The loader reads the file once.\"",
+      "- `stacked_nouns`: three or more nouns or noun modifiers sit in a row and the sentence does not mark which modifies which. \"The finding help budget overflow note\" is five nouns in one chain. Two nouns (\"the help text\") are ordinary English, and a name the repository uses as one identifier is not a stack.",
+      "- `reduced_relative`: a noun is followed by a clause or participle with the relative pronoun (that, which, who) or the auxiliary missing, and the phrase can be read as the main clause instead. \"The type cut to forty characters keeps an ellipsis.\" \"The findings reported by the gate.\" A short reduced relative with no competing verb is ordinary English and is declined.",
+      "- `inanimate_subject`: an inanimate thing is the subject of an active verb that normally takes a person or animal (bites, swallows, wants, decides), so the reader has to map the metaphor back to a mechanism. \"The stale cache bites every rule that reads it.\" \"The loader reads the file\" names a mechanism as its actor and is not this label; a mental verb on a program is `anthropomorphism`.",
+      "- `denominal`: a noun is used as a verb ad hoc, so the reader re-parses the word's part of speech before the clause makes sense. \"The rule verdicts each sentence.\" A verb the domain already owns (\"cache a value\", \"flag a finding\", \"index a file\") is not this label; the test is whether a reader would have to read the word twice.",
+      "- `long_dependency`: a subject and its verb are separated by one or more clauses that must be resolved first, so the reader holds the subject in memory. \"The rule that the engine runs after every file has changed reports the sentences that the budget did not reach.\" One short relative clause is not this label; the test is whether the reader can name the subject's verb without going back.",
       ...(hasNeighbour
         ? [
             "- `restatement`: the sentence states a fact the previous sentence already states, in other words. A description that adds a rule, a default or a resolution the name does not carry is not a restatement.",
@@ -272,6 +290,18 @@ export const proseVoice: PlannedRule = {
     help_synonym_rotation: "Use one word for the thing in every sentence of the block.",
     help_overgeneralisation: "Limit the claim to the case, or name the exception.",
     help_false_certainty: "State what was measured, or delete the claim.",
+    help_compression:
+      "State the relation between the two facts: add the verb, preposition or conjunction the sentence left out.",
+    help_stacked_nouns:
+      "Unstack the nouns: put the relation in a preposition or a verb (\"the budget for a finding's help\", not \"the finding help budget\").",
+    help_reduced_relative:
+      "Restore the relative pronoun and auxiliary: \"the type that is cut to forty characters\".",
+    help_inanimate_subject:
+      "Name the mechanism and its act: \"the cache returns the stale entry\", not \"the cache bites\".",
+    help_denominal:
+      "Use the verb the sentence already has, or write the noun as a noun: \"the rule labels each sentence\", not \"the rule verdicts each sentence\".",
+    help_long_dependency:
+      "Put the subject next to its verb and move the interrupting clause after it.",
     help_restatement: "Delete the sentence, or replace it with the fact it repeats.",
   }),
   plan: Effect.fn("joggle/prose-voice")(function* (workspace: Workspace, scope: Scope) {

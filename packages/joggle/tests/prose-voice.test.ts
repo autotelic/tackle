@@ -1,13 +1,68 @@
 import { expect, it } from "@effect/vitest"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
+import { DecisionModel } from "effect/ai"
 import { NodeServices } from "@effect/platform-node"
 import { hasWords, readsAsProse, sentencesOfMarkdown } from "../src/prose.ts"
 import { proseVoice } from "../src/rules/prose-voice.ts"
-import { plannedDiagnosticsOf } from "../src/testing.ts"
+import { atomsLayer, planAnswersLayer, plannedDiagnosticsOf } from "../src/testing.ts"
 import { discoverFiles, loadWorkspace } from "../src/workspace.ts"
 import { choice, modelStub } from "./support.ts"
 
 const fixture = () => loadWorkspace("tests/fixtures/prose-voice", ["."])
+
+/** The labels the rule had before the semantic layer, and the six it gained. */
+const EXISTING_LABELS = [
+  "riddle",
+  "verdict",
+  "antithesis",
+  "anthropomorphism",
+  "synonym_rotation",
+  "overgeneralisation",
+  "false_certainty",
+  "restatement",
+] as const
+
+const SEMANTIC_LABELS = [
+  "compression",
+  "stacked_nouns",
+  "reduced_relative",
+  "inanimate_subject",
+  "denominal",
+  "long_dependency",
+] as const
+
+/**
+ * A model that records the voice question's options and declines every sentence.
+ *
+ * The question is the only place a label can enter the rule, so the options a
+ * run actually sends are the vocabulary the judge sees. Reading them back is the
+ * test that a repair the rule can print has a criterion the judge can pick.
+ */
+const captureVoiceQuestion = (seen: Array<ReadonlyArray<string>>) =>
+  Layer.effect(
+    DecisionModel.DecisionModel,
+    DecisionModel.make({
+      decide: ({ decisions }) =>
+        Effect.sync(() => {
+          const answers: Record<string, DecisionModel.ProviderAnswer> = {}
+          for (const [key, decision] of Object.entries(decisions)) {
+            if (decision._tag !== "Classify") continue
+            const labels = Object.keys(decision.criteria)
+            seen.push(labels)
+            const remainder = 0.05 / Math.max(1, labels.length - 1)
+            answers[key] = {
+              _tag: "Classify",
+              label: "no_issue",
+              probabilities: Object.fromEntries(
+                labels.map((label) => [label, label === "no_issue" ? 0.95 : remainder]),
+              ),
+              confidence: 0.95,
+            }
+          }
+          return { answers, usage: { inputTokens: 0, outputTokens: 0 } }
+        }),
+    }),
+  )
 
 it("markdown reaches the index as prose, and structure is not prose", () => {
   const document = `# Notes
@@ -67,11 +122,54 @@ it.effect("a sentence the judge reads as plain is dropped, not printed", () =>
 )
 
 it("every label a judgement may return has a repair message", () => {
-  const labels = ["riddle", "verdict", "antithesis", "anthropomorphism", "synonym_rotation", "overgeneralisation", "false_certainty", "restatement"]
-  for (const label of labels) {
+  for (const label of [...EXISTING_LABELS, ...SEMANTIC_LABELS]) {
     expect(proseVoice.messages?.["help_" + label]).toBeDefined()
   }
 })
+
+it.effect("the question offers a criterion for every label the rule repairs", () => {
+  const seen: Array<ReadonlyArray<string>> = []
+  return Effect.gen(function* () {
+    // Two sentences in one paragraph, so the neighbour-gated `restatement` option
+    // is actually offered. The fixture has one sentence per block.
+    const text = "The notes are not decoration, ever. The funnel is the only thing that says otherwise."
+    const workspace = yield* loadWorkspace("tests/fixtures/prose-voice-empty", [], {
+      prose: [{ path: "NOTES.md", text, sentences: sentencesOfMarkdown(text) }],
+    })
+    yield* plannedDiagnosticsOf(proseVoice, workspace)
+    expect(seen.length).toBe(2)
+    const offered = new Set(seen.flatMap((criteria) => criteria))
+    for (const label of [...EXISTING_LABELS, ...SEMANTIC_LABELS]) {
+      expect(offered.has(label), label).toBe(true)
+    }
+    expect(offered.has("no_issue")).toBe(true)
+    const repaired = Object.keys(proseVoice.messages ?? {})
+      .filter((key) => key.startsWith("help_"))
+      .map((key) => key.slice("help_".length))
+      .sort()
+    expect([...offered].filter((label) => label !== "no_issue").sort()).toEqual(repaired)
+  }).pipe(
+    Effect.provide(Layer.mergeAll(captureVoiceQuestion(seen), atomsLayer, planAnswersLayer)),
+    Effect.provide(NodeServices.layer),
+  )
+})
+
+it.effect("each semantic label reaches a finding with its own repair", () =>
+  Effect.gen(function* () {
+    const workspace = yield* loadWorkspace("tests/fixtures/prose-voice-labels", ["."])
+    expect(workspace.prose[0]?.sentences.length).toBe(SEMANTIC_LABELS.length)
+    for (const label of SEMANTIC_LABELS) {
+      const result = yield* plannedDiagnosticsOf(proseVoice, workspace).pipe(
+        Effect.provide(modelStub({ tell: choice(label, 0.95) })),
+      )
+      expect(result.diagnostics.length, label).toBe(SEMANTIC_LABELS.length)
+      for (const diagnostic of result.diagnostics) {
+        expect(diagnostic.message).toContain("reads as " + label.replace(/_/g, " "))
+        expect(diagnostic.help).toBe(proseVoice.messages?.["help_" + label])
+      }
+    }
+  }).pipe(Effect.provide(NodeServices.layer)),
+)
 
 it.effect("only a literal written as a sentence is judged", () =>
   Effect.gen(function* () {

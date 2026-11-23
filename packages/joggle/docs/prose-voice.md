@@ -236,10 +236,16 @@ declaration name, and no path: two identical sentences in two files are one
 question. A path in the atom made the verdict depend on how the file was named, so
 a per-file run and a repository run disagreed about the same sentence.
 
-**The question** (`Decision.classify`, one per candidate, nine labels):
+**The question** (`Decision.classify`, one per candidate, fifteen labels):
 
 `riddle`, `verdict`, `antithesis`, `anthropomorphism`, `synonym_rotation`,
-`overgeneralisation`, `false_certainty`, `restatement`, `no_issue`.
+`overgeneralisation`, `false_certainty`, `restatement`, `compression`,
+`stacked_nouns`, `reduced_relative`, `inanimate_subject`, `denominal`,
+`long_dependency`, `no_issue`.
+
+The first eight are this repository's own register. The six after them are the
+semantic layer, and section 10a records where they come from and what each one
+tests.
 
 Each label is a definition with a test, and the two that carried the most noise
 were rewritten as tests rather than descriptions:
@@ -254,6 +260,69 @@ were rewritten as tests rather than descriptions:
 **Output** is `info` for a review-band answer and `warn` for an act-band one, with
 the label and the sentence in the message and the repair in the help. The
 severity stays below `error` until a labelled set says the labels are right.
+
+## 10a. The semantic layer: six constructs from Clark, Martin and Mahowald
+
+The first eight labels are the register this rule began with. Six more come from
+psycholinguistics, and they name a property a reader pays for rather than a tone:
+Thomas Hikaru Clark, Matias B. Martin and Kyle Mahowald, "Why is AI-generated
+language so hard to understand?" (2026), arXiv:2610.29162.
+
+The paper's account is narrow enough to borrow. Human language is produced under a
+pressure to communicate successfully. Text produced under a pressure for
+*information density* tends to choose the shorter member of a syntactic
+alternation, and the shorter member costs the reader a re-analysis. The authors
+measure nine features in nine frontier and near-frontier models against human
+baselines. They report more inanimate subjects with animate verbs and more
+low-frequency n-grams in all nine, and, in conversation, longer dependencies,
+more stacked nouns and more reduced object relatives in most. A fine-tuning
+experiment with a length penalty moves a model toward the same profile. That is
+the mechanism the six labels use.
+
+The rule borrows the constructs and the processing account. It does not borrow the
+detector. The paper compares rates across corpora and model families; this rule
+reads one sentence for one repository. A person can write every shape below, and a
+model can avoid all of them, so a finding is a sentence to edit, not evidence of
+authorship. Turning any of these labels into an authorship signal would be a
+different instrument with a different error, and it is not this one.
+
+| label | the paper's feature | the test the judge applies | the repair |
+| --- | --- | --- | --- |
+| `compression` | information density: the shorter member of an alternation, with the relation left implicit | two facts are fused in one clause and the word that relates them is missing | state the relation |
+| `stacked_nouns` | three or more nouns in a modifier relationship | three or more nouns modify one another, and the sentence does not mark which modifies which | unstack with a preposition or a verb |
+| `reduced_relative` | a relative clause without its optional relativizer, especially a reduced object relative | a noun is followed by a clause or participle with the pronoun or auxiliary missing, and the phrase has a second reading | restore `that` and the auxiliary |
+| `inanimate_subject` | an inanimate subject with an active verb that normally takes an animate subject | an inanimate thing is the subject of such a verb, and no mechanism is named as the actor | name the mechanism and its act |
+| `denominal` | a noun used as a verb ad hoc, so the part of speech must be re-read | a noun is used as a verb in a way this repository does not establish | use the existing verb, or write the noun as a noun |
+| `long_dependency` | a long syntactic dependency, especially a subject held across a clause | a subject and its verb are separated by a clause that must be resolved first | put the subject next to its verb |
+
+Three boundaries keep the six from collapsing into the eight already here:
+
+- **`compression` is one observable move, not the paper's whole hypothesis.** The
+  hypothesis explains why any of the six appear. The label is a clause that fuses
+  two facts and deletes the relation. If the reader can point at the missing
+  relation, it is `compression`; if the mechanism is replaced by its purpose, it
+  is `riddle`.
+- **`reduced_relative` is a missing relativizer, not every participle.** A short
+  reduced relative that follows one noun with no competing verb is ordinary
+  English and is declined. The label needs the second reading.
+- **`inanimate_subject` is an animate verb, not a mental one.** "The cache bites"
+  is `inanimate_subject`; "the rule knows" is `anthropomorphism`.
+
+Each of these repairs is longer than the defect, which is the point. The shorter
+member of an alternation is easier to write and harder to read, so the help states
+the fuller sentence rather than naming the feature.
+
+What this pass does not add: no dependency parser, no n-gram frequency table, no
+fourth engine, and no second rule. The paper identifies its features from spaCy
+parses. Here the judge reads one sentence, and the deterministic candidate filters
+in section 10 are unchanged. The labels are semantic, so the model is the parser.
+
+The calibration warning in section 8 applies to these labels more than to the
+first eight. The paper's features are over-represented in model text, and every
+judge asked to apply them is a model. A count of `inanimate_subject` is a list of
+sentences to edit, not a measurement of authorship. A labelled set still decides
+whether each definition is sharp enough to keep: a label that fires only because
+the judge likes the category is removed.
 
 ## 11. What the runs found
 
