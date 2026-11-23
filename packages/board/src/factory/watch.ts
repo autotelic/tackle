@@ -23,6 +23,9 @@ export type WatchEvent = typeof WatchEvent.Type
 
 const Github = Schema.Struct({
   headRefOid: Schema.String,
+  baseRefOid: Schema.optional(Schema.String),
+  mergeable: Schema.optional(Schema.String),
+  mergeStateStatus: Schema.optional(Schema.String),
   reviews: Schema.Array(
     Schema.Struct({
       id: Schema.String,
@@ -61,6 +64,7 @@ const run = (input: { readonly command: string; readonly args: ReadonlyArray<str
 export const githubEvents = (input: {
   readonly record: Workstream
   readonly runGh?: ((args: ReadonlyArray<string>) => Result.Result<string, string>) | undefined
+  readonly at?: string | undefined
 }): ReadonlyArray<WatchEvent> => {
   if (input.record.pr === undefined) return []
   const gh = input.runGh ?? ((args) => run({ command: process.env.GH_BIN ?? "gh", args }))
@@ -71,7 +75,7 @@ export const githubEvents = (input: {
     "--repo",
     input.record.repo,
     "--json",
-    "reviews,comments,headRefOid",
+    "reviews,comments,headRefOid,baseRefOid,mergeable,mergeStateStatus",
   ])
   if (Result.isFailure(result)) return []
   const json = Schema.decodeResult(Schema.fromJsonString(Schema.Unknown))(result.success)
@@ -100,6 +104,28 @@ export const githubEvents = (input: {
       payload: { body: comment.body },
       headSha: decoded.success.headRefOid,
       actor: comment.author?.login,
+    })
+  }
+  // A conflict is a state, not a review: emit it while it is true, with an id tied to the
+  // head and base so a rebase or a base move makes a new event and a consumed success does
+  // not wake the same conflict again.
+  const mergeable = decoded.success.mergeable
+  const mergeState = decoded.success.mergeStateStatus
+  if (mergeable === "CONFLICTING" || mergeState === "DIRTY") {
+    const base = decoded.success.baseRefOid ?? input.record.baseSha
+    events.push({
+      id: "github:conflict:" + decoded.success.headRefOid + ":" + base,
+      kind: "merge-conflict",
+      at: input.at ?? new Date().toISOString(),
+      payload: {
+        pr: input.record.pr,
+        headRefOid: decoded.success.headRefOid,
+        baseRefOid: base,
+        mergeable,
+        mergeStateStatus: mergeState,
+      },
+      headSha: decoded.success.headRefOid,
+      actor: "github",
     })
   }
   return events
@@ -300,7 +326,7 @@ export const watchOnce = async (input: {
   if (found === undefined) return { appended: [], passes: [] }
   let record = found
   const polled = [
-    ...githubEvents({ record, runGh: input.runGh }),
+    ...githubEvents({ record, runGh: input.runGh, at: input.at }),
     ...baseEvents({ record, runGit: input.runGit }),
     ...linearEvents({ record, runLinear: input.runLinear }),
     ...(await reportEvents({ record })),

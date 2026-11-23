@@ -65,6 +65,7 @@
     "plumb/no-builtin-throws:packages/room/src/Service.ts",
     "plumb/no-multiple-function-params:packages/board/view/src/main.ts",
     "plumb/no-multiple-function-params:packages/board/view/src/vision.ts",
+    "plumb/no-nondeterministic-core:packages/board/src/factory/watch.ts",
     "plumb/no-nondeterministic-core:packages/room/src/Service.ts",
     "plumb/no-runtime-typeof:packages/board/view/src/main.ts",
     "plumb/no-runtime-typeof:packages/protocol/src/mailbox.ts",
