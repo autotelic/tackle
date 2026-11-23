@@ -2,7 +2,7 @@ import { Clock, Context, Effect, Layer } from "effect"
 import { execFile } from "node:child_process"
 import { existsSync } from "node:fs"
 import { mkdir, rename } from "node:fs/promises"
-import { join, resolve } from "node:path"
+import { basename, dirname, join, resolve } from "node:path"
 import { promisify } from "node:util"
 
 const run = promisify(execFile)
@@ -50,7 +50,10 @@ export const WorktreeLive = Layer.effect(
           // twice, so presence is the answer, not another add.
           if (existsSync(join(absolute, ".git"))) return absolute
           await mkdir(join(absolute, ".."), { recursive: true })
-          await run("git", ["worktree", "add", "-B", `room/${base}`, absolute, base], { cwd: repo })
+          const id = basename(dirname(absolute))
+          await run("git", ["worktree", "add", "-B", `room/${id}-${base}`, absolute, base], {
+            cwd: repo,
+          })
           return absolute
         },
         catch: (cause) => new WorktreeError(String(cause)),

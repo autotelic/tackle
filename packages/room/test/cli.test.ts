@@ -256,4 +256,52 @@ describe("a verb that prints a completion is a claim", () => {
       close()
     }
   })
+
+  it("runs two rooms with separate worktrees, ports, and services", async () => {
+    const { root, close } = scratch()
+    const repo = repository(root)
+    const server = join(repo, "server.mjs")
+    writeFileSync(
+      server,
+      'import { createServer } from "node:http"\nimport { readFileSync } from "node:fs"\nconst who = readFileSync("who.txt", "utf8").trim()\ncreateServer((request, response) => response.end(who + " " + request.url)).listen(process.env.PORT)\n',
+    )
+    git(repo, "add", "server.mjs")
+    git(repo, "commit", "-q", "-m", "server")
+    try {
+      expect(room(root, "new", "--repo", repo, "--scope", "perms").status).toBe(0)
+      expect(room(root, "new", "--repo", repo, "--scope", "qa").status).toBe(0)
+      const perms = join(root, ".room", "perms-repo", "worktree")
+      const qa = join(root, ".room", "qa-repo", "worktree")
+      writeFileSync(join(perms, "who.txt"), "perms\n")
+      writeFileSync(join(qa, "who.txt"), "qa\n")
+
+      for (const id of ["perms-repo", "qa-repo"]) {
+        const up = room(
+          root,
+          "up",
+          "--id",
+          id,
+          "--service",
+          "web",
+          "--health",
+          "/healthz",
+          "--exec",
+          "node server.mjs",
+        )
+        expect(up.status).toBe(0)
+      }
+      const permsStatus = room(root, "status", "--id", "perms-repo")
+      const qaStatus = room(root, "status", "--id", "qa-repo")
+      expect(permsStatus.stdout).toContain("port 4400")
+      expect(qaStatus.stdout).toContain("port 4401")
+      expect(permsStatus.stdout).toContain("service web healthy")
+      expect(qaStatus.stdout).toContain("service web healthy")
+      expect(readFileSync(join(perms, "who.txt"), "utf8")).toBe("perms\n")
+      expect(readFileSync(join(qa, "who.txt"), "utf8")).toBe("qa\n")
+    } finally {
+      room(root, "down", "--id", "perms-repo")
+      room(root, "down", "--id", "qa-repo")
+      close()
+    }
+  }, 30_000)
 })
