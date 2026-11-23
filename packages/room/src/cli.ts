@@ -5,6 +5,7 @@ import { existsSync } from "node:fs"
 import { homedir } from "node:os"
 import { join } from "node:path"
 import { parseArgs } from "node:util"
+import { localRoomProvider } from "./Provider.ts"
 import { Worktree, WorktreeLive } from "./Worktree.ts"
 import {
   createRoom,
@@ -94,6 +95,7 @@ const slug = (value: string): string =>
     .replace(/^-|-$/gu, "") || "room"
 
 const attachWorktree = (input: {
+  readonly id: string
   readonly repo: string
   readonly branch: string
   readonly root: string
@@ -101,11 +103,12 @@ const attachWorktree = (input: {
   Effect.runPromise(
     Effect.gen(function* () {
       const trees = yield* Worktree
-      return yield* trees.attach(input)
+      return yield* localRoomProvider(trees).attach(input)
     }).pipe(Effect.provide(WorktreeLive)),
   )
 
 const ensureWorktree = (input: {
+  readonly id: string
   readonly repo: string
   readonly base: string
   readonly root: string
@@ -113,7 +116,7 @@ const ensureWorktree = (input: {
   Effect.runPromise(
     Effect.gen(function* () {
       const trees = yield* Worktree
-      return yield* trees.ensure(input)
+      return yield* localRoomProvider(trees).ensure(input)
     }).pipe(Effect.provide(WorktreeLive)),
   )
 
@@ -135,13 +138,24 @@ const main = async (): Promise<void> => {
     if (values.repo === undefined || values.scope === undefined)
       return fail("new needs --repo and --scope (see room --help)", EXIT.usage)
     const id = values.id ?? slug(values.scope + "-" + (values.repo.split("/").at(-1) ?? "repo"))
-    let worktree = join(roomDir({ root, id }), "worktree")
-    // SAFETY: the worktree provider is a process boundary; its failure is infrastructure.
+    // SAFETY: the room provider is a process boundary; its failure is infrastructure.
+    let worktree: string
+    // oxlint-disable-next-line plumb-effect/no-try-catch -- the CLI owns the process boundary.
     try {
       worktree =
         values.branch === undefined
-          ? await ensureWorktree({ repo: values.repo, base: values.base, root: worktree })
-          : await attachWorktree({ repo: values.repo, branch: values.branch, root: worktree })
+          ? await ensureWorktree({
+              id,
+              repo: values.repo,
+              base: values.base,
+              root,
+            })
+          : await attachWorktree({
+              id,
+              repo: values.repo,
+              branch: values.branch,
+              root,
+            })
     } catch (cause) {
       return fail("worktree failed: " + String(cause), EXIT.infrastructure)
     }
@@ -219,9 +233,10 @@ const main = async (): Promise<void> => {
     if (parsed.positionals.length === 0)
       return fail("run needs a command after -- (see room --help)", EXIT.usage)
     const worktree = await ensureWorktree({
+      id,
       repo: room.state.repo,
       base: room.base,
-      root: join(roomDir({ root, id }), "worktree"),
+      root,
     }).catch((cause) => fail("worktree failed: " + String(cause), EXIT.infrastructure))
     const binary = hcBin()
     if (Option.isNone(binary)) return fail("hc is not on PATH", EXIT.infrastructure)
@@ -278,10 +293,10 @@ const main = async (): Promise<void> => {
         : room.service === undefined || exec === undefined
           ? room.service
           : { ...room.service, command: exec }
-    let worktree = join(roomDir({ root, id }), "worktree")
+    let worktree: string
     // SAFETY: the worktree provider is a process boundary; its failure is infrastructure.
     try {
-      worktree = await ensureWorktree({ repo: room.state.repo, base: room.base, root: worktree })
+      worktree = await ensureWorktree({ id, repo: room.state.repo, base: room.base, root })
     } catch (cause) {
       return fail("worktree failed: " + String(cause), EXIT.infrastructure)
     }
