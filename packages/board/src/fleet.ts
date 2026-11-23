@@ -1,5 +1,6 @@
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
+import { UnknownRecord } from "./schema.ts"
 import type { Tailnet, TailnetPeer } from "./tailnet.ts"
 
 /*
@@ -14,10 +15,9 @@ const RemoteRoom = Schema.Struct({
   process: Schema.Unknown,
 })
 
-const RemoteSession = Schema.Record(Schema.String, Schema.Unknown)
 const RemoteSource = Schema.Struct({
   available: Schema.Boolean,
-  sessions: Schema.Array(RemoteSession),
+  sessions: Schema.Array(UnknownRecord),
 })
 
 const RemotePresence = Schema.Struct({

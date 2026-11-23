@@ -457,6 +457,10 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
   const wallMs = record.budgets.wallMinutesPerPass * 60_000
   const workerEnv = {
     ...process.env,
+    // The worker is an agent this factory creates. Low thinking is the default; a Pi
+    // worker must pass it to `pi --thinking` because this env is a descriptor, not a flag.
+    FACTORY_THINKING: "low",
+    PI_REASONING_LEVEL: "low",
     FACTORY_WORKSTREAM: record.id,
     FACTORY_PROJECT: record.project,
     FACTORY_PHASE: record.phase,

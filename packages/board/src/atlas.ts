@@ -3,6 +3,7 @@ import { readdir, readFile } from "node:fs/promises"
 import { dirname, join, resolve } from "node:path"
 import { Schema } from "effect"
 import * as Result from "effect/Result"
+import { UnknownRecord } from "./schema.ts"
 
 /*
  * The atlas is the workspace's own table of contents: one record per package, read
@@ -37,17 +38,16 @@ export interface Atlas {
   readonly edges: ReadonlyArray<AtlasEdge>
 }
 
-const StringMap = Schema.Record(Schema.String, Schema.Unknown)
 const Manifest = Schema.Struct({
   name: Schema.optional(Schema.String),
   version: Schema.optional(Schema.String),
   description: Schema.optional(Schema.String),
   private: Schema.optional(Schema.Boolean),
-  scripts: Schema.optional(StringMap),
-  dependencies: Schema.optional(StringMap),
-  devDependencies: Schema.optional(StringMap),
-  peerDependencies: Schema.optional(StringMap),
-  optionalDependencies: Schema.optional(StringMap),
+  scripts: Schema.optional(UnknownRecord),
+  dependencies: Schema.optional(UnknownRecord),
+  devDependencies: Schema.optional(UnknownRecord),
+  peerDependencies: Schema.optional(UnknownRecord),
+  optionalDependencies: Schema.optional(UnknownRecord),
 })
 type Manifest = typeof Manifest.Type
 

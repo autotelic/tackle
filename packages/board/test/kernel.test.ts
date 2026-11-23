@@ -83,10 +83,11 @@ test("a pass consumes its events, checkpoints the worktree, and survives worker 
     const worker = join(f.root, "worker.sh")
     writeFileSync(
       worker,
-      '#!/bin/sh\nprintf "%s" "$FACTORY_PROMPT" > "$FACTORY_WITNESS"\necho handled > handled.txt\n',
+      '#!/bin/sh\nprintf "%s" "$FACTORY_PROMPT" > "$FACTORY_WITNESS"\nprintf "%s" "$FACTORY_THINKING" > "$FACTORY_THINKING_WITNESS"\necho handled > handled.txt\n',
     )
     chmodSync(worker, 0o755)
     process.env.FACTORY_WITNESS = join(f.root, "prompt.txt")
+    process.env.FACTORY_THINKING_WITNESS = join(f.root, "thinking.txt")
 
     const result = await runPass({
       id: "permissions-1862",
@@ -100,6 +101,7 @@ test("a pass consumes its events, checkpoints the worktree, and survives worker 
     expect(result.receipt.journal).toBeDefined()
     if (result.receipt.journal !== undefined) expect(existsSync(result.receipt.journal)).toBe(true)
     expect(readFileSync(join(f.root, "prompt.txt"), "utf8")).toContain("review-1")
+    expect(readFileSync(join(f.root, "thinking.txt"), "utf8")).toBe("low")
     expect((await readEvents({ id: "permissions-1862", home: f.home }))[0]?.status).toBe("consumed")
     expect((await readWorkstream({ id: "permissions-1862", home: f.home }))?.checkpoint.sha).toBe(
       result.checkpoint,

@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process"
 import { homedir } from "node:os"
 import { readFile, readdir } from "node:fs/promises"
 import { join } from "node:path"
+import { Option } from "effect"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 import { appendEvent, consumeEvents, readEvents } from "./events.ts"
@@ -21,11 +22,29 @@ export const WatchEvent = Schema.Struct({
 })
 export type WatchEvent = typeof WatchEvent.Type
 
+const Check = Schema.Struct({
+  __typename: Schema.optional(Schema.NullOr(Schema.String)),
+  name: Schema.optional(Schema.NullOr(Schema.String)),
+  context: Schema.optional(Schema.NullOr(Schema.String)),
+  status: Schema.optional(Schema.NullOr(Schema.String)),
+  conclusion: Schema.optional(Schema.NullOr(Schema.String)),
+  state: Schema.optional(Schema.NullOr(Schema.String)),
+  startedAt: Schema.optional(Schema.NullOr(Schema.String)),
+  completedAt: Schema.optional(Schema.NullOr(Schema.String)),
+  createdAt: Schema.optional(Schema.NullOr(Schema.String)),
+  updatedAt: Schema.optional(Schema.NullOr(Schema.String)),
+  detailsUrl: Schema.optional(Schema.NullOr(Schema.String)),
+  workflowName: Schema.optional(Schema.NullOr(Schema.String)),
+  targetUrl: Schema.optional(Schema.NullOr(Schema.String)),
+  description: Schema.optional(Schema.NullOr(Schema.String)),
+})
+
 const Github = Schema.Struct({
   headRefOid: Schema.String,
   baseRefOid: Schema.optional(Schema.String),
   mergeable: Schema.optional(Schema.String),
   mergeStateStatus: Schema.optional(Schema.String),
+  statusCheckRollup: Schema.optional(Schema.NullOr(Schema.Array(Check))),
   reviews: Schema.Array(
     Schema.Struct({
       id: Schema.String,
@@ -75,7 +94,7 @@ export const githubEvents = (input: {
     "--repo",
     input.record.repo,
     "--json",
-    "reviews,comments,headRefOid,baseRefOid,mergeable,mergeStateStatus",
+    "reviews,comments,headRefOid,baseRefOid,mergeable,mergeStateStatus,statusCheckRollup",
   ])
   if (Result.isFailure(result)) return []
   const json = Schema.decodeResult(Schema.fromJsonString(Schema.Unknown))(result.success)
@@ -106,6 +125,14 @@ export const githubEvents = (input: {
       actor: comment.author?.login,
     })
   }
+  const checkEvent = checkEvents({
+    checks: decoded.success.statusCheckRollup ?? [],
+    head: decoded.success.headRefOid,
+    pr: input.record.pr,
+    at: input.at,
+  })
+  if (Option.isSome(checkEvent)) events.push(checkEvent.value)
+
   // A conflict is a state, not a review: emit it while it is true, with an id tied to the
   // head and base so a rebase or a base move makes a new event and a consumed success does
   // not wake the same conflict again.
@@ -129,6 +156,78 @@ export const githubEvents = (input: {
     })
   }
   return events
+}
+
+type GithubCheck = typeof Check.Type
+
+/** One check's state in the only vocabulary the kernel needs: pending, passed, failed. */
+const checkState = (check: GithubCheck): "pending" | "passed" | "failed" => {
+  const conclusion = check.conclusion?.toLowerCase()
+  if (conclusion === "failure" || conclusion === "timed_out" || conclusion === "cancelled")
+    return "failed"
+  if (conclusion === "action_required" || conclusion === "startup_failure") return "failed"
+  if (conclusion === "success" || conclusion === "neutral" || conclusion === "skipped")
+    return "passed"
+  const state = check.state?.toUpperCase()
+  if (state === "FAILURE" || state === "ERROR") return "failed"
+  if (state === "SUCCESS") return "passed"
+  return "pending"
+}
+
+const checkName = (check: GithubCheck): string => check.name ?? check.context ?? "check"
+
+/** The instant a check last changed, used both for the event clock and for its identity. */
+const checkAt = (check: GithubCheck, fallback: string): string =>
+  check.completedAt ?? check.updatedAt ?? check.createdAt ?? check.startedAt ?? fallback
+
+/**
+ * A check run is a state of the head, not a comment. Emit one event when the head has a
+ * failure, or when every check has finished without one, and key it by the state of the
+ * checks so a re-run with the same result does not wake the same pass twice.
+ *
+ * Pending checks are deliberately silent: a half-finished matrix is not evidence that the
+ * branch is broken or ready.
+ */
+const checkEvents = (input: {
+  readonly checks: ReadonlyArray<GithubCheck>
+  readonly head: string
+  readonly pr: number
+  readonly at: string
+}): Option.Option<WatchEvent> => {
+  const noEvent = Option.none<WatchEvent>()
+  if (input.checks.length === 0) return noEvent
+  const states = input.checks.map((check) => checkState(check))
+  const failed = input.checks.filter((_, index) => states[index] === "failed")
+  const pending = states.includes("pending")
+  if (failed.length === 0 && pending) return noEvent
+  const state = failed.length > 0 ? "failed" : "passed"
+  const latest = input.checks
+    .map((check) => checkAt(check, input.at))
+    .sort((left, right) => Date.parse(right) - Date.parse(left))[0]
+  const signature = input.checks
+    .map((check) => checkName(check) + "=" + checkState(check) + "@" + checkAt(check, ""))
+    .sort((left, right) => left.localeCompare(right))
+    .join("|")
+  return Option.some({
+    id: "github:check:" + input.head + ":" + state + ":" + signature,
+    kind: "check",
+    at: latest ?? input.at,
+    payload: {
+      pr: input.pr,
+      headRefOid: input.head,
+      state,
+      failed: failed.map(checkName),
+      checks: input.checks.map((check) => ({
+        name: checkName(check),
+        state: checkState(check),
+        conclusion: check.conclusion ?? null,
+        status: check.status ?? null,
+        completedAt: check.completedAt ?? null,
+      })),
+    },
+    headSha: input.head,
+    actor: "github",
+  })
 }
 
 /** Watch the base branch itself when the workstream has no PR to watch. */
@@ -404,9 +503,12 @@ export const watchOnce = async (input: {
     if (pass.ok) {
       const current = await readWorkstream({ id: input.id, home: input.home })
       if (current !== undefined) {
+        // A review or comment has a time watermark. A conflict or check is a state
+        // keyed by its own event id; advancing the shared cursor past it would skip a
+        // comment that arrived before the check finished.
         const key = event.id.startsWith("linear:")
           ? "linear"
-          : event.id.startsWith("github:") || event.id.startsWith("base:")
+          : event.id.startsWith("base:") || event.kind === "review" || event.kind === "comment"
             ? "github"
             : null
         if (key !== null)

@@ -5,7 +5,13 @@ import { fileURLToPath } from "node:url"
 import * as Result from "effect/Result"
 import { expect, test } from "vitest"
 import { recordOf, type Workstream } from "../src/factory/store.ts"
-import { baseEvents, deskEvents, shouldWake, type WatchEvent } from "../src/factory/watch.ts"
+import {
+  baseEvents,
+  deskEvents,
+  githubEvents,
+  shouldWake,
+  type WatchEvent,
+} from "../src/factory/watch.ts"
 
 /* oxlint-disable plumb/prefer-property-tests, no-reinterpret-cast, require-safety-comment-for-type-assertion -- the fixtures are trusted local JSON and the test shape is the assertion. */
 
@@ -83,6 +89,116 @@ test("a trunk workstream watches its base branch, not a PR", () => {
       runGit,
     }),
   ).toEqual([])
+})
+
+const githubChecks = (checks: ReadonlyArray<unknown>) => {
+  const sha = base().head
+  return (args: ReadonlyArray<string>) => {
+    expect(args.join(" ")).toContain("statusCheckRollup")
+    return Result.succeed(
+      JSON.stringify({
+        headRefOid: sha,
+        reviews: [],
+        comments: [],
+        mergeable: "MERGEABLE",
+        mergeStateStatus: "CLEAN",
+        statusCheckRollup: checks,
+      }),
+    )
+  }
+}
+
+test("a failed check becomes a check event for the head", () => {
+  const sha = base().head
+  const events = githubEvents({
+    record: base(),
+    at: "2026-11-21T23:30:00.000Z",
+    runGh: githubChecks([
+      {
+        __typename: "CheckRun",
+        name: "check",
+        status: "COMPLETED",
+        conclusion: "FAILURE",
+        completedAt: "2026-11-21T23:29:00.000Z",
+      },
+      {
+        __typename: "CheckRun",
+        name: "test",
+        status: "COMPLETED",
+        conclusion: "SUCCESS",
+        completedAt: "2026-11-21T23:28:00.000Z",
+      },
+    ]),
+  })
+  expect(events).toHaveLength(1)
+  expect(events[0]?.kind).toBe("check")
+  expect(events[0]?.headSha).toBe(sha)
+  expect(events[0]?.id).toContain(":failed:")
+  expect(events[0]?.payload).toMatchObject({ state: "failed", failed: ["check"] })
+})
+
+test("a fully green check rollup becomes one check event", () => {
+  const events = githubEvents({
+    record: base(),
+    at: "2026-11-21T23:30:00.000Z",
+    runGh: githubChecks([
+      {
+        __typename: "CheckRun",
+        name: "check",
+        status: "COMPLETED",
+        conclusion: "SUCCESS",
+        completedAt: "2026-11-21T23:29:00.000Z",
+      },
+      { __typename: "StatusContext", context: "vercel", state: "SUCCESS" },
+    ]),
+  })
+  expect(events).toHaveLength(1)
+  expect(events[0]?.kind).toBe("check")
+  expect(events[0]?.id).toContain(":passed:")
+  expect(events[0]?.payload).toMatchObject({ state: "passed", failed: [] })
+})
+
+test("a check rollup without timestamps keeps a stable event id", () => {
+  const runGh = githubChecks([{ __typename: "StatusContext", context: "vercel", state: "SUCCESS" }])
+  const first = githubEvents({ record: base(), at: "2026-11-21T23:30:00.000Z", runGh })
+  const second = githubEvents({ record: base(), at: "2026-11-21T23:31:00.000Z", runGh })
+  expect(first[0]?.id).toBe(second[0]?.id)
+})
+
+test("a pending check rollup stays silent until every check has finished", () => {
+  const events = githubEvents({
+    record: base(),
+    at: "2026-11-21T23:30:00.000Z",
+    runGh: githubChecks([
+      {
+        __typename: "CheckRun",
+        name: "check",
+        status: "IN_PROGRESS",
+        conclusion: null,
+        completedAt: null,
+      },
+    ]),
+  })
+  expect(events).toEqual([])
+})
+
+test("a failed check is still actionable while another check is pending", () => {
+  const events = githubEvents({
+    record: base(),
+    at: "2026-11-21T23:30:00.000Z",
+    runGh: githubChecks([
+      {
+        __typename: "CheckRun",
+        name: "check",
+        status: "COMPLETED",
+        conclusion: "FAILURE",
+        completedAt: "2026-11-21T23:29:00.000Z",
+      },
+      { __typename: "CheckRun", name: "test", status: "IN_PROGRESS", conclusion: null },
+    ]),
+  })
+  expect(events).toHaveLength(1)
+  expect(events[0]?.payload).toMatchObject({ state: "failed" })
 })
 
 test("a desk answer becomes an event for its own workstream", async () => {
