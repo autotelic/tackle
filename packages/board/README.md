@@ -28,6 +28,7 @@ process is gone) and serves:
 - `GET /presence` — shop, observedAt, rooms, service address
 - `GET /atlas` — the workspace's packages, README summaries, and internal dependency edges
 - `GET /tackle` — the package atlas page (the same built view as `/factory`)
+- `GET /vision` — the static map of what the factory can do and what is still missing
 - `GET /preview/<workstream>/` — the room's leased service
 - `GET /queue` — paused room ids
 

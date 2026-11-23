@@ -415,7 +415,12 @@ const serveView = async ({
   readonly path: string
 }): Promise<void> => {
   const relative =
-    path === "/" || path === "/factory" || path === "/tackle" || path === "/tackle/"
+    path === "/" ||
+    path === "/factory" ||
+    path === "/tackle" ||
+    path === "/tackle/" ||
+    path === "/vision" ||
+    path === "/vision/"
       ? "index.html"
       : path.slice("/factory/".length)
   if (relative.includes("..")) {
@@ -645,6 +650,8 @@ const serve = async ({
       path === "/factory" ||
       path === "/tackle" ||
       path === "/tackle/" ||
+      path === "/vision" ||
+      path === "/vision/" ||
       path.startsWith("/factory/")
     ) {
       void serveView({ response, path })
@@ -671,6 +678,7 @@ const serve = async ({
           "/",
           "/factory",
           "/tackle",
+          "/vision",
           "/atlas",
           "/health",
           "/presence",

@@ -5,6 +5,7 @@ import { defineMessageUnion } from "foldkit/message"
 import { ticks } from "foldkit-primitives/time"
 
 import { Atlas, type AtlasPackage } from "./atlas.ts"
+import { visionView } from "./vision.ts"
 import {
   Activity,
   Desk,
@@ -17,7 +18,7 @@ import {
   environmentsByWorkstream,
 } from "./presence.ts"
 
-export const Route = Schema.Literals(["factory", "tackle"])
+export const Route = Schema.Literals(["factory", "tackle", "vision"])
 export type Route = typeof Route.Type
 
 export const Model = Schema.Struct({
@@ -47,12 +48,15 @@ type UpdateReturn = Update.Return<Model, Message>
 /** The Foldkit update function: every transition is explicit here. */
 export const update = (model: Model, message: Message): UpdateReturn =>
   Message.match<UpdateReturn>(message, {
-    ClickedRefresh: () => ({
-      model: { ...model, loading: true },
-      commands: [model.route === "tackle" ? FetchAtlas() : FetchPresence()],
-    }),
+    ClickedRefresh: () =>
+      model.route === "vision"
+        ? { model }
+        : {
+            model: { ...model, loading: true },
+            commands: [model.route === "tackle" ? FetchAtlas() : FetchPresence()],
+          },
     Ticked: () =>
-      model.loading
+      model.loading || model.route === "vision"
         ? { model }
         : {
             model: { ...model, loading: true },
@@ -96,16 +100,25 @@ export const update = (model: Model, message: Message): UpdateReturn =>
   })
 
 /** Start with a fetch and an empty model. */
-const routeOf = (): Route =>
-  typeof window !== "undefined" && window.location.pathname.startsWith("/tackle")
-    ? "tackle"
-    : "factory"
+const routeOf = (): Route => {
+  if (typeof window === "undefined") return "factory"
+  if (window.location.pathname.startsWith("/tackle")) return "tackle"
+  if (window.location.pathname.startsWith("/vision")) return "vision"
+  return "factory"
+}
 
 export const init: Runtime.ApplicationInit<Model, Message> = () => {
   const route = routeOf()
   return {
-    model: { route, presence: null, atlas: null, error: null, loading: true, notice: null },
-    commands: [route === "tackle" ? FetchAtlas() : FetchPresence()],
+    model: {
+      route,
+      presence: null,
+      atlas: null,
+      error: null,
+      loading: route !== "vision",
+      notice: null,
+    },
+    commands: route === "vision" ? [] : [route === "tackle" ? FetchAtlas() : FetchPresence()],
   }
 }
 
@@ -579,6 +592,7 @@ const routeNav = (h: HtmlBuilder<Message>, active: Route) =>
     [
       h.a([h.Href("/"), ...(active === "factory" ? [h.Class("active")] : [])], ["Factory"]),
       h.a([h.Href("/tackle"), ...(active === "tackle" ? [h.Class("active")] : [])], ["Tackle"]),
+      h.a([h.Href("/vision"), ...(active === "vision" ? [h.Class("active")] : [])], ["Vision"]),
     ],
   )
 
@@ -590,7 +604,12 @@ const appHeader = (h: HtmlBuilder<Message>, model: Model, title: string, summary
         [],
         [h.h1([], [title]), h.span([h.Class("muted")], [summary]), routeNav(h, model.route)],
       ),
-      h.button([h.OnClick(Message.ClickedRefresh())], [model.loading ? "Refreshing…" : "Refresh"]),
+      model.route === "vision"
+        ? h.span([h.Class("muted")], ["static map"])
+        : h.button(
+            [h.OnClick(Message.ClickedRefresh())],
+            [model.loading ? "Refreshing…" : "Refresh"],
+          ),
     ],
   )
 
@@ -862,4 +881,8 @@ const atlasView = (model: Model, h: HtmlBuilder<Message>): Document => {
 
 /** The route selector: /tackle is the workspace atlas, everything else is the factory. */
 export const view = (model: Model, h: HtmlBuilder<Message>): Document =>
-  model.route === "tackle" ? atlasView(model, h) : factoryView(model, h)
+  model.route === "tackle"
+    ? atlasView(model, h)
+    : model.route === "vision"
+      ? visionView(model, h)
+      : factoryView(model, h)
