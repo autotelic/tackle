@@ -91,6 +91,187 @@ const phoneCard = (h: HtmlBuilder<Message>, title: string, surface: string) =>
     ],
   )
 
+interface TailnetMachine {
+  readonly id: string
+  readonly label: string
+  readonly subtitle: string
+  readonly contacts: ReadonlyArray<string>
+  readonly workstreams: ReadonlyArray<{ readonly name: string; readonly service: string }>
+  readonly kind: "machine" | "phone"
+}
+
+const TAILNET_MACHINES: ReadonlyArray<TailnetMachine> = [
+  {
+    id: "mbp1",
+    label: "MacBook Pro 1",
+    subtitle: "shop · board · factory UI",
+    contacts: ["Herdr", "board", "factory UI"],
+    workstreams: [
+      { name: "permissions-1862", service: "web :4400 · healthy" },
+      { name: "enterprise-1854", service: "web :4401 · healthy" },
+    ],
+    kind: "machine",
+  },
+  {
+    id: "mbp2",
+    label: "MacBook Pro 2",
+    subtitle: "Herdr + Rex",
+    contacts: ["Herdr", "Rex"],
+    workstreams: [{ name: "tackle-factory", service: "trunk · daemon · preview" }],
+    kind: "machine",
+  },
+  {
+    id: "mbp3",
+    label: "MacBook Pro 3",
+    subtitle: "Herdr + Rex",
+    contacts: ["Herdr", "Rex"],
+    workstreams: [{ name: "factory-view", service: "web :4402 · review" }],
+    kind: "machine",
+  },
+  {
+    id: "mini",
+    label: "Mac mini",
+    subtitle: "always-on shop",
+    contacts: ["board daemon", "records", "mailbox"],
+    workstreams: [{ name: "durable source", service: "no service · always on" }],
+    kind: "machine",
+  },
+  {
+    id: "phoneA",
+    label: "Phone A",
+    subtitle: "Herdr",
+    contacts: ["Herdr"],
+    workstreams: [],
+    kind: "phone",
+  },
+  {
+    id: "phoneB",
+    label: "Phone B",
+    subtitle: "Rex",
+    contacts: ["Rex"],
+    workstreams: [],
+    kind: "phone",
+  },
+]
+
+const mapMachine = (h: HtmlBuilder<Message>, machine: TailnetMachine, selected: string) =>
+  h.button(
+    [
+      h.Class("rack-machine rack-" + machine.id + (machine.id === selected ? " selected" : "")),
+      h.OnClick(Message.VisionMachine({ machine: machine.id })),
+    ],
+    [
+      h.span([h.Class("map-machine-title")], [machine.label]),
+      h.span([h.Class("map-machine-sub")], [machine.subtitle]),
+      h.div(
+        [h.Class("map-contacts")],
+        machine.contacts.map((contact) => h.span([h.Class("map-contact")], [contact])),
+      ),
+      h.div(
+        [h.Class("map-workstreams")],
+        machine.workstreams.map((workstream) =>
+          h.span(
+            [h.Class("map-workstream")],
+            [
+              h.span([h.Class("map-workstream-name")], [workstream.name]),
+              h.span([h.Class("map-workstream-service")], [workstream.service]),
+            ],
+          ),
+        ),
+      ),
+    ],
+  )
+
+const tailnetMap = (h: HtmlBuilder<Message>, selected: string) => {
+  const machine = TAILNET_MACHINES.find((entry) => entry.id === selected) ?? TAILNET_MACHINES[0]!
+  return h.div(
+    [h.Class("tailnet-wrap")],
+    [
+      h.div(
+        [h.Class("map-scroll")],
+        [
+          h.div(
+            [h.Class("tailnet-rack")],
+            [
+              h.div(
+                [h.Class("rack-services")],
+                [
+                  h.span([h.Class("rack-label")], ["OUTSIDE THE TAILNET"]),
+                  h.span([h.Class("rack-service")], ["Linear"]),
+                  h.span([h.Class("rack-service")], ["GitHub"]),
+                  h.span([h.Class("rack-service")], ["Slack"]),
+                ],
+              ),
+              h.div(
+                [h.Class("rack-bus")],
+                [
+                  h.span([h.Class("rack-bus-label")], ["TAILNET · taila38bf7.ts.net"]),
+                  h.span([h.Class("rack-bus-line")], []),
+                ],
+              ),
+              h.div(
+                [h.Class("rack-machines")],
+                TAILNET_MACHINES.filter((entry) => entry.kind === "machine").map((entry) =>
+                  mapMachine(h, entry, selected),
+                ),
+              ),
+              h.div(
+                [h.Class("rack-phones")],
+                [
+                  h.span([h.Class("rack-label")], ["CONTACT SURFACES"]),
+                  ...TAILNET_MACHINES.filter((entry) => entry.kind === "phone").map((entry) =>
+                    mapMachine(h, entry, selected),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+      h.div(
+        [h.Class("map-focus")],
+        [
+          h.span(
+            [h.Class("node-kicker")],
+            [machine.kind === "phone" ? "CONTACT SURFACE" : "MACHINE"],
+          ),
+          h.h3([], [machine.label]),
+          h.p([], [machine.subtitle]),
+          h.div(
+            [h.Class("map-focus-grid")],
+            [
+              h.div(
+                [h.Class("map-focus-contacts")],
+                [
+                  h.span([h.Class("map-focus-label")], ["running here"]),
+                  ...machine.contacts.map((contact) => h.span([h.Class("map-contact")], [contact])),
+                ],
+              ),
+              h.div(
+                [h.Class("map-focus-workstreams")],
+                [
+                  h.span([h.Class("map-focus-label")], ["workstreams"]),
+                  ...(machine.workstreams.length === 0
+                    ? [h.span([h.Class("muted")], ["contact surface only"])]
+                    : machine.workstreams.map((workstream) =>
+                        h.span(
+                          [h.Class("map-workstream")],
+                          [
+                            h.span([h.Class("map-workstream-name")], [workstream.name]),
+                            h.span([h.Class("map-workstream-service")], [workstream.service]),
+                          ],
+                        ),
+                      )),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    ],
+  )
+}
+
 const sceneHeader = (h: HtmlBuilder<Message>, title: string, caption: string) =>
   h.div([h.Class("scene-head")], [h.h2([], [title]), h.p([], [caption])])
 
@@ -272,106 +453,9 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
             sceneHeader(
               h,
               "The tailnet is the intranet",
-              "Three MacBook Pros, one Mac mini, and two phones. The smaller cards are the running surfaces inside each machine.",
+              "Three MacBook Pros, one Mac mini, two phones. Select a machine; its workstreams and services open in place.",
             ),
-            h.div(
-              [h.Class("tailnet-board")],
-              [
-                h.div(
-                  [h.Class("outside-strip")],
-                  [
-                    h.span([h.Class("zone-label")], ["OUTSIDE"]),
-                    deviceChip(h, "Linear"),
-                    deviceChip(h, "GitHub"),
-                    deviceChip(h, "Slack"),
-                  ],
-                ),
-                h.div(
-                  [h.Class("tailnet-frame")],
-                  [
-                    h.span([h.Class("zone-label tailnet-label")], ["TAILNET · taila38bf7.ts.net"]),
-                    h.div(
-                      [h.Class("device-grid")],
-                      [
-                        deviceCard(
-                          h,
-                          "MacBook Pro 1",
-                          "shop · board · factory UI",
-                          [
-                            chipRow(h, ["board", "factory UI", "Herdr"]),
-                            workstreamTile(
-                              h,
-                              "permissions-1862",
-                              "forestbuilder",
-                              "web :4400 · healthy",
-                            ),
-                            workstreamTile(
-                              h,
-                              "enterprise-1854",
-                              "forestbuilder",
-                              "web :4401 · healthy",
-                            ),
-                          ],
-                          "shop",
-                        ),
-                        deviceCard(h, "MacBook Pro 2", "Herdr + Rex", [
-                          chipRow(h, ["Herdr", "Rex"]),
-                          workstreamTile(
-                            h,
-                            "tackle-factory",
-                            "autotelic/tackle",
-                            "trunk · daemon · preview",
-                          ),
-                        ]),
-                        deviceCard(h, "MacBook Pro 3", "Herdr + Rex", [
-                          chipRow(h, ["Herdr", "Rex"]),
-                          workstreamTile(
-                            h,
-                            "factory-view",
-                            "autotelic/tackle",
-                            "web :4402 · review",
-                          ),
-                        ]),
-                        deviceCard(
-                          h,
-                          "Mac mini",
-                          "always-on shop",
-                          [
-                            chipRow(h, ["board daemon", "factory records", "mailbox"]),
-                            workstreamTile(
-                              h,
-                              "durable source",
-                              "records + events",
-                              "no service · always on",
-                            ),
-                          ],
-                          "mini",
-                        ),
-                      ],
-                    ),
-                    h.div(
-                      [h.Class("phone-row")],
-                      [phoneCard(h, "Phone A", "Herdr"), phoneCard(h, "Phone B", "Rex")],
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            h.div(
-              [h.Class("network-flow")],
-              [
-                h.span([h.Class("flow-tag")], ["KICK OFF"]),
-                machine(h, "you", "Herdr or Rex", "flow-node"),
-                h.span([h.Class("bridge-arrow")], ["→"]),
-                machine(h, "factory UI", "/factory · /tackle · /vision", "flow-node"),
-                h.span([h.Class("bridge-arrow")], ["→"]),
-                machine(h, "board", "adopt · event · daemon", "flow-node"),
-                h.span([h.Class("bridge-arrow")], ["→"]),
-                machine(h, "room", "worktree · port · service", "flow-node"),
-                h.span([h.Class("bridge-arrow")], ["→"]),
-                machine(h, "preview tab", "review the work", "flow-node"),
-              ],
-            ),
+            tailnetMap(h, model.visionMachine ?? "mbp1"),
           ],
         ),
         h.section(

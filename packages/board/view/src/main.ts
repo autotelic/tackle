@@ -30,6 +30,7 @@ export const Model = Schema.Struct({
   notice: Schema.NullOr(Schema.String),
   visionStep: Schema.optional(Schema.Finite),
   visionFocus: Schema.optional(Schema.Literals(["permissions", "enterprise"])),
+  visionMachine: Schema.optional(Schema.String),
 })
 export type Model = typeof Model.Type
 
@@ -46,6 +47,7 @@ export const Message = defineMessageUnion({
   VisionNext: {},
   VisionReset: {},
   VisionFocus: { focus: Schema.Literals(["permissions", "enterprise"]) },
+  VisionMachine: { machine: Schema.String },
 })
 export type Message = typeof Message.Type
 
@@ -105,6 +107,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
     }),
     VisionReset: () => ({ model: { ...model, visionStep: 0 } }),
     VisionFocus: ({ focus }) => ({ model: { ...model, visionFocus: focus } }),
+    VisionMachine: ({ machine }) => ({ model: { ...model, visionMachine: machine } }),
     Answered: ({ ok, error }) => ({
       model: {
         ...model,
@@ -134,6 +137,7 @@ export const init: Runtime.ApplicationInit<Model, Message> = () => {
       notice: null,
       visionStep: 0,
       visionFocus: "permissions",
+      visionMachine: "mbp1",
     },
     commands: route === "vision" ? [] : [route === "tackle" ? FetchAtlas() : FetchPresence()],
   }
