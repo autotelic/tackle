@@ -27,6 +27,7 @@ const usage = [
   "  factory daemon run --worker <command> [--interval <ms>]",
   "  factory daemon stop",
   "  factory link --id <id> --linear-url <https://linear.app/...>",
+  "  factory worker --id <id> --worker <command|intercom:session>",
   "  factory cursor --id <id> --github <iso> --linear <iso>",
   "  factory budget --id <id> --passes-per-phase <n>",
   "  factory desk list [--json]",
@@ -122,8 +123,7 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
       },
       allowPositionals: false,
     })
-    if (parsed.values.id === undefined || parsed.values.worker === undefined)
-      return fail("run needs --id and --worker")
+    if (parsed.values.id === undefined) return fail("run needs --id")
     const at = parsed.values.at ?? new Date().toISOString()
     const result = await runPass({
       id: parsed.values.id,
@@ -218,6 +218,23 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
       return
     }
     return fail("desk needs list, answer or raise")
+  }
+
+  if (command === "worker") {
+    const parsed = parseArgs({
+      args: argv.slice(1),
+      options: { id: { type: "string" }, worker: { type: "string" } },
+      allowPositionals: false,
+    })
+    const { id, worker } = parsed.values
+    if (id === undefined || worker === undefined) return fail("worker needs --id and --worker")
+    const record = await readWorkstream({ id })
+    if (record === undefined) return fail("WorkstreamNotFound")
+    await writeWorkstream({
+      record: { ...record, worker, updatedAt: new Date().toISOString() },
+    })
+    console.log("factory: " + record.id + " worker set")
+    return
   }
 
   if (command === "link") {
@@ -436,8 +453,7 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
       },
       allowPositionals: false,
     })
-    if (parsed.values.id === undefined || parsed.values.worker === undefined)
-      return fail("watch needs --id and --worker")
+    if (parsed.values.id === undefined) return fail("watch needs --id")
     const interval = Number(parsed.values.interval)
     if (!Number.isInteger(interval) || interval < 1)
       return fail("--interval must be a positive integer")
@@ -470,6 +486,7 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
       project: { type: "string" },
       "linear-project-id": { type: "string" },
       "linear-url": { type: "string" },
+      worker: { type: "string" },
       label: { type: "string" },
       delivery: { type: "string" },
       reports: { type: "string" },
@@ -509,6 +526,7 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
     project,
     linearProjectId: parsed.values["linear-project-id"],
     linearUrl,
+    worker: parsed.values.worker,
     label,
     delivery,
     reports: parsed.values.reports,

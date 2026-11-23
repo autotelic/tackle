@@ -114,6 +114,49 @@ test("a pass consumes its events, checkpoints the worktree, and survives worker 
   }
 }, 20_000)
 
+test("a worker exit 2 blocks the workstream and leaves the event pending", async () => {
+  const f = fixture()
+  try {
+    const adopted = await adopt({
+      path: f.repo,
+      project: "P-AUT-128",
+      delivery: "pr",
+      label: "permissions-overhaul",
+      pr: 1862,
+      id: "permissions-1862",
+      phase: "build",
+      worker: "/bin/sh -c 'exit 2'",
+      at: "2026-11-21T00:00:00.000Z",
+      home: f.home,
+    })
+    expect(adopted.ok).toBe(true)
+    await appendEvent({
+      id: "permissions-1862",
+      home: f.home,
+      event: {
+        id: "ticket-1",
+        kind: "ticket",
+        at: "2026-11-21T00:01:00.000Z",
+        payload: {},
+        status: "pending",
+      },
+    })
+    const result = await runPass({
+      id: "permissions-1862",
+      at: "2026-11-21T00:02:00.000Z",
+      home: f.home,
+    })
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.reason).toBe("blocked-on-human")
+    expect(result.receipt?.exit).toBe(2)
+    expect((await readWorkstream({ id: "permissions-1862", home: f.home }))?.phase).toBe("blocked")
+    expect((await readEvents({ id: "permissions-1862", home: f.home }))[0]?.status).toBe("pending")
+  } finally {
+    rmSync(f.root, { recursive: true, force: true })
+  }
+}, 20_000)
+
 test("a failed worker is charged, leaves events pending, and writes a failed receipt", async () => {
   const f = fixture()
   try {

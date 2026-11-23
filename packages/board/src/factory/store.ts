@@ -16,6 +16,7 @@ export const Workstream = Schema.Struct({
   project: Schema.String,
   linearProjectId: Schema.optional(Schema.String),
   linearUrl: Schema.optional(Schema.String),
+  worker: Schema.optional(Schema.String),
   label: Schema.String,
   repo: Schema.String,
   path: Schema.String,
@@ -71,6 +72,7 @@ export interface Facts {
   readonly project: string
   readonly linearProjectId?: string | undefined
   readonly linearUrl?: string | undefined
+  readonly worker?: string | undefined
   readonly label: string
   readonly repo: string
   readonly path: string
@@ -204,6 +206,7 @@ export const recordOf = (input: { readonly id: string; readonly facts: Facts }):
   project: input.facts.project,
   linearProjectId: input.facts.linearProjectId,
   linearUrl: input.facts.linearUrl,
+  worker: input.facts.worker,
   label: input.facts.label,
   repo: input.facts.repo,
   path: resolve(input.facts.path),

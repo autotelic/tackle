@@ -314,7 +314,7 @@ export interface WatchOutcome {
  */
 export const watchOnce = async (input: {
   readonly id: string
-  readonly worker: string
+  readonly worker?: string | undefined
   readonly at: string
   readonly home?: string | undefined
   readonly events?: ReadonlyArray<WatchEvent>

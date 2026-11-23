@@ -20,6 +20,7 @@ export const Workstream = Schema.Struct({
   delivery: Schema.optional(Schema.String),
   linearProjectId: Schema.optional(Schema.String),
   linearUrl: Schema.optional(Schema.String),
+  worker: Schema.optional(Schema.String),
   checkpoint: Schema.Struct({ sha: Schema.String, at: Schema.String }),
 })
 export const Desk = Schema.Struct({

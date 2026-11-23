@@ -343,6 +343,40 @@ const runInTerminal = async (input: {
   )
 }
 
+/** The intercom CLI installed beside Pi; an operator can override it for another machine. */
+const intercomCli = (): string =>
+  process.env.PI_INTERCOM_CLI ?? join(homedir(), ".pi/agent/npm/node_modules/pi-intercom/cli.mjs")
+
+/**
+ * Deliver a pass to a live Pi session and wait for its reply.
+ *
+ * The session has no shell exit of its own, so the ask timeout becomes the pass's
+ * blocked-on-human exit (2). The timeout leaves time for the quality gate under the
+ * workstream's wall-clock budget.
+ */
+const runIntercom = async (input: {
+  readonly record: Workstream
+  readonly session: string
+  readonly prompt: string
+  readonly env: NodeJS.ProcessEnv
+  readonly wallMs: number
+}) =>
+  runProcess(
+    process.execPath,
+    [
+      intercomCli(),
+      "ask",
+      "--to",
+      input.session,
+      "--json",
+      "--timeout-ms",
+      String(Math.max(1_000, input.wallMs - 300_000)),
+      "--text",
+      "Work in " + input.record.path + ". Do not edit another worktree.\n\n" + input.prompt,
+    ],
+    { cwd: input.record.path, env: input.env, timeout: input.wallMs },
+  )
+
 /**
  * Run one pass over the pending events. The pass is charged when it starts, not when it ends.
  *
@@ -351,7 +385,7 @@ const runInTerminal = async (input: {
  */
 interface RunPassInput {
   readonly id: string
-  readonly worker: string
+  readonly worker?: string | undefined
   readonly at: string
   readonly home?: string | undefined
   readonly eventIds?: ReadonlyArray<string>
@@ -399,6 +433,9 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
     (event) => event.status === "pending" && (only === undefined || only.has(event.id)),
   )
   if (events.length === 0) return { ok: false, reason: "NoPendingEvents" }
+  const worker = record.worker ?? input.worker
+  if (worker === undefined)
+    return { ok: false, reason: "NoWorker: set the workstream worker or pass --worker" }
 
   const pass = used + 1
   const startHeadResult = spawnSync("git", ["-C", record.path, "rev-parse", "HEAD"], {
@@ -429,20 +466,62 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
     FACTORY_REPORT_DIR: join(factoryHome(), "reports"),
     FACTORY_PROMPT: promptOf({ record, events }),
   }
-  const result =
-    (await runInTerminal({
-      record,
+  const result = worker.startsWith("intercom:")
+    ? await runIntercom({
+        record,
+        session: worker.slice("intercom:".length),
+        prompt: workerEnv.FACTORY_PROMPT ?? "",
+        env: workerEnv,
+        wallMs,
+      })
+    : ((await runInTerminal({
+        record,
+        pass,
+        worker,
+        env: workerEnv,
+        wallMs,
+      })) ??
+      (await runProcess(worker, [], {
+        cwd: record.path,
+        shell: true,
+        timeout: wallMs,
+        env: workerEnv,
+      })))
+
+  if (result.status === 2) {
+    const journal = await snapshotJournal({
+      id: record.id,
       pass,
-      worker: input.worker,
-      env: workerEnv,
-      wallMs,
-    })) ??
-    (await runProcess(input.worker, [], {
-      cwd: record.path,
-      shell: true,
-      timeout: wallMs,
-      env: workerEnv,
-    }))
+      at: input.at,
+      status: "failed",
+      home: input.home,
+    })
+    const blockedReceipt: Receipt = {
+      ...receipt,
+      status: "failed",
+      exit: 2,
+      journal,
+    }
+    await writeReceipt({ id: input.id, receipt: blockedReceipt, home: input.home })
+    await writeWorkstream({
+      record: { ...record, phase: "blocked", updatedAt: input.at },
+      home: input.home,
+    })
+    await raiseDesk({
+      item: {
+        id: "desk-" + record.id + "-blocked-" + pass,
+        workstream: record.id,
+        kind: "decision",
+        title: "Pass #" + pass + " needs a human",
+        body: "The worker exited 2 (blocked-on-human). Answer resume to retry the event, or defer to leave the workstream blocked.",
+        choices: ["resume", "defer"],
+        route: "live",
+        at: input.at,
+      },
+      home: input.home,
+    })
+    return { ok: false, reason: "blocked-on-human", receipt: blockedReceipt }
+  }
 
   if (result.status !== 0) {
     const timedOut =

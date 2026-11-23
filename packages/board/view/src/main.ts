@@ -531,6 +531,7 @@ const workstreamCard = (
                 ["PR #" + ws.pr],
               ),
           h.span([h.Class("mono")], ["checkpoint " + ws.checkpoint.sha.slice(0, 8)]),
+          ...(ws.worker === undefined ? [] : [h.span([h.Class("mono")], ["worker " + ws.worker])]),
         ],
       ),
       workstreamBrands(h, ws),

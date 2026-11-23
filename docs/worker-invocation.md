@@ -5,6 +5,18 @@ worker runner already exists, and it does not have agents.
 
 ---
 
+## 0. A live session can be a worker
+
+A workstream may store its own worker. That is how an existing Pi conversation becomes the worker without being replaced by a fresh `--print` process:
+
+```sh
+factory adopt ... --worker intercom:01a1f5c7
+# or attach it later:
+factory worker --id shakti-v2-feedback-6 --worker intercom:01a1f5c7
+```
+
+The kernel recognizes `intercom:<session>` and sends the pass prompt with `pi-intercom ask`. The live session must work in the worktree named in the prompt. `ask` exit `2` becomes blocked-on-human, with a desk item and no checkpoint; a delivery failure is a failed pass. The reply is on the terminal/session transcript, not in the receipt. The ask timeout is five minutes shorter than the pass wall budget so the quality gate still has time.
+
 ## 1. What the worker actually is
 
 Treadle drives **one Session through the Pi SDK** (`packages/treadle/src/run-session.ts` → `session.ts`):
