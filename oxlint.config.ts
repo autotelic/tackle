@@ -116,6 +116,12 @@ const BOUNDARY_FILES = [
   // specifier (the package deliberately does not typecheck it) and fakes both hosts down to
   // the three domains each touches. Asserting the runtime contract is the test's subject.
   "packages/jig-cli/src/surfaces.test.ts",
+  // Two more crossings the list missed. `protocol/mailbox.ts` decodes the receipt, lease and
+  // envelope payloads another process wrote — the wire shape, not a copy of it — and
+  // `board/atlas.ts` decodes package manifests and READMEs it read off disk. Both answer
+  // absence rather than throwing, and neither owns the bytes it parses.
+  "packages/protocol/src/mailbox.ts",
+  "packages/board/src/atlas.ts",
 ]
 
 const BOUNDARY_RULES = {
@@ -181,6 +187,9 @@ const PURE_LOOKUP_FILES = [
   // `partsOfPage` is a pure read whose miss is the ordinary answer the menu prints, so an
   // `Option` would move the same branch to every caller without adding a distinction.
   "packages/protocol/src/graph.ts",
+  // Reading a README's first paragraph and a package manifest are the same miss: a package
+  // with no prose renders its manifest description instead. No operation is guarded.
+  "packages/board/src/atlas.ts",
 ]
 
 /**
@@ -333,11 +342,15 @@ export default {
       },
     },
     {
-      // Foldkit's runtime names these exports; the browser fetch is the UI boundary.
+      // Foldkit's runtime names these exports; the browser fetch is the UI boundary, and
+      // `typeof window === "undefined"` is not a representation check on domain data: it is
+      // the client entry's only way to ask whether there is a browser at all. The guard IS
+      // the boundary, so there is no upstream parser to move it to.
       files: ["packages/board/view/src/main.ts"],
       rules: {
         "plumb/no-generic-export-names": "off",
         "plumb-effect/no-direct-fetch": "off",
+        "plumb/no-runtime-typeof": "off",
         "unicorn/no-useless-spread": "off",
       },
     },
@@ -398,6 +411,8 @@ export default {
         "packages/room/test/mailbox-render.test.ts",
         "packages/jig-cli/src/pin.test.ts",
         "packages/board/test/mailbox-rat-king.test.ts",
+        // GitHub's own payload fixtures: the suite pins which event each published shape earns.
+        "packages/board/test/github-review.test.ts",
       ],
       rules: { "plumb/prefer-property-tests": "off" },
     },
@@ -411,7 +426,15 @@ export default {
       // Reasoning belongs where the decision is made. joggle recorded exactly this for its
       // own tree: plumb wants the note in JSDoc, but an inline comment sits beside the line
       // it explains, and moving it onto a signature forty lines above separates the two.
-      files: ["packages/*/src/**", "packages/jig-cli/extensions/**", "scripts/**"],
+      //
+      // The board view is a second source tree under `packages/board/view/src`, and its
+      // renderer bodies are exactly this case: the note explains the cell it fills.
+      files: [
+        "packages/*/src/**",
+        "packages/*/view/src/**",
+        "packages/jig-cli/extensions/**",
+        "scripts/**",
+      ],
       rules: { "plumb/no-stray-inline-comments": "off" },
     },
     {
@@ -431,7 +454,11 @@ export default {
       // A package's `index.ts` IS the aggregate surface: one name a consumer imports, and one
       // place to add the next export. A barrel hides ownership in an application; here the
       // aggregation is the point. joggle excepted its `plugin.ts` for the same reason.
-      files: ["packages/*/src/index.ts"],
+      //
+      // The board's `mailbox/` and `factory/` are that same surface one directory in: `factory`
+      // is a dozen modules a consumer reads as one workstream vocabulary, and spelling the
+      // names out by hand is the list that rots, not the barrel.
+      files: ["packages/*/src/index.ts", "packages/*/src/*/index.ts"],
       rules: { "plumb/no-barrel-export-star": "off" },
     },
     {

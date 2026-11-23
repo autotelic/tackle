@@ -69,6 +69,7 @@ test("a submitted review with a string id is an event", () => {
   })
   const events = githubEvents({
     record,
+    at: "2026-11-23T12:00:00.000Z",
     runGh: () =>
       Result.succeed(
         JSON.stringify({

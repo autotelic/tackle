@@ -1,9 +1,11 @@
 /* oxlint-disable plumb/prefer-property-tests -- one probe against one fixture server; each case pins which observation the socket earned. */
 import { spawn } from "node:child_process"
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
-import { createServer } from "node:http"
+import { createServer, type Server } from "node:http"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import * as Result from "effect/Result"
+import * as Schema from "effect/Schema"
 import { describe, expect, it } from "vitest"
 import { observeService, serviceUrl } from "../src/Service.ts"
 import { readRoom, roomDir, roomFile, setRoomService, type RoomFile } from "../src/store.ts"
@@ -18,6 +20,15 @@ interface Answer {
   readonly headers?: Readonly<Record<string, string>>
 }
 
+/** The one field the fixture needs from the socket's address answer. */
+const BoundPort = Schema.Struct({ port: Schema.Int })
+
+/** The port a listening socket bound; Node answers a unix socket with a path, and none here does. */
+const boundPort = (server: Server): number => {
+  const decoded = Schema.decodeUnknownResult(BoundPort)(server.address())
+  return Result.isSuccess(decoded) ? decoded.success.port : 0
+}
+
 /** A loopback server that answers per path, on a port the kernel picks. */
 const serve = async (
   answer: (path: string) => Answer,
@@ -28,9 +39,8 @@ const serve = async (
     response.end("answer\n")
   })
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve))
-  const address = server.address()
   return {
-    port: address === null || typeof address === "string" ? 0 : address.port,
+    port: boundPort(server),
     close: () => new Promise<void>((resolve) => server.close(() => resolve())),
   }
 }

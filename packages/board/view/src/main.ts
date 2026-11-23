@@ -1,4 +1,4 @@
-import { Effect, Option, Result, Schema } from "effect"
+import { Effect, Match, Option, Result, Schema } from "effect"
 import { Command, Runtime, Update } from "foldkit"
 import type { Document, Html, HtmlBuilder } from "foldkit/html"
 import { defineMessageUnion } from "foldkit/message"
@@ -125,6 +125,11 @@ const routeOf = (): Route => {
   return "factory"
 }
 
+/**
+ * Start the application: the route comes from the path, and every other field is empty.
+ *
+ * @returns the initial model, plus the one fetch the route needs to fill it.
+ */
 export const init: Runtime.ApplicationInit<Model, Message> = () => {
   const route = routeOf()
   return {
@@ -459,11 +464,17 @@ const githubRepoUrl = (repo: string): string => "https://github.com/" + repo
 const githubPrUrl = (repo: string, pr: number): string =>
   "https://github.com/" + repo + "/pull/" + String(pr)
 
-const githubLabelUrl = (repo: string, label: string): string =>
-  "https://github.com/" + repo + "/issues?q=label%3A" + encodeURIComponent(label)
+const githubLabelUrl = (input: { readonly repo: string; readonly label: string }): string =>
+  "https://github.com/" + input.repo + "/issues?q=label%3A" + encodeURIComponent(input.label)
 
-const brandLink = (h: HtmlBuilder<Message>, kind: string, label: string, href: string) =>
-  h.a([h.Class("brand " + kind), h.Href(href), h.Target("_blank"), h.Rel("noreferrer")], [label])
+const brandLink = (
+  h: HtmlBuilder<Message>,
+  input: { readonly kind: string; readonly label: string; readonly href: string },
+): Html =>
+  h.a(
+    [h.Class("brand " + input.kind), h.Href(input.href), h.Target("_blank"), h.Rel("noreferrer")],
+    [input.label],
+  )
 
 const workstreamBrands = (h: HtmlBuilder<Message>, ws: typeof Workstream.Type) => {
   const repo = ws.repo
@@ -472,16 +483,34 @@ const workstreamBrands = (h: HtmlBuilder<Message>, ws: typeof Workstream.Type) =
     [
       ...(repo === undefined
         ? []
-        : [brandLink(h, "github", "GitHub · " + repo, githubRepoUrl(repo))]),
+        : [brandLink(h, { kind: "github", label: "GitHub · " + repo, href: githubRepoUrl(repo) })]),
       ...(repo === undefined || ws.pr === undefined
         ? []
-        : [brandLink(h, "github", "PR #" + ws.pr, githubPrUrl(repo, ws.pr))]),
+        : [
+            brandLink(h, {
+              kind: "github",
+              label: "PR #" + ws.pr,
+              href: githubPrUrl(repo, ws.pr),
+            }),
+          ]),
       ...(repo === undefined
         ? []
-        : [brandLink(h, "label", "Label · " + ws.label, githubLabelUrl(repo, ws.label))]),
+        : [
+            brandLink(h, {
+              kind: "label",
+              label: "Label · " + ws.label,
+              href: githubLabelUrl({ repo, label: ws.label }),
+            }),
+          ]),
       ...(ws.linearUrl === undefined
         ? []
-        : [brandLink(h, "linear", "Linear · " + ws.project, ws.linearUrl)]),
+        : [
+            brandLink(h, {
+              kind: "linear",
+              label: "Linear · " + ws.project,
+              href: ws.linearUrl,
+            }),
+          ]),
     ],
   )
 }
@@ -654,25 +683,47 @@ const routeNav = (h: HtmlBuilder<Message>, active: Route) =>
     ],
   )
 
-const appHeader = (h: HtmlBuilder<Message>, model: Model, title: string, summary: string) =>
+const appHeader = (
+  h: HtmlBuilder<Message>,
+  input: { readonly model: Model; readonly title: string; readonly summary: string },
+): Html =>
   h.header(
     [h.Class("header")],
     [
       h.div(
         [],
-        [h.h1([], [title]), h.span([h.Class("muted")], [summary]), routeNav(h, model.route)],
+        [
+          h.h1([], [input.title]),
+          h.span([h.Class("muted")], [input.summary]),
+          routeNav(h, input.model.route),
+        ],
       ),
-      model.route === "vision"
+      input.model.route === "vision"
         ? h.span([h.Class("muted")], ["static map"])
         : h.button(
             [h.OnClick(Message.ClickedRefresh())],
-            [model.loading ? "Refreshing…" : "Refresh"],
+            [input.model.loading ? "Refreshing…" : "Refresh"],
           ),
     ],
   )
 
-/** Render the factory state; every field comes from /presence. */
+/**
+ * Tailnet presence is three states, and the border class and the word beside it disagree on
+ * the unobserved one: a peer that reported nothing is not a peer that reported offline.
+ *
+ * @param online - the presence record's own tri-state.
+ * @returns the class suffix and the word the floor card prints.
+ */
+const onlineStatus = (
+  online: boolean | undefined,
+): { readonly cls: string; readonly word: string } =>
+  Match.value(online).pipe(
+    Match.when(true, () => ({ cls: "online", word: "online" })),
+    Match.when(false, () => ({ cls: "offline", word: "offline" })),
+    Match.orElse(() => ({ cls: "unknown", word: "observed" })),
+  )
 
+/** Render the factory state; every field comes from /presence. */
 const factoryFloor = (
   h: HtmlBuilder<Message>,
   environments: ReadonlyArray<Environment>,
@@ -729,23 +780,8 @@ const factoryFloor = (
                   [
                     h.h3([], [host]),
                     h.span(
-                      [
-                        h.Class(
-                          "floor-status " +
-                            (machine.online === true
-                              ? "online"
-                              : machine.online === false
-                                ? "offline"
-                                : "unknown"),
-                        ),
-                      ],
-                      [
-                        machine.online === true
-                          ? "online"
-                          : machine.online === false
-                            ? "offline"
-                            : "observed",
-                      ],
+                      [h.Class("floor-status " + onlineStatus(machine.online).cls)],
+                      [onlineStatus(machine.online).word],
                     ),
                   ],
                 ),
@@ -843,7 +879,7 @@ const factoryView = (model: Model, h: HtmlBuilder<Message>): Document => {
     body: h.div(
       [h.Class("shell")],
       [
-        appHeader(h, model, "Software factory", summary),
+        appHeader(h, { model, title: "Software factory", summary }),
         ...(model.error === null
           ? []
           : [h.p([h.Class("error")], ["Could not read /presence: " + model.error])]),
@@ -1033,7 +1069,7 @@ const atlasView = (model: Model, h: HtmlBuilder<Message>): Document => {
     body: h.div(
       [h.Class("shell")],
       [
-        appHeader(h, model, "Tackle", summary),
+        appHeader(h, { model, title: "Tackle", summary }),
         ...(model.error === null
           ? []
           : [h.p([h.Class("error")], ["Could not read /atlas: " + model.error])]),
@@ -1090,8 +1126,9 @@ const atlasView = (model: Model, h: HtmlBuilder<Message>): Document => {
 
 /** The route selector: /tackle is the workspace atlas, everything else is the factory. */
 export const view = (model: Model, h: HtmlBuilder<Message>): Document =>
-  model.route === "tackle"
-    ? atlasView(model, h)
-    : model.route === "vision"
-      ? visionView(model, h)
-      : factoryView(model, h)
+  Match.value(model.route).pipe(
+    Match.when("tackle", () => atlasView(model, h)),
+    Match.when("vision", () => visionView(model, h)),
+    Match.when("factory", () => factoryView(model, h)),
+    Match.exhaustive,
+  )

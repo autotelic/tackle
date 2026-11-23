@@ -1,6 +1,7 @@
 import { request } from "node:http"
+import { Predicate as P } from "effect"
 import * as Schema from "effect/Schema"
-import { alive, type RoomRun } from "./run.ts"
+import { alive } from "./run.ts"
 
 /**
  * One declared service on a room.
@@ -21,7 +22,7 @@ export const ServiceDecl = Schema.Struct({
 export type ServiceDecl = typeof ServiceDecl.Type
 
 /** Whether a health path is one this room may probe: a path on its own port, not an origin. */
-export const isHealthPath = (value: string): boolean =>
+export const isHealthPath: P.Predicate<string> = (value) =>
   value.startsWith("/") && !value.startsWith("//")
 
 /** The states a probe can report. There is no "probably fine": health is only what was answered. */
@@ -68,16 +69,17 @@ export const healthTimeoutMs = 500
  * `fetch` because each probe is one connection that dies with the answer: no keep-alive pool
  * outlives the /presence request that started it, and no body can hold the page open.
  *
- * @param input - the port, the health path, and the budget for one answer.
+ * @param input - the port, the health path, the budget for one answer, and the instant the
+ * look began. The instant is the caller's: no clock runs in this module.
  * @returns the observed health; a refused or silent port is a finding, not an exception.
  */
 export const probeHealth = (input: {
   readonly port: number
   readonly path: string
   readonly timeoutMs?: number | undefined
-  readonly at?: number | undefined
+  readonly at: number
 }): Promise<ServiceHealth> => {
-  const at = input.at ?? Date.now()
+  const at = input.at
   const timeoutMs = input.timeoutMs ?? healthTimeoutMs
   const path = input.path
   return new Promise((resolve) => {
@@ -135,18 +137,19 @@ export interface ServiceHost {
  * reason instead of a health state nobody observed. Only a live probe that answered 2xx reports
  * `healthy`.
  *
- * @param input - the room's declaration and lease, its run record, and the probe budget.
+ * @param input - the room's declaration and lease, its run record, the probe budget, and
+ * the instant the observation is stamped with.
  * @returns the service status, or undefined when the room declares no service.
  */
 export const observeRoomService = async (input: {
   readonly room: ServiceHost
   readonly run: { readonly pid: number } | undefined
   readonly timeoutMs?: number | undefined
-  readonly at?: number | undefined
+  readonly at: number
 }): Promise<ServiceStatus | undefined> => {
   const declared = input.room.service
   if (declared === undefined) return undefined
-  const at = input.at ?? Date.now()
+  const at = input.at
   const port = input.room.port?.number ?? null
   const base = { name: declared.name, command: declared.command, port }
   if (port === null)
@@ -199,6 +202,12 @@ export interface ServiceObservation {
 
 export const probeTimeoutMs = healthTimeoutMs
 
+/**
+ * The loopback address a room's service answers on.
+ *
+ * @param input - the leased port and the service's own health path.
+ * @returns the URL this host reaches the service at, never a published origin.
+ */
 export const serviceUrl = (input: { readonly port: number; readonly healthPath: string }): string =>
   "http://127.0.0.1:" + input.port + input.healthPath
 
@@ -221,19 +230,26 @@ export const observeService = async (input: {
     run: input.run,
     at: Date.parse(input.checkedAt),
   })
-  if (observed === undefined) throw new Error("service declaration disappeared")
+  // The declaration is the caller's, so the probe answered for it; expressing the
+  // disappearance as a status keeps a thrown Error out of a read.
+  const health = observed?.health ?? {
+    path: input.service.healthPath,
+    state: "unknown" as const,
+    detail: "the room declares no service",
+    checkedAt: Date.parse(input.checkedAt),
+  }
   const status =
-    observed.health.state === "healthy"
+    health.state === "healthy"
       ? "healthy"
-      : observed.health.state === "unknown" && observed.health.detail === "the room is not up"
+      : health.state === "unknown" && health.detail === "the room is not up"
         ? "stopped"
         : "unhealthy"
   const detail =
     status === "stopped"
       ? "no supervisor is running for this room"
-      : observed.health.detail?.startsWith("answered ")
-        ? "HTTP " + observed.health.detail.slice("answered ".length)
-        : (observed.health.detail ?? null)
+      : health.detail?.startsWith("answered ")
+        ? "HTTP " + health.detail.slice("answered ".length)
+        : (health.detail ?? null)
   return {
     name: input.service.name,
     command: input.service.command,

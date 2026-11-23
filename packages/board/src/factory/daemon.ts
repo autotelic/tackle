@@ -4,7 +4,7 @@ import { closeSync, openSync } from "node:fs"
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { factoryHome, listWorkstreams } from "./store.ts"
-import { alive } from "../alive.ts"
+import { alive } from "@autotelic/room/run"
 import { watchOnce } from "./watch.ts"
 
 /** A daemon start that cannot proceed. */
@@ -63,6 +63,8 @@ export const runDaemon = async (input: {
 }): Promise<void> => {
   const watch = async (record: { readonly id: string }): Promise<void> => {
     for (;;) {
+      // SAFETY: the daemon is a process boundary and the loop is its retry: one failed pass is
+      // printed and the next poll still runs. The cause is reported, not dropped.
       try {
         const outcome = await watchOnce({
           id: record.id,
@@ -90,6 +92,8 @@ export const runDaemon = async (input: {
   if (input.once === true) {
     await Promise.all(
       records.map(async (record) => {
+        // SAFETY: same boundary in one-shot mode — a failed pass is printed, and the other
+        // workstreams' passes still run to completion.
         try {
           const outcome = await watchOnce({
             id: record.id,

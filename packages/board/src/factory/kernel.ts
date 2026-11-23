@@ -3,6 +3,7 @@ import { existsSync } from "node:fs"
 import { homedir } from "node:os"
 import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises"
 import { join } from "node:path"
+import { alive } from "@autotelic/room/run"
 import { Match } from "effect"
 import * as Option from "effect/Option"
 import * as Predicate from "effect/Predicate"
@@ -151,16 +152,6 @@ const RunningReceipt = Schema.Struct({
   status: Schema.String,
   pid: Schema.optional(Schema.Finite),
 })
-
-const alive = (pid: number): boolean => {
-  // SAFETY: signalling a PID is a process boundary; ESRCH is the expected absence.
-  try {
-    process.kill(pid, 0)
-    return true
-  } catch {
-    return false
-  }
-}
 
 /** A pass already running in this home, if its receipt's process is alive. */
 const runningPass = async (input: {
@@ -687,9 +678,17 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
   return { ok: true, receipt: done, checkpoint: captured.value.sha }
 }
 
+/**
+ * Run one pass with the workstream's pass lock held.
+ *
+ * @param input - the workstream id, the worker, the instant the pass started, and its budget.
+ * @returns the pass outcome, or a refusal when a live pass already holds the lock.
+ */
 export const runPass = async (input: RunPassInput): Promise<PassOutcome> => {
   const held = await acquirePassLock({ id: input.id, home: input.home })
   if (held !== undefined) return { ok: false, reason: "PassRunning: lock held by " + held }
+  // SAFETY: the lock is a file a second process reads, so it must go on the throwing path too.
+  // Nothing is caught here: the pass's failure travels on, and only the release is guaranteed.
   try {
     return await runPassInner(input)
   } finally {
