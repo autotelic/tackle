@@ -10,8 +10,9 @@ session is a worker that can exit. Do not adopt Pi goal mode.
 | P-AUT-128 Permissions overhaul | `permissions-1862` | `~/autotelic/shakti-perms`                      | 1862 | `reconcile` |
 | P-AUT-129 Enterprise Readiness | `enterprise-1854`  | `~/autotelic/feat/enterprise-readiness-alchemy` | 1854 | `land`      |
 
-`factory` is at `/Users/togmund/autotelic/tackle/packages/factory/bin/factory.js` (or the
-`@autotelic/factory` bin after install). Records are under `~/.factory/`, never in the repo.
+`factory` is at `/Users/togmund/autotelic/tackle/packages/board/bin/factory.js` (or the
+`@autotelic/board` compatibility bin after install). Records are under `~/.factory/`, never in
+the repo.
 
 ## Start
 
