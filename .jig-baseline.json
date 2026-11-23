@@ -58,6 +58,7 @@
     "joggle/single-path\u0000packages/cutlist/src/render/patterns.ts\u0000patternLine\u00001368",
     "joggle/structural-collapse\u0000Diagnostic\u0000MutableDiagnostic",
     "joggle/temporal-coupling\u0000packages/board/src/mailbox/records.ts\u0000Host.lease\u0000acquire",
+    "plumb/eslint/no-unused-vars:packages/board/view/src/vision.ts",
     "plumb/eslint/no-unused-vars:packages/room/src/Service.ts",
     "plumb/no-barrel-export-star:packages/board/src/factory/index.ts",
     "plumb/no-barrel-export-star:packages/board/src/mailbox/index.ts",
