@@ -1,5 +1,6 @@
 import { eslintCompatPlugin } from "@oxlint/plugins";
 import { noDeprecatedPartsRule } from "./rules/no-deprecated-parts.js";
+import { noOffTokenColorRule } from "./rules/no-off-token-color.js";
 /**
  * Rules that read the catalog's lint manifest.
  *
@@ -12,7 +13,8 @@ const plumbUiPlugin = eslintCompatPlugin({
     meta: { name: "plumb-ui" },
     rules: {
         "no-deprecated-parts": noDeprecatedPartsRule,
+        "no-off-token-color": noOffTokenColorRule,
     },
 });
 export default plumbUiPlugin;
-export { noDeprecatedPartsRule };
+export { noDeprecatedPartsRule, noOffTokenColorRule };

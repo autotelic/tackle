@@ -59,7 +59,7 @@ export function decodeUiManifest(value) {
         if (part !== undefined)
             components.push(part);
     }
-    return { components };
+    return { components, colors: strings(value.colors) ?? [] };
 }
 /**
  * Read a manifest from disk, degrading to `undefined`.

@@ -1,4 +1,5 @@
 import { noDeprecatedPartsRule } from "./rules/no-deprecated-parts.ts";
+import { noOffTokenColorRule } from "./rules/no-off-token-color.ts";
 /**
  * Rules that read the catalog's lint manifest.
  *
@@ -9,4 +10,4 @@ import { noDeprecatedPartsRule } from "./rules/no-deprecated-parts.ts";
  */
 declare const plumbUiPlugin: import("@oxlint/plugins").Plugin;
 export default plumbUiPlugin;
-export { noDeprecatedPartsRule };
+export { noDeprecatedPartsRule, noOffTokenColorRule };

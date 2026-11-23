@@ -27,7 +27,10 @@
       "type": "string",
       "description": "Content hash of everything below, so a reader can verify rather than trust."
     },
-    "root": { "type": "string" },
+    "root": {
+      "type": "string",
+      "description": "The directory part paths are relative to. cutlist writes `.`; an absolute path would put the machine into the hash."
+    },
     "tokens": {
       "type": "object",
       "required": ["colors", "type", "shape", "spacing"],

@@ -8,9 +8,10 @@ export interface UiPart {
     readonly status?: UiPartStatus;
     readonly useInstead?: ReadonlyArray<string>;
 }
-/** A manifest, reduced to the parts the rule can act on. */
+/** A manifest, reduced to the parts and tokens the rules can act on. */
 export interface UiManifest {
     readonly components: ReadonlyArray<UiPart>;
+    readonly colors: ReadonlyArray<string>;
 }
 /**
  * Read one component, or `undefined` when it cannot be identified.

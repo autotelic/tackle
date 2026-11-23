@@ -25,9 +25,10 @@ export interface UiPart {
 	readonly useInstead?: ReadonlyArray<string>;
 }
 
-/** A manifest, reduced to the parts the rule can act on. */
+/** A manifest, reduced to the parts and tokens the rules can act on. */
 export interface UiManifest {
 	readonly components: ReadonlyArray<UiPart>;
+	readonly colors: ReadonlyArray<string>;
 }
 
 const STATUSES: ReadonlyArray<UiPartStatus> = ["stable", "beta", "experimental", "deprecated"];
@@ -89,7 +90,7 @@ export function decodeUiManifest(value: unknown): UiManifest | undefined {
 		const part = decodeUiPart(entry);
 		if (part !== undefined) components.push(part);
 	}
-	return { components };
+	return { components, colors: strings(value.colors) ?? [] };
 }
 
 /**
