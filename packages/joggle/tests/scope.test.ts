@@ -1,14 +1,15 @@
 import { expect, test } from "vitest"
 import { Effect, Layer, Option, Ref } from "effect"
 import { Decision, DecisionModel } from "effect/ai"
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs"
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { Atoms } from "../src/atoms.ts"
 import { checkRepository } from "../src/check.ts"
-import { DecisionStats } from "../src/decision.ts"
+import { DecisionStats, layer as decisionLayer } from "../src/decision.ts"
 import { PlanAnswers, type Plan } from "../src/plans.ts"
 import { policy } from "../src/policy.ts"
+import { VERSION } from "../src/version.ts"
 import { everyFile, finding, outcome, type DecisionAnswers, type PlannedRule } from "../src/rule.ts"
 import { Rules } from "../src/rules/index.ts"
 import type { Diagnostic, Drop } from "../src/schema.ts"
@@ -16,7 +17,7 @@ import { shortHash } from "../src/state.ts"
 import { planAnswersLayer } from "../src/testing.ts"
 import { corpus, nodeLayer, tsgoStub } from "./support.ts"
 
-const totals = { requests: 0, replayed: 0, calls: 0, unavailable: 0, inputTokens: 0, outputTokens: 0 }
+const totals = { requests: 0, replayed: 0, judged: 0, calls: 0, unavailable: 0, inputTokens: 0, outputTokens: 0 }
 
 /**
  * A rule that does NOT filter by scope. It emits one candidate inside the run's
@@ -127,7 +128,7 @@ test("a candidate outside the run's scope is never judged and never reported", a
     writeFileSync(
       join(dir, "last-run.json"),
       JSON.stringify({
-        version: policy.version,
+        version: VERSION,
         manifest: "stale-manifest-so-the-run-proceeds",
         sources: [
           { path: "src/orders.ts", hash: shortHash(readFileSync(join(corpus, "src/orders.ts"), "utf8")), exports: [] },
@@ -160,7 +161,7 @@ test("a candidate outside the run's scope is never judged and never reported", a
       Effect.provide(Layer.mergeAll(
         recordingModel(seen),
         planAnswersLayer,
-        Layer.succeed(DecisionStats, { read: Effect.succeed(totals) }),
+        Layer.succeed(DecisionStats, { read: Effect.succeed(totals), setTotal: () => Effect.void }),
         tsgoStub,
         Layer.succeed(Rules, [probe]),
       )),
@@ -204,7 +205,7 @@ test("a git-changed scope judges only the files that moved", async () => {
       }).pipe(
         Effect.provide(recordingModel(seen)),
         Effect.provide(planAnswersLayer),
-        Effect.provide(Layer.succeed(DecisionStats, { read: Effect.succeed(totals) })),
+        Effect.provide(Layer.succeed(DecisionStats, { read: Effect.succeed(totals), setTotal: () => Effect.void })),
         Effect.provide(tsgoStub),
         Effect.provide(Layer.succeed(Rules, [probe])),
       )
@@ -222,6 +223,50 @@ test("a git-changed scope judges only the files that moved", async () => {
   expect(result.asked).toEqual(["probe src/users.ts"])
   expect(result.files).toEqual(["src/users.ts"])
   expect(result.replayed).toBe(false)
+})
+
+test("a scoped run refuses to write the ledger", async () => {
+  const target = join(mkdtempSync(join(tmpdir(), "joggle-scoped-accept-")), "baseline.json")
+  const message = await Effect.runPromise(
+    Effect.gen(function* () {
+      const refused = yield* Effect.flip(
+        checkRepository({
+          cwd: corpus,
+          paths: ["src"],
+          rules: undefined,
+          typecheck: false,
+          types: "off",
+          useTsgo: false,
+          cacheDirExplicit: true,
+          cacheDir: mkdtempSync(join(tmpdir(), "joggle-scoped-accept-cache-")),
+          replayUnchanged: false,
+          changed: false,
+          changedPaths: ["src/users.ts"],
+          baselinePath: undefined,
+          updateBaselinePath: target,
+          config: {},
+        }).pipe(
+          Effect.provide(
+            decisionLayer({
+              cacheDir: mkdtempSync(join(tmpdir(), "joggle-scoped-accept-noise-")),
+              offline: true,
+              apiKey: Option.none(),
+            }),
+          ),
+          Effect.provide(tsgoStub),
+          Effect.provide(Layer.succeed(Rules, [probe])),
+        ),
+      )
+      return String(refused.cause)
+    }).pipe(Effect.provide(nodeLayer)),
+  )
+  // A scoped run's identities are not a subset of a full run's: the fold can pick a different
+  // survivor. Accepting here would write a ledger CI cannot hold, so it is an error and not a
+  // warning, at the moment someone tries it.
+  expect(message).toContain("refusing to write")
+  expect(message).toContain("scoped run")
+  expect(message).toContain("--allow-scoped-baseline")
+  expect(existsSync(target)).toBe(false)
 })
 
 test("an empty git scope says so instead of looking like a clean repository", async () => {
@@ -247,7 +292,7 @@ test("an empty git scope says so instead of looking like a clean repository", as
       }).pipe(
         Effect.provide(recordingModel(seen)),
         Effect.provide(planAnswersLayer),
-        Effect.provide(Layer.succeed(DecisionStats, { read: Effect.succeed(totals) })),
+        Effect.provide(Layer.succeed(DecisionStats, { read: Effect.succeed(totals), setTotal: () => Effect.void })),
         Effect.provide(tsgoStub),
         Effect.provide(Layer.succeed(Rules, [probe])),
       )
@@ -286,7 +331,7 @@ test("a candidate past the run's token budget is reported, not judged", async ()
       }).pipe(
         Effect.provide(recordingModel(seen)),
         Effect.provide(planAnswersLayer),
-        Effect.provide(Layer.succeed(DecisionStats, { read: Effect.succeed(totals) })),
+        Effect.provide(Layer.succeed(DecisionStats, { read: Effect.succeed(totals), setTotal: () => Effect.void })),
         Effect.provide(tsgoStub),
         Effect.provide(Layer.succeed(Rules, [probe])),
       )

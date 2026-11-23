@@ -6,7 +6,7 @@ import {
   type TierName,
 } from "@autotelic/protocol"
 import { authoredLines } from "./authored.ts"
-import { plural } from "./text.ts"
+import { plural, some } from "./text.ts"
 
 /*
  * `menu.json` and `MENU.md`.
@@ -34,22 +34,6 @@ const MENU_KIND_ORDER: ReadonlyArray<PartRole> = [
   "barrel",
   "module",
 ]
-
-/**
- * A capped list, because the menu is an index and the catalog is the raw material.
- *
- * One `Dialog` exports eleven names and one provider can compose twenty atoms; printing
- * every one made the menu a quarter-megabyte of text a reader scrolls past. The first few
- * names answer "is this the thing I want"; the catalog and manifest carry the rest.
- */
-const some = (items: ReadonlyArray<string>, limit: number): string => {
-  const shown = items
-    .slice(0, limit)
-    .map((item) => `\`${item}\``)
-    .join(", ")
-  const rest = items.length - limit
-  return rest > 0 ? `${shown} +${String(rest)} more` : shown
-}
 
 /** The menu model as JSON. The machine rendering an agent reads. */
 export const renderMenuJson = (menu: Menu): string => `${JSON.stringify(menu, null, 2)}\n`

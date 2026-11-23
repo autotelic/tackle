@@ -1,11 +1,13 @@
 import { expect, test } from "vitest"
 import { it } from "@effect/vitest"
 import { Effect, FileSystem, Option, Path, Result } from "effect"
-import { mkdtempSync } from "node:fs"
+import { mkdtempSync, statSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import {
+  answerStoreBytes,
   census,
+  compact,
   make,
   mergeEntries,
   mergeShardText,
@@ -24,6 +26,83 @@ const probability = (value: number): StoredAnswer => ({ kind: "Probability", pro
 const entry = (key: string, at: number, value: number): Entry => ({ key, writtenAt: at, answer: probability(value) })
 
 const fresh = (name: string): string => mkdtempSync(join(tmpdir(), name))
+
+test("the ledger's size is read from disk, not guessed from its entries", () => {
+  const dir = fresh("joggle-bytes-")
+  const file = join(dir, "answers.jsonl")
+  writeFileSync(file, renderShard([entry("ab", 1, 0.1), entry("cd", 2, 0.2)]))
+  const expected = statSync(file).size
+  return Effect.runPromise(
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem
+      const path = yield* Path.Path
+      expect(yield* answerStoreBytes(fs, path, dir)).toBe(expected)
+      // A missing store is 0 bytes, not a failure: a repository that never judged has one.
+      expect(yield* answerStoreBytes(fs, path, join(dir, "absent"))).toBe(0)
+    }).pipe(Effect.provide(nodeLayer)),
+  )
+})
+
+test("a committed line is a function of its key, so two branches merge to one line", () => {
+  // No timestamp: that is the whole point. A stamp made the same answer a different line in
+  // every clone, `merge=union` kept both, and a stack turned 0.9 MB of answers into 20.5 MB.
+  const stable = renderShard([{ key: "ab", answer: probability(0.1) }])
+  expect(stable).not.toContain("\t17")
+  const merged = Effect.runSync(
+    Effect.orDie(mergeShardText({ ours: stable, theirs: renderShard([{ key: "ab", answer: probability(0.1) }]) })),
+  )
+  expect(merged.trim().split("\n")).toHaveLength(1)
+})
+
+test("a stamped line still parses, so an old ledger is read rather than rejected", () => {
+  const parsed = parseLines("ab\t1794606090\t" + JSON.stringify({ kind: "Probability", probability: 0.2 }) + "\n")
+  expect(parsed.entries).toEqual([{ key: "ab", writtenAt: 1794606090, answer: probability(0.2) }])
+  expect(parsed.skippedLines).toBe(0)
+})
+
+test("compaction collapses the duplicates a union merge left behind", () =>
+  Effect.runPromise(
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem
+      const path = yield* Path.Path
+      const dir = fresh("joggle-compact-")
+      const line = renderEntry({ key: "ab", writtenAt: 1, answer: probability(0.1) })
+      // Three lines, two answers: what a duplicated merge looks like on disk, in the old
+      // stamped shape. Compaction is what a repository runs to repair it.
+      yield* fs.writeFileString(join(dir, "answers.jsonl"), [line, line, renderEntry({ key: "cd", writtenAt: 2, answer: probability(0.2) })].join("\n") + "\n")
+      const before = yield* census(fs, path, dir)
+      expect(before.entries).toBe(2)
+      expect(before.lines).toBe(3)
+      const result = yield* compact(fs, path, dir)
+      expect(result).toMatchObject({ lines: 3, entries: 2, duplicates: 1 })
+      const after = yield* census(fs, path, dir)
+      expect(after.entries).toBe(2)
+      expect(after.lines).toBe(2)
+      expect(result.bytesAfter).toBeLessThan(result.bytesBefore)
+      // The repaired file is the committed shape: key and answer, no age. A stamp left behind
+      // would make the next merge duplicate the same answer again.
+      expect(yield* fs.readFileString(join(dir, "answers.jsonl"))).not.toMatch(/\t\d+\t/)
+    }).pipe(Effect.provide(nodeLayer)),
+  ))
+
+test("a read-only store answers from the ledger and never writes it", () =>
+  Effect.runPromise(
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem
+      const path = yield* Path.Path
+      const dir = fresh("joggle-readonly-")
+      const file = join(dir, "answers.jsonl")
+      yield* fs.writeFileString(file, renderShard([entry("ab", 1, 0.1)]) + "\n")
+      const before = yield* fs.readFileString(file)
+      const store = yield* make(fs, path, dir, { readOnly: true })
+      expect(Option.isSome(yield* store.get("ab"))).toBe(true)
+      yield* store.put("cd", { kind: "Probability", probability: 0.9 })
+      // A gate must not edit the tree it judges: the answer it judged would rename a finding
+      // the ledger already accepted.
+      expect(yield* fs.readFileString(file)).toBe(before)
+      expect(Option.isNone(yield* store.get("cd"))).toBe(true)
+    }).pipe(Effect.provide(nodeLayer)),
+  ))
 
 test("a shard is sorted by key and newline-terminated", () => {
   const text = renderShard([entry("cd", 2, 0.2), entry("ab", 1, 0.1)])

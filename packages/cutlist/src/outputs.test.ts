@@ -1,3 +1,4 @@
+/* oxlint-disable plumb/prefer-property-tests -- the subject is a fixture config and the table it must cover exactly; the claim is completeness, not a distribution. */
 import { describe, expect, it } from "vitest"
 import { cutlistDefaultOutput, lexiconRef, type Menu } from "@autotelic/protocol"
 import { outputsOf, type Renderings } from "./outputs.ts"

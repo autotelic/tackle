@@ -1,0 +1,36 @@
+{
+  "$comment": "The control. GitHub serializes UTC with Z everywhere, so lexical ordering happens to agree with instant ordering here. A normalizer that is only exercised on this file passes while Linear is broken, which is why both files exist.",
+  "source": "github",
+  "field": "updated_at",
+  "events": [
+    {
+      "id": "g1",
+      "pr": 1862,
+      "updatedAt": "2026-11-21T07:00:00Z",
+      "instant": "2026-11-21T07:00:00.000Z"
+    },
+    {
+      "id": "g2",
+      "pr": 1854,
+      "updatedAt": "2026-11-21T07:30:00Z",
+      "instant": "2026-11-21T07:30:00.000Z"
+    },
+    {
+      "id": "g3",
+      "pr": 1862,
+      "updatedAt": "2026-11-21T08:00:00Z",
+      "instant": "2026-11-21T08:00:00.000Z"
+    }
+  ],
+  "lexicalOrder": ["g1", "g2", "g3"],
+  "instantOrder": ["g1", "g2", "g3"],
+  "cases": [
+    {
+      "cursor": "g1",
+      "since": "2026-11-21T07:00:00Z",
+      "stringComparisonReturns": ["g2", "g3"],
+      "mustReturn": ["g2", "g3"],
+      "why": "Here the naive implementation is accidentally correct. The test asserts the instant-backed path gives the same answer, so one code path serves both sources."
+    }
+  ]
+}

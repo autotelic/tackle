@@ -1,4 +1,5 @@
 import { Match } from "effect"
+import { severityRank } from "@autotelic/protocol"
 import type { Diagnostic, Drop, Note, Severity, Structure } from "./schema.ts"
 import { moveOrder, moveVocabulary, type Move } from "./moves.ts"
 
@@ -59,6 +60,21 @@ export interface Report {
   readonly rules: number
   /** The shape of the codebase, for the backpressure line. */
   readonly structure: Structure
+  /**
+   * What discovery read, and what it declined to read.
+   *
+   * The counts were prose in `notes`, which is not something a caller can diff; `paths` is
+   * present only when the run asked for it, because it is thousands of lines on a real
+   * repository and the reason to ask is exactly "diff these two trees".
+   */
+  readonly discovery?: {
+    readonly analysed: number
+    readonly ignored: number
+    readonly ignoredDirectories: number
+    readonly truncated: boolean
+    readonly skippedExtensions: ReadonlyArray<{ readonly extension: string; readonly count: number }>
+    readonly paths?: ReadonlyArray<string>
+  }
   readonly skipped: ReadonlyArray<Note>
   /**
    * Bounds the rules hit, in their own words. A note is not a failure: it is
@@ -81,7 +97,9 @@ export interface Report {
   readonly decision: {
     readonly requests: number
     readonly replayed: number
-    /** Wire calls. Fewer than requests means batching worked. */
+    /** Answers judged and written: one per candidate, however the calls were batched. */
+    readonly judged: number
+    /** Wire calls. Fewer than judged means batching worked. */
     readonly calls: number
     readonly unavailable: number
     readonly inputTokens: number
@@ -92,8 +110,6 @@ export interface Report {
   readonly replayed: boolean
 }
 
-const rank: Record<Severity, number> = { error: 0, warn: 1, info: 2 }
-
 /** Rank findings for reading: file, line, column, severity, then rule. */
 export const sortDiagnostics = (
   diagnostics: ReadonlyArray<Diagnostic>,
@@ -103,7 +119,7 @@ export const sortDiagnostics = (
       a.location.file.localeCompare(b.location.file) ||
       a.location.line - b.location.line ||
       a.location.column - b.location.column ||
-      rank[a.severity] - rank[b.severity] ||
+      severityRank[a.severity] - severityRank[b.severity] ||
       a.ruleId.localeCompare(b.ruleId),
   )
 
@@ -544,6 +560,7 @@ const json = (report: Report): string =>
         // artifact that hid where the candidates went -- and reading it is how the
         // gated band below was found.
         drops: report.drops,
+        discovery: report.discovery,
       },
     },
     null,

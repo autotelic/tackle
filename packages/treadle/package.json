@@ -1,0 +1,29 @@
+{
+  "name": "@autotelic/treadle",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A long-lived loop of AI agent sessions against one repository: trackers, checks, budgets, receipts, and deterministic verification.",
+  "type": "module",
+  "scripts": {
+    "treadle": "node --conditions=development src/run-loop.ts",
+    "lint": "biome check .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check": "pnpm lint && pnpm typecheck && pnpm test"
+  },
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "catalog:",
+    "@xstate/effect": "catalog:",
+    "effect": "catalog:",
+    "typebox": "catalog:",
+    "xstate": "catalog:"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@types/node": "catalog:",
+    "vitest": "catalog:"
+  },
+  "engines": {
+    "node": ">=26"
+  }
+}

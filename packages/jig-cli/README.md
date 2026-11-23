@@ -89,10 +89,44 @@ The gate is `protocol`'s baseline: findings are accepted **by identity**, never 
 A run fails on new identities only. `warn` repo-wide and `error` on what you touched is
 the same file, not a second configuration.
 
+`--changed`, `--since <rev>`, and `--pr [<number>]` narrow a run to a change set, for the
+report and the gate together: the engines still read the whole tree — a cross-file rule cannot
+answer from three files, and a scoped oxlint invocation cannot see an import it did not
+load — and the report is filtered afterwards, with every engine's counts recounted. The
+text report prints the scope on its second line, because "0 findings" over three changed
+files and over the repository are different claims. A scope that cannot be resolved (a bad
+revision, no `gh`, no PR for the branch) exits 3 rather than falling back to the whole
+tree, and the stale-ledger line is absent in a scoped run: only a whole-tree run can say an
+identity stopped firing.
+
+Three lines exist because a green gate can be true and still not answer the question a reader
+thinks it answered:
+
+- **the headline carries the unjudged count** — `0 error(s) … ; 11,946 candidate(s) not judged`.
+  A judged rule that never ran has not said the repository is architecturally fine, and a
+  trailing engine note is easy to scroll past.
+- **the scope line carries what it set aside** — `412 finding(s) outside this scope, not shown`.
+  A zero produced by a file filter is not the repository's zero.
+- **the gate line names rules that cannot fail it** — `2,112 finding(s) reported and cannot fail
+  this gate (failOn: error): plumb/no-stray-inline-comments 2005, …`. A warning under
+  `failOn: error`, a baselined identity, and an advisory engine all read as ordinary findings
+  and are enforced by nothing. If a repository keeps a second, errors-only lint config, this is
+  the line that says which rules live only there.
+
+A repository with judged rules has **two populations** of finding: the deterministic ones a
+keyless run can name, and the judged ones only a run with a model key produces. Accept from the
+**keyed** run once (`jig baseline --allow-unjudged` when a per-rule ceiling or a `count` policy
+left candidates unjudged). That ledger is a superset: keyed runs pass on what they judged, and
+keyless CI passes on the subset it can name. The reverse — accepting keyless, then running with a
+key — is the direction that fails, because the keyed run names findings the ledger never held.
+
 ```sh
 jig check                    # run every engine; fail on errors and new findings
 jig check --format sarif     # SARIF 2.1.0 for code scanning
 jig check --limit 20         # the census, then the first 20 findings
+jig check --since origin/main  # only what this branch changed, for every engine
+jig check --pr 1862          # the same, for one pull request's files
+jig check --changed          # the same, for the working tree
 jig baseline                 # accept the current findings into the baseline
 jig engines                  # what is configured, and whether it is on PATH
 jig menu                     # the cutlist stable shape and artifact files
@@ -101,7 +135,7 @@ jig init                     # inspect the repo, then write the harness it can r
 jig init --gate all          # the same, enforcing every finding from the first run
 jig init --print             # the same plan and agent prompt, writing nothing
 jig init --hooks             # .git/hooks/pre-commit, running the scoped gate
-jig init                     # also writes .agents/skills: room, intercom-setup, feedback-loop, project-run
+jig init                     # also writes .agents/skills: intercom-setup, feedback-loop, project-run
 jig onboard                  # just the setup prompt for an agent
 jig onboard --gate all       # the prompt, planning a repo-wide gate
 ```
@@ -124,25 +158,43 @@ onboarding. `init` inspects the repository first:
 - the agent docs already present, which are left untouched.
 
 It enables only engines that can run, writes a starter `joggle.config.json` with
-`unavailable: "count"` when joggle is enabled, and defaults the gate to
-`touched-files`: existing debt is reported, not enforced, until someone touches
-it. `--gate all` opts into the repo-wide ratchet. The generated `JIG.md` and
-`ONBOARD.md` are specific to the profile, and the summary names what was kept,
-what was written, and the next two commands.
+`unavailable: "count"` when joggle is enabled, and defaults the gate to **`all`**:
+every finding in the tree is measured, because `touched-files` measures against
+`HEAD` and a clean CI checkout has no touched set at all — a scaffold that looks
+like a gate and gates nothing is worse than no scaffold. `--gate touched-files`
+remains the pre-commit shape, where there is always a working-tree change.
+
+A repo-wide gate needs a ledger to pass, so `init` runs the engines once and
+**accepts the findings that exist today** as the baseline. Initiating a ratchet
+means freezing what is there and failing on what comes next; an empty ledger under
+`failOn: any-new` makes every existing finding new, so adoption is red on day one
+and every pull request fails on debt it did not create — and on a repository with
+judged rules, `jig baseline` needs a model key, which can leave that state
+impossible to exit. The acceptance stays reviewable: the summary prints how many
+identities were accepted, the ledger is in the same commit, and `jig check --limit 0`
+lists them. A run that could not judge (no key) writes unverified identities, and
+says so. The generated `JIG.md` and `ONBOARD.md` are specific to the profile, and
+the summary names what was kept, what was written, and the next two commands.
 
 `ONBOARD.md` is one paste-able prompt, not a reference: it opens with the global
 install of the CLI (the checkout when this tree builds jig, npm otherwise, and
 the manager's own verb), reads the config it just wrote, installs what the census
-says is missing, runs `init`, wires the agent host (`pi install … --local`; for OpenCode, a `"plugin"` array entry
+says is missing, runs `init`, wires the agent host (`pi install … --local`, in that scope only — two installs of the
+package declare the same tool names and pi refuses the second, so a user-scope copy and a project copy cannot
+coexist; for OpenCode, a `"plugin"` array entry
 on opencode2 or a file in `.opencode/plugins/` on opencode 1.x — 1.x reads files, not the array)
-and, in a repo that runs one, plans the room. `JIG.md` stays the reference; the prompt is the door.
+`JIG.md` stays the reference; the prompt is the door.
 
-`touched-files` is the adoption default, but it is the wrong gate for validating a
-clean checkout: the working-tree diff is empty, so the touched set is empty, and a
-run can exit 0 while the report lists findings. For a first run, a workshop, or CI
-on a clean PR checkout, pass `--gate all` — or `gate: "all"` to `jig_onboard` /
-`jig.onboard` and `jig_init` / `jig.init`. The plan's next command carries the gate
-it chose, so the applied config matches what was approved.
+`touched-files` is the opt-in for a repo that wants debt reported and not
+enforced until someone edits the file; it is the wrong gate for CI on a clean
+checkout, where the touched set is empty and a run can exit 0 while the report
+lists findings. The plan's next command carries the gate it chose, so the applied
+config matches what was approved.
+
+For a pull request, scope the gate to the change instead of guessing at a ledger:
+`jig check --since origin/<base> --format github` answers for what the branch
+introduced. Keep the unscoped `jig check` on the default branch — that is where the
+whole tree is compared to the ledger, and where new debt becomes visible.
 
 `jig init --print` and `jig onboard` are the agent door: they run the same
 inspection but write nothing, and print that same prompt with the plan's engines,

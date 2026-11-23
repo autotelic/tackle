@@ -660,6 +660,17 @@ const summarize = (
   }
 }
 
+/**
+ * One line on stderr at an engine boundary.
+ *
+ * The merged report only exists at the end, and engines run concurrently, so without this a
+ * run that takes minutes prints nothing until it is over -- indistinguishable from hung,
+ * especially when one engine is judging. Stderr keeps every machine format on stdout clean.
+ */
+const announce = (line: string): void => {
+  process.stderr.write("jig: " + line + "\n")
+}
+
 /** Run one engine and reduce its output to diagnostics. It never fails the run. */
 export const runEngine = (
   root: string,
@@ -682,14 +693,25 @@ export const runEngine = (
 
     const binary = engine.command ?? id
     const command = resolveEngineCommand({ root, command: binary })
+    announce(id + ": running " + command)
     const outcome = yield* Effect.match(
-      exec({ binary: command, args: argsFor(engine), cwd: root }),
+      // Every engine runs read-only. A check is a report: one that writes into the tree it
+      // judges changes the next run's answer, and for joggle it RENAMES the findings it
+      // verifies — which re-opens identities the ledger already accepted and fails a gate
+      // on files the change never touched. joggle honours the variable; anything else ignores it.
+      exec({
+        binary: command,
+        args: argsFor(engine),
+        cwd: root,
+        env: { JIG_READ_ONLY: "1" },
+      }),
       {
         onFailure: (message: string) => ({ ok: false as const, message }),
         onSuccess: (value) => ({ ok: true as const, value }),
       },
     )
     if (!outcome.ok) {
+      announce(id + ": could not run -- " + outcome.message)
       return {
         id,
         summary: summarize(id, [], Date.now() - started, {
@@ -702,6 +724,8 @@ export const runEngine = (
 
     const { stdout, stderr, code } = outcome.value
     const diagnostics = engineDiagnostics({ id, output: { code, stdout, stderr }, root })
+    const seconds = Math.round((Date.now() - started) / 1000)
+    announce(id + ": " + String(diagnostics.length) + " finding(s) in " + String(seconds) + "s")
     return {
       id,
       summary: summarize(id, diagnostics, Date.now() - started, {

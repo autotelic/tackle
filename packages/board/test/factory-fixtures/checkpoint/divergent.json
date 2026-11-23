@@ -1,0 +1,33 @@
+{
+  "$comment": "Restore found different bytes than the checkpoint promised. The state a human sees: blocked, divergent, both hashes, and nothing merged. This is the fixture that keeps 'quarantine, never merge' from becoming a comment.",
+  "state": {
+    "workstream": "perms-1862",
+    "phase": "blocked",
+    "blocked": "divergent",
+    "checkpoint": { "sha": "9f1c2ab", "pass": 7, "at": "2026-11-21T22:38:00.000Z" },
+    "divergence": {
+      "detectedAt": "2026-11-21T22:44:02.000Z",
+      "origin": "restore",
+      "expectedJournalSha": "b6f0a5c1d2e3f40516273849506a7b8c9d0e1f2a3b4c5d6e7f8091a2b3c4d5e6",
+      "foundJournalSha": "0c9d8e7f6a5b4c3d2e1f00112233445566778899aabbccddeeff001122334455",
+      "expectedHeadSha": "9f1c2ab",
+      "foundHeadSha": "a4e5b0c",
+      "reason": "the quarantined copy advanced two commits past its last checkpoint"
+    },
+    "action": {
+      "merged": false,
+      "quarantinedTo": "~/.factory/quarantine/perms-1862-gen3-2026-11-21T22-44-02Z",
+      "generation": 4,
+      "note": "the old copy is fenced out and cannot write after generation 4 is granted"
+    }
+  },
+  "expectedText": [
+    "perms-1862 · blocked: divergent · PR 1862 · checkpoint 3m ago · expected journal b6f0a5c1, found 0c9d8e7f"
+  ],
+  "assertions": [
+    "both hashes are in the record and both appear in the human line, prefix or full",
+    "action.merged is false: a divergent restore never merges, never picks a side silently",
+    "the quarantine path and the new generation are recorded, so 'where did those commits go' has an answer",
+    "the exit code for the command that hit this is 1 (refusal), not 3 (infrastructure) — the tool worked"
+  ]
+}

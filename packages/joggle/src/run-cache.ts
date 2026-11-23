@@ -1,5 +1,6 @@
 import { Effect, FileSystem, Path, Result, Schema, SchemaParser } from "effect"
 import { policy } from "./policy.ts"
+import { VERSION } from "./version.ts"
 import { shortHash } from "./state.ts"
 import { Baseline, StoredRun } from "./schema.ts"
 
@@ -183,8 +184,12 @@ export const writeBaseline = (
     if (target.endsWith(".json")) {
       const parent = path.dirname(target)
       yield* Effect.orElseSucceed(fs.makeDirectory(parent, { recursive: true }), () => undefined)
+      // A ledger is a set: a merge that re-accepts an identity must not grow a duplicate row.
       const body = JSON.stringify(
-        { version: policy.version, identities: [...identities].sort((left, right) => left.localeCompare(right)) },
+        {
+          version: VERSION,
+          identities: [...new Set(identities)].sort((left, right) => left.localeCompare(right)),
+        },
         null,
         2,
       )

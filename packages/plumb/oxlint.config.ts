@@ -27,6 +27,8 @@ export default defineConfig({
     "plumb/no-vague-test-filenames": "error",
     "plumb/no-chained-type-assertions": "error",
     "plumb/no-conditional-empty-object-spread": "error",
+    "plumb/effect-test-cannot-float": "error",
+    "plumb/no-caller-supplied-instant": "error",
     "plumb/no-impossible-branch-throw": "error",
     "plumb/no-known-value-widening": "error",
     "plumb/no-module-mocking": "error",

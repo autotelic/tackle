@@ -24,7 +24,7 @@ export const requireDeprecatedTagForLegacyCommentsRule = defineRule({
 		},
 		messages: {
 			missingDeprecatedTag:
-				"Comment says this code is deprecated/legacy but carries no @deprecated tag; prose warnings are invisible to tooling. Add `@deprecated` (with a pointer to the replacement) so agents and editors see it.",
+				"This comment calls the code deprecated/legacy but carries no @deprecated tag, so tooling cannot see the retirement. Add `@deprecated` (with a pointer to the replacement) inside THIS comment — a tag in a neighbouring block does not count — or reword the comment to drop the retirement wording.",
 		},
 	},
 	createOnce(context) {

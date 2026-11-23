@@ -10,11 +10,6 @@ Every package under `packages/` is `publishConfig.access: public`. `@autotelic/p
 already on the registry (0.6.0) and is republished from here now; the rest have never been
 published.
 
-`@autotelic/board` is public because `@autotelic/room` is. `room` depends on it through
-`workspace:*`, so a published `room` either points at a published `board` or ships a dependency
-graph nobody can install, and neither tool bundles its dependencies. Publishing is the only
-consistent answer, which is why `board` also grew a `files` list: `dist` and nothing else.
-
 ## The first publish of a package npm has never seen
 
 `npm trust` cannot go first. Its man page is explicit:
@@ -62,7 +57,7 @@ Once a package exists, a trusted publisher is granted per package, with 2FA, as 
 challenge:
 
 ```sh
-for p in plumb joggle protocol cutlist jig-cli room board; do
+for p in plumb joggle protocol cutlist jig-cli; do
   npm trust github "@autotelic/$p" \
     --repo autotelic/tackle --file release.yml --allow-publish
 done

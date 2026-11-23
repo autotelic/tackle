@@ -1,19 +1,17 @@
 {
   "name": "@autotelic/board",
-  "version": "0.1.1",
-  "description": "The room's records and invariants, as Effect schemas: a chit, a claim with a fencing epoch, a job, a receipt, a presence.",
-  "homepage": "https://github.com/autotelic/tackle/tree/main/packages/board#readme",
-  "bugs": {
-    "url": "https://github.com/autotelic/tackle/issues"
-  },
+  "version": "0.0.0",
+  "private": true,
+  "description": "The board: the shop supervisor, queue status and the one-owner lock.",
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/autotelic/tackle.git",
-    "directory": "packages/board"
+  "bin": {
+    "board": "./bin/board.js",
+    "factory": "./bin/factory.js",
+    "mailbox-server": "./bin/mailbox-server.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "bin"
   ],
   "type": "module",
   "sideEffects": false,
@@ -21,24 +19,35 @@
     ".": {
       "development": "./src/index.ts",
       "default": "./dist/index.js"
-    }
-  },
-  "publishConfig": {
-    "access": "public"
+    },
+    "./cli": {
+      "development": "./src/cli.ts",
+      "default": "./dist/cli.js"
+    },
+    "./*": "./src/*.ts"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "build": "tsc -p tsconfig.build.json",
+    "board": "node --conditions=development src/cli.ts"
   },
   "dependencies": {
+    "@alchemy.run/cloudflare": "2.0.0-beta.87",
+    "@alchemy.run/domain": "2.0.0-beta.87",
+    "@autotelic/protocol": "workspace:*",
+    "@autotelic/room": "workspace:*",
+    "@hpke/core": "1.10.1",
+    "@ipld/dag-cbor": "11.0.0",
+    "alchemy": "2.0.0-beta.87",
     "effect": "catalog:"
   },
   "devDependencies": {
+    "@effect/platform-node": "catalog:",
     "@effect/tsgo": "catalog:",
+    "@effect/vitest": "catalog:",
     "@types/node": "catalog:",
     "@typescript/native": "catalog:",
-    "fast-check": "catalog:",
     "vitest": "catalog:"
   },
   "engines": {

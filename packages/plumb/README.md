@@ -5,7 +5,7 @@ Opinionated [Oxlint](https://oxc.rs) rules that keep TypeScript *true*: a plumb 
 ## Plugins
 
 - **`plumb`**: generic rules that reject low-evidence and low-signal implementation patterns (49 rules).
-- **`plumb-effect`**: opt-in rules for Effect service and Layer architecture (26 rules). Enable only in repos that depend on `effect`.
+- **`plumb-effect`**: opt-in rules for Effect service and Layer architecture (27 rules). Enable only in repos that depend on `effect`.
 - **`plumb-react`**: opt-in React composition rules (4 rules). Enable only in React repos.
 - **`plumb-ui`**: opt-in catalog rules (1 rule). Reads cutlist's generated manifest; `no-deprecated-parts` reports an import of a part whose authored intent marks it `deprecated`, naming the recorded replacement. Fails open when the manifest is missing or malformed; `cutlist build --check` is the gate that keeps it current.
 - **`plumb/configs`**: shared rule sets (`plumbRecommendedRules`, `plumbEffectRecommendedRules`, `plumbReactRecommendedRules`) that enable every rule in a plugin at `error`, for either linter.

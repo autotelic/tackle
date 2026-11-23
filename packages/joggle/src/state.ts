@@ -49,6 +49,34 @@ export const runCacheDirFor = (root: string): Effect.Effect<string> =>
   Effect.map(machineCacheRoot, (base) => `${base}/joggle/${shortHash(root)}`)
 
 /**
+ * Where a SCOPED run's answers go.
+ *
+ * A scoped run answers "what did this branch introduce", and a branch's answers are a cache,
+ * not a commit. Writing them into the repository's `.joggle/` puts thousands of lines into
+ * every pull request of a stack — unreviewable, and a blob in every clone and every CI
+ * checkout — which is what a 22-branch migration produced: a 55 MB file, 777 commits touching
+ * it, and a diff nobody could read.
+ *
+ * So a scoped run writes the machine cache unless the caller names a store with
+ * `--cache-dir`. The committed ledger stays the trunk's: one full run on the base branch
+ * decides what is accepted, and a branch's answers warm that machine and nobody else's diff.
+ *
+ * @param input.declared - `--cache-dir`, when the caller gave one. It always wins.
+ * @param input.repository - What {@link cacheDirFor} resolved: `.joggle/` or the machine.
+ * @param input.machine - The machine-local cache for this root.
+ * @param input.scoped - Whether the run was scoped to a change (`--since`, `--pr`, `--changed`).
+ */
+export const scopedAnswerCacheDir = (input: {
+  readonly declared: string | undefined
+  readonly repository: string
+  readonly machine: string
+  readonly scoped: boolean
+}): string => {
+  if (input.declared !== undefined) return input.declared
+  return input.scoped ? input.machine : input.repository
+}
+
+/**
  * Where a run's answer cache goes.
  *
  * Explicit wins. Otherwise a repository that already has a `.joggle/` is one

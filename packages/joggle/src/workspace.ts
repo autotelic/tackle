@@ -2274,12 +2274,24 @@ export const discoverFiles = (
         const astro = walked.files.filter(
           (file) => isAstro(file) && inScope(path.relative(root, file).split(path.sep).join("/")),
         )
+        // The checker's file list is a tsconfig's include, and a tsconfig's include is not a
+        // judgement about what is source: `packages/*/dist` is inside the program when a
+        // declaration is emitted there. Analysing it reads every declaration twice — once as
+        // written, once as built — and reports "Query is declared in two places" about a
+        // build artifact. 73 of 95 findings on one repository were exactly that, and the
+        // walk has always known better (`policy.ignoredDirectories`); this list did not.
+        const keep = (file: string): boolean =>
+          !path
+            .relative(root, file)
+            .split(path.sep)
+            .some((segment) => ignored.has(segment))
+        const files = discovered.filter(keep)
         return {
-          files: [...discovered, ...astro].sort(Order.String),
+          files: [...files, ...astro.filter(keep)].sort(Order.String),
           prose: walked.prose,
           skippedExtensions: [],
           truncated: walked.truncated,
-          ignored: 0,
+          ignored: discovered.length - files.length,
           ignoredDirectories: 0,
         }
       })

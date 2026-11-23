@@ -9,6 +9,7 @@
 
 packages:
   - "packages/*"
+  - "packages/board/view"
   - "examples/*"
   # The foreman's own harness. Deliberately outside `packages/`: it is not a fifth
   # tool, it drives the four. It joins the workspace only so `pnpm check` reaches it.
@@ -23,17 +24,26 @@ ignoredBuiltDependencies:
   - protobufjs
 
 catalog:
-  effect: "4.0.5" # stable v4
+  effect: "4.1.5" # stable v4
   # The OpenCode plugin API, used only by jig's optional `./opencode` surface.
   "@opencode/plugin": "2.1.2"
   # The Worker/DO types for the room bundle, and the bundler celld dev shells out to.
   "@cloudflare/workers-types": "5.20261023.1"
   esbuild: "0.28.2"
-  "@effect/platform-node": "4.0.5"
-  "@effect/vitest": "4.0.5"
+  "@effect/platform-node": "4.1.5"
+  # Beside platform-node on purpose: it declares "^4.1.5" for its own shared package, so a
+  # consumer install floats it to a newer minor while `effect` stays at the pinned version,
+  # and the published tool then dies on a NodeWS export the newer shared no longer provides.
+  # Workspace `overrides` hide this locally; a dependency is what publishes.
+  "@effect/platform-node-shared": "4.1.5"
+  "@effect/vitest": "4.1.5"
+  "@effect/platform-browser": "4.1.5"
+  foldkit: "0.171.0"
+  foldkit-primitives: "0.23.0"
+  vite: "8.3.1"
   # joggle's judgement model: Effect's AI surface plus the TypeSafe provider. On the
   # stable line with the rest of the workspace now that joggle's port landed.
-  "@effect/ai-typesafe": "4.0.5"
+  "@effect/ai-typesafe": "4.1.5"
   # Typechecking and building run on TypeScript 7's native compiler, wearing
   # Effect's language service (@effect/tsgo) via the `prepare` patch. TypeScript 7
   # ships no programmatic API, so the `typescript` name stays aliased to the
@@ -62,6 +72,14 @@ catalog:
   # TypeScript. Draft 2020-12, which is what schema/*.json declares. Dev-only; protocol's
   # runtime stays dependency-free.
   ajv: "8.17.1"
+  # treadle: the long-lived loop engine. xstate drives the pass machine through @xstate/effect;
+  # typebox is what its rules and the pi extension declare state with. Versions are the ones
+  # its own lockfile resolved, so the move does not also change its behaviour.
+  "@biomejs/biome": "2.6.5"
+  "@earendil-works/pi-coding-agent": "1.5.0"
+  "@xstate/effect": "1.0.0-alpha.12"
+  xstate: "6.0.0-alpha.73"
+  typebox: "1.4.4"
 
 # `@opencode/plugin` (jig's optional, dev-only peer) pins `effect@4.0.1` and its own
 # `@effect/*` tree. In this workspace that installs a SECOND copy of Effect, which the
@@ -70,10 +88,10 @@ catalog:
 # workspace's line; the plugin is never shipped, and the public surface still gets the
 # host's own `@opencode/plugin` at runtime.
 overrides:
-  effect: "4.0.5"
-  "@effect/platform-node": "4.0.5"
-  "@effect/platform-node-shared": "4.0.5"
-  "@effect/opentelemetry": "4.0.5"
+  effect: "4.1.5"
+  "@effect/platform-node": "4.1.5"
+  "@effect/platform-node-shared": "4.1.5"
+  "@effect/opentelemetry": "4.1.5"
 
 # Hold a brand-new release for a day before it can be installed. The exclude list
 # below was inert without this line: pnpm has nothing to exempt when no age floor is set.
@@ -82,6 +100,13 @@ overrides:
 minimumReleaseAge: 1440
 
 minimumReleaseAgeExclude:
+  # Operator directive: Effect 4.1.5 is the workspace line, so its publish age is waived.
+  - effect@4.1.5
+  - "@effect/platform-node@4.1.5"
+  - "@effect/platform-node-shared@4.1.5"
+  - "@effect/vitest@4.1.5"
+  - "@effect/ai-typesafe@4.1.5"
+  - "@effect/opentelemetry@4.1.5"
   - "@effect/tsgo-darwin-arm64@0.56.0"
   - "@effect/tsgo-darwin-x64@0.56.0"
   - "@effect/tsgo-linux-arm64@0.56.0"
@@ -108,9 +133,14 @@ minimumReleaseAgeExclude:
 # pnpm 12 defaults `strictDepBuilds` to true, so a package whose build scripts nobody has
 # ruled on fails the install. These three are the rulings: esbuild needs its postinstall to
 # fetch its binary; the other two arrive transitively through pi-durable and neither script is
-# needed to run a room, so they are denied rather than left unreviewed. The placeholder text
-# pnpm's prompt leaves behind is not a boolean and does not count as a decision.
+# needed to run a room, so they are denied rather than left unreviewed.
+#
+# workerd was the one nobody had ruled on: pnpm's prompt leaves the literal string "set this
+# to true or false" behind, which strictDepBuilds reads as unruled, so every fresh clone and
+# every fresh worktree failed with ERR_PNPM_IGNORED_BUILDS. Approved, because the package's own
+# install expects its binary and a denial is not a decision pnpm can act on.
 allowBuilds:
   "@google/genai": false
   esbuild: true
   protobufjs: false
+  workerd: true

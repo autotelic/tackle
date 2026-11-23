@@ -1,5 +1,6 @@
 import { Effect, FileSystem, Order, Path, Predicate } from "effect"
 import { parseSync } from "oxc-parser"
+import type { CatalogDeclaration } from "@autotelic/protocol"
 
 /*
  * Pass 1 — parse.
@@ -23,18 +24,9 @@ export interface ObjectLiteral {
 }
 
 /** One declaration in a module. A part's kind is a question about these, not about the file. */
-export interface Declaration {
-  readonly name: string
-  readonly kind: "function" | "class" | "variable" | "type"
-  readonly exported: boolean
-  /** Whether the declaration's own body renders JSX. */
-  readonly renders: boolean
-  /** Callee names inside the declaration; `useState`, `createContext`, `memo`. */
-  readonly calls: ReadonlyArray<string>
+export interface Declaration extends CatalogDeclaration {
   /** JSX tags inside the declaration, so one file's declarations can be asked separately. */
   readonly tags: ReadonlyArray<string>
-  /** Keys, when a variable is bound to an object literal. */
-  readonly objectKeys?: ReadonlyArray<string>
 }
 
 /** A JSX element as written, with where it was written. */
@@ -70,6 +62,8 @@ export interface SourceModule {
   /** Every JSX element with its line; `tags` is derived from these. */
   readonly renders: ReadonlyArray<RenderSite>
   readonly hooks: ReadonlyArray<string>
+  /** Local FoldKit view functions called with the builder; the composition the signature reads. */
+  readonly foldkitCalls?: ReadonlyArray<string>
   readonly props: ReadonlyArray<string>
   /** Object literals in the module. The composition pattern lives in their keys. */
   readonly objects: ReadonlyArray<ObjectLiteral>
@@ -114,7 +108,153 @@ const walk = (root: unknown, visit: (node: Ast) => void): void => {
   step(root)
 }
 
-/** A JSX element's name: `Combobox`, `Combobox.Input`. */
+/**
+ * FoldKit's HTML builder names, as written after `h.`.
+ *
+ * FoldKit has no JSX: a view is a function taking the builder and returning
+ * `h.div(...)` calls. Recognizing the builder's element vocabulary is what keeps a
+ * FoldKit app from reading as a directory of empty modules. Attribute builders such as
+ * `h.Class` and `h.OnClick` are deliberately absent: they describe an element, they are
+ * not one.
+ */
+const FOLDKIT_HTML_TAGS = new Set([
+  "a",
+  "abbr",
+  "address",
+  "article",
+  "aside",
+  "audio",
+  "b",
+  "blockquote",
+  "br",
+  "button",
+  "canvas",
+  "caption",
+  "circle",
+  "code",
+  "col",
+  "colgroup",
+  "data",
+  "datalist",
+  "dd",
+  "defs",
+  "del",
+  "details",
+  "dfn",
+  "dialog",
+  "div",
+  "dl",
+  "dt",
+  "em",
+  "fieldset",
+  "figcaption",
+  "figure",
+  "footer",
+  "form",
+  "g",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "header",
+  "hr",
+  "i",
+  "iframe",
+  "img",
+  "input",
+  "ins",
+  "kbd",
+  "label",
+  "legend",
+  "li",
+  "line",
+  "link",
+  "main",
+  "map",
+  "mark",
+  "menu",
+  "meta",
+  "meter",
+  "nav",
+  "noscript",
+  "object",
+  "ol",
+  "optgroup",
+  "option",
+  "output",
+  "p",
+  "path",
+  "picture",
+  "pre",
+  "progress",
+  "q",
+  "rect",
+  "s",
+  "samp",
+  "script",
+  "section",
+  "select",
+  "small",
+  "source",
+  "span",
+  "strong",
+  "style",
+  "sub",
+  "summary",
+  "sup",
+  "svg",
+  "table",
+  "tbody",
+  "td",
+  "textarea",
+  "tfoot",
+  "th",
+  "thead",
+  "time",
+  "title",
+  "tr",
+  "track",
+  "u",
+  "ul",
+  "var",
+  "video",
+  "wbr",
+])
+
+/** A FoldKit element builder call, `h.div(...)`, or undefined for any other call. */
+const foldkitElementTagOf = (node: Ast): string | undefined => {
+  if (node.type !== "CallExpression") return undefined
+  const callee = asRecord(node.callee)
+  if (callee?.type !== "MemberExpression" || nameOf(callee.object) !== "h") return undefined
+  const tag = nameOf(callee.property)
+  return tag !== undefined && FOLDKIT_HTML_TAGS.has(tag) ? tag : undefined
+}
+
+/**
+ * A local view function threaded with the builder, as in `card(h, props)` or
+ * `factoryView(model, h)`.
+ *
+ * FoldKit passes the builder explicitly, so the call itself is the composition edge. A
+ * function that never receives the builder is ordinary code, not a render.
+ */
+const foldkitViewNameOf = (node: Ast): string | undefined => {
+  if (node.type !== "CallExpression") return undefined
+  const callee = asRecord(node.callee)
+  if (callee === undefined || callee.type === "MemberExpression") return undefined
+  const name = calleeNameOf(callee)
+  if (name === undefined || name === "h") return undefined
+  const passesBuilder = asArray(node.arguments).some(
+    (argument) => asRecord(argument)?.type === "Identifier" && nameOf(argument) === "h",
+  )
+  return passesBuilder ? name : undefined
+}
+
+/** One render site in a FoldKit call, or undefined for an ordinary call. */
+const foldkitTagOf = (node: Ast): string | undefined =>
+  foldkitElementTagOf(node) ?? foldkitViewNameOf(node)
+
 const jsxNameOf = (value: unknown): string | undefined => {
   const record = asRecord(value)
   if (record === undefined) return undefined
@@ -234,6 +374,7 @@ const rendersIn = (node: Ast): boolean => {
   let renders = false
   walk(node, (child) => {
     if (child.type === "JSXOpeningElement") renders = true
+    if (foldkitTagOf(child) !== undefined) renders = true
   })
   return renders
 }
@@ -242,7 +383,11 @@ const rendersIn = (node: Ast): boolean => {
 const tagsIn = (node: Ast): ReadonlyArray<string> => {
   const tags = new Set<string>()
   walk(node, (child) => {
-    if (child.type !== "JSXOpeningElement") return
+    if (child.type !== "JSXOpeningElement") {
+      const foldkit = foldkitTagOf(child)
+      if (foldkit !== undefined) tags.add(foldkit)
+      return
+    }
     const name = jsxNameOf(child.name)
     if (name !== undefined) tags.add(name)
   })
@@ -440,6 +585,7 @@ export const parseModule = ({
   const program = asRecord(parsed.program) ?? {}
   const lineAt = lineIndex(text)
   const tags = new Set<string>()
+  const foldkitCalls = new Set<string>()
   const hooks = new Set<string>()
   const renderSites: Array<RenderSite> = []
   const objectKeys = new Map<object, ReadonlyArray<string>>()
@@ -456,6 +602,14 @@ export const parseModule = ({
     } else if (node.type === "CallExpression") {
       const name = calleeNameOf(node.callee)
       if (name !== undefined && name.startsWith("use")) hooks.add(name)
+      const foldkitView = foldkitViewNameOf(node)
+      if (foldkitView !== undefined) foldkitCalls.add(foldkitView)
+      const foldkit = foldkitTagOf(node)
+      const start = node.start
+      if (foldkit !== undefined && typeof start === "number") {
+        tags.add(foldkit)
+        renderSites.push({ tag: foldkit, line: lineAt(start) })
+      }
       // `createContext` is the composition pattern's one unambiguous structural signal.
       // React itself is spelled `React.createContext`; a repo alias may add a path, so
       // the suffix is the test rather than an exact name.
@@ -494,6 +648,7 @@ export const parseModule = ({
     importEdges: importEdgesOf(parsed.module.staticImports),
     tags: [...tags].sort(Order.String),
     renders: renderSites,
+    foldkitCalls: [...foldkitCalls].sort(Order.String),
     hooks: [...hooks].sort(Order.String),
     props: propsOf(program),
     objects,

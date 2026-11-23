@@ -561,13 +561,20 @@ const memberList = (units: ReadonlyArray<Unit>): string => {
 }
 
 /**
- * A stable name for a finding, for comparing one run against the next.
+ * A stable name for a finding: the rule and the MEMBERS, never the verdict.
  *
- * Membership and the kept symbol, never line numbers: code moves constantly and
- * a baseline that reports every edit as new is a baseline nobody reads.
+ * This used to include the kept symbol, which is the model's answer. So the same cluster had
+ * one name when a judgement reached it and another when it did not, and a ledger written by a
+ * keyed run matched none of the identities a keyless run (and CI) reported. Membership is
+ * decided by the detector, before any question is asked, so it is the same in both modes:
+ * `file:name` per member, sorted, with no line numbers (code moves; a baseline that renames a
+ * finding on every edit is a baseline nobody reads).
  */
-const identityOf = (ruleId: string, cluster: Cluster, keep: Unit): string =>
-  [ruleId, keep.name, ...[...new Set(cluster.members.map((m) => m.file))].sort(Order.String)].join("\u0000")
+const identityOf = (ruleId: string, cluster: Cluster): string =>
+  [
+    ruleId,
+    ...[...new Set(cluster.members.map((member) => `${member.file}:${member.name}`))].sort(Order.String),
+  ].join("\u0000")
 
 /** Prescriptions that mean expected duplication: reported, but as a notice. */
 const EXPECTED_DUPLICATION: ReadonlySet<string> = new Set(["leave_it", "share_a_contract"])
@@ -624,7 +631,7 @@ export const unverifiedFinding = ({
       duplicates: memberList(drops),
     },
     helpId: "unverified_help",
-    identity: identityOf(rule.ruleId, cluster, keep),
+    identity: identityOf(rule.ruleId, cluster),
     judged: false,
     severity: rule.severity,
   })
@@ -863,7 +870,7 @@ export const findingFor = ({
         review: review ? " For review: " + quality.reason + "." : "",
       },
       helpId: "duplicate_help",
-      identity: identityOf(rule.ruleId, cluster, keep),
+      identity: identityOf(rule.ruleId, cluster),
       confidence: verdict.confidence,
       score: verdict.score,
       judged: true,

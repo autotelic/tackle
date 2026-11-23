@@ -1,0 +1,38 @@
+{
+  "issues": {
+    "ready": "enterprise-readiness",
+    "working": "enterprise-readiness:working",
+    "parked": "enterprise-readiness:parked",
+    "tracker": "github"
+  },
+  "install": "true",
+  "checks": [
+    { "name": "jig", "run": "pnpm jig check", "timeoutSeconds": 900 },
+    { "name": "unit", "run": "pnpm test", "timeoutSeconds": 1800 },
+    { "name": "e2e", "run": "pnpm test:e2e", "timeoutSeconds": 3600 }
+  ],
+  "protectedPaths": ["package.json", "pnpm-lock.yaml", ".github/workflows/**"],
+  "featureDone": {
+    "changedPaths": ["src/enterprise/**", "test/enterprise/**"],
+    "requireNewTests": true
+  },
+  "budgets": {
+    "passesPerIssue": 4,
+    "stallAfterFlatPasses": 2,
+    "maxTurnsPerSession": 200,
+    "sessionTimeoutMinutes": 30,
+    "askHumanTimeoutMinutes": 30,
+    "passesPerNight": 8,
+    "stopAfterParkedInARow": 3,
+    "maxCostPerSessionUsd": 6,
+    "maxOpenLoopPrs": 1
+  },
+  "integrationBranch": "feat/enterprise-readiness-alchemy",
+  "_generated": {
+    "workstream": "enterprise-1854",
+    "pass": 1,
+    "at": "2026-11-21T22:50:00.000Z",
+    "defaulted": ["install"],
+    "note": "phase is land, so the kernel will pass a single mergeable-making task rather than a ticket."
+  }
+}

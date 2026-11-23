@@ -28,7 +28,21 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # format:check → typecheck → test → build, every package. `lint` is intentionally
-      # not here yet: the workspace dogfoods plumb/joggle against itself only once they
-      # are moved in (see MIGRATION.md).
+      # format:check → typecheck → test → lexicon compat → catalog → every package's own
+      # check → build.
       - run: pnpm check
+
+      # The root rulebook, over exactly the tree jig's `plumb` engine reads. It was absent
+      # while the scope and the config were still settling (MIGRATION.md item 6); the two
+      # scopes are one list now, and a tree that does not pass its own lint is not a tree to
+      # publish from.
+      - run: pnpm lint
+
+      # The whole harness over its own tree: plumb, cutlist, and joggle through one report and
+      # one baseline. This CI has no model key and must not have one (SECRETS.md): joggle is
+      # started with `--read-only` and answers the committed verdicts in `.joggle`, so the run
+      # is the same one a workstation makes. A change that makes joggle ask a NEW question
+      # fails here with "candidates not judged" rather than passing on an unlooked answer --
+      # the remedy is to re-judge with a key and commit the answers, which is why the ledger
+      # and the cache are in the tree.
+      - run: pnpm exec jig check

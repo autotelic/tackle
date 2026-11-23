@@ -16,6 +16,7 @@ import { shortHash } from "./state.ts"
 import { canonical } from "./canonical.ts"
 import { sourceFingerprint } from "./fingerprint.ts"
 import { loadParses } from "./parsecache.ts"
+import { answerStoreBytes } from "./answer-store.ts"
 import {
   baselinePath,
   manifestOf,
@@ -25,6 +26,7 @@ import {
   writeStored,
 } from "./run-cache.ts"
 import { policy } from "./policy.ts"
+import { VERSION } from "./version.ts"
 import { Rules } from "./rules/index.ts"
 import type { Loaded } from "./plugins.ts"
 import { foldSiteDuplicates, funnelNotes, rankDiagnostics, type Report } from "./report.ts"
@@ -70,6 +72,15 @@ import type { ImportGraph } from "./imports.ts"
  * consequences is a record of something that never happened.
  */
 const UNJUDGED_STAGES: ReadonlySet<string> = new Set(["unreadable", "no_evidence", "budget"])
+
+/**
+ * The size at which a growing ledger stops being a cache and starts being repository debt.
+ *
+ * GitHub warns above 50 MB per file and refuses above 100 MB, and every clone and CI
+ * checkout pays. Well below that is already larger than a diff anyone reviews, so the note
+ * fires early — at 8 MB — and names the cap rather than waiting for the warning.
+ */
+const CACHE_WARN_BYTES = 8 * 1024 * 1024
 
 export interface Options {
   readonly cwd: string
@@ -170,6 +181,32 @@ export interface Options {
   readonly baselinePath: string | undefined
   /** Write the current findings as the accepted baseline. */
   readonly updateBaselinePath: string | undefined
+  /**
+   * Write a ledger from a scoped run anyway.
+   *
+   * A scoped run's identities are not a subset of a full run's: the same site can fold to a
+   * different survivor when the candidates outside the scope are missing, so a ledger written
+   * from a partial view can be missing exactly the identity CI's full run reports. Soundness
+   * here rests on aliases existing (protocol), not on discipline.
+   */
+  readonly allowScopedBaseline?: boolean | undefined
+  /** Answer from the cache and never write it: a gate does not edit the tree it judges. */
+  readonly readOnly?: boolean | undefined
+  /**
+   * Include the analysed file paths in the report's discovery block.
+   *
+   * The only honest way to answer "why does this tree see 95 findings and that one 0" is to
+   * diff the two file lists; everything else is inference.
+   */
+  readonly listFiles?: boolean | undefined
+  /**
+   * Union with the identities already in the update target instead of replacing them.
+   *
+   * A scoped run (`--since`) judges every candidate in its own files completely, so its
+   * identities are a reviewable, pull-request-sized set. Merging that set into the committed
+   * ledger adds only what the branch introduced, without re-judging the repository.
+   */
+  readonly mergeBaseline?: boolean | undefined
   /**
    * Write the baseline even though some candidates were not judged.
    *
@@ -412,20 +449,90 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
         })
       }
       if (options.updateBaselinePath !== undefined) {
+        const target = baselinePath(path, options.updateBaselinePath)
+        // A scoped run is for the gate. Acceptance is a full-run act until folded findings
+        // carry the identities they absorbed, because which survivor wins a fold depends on
+        // what ran -- so a scoped accept can miss the identity a full run reports, silently.
+        const scoped = options.changed === true || options.changedPaths !== undefined
+        if (scoped && options.allowScopedBaseline !== true) {
+          return yield* WorkspaceError.make({
+            path: options.updateBaselinePath,
+            operation: "baseline",
+            cause: new Error(
+              `refusing to write ${target} for a scoped run: a scoped run's identities are not a subset of a full run's — the same site can fold to a different survivor when candidates outside the scope are missing — so this ledger could be missing the identity a full run reports. Accept with one full run (at the head of a stack), or pass --allow-scoped-baseline to accept the risk. Unscoped runs are unaffected.`,
+            ),
+          })
+        }
         if (unjudged > 0 && options.allowUnjudgedBaseline !== true) {
+          /*
+           * Name the LIMIT, not a knob that cannot move it.
+           *
+           * A run that stops at a per-rule candidate ceiling reports the same "unjudged" count as
+           * one that ran out of tokens, and the earlier message pointed at --max-tokens for both:
+           * raising it beyond 1e9 changed nothing, because the slice is a constant in the policy.
+           * The drops already carry the reason per rule, so the refusal quotes them.
+           */
+          const ceilings = new Map<string, number>()
+          for (const drop of report.drops) {
+            if (drop.stage !== "budget") continue
+            const key = drop.ruleId + ": " + drop.reason
+            ceilings.set(key, (ceilings.get(key) ?? 0) + 1)
+          }
+          const largest = [...ceilings]
+            .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+            .slice(0, 3)
+            .map(([cause, count]) => cause + " (" + String(count) + ")")
           return yield* WorkspaceError.make({
             path: options.updateBaselinePath,
             operation: "baseline",
             cause: new Error(
               `refusing to write ${options.updateBaselinePath}: ${unjudged} candidate(s) were not judged. ` +
-                "Pass --allow-unjudged-baseline to accept that, or judge the run first.",
+                "Judging needs a model key in this run's environment (TYPESAFE_API_KEY); without one, " +
+                "the same findings are named from what the rule could see alone, so a ledger written " +
+                "now would not match a judged run. " +
+                (largest.length === 0
+                  ? ""
+                  : "The largest causes were " + largest.join("; ") + " — these are per-rule " +
+                    "ceilings, not the token budget, and --max-tokens cannot raise them. ") +
+                "If the limit was the run's token budget, raise --max-tokens or " +
+                "decision.maxInputTokens instead. Or run scoped (--since <base>) to see the " +
+                "change judged with a pull request's budget — a scoped run reports the gate's " +
+                "answer but cannot write the ledger. Pass --allow-unjudged-baseline only to " +
+                "accept the unjudged debt itself.",
             ),
           })
         }
-        const identities = report.diagnostics
+        const fresh = report.diagnostics
           .map((entry) => entry.identity)
           .filter((identity): identity is string => identity !== undefined)
-        yield* writeBaseline(fs, path, baselinePath(path, options.updateBaselinePath), identities)
+        // A scoped run reports only what it judged in its own files; writing it alone would
+        // truncate the ledger to this pull request's identities. Merging keeps the accepted
+        // state and adds the run's — the hand-union an adopter had to do by hand.
+        const known = options.mergeBaseline === true ? yield* readBaseline(fs, path, target) : undefined
+        const identities = known === undefined ? fresh : [...known, ...fresh]
+        yield* writeBaseline(fs, path, target, identities)
+        // An empty ledger is still a ledger: without this line a caller's merge step has to
+        // infer "nothing new" from an empty array, or worse, from a file it never looked for.
+        if (fresh.length === 0) {
+          notes.push({
+            ruleId: "joggle",
+            reason: `wrote 0 identities to ${target}: nothing new to accept`,
+          })
+        }
+        // A finding with no identity is one no baseline can ever hold: it survives every run
+        // and no accept quiets it. Saying so is the difference between "accepted" and
+        // "accepted, and these will be back".
+        const unnameable = report.diagnostics.filter(
+          (entry) => entry.identity === undefined,
+        ).length
+        if (unnameable > 0) {
+          notes.push({
+            ruleId: "joggle",
+            reason:
+              unnameable +
+              " finding(s) declare no identity, so no baseline can accept them; they will appear in every run",
+          })
+        }
       }
       return notes.length === 0
         ? { ...report, diagnostics }
@@ -458,7 +565,7 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
         structure: stored.structure ?? { concepts: 0, declarations: 0, duplicated: 0, overloaded: 0 },
         timings: [{ phase: "replay-check", ms: discoverMs }],
         // This run spent nothing, so it reports nothing spent.
-        decision: { requests: 0, replayed: 0, calls: 0, unavailable: 0, inputTokens: 0, outputTokens: 0 },
+        decision: { requests: 0, replayed: 0, judged: 0, calls: 0, unavailable: 0, inputTokens: 0, outputTokens: 0 },
         elapsedMs: (yield* Clock.currentTimeMillis) - started,
         replayed: true,
       })
@@ -719,6 +826,9 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
       estimated += cost
       allowed.push(chunk)
     }
+    // The denominator of the progress line: every question this run will resolve, replayed or
+    // judged. Set here because the plans are built after the judgement layer exists.
+    yield* decisionStats.setTotal(allowed.reduce((sum, chunk) => sum + chunk.plans.length, 0))
 
     // A chunk that fails is CUT AND RETRIED, not abandoned.
     //
@@ -1103,7 +1213,28 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
       ruleId: "joggle",
       reason:
         folded.folded +
-        " finding(s) reported a site another rule already reported with more evidence, and were folded into it",
+        " finding(s) reported a site another rule already reported with more evidence, and were folded into it" +
+        // In a scoped run the fold is a ledger hazard, not just a readability note: the folded
+        // finding has no identity in this run, so an accept written from a scoped run can be
+        // missing exactly the identity a full run reports (and CI fails on).
+        (options.changedPaths === undefined
+          ? ""
+          : "; a folded finding's identity is not in this run, so an accept taken from a scoped run can miss one a full run reports"),
+    })
+  }
+
+  // A committed answer cache is a cache, and a cache that only grows is a repository-health
+  // problem the run can see: GitHub warns above 50 MB per file and refuses above 100 MB, and
+  // every clone and CI checkout pays for the bytes. Scoped accepts on a deep stack grow it
+  // fastest, because each branch judges its own delta and keeps every answer.
+  const cacheBytes = yield* answerStoreBytes(fs, path, options.cacheDir)
+  if (cacheBytes > CACHE_WARN_BYTES) {
+    const megabytes = Math.round((cacheBytes / (1024 * 1024)) * 10) / 10
+    notes.push({
+      ruleId: "joggle",
+      reason:
+        `the judgement cache at ${options.cacheDir} is ${megabytes} MB; keep it machine-local or cap what is committed (` +
+        "joggle cache prune --max-bytes 4000000) — GitHub warns above 50 MB per file and every clone pays for it",
     })
   }
 
@@ -1136,13 +1267,45 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
     overloaded,
   }
 
+  const seen: NonNullable<Report["discovery"]> = {
+    analysed: workspace.files.length,
+    ignored: discovery.ignored,
+    ignoredDirectories: discovery.ignoredDirectories,
+    truncated: discovery.truncated,
+    skippedExtensions: discovery.skippedExtensions,
+  }
+  // Only when asked: the list is thousands of lines, and the reason to ask is exactly "diff
+  // these two trees".
+  if (options.listFiles === true) {
+    Object.assign(seen, { paths: workspace.files.map((file) => file.path).sort(Order.String) })
+  }
   const decisionTotals: DecisionTotals = yield* decisionStats.read
+  // Say how the answers were obtained. A keyed run judges live and a keyless one replays,
+  // and the two can name the same site differently — which is the whole difference between
+  // a developer's machine and CI at the same commit. Without this line the report looks the
+  // same either way, and the difference is found by bisecting a ledger.
+  if (decisionTotals.calls > 0) {
+    notes.push({
+      ruleId: "joggle",
+      reason:
+        decisionTotals.calls +
+        " judgement(s) were asked of the model in this run: a key was present, so this run judged for itself. A run without the key replays the committed answers, and judged identities are not always the unverified ones — compare this report with CI's before treating a difference as a code change.",
+    })
+  } else if (decisionTotals.replayed > 0) {
+    notes.push({
+      ruleId: "joggle",
+      reason:
+        decisionTotals.replayed +
+        " judgement(s) were replayed from a cache — the committed ledger and this machine's wire cache — and no model was called. A cold CI run has neither, so it judges nothing and names the same sites differently",
+    })
+  }
   const elapsedMs = (yield* Clock.currentTimeMillis) - started
   const report: Report = {
     diagnostics: rankDiagnostics(folded.diagnostics),
     files: workspace.files.length,
     rules: effective.length,
     structure,
+    discovery: seen,
     skipped,
     notes,
     drops,
@@ -1158,7 +1321,7 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
   // next full run is compared against.
   if (!options.changed && options.changedPaths === undefined) {
     yield* writeStored(fs, path, runCache, {
-      version: policy.version,
+      version: VERSION,
       manifest,
       sources: workspace.files.map((file) => ({
         path: file.path,

@@ -1,0 +1,93 @@
+{
+  "$comment": "Four ways a live grant stops being mergeable. Each case states the observed facts and what the lander must do; none of them is 'merge anyway'. Written against docs/lander.md §The state machine.",
+  "cases": [
+    {
+      "name": "patch-id-differs",
+      "given": {
+        "entry": {
+          "pr": 1862,
+          "headSha": "55aa5293a",
+          "contentPatchId": "f6f830a5d25d0c752ca226da539673e01f39c6ee"
+        },
+        "nowHeadSha": "c0ffee123",
+        "nowContentPatchId": "1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d",
+        "binaryOrModeChange": false
+      },
+      "expected": {
+        "outcome": "re-ask",
+        "code": "ContentChanged",
+        "exit": 1,
+        "shows": "range-diff between the approved range and the candidate range, as evidence in the desk item",
+        "why": "Content identity is the approval. A different patch-id is new content and needs a new sha approval."
+      }
+    },
+    {
+      "name": "binary-or-mode-change",
+      "given": {
+        "entry": {
+          "pr": 1862,
+          "headSha": "55aa5293a",
+          "contentPatchId": "f6f830a5d25d0c752ca226da539673e01f39c6ee"
+        },
+        "nowHeadSha": "55aa5293a",
+        "nowContentPatchId": "f6f830a5d25d0c752ca226da539673e01f39c6ee",
+        "binaryOrModeChange": true
+      },
+      "expected": {
+        "outcome": "re-ask",
+        "code": "EquivalenceUnavailable",
+        "exit": 1,
+        "shows": "the numstat '-' row or the --summary mode change that disqualified the cheap path",
+        "why": "git patch-id is blind to binary hunks and mode changes, so equal patch-ids prove nothing here. The fence has a hole shaped like a PNG if this case is missed."
+      }
+    },
+    {
+      "name": "head-sha-mismatch",
+      "given": {
+        "entry": {
+          "pr": 1862,
+          "headSha": "55aa5293a",
+          "checkMode": "pr-merge",
+          "testedMergeSha": "7b21c0d9"
+        },
+        "check_suite": {
+          "head_sha": "0f1e2d3c",
+          "conclusion": "success",
+          "pull_requests": [{ "head": { "sha": "55aa5293a" } }]
+        }
+      },
+      "expected": {
+        "outcome": "refuse-to-merge",
+        "code": "UntestedMerge",
+        "exit": 1,
+        "shows": "the sha the suite tested and the sha the grant approved",
+        "why": "A green suite on a different merge commit tested a different pair. Re-test; do not merge on someone else's green."
+      }
+    },
+    {
+      "name": "parents-wrong",
+      "given": {
+        "entry": {
+          "pr": 1862,
+          "headSha": "55aa5293a",
+          "baseSha": "6e4f4ffc8",
+          "checkMode": "pr-merge",
+          "testedMergeSha": "7b21c0d9"
+        },
+        "check_suite": {
+          "head_sha": "7b21c0d9",
+          "conclusion": "success",
+          "pull_requests": [{ "head": { "sha": "55aa5293a" } }]
+        },
+        "tested_merge_parents": ["b00b00b", "55aa5293a"]
+      },
+      "expected": {
+        "outcome": "refuse-to-merge",
+        "code": "WrongPair",
+        "exit": 1,
+        "shows": "expected parents {baseSha, headSha} and the parents found, as a set",
+        "why": "The sha matched and the pair was wrong: the base moved before the test. Without the parent-set check the grant authorises a merge against a base nobody tested."
+      }
+    }
+  ]
+}

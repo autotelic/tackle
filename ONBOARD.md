@@ -62,35 +62,11 @@ Secrets are the environment and the host owns them: if a run needs a key this se
 - **pi** is already wired here (`.pi/settings.json`): run `pi update --extensions` rather than adding a second entry.
 - **OpenCode** is already wired here: keep the existing `"plugin"` entry or `.opencode/plugins/` file rather than adding another.
 
-## 7. The room — **STOP and ask**
-
-This repository keeps a project room: one ledger per Linear project, a daemon on this
-machine, and a review job that runs jig, a Pi, and one fenced post.
-
-```sh
-pnpm jig room plan            # read it, then show me the init line and wait
-pnpm jig room init            # only after I approve: writes room.config.json, registers the room
-pnpm jig room doctor          # names what is missing on this machine
-pnpm jig room dev             # the room, locally
-pnpm jig room webhook | sh    # forward GitHub events to it
-pnpm jig room daemon          # its own terminal: claims jobs, wakes the session
-```
-
-Ask before installing anything doctor names. What the checks mean:
-
-- `celld` — the room itself: `curl -fsSL https://celld.dev/install.sh | sh`
-- `gh webhook` — the GitHub forward: `gh extension install cli/gh-webhook`
-- a Linear token at `~/.linearis/token` (`linearis`), when this room watches Linear
-- `pi` — the review and the session wake both run it, so it has to be on PATH
-
-`hc` (herdr-core) is only needed by `pnpm jig room work`, and the wake needs the machine
-awake: a sleeping laptop is a hosting problem, not a bug.
-
-## 8. Report, then stop
+## 7. Report, then stop
 
 Tell me what you installed, what `pnpm jig init` wrote and kept, the census, and the first findings. Then wait for me.
 
-## 9. Never, without asking me
+## 8. Never, without asking me
 
 - `pnpm jig baseline` — it accepts every current finding, and an unreviewed baseline is debt made invisible.
 - Changing the gate back to `touched-files`, or adding an ignore to get green.
@@ -98,7 +74,7 @@ Tell me what you installed, what `pnpm jig init` wrote and kept, the census, and
 - `pnpm jig room init`, which registers the room against Linear.
 - Changing `jig.config.json` by hand instead of re-running `init`.
 
-## 10. What this scan already found
+## 9. What this scan already found
 
 - room not initialised: no room.config.json; `pnpm jig room plan` prints the init it would run
 

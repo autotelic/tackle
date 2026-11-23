@@ -1,5 +1,286 @@
 # @autotelic/jig-cli
 
+## 0.7.1
+
+### Patch Changes
+
+- 67961a5: A progress line whose units add up, and a baseline refusal that names the real cause.
+
+  The progress line printed the WIRE request count as "resolved". That is a different quantity: a
+  replayed candidate never makes a request, and one batched call can answer many candidates, so a
+  ten-minute run reported "198/10040 resolved (31 judged, 9731 replayed)" while writing 17,000
+  answers. The counters are now three distinct units — `judged` (answers written, one per
+  candidate), `replayed` (per-decision cache hits), `apiCalls` (provider requests) — and
+  `resolved` is their terminal sum with `unavailable`. The progress document carries the same
+  fields, plus `unavailable`.
+
+  `jig baseline` refused with "joggle reads its model key from this run's environment" whether or
+  not the key was present. On a repository that sets `unavailable: "count"`, the key IS present and
+  the candidates are still unjudged — a per-rule ceiling, not a missing secret. The refusal now
+  states which case it is, says that no key can raise a ceiling, and points at `--allow-unjudged`
+  for a repository whose engine policy already declares that unjudged is expected.
+
+  The README also states the direction that works: accept from a KEYED run once, and both modes
+  pass, because a keyless run sees a subset of a keyed ledger. Accepting keyless and then running
+  with a key fails by construction.
+
+## 0.7.0
+
+### Minor Changes
+
+- 0487a0b: A finding's identity no longer depends on whether a judgement reached it.
+
+  A cluster's identity included **the symbol the model chose to keep**, so the same duplicate had
+  one name when a keyed run judged it and another when CI ran keyless — and a ledger written in
+  either mode matched nothing in the other. That is why a developer with a key could not run the
+  gate unscoped and pass, and why "the engine ledger owns the bulk, the gate ledger stays short"
+  could not hold.
+
+  Identities are now the rule and the cluster's **members** (`file:name`, sorted, no line
+  numbers): membership is decided by the detector, before any question is asked, so keyed and
+  keyless runs agree. Verified on this workspace: the keyless identity set is a subset of the keyed
+  one, with zero renames (the keyed run adds findings; it no longer moves them).
+
+  **This renames the ledger, once.** Accepted identities written by joggle before this release will
+  not match; re-run `jig baseline` on the default branch (and the engine's `--update-baseline`)
+  after upgrading. The gate's report names the difference as new findings, so nothing is lost
+  silently.
+
+  Three related corrections:
+
+  - `jig baseline` refused any ledger containing a **deterministic** finding, because such findings
+    are marked `judged: false` — an exact duplicate has no question to ask. It now refuses only when
+    an engine actually skipped judgement (its census reports unjudged candidates), and says how many.
+  - The baseline refusal quotes the **per-rule ceilings** that dropped candidates, so a run that
+    stopped at a constant no longer sends the operator to `--max-tokens`, which cannot raise it.
+  - `jig init --force` no longer replaces a repository's decisions: an existing layer's `include`
+    set is kept (it is authored intent, not a draft), and a JIG.md/ONBOARD.md that differs from the
+    generated text is left alone with the fresh copy beside it as `.new`.
+
+## 0.6.0
+
+### Minor Changes
+
+- 94aca21: A long run says where it is, and the version a binary prints is the version on npm.
+
+  A judged run of 13 minutes printed **nothing** — stdout and stderr at zero bytes until the report
+  — so the only way to tell working from hung was to watch the answer cache grow. Two surfaces now
+  exist, both optional and both machine-local:
+
+  - **stderr, every 10 seconds**, counts only so every machine format on stdout stays clean:
+    `joggle: 4210/7787 candidate(s) resolved (1234 judged, 2976 replayed) · 1.9M/4.0M input tokens · 13m20s`.
+    Judged and replayed are named separately because "findings" and "findings no judgement reached"
+    added into one number is a misread that already happened.
+  - **a progress document**, rewritten atomically (temp + rename) on the same tick at
+    `<machine cache>/progress.json`: `{ phase, candidatesTotal, candidatesResolved, judged, replayed,
+    apiCalls, inputTokens, inputBudget, elapsedMs, updatedAt }`. A CI log or an agent can poll it.
+
+  `jig check` also announces each engine's start and finish on stderr, so the gap between concurrent
+  engines is visible instead of being swallowed until the merged report.
+
+  The answer ledger is now written atomically too: temp then rename, both layouts. A run killed
+  mid-write leaves the previous whole ledger instead of a truncated tail, which the reader would
+  have counted as skipped lines — losing answers silently.
+
+  `jig --version` and `cutlist --version` print the package version plus the checkout's short sha
+  (`jig v0.6.0+1a2b3c4`) instead of a hardcoded `0.0.0+<cwd sha>`, so an npm install and a checkout
+  are distinguishable, and "is my install current" is answerable from the binary.
+
+  One more line in the report: the headline separates findings from findings nobody judged
+  (`… ; 7787 candidate(s) not judged; 5315 of these finding(s) unverified`).
+
+## 0.5.0
+
+### Minor Changes
+
+- eefcec0: `init` starts the ratchet at today's debt, instead of at a gate nobody can pass.
+
+  A repo-wide gate (`mode: all`, the adoption default) with an EMPTY ledger makes every finding
+  already in the tree a new identity: adoption is red on day one, and every pull request fails on
+  debt it did not create. On a repository with judged rules the state can be impossible to leave,
+  because `jig baseline` needs a model key. That is what one consumer hit: a green scoped lint
+  gate and a red, unscoped `jig check` naming duplicate declarations in files their PR never
+  touched.
+
+  `init` now runs the engines once and accepts what it finds as the baseline — one reviewed commit,
+  with the count in the summary, the ledger in the diff, and `jig check --limit 0` to read it. A
+  run that could not judge (no key) says so, because adding a key can rename its identities. A
+  `touched-files` gate still gets an empty ledger: it holds nothing outside the change, so it needs
+  no ledger to pass and should not pay for a full run at init.
+
+  The report also explains the state it is in: when `failOn: any-new` holds findings against an
+  empty ledger, the gate line says that the ledger is empty and names both ways out (`jig baseline`
+  with `--allow-unjudged` when there is no key, or a scoped `jig check --since <base>`).
+
+  Two documents that lied are corrected: `JIG.md` claimed "the first run explains the debt instead
+  of failing on it" while writing an empty ledger, and the README called `touched-files` the
+  adoption default while `init` had moved to `all`. The generated CI guidance now names the two
+  questions: scope the pull-request run to the change, keep the unscoped run on the default branch.
+
+## 0.4.3
+
+### Patch Changes
+
+- 947c439: Say what a green gate did not answer.
+
+  Three additions to the text report, each from the same question: which reading of "0 findings"
+  is this?
+
+  - The headline now carries the unjudged count (`… ; 11,946 candidate(s) not judged`). A judged
+    rule whose model key was absent has not assessed the architecture, and the per-engine note
+    was too easy to scroll past.
+  - A scoped run says how many findings it read outside its change set (`412 finding(s) outside
+    this scope, not shown`). `--pr` narrows to the files the pull request touched; a cross-file
+    finding filed on an older file is then invisible, so the scoped number is a floor, not the
+    repository's answer.
+  - The gate names the rules that are reported and cannot fail it (`2,112 finding(s) reported and
+    cannot fail this gate (failOn: error): …`). A warning under `failOn: error`, a baselined
+    identity, and an advisory engine are all displayed like enforced findings and are enforced by
+    nothing; a repository keeping a second, errors-only lint config can now see which rules live
+    only there, without diffing two JSON files.
+
+## 0.4.2
+
+### Patch Changes
+
+- 96901d5: Do not query the host registry while an extension loads.
+
+  The duplicate-install guard added in the previous patch called `pi.getAllTools()` at the top of the
+  factory. pi's loader installs a throwing placeholder for every action method until the extension
+  has committed — "Extension runtime not initialized. Action methods cannot be called during
+  extension loading" — so the guard did not detect anything: it made the extension fail to load on
+  every boot, in every repository, whether or not a second copy was installed. That is worse than
+  the conflict it was meant to soften.
+
+  The guard is removed. Reading pi's loader settles what a duplicate actually is: both extensions
+  stay loaded, one diagnostic is recorded per conflicting name, and load order decides precedence.
+  Detecting that is the host's job. Making sure there is one install is configuration's, which the
+  generated `ONBOARD.md` and the README now state in one sentence.
+
+## 0.4.1
+
+### Patch Changes
+
+- 442e3ce: A second install of the extension no longer breaks the boot.
+
+  pi loads extensions per scope, so one package can be present twice: a user-scope checkout
+  (`pi install <path>`) and a project's own dependency. Both declare the same tool names, and pi
+  refuses the second registration — six load errors for jig, one per tool for room, on a boot that
+  would otherwise work, with the winning version decided by load order.
+
+  The extension now checks whether its own tool names are already registered by a DIFFERENT file
+  before registering. If so it skips once, with one line naming the other install and which file
+  it skipped; if they belong to its own path it registers as before, because that is a reload.
+  A host without `getAllTools` is unchanged.
+
+  The onboarding prompt and the README also say it plainly: install the agent surface in ONE
+  scope.
+
+## 0.4.0
+
+### Minor Changes
+
+- a6edace: `jig check` answers for a change, not only for the repository.
+
+  `--changed`, `--since <rev>`, and `--pr` / `--pr-number <n>` narrow a run to a change set —
+  the report and the gate together. This was the one thing joggle could do and its harness could
+  not, so "did this pull request introduce anything" had to be assembled from three tools by hand.
+
+  What is narrowed is the REPORT, not the engines. They still read the whole tree: a cross-file
+  rule cannot answer from three files, and a scoped oxlint invocation cannot see an import it
+  never loaded. Afterwards each engine's counts are recounted over the change set, and
+  everything an engine said about HOW it ran — replayed, skipped, candidates not judged — is
+  carried through untouched, because a scoped run must still be able to say what it did not look
+  at.
+
+  Three rules keep the smaller report from becoming a bigger claim:
+
+  - The text report prints the scope and the number of files read. "0 findings" over three
+    changed files and over the repository are different sentences.
+  - A scope that cannot be resolved — a revision git does not know, no `gh`, no pull request for
+    the branch — exits 3 and says so. It never falls back to the whole tree, which would answer
+    "is the repository clean" to a question about one change.
+  - The stale-ledger line is absent in a scoped run. A scoped diff compared the ledger to a
+    handful of files, so every identity outside that slice would read as stale; only a
+    whole-tree run can say an entry stopped firing.
+
+## 0.3.2
+
+### Patch Changes
+
+- f8e19ba: Pin `@effect/platform-node-shared` as a real dependency.
+
+  `@effect/platform-node` constrains its shared package with a caret and nothing else, so a
+  consumer whose lockfile resolves that caret upward got a shared package built for a newer
+  Effect than the one the tool pins: `cutlist@0.0.2` died on `effect/dist/process/CommandLine.js`
+  in a repository that also had Effect 4.1. The workspace `overrides` hid this locally; a
+  dependency is what publishes, and no package declared one. Both published tools now do, and
+  `scripts/check-catalog.mjs` now fails when a package uses `@effect/platform-node` without
+  pinning the shared package beside it, so the next tool cannot publish with the same gap.
+
+## 0.3.1
+
+### Patch Changes
+
+- 9fabc38: `--format github` carries the census. An engine that skipped a rule, left candidates unjudged, or
+  replayed found _nothing to say_, which is not the same as nothing to find — and the annotations
+  used to drop all of it, so a CI step could print no annotations at all and exit 0 while the rules
+  it exists to run never looked. Each such engine now emits
+  `::warning title=jig census (<engine>)::<why>` before its findings.
+
+## 0.3.0
+
+### Minor Changes
+
+- 010a06d: `jig check` runs every engine read-only (`JIG_READ_ONLY=1`): a report that edits the tree it
+  reports on changes its own next answer. The gate's section also names where its failures are
+  (`file:line` samples per rule) instead of only counting them, so a run that re-opens dozens of
+  findings in one rule can be acted on from the log.
+
+## 0.2.3
+
+### Patch Changes
+
+- 461ec12: The cookbook's stacked-branch recipe now separates the two runs: `--since <base>` is the gate's
+  run, and accepting is one full run at the head (`--update-baseline ... --merge-baseline`),
+  because `--update-baseline` refuses a scoped run. A scoped accept folds findings differently and
+  can miss the identity a full run reports.
+
+## 0.2.2
+
+### Patch Changes
+
+- 4998735: `--format github` annotates the findings the gate actually holds as `::error`, not by the
+  engine's own severity. `failOn: any-new` fails on novelty, so it can hold an `info` finding —
+  which printed as a notice and left the log with a red gate and no red finding in it.
+
+## 0.2.1
+
+### Patch Changes
+
+- e52f439: The cookbook's stacked-branch recipe now gives the ordering rule, not just the scoped run:
+  accept and rebuild every branch first, then rebase bottom-up once, then push once. A commit on
+  the parent (an accepted identity, a rebuilt catalog) re-dirties every child above it, so a
+  cascade run between fixes runs once per fix — five times through a 22-branch migration.
+
+## 0.2.0
+
+### Minor Changes
+
+- e6a6d56: jig baseline refuses findings no judgement reached (`--allow-unjudged` overrides), and names
+  TYPESAFE_API_KEY as what judges them: without one the same findings are named from what the
+  rules could see alone, so a ledger written locally does not match a judged run and passes here
+  while failing CI.
+
+  It also checks its own postcondition. The ledger decides novelty alone, so under
+  `failOn: warn|error` or a `maxWarnings` ceiling the gate holds by severity and cannot be
+  cleared by accepting findings; baseline now says which regime held and exits with `check`'s
+  code instead of printing success over a red gate.
+
+  `--format github` annotates identities the ledger already accepts as `::notice` rather than
+  `::error`, and always emits the gate's own line, so an accepted finding is never the last red
+  line in a CI log.
+
 ## 0.1.3
 
 ### Patch Changes

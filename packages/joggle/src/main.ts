@@ -7,17 +7,19 @@ import { checkRepository } from "./check.ts"
 import { layer as decisionLayer } from "./decision.ts"
 import {
   census as censusAnswers,
+  compact as compactAnswers,
   make as makeAnswerStore,
   mergeShardText,
   prune as pruneAnswers,
 } from "./answer-store.ts"
 import { ask } from "./ask.ts"
-import { cacheDirFor, runCacheDirFor, shortHash } from "./state.ts"
+import { cacheDirFor, runCacheDirFor, scopedAnswerCacheDir, shortHash } from "./state.ts"
 import { canonical } from "./canonical.ts"
 import { loadConfig, isEnabled, severityFor } from "./config.ts"
 import { layer as gitLayer, Service as Git } from "./git.ts"
 import { loadPlugins, withDefaults } from "./plugins.ts"
 import { policy } from "./policy.ts"
+import { VERSION } from "./version.ts"
 import { exitCodeFor, render } from "./report.ts"
 import { applyDeclarationTypes, isRecord, loadWorkspace } from "./workspace.ts"
 import { answerPlansRaw, chunkPlans, type Plan, type PlanAnswers } from "./plans.ts"
@@ -171,6 +173,30 @@ const checkCommand = Command.make(
       Flag.withDescription("Write the current findings to this file as the accepted baseline."),
       Flag.optional,
     ),
+    mergeBaseline: Flag.Boolean("merge-baseline").pipe(
+      Flag.withDescription(
+        "With --update-baseline, keep the identities already in that file and add this run's. A scoped run (--since) judges all of its own files, so this grows a ledger by one change instead of replacing it.",
+      ),
+      Flag.withDefault(false),
+    ),
+    listFiles: Flag.Boolean("list-files").pipe(
+      Flag.withDescription(
+        "Include the analysed file paths in the report's discovery block (--format json). The only honest way to answer why two checkouts of one commit report different findings is to diff their file lists.",
+      ),
+      Flag.withDefault(false),
+    ),
+    readOnly: Flag.Boolean("read-only").pipe(
+      Flag.withDescription(
+        "Answer from the cache and never write it. Set for every engine jig runs: a check must not edit the tree it judges, because new answers rename the findings they verify.",
+      ),
+      Flag.withDefault(false),
+    ),
+    allowScopedBaseline: Flag.Boolean("allow-scoped-baseline").pipe(
+      Flag.withDescription(
+        "Write a ledger from a scoped run. Refused by default: a scoped run's identities are not a subset of a full run's, so the ledger can miss the identity CI reports. Accept from a full run instead.",
+      ),
+      Flag.withDefault(false),
+    ),
     allowUnjudgedBaseline: Flag.Boolean("allow-unjudged-baseline").pipe(
       Flag.withDescription(
         "Write the baseline even though some candidates were not judged. A baseline is what was reviewed; this is the explicit way to accept that some of it was not.",
@@ -197,7 +223,8 @@ const checkCommand = Command.make(
       // file list against the root, git's changed files against the workspace --
       // and a relative root makes those comparisons fail quietly.
       const cwd = path.resolve(Option.getOrUndefined(config.cwd) ?? process.cwd())
-      const cacheDir = yield* cacheDirFor(cwd, Option.getOrUndefined(config.cacheDir))
+      const declaredCacheDir = Option.getOrUndefined(config.cacheDir)
+      const repositoryCache = yield* cacheDirFor(cwd, declaredCacheDir)
       const apiKey = yield* Config.option(Config.String("TYPESAFE_API_KEY"))
       const ruleFlag = Option.getOrUndefined(config.rule)
       const proseInputs = (value: string | undefined): ReadonlyArray<string> | undefined =>
@@ -250,6 +277,16 @@ const checkCommand = Command.make(
       // The machine cache holds the run cache and the wire cache. The
       // per-decision answer cache in `cacheDir` is the one CI replays.
       const machineCache = yield* runCacheDirFor(cwd)
+      // A branch's answers are a cache, not a commit: a scoped run warms this machine and
+      // leaves the committed ledger alone. Otherwise every pull request in a stack carries
+      // thousands of lines of verdicts nobody can review (see docs/artifacts.md).
+      const scopedRun = config.changed || changedPaths !== undefined
+      const cacheDir = scopedAnswerCacheDir({
+        declared: declaredCacheDir,
+        repository: repositoryCache,
+        machine: machineCache,
+        scoped: scopedRun,
+      })
 
       const report = yield* checkRepository({
         config: effective,
@@ -280,6 +317,9 @@ const checkCommand = Command.make(
         baselinePath: Option.getOrUndefined(config.baseline),
         updateBaselinePath: Option.getOrUndefined(config.updateBaseline),
         allowUnjudgedBaseline: config.allowUnjudgedBaseline,
+        mergeBaseline: config.mergeBaseline,
+        allowScopedBaseline: config.allowScopedBaseline,
+        listFiles: config.listFiles,
       }).pipe(
         Effect.provide(
           Layer.mergeAll(
@@ -287,9 +327,16 @@ const checkCommand = Command.make(
             decisionLayer({
               cacheDir,
               wireCacheDir: machineCache,
+              // Machine-local, pollable, and never part of the committed ledger: it describes
+              // THIS run. A long judged run used to print nothing at all until the report.
+              progressFile: path.join(machineCache, "progress.json"),
+              inputBudget:
+                Option.getOrUndefined(config.maxTokens) ?? effective.decision?.maxInputTokens,
               offline: config.offline,
               apiKey,
               layout: effective.cache?.layout,
+              timestamps: cacheDir === machineCache,
+              readOnly: config.readOnly || process.env["JIG_READ_ONLY"] === "1",
             }),
             tsgoLayer(cwd, {
               runExternalCode: config.runExternalCode || effective.runExternalCode === true,
@@ -298,9 +345,25 @@ const checkCommand = Command.make(
         ),
       )
 
-      yield* write(render(report, config.format, { color: process.stdout.isTTY === true }))
+      // Say where the answers went when the run left the committed ledger alone: a reader
+      // who expected the cache to grow would otherwise think judging did nothing.
+      const answered = scopedRun && declaredCacheDir === undefined && repositoryCache !== machineCache
+      const reported = answered
+        ? {
+            ...report,
+            notes: [
+              {
+                ruleId: "joggle",
+                reason:
+                  "answers for this scoped run went to the machine cache, not the committed ledger: a branch's verdicts are a cache, and committing them puts thousands of lines in every pull request",
+              },
+              ...report.notes,
+            ],
+          }
+        : report
+      yield* write(render(reported, config.format, { color: process.stdout.isTTY === true }))
       yield* Effect.sync(() => {
-        process.exitCode = exitCodeFor(report, config.maxWarnings)
+        process.exitCode = exitCodeFor(reported, config.maxWarnings)
       })
     }).pipe(Effect.provide(gitLayer)),
 ).pipe(
@@ -989,6 +1052,15 @@ const cacheReport = Command.make(
           "  verdicts  Probability " + found.verdicts.yes + " yes / " + found.verdicts.no + " no",
           "  labels    " + (labels === "" ? "none" : labels),
           "  written   " + date(found.oldest) + " .. " + date(found.newest),
+          ...(found.lines > found.entries
+            ? [
+                "  duplicates " +
+                  (found.lines - found.entries) +
+                  " line(s) over " +
+                  found.entries +
+                  " answer(s); `joggle cache compact` rewrites the set",
+              ]
+            : []),
           ...(found.skippedLines === 0 ? [] : ["  skipped   " + found.skippedLines + " unreadable line(s)"]),
         ].join("\n"),
       )
@@ -1000,6 +1072,58 @@ const cacheReport = Command.make(
   Command.withShortDescription("Report on the answer cache."),
   Command.withExamples([
     { command: "joggle cache report", description: "Count what the committed ledger holds." },
+  ]),
+)
+
+const cacheCompact = Command.make(
+  "compact",
+  {
+    cwd: Flag.String("cwd").pipe(
+      Flag.withDescription("Project root whose cache to compact (default: the current directory)."),
+      Flag.optional,
+    ),
+    cacheDir: Flag.String("cache-dir").pipe(
+      Flag.withDescription("Where the answer cache lives: <cwd>/.joggle when it exists, otherwise the machine cache."),
+      Flag.optional,
+    ),
+  },
+  (config) =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem
+      const path = yield* Path.Path
+      const cwd = path.resolve(Option.getOrUndefined(config.cwd) ?? process.cwd())
+      const dir = yield* cacheDirFor(cwd, Option.getOrUndefined(config.cacheDir))
+      const result = yield* compactAnswers(fs, path, dir)
+      if (result.duplicates === 0) {
+        yield* write(
+          "joggle: the ledger is already a set: " + result.entries + " answer(s), " + result.bytesAfter + " bytes",
+        )
+        return
+      }
+      yield* write(
+        "joggle: " +
+          result.lines +
+          " line(s) held " +
+          result.entries +
+          " answer(s); compacted " +
+          result.duplicates +
+          " duplicate(s) away, " +
+          result.bytesBefore +
+          " -> " +
+          result.bytesAfter +
+          " bytes",
+      )
+    }),
+).pipe(
+  Command.withDescription(
+    "Rewrite the answer ledger as the set it is: one sorted line per key, newest answer winning. Repairs the duplication a union merge leaves behind (a differing line is kept from both sides), without re-judging anything.",
+  ),
+  Command.withShortDescription("Deduplicate the answer cache."),
+  Command.withExamples([
+    {
+      command: "joggle cache compact",
+      description: "Collapse duplicate lines left by a stack's merges.",
+    },
   ]),
 )
 
@@ -1041,12 +1165,12 @@ const cacheMigrate = Command.make(
 
 const cacheCommand = Command.make("cache", {}, () =>
   write(
-    "joggle cache: run `joggle cache report`, `prune`, or `migrate --layout single|sharded`; docs/artifacts.md has the reasoning.",
+    "joggle cache: run `joggle cache compact`, `report`, `prune`, or `migrate --layout single|sharded`; docs/artifacts.md has the reasoning.",
   ),
 ).pipe(
-  Command.withDescription("Work on the answer cache itself: prune it, migrate it, and see how it is laid out."),
-  Command.withShortDescription("Prune the answer cache."),
-  Command.withSubcommands([cachePrune, cacheMigrate, cacheReport]),
+  Command.withDescription("Work on the answer cache itself: compact it, prune it, migrate it, and see how it is laid out."),
+  Command.withShortDescription("Work on the answer cache."),
+  Command.withSubcommands([cacheCompact, cachePrune, cacheMigrate, cacheReport]),
 )
 
 const cli = Command.make("joggle").pipe(
@@ -1074,7 +1198,7 @@ const cli = Command.make("joggle").pipe(
 
 const services = Layer.mergeAll(NodeServices.layer, FetchHttpClient.layer, builtIn)
 
-const program = Command.run(cli, { version: policy.version }).pipe(Effect.provide(services))
+const program = Command.run(cli, { version: VERSION }).pipe(Effect.provide(services))
 
 /*
  * Never fail silently. A typed failure, an interruption and a defect all have

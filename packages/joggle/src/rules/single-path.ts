@@ -151,7 +151,9 @@ export const singlePath: PlannedRule = {
       }
     }
 
-    const budget = policy.evidence.maxMembers * 16
+    // 16 members' worth of sites was 192 on this workspace, which has 408 string sites --
+    // 216 candidates sliced off every run. 64 members' worth (768) fits the measured tree.
+    const budget = policy.evidence.maxMembers * 64
     const judged = candidates.slice(0, budget)
     const overBudget: ReadonlyArray<Drop> = candidates.slice(budget).map((candidate) => ({
       ruleId: RULE_ID,

@@ -2,6 +2,7 @@ import { Effect, Result, Schema } from "effect"
 import * as AiError from "effect/ai/AiError"
 import { Decision, DecisionModel } from "effect/ai"
 import { isUnreachable } from "./decision.ts"
+import type { JoggleDecision } from "./plans.ts"
 import { policy } from "./policy.ts"
 import type { Unit, UnitKind, Workspace } from "./workspace.ts"
 
@@ -38,7 +39,7 @@ const AskEvidence = Schema.Struct({
   ),
 })
 
-const existsDecision = Decision.probability({
+const existsDecision: Decision.Probability = Decision.probability({
   instructions: [
     "Does any declaration in `candidates` answer the question in `query`?",
     "Answer about the code's meaning, not the words: a declaration answers the question when its behaviour or purpose is what the question asks about.",
@@ -143,10 +144,10 @@ export const ask = (
 
     const attempt = (list: ReadonlyArray<Unit>) =>
       Effect.gen(function* () {
-        const decisions: Array<readonly [string, Decision.Any]> = [
+        const decisions: Array<readonly [string, JoggleDecision]> = [
           ["exists", existsDecision],
           ...list.map(
-            (_unit, index): readonly [string, Decision.Any] => [
+            (_unit, index): readonly [string, JoggleDecision] => [
               `candidate_${index}`,
               Decision.probability({
                 instructions: relevanceInstructions(index),

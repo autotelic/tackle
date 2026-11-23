@@ -4,6 +4,7 @@ import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { promisify } from "node:util"
 import { Plugin } from "@opencode/plugin"
+import { findProjectBin } from "./launcher.ts"
 
 /*
  * jig as an OpenCode plugin.
@@ -71,8 +72,8 @@ export const resolveLauncher = (env: LaunchEnvironment): Launcher => {
   if (env.override !== undefined && env.override !== "") {
     return { command: env.override, args: [], kind: "override" }
   }
-  const local = join(env.cwd, "node_modules", ".bin", "jig")
-  if (env.exists(local)) return { command: local, args: [], kind: "project" }
+  const local = findProjectBin({ cwd: env.cwd, name: "jig", exists: env.exists })
+  if (local._tag === "Found") return { command: local.path, args: [], kind: "project" }
   const global = env.onPath("jig")
   if (global !== undefined) return { command: global, args: [], kind: "path" }
   const node = env.onPath("node") ?? env.execPath
@@ -203,7 +204,7 @@ const v2 = Plugin.define({
       editor.add({
         name: "baseline",
         description:
-          "Accept the current findings into the ledger (`jig baseline`). This WRITES the baseline, so a human decides it, not a tool call: use it only after they have read the report. It does not judge anything; a judged baseline needs a model key in the host's environment and is shell-only.",
+          "Accept the current findings into the ledger (`jig baseline`). This WRITES the baseline, so a human decides it, not a tool call: use it only after they have read the report. It does not judge anything, and a finding no judgement reached is rejected — a judged baseline needs a model key in the host's environment and is shell-only.",
         input: {
           type: "object",
           properties: {

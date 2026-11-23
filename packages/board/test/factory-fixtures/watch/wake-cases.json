@@ -1,0 +1,121 @@
+{
+  "$comment": "The wake decision, which is where polling loops and lost comments both come from. Six cases: two that must wake, four that must not — and every 'must not' names the reason, because a silent non-wake is indistinguishable from a broken poller.",
+  "workstream": {
+    "id": "perms-1862",
+    "phase": "build",
+    "head": "55aa5293a4b9d0f7f0e1c1b6a1f0d3c8e7b6a5d4",
+    "cursors": { "github": "2026-11-21T22:31:10.000Z", "linear": "2026-11-21T22:29:44.000Z" },
+    "consumedEvents": ["github:review-comment:2048113377"],
+    "budget": { "passes": { "used": 3, "of": 5 }, "capStop": null }
+  },
+  "cases": [
+    {
+      "name": "stale-head-review",
+      "given": {
+        "event": {
+          "id": "github:review-comment:2048113901",
+          "kind": "review.comment",
+          "at": "2026-11-21T22:40:00.000Z",
+          "headSha": "7c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d",
+          "body": "this refusal should be 409, not 403"
+        }
+      },
+      "expected": {
+        "wake": true,
+        "reason": "review comment on an older head still critiques the change",
+        "passInput": {
+          "event": "github:review-comment:2048113901",
+          "authoredAgainst": "7c1d0e9f",
+          "currentHead": "55aa5293a"
+        },
+        "receipt": { "headMismatch": true },
+        "why": "Suppressing it loses a human's comment, which is the worse failure. The pass must KNOW the line numbers may not map — hence authoredAgainst beside currentHead, and headMismatch in the receipt."
+      }
+    },
+    {
+      "name": "current-head-review",
+      "given": {
+        "event": {
+          "id": "github:review-comment:2048114020",
+          "kind": "review.comment",
+          "at": "2026-11-21T22:45:00.000Z",
+          "headSha": "55aa5293a4b9d0f7f0e1c1b6a1f0d3c8e7b6a5d4",
+          "body": "add a test for the refusal path"
+        }
+      },
+      "expected": {
+        "wake": true,
+        "reason": "review comment on the current head",
+        "passInput": { "event": "github:review-comment:2048114020" },
+        "receipt": { "headMismatch": false }
+      }
+    },
+    {
+      "name": "already-consumed",
+      "given": {
+        "event": {
+          "id": "github:review-comment:2048113377",
+          "kind": "review.comment",
+          "at": "2026-11-21T20:14:03.000Z",
+          "headSha": "55aa5293a4b9d0f7f0e1c1b6a1f0d3c8e7b6a5d4"
+        }
+      },
+      "expected": {
+        "wake": false,
+        "reason": "event id already in consumedEvents",
+        "records": false
+      },
+      "why": "An overlapping poll window returns the same event again. Without this, every wake doubles."
+    },
+    {
+      "name": "self-authored",
+      "given": {
+        "event": {
+          "id": "github:review-comment:2048114100",
+          "kind": "review.comment",
+          "at": "2026-11-21T22:46:00.000Z",
+          "headSha": "55aa5293a4b9d0f7f0e1c1b6a1f0d3c8e7b6a5d4",
+          "actor": "autotelic-foreman[bot]"
+        }
+      },
+      "expected": {
+        "wake": false,
+        "reason": "actor is this workstream's own bot identity",
+        "records": true
+      },
+      "why": "The poller sees the foreman's own comment on the next tick. A foreman that wakes on its own output is an infinite loop with extra steps."
+    },
+    {
+      "name": "blocked-on-desk",
+      "given": {
+        "workstream": { "phase": "blocked" },
+        "event": {
+          "id": "github:review-comment:2048114210",
+          "kind": "review.comment",
+          "at": "2026-11-21T22:47:00.000Z",
+          "headSha": "55aa5293a4b9d0f7f0e1c1b6a1f0d3c8e7b6a5d4"
+        }
+      },
+      "expected": {
+        "wake": false,
+        "reason": "phase is blocked; the desk answer is the next event",
+        "records": true
+      },
+      "why": "Record it and wait. Starting a pass while a human decision is pending is how a blocked workstream quietly resumes and contradicts the answer it was waiting for."
+    },
+    {
+      "name": "cap-stopped",
+      "given": {
+        "workstream": { "budget": { "passes": { "used": 5, "of": 5 }, "capStop": "passes" } },
+        "event": {
+          "id": "github:review-comment:2048114222",
+          "kind": "review.comment",
+          "at": "2026-11-21T22:48:00.000Z",
+          "headSha": "55aa5293a4b9d0f7f0e1c1b6a1f0d3c8e7b6a5d4"
+        }
+      },
+      "expected": { "wake": false, "reason": "cap stop: passes 5/5", "records": true },
+      "why": "A cap stop is a state, not a typo. The event is recorded and would be picked up by a pass after the cap is raised — and the reason names the dimension and the counts, not the word 'blocked'."
+    }
+  ]
+}

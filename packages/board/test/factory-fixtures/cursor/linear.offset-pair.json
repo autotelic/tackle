@@ -1,0 +1,50 @@
+{
+  "$comment": "Linear's DateTime serializes ISO-8601 and has appeared with an offset. The point of this fixture is that the poller must not depend on the source always emitting Z.",
+  "source": "linear",
+  "field": "updatedAt",
+  "events": [
+    {
+      "id": "e1",
+      "issue": "P-AUT-241",
+      "updatedAt": "2026-11-21T09:00:00.000+02:00",
+      "instant": "2026-11-21T07:00:00.000Z"
+    },
+    {
+      "id": "e2",
+      "issue": "P-AUT-243",
+      "updatedAt": "2026-11-21T07:30:00.000Z",
+      "instant": "2026-11-21T07:30:00.000Z"
+    },
+    {
+      "id": "e3",
+      "issue": "P-AUT-247",
+      "updatedAt": "2026-11-21T03:00:00.000-05:00",
+      "instant": "2026-11-21T08:00:00.000Z"
+    }
+  ],
+  "lexicalOrder": ["e3", "e2", "e1"],
+  "instantOrder": ["e1", "e2", "e3"],
+  "cases": [
+    {
+      "cursor": "e1",
+      "since": "2026-11-21T09:00:00.000+02:00",
+      "stringComparisonReturns": [],
+      "mustReturn": ["e2", "e3"],
+      "why": "e1's string sorts LAST lexically, so a since=<string> poll answers 'nothing new' while two later events exist. Silent skip."
+    },
+    {
+      "cursor": "e3",
+      "since": "2026-11-21T03:00:00.000-05:00",
+      "stringComparisonReturns": ["e1", "e2", "e3"],
+      "mustReturn": [],
+      "why": "e3's string sorts FIRST lexically, so the same poll replays the whole window. Duplicate work, not a skip."
+    },
+    {
+      "cursor": "e1",
+      "since": "2026-11-21T07:00:00.000Z",
+      "stringComparisonReturns": null,
+      "mustReturn": ["e2", "e3"],
+      "why": "The instant-backed cursor gives the right answer for the same starting point as case 1, which is the whole test: same cursor, two behaviours."
+    }
+  ]
+}

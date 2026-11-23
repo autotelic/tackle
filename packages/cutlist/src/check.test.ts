@@ -1,3 +1,4 @@
+/* oxlint-disable plumb/prefer-property-tests -- the fixtures ARE the unreadable bytes: the gate's contract is which inputs it fails closed on, and each one is a named case. */
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"

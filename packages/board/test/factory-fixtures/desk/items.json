@@ -1,0 +1,196 @@
+{
+  "$comment": "The four things a workstream can ask a human, plus one that is not a question. Every phase terminates in one of these, so the shape matters more than any single instance: a choice is an axis with options, rows are artifacts, and refs are where to look.",
+  "items": [
+    {
+      "id": "desk-b7c1",
+      "workstream": "enterprise-1854",
+      "kind": "approval",
+      "title": "Merge 2 prepared PRs",
+      "why": "land phase: both entries are green on the pair that was approved",
+      "body": "Both entries re-tested after the base moved; patch-ids unchanged, no binary or mode changes.",
+      "choices": [
+        {
+          "key": "decision",
+          "label": "What should happen",
+          "suggest": "merge-all",
+          "options": [
+            {
+              "id": "merge-all",
+              "label": "Merge both",
+              "outcome": "lander merges each entry whose head still matches its approved sha"
+            },
+            {
+              "id": "merge-subset",
+              "label": "Merge only the rows I select",
+              "outcome": "unselected entries stay open and re-propose next pass"
+            },
+            {
+              "id": "decline",
+              "label": "Do not merge",
+              "outcome": "returns to land with your note attached"
+            }
+          ]
+        }
+      ],
+      "rows": {
+        "key": "entries",
+        "label": "Entries in this batch",
+        "items": [
+          {
+            "v": "1862",
+            "label": "PR 1862 · 14 files +412 −88 · jig 0 error 2 warn · tests green · base moved once",
+            "on": true
+          },
+          {
+            "v": "1854",
+            "label": "PR 1854 · 31 files +1280 −210 · jig 0 error 0 warn · tests green · base unchanged",
+            "on": true
+          }
+        ]
+      },
+      "refs": ["pr:1862", "pr:1854", "grant:batch-2026-11-21-a"],
+      "createdAt": "2026-11-21T22:52:00.000Z",
+      "expiresAt": "2026-11-22T22:52:00.000Z"
+    },
+
+    {
+      "id": "desk-a4f9",
+      "workstream": "perms-1862",
+      "kind": "approval",
+      "title": "Apply the reconciliation report?",
+      "why": "Linear says 42 Backlog; the branch and its project doc say 26 done or refused",
+      "body": "26 proposals carry evidence (commit, PR or passing check). 9 are inference-only and will not be applied by `apply --confidence evidence`. 2 are unknown.",
+      "choices": [
+        {
+          "key": "decision",
+          "label": "What to apply",
+          "suggest": "evidence-only",
+          "options": [
+            {
+              "id": "evidence-only",
+              "label": "Apply the 26 evidenced proposals",
+              "outcome": "26 state changes, one receipt each, inference-only proposals left pending"
+            },
+            {
+              "id": "all",
+              "label": "Apply all 35 proposals",
+              "outcome": "includes the 9 inference-only; each receipt names its confidence"
+            },
+            {
+              "id": "none",
+              "label": "Apply nothing",
+              "outcome": "the report stays as evidence and the phase stays reconcile"
+            }
+          ]
+        }
+      ],
+      "rows": {
+        "key": "confidence",
+        "label": "Proposals by confidence",
+        "items": [
+          { "v": "evidence", "label": "26 issues name a commit, PR or check", "on": true },
+          { "v": "inference", "label": "9 issues matched by branch or title only", "on": false },
+          { "v": "unknown", "label": "2 issues with no evidence either way", "on": false }
+        ]
+      },
+      "refs": ["report:perms-1862-2026-11-21T22-40Z"],
+      "createdAt": "2026-11-21T22:40:30.000Z"
+    },
+
+    {
+      "id": "desk-c2e0",
+      "workstream": "perms-1862",
+      "kind": "decision",
+      "title": "One PR for the remaining 16 leaves, or split?",
+      "why": "sizeBudget: 42 issues and 4,100 changed lines in one open PR",
+      "body": "The preference is one PR per project. At this size the second half will be unreviewable, and a split now is cheaper than a 4,000-line review.",
+      "choices": [
+        {
+          "key": "strategy",
+          "label": "Delivery shape",
+          "suggest": "continue",
+          "options": [
+            {
+              "id": "continue",
+              "label": "Continue on PR 1862",
+              "outcome": "recorded as an approved size exception with an expiry, re-proposed at expiry"
+            },
+            {
+              "id": "split",
+              "label": "Split at the next cohort",
+              "outcome": "finish the current cohort, then open PR 2 for the remainder"
+            },
+            {
+              "id": "stop",
+              "label": "Stop and re-plan the project",
+              "outcome": "phase becomes blocked; no further passes"
+            }
+          ]
+        }
+      ],
+      "refs": ["pr:1862", "project:P-AUT-128"],
+      "createdAt": "2026-11-21T22:41:00.000Z"
+    },
+
+    {
+      "id": "desk-d5a3",
+      "workstream": "enterprise-1854",
+      "kind": "blocked",
+      "title": "Pass 4 raised 3 new warnings",
+      "why": "quality-regressed: jig went from 0 error 0 warn to 0 error 3 warn",
+      "body": "The pass is checkpointed but not accepted. Nothing is pushed to the PR until this is answered.",
+      "choices": [
+        {
+          "key": "decision",
+          "label": "What to do with the pass",
+          "suggest": "revert",
+          "options": [
+            {
+              "id": "revert",
+              "label": "Revert to the last clean checkpoint",
+              "outcome": "the pass stays charged; the workstream returns to land"
+            },
+            {
+              "id": "accept-baseline",
+              "label": "Accept the 3 warnings into the baseline",
+              "outcome": "baseline grows by 3 identities; the pass is accepted"
+            },
+            {
+              "id": "allow-once",
+              "label": "Allow this pass, keep the ratchet",
+              "outcome": "the pass is accepted and the next pass must return to 0 warn"
+            }
+          ]
+        }
+      ],
+      "rows": {
+        "key": "counts",
+        "label": "jig before → after",
+        "items": [
+          { "v": "error", "label": "0 → 0", "on": false },
+          { "v": "warn", "label": "0 → 3 (require-jsdoc-on-exported ×3)", "on": true }
+        ]
+      },
+      "refs": ["pass:4", "checkpoint:3d7e901", "receipt:pass-4"],
+      "createdAt": "2026-11-21T21:07:30.000Z"
+    },
+
+    {
+      "id": "desk-e8b2",
+      "workstream": "perms-1862",
+      "kind": "fyi",
+      "title": "Reconciled 26 issues against the branch",
+      "why": "no decision needed; the report is the artifact",
+      "body": "26 evidenced, 9 inference-only, 2 unknown. Report committed beside the workstream record.",
+      "choices": [],
+      "refs": ["report:perms-1862-2026-11-21T22-40Z"],
+      "createdAt": "2026-11-21T22:40:00.000Z"
+    }
+  ],
+  "rules": [
+    "kind fyi has no choices and can never be answered — answering it is UnknownOption",
+    "every choice has a suggest, because a human reading an item should see what the foreman would do",
+    "rows are artifacts, not verdicts: each row carries the numbers a reviewer would check",
+    "a blocked item's pass is checkpointed but not accepted; the item says so in body"
+  ]
+}

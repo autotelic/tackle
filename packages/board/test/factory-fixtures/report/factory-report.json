@@ -1,0 +1,63 @@
+{
+  "$comment": "The P4 seam: what a Shakti foreman sends the Tackle workstream when the tooling itself gets in the way. Intercom today, the AT mailbox later — the shape is what survives the transport, so it carries enough to triage without a follow-up.",
+  "shape": {
+    "id": "report-<workstream>-<seq>",
+    "workstream": "perms-1862",
+    "kind": "ergonomics | conformance | docs | blocker | quality",
+    "at": "2026-11-21T23:10:00.000Z",
+    "command": "factory status --json",
+    "expected": "what should have happened",
+    "actual": "what did happen, quoting the interesting line",
+    "output": "the full output when it is short, otherwise a ref",
+    "evidence": { "receipt": "pass:7", "refs": ["docs/seam.md"] },
+    "blocked": false,
+    "fingerprint": "<stable hash of kind+command+first failing line>"
+  },
+  "reports": [
+    {
+      "id": "report-perms-1862-004",
+      "workstream": "perms-1862",
+      "kind": "ergonomics",
+      "at": "2026-11-21T23:10:00.000Z",
+      "command": "factory status --json",
+      "expected": "phase build with a checkpoint age",
+      "actual": "phase build, checkpoint null after a successful adoption",
+      "output": "{\"id\":\"perms-1862\",\"phase\":\"build\",\"checkpoint\":null}",
+      "evidence": { "receipt": "pass:7" },
+      "blocked": false,
+      "fingerprint": "ergonomics:factory status:checkpoint null after adoption"
+    },
+    {
+      "id": "report-perms-1862-005",
+      "workstream": "perms-1862",
+      "kind": "conformance",
+      "at": "2026-11-21T23:22:00.000Z",
+      "command": "jig check",
+      "expected": "0 error 0 warn on a preserved tree",
+      "actual": "1 warn: require-jsdoc-on-exported in factory/adopt.ts",
+      "output": "packages/board/src/factory/adopt.ts:41 plumb/require-jsdoc-on-exported",
+      "evidence": { "refs": ["docs/refusals.md"] },
+      "blocked": false,
+      "fingerprint": "conformance:jig check:require-jsdoc-on-exported:41"
+    },
+    {
+      "id": "report-enterprise-1854-002",
+      "workstream": "enterprise-1854",
+      "kind": "blocker",
+      "at": "2026-11-21T23:31:00.000Z",
+      "command": "factory land",
+      "expected": "the merge batch is raisable",
+      "actual": "refused: UntestedMerge — check_suite.head_sha 7b21c0d9 != testedMergeSha 0f1e2d3c",
+      "output": "",
+      "evidence": { "receipt": "pass:3", "refs": ["docs/lander.md"] },
+      "blocked": true,
+      "fingerprint": "blocker:factory land:UntestedMerge"
+    }
+  ],
+  "rules": [
+    "fingerprint is stable per (kind, command, first failing line) so repeats are counted, not re-triaged",
+    "blocked true means the foreman cannot proceed without the fix; false means it worked around it and the report is a complaint",
+    "output is truncated to the interesting line; the full text travels as a ref, never inline",
+    "a report is never a desk item: it goes to the factory workstream, which decides whether a human needs to see it"
+  ]
+}

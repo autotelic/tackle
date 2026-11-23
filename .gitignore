@@ -41,3 +41,10 @@ tools/foreman/*.sqlite-journal
 
 # celld dev state for the room bundle
 packages/room/.celld/
+
+# The shop's local lock and queue state; the workstreams live in ~/.factory.
+.room/
+
+# The Herdr app writes its own API types beside a mod it checks; they follow the app
+# version, not this repo. The mod in herdr/factory is the source.
+herdr/factory/*.d.ts

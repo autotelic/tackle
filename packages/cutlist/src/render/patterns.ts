@@ -1,6 +1,6 @@
 import type { Pattern, PatternView } from "@autotelic/protocol"
 import { authoredLines } from "./authored.ts"
-import { plural } from "./text.ts"
+import { plural, some } from "./text.ts"
 
 /*
  * `PATTERNS.md` and `patterns.json`.
@@ -9,15 +9,6 @@ import { plural } from "./text.ts"
  * and what is it connected to?". The Markdown is the human reading; the JSON is the same
  * view for an agent that sorts or filters without re-deriving stability.
  */
-
-const list = (items: ReadonlyArray<string>, limit: number): string => {
-  const shown = items
-    .slice(0, limit)
-    .map((item) => `\`${item}\``)
-    .join(", ")
-  const rest = items.length - limit
-  return rest > 0 ? `${shown} +${String(rest)} more` : shown
-}
 
 const factorLine = (pattern: Pattern): string =>
   `tier ${pattern.factors.tier.toFixed(2)} · adoption ${pattern.factors.adoption.toFixed(2)} · ownership ${pattern.factors.ownership.toFixed(2)} · variant ${pattern.factors.variant.toFixed(2)} · documented ${pattern.factors.documented.toFixed(2)}`
@@ -30,7 +21,7 @@ const relationLine = (pattern: Pattern): string => {
     group.push(relation.target)
     grouped.set(relation.kind, group)
   }
-  const parts = [...grouped].map(([kind, targets]) => `${kind} ${list(targets, 4)}`)
+  const parts = [...grouped].map(([kind, targets]) => `${kind} ${some(targets, 4)}`)
   return parts.join("; ")
 }
 
@@ -48,7 +39,7 @@ const patternLine = (pattern: Pattern): ReadonlyArray<string> => {
   const relations = relationLine(pattern)
   if (relations !== "") lines.push(`  relations: ${relations}`)
   if (pattern.composedOf.length > 0) {
-    lines.push(`  composed of: ${list(pattern.composedOf, 6)}`)
+    lines.push(`  composed of: ${some(pattern.composedOf, 6)}`)
   }
   return lines
 }
@@ -63,15 +54,15 @@ const compositionSection = (pattern: Pattern): ReadonlyArray<string> => {
   ]
   if (authoredText.length > 0) lines.push(`- authored: ${authoredText.join(" — ")}`)
   if (pattern.blocks !== undefined && pattern.blocks.length > 0) {
-    lines.push(`- blocks: ${list(pattern.blocks, 8)}`)
+    lines.push(`- blocks: ${some(pattern.blocks, 8)}`)
   }
   if (pattern.hooks !== undefined && pattern.hooks.length > 0) {
-    lines.push(`- hooks: ${list(pattern.hooks, 6)}`)
+    lines.push(`- hooks: ${some(pattern.hooks, 6)}`)
   }
   if (pattern.valueKeys !== undefined && pattern.valueKeys.length > 0) {
     lines.push(`- value keys: ${pattern.valueKeys.join(" · ")}`)
   }
-  if (pattern.exports.length > 0) lines.push(`- exports: ${list(pattern.exports, 6)}`)
+  if (pattern.exports.length > 0) lines.push(`- exports: ${some(pattern.exports, 6)}`)
   const relations = relationLine(pattern)
   if (relations !== "") lines.push(`- relations: ${relations}`)
   return lines
@@ -121,7 +112,7 @@ export const renderPatterns = (view: PatternView): string => {
     lines.push(
       `- stability: ${pattern.stability.toFixed(2)} — ${factorLine(pattern)}`,
       `- canonical: \`${pattern.path}\`; ${plural(pattern.usedBy, ["importer", "importers"])}`,
-      `- variants: ${variants.length === 0 ? "none" : list(variants, 8)}`,
+      `- variants: ${variants.length === 0 ? "none" : some(variants, 8)}`,
     )
     const text = authoredLines(pattern)
     if (text.length > 0) lines.push(`- authored: ${text.join(" — ")}`)
@@ -147,7 +138,7 @@ export const renderPatterns = (view: PatternView): string => {
   lines.push(`### variant families (${view.signals.variants.length})`, "")
   for (const variant of view.signals.variants.slice(0, 20)) {
     lines.push(
-      `- canonical \`${variant.canonical}\`; variants ${list(variant.members, 6)} (the canonical is the most-used member, not a command)`,
+      `- canonical \`${variant.canonical}\`; variants ${some(variant.members, 6)} (the canonical is the most-used member, not a command)`,
     )
   }
   if (view.signals.variants.length === 0) lines.push("- none")

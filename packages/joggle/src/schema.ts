@@ -229,6 +229,9 @@ export interface Drop extends Schema.Schema.Type<typeof Drop> {}
 export const DecisionTotals = Schema.Struct({
   requests: Schema.Number,
   replayed: Schema.Number,
+  /** Answers actually judged and written: one per candidate, however the calls were batched. */
+  judged: Schema.Number,
+  /** Requests to the provider. One call can answer many candidates when batching is on. */
   calls: Schema.Number,
   unavailable: Schema.Number,
   inputTokens: Schema.Number,

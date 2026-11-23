@@ -1,0 +1,99 @@
+{
+  "$comment": "Answers are records, not replies. Every one names the item it answers, the human who answered, and the instant — so 'why is this merged' survives the person, the session and the tool.",
+  "answers": [
+    {
+      "id": "answer-1f7c",
+      "item": "desk-b7c1",
+      "inReplyTo": "3n2u5aj4z2k3v",
+      "answeredBy": "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK",
+      "at": "2026-11-21T23:02:10.000Z",
+      "values": { "decision": "merge-all" },
+      "rows": {},
+      "note": "both entries verified after the base move",
+      "supersedes": null
+    },
+    {
+      "id": "answer-2b31",
+      "item": "desk-b7c1",
+      "inReplyTo": "3n2u5aj4z2k3v",
+      "answeredBy": "did:key:z6MkpTHR8VNsBxYAAWHut2Geadd9jSwuBV8xRoAnwWsdvktH",
+      "at": "2026-11-21T23:03:40.000Z",
+      "values": { "decision": "merge-subset" },
+      "rows": { "entries": ["1854"] },
+      "note": "1854 only — 1862 still needs the refusal test",
+      "supersedes": "answer-1f7c"
+    },
+    {
+      "id": "answer-3c88",
+      "item": "desk-a4f9",
+      "inReplyTo": "3n2u5aj4z2k50",
+      "answeredBy": "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK",
+      "at": "2026-11-21T23:05:00.000Z",
+      "values": { "decision": "evidence-only" },
+      "rows": {},
+      "note": "leave the inference-only nine pending; I want to look at them individually",
+      "supersedes": null
+    },
+    {
+      "id": "answer-4d10",
+      "item": "desk-d5a3",
+      "inReplyTo": "3n2u5aj4z2k6b",
+      "answeredBy": "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK",
+      "at": "2026-11-21T23:06:12.000Z",
+      "values": { "decision": "revert" },
+      "rows": {},
+      "note": "revert; the pass stays charged",
+      "supersedes": null
+    }
+  ],
+  "refusals": [
+    {
+      "name": "unknown-option",
+      "given": { "item": "desk-e8b2", "values": { "decision": "approve" } },
+      "expected": {
+        "code": "UnknownOption",
+        "exit": 1,
+        "message": "desk-e8b2 is an fyi item and has no choices to answer"
+      }
+    },
+    {
+      "name": "unknown-row",
+      "given": {
+        "item": "desk-b7c1",
+        "values": { "decision": "merge-subset" },
+        "rows": { "entries": ["1999"] }
+      },
+      "expected": {
+        "code": "UnknownOption",
+        "exit": 1,
+        "message": "row 1999 is not in entry group 'entries'"
+      }
+    },
+    {
+      "name": "stale-item",
+      "given": { "item": "desk-b7c1", "at": "2026-11-23T00:00:00.000Z" },
+      "expected": {
+        "code": "ItemExpired",
+        "exit": 1,
+        "message": "desk-b7c1 expired at 2026-11-22T22:52:00.000Z"
+      }
+    },
+    {
+      "name": "already-answered-same-value",
+      "given": { "item": "desk-a4f9", "values": { "decision": "evidence-only" } },
+      "expected": {
+        "code": null,
+        "exit": 0,
+        "message": "idempotent: returns the existing answer record, writes nothing",
+        "why": "A double click is not a conflict."
+      }
+    }
+  ],
+  "rules": [
+    "first valid answer wins and is the one acted on; later answers are recorded with supersedes naming the earlier id, never dropped",
+    "a superseded answer is still evidence: the record shows two humans disagreed and which one landed",
+    "an fyi item cannot be answered at all",
+    "an expired item refuses with ItemExpired rather than being silently ignored",
+    "re-answering with the same value is idempotent and returns the existing record"
+  ]
+}

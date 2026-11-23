@@ -81,6 +81,38 @@ describe("buildCatalog", () => {
   })
 })
 
+describe("buildCatalog (FoldKit)", () => {
+  it("catalogs a FoldKit view as a component with its builder composition", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "cutlist-foldkit-"))
+    try {
+      mkdirSync(join(dir, "app"), { recursive: true })
+      writeFileSync(
+        join(dir, "app", "main.ts"),
+        "const card = (h: unknown, title: string) => h.div([], [h.h2([], [title])])\n" +
+          "export const view = (model: { readonly title: string }, h: unknown) => card(h, model.title)\n",
+      )
+      writeFileSync(
+        join(dir, "app", "entry.ts"),
+        'import { view } from "./main.ts"\nexport const run = () => view({ title: "Tackle" }, undefined as never)\n',
+      )
+      const catalog = await Effect.runPromise(
+        buildCatalog(dir, {
+          ...defaultConfig,
+          roots: ["app"],
+          tokens: { from: "app/style.css" },
+          ownership: { ...defaultConfig.ownership, entries: ["app/entry.ts"] },
+        }).pipe(Effect.provide(NodeServices.layer)),
+      )
+      const main = catalog.components.find((component) => component.path === "app/main.ts")
+      expect(main?.kind).toBe("component")
+      expect(main?.signature).toContain("view:card")
+      expect(main?.usedBy).toBe(1)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+})
+
 describe("parseModule", () => {
   const module = parseModule({ filename: "app/components/Combobox.tsx", text: COMBOBOX })
 
@@ -104,6 +136,34 @@ describe("parseModule", () => {
     // The wrapper `<div>` is the frame, not the composition. Two components that both
     // render one must not become near-duplicates on that fact alone.
     expect(skeleton).not.toContain("tag:div")
+  })
+})
+
+const FOLDKIT = `
+const card = (h, title: string) => h.div([h.Class("card")], [h.h2([], [title])])
+
+export const view = (model: { readonly title: string }, h: HtmlBuilder<Message>) =>
+  h.div(
+    [h.Class("shell")],
+    [card(h, model.title), h.button([h.OnClick(Message.Clicked())], ["Refresh"])],
+  )
+`
+
+describe("parseModule (FoldKit)", () => {
+  const module = parseModule({ filename: "src/main.ts", text: FOLDKIT })
+
+  it("reads h.div as a render site and h.Class as an attribute", () => {
+    expect(module.tags).toEqual(["button", "card", "div", "h2"])
+    expect(module.tags).not.toContain("Class")
+    expect(module.tags).not.toContain("OnClick")
+  })
+
+  it("marks an exported view as a component and keeps the helper call", () => {
+    const view = module.declarations.find((declaration) => declaration.name === "view")
+    expect(view?.renders).toBe(true)
+    expect(view?.tags).toEqual(expect.arrayContaining(["div", "card", "button"]))
+    expect(module.foldkitCalls).toEqual(["card"])
+    expect(skeletonOf(module)).toContain("view:card")
   })
 })
 

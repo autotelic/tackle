@@ -1,0 +1,93 @@
+{
+  "$comment": "The queue is a partial order, not a list. Permissions depends on nothing and blocks four; Documentation Files blocks Projects List; Enterprise is parallel. The expected order is verified against the deps in this file, so the fixture cannot silently drift from its own graph.",
+  "workstreams": [
+    { "id": "enterprise-1854", "project": "P-AUT-129", "deps": [], "shipped": false },
+    { "id": "perms-1862", "project": "P-AUT-128", "deps": [], "shipped": false },
+    { "id": "collaboration", "project": "P-AUT-131", "deps": ["perms-1862"], "shipped": false },
+    {
+      "id": "documentation-files",
+      "project": "P-AUT-134",
+      "deps": ["perms-1862"],
+      "shipped": false
+    },
+    {
+      "id": "projects-list",
+      "project": "P-AUT-137",
+      "deps": ["documentation-files"],
+      "shipped": false
+    },
+    { "id": "integrations-1860", "project": "P-AUT-126", "deps": [], "shipped": true },
+    {
+      "id": "settings-shell",
+      "project": "P-AUT-140",
+      "deps": ["projects-list", "collaboration"],
+      "shipped": false
+    }
+  ],
+  "tieBreak": "no unshipped deps first; ties by project id ascending — declared, because 'whatever order the store returned' is how a queue becomes non-deterministic",
+  "expectedOrder": [
+    "enterprise-1854",
+    "perms-1862",
+    "collaboration",
+    "documentation-files",
+    "projects-list",
+    "settings-shell"
+  ],
+  "expectedRows": [
+    { "id": "enterprise-1854", "ready": true, "blockedBy": [] },
+    { "id": "perms-1862", "ready": true, "blockedBy": [] },
+    { "id": "collaboration", "ready": false, "blockedBy": ["perms-1862"] },
+    { "id": "documentation-files", "ready": false, "blockedBy": ["perms-1862"] },
+    { "id": "projects-list", "ready": false, "blockedBy": ["documentation-files"] },
+    { "id": "settings-shell", "ready": false, "blockedBy": ["projects-list", "collaboration"] }
+  ],
+  "refusals": [
+    {
+      "name": "blocked-by-dependency",
+      "given": { "command": "factory up projects-list" },
+      "expected": {
+        "code": "BlockedByDependency",
+        "exit": 1,
+        "message": "projects-list is blocked by documentation-files",
+        "why": "The refusal names the blocking id, not 'not ready' — otherwise the operator goes looking at the wrong workstream."
+      }
+    },
+    {
+      "name": "transitive-block",
+      "given": { "command": "factory up documentation-files" },
+      "expected": {
+        "code": "BlockedByDependency",
+        "exit": 1,
+        "message": "documentation-files is blocked by perms-1862",
+        "why": "One hop is enough to refuse; the chain is what the queue renders, not what the error recites."
+      }
+    },
+    {
+      "name": "already-live",
+      "given": { "command": "factory up perms-1862", "state": { "perms-1862": "live" } },
+      "expected": {
+        "code": "AlreadyLive",
+        "exit": 1,
+        "message": "perms-1862 is already live on macbook (generation 3)",
+        "why": "Same rule as adoption: two owners is the bug, and the message names the holder and the generation."
+      }
+    },
+    {
+      "name": "dependency-cycle",
+      "given": { "graph": { "a": ["b"], "b": ["c"], "c": ["a"] } },
+      "expected": {
+        "code": "DependencyCycle",
+        "exit": 1,
+        "message": "dependency cycle: a -> b -> c -> a",
+        "why": "Humans eventually create one. A cycle reported as 'blocked' hides it forever; the refusal must name the loop so somebody can break it."
+      }
+    }
+  ],
+  "assertions": [
+    "expectedOrder contains every unshipped workstream exactly once and no shipped one",
+    "no entry appears before a dependency it needs",
+    "blockedBy lists every unshipped dependency, not just the first",
+    "a shipped dependency is satisfied and does not appear in blockedBy",
+    "the cycle case is refused rather than resolved by ignoring an edge"
+  ]
+}

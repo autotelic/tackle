@@ -1,0 +1,172 @@
+import { defineRule } from "@oxlint/plugins";
+import { firstOptionRecord } from "../../shared/rule-options.js";
+import { decodeUiManifest, manifestAt, } from "../manifest.js";
+/*
+ * A deprecated part is a promise, and an import is the place the promise is checked.
+ *
+ * Cutlist records `status: deprecated` and `useInstead` in the manifest; this rule reads
+ * that record and reports the call sites that have not migrated. It is the lint-shaped
+ * half of the same idea as a design system's "preferred instance": the catalog says what
+ * replaced the old thing, and the rule makes the old path visible instead of merely
+ * documented.
+ *
+ * The rule fails open. A missing or malformed manifest means no findings, because a lint
+ * rule that invents a migration from a file it could not read is worse than one that is
+ * briefly quiet; `cutlist build --check` is the gate that makes the manifest current.
+ */
+const RULE_ID = "plumb-ui/no-deprecated-parts";
+const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$/u;
+const CACHE = new Map();
+/**
+ * Whether a value is a plain object.
+ *
+ * @param {unknown} value - The value to test.
+ * @returns {boolean} True when the value is a non-null, non-array object.
+ */
+function isRecord(value) {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+/**
+ * Decode a configured manifest, by inline value or by path.
+ *
+ * An inline manifest is what a rule test uses; a path is what a config uses. Both decode
+ * through the same reader, so a test cannot pass a shape the real rule rejects. A path is
+ * read once and remembered, because one program visits many files against one manifest.
+ *
+ * @param {unknown} value - The rule option: an inline manifest or a manifest path.
+ * @returns {UiManifest | undefined} The manifest, or `undefined` when it cannot be read.
+ */
+function manifestFrom(value) {
+    if (isRecord(value) && Array.isArray(value.components))
+        return decodeUiManifest(value);
+    if (typeof value !== "string")
+        return undefined;
+    if (!CACHE.has(value))
+        CACHE.set(value, manifestAt(value));
+    return CACHE.get(value);
+}
+/**
+ * A module path without its source extension or trailing `/index`.
+ *
+ * @param {string} path - The manifest part path.
+ * @returns {string} The importable module path.
+ */
+function moduleOf(path) {
+    return path.replace(/\.(?:tsx?|jsx?)$/u, "").replace(/\/index$/u, "");
+}
+/**
+ * Whether an import specifier names a manifest part.
+ *
+ * The specifier is resolved by suffix rather than by the repository's alias table: the
+ * rule has no tsconfig reader, and every alias in use (`@/`, `~/`, relative) leaves the
+ * tail of the path intact. A named import must also match an exported name when the
+ * manifest carries one; a default or namespace import matches by path alone.
+ *
+ * @param {ImportRef} ref - The import's specifier and imported binding.
+ * @param {UiPart} part - The manifest part to test against.
+ * @returns {boolean} True when the import names the part.
+ */
+function namesPart(ref, part) {
+    const clean = ref.source.replace(/^[.@~]+/u, "").replace(/^\/+/u, "").replace(/\.(?:tsx?|jsx?)$/u, "");
+    const target = moduleOf(part.path);
+    const pathMatches = target === clean || target.endsWith("/" + clean);
+    if (ref.imported === "default" || ref.imported === "*")
+        return pathMatches;
+    return pathMatches || (part.exports?.includes(ref.imported) ?? false);
+}
+/**
+ * The imported binding name, or `*` for a namespace import.
+ *
+ * @param {ESTree.ImportDeclaration["specifiers"][number]} specifier - The import specifier.
+ * @returns {string} The imported name, `default`, or `*`.
+ */
+function importedOf(specifier) {
+    if (specifier.type === "ImportSpecifier") {
+        return specifier.imported.type === "Identifier"
+            ? specifier.imported.name
+            : String(specifier.imported.value);
+    }
+    if (specifier.type === "ImportDefaultSpecifier")
+        return "default";
+    return "*";
+}
+/**
+ * The local binding name a specifier introduces.
+ *
+ * @param {ESTree.ImportDeclaration["specifiers"][number]} specifier - The import specifier.
+ * @returns {string} The name the file uses locally.
+ */
+function localOf(specifier) {
+    return specifier.local.name;
+}
+/**
+ * The deprecated part an import site reaches, if any.
+ *
+ * @param {UiManifest} manifest - The decoded manifest.
+ * @param {ImportRef} ref - The import's specifier and imported binding.
+ * @returns {UiPart | undefined} The deprecated part, or `undefined` when the import is clean.
+ */
+function deprecatedPartFor(manifest, ref) {
+    return manifest.components.find((part) => part.status === "deprecated" && namesPart(ref, part));
+}
+export const noDeprecatedPartsRule = defineRule({
+    meta: {
+        type: "problem",
+        docs: {
+            description: "Imports from a part whose catalog entry is deprecated must move to its recorded replacement.",
+        },
+        messages: {
+            deprecatedImport: "`{{name}}` comes from the deprecated part `{{part}}`; use {{useInstead}} instead.",
+            deprecatedWithoutTarget: "`{{name}}` comes from the deprecated part `{{part}}`, which records no replacement.",
+        },
+        schema: [
+            {
+                type: "object",
+                properties: {
+                    manifest: {
+                        anyOf: [{ type: "string" }, { type: "object" }],
+                    },
+                },
+                additionalProperties: false,
+            },
+        ],
+        defaultOptions: [{ manifest: "tools/ui-catalog/plumb-ui.config.json" }],
+    },
+    createOnce(context) {
+        const option = firstOptionRecord(context.options);
+        const manifest = manifestFrom(option.manifest);
+        if (manifest === undefined)
+            return {};
+        const deprecated = manifest.components.filter((part) => part.status === "deprecated");
+        if (deprecated.length === 0)
+            return {};
+        return {
+            before() {
+                if (TEST_FILE.test(context.filename.replaceAll("\\", "/")))
+                    return false;
+            },
+            ImportDeclaration(node) {
+                const source = node.source.value;
+                if (typeof source !== "string")
+                    return;
+                for (const specifier of node.specifiers) {
+                    const imported = importedOf(specifier);
+                    const part = deprecatedPartFor(manifest, { source, imported });
+                    if (part === undefined)
+                        continue;
+                    const useInstead = part.useInstead ?? [];
+                    context.report({
+                        node: specifier,
+                        messageId: useInstead.length === 0 ? "deprecatedWithoutTarget" : "deprecatedImport",
+                        data: {
+                            name: localOf(specifier),
+                            part: part.name,
+                            useInstead: useInstead.map((name) => `\`${name}\``).join(" or "),
+                        },
+                    });
+                }
+            },
+        };
+    },
+});
+export { RULE_ID };

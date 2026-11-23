@@ -228,10 +228,11 @@ on every machine — which means **run from the repository root**. Evidence
 carries root-relative paths; running from a subdirectory changes the key and
 misses every cached verdict. Successful judgements are written to
 `.joggle/answers.jsonl`, one sorted, line-oriented answer per line; commit that
-file and CI replays them with `--offline` and **no API key at all**. A new
-answer is a new line, so two branches that judge different candidates merge with
-git's built-in `merge=union`, and `joggle cache prune` keeps the store from
-growing without a ceiling. A store large enough to make a whole-file rewrite or a
+file and CI replays them with `--offline` and **no API key at all**. A line is the
+key and the answer and nothing else, so two branches that judge different
+candidates merge with git's built-in `merge=union` and the same answer merges to
+one line rather than a copy; `joggle cache compact` and `cache prune --max-bytes`
+keep the store from growing without a ceiling. A store large enough to make a whole-file rewrite or a
 merge expensive can be sharded instead (`cache.layout: "sharded"`, or
 `joggle cache migrate --layout sharded`); both layouts are read, and
 `cache migrate` moves between them. The older `answers.json` object is read and
@@ -419,6 +420,56 @@ Deliberately *not* next: widening AST coverage to class and object-literal
 methods. That is more surface on a weaker signal. It comes after types.
 
 
+### The committed cache has a size, and it is not free
+
+Committing the answer cache buys keyless replay, and it costs bytes in every clone
+and every CI checkout. GitHub warns above **50 MB per file** and refuses above
+100 MB; a cache is worth nowhere near that.
+
+- `joggle cache prune --max-bytes 4000000` caps the file, oldest first, on any store.
+  `--max-age 90` needs ages, which only the machine cache records.
+- A run says so when the store passes 8 MB, because a cache nobody measured is how
+  a 0-byte ledger on the base branch becomes 55 MB at the top of a stack.
+- **Build output is never source.** The directory walk skips `node_modules`, `dist`,
+  `build`, `out`, `coverage`, `.next`, `.turbo`, `.vercel`, `.cache` and anything a
+  `.gitignore` excludes, and the checker's file list (under `--types`) is filtered the same
+  way. Without that, a tsconfig that includes `dist` made every declaration appear twice, and
+  the report said "declared in two places" about a build artifact — 73 of 95 findings on one
+  repository, present on a developer's machine and absent in CI because CI had never built.
+- **The analysed set is machine-readable.** `--format json` carries a `discovery` block —
+  files analysed, files and directories ignored, extensions skipped, whether the walk was
+  truncated — and `--list-files` adds the paths. Two checkouts of one commit that report
+  different findings differ either in that set or in its verdicts, and the JSON used to show
+  neither: the census was prose and the list was never emitted.
+- **A run says how it got its answers.** "N judgement(s) were asked of the model" means a
+  key was present and this run judged for itself; "N judgement(s) were replayed" means no model
+  was called. The two can name the same site differently, so a local report and a CI report at
+  the same commit are only comparable when this line matches.
+- **A check does not write the ledger at all.** `--read-only` (and any run `jig` starts,
+  which exports `JIG_READ_ONLY=1` to every engine) answers from the cache and never writes
+  it. This is not hygiene: a new answer *renames* the finding it verifies, so a check that
+  judged and wrote would re-open identities the baseline already accepted, and the next run
+  would fail on files the change never touched. One pull request's lint run appended 919
+  answers that way and re-opened 91 findings in a rule whose ledger entries were intact.
+  Warming the ledger is a deliberate act: `joggle check` on trunk, or `--update-baseline`.
+- **A scoped run does not write the committed ledger.** `--since`, `--pr` and
+  `--changed` answer into the machine cache unless `--cache-dir` names a store: a
+  branch's verdicts are a cache, and committing them is what put 131,440 lines in
+  every pull request of a stack instead of the 5,890 answers they held.
+- **`joggle cache compact` repairs a duplicated ledger in place.** A line used to
+  carry `writtenAt`, so the same answer serialised differently on every branch and
+  `merge=union` kept both sides on every rebase. The line is now the key and the
+  answer only, so merges collapse to one line; for a history that already grew,
+  compact reads each key once and rewrites the set. No re-judging, no key needed.
+- **Deduplicating an old ledger is safe on a keyless CI today**, so nobody has to wait
+  for this version to shrink one: the stamps were never load-bearing for replay. A
+  parked stack deduplicated by key in the old three-field format (keeping the newest
+  stamp) went from 55.4 MB / 372,623 lines to 1.21 MB / 8,171 answers, and the
+  keyless lint job stayed green on the same answers.
+- **Compaction is a commit, so it re-dirties every child of a stack.** Compact
+  bottom-up in one pass, or compact the base branch once after the stack merges —
+  compacting a parent mid-stack costs one rebase per child for a diff nobody reads.
+
 ## Two committed artifacts, two machine artifacts
 
 joggle's state is four files with four lifetimes. Two belong to the repository
@@ -452,6 +503,76 @@ joggle cache prune --max-age 90                    # the cache is regenerable; k
 what a person reviewed, and one written over unjudged candidates ratifies what
 nobody looked at. `--allow-unjudged-baseline` is the explicit override; `jig
 init` passes it, because a ledger born on day one has no review to protect yet.
+
+The reason an unjudged ledger is worse than an incomplete one: judgement is part of
+the analysis, not a badge on it. Without a model key (`TYPESAFE_API_KEY` in the
+run's environment) the same candidates are clustered and named from what the rules
+could see alone, so one group can be one finding locally and three in CI. The two
+runs are two analyses with two identity sets, and a ledger written by the unkeyed
+one does not hold against the keyed one — locally green, red in CI, both "passing"
+their own run. A CI ledger must be written by a run with the key; a local run
+without one is for reading, and `jig baseline` refuses unverified findings for the
+same reason. In a stack, seed a child from its parent instead of re-judging:
+`git checkout <parent> -- .jig-baseline.json .joggle/answers.jsonl` reuses every
+identity the branch inherits and asks only for the ones it adds.
+
+In a stack the run that works is scoped, because a full-repository run has a
+full-repository budget: at ~2.5k candidates a keyed run, a repository with 12k
+unjudged candidates is a 25-minute run that still refuses to write.
+
+```sh
+# the gate: what this branch adds, judged
+joggle check --types --no-replay --since origin/<parent> --baseline .joggle/baseline
+```
+
+**A scoped run is for the gate. Acceptance is a full-run act**, and the command
+enforces it: `--update-baseline` refuses a scoped run unless
+`--allow-scoped-baseline` says otherwise.
+
+The reason is the fold. Two findings at the same site with the same move are folded
+into the richer one, and which survivor wins depends on what ran: a scoped run sees
+fewer candidates at that site than a full run does, so it can name the problem with
+one rule where a full run names it with another. Identities are therefore not
+scope-invariant, a scoped accept can miss exactly the identity CI fails on, and no
+amount of `--merge-baseline` repairs a ledger that never saw it. (The fix is aliases
+on a folded survivor, so the ledger can match any of them; until that lands, the
+refusal is the honest state.) Accept with one full run at the head of a stack:
+
+```sh
+joggle check --types --no-replay \
+  --baseline .joggle/baseline --update-baseline .joggle/baseline --merge-baseline
+```
+
+`--merge-baseline` keeps the identities already accepted and adds this run's, so
+accepting at the head does not discard the stack's accepted set. `--allow-unjudged-baseline`
+is not the shortcut here: it ratifies thousands nobody looked at, which is a commit
+nobody can defend.
+
+### The cascade, not the conflicts
+
+In a deep stack the conflicts are the easy half. Every one of them is a committed
+artifact — a baseline, an answer ledger, a generated catalog — so
+`git rebase -X theirs <parent>` clears the text and the artifacts are rebuilt
+rather than merged.
+
+The hard half is ordering. Accepting an identity, or rebuilding a catalog, adds a
+commit to the parent, and that commit re-dirties every child above it: with 21
+children, one fix is 21 re-dirties, and a cascade run between fixes runs once per
+fix. A 22-branch migration spent five cascades that way, not because any rebase
+was hard, but because each pass moved the parent again.
+
+So the recipe is three passes, not one per branch:
+
+1. **Finish every accept and every rebuild first**, on every branch. Nothing is
+   rebased until the artifacts have stopped moving.
+2. **Then rebase bottom-up, once**, with `-X theirs` for the artifact conflicts.
+3. **Then push once**, bottom-up, with `--force-with-lease`.
+
+`gh stack rebase` and the stacked-PR bots do exactly these three steps in one pass,
+which is why they exist. An interrupted rebase leaves `rebase-merge/` or
+`index.lock` behind and the next branch fails with "there is already a rebase-merge
+directory": `git rebase --abort` clears it, and a scripted cascade belongs in a
+`trap` that aborts rather than in a run that stops half-rebased.
 
 The baseline is by identity, not by line: rule, kept symbol and cluster
 membership. Code moves constantly, and a baseline that reports every edit as a

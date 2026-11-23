@@ -1,0 +1,41 @@
+{
+  "$comment": "A Linear issue appearing in the project. Linear's GraphQL returns an issue node with identifier/state/updatedAt; the normalized event keeps the identifier because that is what a commit message names.",
+  "raw": {
+    "data": {
+      "issueCreate": {
+        "success": true,
+        "issue": {
+          "id": "3f2a1b9c-5d6e-4f70-8a91-b2c3d4e5f607",
+          "identifier": "P-AUT-252",
+          "title": "Membership scopes for read policies",
+          "updatedAt": "2026-11-21T09:00:00.000+02:00",
+          "createdAt": "2026-11-21T08:58:00.000+02:00",
+          "state": { "name": "Backlog", "type": "backlog" },
+          "project": {
+            "id": "c1d2e3f4-0000-4000-8000-00000000a128",
+            "name": "Permissions overhaul"
+          },
+          "labels": [{ "name": "permissions-overhaul" }],
+          "assignee": null
+        }
+      }
+    }
+  },
+  "normalized": {
+    "id": "linear:issue:3f2a1b9c-5d6e-4f70-8a91-b2c3d4e5f607",
+    "source": "linear",
+    "kind": "issue.created",
+    "at": "2026-11-21T07:00:00.000Z",
+    "subject": {
+      "project": "P-AUT-128",
+      "issue": "P-AUT-252",
+      "linearId": "3f2a1b9c-5d6e-4f70-8a91-b2c3d4e5f607"
+    },
+    "actor": null,
+    "state": "Backlog",
+    "title": "Membership scopes for read policies",
+    "dedupeKey": "linear:issue:3f2a1b9c-5d6e-4f70-8a91-b2c3d4e5f607:created"
+  },
+  "cursorAfter": "2026-11-21T07:00:00.000Z",
+  "wakes": "one reconcile pass; a new ticket alone does not start build work, because the phase decides what a new ticket means"
+}

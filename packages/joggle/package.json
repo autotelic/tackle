@@ -1,6 +1,6 @@
 {
   "name": "@autotelic/joggle",
-  "version": "0.3.0",
+  "version": "0.10.2",
   "type": "module",
   "description": "Cross-file patterns and idioms for TypeScript — the layer above the linter and the typechecker.",
   "license": "MIT",
@@ -73,9 +73,12 @@
   },
   "dependencies": {
     "@effect/ai-typesafe": "catalog:",
+    "@typescript/native": "catalog:",
     "@effect/platform-node": "catalog:",
+    "@effect/platform-node-shared": "catalog:",
     "effect": "catalog:",
-    "oxc-parser": "catalog:"
+    "oxc-parser": "catalog:",
+    "@autotelic/protocol": "workspace:*"
   },
   "devDependencies": {
     "@autotelic/plumb": "workspace:*",

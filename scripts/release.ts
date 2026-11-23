@@ -1,6 +1,8 @@
-import { Effect, FileSystem, Path } from "effect"
+import { Effect, FileSystem, Layer, Path, Schema } from "effect"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { ChildProcess } from "effect/process"
+import * as FetchHttpClient from "effect/http/FetchHttpClient"
+import * as HttpClient from "effect/http/HttpClient"
 
 /**
  * Publish, and then believe the registry rather than the command.
@@ -25,12 +27,28 @@ interface Manifest {
   readonly version: string
 }
 
-/** Run a command with its own output, and answer its exit code. */
-const run = (
-  root: string,
-  command: string,
-  args: ReadonlyArray<string>,
-): Effect.Effect<number, never, never> =>
+/** The fields this script reads from a package manifest; everything else is ignored. */
+const PackageManifest = Schema.Struct({
+  name: Schema.optional(Schema.String),
+  version: Schema.optional(Schema.String),
+  private: Schema.optional(Schema.Boolean),
+})
+
+/** One command, named rather than positional so a transposed call cannot compile. */
+interface CommandRequest {
+  readonly root: string
+  readonly command: string
+  readonly args: ReadonlyArray<string>
+}
+
+/**
+ * Run a command with its own output, and answer its exit code.
+ *
+ * A command handle is a scoped resource; without `Effect.scoped` the spawn fails with
+ * "Service not found: effect/Scope" before it starts. A spawn that throws is reported as
+ * a failed command, because this script's caller only distinguishes zero from non-zero.
+ */
+const run = ({ root, command, args }: CommandRequest) =>
   Effect.gen(function* () {
     const handle = yield* ChildProcess.make(command, [...args], {
       cwd: root,
@@ -40,8 +58,6 @@ const run = (
     })
     return Number(yield* handle.exitCode)
   }).pipe(
-    // A command handle is a scoped resource; without this the spawn fails with
-    // "Service not found: effect/Scope" before it starts.
     Effect.scoped,
     Effect.orElseSucceed(() => 1),
   )
@@ -53,37 +69,65 @@ const published = (
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
+    const none: ReadonlyArray<string> = []
     const entries = yield* fs
       .readDirectory(path.join(root, "packages"))
-      .pipe(Effect.orElseSucceed(() => [] as ReadonlyArray<string>))
+      .pipe(Effect.orElseSucceed(() => none))
     const manifests: Array<Manifest> = []
     for (const entry of entries) {
       const file = path.join(root, "packages", entry, "package.json")
       const text = yield* fs.readFileString(file).pipe(Effect.orElseSucceed(() => ""))
-      const manifest = yield* Effect.try(() => JSON.parse(text) as Record<string, unknown>).pipe(
-        Effect.orElseSucceed(() => ({})),
-      )
-      const name = typeof manifest["name"] === "string" ? manifest["name"] : undefined
-      const version = typeof manifest["version"] === "string" ? manifest["version"] : undefined
-      if (manifest["private"] === true || name === undefined || version === undefined) continue
+      // A directory that is not a package, and a manifest this script cannot read, are both
+      // ordinary: `published` answers what it could prove, and the publish step is what
+      // reports a missing package.
+      const manifest = yield* Schema.decodeEffect(Schema.fromJsonString(PackageManifest))(
+        text,
+      ).pipe(Effect.orElseSucceed(() => ({})))
+      const { name, version } = manifest
+      if (manifest.private === true || name === undefined || version === undefined) continue
       manifests.push({ name, version })
     }
     return manifests
   })
 
-/** Whether the registry has this exact version, not merely the package. */
-const onRegistry = (manifest: Manifest): Effect.Effect<boolean> =>
-  Effect.tryPromise(async () => {
-    const response = await fetch(REGISTRY + "/" + manifest.name.replace("/", "%2f"))
-    if (!response.ok) return false
-    const document = (await response.json()) as {
-      readonly versions?: Readonly<Record<string, unknown>>
-    }
-    return document.versions?.[manifest.version] !== undefined
-  }).pipe(Effect.orElseSucceed(() => false))
+/**
+ * Whether a consumer can INSTALL this exact version.
+ *
+ * Not "does the version document exist". npm writes that document before the artifact finishes
+ * uploading: @autotelic/joggle@0.10.0 answered 200 on `/<name>/<version>`, carried an integrity
+ * hash and signatures, and its tarball returned 404 for minutes — a release reported green that
+ * could not be installed. The tarball is the only question that matches the reader's.
+ *
+ * The URL is the registry's own convention (scoped packages drop the scope in the file name),
+ * so this reads no manifest shape of npm's: a HEAD on the artifact, 200 or not.
+ */
+const onRegistry = (manifest: Manifest): Effect.Effect<boolean, never, HttpClient.HttpClient> => {
+  const bare = manifest.name.includes("/")
+    ? manifest.name.slice(manifest.name.indexOf("/") + 1)
+    : manifest.name
+  const tarball =
+    REGISTRY +
+    "/" +
+    manifest.name.replace("/", "%2f") +
+    "/-/" +
+    bare +
+    "-" +
+    manifest.version +
+    ".tgz"
+  // GET, not HEAD: during finalisation a HEAD answered 200 for a tarball whose GET still
+  // returned 404, so the method that mirrors a consumer's request is the one that counts.
+  return HttpClient.get(tarball).pipe(
+    Effect.map((response) => response.status === 200),
+    // A request that does not complete answers false, so the run fails rather than claiming a
+    // release it could not verify.
+    Effect.orElseSucceed(() => false),
+  )
+}
 
 /** The packages whose local version the registry does not have. */
-const missing = (manifests: ReadonlyArray<Manifest>): Effect.Effect<ReadonlyArray<Manifest>> =>
+const missing = (
+  manifests: ReadonlyArray<Manifest>,
+): Effect.Effect<ReadonlyArray<Manifest>, never, HttpClient.HttpClient> =>
   Effect.gen(function* () {
     const checked = yield* Effect.forEach(manifests, (manifest) =>
       Effect.map(onRegistry(manifest), (there) => ({ manifest, there })),
@@ -95,18 +139,17 @@ const missing = (manifests: ReadonlyArray<Manifest>): Effect.Effect<ReadonlyArra
  * Wait for the registry to catch up, rather than assuming the first answer is final.
  *
  * A staged upload and a just-finished publish both look "absent" for a few seconds; the
- * difference is that the first stays absent and the second does not.
+ * difference is that the first stays absent and the second does not. Staged versions can
+ * take a couple of minutes to become visible, and a shorter wait reads a healthy stage as a
+ * failed release — which is how this workflow went red twice on a publish that was fine.
  */
 const settled = (
   manifests: ReadonlyArray<Manifest>,
   attempts: number,
-): Effect.Effect<ReadonlyArray<Manifest>> =>
+): Effect.Effect<ReadonlyArray<Manifest>, never, HttpClient.HttpClient> =>
   Effect.gen(function* () {
     let absent = yield* missing(manifests)
     for (let round = 1; round < attempts && absent.length > 0; round += 1) {
-      // Staged versions can take a couple of minutes to become visible; a shorter wait
-      // reads a healthy stage as a failed release, which is how this workflow went red
-      // twice on a publish that was actually fine.
       yield* Effect.sleep("10 seconds")
       absent = yield* missing(manifests)
     }
@@ -116,11 +159,25 @@ const settled = (
 const report = (absent: ReadonlyArray<Manifest>): Effect.Effect<void> =>
   Effect.sync(() => {
     for (const manifest of absent) {
-      console.error("release: still missing " + manifest.name + "@" + manifest.version)
+      console.error(
+        "release: " +
+          manifest.name +
+          "@" +
+          manifest.version +
+          " is not installable yet (the registry's version document can precede its tarball)",
+      )
     }
   })
 
-/** The whole release: build, publish, then let the registry decide. */
+/**
+ * The whole release: build, publish, then let the registry decide.
+ *
+ * The publish command's exit code is not the registry's answer, in either direction: a
+ * staged upload answers success before the version is visible, and re-posting a version
+ * that is already staged answers 409 "cannot publish over previously staged version" for a
+ * release that is in fact complete. Both happened here, so the command gets a log line and
+ * the registry gets the patience — a failure is not treated as a verdict.
+ */
 const program = Effect.gen(function* () {
   const path = yield* Path.Path
   const root = path.resolve(import.meta.dirname, "..")
@@ -141,7 +198,7 @@ const program = Effect.gen(function* () {
     return
   }
 
-  const built = yield* run(root, "pnpm", ["build"])
+  const built = yield* run({ root, command: "pnpm", args: ["build"] })
   if (built !== 0) {
     yield* Effect.sync(() => {
       process.exitCode = built
@@ -149,11 +206,21 @@ const program = Effect.gen(function* () {
     return
   }
 
-  const status = yield* run(root, "pnpm", ["exec", "changeset", "publish"])
-  // A staged publish reports success and a rerun reports 403; neither is authoritative,
-  // so a failure gets no more patience than a success does.
-  let absent = yield* settled(manifests, status === 0 ? 6 : 1)
-  if (absent.length > 0 && status === 0) {
+  const status = yield* run({ root, command: "pnpm", args: ["exec", "changeset", "publish"] })
+  if (status !== 0) {
+    yield* Effect.sync(() =>
+      console.log(
+        "release: the publish command exited " +
+          status +
+          "; asking the registry instead of believing it",
+      ),
+    )
+  }
+  // npm writes the version document before the artifact finishes uploading; one observed
+  // finalisation took five minutes. The window is here so a healthy publish is not red, not so
+  // a broken one can pass.
+  let absent = yield* settled(manifests, 36)
+  if (absent.length > 0) {
     yield* Effect.sync(() =>
       console.log(
         "release: " +
@@ -161,8 +228,8 @@ const program = Effect.gen(function* () {
           " not visible yet; retrying",
       ),
     )
-    yield* run(root, "pnpm", ["exec", "changeset", "publish"])
-    absent = yield* settled(manifests, 18)
+    yield* run({ root, command: "pnpm", args: ["exec", "changeset", "publish"] })
+    absent = yield* settled(manifests, 36)
   }
 
   if (absent.length > 0) {
@@ -175,4 +242,7 @@ const program = Effect.gen(function* () {
   yield* Effect.sync(() => console.log("release: every local version is on the registry"))
 })
 
-NodeRuntime.runMain(Effect.provide(program, NodeServices.layer), { disableErrorReporting: true })
+NodeRuntime.runMain(
+  Effect.provide(program, Layer.mergeAll(NodeServices.layer, FetchHttpClient.layer)),
+  { disableErrorReporting: true },
+)

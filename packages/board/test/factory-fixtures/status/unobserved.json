@@ -1,0 +1,29 @@
+{
+  "$comment": "Unobserved: nobody has looked since adoption. This is the value that a boolean freshness flag silently merges into 'stale', which reads as 'nothing happened'. It is the one case where the text must say NOT OBSERVED and give the instant we last looked — or say never.",
+  "json": {
+    "schema": 1,
+    "at": "2026-11-21T22:50:00.000Z",
+    "workstreams": [
+      {
+        "id": "perms-1862",
+        "phase": "adopted",
+        "pr": 1862,
+        "head": "55aa5293a",
+        "blockedBy": ["integrations-1860"],
+        "checkpoint": null,
+        "observed": { "github": null, "linear": null, "ageSeconds": null },
+        "freshness": "unobserved",
+        "desk": { "open": 0 },
+        "budget": { "passes": { "used": 0, "of": 5 }, "capStop": null }
+      }
+    ]
+  },
+  "expectedText": [
+    "perms-1862 · adopted · PR 1862 · no checkpoint yet · NOT OBSERVED · blocked by integrations-1860"
+  ],
+  "assertions": [
+    "checkpoint null renders as 'no checkpoint yet', never as 0m ago",
+    "freshness unobserved is distinguishable from stale in both renderings",
+    "blockedBy renders the id, never a bare 'blocked'"
+  ]
+}

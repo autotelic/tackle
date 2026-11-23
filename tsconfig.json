@@ -1,5 +1,9 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "extends": "./tsconfig.base.json",
-  "include": ["packages/*/src/**/*.ts"]
+  "include": ["packages/*/src/**/*.ts"],
+  // treadle is an application with its own tsconfig and its own type graph. Keeping it out of
+  // the workspace program keeps its xstate/loop types from being judged as if they were part
+  // of the seam, and keeps the seam's facts the same ones the ledger was written against.
+  "exclude": ["packages/treadle/**"]
 }

@@ -28,6 +28,7 @@ import { recipesOf, renderRecipes, renderRecipesJson } from "./render/recipes.ts
 import { renderTokens } from "./render/tokens.ts"
 import { renderFileSimilar, renderPageView, renderPartView, renderSimilar } from "./render/ask.ts"
 import { declarationSkeletonsOf } from "./signature.ts"
+import { VERSION } from "./version.ts"
 
 /** One report through Effect's Console, newline-normalized so a test can capture it. */
 const write = (text: string): Effect.Effect<void> =>
@@ -501,6 +502,6 @@ const cli = Command.make("cutlist").pipe(
   Command.withSubcommands([buildCommand, askCommand]),
 )
 
-const program = Command.run(cli, { version: "0.0.0" }).pipe(Effect.provide(NodeServices.layer))
+const program = Command.run(cli, { version: VERSION }).pipe(Effect.provide(NodeServices.layer))
 
 NodeRuntime.runMain(program, { disableErrorReporting: true })

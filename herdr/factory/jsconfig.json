@@ -1,0 +1,20 @@
+{
+  "// why": [
+    "Written once by gpui-shell, then yours: an existing jsconfig.json is never replaced.",
+    "`lib` is ES2022 only: this runtime has no DOM, so browser globals would collide with the",
+    "declarations gpui-kit.d.ts makes.",
+    "`strictNullChecks` is on because this mod decides whether a field arrived, and the repo's",
+    "type-aware rules read this file to check that. `strict` is off: the runtime hands a View",
+    "untyped props and callbacks, and `noImplicitAny` would underline every one of them."
+  ],
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022"],
+    "checkJs": true,
+    "strict": false,
+    "strictNullChecks": true,
+    "noEmit": true
+  }
+}

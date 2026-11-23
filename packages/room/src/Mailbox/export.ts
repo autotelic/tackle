@@ -1,0 +1,43 @@
+import { Option } from "effect"
+import { readFile, readdir, stat } from "node:fs/promises"
+import { join } from "node:path"
+import { isTurnPath, LogError, senderInBody, type Turn, type TurnLog } from "./log.ts"
+import { tidAt } from "./tid.ts"
+
+export const BACKFILL_NOTE =
+  "Senders are role labels, not DIDs: no key existed before the wire. Timestamps are file mtimes, not send times."
+
+/**
+ * Bootstrap: turn a directory of `NNNN-*.md` turns into a log. This runs once, before the host
+ * exists, so the projection can be proven against history we already trust. Live turns are never
+ * exported this way; they arrive through `send`.
+ */
+export const exportDirectory = async (
+  dir: string,
+  options: { at: string; note?: string },
+): Promise<TurnLog> => {
+  const names = (await readdir(dir)).filter(isTurnPath).sort((a, b) => a.localeCompare(b))
+  if (names.length === 0) throw new LogError(`${dir}: no turn files`)
+  const turns: Turn[] = []
+  let previous: string | null = null
+  for (const name of names) {
+    const path = join(dir, name)
+    const [body, stats] = await Promise.all([readFile(path, "utf8"), stat(path)])
+    const seq = Number(name.slice(0, 4))
+    const sender = Option.getOrUndefined(senderInBody(body))
+    if (sender === undefined) throw new LogError(`${name}: no "— SENDER —" heading`)
+    const tid = tidAt({ timestampMs: stats.mtimeMs, clockId: seq & 0x3ff })
+    turns.push({ seq, tid, sender, replyTo: previous, path: name, body })
+    previous = tid
+  }
+  return {
+    backfill: {
+      kind: "backfill",
+      at: options.at,
+      from: names,
+      timestampSource: "mtime",
+      note: options.note ?? BACKFILL_NOTE,
+    },
+    turns,
+  }
+}

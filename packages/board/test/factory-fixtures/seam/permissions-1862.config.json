@@ -1,0 +1,47 @@
+{
+  "issues": {
+    "ready": "permissions-overhaul",
+    "working": "permissions-overhaul:working",
+    "parked": "permissions-overhaul:parked",
+    "tracker": "github"
+  },
+  "install": "true",
+  "checks": [
+    { "name": "jig", "run": "pnpm jig check", "timeoutSeconds": 900 },
+    { "name": "unit", "run": "pnpm test", "timeoutSeconds": 1800 }
+  ],
+  "protectedPaths": ["package.json", "pnpm-lock.yaml", ".github/workflows/**"],
+  "featureDone": {
+    "changedPaths": ["src/permissions/**", "test/permissions/**"],
+    "requireNewTests": true
+  },
+  "budgets": {
+    "passesPerIssue": 5,
+    "stallAfterFlatPasses": 2,
+    "maxTurnsPerSession": 200,
+    "sessionTimeoutMinutes": 30,
+    "askHumanTimeoutMinutes": 30,
+    "passesPerNight": 12,
+    "stopAfterParkedInARow": 3,
+    "maxCostPerSessionUsd": 6,
+    "maxOpenLoopPrs": 1
+  },
+  "_generated": {
+    "workstream": "perms-1862",
+    "pass": 3,
+    "at": "2026-11-21T22:50:00.000Z",
+    "defaulted": ["install", "protectedPaths"],
+    "deliberatelyAbsent": [
+      "phase",
+      "cursors",
+      "lease",
+      "desk",
+      "deps",
+      "autonomy",
+      "rules",
+      "pr",
+      "sow"
+    ],
+    "note": "The $comment block is outside the config on purpose: this file must satisfy treadle's assertLoopConfig as-is, and only _generated is non-config metadata the test should strip before asserting."
+  }
+}

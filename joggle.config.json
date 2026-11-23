@@ -22,6 +22,10 @@
       "reason": "plumb is the deterministic single-file linter: its rules are written once and applied everywhere, and its rule-authoring shapes are its own concern. joggle asks whether two things are the same and whether a thing fits THIS repository; plumb's rule internals are not that question, and the root lint already scopes plumb out. Judging them produced 82 `rule-judgment` readings about plumb's own rule metadata, 4 `object-shape` readings about its metadata literals, 3 `duplicate-meaning` and 2 `compose-types` readings within its own rule internals — none of them about this repository."
     },
     {
+      "path": "packages/treadle/**",
+      "reason": "treadle is an application imported as its own tree -- its own Biome gate and two compiler settings -- not one of the seam packages the architecture law describes. Its loop-engine internals (trackers, rules, budgets, receipts) would be judged against a vocabulary they do not use, which is the same reason plumb's rule internals are scoped out. Converting it to the house rulebook is a recorded MIGRATION item, not a silent exception."
+    },
+    {
       "rule": "joggle/compose-types",
       "path": "packages/protocol/src/catalog.ts",
       "reason": "`DuplicateCandidate` and joggle's `ScoredPair` are two packages' independent declarations of a scored pair. They cannot compose: the dependency law is that `protocol` depends on nothing, so it cannot import a type from `joggle`. The shared shape IS the seam — they agree on bytes, not on code."
@@ -60,6 +64,121 @@
       "rule": "joggle/duplicate-meaning",
       "path": "packages/joggle/src/git.ts",
       "reason": "The other side of the `lines` pair: jig-cli and joggle each carry the helper because the tools never import each other. Recorded on both files so the finding cannot move with whichever side the detector names."
+    },
+    {
+      "rule": "joggle/reversal",
+      "path": "packages/cutlist/src/features.ts",
+      "reason": "The same seam as the duplicate-implementation entry above: `dirOf` exists in cutlist and joggle because the tools never import each other, so the detector naming it a second time under the reversal rule is the same fact, not a new one."
+    },
+    {
+      "rule": "joggle/reversal",
+      "path": "packages/cutlist/src/roles.ts",
+      "reason": "`baseOf` is the other half of the `dirOf`/path-scan pair: two engines that agree on bytes, not code."
+    },
+    {
+      "rule": "joggle/reversal",
+      "path": "packages/jig-cli/src/package-json.ts",
+      "reason": "jig and joggle each decode a package manifest, a tsconfig and their own cache because the harness never links an engine. The seam is the reason the two implementations may diverge; a shared decoder would be the runtime dependency the workspace forbids."
+    },
+    {
+      "rule": "joggle/reversal",
+      "path": "packages/joggle/src/typefacts.ts",
+      "reason": "`CachedFacts` and `CachedIndex` share the four envelope fields because that IS the cache format both files write; their entries differ (a position and a resolved type versus a line, a name and a fact). The rule read the envelope as one declaration written twice. Factoring a generic would make the version, tool and manifest fields' meaning depend on a type parameter for no reader's benefit."
+    },
+    {
+      "rule": "joggle/reversal",
+      "path": "packages/protocol/src/catalog.ts",
+      "reason": "`DuplicateCandidate` and joggle's `UnitPair` are two packages' independent declarations of a scored pair, and protocol cannot import joggle. The shared shape is the seam; the existing compose-types entry above records the same fact."
+    },
+    {
+      "rule": "joggle/field-type-drift",
+      "path": "packages/jig-cli/src/init.ts",
+      "reason": "`RepoProfile.packageManager` is the RESOLVED manager, a closed union; `PackageManifest.packageManager` is the raw field as it appears in package.json, and that name is the JSON key the decoder reads. Two levels of one fact — the same shape joggle's own `onUnavailable` entry records."
+    },
+    {
+      "rule": "joggle/reversal",
+      "path": "packages/cutlist/src/version.ts",
+      "reason": "The reader is identical in cutlist, jig-cli and joggle because the tools never import each other: a shared module would be the runtime dependency the seam forbids. `Packaged` and `readVersion` are the same five lines in each deployable, and each reads ITS OWN manifest — the file that differs between them."
+    },
+    {
+      "rule": "joggle/duplicate-implementation",
+      "path": "packages/cutlist/src/version.ts",
+      "reason": "The other face of the reversal entry above: cutlist, jig-cli and joggle each read their own package.json because a shared reader would be the runtime dependency the seam forbids. The five lines are identical on purpose; what differs is the manifest they read."
+    },
+    {
+      "rule": "joggle/invariant-has-a-reconciler",
+      "path": "packages/cutlist/src/catalog.ts",
+      "reason": "Cutlist is a read-only projection: the repair for an invariant it reports is a developer edit or a `cutlist build`, not a runtime reconciler. The detector is the whole contract."
+    },
+    {
+      "rule": "joggle/invariant-has-a-reconciler",
+      "path": "packages/cutlist/src/check.ts",
+      "reason": "The staleness and drift checks are read-only reports. Repair belongs to `cutlist build`, which writes the catalog; adding a reconciler here would make the checker a writer."
+    },
+    {
+      "rule": "joggle/reversal",
+      "path": "packages/cutlist/src/crawl.ts",
+      "reason": "`isTestPath` and `isTid` are already `Predicate.Predicate<string>`; the shared element is that type, which both packages already have. A runtime regex-predicate helper in `protocol` would add runtime to the package chartered as no-runtime."
+    },
+    {
+      "rule": "joggle/reversal",
+      "path": "packages/joggle/src/answer-store.ts",
+      "reason": "`Census` and `Loaded` share field names but not meanings: `entries` is a count in the census and a map in the load. Extending one from the other would make the count a map; the repetition is the two contracts, not a copy."
+    },
+    {
+      "rule": "joggle/invariant-has-a-reconciler",
+      "path": "packages/protocol/src/baseline.ts",
+      "reason": "The baseline's repair path is `jig baseline`, which writes the ledger. `diffBaseline` and `ratchetViolations` are the read-only detectors; a reconciler here would collapse the writer and the check."
+    },
+    {
+      "rule": "joggle/invariant-has-a-reconciler",
+      "path": "packages/protocol/src/catalog.ts",
+      "reason": "`nearestDuplicate` is an advisory candidate finder. The repair is a developer's edit, named in the report; a runtime reconciler would decide a design question for them."
+    },
+    {
+      "rule": "joggle/reversal",
+      "path": "packages/protocol/src/config.ts",
+      "reason": "`CutlistOutput`'s fields are independent optional destinations: absence means 'not written', not a missing deviation field. Sharing a base with the vocabulary would tie an output path to an ownership setting."
+    },
+    {
+      "rule": "joggle/deviation-has-a-shape",
+      "path": "packages/joggle/src/config.ts",
+      "reason": "IgnoreRule is authored config: its authority is git and it has no instant; the missing runtime `suppressed` report is tracked as its own change, not disguised as a field here."
+    },
+    {
+      "rule": "joggle/single-path",
+      "path": "packages/joggle/src/rules/cluster-verdict.ts",
+      "reason": "The three branches choose a sentence, not a list format; memberList is the one formatter. The rule reads the repeated template as a second path."
+    },
+    {
+      "rule": "joggle/deviation-has-a-shape",
+      "path": "packages/protocol/src/config.ts",
+      "reason": "`EngineRef.advisory` is a per-engine policy flag, not a value deviation with an authority and an instant. Replacing it with a tagged variant changes the public `jig.config.json` contract, which this task forbids without asking; the finding is recorded here instead of hidden in a baseline."
+    },
+    {
+      "rule": "joggle/reversal",
+      "path": "packages/board/src/factory/store.ts",
+      "reason": "canonicalWorkstreamPath is a four-line realpath-with-fallback at a filesystem boundary; joggle has the same idiom in its tsgo reader, and the tools never import each other. The seam is the record bytes, not a shared path helper."
+    },
+    {
+      "rule": "joggle/reversal",
+      "path": "packages/board/src/factory/report.ts",
+      "reason": "reportFile and workstreamFile are two join(dir,id+\".json\") one-liners for different record kinds; a shared helper would couple their storage layouts. The seam is the file bytes."
+    },
+    {
+      "rule": "joggle/reversal",
+      "path": "packages/board/src/factory/desk.ts",
+      "reason": "deskItemFile is one join(dir,id+\".json\") for a different record kind; a shared helper would couple desk, report and workstream storage layouts. The seam is the file bytes."
+    },
+    {
+      "rule": "joggle/reversal",
+      "path": "packages/board/view/src/main.ts",
+      "reason": "The view decodes the board's /presence JSON with a local Schema; importing board's server schema would couple the browser bundle to board internals. The shared shape IS the wire contract."
+    },
+    {
+      "rule": "joggle/reversal",
+      "path": "packages/board/src/fleet.ts",
+      "reason": "RemoteSource is the board's decode of the served presence shape; the view has the same schema because it reads the same bytes in a browser. The duplication is the wire contract."
     }
   ],
   "architecture": {
@@ -73,6 +192,20 @@
         "name": "engine",
         "include": ["packages/plumb/**", "packages/joggle/**", "packages/cutlist/**"],
         "forbid": ["@autotelic/jig-cli", "@autotelic/jig-cli/**"]
+      },
+      {
+        "name": "app",
+        "include": ["packages/treadle/**"],
+        "forbid": [
+          "@autotelic/plumb",
+          "@autotelic/plumb/**",
+          "@autotelic/joggle",
+          "@autotelic/joggle/**",
+          "@autotelic/cutlist",
+          "@autotelic/cutlist/**",
+          "@autotelic/jig-cli",
+          "@autotelic/jig-cli/**"
+        ]
       },
       {
         "name": "harness",

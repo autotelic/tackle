@@ -7,6 +7,8 @@ import { noAntithesisClauseRule } from "./rules/no-antithesis-clause.ts";
 import { noProseVerdictRule } from "./rules/no-prose-verdict.ts";
 import { noChainedTypeAssertionsRule } from "./rules/no-chained-type-assertions.ts";
 import { noConditionalEmptyObjectSpreadRule } from "./rules/no-conditional-empty-object-spread.ts";
+import { effectTestCannotFloatRule } from "./rules/effect-test-cannot-float.ts";
+import { noCallerSuppliedInstantRule } from "./rules/no-caller-supplied-instant.ts";
 import { noBooleanFieldSignalsRule } from "./rules/no-boolean-field-signals.ts";
 import { noImpossibleBranchThrowRule } from "./rules/no-impossible-branch-throw.ts";
 import { noKnownValueWideningRule } from "./rules/no-known-value-widening.ts";
@@ -68,6 +70,8 @@ const plumbPlugin = eslintCompatPlugin({
 		"no-chained-type-assertions": noChainedTypeAssertionsRule,
 		"no-boolean-field-signals": noBooleanFieldSignalsRule,
 		"no-conditional-empty-object-spread": noConditionalEmptyObjectSpreadRule,
+		"effect-test-cannot-float": effectTestCannotFloatRule,
+		"no-caller-supplied-instant": noCallerSuppliedInstantRule,
 		"no-impossible-branch-throw": noImpossibleBranchThrowRule,
 		"no-known-value-widening": noKnownValueWideningRule,
 		"no-module-mocking": noModuleMockingRule,

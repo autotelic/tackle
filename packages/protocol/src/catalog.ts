@@ -69,7 +69,11 @@ export interface CatalogFeature {
   readonly valueKeys: ReadonlyArray<string>
 }
 
-/** One component as the crawler classified it. */
+/**
+ * One component as the crawler classified it.
+ *
+ * Projection of `cutlist build`; refresh by running it, and read it as stale until then.
+ */
 export interface CatalogComponent extends ComponentFields {
   /**
    * The part's stable identity: its repository-relative path without the source
@@ -343,7 +347,7 @@ export const similarityOf = ({
   return shared / (left.size + right.size - shared)
 }
 
-/** The nearest same-or-higher-tier twin of a component, at or above a threshold. */
+/** The nearest other component, at or above a threshold. */
 export const nearestDuplicate = (
   catalog: Catalog,
   subject: CatalogComponent,

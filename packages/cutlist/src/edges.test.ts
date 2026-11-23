@@ -1,3 +1,4 @@
+/* oxlint-disable plumb/prefer-property-tests -- the subject is a parse of fixed source text against a fixed tree; a generator would have to re-implement the parser to know what to expect. */
 import { describe, expect, it } from "vitest"
 import { importerGraph, renderEdgesOf } from "./catalog.ts"
 import { parseModule } from "./crawl.ts"

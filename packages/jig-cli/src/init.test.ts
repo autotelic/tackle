@@ -14,7 +14,9 @@ import { dirname, join } from "node:path"
 import { describe, expect, it } from "vitest"
 import { Effect } from "effect"
 import { NodeServices } from "@effect/platform-node"
+import { makeReport } from "@autotelic/protocol"
 import {
+  acceptedIdentities,
   configFor,
   cookbookFor,
   initialise,
@@ -64,7 +66,7 @@ const OXLINT = {
 }
 
 describe("mergeArchitecture", () => {
-  it("re-drafts the includes and keeps the forbid by layer name", () => {
+  it("keeps authored includes and forbids, adds a missing layer, and reports both", () => {
     const existing = {
       unavailable: "count",
       rules: { "joggle/import-cycle": "error", "joggle/layer-direction": "error" },
@@ -85,13 +87,17 @@ describe("mergeArchitecture", () => {
     })
     const layers = (merged.file.architecture as { layers: ReadonlyArray<Record<string, unknown>> })
       .layers
-    // The include set follows the tree; the forbid follows the name a person wrote it against.
+    // An authored include set is a decision, not a draft: --force used to replace it, which
+    // silently dropped the patterns a repository had put in a tier. The draft only adds.
     expect(layers[0]).toEqual({
       name: "domain",
-      include: ["packages/domain/**", "packages/shakti-utils/**"],
+      include: ["packages/domain/**"],
       forbid: ["react*", "fastify*"],
     })
-    expect(merged.forbidsKept).toEqual(["domain"])
+    expect(merged.includesKept).toEqual(["domain"])
+    // A layer the tree has now and the file does not is added.
+    expect(layers.map((layer) => layer["name"])).toEqual(["domain", "legacy", "ui"])
+    expect(merged.forbidsKept).toEqual(["domain", "legacy"])
     // A layer the draft stopped proposing is reported, never dropped in silence: a lost
     // forbid makes layer-purity read 0 on a rule nobody removed.
     expect(merged.forbidsDropped).toEqual(["legacy"])
@@ -589,14 +595,15 @@ describe("inspectRepo", () => {
     try {
       const profile = await inspect(root)
       const alias = profile.cutlistDraft?.alias ?? {}
-      expect([...(profile.cutlistDraft?.roots ?? [])].sort()).toEqual([
-        "apps/admin",
-        "apps/web",
-        "libs/ui/src",
-      ])
+      expect(
+        [...(profile.cutlistDraft?.roots ?? [])].sort((left, right) => left.localeCompare(right)),
+      ).toEqual(["apps/admin", "apps/web", "libs/ui/src"])
       // `apps/web` and `apps/admin` are roots that *are* the app directory, so their
       // tsconfig is inside them rather than in the parent. Both targets must survive.
-      expect([...(alias["@/*"] ?? [])].sort()).toEqual(["apps/admin/*", "apps/web/*"])
+      expect([...(alias["@/*"] ?? [])].sort((left, right) => left.localeCompare(right))).toEqual([
+        "apps/admin/*",
+        "apps/web/*",
+      ])
       // `libs/ui/src` keeps its tsconfig one level up, which must still be read.
       expect(alias["~/*"]).toEqual(["libs/ui/src/*"])
     } finally {
@@ -840,33 +847,6 @@ describe("inspectRepo", () => {
       rmSync(root, { recursive: true, force: true })
     }
   })
-
-  it("documents the room when this repo runs one, and asks before registering it", async () => {
-    const root = project(
-      {
-        json: [["package.json", {}]],
-        text: [["packages/room/package.json", "{}"]],
-      },
-      [],
-    )
-    try {
-      const profile = await inspect(root)
-      expect(profile.facts.has("room")).toBe(true)
-      expect(profile.notes.join("\n")).toContain("room not initialised")
-      expect(cookbookFor(profile)).toContain("room doctor")
-      expect(cookbookFor(profile)).toContain("room board")
-      expect(onboardingFor(profile)).toContain("room doctor")
-      expect(onboardingFor(profile)).toContain("room plan")
-      expect(onboardingFor(profile)).toContain("**STOP and ask**")
-      // The prompt names what the room needs on the machine, and says who checks it.
-      expect(onboardingFor(profile)).toContain("celld")
-      expect(onboardingFor(profile)).toContain("gh extension install cli/gh-webhook")
-      expect(onboardingFor(profile)).toContain("room doctor")
-      expect(cookbookFor(profile)).toContain("room daemon")
-    } finally {
-      rmSync(root, { recursive: true, force: true })
-    }
-  })
 })
 
 describe("a repository that ignores the harness", () => {
@@ -971,8 +951,41 @@ describe("making the harness real", () => {
   })
 })
 
+describe("acceptedIdentities", () => {
+  it("accepts one key per rule and file, sorted, so the ledger merges", () => {
+    const report = makeReport({
+      diagnostics: [
+        {
+          engine: "plumb",
+          ruleId: "no-x",
+          severity: "warn",
+          message: "a",
+          location: { file: "b.ts", line: 1, column: 1 },
+        },
+        {
+          engine: "plumb",
+          ruleId: "no-x",
+          severity: "warn",
+          message: "b",
+          location: { file: "b.ts", line: 9, column: 1 },
+        },
+        {
+          engine: "plumb",
+          ruleId: "no-x",
+          severity: "error",
+          message: "c",
+          location: { file: "a.ts", line: 1, column: 1 },
+        },
+      ],
+      files: 2,
+      generators: [],
+    })
+    expect(acceptedIdentities(report)).toEqual(["plumb/no-x:a.ts", "plumb/no-x:b.ts"])
+  })
+})
+
 describe("initialise", () => {
-  it("writes a config, an empty baseline, the docs, and a counted joggle config", async () => {
+  it("writes a config, a ledger, the docs, and a counted joggle config", async () => {
     const root = project(
       {
         json: [
@@ -1220,6 +1233,29 @@ describe("initialise", () => {
     }
   })
 
+  it("never replaces a cookbook a repository edited, and says what is waiting", async () => {
+    const root = project(
+      {
+        json: [["package.json", { packageManager: "pnpm@9.10.0", scripts: { lint: "oxlint ." } }]],
+        text: [["AGENTS.md", "**Project**: a forestry system.\n"]],
+      },
+      ["oxlint"],
+    )
+    try {
+      await initialiseIn(root)
+      const edited = readFileSync(join(root, "JIG.md"), "utf8") + "\n## Our own notes\n"
+      writeFileSync(join(root, "JIG.md"), edited)
+      const forced = await initialiseIn(root, { force: true })
+      // --force refreshes the harness; it does not decide that a repository's own guidance
+      // was wrong. The fresh copy sits beside the file for a human to diff and merge.
+      expect(readFileSync(join(root, "JIG.md"), "utf8")).toBe(edited)
+      expect(forced.pending).toContain("JIG.md.new")
+      expect(existsSync(join(root, "JIG.md.new"))).toBe(true)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
   it("is idempotent, and --force never replaces the accepted baseline", async () => {
     const root = project(
       {
@@ -1243,8 +1279,11 @@ describe("initialise", () => {
       expect(readFileSync(join(root, ".jig-baseline.json"), "utf8")).toBe(baseline)
 
       const forced = await initialiseIn(root, { force: true })
-      expect(forced.written).toEqual(
-        expect.arrayContaining(["jig.config.json", "JIG.md", "ONBOARD.md"]),
+      // A refreshed document is either rewritten (unchanged text) or left beside a .new copy
+      // (the repository edited it) -- never silently replaced by template text.
+      expect(forced.written).toContain("jig.config.json")
+      expect([...forced.written, ...forced.kept]).toEqual(
+        expect.arrayContaining(["JIG.md", "ONBOARD.md"]),
       )
       expect(forced.kept).toContain(".jig-baseline.json")
       expect(readFileSync(join(root, ".jig-baseline.json"), "utf8")).toBe(baseline)
@@ -1414,14 +1453,14 @@ describe("init --skills", () => {
     try {
       const result = await initialiseIn(root, { skills: true })
       const names = result.skills.map((skill) => skill.name)
-      expect(names).toContain("room")
+      expect(names).toContain("project-run")
       expect(names).toContain("intercom-setup")
       expect(names).toContain("feedback-loop")
       expect(result.skills.every((skill) => skill.state === "written")).toBe(true)
-      const body = readFileSync(join(root, ".agents", "skills", "room", "SKILL.md"), "utf8")
+      const body = readFileSync(join(root, ".agents", "skills", "project-run", "SKILL.md"), "utf8")
       // Frontmatter is the contract both hosts read: a name and a routing description.
-      expect(body.startsWith("---\nname: room\ndescription:")).toBe(true)
-      expect(result.written).toContain(".agents/skills/room/SKILL.md")
+      expect(body.startsWith("---\nname: project-run\ndescription:")).toBe(true)
+      expect(result.written).toContain(".agents/skills/project-run/SKILL.md")
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
@@ -1431,10 +1470,15 @@ describe("init --skills", () => {
     const root = project({}, ["pnpm"])
     try {
       await initialiseIn(root, { skills: true })
-      const before = readFileSync(join(root, ".agents", "skills", "room", "SKILL.md"), "utf8")
+      const before = readFileSync(
+        join(root, ".agents", "skills", "project-run", "SKILL.md"),
+        "utf8",
+      )
       const again = await initialiseIn(root, { skills: true })
       expect(again.skills.every((skill) => skill.state === "kept")).toBe(true)
-      expect(readFileSync(join(root, ".agents", "skills", "room", "SKILL.md"), "utf8")).toBe(before)
+      expect(readFileSync(join(root, ".agents", "skills", "project-run", "SKILL.md"), "utf8")).toBe(
+        before,
+      )
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
@@ -1468,11 +1512,11 @@ it("keeps a skill someone edited, and --force replaces it", async () => {
   const root = project({}, ["pnpm"])
   try {
     await initialiseIn(root)
-    const target = join(root, ".agents", "skills", "room", "SKILL.md")
-    const mine = "---\nname: room\ndescription: mine.\n---\n\nour own room notes\n"
+    const target = join(root, ".agents", "skills", "project-run", "SKILL.md")
+    const mine = "---\nname: project-run\ndescription: mine.\n---\n\nour own notes\n"
     writeFileSync(target, mine)
     const kept = await initialiseIn(root)
-    expect(kept.skills.find((skill) => skill.name === "room")?.state).toBe("kept")
+    expect(kept.skills.find((skill) => skill.name === "project-run")?.state).toBe("kept")
     expect(readFileSync(target, "utf8")).toBe(mine)
     expect(kept.profile.notes.some((note) => note.includes("differs from the shipped skill"))).toBe(
       true,

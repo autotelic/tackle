@@ -92,18 +92,26 @@ const BOUNDARY_FILES = [
   "packages/protocol/src/baseline.ts",
   "packages/cutlist/src/crawl.ts",
   "packages/jig-cli/src/engines.ts",
+  "packages/jig-cli/src/init.ts",
   "packages/jig-cli/src/menu.ts",
   "packages/jig-cli/src/menu.test.ts",
   "packages/jig-cli/src/opencode.ts",
   "packages/jig-cli/extensions/jig.ts",
   // The conformance tests hold raw fixture bytes against a schema: the same crossing, in a
-  // test. The cast is the test's subject, not an accident.
+  // test. The cast is the test's subject.
   "packages/protocol/src/conformance.test.ts",
   "packages/protocol/src/compat.test.ts",
   "packages/protocol/src/projections.test.ts",
   // The host's half of the same conformance: it reads the spec's fixture bytes and compares
   // its own projection to them. Same crossing, same reason.
   "packages/jig-cli/src/projections.test.ts",
+  // `init` reads a repository it did not write: package manifests, tsconfigs, an oxfmt config,
+  // a joggle config, an existing `.gitattributes`. Every parse is a boundary crossing, and the
+  // defensive readers answer "not there" rather than throwing.
+  "packages/jig-cli/src/init.ts",
+  "packages/jig-cli/src/init.test.ts",
+  // The baseline ledger is a committed document read from disk; the test writes entries by hand.
+  "packages/jig-cli/src/baseline.test.ts",
   // The other host's half, for the agent surfaces: it loads the pi extension by computed
   // specifier (the package deliberately does not typecheck it) and fakes both hosts down to
   // the three domains each touches. Asserting the runtime contract is the test's subject.
@@ -146,10 +154,13 @@ const CONDITIONAL_SPREAD_FILES = [
   "packages/cutlist/src/patterns.ts",
   "packages/cutlist/src/render/recipes.ts",
   "packages/jig-cli/src/menu.ts",
+  "packages/protocol/src/graph.ts",
+  "packages/protocol/src/graph.test.ts",
   "packages/protocol/src/projections.test.ts",
   "packages/jig-cli/src/projections.test.ts",
   "packages/jig-cli/src/engines.ts",
   "packages/jig-cli/src/opencode.ts",
+  "packages/jig-cli/src/exec.ts",
   "packages/jig-cli/extensions/jig.ts",
 ]
 
@@ -166,6 +177,10 @@ const PURE_LOOKUP_FILES = [
   "packages/cutlist/src/paths.ts",
   "packages/cutlist/src/patterns.ts",
   "packages/cutlist/src/render/recipes.ts",
+  // The graph queries answer the same absent case: a part or page the catalog does not hold.
+  // `partsOfPage` is a pure read whose miss is the ordinary answer the menu prints, so an
+  // `Option` would move the same branch to every caller without adding a distinction.
+  "packages/protocol/src/graph.ts",
 ]
 
 /**
@@ -189,6 +204,9 @@ const TEXT_RENDERER_FILES = [
   "packages/cutlist/src/render/patterns.ts",
   "packages/cutlist/src/render/recipes.ts",
   "packages/jig-cli/src/menu.ts",
+  // The cookbook and onboarding templates: the interpolation is the sentence a person reads,
+  // assembled from what `inspect` found. No query is built here.
+  "packages/jig-cli/src/init.ts",
 ]
 
 export default {
@@ -197,6 +215,8 @@ export default {
     "examples/**",
     "packages/plumb/**",
     "packages/joggle/**",
+    // The pi extension is a host surface: pi loads it and strips its types itself, so it is
+    // outside every package's compiler program and is not part of the library the rules judge.
     // The foreman is the ratchet's engine, not a specimen: a dependency-free Node program
     // (node:sqlite + node:child_process) that is deliberately not an Effect app, so most of
     // the rulebook's reasons do not apply to it. It is held to the rules in a later round;
@@ -249,10 +269,149 @@ export default {
       rules: { "plumb/no-sql-string-interpolation": "off" },
     },
     {
+      // The mailbox log reports the offending line as a sentence; the rule reads the template
+      // as a query. There is no SQL in this file, only an error message.
+      files: ["packages/room/src/Mailbox/log.ts"],
+      rules: { "plumb/no-sql-string-interpolation": "off" },
+    },
+    {
+      // A receipt's state is Rat King's wire string, not a local dispatch tag. The envelope
+      // predicate takes unknown because it is the boundary parser, and returns a Schema.is
+      // refinement rather than a cast.
+      files: ["packages/protocol/src/mailbox.ts"],
+      rules: {
+        "plumb-effect/prefer-tagged-enum": "off",
+        "plumb/no-unknown-parameters": "off",
+      },
+    },
+    {
+      // did:web is a plain JSON read any browser can do; Effect HttpClient would force a
+      // platform service into a module the server and the tests both use directly.
+      files: ["packages/board/src/mailbox/did.ts", "packages/board/src/mailbox/cli.ts"],
+      rules: { "plumb-effect/no-direct-fetch": "off" },
+    },
+    {
+      // The host lookup is a pure two-map read used by sync tests; making it an Effect would
+      // put a runtime between a fixture and the record it resolves.
+      files: ["packages/board/src/mailbox/records.ts"],
+      rules: { "plumb-effect/guarded-op-must-return-effect": "off" },
+    },
+    {
+      // Schema.is is the discriminant here: the union is Backfill | Turn, and the predicate is
+      // the schema's own refinement, not an ad-hoc field check.
+      files: ["packages/room/src/Mailbox/log.ts"],
+      rules: { "plumb-effect/no-manual-field-guards": "off" },
+    },
+    {
+      // senderInBody is a pure Option extraction from a regex, not an effectful guarded
+      // operation; the Option is the contract, not a missing Effect.
+      files: ["packages/room/src/Mailbox/log.ts"],
+      rules: { "plumb-effect/guarded-op-must-return-effect": "off" },
+    },
+    {
+      // The one-supervisor-per-shop guard is a process-level registry. It is deliberately
+      // module-scoped and never exported; the rule reads any module mutation as exported state.
+      files: ["packages/board/src/Supervisor.ts"],
+      rules: { "plumb/no-exported-mutable-state": "off" },
+    },
+    {
+      // Fleet is the outbound network boundary: it pulls untrusted presence JSON from tailnet
+      // peers, records per-host prose for the operator, and takes its fetcher as a parameter
+      // so the merge can be tested without HTTP. A typed service graph here would be a second
+      // HTTP client beside the one the CLI already owns.
+      files: ["packages/board/src/fleet.ts"],
+      rules: {
+        "plumb/no-boolean-field-signals": "off",
+        "plumb/no-unknown-returns": "off",
+        "plumb/no-unknown-parameters": "off",
+        "plumb/no-builtin-throws": "off",
+        "plumb/no-nondeterministic-core": "off",
+        "plumb-effect/no-direct-fetch": "off",
+        "plumb-effect/no-try-catch": "off",
+        "plumb-effect/guarded-op-must-return-option": "off",
+        "plumb-effect/no-raw-error-forwarding": "off",
+      },
+    },
+    {
+      // Foldkit's runtime names these exports; the browser fetch is the UI boundary.
+      files: ["packages/board/view/src/main.ts"],
+      rules: {
+        "plumb/no-generic-export-names": "off",
+        "plumb-effect/no-direct-fetch": "off",
+        "unicorn/no-useless-spread": "off",
+      },
+    },
+    {
+      // The watch tests load trusted local fixtures; the fixture shape is the assertion, and
+      // decoding a hand-written table through a second schema would test the schema instead.
+      files: ["packages/board/test/watch.test.ts"],
+      rules: {
+        "plumb/no-reinterpret-cast": "off",
+        "plumb/require-safety-comment-for-type-assertion": "off",
+      },
+    },
+    {
+      // The CLIs are the process boundary: they mint the instant and pass it into the store.
+      files: [
+        "packages/room/src/cli.ts",
+        "packages/room/src/supervise.ts",
+        "packages/board/src/cli.ts",
+        "packages/board/src/factory/cli.ts",
+        "packages/board/src/factory/daemon.ts",
+        "packages/board/src/mailbox/service.ts",
+        "packages/board/src/mailbox/cli.ts",
+      ],
+      rules: { "plumb/no-nondeterministic-core": "off" },
+    },
+    {
+      // The jig CLI is the process boundary: it mints the ship instant and stamps the pin file.
+      files: ["packages/jig-cli/src/cli.ts"],
+      rules: { "plumb/no-nondeterministic-core": "off" },
+    },
+    {
+      // derivePin is a pure lockfile projection: Option says 'not resolved'; there is no effect
+      // and no runtime to return.
+      files: ["packages/jig-cli/src/pin.ts"],
+      rules: { "plumb-effect/guarded-op-must-return-effect": "off" },
+    },
+    {
+      // Room stories and the supervisor suite are ordered scenarios (given/when/then, crash then
+      // restart), not claims over arbitrary input; a property suite would test something else.
+      files: [
+        "packages/board/test/supervisor.test.ts",
+        "packages/room/test/worktree.test.ts",
+        "packages/room/test/Move.story.test.ts",
+        "packages/room/test/Room.story.test.ts",
+        "packages/room/test/cli.test.ts",
+        "packages/board/test/cli.test.ts",
+      ],
+      rules: { "plumb/prefer-property-tests": "off" },
+    },
+    {
+      // These suites are Rat King's published fixtures and protocol examples, not general
+      // claims about arbitrary input; a property suite would be a different suite.
+      files: [
+        "packages/board/test/mailbox-cutover.test.ts",
+        "packages/board/test/mailbox-envelope.test.ts",
+        "packages/board/test/mailbox-federation.test.ts",
+        "packages/board/test/mailbox-fixtures.test.ts",
+        "packages/room/test/mailbox-render.test.ts",
+        "packages/jig-cli/src/pin.test.ts",
+        "packages/board/test/mailbox-rat-king.test.ts",
+      ],
+      rules: { "plumb/prefer-property-tests": "off" },
+    },
+    {
+      // The CLI is the process boundary: it mints the instant and passes it into the core.
+      // No core byte depends on a clock.
+      files: ["packages/room/src/Mailbox/cli.ts"],
+      rules: { "plumb/no-nondeterministic-core": "off" },
+    },
+    {
       // Reasoning belongs where the decision is made. joggle recorded exactly this for its
       // own tree: plumb wants the note in JSDoc, but an inline comment sits beside the line
       // it explains, and moving it onto a signature forty lines above separates the two.
-      files: ["packages/*/src/**", "packages/jig-cli/extensions/**"],
+      files: ["packages/*/src/**", "packages/jig-cli/extensions/**", "scripts/**"],
       rules: { "plumb/no-stray-inline-comments": "off" },
     },
     {
@@ -318,8 +477,36 @@ export default {
       // `Date.now()` measures a wall-clock duration for the report's `durationMs`. It is not
       // part of a finding's identity, of the baseline, or of any canonical byte, so it cannot
       // make the ratchet non-reproducible — which is the harm the rule exists to prevent.
-      files: ["packages/jig-cli/src/engines.ts", "packages/jig-cli/src/run.ts"],
+      files: [
+        "packages/jig-cli/src/engines.ts",
+        "packages/jig-cli/src/run.ts",
+        "packages/cutlist/src/cli.ts",
+        // The progress beat's elapsed clock: it measures a run and prints to stderr. It is not
+        // part of a finding's identity, the baseline, or any canonical byte.
+        "packages/joggle/src/decision.ts",
+      ],
       rules: { "plumb/no-nondeterministic-core": "off" },
+    },
+    {
+      // `mergeArchitecture` carries through a config it did not write: the return type states
+      // the four keys `init` owns, and the rest of the document keeps the adopter's shape. That
+      // is the reader's contract, not a widened literal.
+      files: ["packages/jig-cli/src/init.ts"],
+      rules: { "plumb/no-known-value-widening": "off" },
+    },
+    {
+      // `shared` and `unshared` are two readings of one comparison, not two spellings of one
+      // collection: what the candidates have in common is the evidence FOR a match, and what the
+      // subject has that they lack is the evidence AGAINST. A consumer prints either, so storing
+      // one and deriving the other at every call site would make the caller re-do the set work.
+      files: ["packages/protocol/src/graph.ts"],
+      rules: { "plumb/no-redundant-derived-field": "off" },
+    },
+    {
+      // The protocol leaf cannot import Effect's `Predicate`, so the rule's remedy is
+      // inexpressible here. The same gap `fixture-support.ts` and `lexicon.ts` record.
+      files: ["packages/protocol/src/graph.ts"],
+      rules: { "plumb-effect/prefer-effect-predicate-over-boolean-function": "off" },
     },
   ],
 }

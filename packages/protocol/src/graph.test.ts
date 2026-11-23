@@ -1,3 +1,4 @@
+import fc from "fast-check"
 import { describe, expect, it } from "vitest"
 import {
   emptyCatalog,
@@ -123,6 +124,19 @@ describe("pagesOfPart", () => {
 })
 
 describe("nameSimilarity", () => {
+  it("answers a score between 0 and 1 for any pair of names", () => {
+    // The score is compared against thresholds and printed as a reason to look, so a value
+    // outside [0, 1] would silently make every caller's cutoff wrong.
+    fc.assert(
+      fc.property(fc.string(), fc.string(), (left, right) => {
+        const score = nameSimilarity({ left, right })
+        expect(Number.isFinite(score)).toBe(true)
+        expect(score).toBeGreaterThanOrEqual(0)
+        expect(score).toBeLessThanOrEqual(1)
+      }),
+    )
+  })
+
   it("reads a compound spelling as the same word", () => {
     expect(nameSimilarity({ left: "TablePanel", right: "Table" })).toBe(0.5)
     expect(nameSimilarity({ left: "ProgressMeter", right: "ProjectProgress" })).toBe(0.5)

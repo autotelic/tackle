@@ -5,7 +5,12 @@
     "outDir": "dist",
     "rootDir": "src",
     "declaration": false,
-    "sourceMap": false
+    "sourceMap": false,
+    // The typecheck config maps protocol to its SOURCE so a fresh checkout resolves it; the
+    // build must not follow that map, because rootDir is this package's src and the emitted
+    // import is the package specifier. Building resolves protocol's dist, which pnpm's
+    // dependency order has already produced.
+    "paths": {}
   },
   "include": ["src/**/*.ts"]
 }

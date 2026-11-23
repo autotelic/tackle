@@ -16,7 +16,7 @@ Point a person at one file:
   they have read. This is the file to send; the raw form works for an agent that fetches URLs:
   `https://raw.githubusercontent.com/autotelic/tackle/main/ADOPT.md`.
 - **`ONBOARD.md` in any initialised repository** — the same prompt for that repository, generated
-  by `jig init` from what it found (engines, gate, cutlist, room). `jig onboard` prints it
+  by `jig init` from what it found (engines, gate, cutlist). `jig onboard` prints it
   without writing anything.
 
 ## The pieces
@@ -27,6 +27,7 @@ Point a person at one file:
 | `@autotelic/joggle`   | Cross-file _judged_ rules                                                                                                                                                                           | `joggle check` (CLI, pi extension)          | `joggle.config.json`                    | verdicts, report, cache                                                                                                           |
 | `@autotelic/cutlist`  | The vocabulary: crawl → tokens + components + tiers + owners + duplicate _candidates_                                                                                                               | `cutlist build`                             | `cutlist.config.json`                   | `catalog.json`, `menu.json`, `MENU.md`, `PATTERNS.md`, `RECIPES.md`, `plumb-ui.config.json`, `diagrams/`, `hooks.md`, `tokens.md` |
 | `@autotelic/jig-cli`  | The surface over engines (command: `jig`)                                                                                                                                                           | `jig init/check/menu/explain/learn/promote` | `jig.config.json` (+ each engine's own) | one oxlint-shaped report, the artifact query                                                                                      |
+| `@autotelic/treadle`  | The long-lived loop: one repository, one session at a time, a markdown tracker, deterministic checks, budgets, receipts; `treadle` runs under launchd                                               | `node src/run-loop.ts`                      | `loop.config.ts` (in the tracker)       | checkpoints, receipts, distilled tracker state                                                                                    |
 | `@autotelic/protocol` | **Not a tool.** The record formats — the named, versioned lexicons (`report`, `baseline`, `catalog`, `manifest`, `menu`, `onboarding`, the configs) — as pure types, JSON Schema, and pure decoders | —                                           | —                                       | JSON Schema, lexicons, fixtures                                                                                                   |
 
 `cutlist` _produces_ the vocabulary; `plumb` and `joggle` _consume_ it. `jig` drives
@@ -64,7 +65,8 @@ tackle/
 │  ├─ cutlist/    the crawler + renderers (binary)
 │  ├─ jig-cli/    the surface over engines (command: `jig`; binary + pi extension + opencode plugin)
 │  ├─ plumb/      moved in from ../plumb (binary-as-plugin; host = oxlint)
-│  └─ joggle/     moved in from ../mess (binary)
+│  ├─ joggle/     moved in from ../mess (binary)
+│  └─ treadle/    moved in from ../treadle (application: the loop engine; Biome gate)
 ├─ examples/self/ the exemplar client repo — a runnable config set, not a fixture
 ├─ .changeset/    independent versioning
 └─ pnpm-workspace.yaml  catalog: pins effect/oxlint/oxfmt/tsgo ONCE

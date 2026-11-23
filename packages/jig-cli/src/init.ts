@@ -4,16 +4,19 @@ import { Effect, FileSystem, Option, Path, PlatformError } from "effect"
 import {
   cutlistDefaultOutput,
   decodeCutlistConfig,
+  identityOf,
   parseJson,
   isRecord,
   type CutlistConfig,
   type CutlistOutput,
   type EngineRef,
   type HarnessConfig,
+  type Report,
   type ResolvedCutlistOutput,
 } from "@autotelic/protocol"
 import { emptyBaseline, readBaseline, writeBaseline } from "./baseline.ts"
 import { loadConfig } from "./config.ts"
+import { harnessRun } from "./run.ts"
 import { resolveEngineCommand } from "./engines.ts"
 import { exec, type Spawner } from "./exec.ts"
 import {
@@ -58,9 +61,7 @@ export interface RepoProfile {
   /** The command that runs jig: `pnpm jig` when it is a local dependency, else `jig`. */
   readonly jig: string
   /** Facts about the repo that change what the docs say. A set, not flags that can disagree. */
-  readonly facts: ReadonlySet<
-    "ci" | "configured" | "live-judgement" | "room" | "typescript" | "workspaces"
-  >
+  readonly facts: ReadonlySet<"ci" | "configured" | "live-judgement" | "typescript" | "workspaces">
   readonly agentDocs: ReadonlyArray<string>
   /** A short, factual sentence about the repository, from AGENTS.md, README or package.json. */
   readonly summary: string
@@ -129,6 +130,14 @@ export interface InitResult {
   readonly accepted: number
   /** What happened to the scoped pre-commit hook. */
   readonly hooks: "absent" | "foreign" | "kept" | "not-a-repo" | "would write" | "written"
+  /**
+   * A document that differs from the one this run would generate, left for a human to merge.
+   *
+   * `--force` used to replace JIG.md and ONBOARD.md outright, so a repository's own guidance
+   * ("engines are devDependencies here", "nothing global") became template text on a refresh.
+   * The regenerated copy is written beside it instead, and the existing file is untouched.
+   */
+  readonly pending: ReadonlyArray<string>
   /** The agent skills `--skills` copied into `.agents/skills`, and what happened to each. */
   readonly skills: ReadonlyArray<{
     readonly name: string
@@ -1150,21 +1159,6 @@ export const inspectRepo = (
       )
     }
 
-    // The room is the same product as the harness: a repo that keeps one -- or builds one --
-    // wants its commands in the docs, and a room without a config is "not initialised", not
-    // "configured".
-    const room =
-      files.includes("room.config.json") ||
-      dependencies["@autotelic/room"] !== undefined ||
-      (yield* existsAt({ fs, path, root, relative: "packages/room/package.json" }))
-    if (room && !files.includes("room.config.json")) {
-      notes.push(
-        "room not initialised: no room.config.json; `" +
-          jig +
-          " room plan` prints the init it would run",
-      )
-    }
-
     // A repo's engine list is a decision, not a detection artefact: a forced run adds what
     // this run found and drops what no longer resolves, but it never erases an engine the
     // repo configured.
@@ -1192,7 +1186,6 @@ export const inspectRepo = (
         ...(liveJudgement ? (["live-judgement"] as const) : []),
         ...(ci ? (["ci"] as const) : []),
         ...(hasConfig ? (["configured"] as const) : []),
-        ...(room ? (["room"] as const) : []),
       ]),
       agentDocs,
       summary,
@@ -1241,30 +1234,72 @@ export const mergeArchitecture = (input: {
   readonly file: Readonly<Record<string, unknown>>
   readonly forbidsKept: ReadonlyArray<string>
   readonly forbidsDropped: ReadonlyArray<string>
+  readonly includesKept: ReadonlyArray<string>
 } => {
   const architecture = isRecord(input.existing.architecture) ? input.existing.architecture : {}
   const declared = Array.isArray(architecture.layers) ? architecture.layers : []
-  const previous = new Map<string, ReadonlyArray<string>>()
+  /*
+   * An existing layer's INCLUDES are authored intent, not a draft to replace.
+   *
+   * `--force` used to re-derive every include set from the tree, so a repository that had put
+   * `services/ui/app/constants/**` and `services/ui/app/schemas/**` in a tier lost them: the
+   * layers then reported the constants as violations of the very layer that owns them, and
+   * `--force` looked like a tidy-up while it destroyed the decision. Only `forbid` was ever
+   * protected. The draft now adds layers that are missing and keeps what is written; the
+   * summary names the includes it kept so a re-draft is visible rather than silent.
+   */
+  const previous = new Map<
+    string,
+    { readonly include: ReadonlyArray<string>; readonly forbid: ReadonlyArray<string> }
+  >()
+  const order: Array<string> = []
   for (const layer of declared) {
     if (!isRecord(layer) || typeof layer.name !== "string") continue
-    const forbid = Array.isArray(layer.forbid)
-      ? layer.forbid.filter((entry): entry is string => typeof entry === "string")
-      : []
-    if (forbid.length > 0) previous.set(layer.name, forbid)
+    const strings = (value: unknown): ReadonlyArray<string> =>
+      Array.isArray(value)
+        ? value.filter((entry): entry is string => typeof entry === "string")
+        : []
+    previous.set(layer.name, { include: strings(layer.include), forbid: strings(layer.forbid) })
+    order.push(layer.name)
   }
-  const drafted = new Set(input.draft.map((layer) => layer.name))
+  const drafted = new Map(input.draft.map((layer) => [layer.name, layer]))
+  const includesKept: Array<string> = []
   const forbidsKept: Array<string> = []
-  const layers = input.draft.map((layer) => {
-    const forbid = previous.get(layer.name)
-    if (forbid === undefined) return { name: layer.name, include: layer.include }
-    forbidsKept.push(layer.name)
-    return { name: layer.name, include: layer.include, forbid }
-  })
+  const layers: Array<Record<string, unknown>> = []
+  for (const name of order) {
+    const prior = previous.get(name)
+    if (prior === undefined) continue
+    const draft = drafted.get(name)
+    // A draft entry may omit the include set (a layer the tree split did not describe); that
+    // is not a proposal which the file overrides.
+    const draftInclude = draft === undefined || !Array.isArray(draft.include) ? [] : draft.include
+    const include = prior.include.length > 0 ? prior.include : draftInclude
+    // Element-wise, not JSON: order is part of the decision, and a stringified comparison of
+    // ordered lists is exactly the identity check that must not depend on encoding.
+    const differs =
+      prior.include.length !== draftInclude.length ||
+      prior.include.some((entry, index) => entry !== draftInclude[index])
+    if (prior.include.length > 0 && draftInclude.length > 0 && differs) {
+      includesKept.push(name)
+    }
+    if (prior.forbid.length > 0) {
+      forbidsKept.push(name)
+      layers.push({ name, include, forbid: prior.forbid })
+    } else {
+      layers.push({ name, include })
+    }
+  }
+  // A layer the tree has now and the file does not is the one thing worth adding.
+  for (const layer of input.draft) {
+    if (previous.has(layer.name)) continue
+    layers.push({ name: layer.name, include: layer.include })
+  }
   const forbidsDropped = [...previous.keys()].filter((name) => !drafted.has(name))
   return {
     file: { ...input.existing, architecture: { ...architecture, layers } },
     forbidsKept,
     forbidsDropped,
+    includesKept,
   }
 }
 
@@ -1277,31 +1312,6 @@ const engineSummary = (profile: RepoProfile): string =>
           engine.config === undefined ? engine.id : `${engine.id} (${engine.config})`,
         )
         .join(", ")
-
-/** The room's commands, for the repositories that run one. */
-const roomSection = (profile: RepoProfile): string =>
-  profile.facts.has("room")
-    ? `## The room
-
-\`jig room\` is this repo's listener: one ledger per Linear project, a daemon on each
-machine, and a review job that runs \`${profile.jig}\`, a Pi, and one fenced post.
-
-- \`${profile.jig} room plan\` — read the repo, the token, and the rooms; print the init it would run
-- \`${profile.jig} room init\` — write \`room.config.json\` and register the room
-- \`${profile.jig} room doctor\` — prove the loop: config, identity, celld, pi, the forward, the room
-- \`${profile.jig} room dev\` — run the room locally with \`celld dev\`
-- \`${profile.jig} room webhook\` — print the \`gh webhook forward\` command for this room
-- \`${profile.jig} room daemon\` — claim jobs, run reviews, deliver into the durable session
-- \`${profile.jig} room session\` — the room's durable conversation (--json, --say, --watch, --note)
-- \`${profile.jig} room work --pr N\` — a worktree, an app, and an attachable Pi session
-- \`${profile.jig} room board\` — jobs, chits, and presence
-
-\`${profile.jig} room doctor\` names the prerequisites this machine is missing — \`celld\`,
-the \`gh webhook\` extension, a Linear token at \`~/.linearis/token\`, \`pi\` on PATH — so the
-list never goes stale here. \`hc\` (herdr-core) is only needed by \`room work\`.
-
-`
-    : ""
 
 /** One blank line between sections, however the template was assembled. */
 const tighten = (text: string): string => text.replace(/\n{3,}/gu, "\n\n")
@@ -1321,10 +1331,11 @@ ${profile.summary === "" ? "" : "\n" + profile.summary + "\n"}
 | --- | --- |
 | \`${profile.jig} check\` | every engine, one report, fail on what is new |
 | \`${profile.jig} check --limit 50\` | the census and the first 50 findings |
+| \`${profile.jig} check --since origin/main\` | only what this branch changed, for every engine |
+| \`${profile.jig} check --pr <number>\` | the same, for one pull request's files |
 | \`${profile.jig} engines\` | what is configured, and whether each command resolves |
 | \`${profile.jig} baseline\` | accept the current findings; the ledger only shrinks after that |
 | \`${profile.jig} explain <rule>\` | everything jig knows about one rule, here, now |
-${profile.facts.has("room") ? "| `" + profile.jig + " room board` | the room: jobs, chits, and presence |\n" : ""}${profile.engines.some((engine) => engine.id === "cutlist") ? "| `" + profile.jig + " menu` | the component catalog cutlist built |\n\nEditing one component can mark several generated catalog files stale: `cutlist build --check` compares the whole catalog, so run `" + invocationOf({ profile, tool: "cutlist", args: "build" }) + "` after a UI edit, or wire it into lint-staged.\n" : ""}${profile.commands.length === 0 ? "" : "\n## The repo's own commands\n\n" + profile.commands.map((command) => "- `" + command.command + "` — the repo's " + command.name + " script").join("\n") + "\n"}
 
 ## What runs
 
@@ -1332,15 +1343,15 @@ ${profile.facts.has("room") ? "| `" + profile.jig + " room board` | the room: jo
 - gate: \`${profile.gateMode}\`, failing on \`any-new\` identity
 - baseline: \`${profile.baseline}\`
 ${profile.notes.length === 0 ? "" : "\nNotes:\n" + profile.notes.map((note) => "- " + note).join("\n") + "\n"}
-${roomSection(profile)}${
-    profile.gateMode === "touched-files"
-      ? "Only findings in the change in front of you fail a run. Existing debt is reported,\nnot enforced, until you touch it."
-      : "Every finding in the repository fails a run. Accept the current debt deliberately\nwith `" +
-        profile.jig +
-        " baseline`, or switch the gate to `touched-files`."
-  }
+${
+  profile.gateMode === "touched-files"
+    ? "Only findings in the change in front of you fail a run. Existing debt is reported,\nnot enforced, until you touch it."
+    : "Every finding in the repository fails a run. Accept the current debt deliberately\nwith `" +
+      profile.jig +
+      " baseline`, or switch the gate to `touched-files`."
+}
 
-${profile.facts.has("ci") ? "## CI\n\nRun `" + profile.jig + " check --format github` in the pull-request workflow. The gate holds new identities only, so the first run explains the debt instead of failing on it. For machine output (`--format json`, `sarif`, `github`), use `" + profile.run + " exec jig`, or `" + profile.run + " -s jig` when you type the repo's own script: a bare `" + profile.run + " jig` prints the script banner first and corrupts the document.\n\n" : ""}## Judgement
+${profile.facts.has("ci") ? "## CI\n\nRun `" + profile.jig + " check --format github` on the default branch, and on a pull request, run `" + profile.jig + " check --since origin/<base> --format github`.  `init` accepted the findings that existed when it ran, so the gate holds new identities only: today's debt is reported, not enforced. A check runs every engine read-only — it never writes the answer cache or a generated artifact, because a run that edits what it judges reports differently next time. Warming those is deliberate: `joggle check` on the base branch, `" + profile.jig + " baseline` for the ledger. The machine formats carry the census too, so an engine that skipped its rules shows as a warning rather than a clean run. For machine output (`--format json`, `sarif`, `github`), use `" + profile.run + " exec jig`, or `" + profile.run + " -s jig` when you type the repo's own script: a bare `" + profile.run + " jig` prints the script banner first and corrupts the document.\n\n" : ""}## Judgement
 
 joggle judges candidates with the TypeSafe model. ${profile.facts.has("live-judgement") ? "A TYPESAFE_API_KEY is present in this environment, so a run can judge." : "No TYPESAFE_API_KEY is present in this environment, so unjudged candidates are counted, not printed. Set the key to judge, or keep the count in CI."}
 
@@ -1352,7 +1363,28 @@ little; re-baseline only after reading what the new identities are.
 
 A baseline is refused while any candidate was not judged (\`unreadable\`, \`no_evidence\`, or
 past the budget), because accepting those consequences is accepting something nobody looked
-at. \`--allow-unjudged-baseline\` is the explicit override.
+at. \`--allow-unjudged-baseline\` is the explicit override. \`${profile.jig} baseline\` refuses
+the same way (\`--allow-unjudged\`), because judgement is part of the analysis rather than a
+label on it: the unkeyed run names one cluster from what the rules could see, the keyed run
+names three from what the model saw. A ledger CI replays must therefore be written by a run
+with the key — otherwise the local baseline and CI hold different identities for the same
+findings, and both look like a pass.
+
+On a branch in a stack, do not re-judge the repository to grow the ledger. A scoped run
+judges every file it reads, so its identities are the change's own:
+\`joggle check --types --no-replay --since origin/<base> --baseline .joggle/baseline\` judges
+only what the branch introduced. That run is for the GATE: accepting is a full-run act, and
+\`--update-baseline\` refuses a scoped run, because a scoped run folds findings differently and
+can miss the identity a full run reports. Accept once, at the head, with
+\`--update-baseline .joggle/baseline --merge-baseline\`.
+\`${profile.jig} baseline\` accepts from a full run, so it is the whole-repository tool; the
+scoped form is the one a stacked pull request needs. Finish every accept and every rebuild
+BEFORE rebasing: a commit on the parent re-dirties every child above it, so a stack is accepted
+bottom-to-top, then rebased bottom-up once with \`-X theirs\` for the artifact conflicts, then
+pushed once with \`--force-with-lease\`. A scoped accept is necessary, not sufficient: cross-file
+rules only fire over the whole repository, and a scoped run folds some findings into another
+rule, so CI's full run is the authority — when it names an identity the scoped ledger lacks,
+accept that one.
 
 ## Reading a finding
 
@@ -1422,7 +1454,7 @@ const GLOBAL_BIN_HINT = {
  * The shape is the one that works -- Alchemy's and rat-stack's: a line of intent, one
  * named command per step, the doc to read before acting, and an explicit place to stop
  * and ask. Nothing is left as "see the README": a prompt that stops at "run init" leaves
- * the person to discover the CLI install, the agent wiring, and the room alone. `JIG.md`
+ * the person to discover the CLI install, the agent wiring alone. `JIG.md`
  * stays the reference; this is the door.
  */
 export const onboardingFor = (profile: RepoProfile): string => {
@@ -1445,13 +1477,13 @@ export const onboardingFor = (profile: RepoProfile): string => {
   const initialise = [
     profile.facts.has("configured")
       ? `\`jig.config.json\` is already here, and nothing needs applying: a re-run keeps it. \`${initCommandFor(profile)} --force\` rewrites the config and the two docs — never the baseline — so run that only when the plan changes.`
-      : `This repository is not initialised yet. Run \`${initCommandFor(profile)}\`: it writes \`jig.config.json\`, an empty \`${profile.baseline}\`, \`${profile.cookbook}\`, and \`${profile.onboarding}\`.`,
+      : `This repository is not initialised yet. Run \`${initCommandFor(profile)}\`: it writes \`jig.config.json\`, \`${profile.baseline}\` (the findings that exist today, accepted), \`${profile.cookbook}\`, and \`${profile.onboarding}\`.`,
     profile.cutlistDraft === undefined
       ? ""
       : `The same command drafts \`cutlist.config.json\`, because this tree looks like a UI. Review the vocabulary it infers, run \`${invocationOf({ profile, tool: "cutlist", args: "build" })}\`, and commit the catalog: \`jig check\` runs the engine as \`cutlist build --check\`, which compares the tree against the catalog on disk, so a catalog that is ignored or stale passes only on the machine that built it. Then re-run with \`--force\`. A draft is not enabled before a person has read it.`,
-    `Init writes each engine's own ledger too (joggle's is born accepted, and is never rewritten), so day one is "nothing new" rather than a pile nobody has judged.`,
+    `The ledger is born accepted: the gate freezes what exists today and fails on what comes next, so day one is "nothing new" rather than a red tree nobody can get past -- which is also why \`jig baseline\` needs a model key on a repository with judged rules. Read what it accepted with \`${profile.jig} check --limit 0\`; the file is in the same commit.`,
     'A known-broken engine does not have to be removed: set `"advisory": true` on its entry in `jig.config.json` and its findings stay in the report and the baseline while the gate ignores them, or `"enabled": false` to keep it out of a run. Both survive `init --force`, which keeps a configured engine\'s own fields.',
-    `The same run installs the agent skills into \`.agents/skills/\` — \`room\`, \`intercom-setup\`, \`feedback-loop\`, \`project-run\`. pi and OpenCode both read that directory, so there is no second install; a skill someone edits is kept, and \`--force\` replaces it.`,
+    `The same run installs the agent skills into \`.agents/skills/\` — \`intercom-setup\`, \`feedback-loop\`, \`project-run\`. pi and OpenCode both read that directory, so there is no second install; a skill someone edits is kept, and \`--force\` replaces it.`,
     profile.architectureDraft === undefined
       ? ""
       : `The same run drafts \`architecture.layers\` in \`joggle.config.json\` from this workspace: includes only, in directory order, with \`layer-direction\`/\`layer-purity\` off, because neither the order nor the \`forbid\` sets can be inferred from a tree. A UI root is split into \`support\` (\`utils\`/\`lib\`/\`models\`/\`hooks\`/\`types\`), primitives, shared components and routes, in that order: a route may import support and so may a primitive, which is what keeps a routes split from reading as 731 upward imports. The splits come before the root they belong to, and each root stays last as the catch-all. Order the rest by what depends on what, add \`forbid\` where it is true, and check every \`forbid\` against the manifest of the layer that forbids it -- forbidding a dependency a package is built on reports that package's own imports as violations -- then turn those two rules on. Until then a clean architecture report means nothing looked.`,
@@ -1465,7 +1497,7 @@ export const onboardingFor = (profile: RepoProfile): string => {
   const wire = [
     piWired
       ? "- **pi** is already wired here (`.pi/settings.json`): run `pi update --extensions` rather than adding a second entry."
-      : `- **pi**: \`pi install ${profile.jigSource} --local\` writes \`.pi/settings.json\`, and the package's extension adds \`jig_check\`, \`jig_engines\`, \`jig_onboard\`, \`jig_init\`, and \`jig_menu\`.`,
+      : `- **pi**: \`pi install ${profile.jigSource} --local\` writes \`.pi/settings.json\`, and the package's extension adds \`jig_check\`, \`jig_engines\`, \`jig_onboard\`, \`jig_init\`, and \`jig_menu\`. Install it in ONE scope: if jig is already installed for every project (\`pi install\` without \`--local\`), use that copy instead — two installs declare the same tool names and pi refuses the second.`,
     opencodeWired
       ? '- **OpenCode** is already wired here: keep the existing `"plugin"` entry or `.opencode/plugins/` file rather than adding another.'
       : '- **opencode 2**: add `"@autotelic/jig-cli/opencode"` to the `"plugin"` array in `opencode.json`. **opencode 1.x** reads plugin files, not that array: add `.opencode/plugins/jig.ts` containing `export { default } from "@autotelic/jig-cli/opencode"`. Either way the surface adds `jig_check`, `jig_engines`, `jig_menu`, `jig_onboard`, and `jig_init`.',
@@ -1478,34 +1510,6 @@ export const onboardingFor = (profile: RepoProfile): string => {
   ]
     .filter((line) => line !== "")
     .join("\n")
-  const room = (): string =>
-    profile.facts.has("room")
-      ? `${section("The room — **STOP and ask**")}
-
-This repository keeps a project room: one ledger per Linear project, a daemon on this
-machine, and a review job that runs jig, a Pi, and one fenced post.
-
-\`\`\`sh
-${profile.jig} room plan            # read it, then show me the init line and wait
-${profile.jig} room init            # only after I approve: writes room.config.json, registers the room
-${profile.jig} room doctor          # names what is missing on this machine
-${profile.jig} room dev             # the room, locally
-${profile.jig} room webhook | sh    # forward GitHub events to it
-${profile.jig} room daemon          # its own terminal: claims jobs, wakes the session
-\`\`\`
-
-Ask before installing anything doctor names. What the checks mean:
-
-- \`celld\` — the room itself: \`curl -fsSL https://celld.dev/install.sh | sh\`
-- \`gh webhook\` — the GitHub forward: \`gh extension install cli/gh-webhook\`
-- a Linear token at \`~/.linearis/token\` (\`linearis\`), when this room watches Linear
-- \`pi\` — the review and the session wake both run it, so it has to be on PATH
-
-\`hc\` (herdr-core) is only needed by \`${profile.jig} room work\`, and the wake needs the machine
-awake: a sleeping laptop is a hosting problem, not a bug.
-
-`
-      : ""
   const notes = (): string =>
     profile.notes.length === 0
       ? ""
@@ -1566,7 +1570,7 @@ ${section("Wire this agent")}
 
 ${wire}
 
-${room()}${section("Report, then stop")}
+${section("Report, then stop")}
 
 Tell me what you installed, what \`${profile.jig} init\` wrote and kept, the census, and the first findings. Then wait for me.
 
@@ -1575,7 +1579,7 @@ ${section("Never, without asking me")}
 - \`${profile.jig} baseline\` — it accepts every current finding, and an unreviewed baseline is debt made invisible.
 - Changing the gate ${profile.gateMode === "all" ? "back to `touched-files`" : "to `all`"}, or adding an ignore to get green.
 - Installing an engine, or anything else globally. Step 1 is the one exception.
-${profile.facts.has("room") ? "- `" + profile.jig + " room init`, which registers the room against Linear.\n" : ""}- Changing \`jig.config.json\` by hand instead of re-running \`init\`.
+- Changing \`jig.config.json\` by hand instead of re-running \`init\`.
 
 ${notes()}
 
@@ -1616,6 +1620,12 @@ export const summaryFor = (result: InitResult): string => {
       : [`  gitattributes    ${result.gitattributes} (generated block only)`]),
     `  ${action.padEnd(16)} ${result.written.length === 0 ? "nothing" : result.written.join(", ")}`,
     ...(result.kept.length === 0 ? [] : [`  ${keptAction.padEnd(16)} ${result.kept.join(", ")}`]),
+    // A document a repository has edited is never replaced; the fresh copy sits beside it.
+    ...(result.pending.length === 0
+      ? []
+      : [
+          `  ${"for review".padEnd(16)} ${result.pending.join(", ")} — the existing file differs from this run's text and was left alone; diff and merge, then delete the .new`,
+        ]),
     ...(result.hooks === "absent" ? [] : [`  hook             pre-commit ${result.hooks}`]),
     ...(result.skills.length === 0
       ? []
@@ -1749,6 +1759,7 @@ export const initJson = (result: InitResult, prompt?: string): string => {
     dryRun: result.dryRun,
     written: result.written,
     kept: result.kept,
+    pending: result.pending,
     joggleConfig: result.joggleConfig,
     cutlistConfig: result.cutlistConfig,
     gitattributes: result.gitattributes,
@@ -1957,6 +1968,14 @@ const writeIfAbsent = (input: {
   readonly write: boolean
   readonly written: Array<string>
   readonly kept: Array<string>
+  readonly pending: Array<string>
+  /**
+   * Never replace a DIFFERENT existing file; write `<file>.new` beside it instead.
+   *
+   * For documents a repository edits: a refresh that silently discards the edits is worse than
+   * a stale document, because nobody sees the change.
+   */
+  readonly preferDiff: boolean
 }) =>
   Effect.gen(function* () {
     const target = input.path.join(input.root, input.file)
@@ -1965,9 +1984,39 @@ const writeIfAbsent = (input: {
       input.kept.push(input.file)
       return
     }
+    if (exists && input.preferDiff) {
+      const current = yield* Effect.orElseSucceed(input.fs.readFileString(target), () => "")
+      if (current === input.body) {
+        input.kept.push(input.file)
+        return
+      }
+      const beside = input.file + ".new"
+      if (input.write) {
+        yield* Effect.orElseSucceed(
+          input.fs.writeFileString(input.path.join(input.root, beside), input.body),
+          () => undefined,
+        )
+      }
+      input.kept.push(input.file)
+      input.pending.push(beside)
+      input.written.push(beside)
+      return
+    }
     if (input.write) yield* input.fs.writeFileString(target, input.body)
     input.written.push(input.file)
   })
+
+/**
+ * The identities an `init` run accepts as today's debt: unique, sorted, and committed verbatim.
+ *
+ * Unique because two findings in one file under one rule are one ratchet key, and sorted so the
+ * ledger is a stable file two branches can merge rather than a report's order.
+ *
+ * @param report - The run over the tree as it is now.
+ * @returns The ledger's identities.
+ */
+export const acceptedIdentities = (report: Report): ReadonlyArray<string> =>
+  [...new Set(report.diagnostics.map(identityOf))].sort((left, right) => left.localeCompare(right))
 
 /**
  * Inspect a repository and write the harness it should have.
@@ -2001,6 +2050,7 @@ export const initialise = (
     })
     const written: Array<string> = []
     const kept: Array<string> = []
+    const pending: Array<string> = []
     const force = options.force === true
     const dryRun = options.dryRun === true
 
@@ -2014,6 +2064,8 @@ export const initialise = (
       write: !dryRun,
       written,
       kept,
+      pending,
+      preferDiff: false,
     })
     let cutlistConfig: InitResult["cutlistConfig"] = "absent"
     if (profile.cutlistDraft !== undefined) {
@@ -2065,12 +2117,48 @@ export const initialise = (
       }
     }
 
-    // The baseline is a reviewed ledger. Even `--force` does not replace it.
+    /*
+     * The ledger is born accepted. Even `--force` does not replace an existing one.
+     *
+     * A repo-wide gate with an empty ledger is a gate that cannot pass: EVERY finding already
+     * in the tree is a new identity, so adoption is red on day one and every pull request fails
+     * on debt it did not create -- and on a repository with judged rules, `jig baseline` needs
+     * a model key, so the state can be impossible to leave. Initiating a ratchet means freezing
+     * what exists now and failing on what comes next; that is this run's report. The acceptance
+     * stays reviewable: the count is in the summary, the ledger is in the same commit, and
+     * `jig check --limit 0` lists every accepted finding.
+     *
+     * Only for `all`: a `touched-files` gate holds nothing outside the change, so it needs no
+     * ledger to pass and should not pay for a full run at init.
+     */
     const baseline = path.join(root, profile.baseline)
     if (yield* Effect.orElseSucceed(fs.exists(baseline), () => false)) {
       kept.push(profile.baseline)
     } else {
-      if (!dryRun) yield* writeBaseline(baseline, emptyBaseline)
+      if (!dryRun && profile.gateMode === "all") {
+        const settings = yield* loadConfig(path.join(root, "jig.config.json"))
+        const run = yield* harnessRun(root, settings, emptyBaseline)
+        const identities = acceptedIdentities(run.report)
+        yield* writeBaseline(baseline, { ...emptyBaseline, identities })
+        // A ledger written without a model key holds UNVERIFIED identities: CI replays the same
+        // keyless run, so it agrees today, but adding a key can rename them. Say it here rather
+        // than let the first keyed run look like a regression.
+        const unjudged = run.report.generators.reduce(
+          (sum, generator) => sum + (generator.unjudged ?? 0),
+          0,
+        )
+        if (unjudged > 0) {
+          profile = {
+            ...profile,
+            notes: [
+              ...profile.notes,
+              `accepted ${identities.length} finding(s) from a run that did not judge ${unjudged} candidate(s): the ledger is playable in CI but not judged. Add TYPESAFE_API_KEY and re-run \`jig baseline\` before trusting a judged change.`,
+            ],
+          }
+        }
+      } else if (!dryRun) {
+        yield* writeBaseline(baseline, emptyBaseline)
+      }
       written.push(profile.baseline)
     }
     yield* writeIfAbsent({
@@ -2083,6 +2171,9 @@ export const initialise = (
       write: !dryRun,
       written,
       kept,
+      pending,
+      // A repository edits its cookbook: points at its own scripts, its own install policy.
+      preferDiff: true,
     })
     yield* writeIfAbsent({
       fs,
@@ -2094,6 +2185,8 @@ export const initialise = (
       write: !dryRun,
       written,
       kept,
+      pending,
+      preferDiff: true,
     })
 
     const accepted = yield* readBaseline(baseline).pipe(
@@ -2391,6 +2484,7 @@ export const initialise = (
       profile: titles,
       written,
       kept,
+      pending,
       ignore: [
         ...unignored.removed.map((path) => ({ path, status: "removed" as const })),
         ...unignored.patterned.map((path) => ({ path, status: "pattern" as const })),

@@ -1,0 +1,33 @@
+{
+  "$comment": "A GitHub pull-request review comment, as the API returns it (trimmed to the fields we use), plus the normalized event the poller must produce. The raw block is deliberately close to the real payload so a shape change shows up as a test failure rather than a silent mismatch.",
+  "raw": {
+    "id": 2048113377,
+    "body": "The refusal path returns 409 here but the doc says 403. Which is it?",
+    "user": { "login": "kayla", "type": "User" },
+    "created_at": "2026-11-21T20:14:03Z",
+    "updated_at": "2026-11-21T20:14:03Z",
+    "pull_request_url": "https://api.github.com/repos/Shakti-Reforestation/forestbuilder/pulls/1862",
+    "commit_id": "55aa5293a4b9d0f7f0e1c1b6a1f0d3c8e7b6a5d4",
+    "path": "src/permissions/policy.ts",
+    "line": 118,
+    "in_reply_to_id": null
+  },
+  "normalized": {
+    "id": "github:review-comment:2048113377",
+    "source": "github",
+    "kind": "review.comment",
+    "at": "2026-11-21T20:14:03.000Z",
+    "subject": {
+      "repo": "Shakti-Reforestation/forestbuilder",
+      "pr": 1862,
+      "path": "src/permissions/policy.ts",
+      "line": 118
+    },
+    "actor": "kayla",
+    "headSha": "55aa5293a4b9d0f7f0e1c1b6a1f0d3c8e7b6a5d4",
+    "body": "The refusal path returns 409 here but the doc says 403. Which is it?",
+    "dedupeKey": "github:review-comment:2048113377"
+  },
+  "cursorAfter": "2026-11-21T20:14:03.000Z",
+  "wakes": "one worker pass with this comment as input; the receipt names the event id and headSha"
+}

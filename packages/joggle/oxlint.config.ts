@@ -169,6 +169,13 @@ export default {
    */
   overrides: [
     {
+      // The progress beat measures a run with the wall clock and prints to stderr. It is not
+      // part of a finding's identity, of the ledger, or of any canonical byte, so it cannot
+      // make the ratchet non-reproducible -- which is the harm the rule exists to prevent.
+      files: ["src/decision.ts"],
+      rules: { "plumb/no-nondeterministic-core": "off" },
+    },
+    {
       // The prompt in this rule quotes the defects it reports, and a quote is the
       // definition: a rule that names a phrase has to write the phrase down. The
       // three prose rules cannot tell an example from a slip.

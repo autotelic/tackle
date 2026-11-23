@@ -1,17 +1,26 @@
 import { execFileSync } from "node:child_process"
-import { existsSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
+import { mkdir } from "node:fs/promises"
+import { readFile, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { Console, Effect, FileSystem, Option, Path, Runtime } from "effect"
+import { Console, Effect, FileSystem, Option, Path, Runtime, Schema } from "effect"
 import { Argument, CliError, Command, Flag } from "effect/cli"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
-import { accept, REPORT_FORMATS } from "@autotelic/protocol"
+import {
+  accept,
+  diffBaseline,
+  ruleNameOf,
+  REPORT_FORMATS,
+  type HarnessConfig,
+} from "@autotelic/protocol"
 import { emptyBaseline, readBaseline, writeBaseline } from "./baseline.ts"
 import { explainRule, lesson, promotion, renderLesson, renderPromotion } from "./commands.ts"
 import { loadConfig } from "./config.ts"
+import type { Spawner } from "./exec.ts"
 import { resolveEngineCommand } from "./engines.ts"
 import { EXIT, gateVerdict } from "./gate.ts"
-import { touchedFiles } from "./git.ts"
+import { changedInPullRequest, changedSince, touchedFiles } from "./git.ts"
 import {
   answerGraph,
   findMatches,
@@ -23,18 +32,24 @@ import {
 } from "./menu.ts"
 import { renderCodeClimate, renderJsonl, renderLsp, renderSarif } from "./projections.ts"
 import { renderGithub, renderJson, renderText } from "./render.ts"
-import { harnessRun } from "./run.ts"
-import { isRoomInvocation, runRoom } from "./room.ts"
+import { harnessRun, type HarnessRun } from "./run.ts"
 import { initialise, initJson, onboardingFor, summaryFor } from "./init.ts"
+import { derivePin, pinMatches, RepoPinSchema, type RepoPin } from "./pin.ts"
+import { isRoomInvocation, runRoom } from "./room.ts"
+import { VERSION } from "./version.ts"
 
 /**
- * The version a `--version` prints.
+ * The version a `--version` prints: the package's, plus the checkout's commit when there is one.
  *
- * Every member of the family is `0.0.0` until it is published, so after a rebuild the number
- * cannot answer "is my link current?". When jig runs from a checkout the commit is the answer,
- * and it rides along as semver build metadata: `0.0.0+1a2b3c4`.
+ * The version is what npm has, so "is my install current" is answerable from the binary. A
+ * checkout adds its short sha as build metadata (`0.5.0+1a2b3c4`), so the OTHER question —
+ * "is my link pointing at the commit I just made?" — stays answerable too. It used to answer
+ * only the second, with a hardcoded `0.0.0`, which made an npm install look like a checkout.
  */
 const versionOf = (): string => {
+  // SAFETY: `execFileSync` is the synchronous boundary to git. A published tarball and a plain
+  // directory have no repository, which is the ordinary case here rather than an error; the
+  // package version alone is the answer there.
   try {
     const sha = execFileSync("git", ["rev-parse", "--short", "HEAD"], {
       cwd: fileURLToPath(new URL("..", import.meta.url)),
@@ -42,9 +57,9 @@ const versionOf = (): string => {
     })
       .toString()
       .trim()
-    return sha === "" ? "0.0.0" : `0.0.0+${sha}`
+    return sha === "" ? VERSION : `${VERSION}+${sha}`
   } catch {
-    return "0.0.0"
+    return VERSION
   }
 }
 
@@ -86,6 +101,98 @@ const context = ({
     return { path, root, settings, configured }
   })
 
+/**
+ * The gate a run earns under this repo's config.
+ *
+ * One place, because `check` and `baseline` must agree about what the ledger buys: a
+ * baseline that reports success while the gate ignores the ledger is a trap, and the two
+ * commands disagreeing about the scope is how that trap opens.
+ */
+const verdictOf = (
+  root: string,
+  settings: HarnessConfig,
+  run: HarnessRun,
+  scoped?: ReadonlySet<string>,
+) =>
+  Effect.gen(function* () {
+    // An explicit scope wins over the config: --since/--pr is a question about this change,
+    // and answering it with the repository's default gate would be a different run.
+    const touched =
+      scoped ?? (settings.gate.mode === "touched-files" ? yield* touchedFiles(root) : undefined)
+    return gateVerdict(run, {
+      mode: touched === undefined ? "all" : "touched-files",
+      failOn: settings.gate.failOn ?? "any-new",
+      maxWarnings: settings.report?.maxWarnings ?? -1,
+      touched: touched ?? new Set<string>(),
+      advisory: new Set(
+        settings.engines.filter((engine) => engine.advisory === true).map((engine) => engine.id),
+      ),
+    })
+  })
+
+/**
+ * The change set `--changed`/`--since`/`--pr` asked for, and why it could not be read.
+ *
+ * Named for what it is, not for the flag: joggle has its own `Scope` (the files a run
+ * changed versus moved), and two packages that never import each other must not give two
+ * concepts one name.
+ */
+type ChangeScope =
+  | { readonly kind: "none" }
+  | { readonly kind: "resolved"; readonly touched: ReadonlySet<string>; readonly label: string }
+  | { readonly kind: "failed"; readonly label: string }
+
+/**
+ * Resolve the scope flag into a change set, or say which question went unanswered.
+ *
+ * A scope that cannot be resolved is NOT degraded to the whole tree: that would answer
+ * "is the repository clean" while the caller asked "is my change clean". It is reported as
+ * an infrastructure fault, the exit code that already means "this run did not look".
+ */
+const resolveScope = (
+  root: string,
+  options: {
+    readonly changed: boolean
+    readonly since: Option.Option<string>
+    readonly pr: boolean
+    readonly prNumber: Option.Option<string>
+  },
+): Effect.Effect<ChangeScope, never, Spawner> =>
+  Effect.gen(function* () {
+    const asked = [
+      options.changed ? "--changed" : undefined,
+      Option.isSome(options.since) ? "--since" : undefined,
+      options.pr ? "--pr" : undefined,
+      Option.isSome(options.prNumber) ? "--pr-number" : undefined,
+    ].filter((entry) => entry !== undefined)
+    if (asked.length > 1) {
+      return { kind: "failed", label: `choose one scope, not ${asked.join(" + ")}` }
+    }
+    if (options.changed) {
+      const touched = yield* touchedFiles(root)
+      return touched === undefined
+        ? { kind: "failed", label: "git could not say what the working tree changes" }
+        : { kind: "resolved", touched, label: "the working tree" }
+    }
+    const since = Option.getOrUndefined(options.since)
+    if (since !== undefined) {
+      const touched = yield* changedSince({ root, revision: since })
+      return touched === undefined
+        ? { kind: "failed", label: `git could not resolve ${since}` }
+        : { kind: "resolved", touched, label: `since ${since}` }
+    }
+    const number = Option.getOrUndefined(options.prNumber)
+    if (options.pr || number !== undefined) {
+      const touched = yield* changedInPullRequest({ root, number })
+      const label =
+        number === undefined ? "the current branch's pull request" : `pull request #${number}`
+      return touched === undefined
+        ? { kind: "failed", label: `gh could not list the files of ${label}` }
+        : { kind: "resolved", touched, label }
+    }
+    return { kind: "none" }
+  })
+
 const checkCommand = Command.make(
   "check",
   {
@@ -101,30 +208,50 @@ const checkCommand = Command.make(
       Flag.withDescription("Maximum findings to print in the text report. 0 prints all."),
       Flag.withDefault(20),
     ),
+    changed: Flag.Boolean("changed").pipe(
+      Flag.withDescription(
+        "Scope to files changed in the working tree, the set the touched-files gate reads.",
+      ),
+      Flag.withDefault(false),
+    ),
+    since: Flag.String("since").pipe(
+      Flag.withDescription(
+        "Scope to files changed since a git revision (for example origin/main).",
+      ),
+      Flag.optional,
+    ),
+    pr: Flag.Boolean("pr").pipe(
+      Flag.withDescription("Scope to the current branch's pull request, as gh resolves it."),
+      Flag.withDefault(false),
+    ),
+    prNumber: Flag.String("pr-number").pipe(
+      Flag.withDescription("Scope to a specific pull request's changed files."),
+      Flag.optional,
+    ),
   },
   (options) =>
     Effect.gen(function* () {
       const { path, root, settings } = yield* context({ cwd: options.cwd, config: options.config })
       const baseline = yield* readBaseline(path.resolve(root, settings.gate.baseline))
-      const run = yield* harnessRun(root, settings, baseline)
+      const scope = yield* resolveScope(root, options)
+      if (scope.kind === "failed") {
+        yield* write("jig: " + scope.label)
+        yield* Effect.sync(() => {
+          process.exitCode = EXIT.usage
+        })
+        return
+      }
+      const touched = scope.kind === "resolved" ? scope.touched : undefined
+      const run = yield* harnessRun(root, settings, baseline, touched)
       // The accepted identities, so a projection can say novel from known. An empty
       // baseline still counts as "given": everything is novel until it is accepted.
       const known = new Set(baseline.identities)
       const limit = options.limit
       // The flag wins, then the repo's configured default, then the human form.
       const format = Option.getOrUndefined(options.format) ?? settings.report?.format ?? "text"
-      // The gate reads the scope git reports; when git cannot say, it widens to everything
-      // rather than narrowing to nothing — an empty scope would pass every finding.
-      const touched = settings.gate.mode === "touched-files" ? yield* touchedFiles(root) : undefined
-      const verdict = gateVerdict(run, {
-        mode: touched === undefined ? "all" : "touched-files",
-        failOn: settings.gate.failOn ?? "any-new",
-        maxWarnings: settings.report?.maxWarnings ?? -1,
-        touched: touched ?? new Set<string>(),
-        advisory: new Set(
-          settings.engines.filter((engine) => engine.advisory === true).map((engine) => engine.id),
-        ),
-      })
+      const verdict = yield* verdictOf(root, settings, run, touched)
+      const scopeNote =
+        scope.kind === "resolved" ? `${scope.label}: ${scope.touched.size} file(s)` : undefined
 
       switch (format) {
         case "json":
@@ -134,7 +261,7 @@ const checkCommand = Command.make(
           yield* write(renderJsonl(run.report))
           break
         case "github":
-          yield* write(renderGithub(run.report))
+          yield* write(renderGithub(run.report, { known, gate: verdict }))
           break
         case "sarif":
           yield* write(renderSarif(run.report, known))
@@ -146,7 +273,27 @@ const checkCommand = Command.make(
           yield* write(renderCodeClimate(run.report))
           break
         default:
-          yield* write(renderText(run, { limit, gate: verdict }))
+          yield* write(
+            renderText(
+              run,
+              scopeNote === undefined
+                ? { limit, gate: verdict, emptyLedger: baseline.identities.length === 0 }
+                : run.outOfScope === undefined
+                  ? {
+                      limit,
+                      gate: verdict,
+                      scope: scopeNote,
+                      emptyLedger: baseline.identities.length === 0,
+                    }
+                  : {
+                      limit,
+                      gate: verdict,
+                      scope: scopeNote,
+                      outOfScope: run.outOfScope,
+                      emptyLedger: baseline.identities.length === 0,
+                    },
+            ),
+          )
           break
       }
 
@@ -164,22 +311,134 @@ const checkCommand = Command.make(
     { command: "jig check --format github", description: "Emit GitHub Actions annotations." },
     { command: "jig check --format sarif", description: "Emit SARIF 2.1.0 for code scanning." },
     { command: "jig check --limit 20", description: "Print the census and the first 20 findings." },
+    {
+      command: "jig check --since origin/main",
+      description: "Answer for a branch: only findings in what it changed.",
+    },
+    {
+      command: "jig check --pr 1862",
+      description: "The same answer for one pull request, as gh lists its files.",
+    },
   ]),
 )
 
-const baselineCommand = Command.make("baseline", { cwd: cwdFlag, config: configFlag }, (options) =>
-  Effect.gen(function* () {
-    const { path, root, settings } = yield* context({ cwd: options.cwd, config: options.config })
-    const run = yield* harnessRun(root, settings, emptyBaseline)
-    const baseline = accept(run.report.diagnostics)
-    yield* writeBaseline(path.resolve(root, settings.gate.baseline), baseline)
-    yield* write(
-      `jig: accepted ${baseline.identities.length} finding(s) into ${settings.gate.baseline}`,
-    )
-  }),
+const baselineCommand = Command.make(
+  "baseline",
+  {
+    cwd: cwdFlag,
+    config: configFlag,
+    allowUnjudged: Flag.Boolean("allow-unjudged").pipe(
+      Flag.withDescription(
+        "Accept findings no judgement reached. A judged run can name the same finding differently, so the ledger may not hold in CI.",
+      ),
+      Flag.withDefault(false),
+    ),
+  },
+  (options) =>
+    Effect.gen(function* () {
+      const { path, root, settings } = yield* context({ cwd: options.cwd, config: options.config })
+      const run = yield* harnessRun(root, settings, emptyBaseline)
+      // An engine that could not verify a finding names it from what it could see, and a
+      // judged run can name the same finding from the cluster: two identities for one thing.
+      // Accepting the unverified one is therefore accepting a ledger CI cannot replay, which
+      // is exactly how a green local baseline and a red CI run both look like a pass.
+      /*
+       * Only findings whose engine actually SKIPPED a judgement can be unverified.
+       *
+       * `judged: false` also marks a deterministic rule's finding -- an exact duplicate has no
+       * question to ask -- and those can be accepted forever. Reading the flag alone refused
+       * every ledger containing one, and told the operator to fetch a model key that could
+       * never help. The engine's own unjudged count is the signal that judgement was available
+       * and skipped.
+       */
+      const skipped = run.report.generators.reduce(
+        (sum, generator) => sum + (generator.unjudged ?? 0),
+        0,
+      )
+      const unverified =
+        skipped > 0
+          ? run.report.diagnostics.filter((diagnostic) => diagnostic.judged === false)
+          : []
+      if (unverified.length > 0 && options.allowUnjudged !== true) {
+        /*
+         * Name the cause that is actually true in THIS run.
+         *
+         * It used to say "joggle reads its model key from this run's environment" whether or
+         * not the key was there. On a repository that sets `unavailable: "count"` the key IS
+         * there and most candidates are still not judged — a per-rule ceiling, not a missing
+         * secret — so the instruction sent the operator to look for a key they already had.
+         */
+        const keyPresent =
+          process.env["TYPESAFE_API_KEY"] !== undefined && process.env["TYPESAFE_API_KEY"] !== ""
+        yield* write(
+          `jig: refusing to accept ${unverified.length} unverified finding(s) into ${settings.gate.baseline}.\n` +
+            "  A judged run can name the same finding differently, so this ledger would not hold in CI.\n" +
+            "  " +
+            String(skipped) +
+            " candidate(s) were not judged. " +
+            (keyPresent
+              ? "TYPESAFE_API_KEY is present, so judgement was attempted: the limit was a\n" +
+                "  per-rule candidate ceiling or this run's token budget (the report names which),\n" +
+                "  and no key can raise either."
+              : "No TYPESAFE_API_KEY is in this run's environment, so judged rules cannot ask.") +
+            "\n  A repository whose engine policy is `unavailable: count` has declared that this is\n" +
+            "  expected: --allow-unjudged accepts those findings, and keyless CI reproduces them.\n" +
+            "  Accepting from a KEYED run is a superset: keyed runs then pass on what they judged,\n" +
+            "  and keyless runs pass on the subset they can name.",
+        )
+        yield* Effect.sync(() => {
+          process.exitCode = EXIT.usage
+        })
+        return
+      }
+      const baseline = accept(run.report.diagnostics)
+      yield* writeBaseline(path.resolve(root, settings.gate.baseline), baseline)
+      yield* write(
+        `jig: accepted ${baseline.identities.length} finding(s) into ${settings.gate.baseline}`,
+      )
+      if (unverified.length > 0) {
+        yield* write(
+          `jig: ${unverified.length} of them were unverified; a later judged run may report them as new identities`,
+        )
+      }
+      // The postcondition, not a promise: write, then ask the same gate `check` would ask.
+      // The ledger decides novelty alone, so under `failOn: warn|error` or a maxWarnings
+      // ceiling these accepted findings still fail, and saying "accepted" would be a lie.
+      const verdict = yield* verdictOf(root, settings, {
+        report: run.report,
+        diff: diffBaseline(baseline, run.report.diagnostics),
+      })
+      // The same exit code `check` would give, because a script that ran `baseline` and saw zero
+      // would otherwise believe the repository became green.
+      if (verdict.exitCode !== EXIT.clean) {
+        yield* Effect.sync(() => {
+          process.exitCode = verdict.exitCode
+        })
+      }
+      if (verdict.exitCode === EXIT.infrastructure) {
+        yield* write(
+          `jig: the gate still cannot judge this run: engine(s) ${verdict.infrastructure.join(", ")} did not run (exit ${EXIT.infrastructure})`,
+        )
+      } else if (verdict.failing.length > 0) {
+        const byRule = [...new Set(verdict.failing.map(ruleNameOf))].sort((left, right) =>
+          left.localeCompare(right),
+        )
+        yield* write(
+          `jig: accepted, but the gate still holds ${verdict.failing.length} of these finding(s) (exit ${verdict.exitCode}): ${byRule.join(", ")}.\n` +
+            `  The ledger decides novelty; ${verdict.failOn === "any-new" ? "maxWarnings holds warnings by count regardless of the baseline" : `failOn "${verdict.failOn}" holds by severity, and severity ignores the baseline`}.`,
+        )
+      }
+    }),
 ).pipe(
   Command.withDescription("Accept the current findings into the baseline."),
   Command.withShortDescription("Accept the current findings."),
+  Command.withExamples([
+    { command: "jig baseline", description: "Accept the verified findings into the ledger." },
+    {
+      command: "jig baseline --allow-unjudged",
+      description: "Accept findings no judgement reached, and say so.",
+    },
+  ]),
 )
 
 const enginesCommand = Command.make("engines", { cwd: cwdFlag, config: configFlag }, (options) =>
@@ -533,15 +792,99 @@ const menuCommand = Command.make(
   ]),
 )
 
-// `jig room` is a passthrough, not a subcommand: the room owns its flags and its help, and
-// jig must not learn them. The seam stays a command line, like the engines.
+const shipCommand = Command.make(
+  "ship",
+  {
+    cwd: cwdFlag,
+    dryRun: Flag.Boolean("dry-run").pipe(
+      Flag.withDescription("Print the record without writing .jig/ship.json."),
+      Flag.withDefault(false),
+    ),
+  },
+  (options) =>
+    Effect.gen(function* () {
+      const { root } = yield* context({ cwd: options.cwd, config: Option.none() })
+      const commit = execFileSync("git", ["rev-parse", "HEAD"], { cwd: root }).toString().trim()
+      const branch = execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], { cwd: root })
+        .toString()
+        .trim()
+      const pinFile = join(root, "repo.pin.json")
+      const pin: RepoPin | undefined = existsSync(pinFile)
+        ? yield* Schema.decodeUnknownEffect(RepoPinSchema)(
+            JSON.parse(readFileSync(pinFile, "utf8")),
+          )
+        : undefined
+      const at = new Date().toISOString()
+      const record = pin === undefined ? { commit, branch, at } : { commit, branch, at, pin }
+      if (!options.dryRun) {
+        yield* Effect.promise(() => mkdir(join(root, ".jig"), { recursive: true }))
+        yield* Effect.promise(() =>
+          writeFile(join(root, ".jig", "ship.json"), JSON.stringify(record, null, 2) + "\n"),
+        )
+      }
+      yield* write(
+        `ship: ${branch}@${commit.slice(0, 7)}${pin === undefined ? "" : ` pin ${pin.name}@${pin.version}`}`,
+      )
+    }),
+).pipe(
+  Command.withDescription(
+    "Write the ship record: commit, branch, and the repo pin it was verified with.",
+  ),
+  Command.withShortDescription("Write one ship record."),
+)
+
+// `jig room` is a passthrough, not a subcommand: the room owns its flags and its help.
 if (isRoomInvocation(process.argv)) {
   process.exit(runRoom(process.argv))
 }
 
+const pinCommand = Command.make(
+  "pin",
+  {
+    cwd: cwdFlag,
+    package: Flag.String("package").pipe(
+      Flag.withDescription("The dependency to pin, as the lockfile names it."),
+    ),
+    check: Flag.Boolean("check").pipe(
+      Flag.withDescription("Fail when repo.pin.json disagrees with the lockfile."),
+      Flag.withDefault(false),
+    ),
+  },
+  (options) =>
+    Effect.gen(function* () {
+      const { root } = yield* context({ cwd: options.cwd, config: Option.none() })
+      const lock = yield* Effect.promise(() => readFile(join(root, "pnpm-lock.yaml"), "utf8"))
+      const derived = derivePin({ lockText: lock, name: options.package })
+      if (Option.isNone(derived)) {
+        process.exitCode = 1
+        return yield* Console.error(`pin: ${options.package} is not in pnpm-lock.yaml`)
+      }
+      const file = join(root, "repo.pin.json")
+      if (options.check) {
+        const stored = yield* Schema.decodeUnknownEffect(RepoPinSchema)(
+          JSON.parse(yield* Effect.promise(() => readFile(file, "utf8"))),
+        )
+        if (!pinMatches({ stored, derived: derived.value })) {
+          process.exitCode = 1
+          return yield* Console.error(
+            `pin: ${derived.value.name} drifted (file ${stored.version}, lockfile ${derived.value.version})`,
+          )
+        }
+        return yield* write(`pin: ${derived.value.name}@${derived.value.version} verified`)
+      }
+      yield* Effect.promise(() => writeFile(file, JSON.stringify(derived.value, null, 2) + "\n"))
+      yield* write(
+        `pin: ${derived.value.name}@${derived.value.version} (${derived.value.integrity ?? "no integrity"})`,
+      )
+    }),
+).pipe(
+  Command.withDescription("Derive repo.pin.json from the lockfile; --check fails on drift."),
+  Command.withShortDescription("Derive or verify a repo pin."),
+)
+
 const cli = Command.make("jig").pipe(
   Command.withDescription(
-    "The harness: run every conformance engine in one pass, merge them into one report, and hold the ratchet. `jig room` opens the project room.",
+    "The harness: run every conformance engine in one pass, merge them into one report, and hold the ratchet. `jig room` opens the room.",
   ),
   Command.withSubcommands([
     checkCommand,
@@ -553,6 +896,8 @@ const cli = Command.make("jig").pipe(
     explainCommand,
     promoteCommand,
     learnCommand,
+    pinCommand,
+    shipCommand,
   ]),
 )
 

@@ -1,0 +1,60 @@
+{
+  "$comment": "One land attempt: two entries, one per check mode. No ref names anywhere — baseSha is a commit, testedMergeSha is the merge commit GitHub actually tested. This file is the shape the desk item renders and the lander re-verifies at merge time.",
+  "grant": {
+    "batchId": "batch-2026-11-21-a",
+    "grantedBy": "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK",
+    "expiresAt": "2026-11-22T22:40:00.000Z",
+    "entries": [
+      {
+        "repo": "Shakti-Reforestation/forestbuilder",
+        "pr": 1862,
+        "headSha": "55aa5293a4b9d0f7f0e1c1b6a1f0d3c8e7b6a5d4",
+        "baseSha": "6e4f4ffc8b1a2c3d4e5f60718293a4b5c6d7e8f9",
+        "contentPatchId": "f6f830a5d25d0c752ca226da539673e01f39c6ee",
+        "checkMode": "pr-merge",
+        "testedMergeSha": "7b21c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3"
+      },
+      {
+        "repo": "Shakti-Reforestation/forestbuilder",
+        "pr": 1854,
+        "headSha": "6e4f4ffc8b1a2c3d4e5f60718293a4b5c6d7e8f9",
+        "baseSha": "6e4f4ffc8b1a2c3d4e5f60718293a4b5c6d7e8f9",
+        "contentPatchId": "23a43edf4e43b3af3f3030d22b559dd09575a385",
+        "checkMode": "head"
+      }
+    ]
+  },
+  "facts": {
+    "$comment": "The observation a merge re-checks. Recorded beside the grant so a test can assert the lander reads it rather than trusting the grant's own numbers.",
+    "checks": {
+      "1862": {
+        "check_suite": {
+          "head_sha": "7b21c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3",
+          "conclusion": "success",
+          "pull_requests": [{ "head": { "sha": "55aa5293a4b9d0f7f0e1c1b6a1f0d3c8e7b6a5d4" } }]
+        },
+        "tested_merge_parents": [
+          "6e4f4ffc8b1a2c3d4e5f60718293a4b5c6d7e8f9",
+          "55aa5293a4b9d0f7f0e1c1b6a1f0d3c8e7b6a5d4"
+        ]
+      },
+      "1854": {
+        "check_suite": {
+          "head_sha": "6e4f4ffc8b1a2c3d4e5f60718293a4b5c6d7e8f9",
+          "conclusion": "success",
+          "pull_requests": [{ "head": { "sha": "6e4f4ffc8b1a2c3d4e5f60718293a4b5c6d7e8f9" } }]
+        }
+      }
+    },
+    "currentHeads": {
+      "1862": "55aa5293a4b9d0f7f0e1c1b6a1f0d3c8e7b6a5d4",
+      "1854": "6e4f4ffc8b1a2c3d4e5f60718293a4b5c6d7e8f9"
+    }
+  },
+  "assertions": [
+    "no entry contains a ref name: origin/develop must not appear in this file",
+    "pr-merge entries carry testedMergeSha; head entries do not",
+    "merging 1862 requires check_suite.head_sha == testedMergeSha AND pull_requests[0].head.sha == headSha AND parents as a set == {baseSha, headSha}",
+    "the desk item renders diffstat and check state per entry, so the approval is of an artifact and not of a verdict"
+  ]
+}

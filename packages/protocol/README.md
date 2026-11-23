@@ -45,6 +45,14 @@ and another reads. Every record has a named, versioned **lexicon**: its contract
   the manifest without importing this package; a repo with only `oxlint` can use `jig`
   without installing `cutlist`. That tolerance is the point.
 
+## The mailbox
+
+Rat King's mail is a through line, not a package. The wire shapes and the pure decisions
+(`send`, `deliver`, `ack`, `acquire`, `release`, `list`) live in `src/mailbox.ts` with no
+runtime dependency. The room owns the durable turn log and the mailbox command; the board
+owns the HTTP relay. A schema or state-machine change lands here first, so the two sides
+cannot disagree about what a receipt or a fence means.
+
 ## The lexicons
 
 | name             | owner                | kind     | ver | schema                       | fixtures                   |

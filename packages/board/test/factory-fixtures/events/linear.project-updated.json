@@ -1,0 +1,36 @@
+{
+  "$comment": "The SOW-adjacent event: someone edited the project description. This is authored intent, so the event may only ever produce a desk item — never a Linear write, and never a worker pass that edits the description.",
+  "raw": {
+    "data": {
+      "projectUpdate": {
+        "success": true,
+        "project": {
+          "id": "c1d2e3f4-0000-4000-8000-00000000a128",
+          "name": "Permissions overhaul",
+          "description": "Scope: project membership gates every read path. Out of scope: org-wide roles.",
+          "updatedAt": "2026-11-21T03:00:00.000-05:00"
+        },
+        "changedFields": ["description"]
+      }
+    }
+  },
+  "normalized": {
+    "id": "linear:project:c1d2e3f4-0000-4000-8000-00000000a128:description:2026-11-21T08:00:00.000Z",
+    "source": "linear",
+    "kind": "project.updated",
+    "at": "2026-11-21T08:00:00.000Z",
+    "subject": {
+      "project": "P-AUT-128",
+      "field": "description"
+    },
+    "actor": null,
+    "dedupeKey": "linear:project:c1d2e3f4-0000-4000-8000-00000000a128:description:2026-11-21T08:00:00.000Z"
+  },
+  "cursorAfter": "2026-11-21T08:00:00.000Z",
+  "policy": {
+    "mayEdit": false,
+    "mayPropose": true,
+    "wakes": "one reconcile pass that compares the new description against the branch, then a desk item quoting the diff",
+    "refusal": "SowEdit at exit 1 if anything tries to write the description back"
+  }
+}

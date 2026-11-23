@@ -1,0 +1,38 @@
+{
+  "$comment": "Fresh: the ordinary case. Pins that a healthy workstream still reports its checkpoint age rather than a reassuring word, and that every fact in the text exists in the JSON.",
+  "json": {
+    "schema": 1,
+    "at": "2026-11-21T22:50:00.000Z",
+    "workstreams": [
+      {
+        "id": "perms-1862",
+        "phase": "build",
+        "pr": 1862,
+        "head": "55aa5293a",
+        "blockedBy": [],
+        "checkpoint": {
+          "sha": "9f1c2ab",
+          "pass": 7,
+          "at": "2026-11-21T22:38:00.000Z",
+          "ageSeconds": 720
+        },
+        "observed": {
+          "github": "2026-11-21T22:47:00.000Z",
+          "linear": "2026-11-21T22:46:30.000Z",
+          "ageSeconds": 180
+        },
+        "freshness": "fresh",
+        "desk": { "open": 2 },
+        "budget": { "passes": { "used": 3, "of": 5 }, "capStop": null }
+      }
+    ]
+  },
+  "expectedText": [
+    "perms-1862 · build · PR 1862 · checkpoint 12m ago · observed 3m ago · 2 desk items"
+  ],
+  "assertions": [
+    "the text contains no occurrence of the words durable or safe",
+    "checkpoint.ageSeconds equals now minus checkpoint.at, not a stored value",
+    "every scalar in json.workstreams[0] appears in the text except sha values, which the text omits deliberately"
+  ]
+}
