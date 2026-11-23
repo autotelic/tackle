@@ -71,7 +71,6 @@
     "plumb/no-stray-inline-comments:packages/board/view/src/main.ts",
     "plumb/no-swappable-primitive-params:packages/board/view/src/main.ts",
     "plumb/no-swappable-primitive-params:packages/board/view/src/vision.ts",
-    "plumb/no-unknown-parameters:packages/board/view/src/vision.ts",
     "plumb/no-unknown-returns:packages/protocol/src/mailbox.ts",
     "plumb/no-unsafe-dictionary-type:packages/board/src/atlas.ts",
     "plumb/no-unsafe-dictionary-type:packages/protocol/src/mailbox.ts",

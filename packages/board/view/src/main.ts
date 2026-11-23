@@ -28,6 +28,8 @@ export const Model = Schema.Struct({
   error: Schema.NullOr(Schema.String),
   loading: Schema.Boolean,
   notice: Schema.NullOr(Schema.String),
+  visionStep: Schema.optional(Schema.Finite),
+  visionFocus: Schema.optional(Schema.Literals(["permissions", "enterprise"])),
 })
 export type Model = typeof Model.Type
 
@@ -40,6 +42,10 @@ export const Message = defineMessageUnion({
   Opened: { ok: Schema.Boolean, error: Schema.NullOr(Schema.String) },
   ClickedAnswer: { item: Schema.String, choice: Schema.String },
   Answered: { ok: Schema.Boolean, error: Schema.NullOr(Schema.String) },
+  VisionStep: { step: Schema.Finite },
+  VisionNext: {},
+  VisionReset: {},
+  VisionFocus: { focus: Schema.Literals(["permissions", "enterprise"]) },
 })
 export type Message = typeof Message.Type
 
@@ -90,6 +96,15 @@ export const update = (model: Model, message: Message): UpdateReturn =>
       model,
       commands: [AnswerDesk({ item, choice })],
     }),
+    VisionStep: ({ step }) => ({ model: { ...model, visionStep: step } }),
+    VisionNext: () => ({
+      model: {
+        ...model,
+        visionStep: (model.visionStep ?? 0) >= 5 ? 0 : (model.visionStep ?? 0) + 1,
+      },
+    }),
+    VisionReset: () => ({ model: { ...model, visionStep: 0 } }),
+    VisionFocus: ({ focus }) => ({ model: { ...model, visionFocus: focus } }),
     Answered: ({ ok, error }) => ({
       model: {
         ...model,
@@ -117,6 +132,8 @@ export const init: Runtime.ApplicationInit<Model, Message> = () => {
       error: null,
       loading: route !== "vision",
       notice: null,
+      visionStep: 0,
+      visionFocus: "permissions",
     },
     commands: route === "vision" ? [] : [route === "tackle" ? FetchAtlas() : FetchPresence()],
   }
