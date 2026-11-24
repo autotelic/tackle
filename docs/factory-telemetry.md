@@ -40,6 +40,22 @@ process table     worker pid, wall age, terminal name
 daemon log        append/pass counts, timeout and name_taken errors
 ```
 
+## First new-generation receipts
+
+The first receipts written after the kernel became the sole receipt writer carry `commit` and
+`pushed`:
+
+```text
+documentation-files-1862  0016  done  commit c623521a  pushed true
+projects-list-1862        0013  done  commit 141a65ed  pushed true
+```
+
+The same window shows the next real constraint. The two 18:56 passes spent about nine minutes each
+for zero commits; the four sessions since 18:41 spent about forty minutes of wall time for three
+commits per project. Model time is now 65–80% of a pass and tool time is 60–180 seconds. The next
+lever is **pass scope**: one small ticket, existing ADR/SOW context, commit, push, stop — not more
+kernel caching.
+
 ## The telemetry we want next
 
 The receipt is the right home for the durable version, because it survives the session file.
