@@ -209,6 +209,32 @@ test("a passed check at the current checkpoint is consumed without a pass", asyn
   }
 })
 
+test("a failed check is recorded as advisory and never starts a pass", async () => {
+  const root = mkdtempSync(join(tmpdir(), "factory-check-advisory-"))
+  try {
+    const record = { ...base(), phase: "build" as const }
+    await writeWorkstream({ record, home: root })
+    const outcome = await watchOnce({
+      id: record.id,
+      home: root,
+      at: "2026-11-24T00:00:00.000Z",
+      events: [
+        {
+          id: "check-failed-1",
+          kind: "check",
+          at: "2026-11-24T00:00:00.000Z",
+          payload: { state: "failed", headRefOid: record.head },
+        },
+      ],
+      runGh: githubChecks([]),
+    })
+    expect(outcome.passes).toEqual([])
+    expect((await readEvents({ id: record.id, home: root }))[0]?.status).toBe("consumed")
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
 test("an exhausted pass budget no longer stops a queued event or raises a cap card", async () => {
   const root = mkdtempSync(join(tmpdir(), "factory-cap-"))
   try {

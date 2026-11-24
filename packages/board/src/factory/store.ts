@@ -46,6 +46,27 @@ export const Workstream = Schema.Struct({
     tokensPerDay: Schema.Finite,
     roundsOfChanges: Schema.Finite,
   }),
+  gates: Schema.optional(
+    Schema.Struct({
+      perPass: Schema.Array(Schema.Struct({ name: Schema.String, command: Schema.String })),
+      onReady: Schema.Array(Schema.Struct({ name: Schema.String, command: Schema.String })),
+    }),
+  ),
+  readiness: Schema.optional(
+    Schema.Struct({
+      at: Schema.String,
+      ok: Schema.Boolean,
+      checks: Schema.Array(
+        Schema.Struct({
+          name: Schema.String,
+          command: Schema.String,
+          exit: Schema.Finite,
+          durationMs: Schema.Finite,
+          output: Schema.String,
+        }),
+      ),
+    }),
+  ),
   autonomy: Schema.Array(Schema.String),
   desk: Schema.Array(Schema.Unknown),
   sources: Schema.optional(

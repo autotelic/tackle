@@ -7,13 +7,7 @@ import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 import { activityOf } from "./activity.ts"
 import { appendEvent, consumeEvents, readEvents } from "./events.ts"
-import {
-  isProtectedPath,
-  passesUsed,
-  runPass,
-  type PassOutcome,
-  type QualityCache,
-} from "./kernel.ts"
+import { isProtectedPath, passesUsed, runPass, type PassOutcome } from "./kernel.ts"
 import { readWorkstream, writeWorkstream, type Workstream } from "./store.ts"
 import { answerDesk, listAnswers, listDesk, raiseDesk, readDesk } from "./desk.ts"
 import { Report } from "./report.ts"
@@ -428,6 +422,8 @@ export const shouldWake = (input: {
   if (input.record.phase === "done") return { wake: false, reason: "done" }
   if (input.consumed.includes(input.event.id)) return { wake: false, reason: "already-consumed" }
   if (input.event.actor?.endsWith("[bot]") === true) return { wake: false, reason: "self-authored" }
+  // CI is a landing gate. A check describes a head; it does not start build work.
+  if (input.event.kind === "check") return { wake: false, reason: "ci-landing-gate" }
   // Pass count is a safety ceiling, not a stop signal. `progressOfPasses` is what distinguishes
   // a productive branch from a stall; a queued event must never wait for a human to lift a
   // budget button.
@@ -488,7 +484,6 @@ export const watchOnce = async (input: {
   readonly runGh?: ((args: ReadonlyArray<string>) => Result.Result<string, string>) | undefined
   readonly runGit?: ((args: ReadonlyArray<string>) => Result.Result<string, string>) | undefined
   readonly runLinear?: ((args: ReadonlyArray<string>) => Result.Result<string, string>) | undefined
-  readonly cache?: QualityCache | undefined
 }): Promise<WatchOutcome> => {
   const found = await readWorkstream({ id: input.id, home: input.home })
   if (found === undefined) return { appended: [], passes: [] }
@@ -600,6 +595,18 @@ export const watchOnce = async (input: {
       continue
     }
 
+    if (event.kind === "check") {
+      // Record the check for the landing audit, but never spend a build pass on it.
+      if (previous === undefined)
+        await appendEvent({
+          id: input.id,
+          home: input.home,
+          event: { ...event, status: "consumed" },
+        })
+      else await consumeEvents({ id: input.id, ids: [event.id], home: input.home })
+      appended.push(event.id)
+      continue
+    }
     if (event.kind === "desk" && record.phase === "blocked" && choice === "resume") {
       record = { ...record, phase: "build", updatedAt: event.at }
       await writeWorkstream({ record, home: input.home })
@@ -648,7 +655,6 @@ export const watchOnce = async (input: {
       at: input.at,
       home: input.home,
       eventIds: [event.id],
-      cache: input.cache,
     })
     passes.push(pass)
     if (pass.ok) {

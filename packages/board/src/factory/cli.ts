@@ -7,11 +7,12 @@ import * as Schema from "effect/Schema"
 import { adopt } from "./adopt.ts"
 import { branchGuard } from "./branch.ts"
 import { appendEvent, consumeEvents } from "./events.ts"
-import { runPass, type QualityCache } from "./kernel.ts"
+import { runPass } from "./kernel.ts"
 import { listWorkstreams, Phase, readWorkstream, writeWorkstream } from "./store.ts"
 import { deliverReport, fingerprintOf, ReportKind, writeReport, type Report } from "./report.ts"
 import { answerDesk, listDesk, raiseDesk, readAnswer, withdrawDesk, type DeskItem } from "./desk.ts"
 import { runDaemon, startDaemon, stopDaemon } from "./daemon.ts"
+import { runReady } from "./ready.ts"
 import { readTelemetry } from "./telemetry.ts"
 import { watchOnce } from "./watch.ts"
 
@@ -30,6 +31,7 @@ const usage = [
   "  factory watch --id <id> --worker <command> [--once] [--interval <ms>]",
   "  factory report --workstream <id> --kind <kind> --command <cmd> --expected <text> --actual <text> [--output <text>] [--blocked] [--deliver <session>]",
   "  factory phase --id <id> --set reconcile|build|land|blocked|done [--answer <desk-answer.json>]",
+  "  factory ready --id <id> [--at <iso>]",
   "  factory retire --id <id> [--close-pr]",
   "  factory daemon start --worker <command> [--interval <ms>]",
   "  factory daemon run --worker <command> [--interval <ms>]",
@@ -509,6 +511,29 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
     return
   }
 
+  if (command === "ready") {
+    const parsed = parseArgs({
+      args: argv.slice(1),
+      options: { id: { type: "string" }, at: { type: "string" } },
+      allowPositionals: false,
+    })
+    if (parsed.values.id === undefined) return fail("ready needs --id")
+    const at = parsed.values.at ?? new Date().toISOString()
+    if (Number.isNaN(Date.parse(at))) return fail("--at must be an ISO instant")
+    const result = await runReady({ id: parsed.values.id, at })
+    for (const check of result.checks)
+      console.log(
+        check.name + "  exit " + check.exit + "  " + Math.round(check.durationMs / 1000) + "s",
+      )
+    if (!result.ok) {
+      console.error(
+        "factory: ready failed" + (result.reason === undefined ? "" : ": " + result.reason),
+      )
+      process.exitCode = 1
+    }
+    return
+  }
+
   if (command === "phase") {
     const parsed = parseArgs({
       args: argv.slice(1),
@@ -654,14 +679,11 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
     const interval = Number(parsed.values.interval)
     if (!Number.isInteger(interval) || interval < 1)
       return fail("--interval must be a positive integer")
-    // A watch loop is one session: hold its gate cache here rather than in the kernel module.
-    const cache: QualityCache = new Map()
     for (;;) {
       const outcome = await watchOnce({
         id: parsed.values.id,
         worker: parsed.values.worker,
         at: new Date().toISOString(),
-        cache,
       })
       console.log(
         "factory: watch " +

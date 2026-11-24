@@ -1,0 +1,56 @@
+# Factory gates: pass vs landing
+
+Conformance is a landing gate, not a per-pass tax.
+
+## Record shape
+
+```json
+{
+  "gates": {
+    "perPass": [
+      {
+        "name": "touched test",
+        "command": "pnpm exec vitest run services/rest/test/projectFileRead.test.js"
+      }
+    ],
+    "onReady": [
+      { "name": "jig", "command": "./node_modules/.bin/jig check --pr-number 1875 --format json" },
+      { "name": "joggle", "command": "./node_modules/.bin/joggle check --pr-number 1875" },
+      { "name": "spec", "command": "node scripts/spec-check.mjs" }
+    ]
+  },
+  "readiness": {
+    "at": "2026-11-24T20:00:00.000Z",
+    "ok": true,
+    "checks": []
+  }
+}
+```
+
+- `gates.perPass` is guidance for the worker: the touched test, changed-file lint and
+  TypeScript checks. It is cheap and proves the ticket.
+- `gates.onReady` is the landing tier. It runs once at the PR head, through `factory ready`.
+- `readiness` is the durable result: `ok`, each command's exit, duration, and output tail.
+- The commands are data, not kernel guesses. A repo can change its conformance command without a
+  factory release, and a jig pin can no longer change the meaning of "measured" by accident.
+
+## Behaviour
+
+```sh
+factory ready --id projects-list-1862
+```
+
+- green: workstream moves to `land`, one "Ready to merge" desk is raised
+- red: workstream stays in `build`, one "Landing gate failed" desk names the command and output
+- no `onReady` gates: refuses with `NoOnReadyGates`
+
+A normal pass no longer measures jig/joggle before and after. Its receipt records
+`available: false`, `complete: false`, and `note: "not measured (conformance is a landing gate)"`.
+That is the honest state; the landing gate is where the measurement belongs.
+
+## Why
+
+The per-pass measurement was both the largest tool-time cost and a source of false confidence:
+the scope depended on the jig version, inherited findings were read as this pass's failure, and a
+draft PR's skipped CI was neither green nor red. The pass owns the ticket and the commit; the
+landing gate owns the PR's conformance.

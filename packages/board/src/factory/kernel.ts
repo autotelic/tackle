@@ -58,199 +58,14 @@ export interface Receipt {
   readonly journal?: string
 }
 
-const JigGenerator = Schema.Struct({
-  id: Schema.String,
-  status: Schema.optional(Schema.String),
-  unjudged: Schema.optional(Schema.Finite),
+/** Conformance is a landing gate; a pass records that it was deliberately not measured. */
+const unmeasuredQuality = (): Quality => ({
+  available: false,
+  errors: 0,
+  warnings: 0,
+  note: "not measured (conformance is a landing gate)",
+  complete: false,
 })
-
-const JigReport = Schema.Struct({
-  diagnostics: Schema.Array(Schema.Struct({ severity: Schema.String })),
-  generators: Schema.optional(Schema.Array(JigGenerator)),
-  scope: Schema.optional(Schema.String),
-})
-
-type CaptureResult = {
-  readonly status: number | null
-  readonly stdout: string
-  readonly stderr: string
-  readonly error?: Error
-}
-
-const runCapture = (
-  command: string,
-  args: ReadonlyArray<string>,
-  options: { readonly cwd: string; readonly timeout: number },
-): Promise<CaptureResult> =>
-  new Promise((resolve) => {
-    const child = spawn(command, [...args], {
-      cwd: options.cwd,
-      stdio: ["ignore", "pipe", "pipe"],
-    })
-    let stdout = ""
-    let stderr = ""
-    let settled = false
-    const finish = (result: CaptureResult) => {
-      if (settled) return
-      settled = true
-      clearTimeout(timer)
-      resolve(result)
-    }
-    const timer = setTimeout(() => {
-      child.kill("SIGTERM")
-      finish({ status: null, stdout, stderr, error: new Error("ETIMEDOUT") })
-    }, options.timeout)
-    child.stdout?.on("data", (chunk) => {
-      stdout += String(chunk)
-    })
-    child.stderr?.on("data", (chunk) => {
-      stderr += String(chunk)
-    })
-    child.on("error", (error) => finish({ status: null, stdout, stderr, error }))
-    child.on("close", (status) => finish({ status, stdout, stderr }))
-  })
-
-/**
- * Gate results keyed by worktree and head. The caller that runs passes owns it, so a second
- * measurement of the same clean tree is free and no module-scope map is mutated.
- */
-export type QualityCache = Map<string, Quality>
-
-/** A clean tree at a known head is the only safe cache key; a dirty tree keeps its own gate. */
-const qualityKey = (input: {
-  readonly path: string
-  readonly head: string
-}): Option.Option<string> => {
-  const status = spawnSync(
-    "git",
-    ["-C", input.path, "status", "--porcelain=v1", "--untracked-files=all"],
-    {
-      encoding: "utf8",
-    },
-  )
-  if (status.status !== 0 || status.stdout.trim() !== "") return Option.none()
-  return Option.some(input.path + "|" + input.head)
-}
-
-const measureQualityCached = async (input: {
-  readonly path: string
-  readonly pr?: number | undefined
-  readonly head: string
-  readonly cache?: QualityCache | undefined
-}): Promise<Quality> => {
-  const key = qualityKey(input)
-  const cached = key.pipe(
-    Option.flatMap((value) => {
-      const hit = input.cache?.get(value)
-      return hit === undefined ? Option.none<Quality>() : Option.some(hit)
-    }),
-  )
-  if (Option.isSome(cached)) return cached.value
-  const measured = await measureQuality(input)
-  if (input.cache !== undefined && Option.isSome(key)) input.cache.set(key.value, measured)
-  return measured
-}
-
-const measureQuality = async (input: {
-  readonly path: string
-  readonly pr?: number | undefined
-}): Promise<Quality> => {
-  const local = join(input.path, "node_modules", ".bin", "jig")
-  const command = existsSync(local) ? local : "jig"
-  const result = await runCapture(
-    command,
-    [
-      "check",
-      "--format",
-      "json",
-      "--cwd",
-      input.path,
-      ...(input.pr === undefined ? [] : ["--pr-number", String(input.pr)]),
-    ],
-    {
-      cwd: input.path,
-      timeout: 120_000,
-    },
-  )
-  const version = await runCapture(command, ["--version"], {
-    cwd: input.path,
-    timeout: 10_000,
-  })
-  const requestedScope = input.pr === undefined ? "all" : "touched-files"
-  if (result.error !== undefined)
-    return {
-      available: false,
-      errors: 0,
-      warnings: 0,
-      note: String(result.error),
-      command,
-      version: version.stdout.trim(),
-      scope: "absent",
-      requestedScope,
-      complete: false,
-    }
-  const decoded = Schema.decodeResult(Schema.fromJsonString(JigReport))(result.stdout)
-  if (Result.isFailure(decoded))
-    return {
-      available: false,
-      errors: 0,
-      warnings: 0,
-      note: "jig output did not decode (exit " + result.status + ")",
-      command,
-      version: version.stdout.trim(),
-      scope: "absent",
-      requestedScope,
-      complete: false,
-    }
-  let errors = 0
-  let warnings = 0
-  for (const diagnostic of decoded.success.diagnostics) {
-    if (diagnostic.severity === "error") errors += 1
-    if (diagnostic.severity === "warn") warnings += 1
-  }
-  const generators = decoded.success.generators ?? []
-  const unjudged = generators.reduce((total, generator) => total + (generator.unjudged ?? 0), 0)
-  const actualScope = decoded.success.scope ?? "absent"
-  // Older jig versions accept --pr-number but omit the resulting scope from their JSON. Infer
-  // the requested scope for those reports, mark the measurement incomplete, and keep the counts;
-  // a missing field in the instrument is not the same as an unmeasured or mismatched run.
-  const inferredScope = actualScope === "absent" && input.pr !== undefined
-  const effectiveScope = inferredScope ? requestedScope : actualScope
-  const complete =
-    !inferredScope &&
-    effectiveScope === requestedScope &&
-    generators.length > 0 &&
-    generators.every((generator) => generator.status === "ran") &&
-    unjudged === 0
-  if (!inferredScope && actualScope !== requestedScope)
-    return {
-      available: false,
-      errors: 0,
-      warnings: 0,
-      note: "jig scope mismatch: requested " + requestedScope + ", report " + actualScope,
-      command,
-      version: version.stdout.trim(),
-      scope: actualScope,
-      requestedScope,
-      complete: false,
-    }
-  return {
-    available: true,
-    errors,
-    warnings,
-    note: inferredScope
-      ? "jig report has no scope; treated as " + effectiveScope
-      : unjudged === 0
-        ? "jig check"
-        : "jig check · " + unjudged + " unjudged",
-    command,
-    version: version.stdout.trim(),
-    scope: effectiveScope,
-    requestedScope,
-    unjudged,
-    complete,
-  }
-}
 
 /**
  * The receipts directory for one workstream.
@@ -436,10 +251,12 @@ const promptOf = (input: {
     "Read and write Linear through the Linear MCP (linear_getProjectDocuments, linear_getDocuments, linear_searchDocuments, linear_getIssueById) or the linearis CLI. A project document is a document, not an issue body. Never open linear.app in a browser; browse is only for the running application. If the Linear tool is unavailable, report the missing tool instead of browsing.",
     "Before raising a desk item, decide from the written record: the Linear project and issue body/done-when first, then repository convention and existing code. If those resolve it, write a short ADR with the passages and code paths, withdraw any stale desk item with `factory desk withdraw --item <id> --by factory --reason <derivation>`, and continue. Escalate only if both are silent or genuinely contradictory; the card must name what was checked, the options left open, and the missing fact.",
     "Commit and push each coherent change as you make it. Do not hold commits until the pass ends; the PR should show the work while the pass is still running.",
-    "Do not run the full jig/joggle gate after every edit. Make the coherent change, commit and push it, then measure once. If a gate fails, fix it and rerun only the touched scope.",
+    "Run only the checks the change needs: the touched test, `pnpm lint:errors:changed`, `pnpm check-typescript-errors:changed`, and `node scripts/spec-check.mjs` when the spec changed.",
+    "Never run `gh pr checks`, `gh pr view --json statusCheckRollup`, or any --watch. Do not wait for CI, do not re-request review, do not comment that a check passed. CI is a landing gate.",
+    "Do not run jig or joggle. Conformance is a landing gate; the kernel measures at ready.",
+    "A pass ends with: one ticket, its acceptance test, one commit, one push, and a receipt. Nothing else.",
     "Before pushing, stage every new and modified file and run the formatter on the staged set. `git diff --name-only origin/<base>...HEAD` omits uncommitted and untracked files; use `git status --porcelain` as well.",
-    "Touched-file scope is the pass gate. The repo-wide gate is the merge gate: run it when the worktree has the committed baseline. If it is inherited-red from a missing or empty ledger, report the scope, baseline state, and inherited counts; do not spend this pass fixing unrelated inherited findings, and do not call the pass ready.",
-    "A green count is not a boot. Run the root integration suite that would catch import-time and app-boot failures before calling ready; a pass can compile, count clean, and still fail every test shard at its root hook.",
+    "If the change can affect boot, run the root integration suite that catches import-time failures before calling ready.",
     "If a commit is already pushed and a mechanical gate failed afterward, do not redo the work. Report the gate with the commit, and resolve the stale event explicitly instead of replaying the committed change.",
     "Handle only these events, then stop. The kernel writes the pass receipt; do not write one yourself.",
     ...input.events.map(
@@ -610,7 +427,6 @@ interface RunPassInput {
   readonly at: string
   readonly home?: string | undefined
   readonly eventIds?: ReadonlyArray<string>
-  readonly cache?: QualityCache | undefined
 }
 
 const passLock = (input: { readonly id: string; readonly home?: string | undefined }): string =>
@@ -679,13 +495,7 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
     encoding: "utf8",
   })
   const startHead = startHeadResult.status === 0 ? startHeadResult.stdout.trim() : record.head
-  const cache: QualityCache = input.cache ?? new Map()
-  const before = await measureQualityCached({
-    path: record.path,
-    pr: record.pr,
-    head: startHead,
-    cache,
-  })
+  const before = unmeasuredQuality()
   const receipt: Receipt = {
     workstream: record.id,
     pass,
@@ -798,12 +608,7 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
 
   const head = spawnSync("git", ["-C", record.path, "rev-parse", "HEAD"], { encoding: "utf8" })
   const currentHead = head.status === 0 ? head.stdout.trim() : record.head
-  const after = await measureQualityCached({
-    path: record.path,
-    pr: record.pr,
-    head: currentHead,
-    cache,
-  })
+  const after = before
   const comparable =
     before.complete !== false &&
     after.complete !== false &&
