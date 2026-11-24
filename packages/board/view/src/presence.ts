@@ -184,6 +184,15 @@ export type Tailnet = typeof Tailnet.Type
 export const Presence = Schema.Struct({
   factory: Schema.Struct({
     workstreams: Schema.Array(Workstream),
+    workstreamIssues: Schema.optional(
+      Schema.Array(
+        Schema.Struct({
+          id: Schema.String,
+          path: Schema.String,
+          detail: Schema.String,
+        }),
+      ),
+    ),
     // Absent on a board that does not serve it yet: the card then draws no Environment line.
     environments: Schema.optional(Schema.Array(Environment)),
     activity: Schema.Array(Activity),

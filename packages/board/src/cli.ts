@@ -21,7 +21,7 @@ import { observeService } from "@autotelic/room/Service"
 import { activityOf } from "./factory/activity.ts"
 import { answerDesk, listDesk } from "./factory/desk.ts"
 import { listReports } from "./factory/report.ts"
-import { listWorkstreams } from "./factory/store.ts"
+import { listWorkstreamIssues, listWorkstreams } from "./factory/store.ts"
 import { factoryMain } from "./factory/cli.ts"
 import {
   discoverSessions,
@@ -166,6 +166,7 @@ const claim = async ({
 const observe = async (root: string) => {
   const rooms = await listRooms(root)
   const records = await listWorkstreams()
+  const workstreamIssues = await listWorkstreamIssues()
   const sessions = await discoverSessions()
   const observedAt = new Date().toISOString()
   const now = Date.now()
@@ -231,6 +232,7 @@ const observe = async (root: string) => {
     sessions: tagged,
     network: { tailscale: tailnet },
     factory: {
+      workstreamIssues,
       workstreams: await workstreamsWithGates({
         workstreams: records,
         activities: activity,

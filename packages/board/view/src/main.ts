@@ -931,6 +931,24 @@ const factoryView = (model: Model, h: HtmlBuilder<Message>): Document => {
           : [h.p([h.Class("error")], ["Could not read /presence: " + model.error])]),
         ...(model.notice === null ? [] : [h.p([h.Class("notice")], [model.notice])]),
         ...(presence === null ? [] : [factoryPulse(h, presence)]),
+        ...(presence === null || (presence.factory.workstreamIssues ?? []).length === 0
+          ? []
+          : [
+              card(h, {
+                title: "Unreadable workstreams",
+                id: "workstream-issues",
+                children: (presence.factory.workstreamIssues ?? []).map((issue) =>
+                  h.div(
+                    [h.Class("error")],
+                    [
+                      h.strong([], [issue.id]),
+                      h.span([h.Class("muted")], [" · " + issue.path]),
+                      h.p([], [issue.detail]),
+                    ],
+                  ),
+                ),
+              }),
+            ]),
         ...(presence === null
           ? []
           : [

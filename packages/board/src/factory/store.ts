@@ -154,6 +154,35 @@ export const readWorkstream = async (input: {
   return text === undefined ? undefined : decode({ text, path })
 }
 
+/** A record the board could not decode; it must be visible, not silently absent. */
+export interface WorkstreamIssue {
+  readonly id: string
+  readonly path: string
+  readonly detail: string
+}
+
+/** Every record that failed to decode, in file order. */
+export const listWorkstreamIssues = async (input?: {
+  readonly home?: string | undefined
+}): Promise<ReadonlyArray<WorkstreamIssue>> => {
+  const dir = workstreamDir(input?.home)
+  const names = await readdir(dir).catch(() => [])
+  const issues: Array<WorkstreamIssue> = []
+  for (const name of names.sort((left, right) => left.localeCompare(right))) {
+    if (!name.endsWith(".json")) continue
+    const text = await readFile(join(dir, name), "utf8").catch(() => undefined)
+    if (text === undefined) continue
+    const decoded = Schema.decodeResult(Schema.fromJsonString(Workstream))(text)
+    if (Result.isSuccess(decoded)) continue
+    issues.push({
+      id: name.slice(0, -5),
+      path: join(dir, name),
+      detail: String(decoded.failure).slice(0, 500),
+    })
+  }
+  return issues
+}
+
 /** Every decodable workstream, in id order; one malformed file does not hide the rest. */
 export const listWorkstreams = async (input?: { readonly home?: string | undefined }) => {
   const dir = workstreamDir(input?.home)
