@@ -297,6 +297,8 @@ export const recordOf = (input: { readonly id: string; readonly facts: Facts }):
     tokensPerDay: 0,
     roundsOfChanges: 2,
   },
+  // Build-only by default. Verification is declared onReady, not run per commit.
+  gates: { perPass: [], onReady: [] },
   autonomy: ["comment", "label", "push", "pr-body", "rebase", "ci-fix", "adopt-commits"],
   desk: [],
   sources:
