@@ -71,8 +71,9 @@ node scripts/derive-tree-facts.mjs --tree permissions
 ```
 
 Run the commands from the child worktree; use the parent's installed dependencies and the same
-gate configuration. A baseline edit to make a gate pass is a failure. A tool defect is reported,
-not worked around.
+gate configuration. A baseline edit to make a gate pass is a failure. A scoped jig check can
+report 0 errors and still carry `unjudged > 0`; the factory records `complete: false` and does
+not call that clean. A tool defect is reported, not worked around.
 
 ### Effect and composition
 
