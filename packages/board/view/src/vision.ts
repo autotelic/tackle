@@ -9,7 +9,7 @@ import { Message, type Model } from "./main.ts"
  */
 
 /** The three status words; the page's whole tone vocabulary. */
-type Tone = "built" | "partial" | "missing"
+type Tone = "built" | "missing"
 /** The two preview routes the browser scene can focus. */
 type Focus = "permissions" | "enterprise"
 
@@ -20,12 +20,12 @@ interface Stage {
 }
 
 const STAGES: ReadonlyArray<Stage> = [
-  { title: "project", detail: "Linear project + issue tree", tone: "partial" },
-  { title: "adopt", detail: "workstream, branch, PR", tone: "built" },
-  { title: "daemon", detail: "one pass per waking event", tone: "built" },
-  { title: "worker", detail: "Pi in a Herdr terminal", tone: "built" },
-  { title: "worktree", detail: "edits + checkpoint", tone: "built" },
-  { title: "receipt", detail: "quality + cursor", tone: "built" },
+  { title: "project", detail: "Linear project + issue tree", tone: "missing" },
+  { title: "adopt", detail: "workstream, branch, PR, worker", tone: "built" },
+  { title: "daemon", detail: "one waking event per pass; restart-safe", tone: "built" },
+  { title: "worker", detail: "Pi · low thinking · Herdr", tone: "built" },
+  { title: "provider", detail: "local worktree / embedded agentOS VM", tone: "built" },
+  { title: "receipt", detail: "quality + check events + handoff", tone: "built" },
 ]
 
 const stageClass = (input: { readonly index: number; readonly active: number }): string =>
@@ -55,7 +55,6 @@ const badge = (h: HtmlBuilder<Message>, tone: Tone): Html =>
     [
       Match.value(tone).pipe(
         Match.when("built", () => "WORKS"),
-        Match.when("partial", () => "PARTIAL"),
         Match.when("missing", () => "NOT BUILT"),
         Match.exhaustive,
       ),
@@ -341,7 +340,7 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
                 h.h1([], ["How the factory moves"]),
                 h.span(
                   [h.Class("muted")],
-                  ["a spatial map of the loop, the isolation boundary, and the horizon"],
+                  ["the loop, the isolation boundary, the technology seam, and the horizon"],
                 ),
                 h.div(
                   [h.Class("nav")],
@@ -359,9 +358,49 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
           [h.Class("scene-legend")],
           [
             h.span([h.Class("scene-badge built")], ["WORKS"]),
-            h.span([h.Class("scene-badge partial")], ["PARTIAL"]),
             h.span([h.Class("scene-badge missing")], ["NOT BUILT"]),
             h.span([h.Class("muted")], ["color is status; position is role"]),
+          ],
+        ),
+        h.section(
+          [h.Class("vision-scene")],
+          [
+            sceneHeader(h, {
+              title: "Current state",
+              caption:
+                "A dated snapshot, not a live feed. /factory and /presence are the live readings.",
+            }),
+            h.div(
+              [h.Class("horizon-stack")],
+              [
+                h.div(
+                  [h.Class("horizon-layer today")],
+                  [
+                    h.span([h.Class("horizon-title")], ["24 Nov 2026"]),
+                    horizonItem(h, {
+                      tone: "built",
+                      title: "main",
+                      detail: "73993178 · pnpm check · jig check · CI green",
+                    }),
+                    horizonItem(h, {
+                      tone: "built",
+                      title: "factory loop",
+                      detail: "check events · quality follow-up · ready + merge retirement",
+                    }),
+                    horizonItem(h, {
+                      tone: "built",
+                      title: "agentOS",
+                      detail: "embedded VM · own filesystem/process · no Rivet credentials",
+                    }),
+                    horizonItem(h, {
+                      tone: "missing",
+                      title: "two-project launch",
+                      detail: "runbook ready · blocked on target gate decision",
+                    }),
+                  ],
+                ),
+              ],
+            ),
           ],
         ),
         h.section(
@@ -408,7 +447,7 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
             sceneHeader(h, {
               title: "Alchemy is the substrate seam",
               caption:
-                "The same desired state can point at this tailnet, a Fly app, or another provider. Today it points at local machines.",
+                "Adopted and runnable: alchemy plan resolves the declaration locally. The same desired state can point at this tailnet, a Fly app, or another provider later.",
             }),
             h.div(
               [h.Class("substrate-map")],
@@ -467,7 +506,7 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
             h.div(
               [h.Class("substrate-note")],
               [
-                "No cloud migration yet. Alchemy is the layer that lets the same definitions be pointed at local machines now and another provider later; the mailbox and the execution plane remain a separate, private choice.",
+                "Alchemy is already a board dependency and a real stack declaration. No cloud migration yet: the local shop remains the running provider, and the mailbox/execution plane stay private.",
               ],
             ),
           ],
@@ -478,7 +517,7 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
             sceneHeader(h, {
               title: "The tailnet is the intranet",
               caption:
-                "Three MacBook Pros, one Mac mini, two phones. Select a machine; its workstreams and services open in place.",
+                "The rack the loop is designed around. Live sessions and services are on /factory; this map does not invent them.",
             }),
             tailnetMap(h, model.visionMachine ?? "mbp1"),
           ],
@@ -530,7 +569,7 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
           [
             sceneHeader(h, {
               title: "Two Shakti apps on the tailnet",
-              caption: "the tabs are real; the wall between them is not",
+              caption: "the tabs are real; the rooms isolate the checkout, not the host",
             }),
             h.div(
               [h.Class("browser")],
@@ -589,7 +628,7 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
                 h.div(
                   [h.Class("isolation-warning")],
                   [
-                    "No container wall. Both rooms see the same filesystem, network namespace, and processes. agentOS is the next provider.",
+                    "Local rooms isolate worktrees, branches, ports, services, and previews. They do not isolate the OS: both still share the host filesystem, network namespace, and processes. The agentOS provider is the prototype for that wall.",
                   ],
                 ),
               ],
@@ -601,14 +640,14 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
           [
             sceneHeader(h, {
               title: "Feedback comes back",
-              caption: "a review enters at the edge; the next pass leaves from the center",
+              caption: "a review or check enters at the edge; the next pass leaves from the center",
             }),
             h.div(
               [h.Class("feedback-cycle")],
               [
                 cycleNode(h, {
-                  title: "review",
-                  detail: "GitHub review or comment",
+                  title: "review / check",
+                  detail: "GitHub review, comment, or check",
                   zone: "cycle-review",
                 }),
                 cycleNode(h, { title: "event", detail: "cursor advances", zone: "cycle-event" }),
@@ -623,7 +662,69 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
                   [h.Class("cycle-center")],
                   [
                     h.span([h.Class("cycle-title")], ["the loop owns the work"]),
-                    h.span([h.Class("muted")], ["outbound labels/comments are not automated yet"]),
+                    h.span(
+                      [h.Class("muted")],
+                      [
+                        "check pass, quality follow-up, ready handoff; outbound labels/comments stay manual",
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+        h.section(
+          [h.Class("vision-scene")],
+          [
+            sceneHeader(h, {
+              title: "The technology seam",
+              caption:
+                "The linked set, decided for this milestone. No dependency was added where the local seam already exists.",
+            }),
+            h.div(
+              [h.Class("horizon-stack")],
+              [
+                h.div(
+                  [h.Class("horizon-layer today")],
+                  [
+                    h.span([h.Class("horizon-title")], ["adopted / prototyped"]),
+                    horizonItem(h, {
+                      tone: "built",
+                      title: "Alchemy",
+                      detail: "adopted · board dependency · alchemy plan resolves",
+                    }),
+                    horizonItem(h, {
+                      tone: "built",
+                      title: "agentOS",
+                      detail: "adopted · embedded core · own VM per room",
+                    }),
+                  ],
+                ),
+                h.div(
+                  [h.Class("horizon-layer next")],
+                  [
+                    h.span([h.Class("horizon-title")], ["deferred / rejected"]),
+                    horizonItem(h, {
+                      tone: "missing",
+                      title: "rivet-effect-cluster",
+                      detail: "deferred · existing lock + journal hold two local projects",
+                    }),
+                    horizonItem(h, {
+                      tone: "missing",
+                      title: "rat-king",
+                      detail: "rejected this milestone · pre-alpha · mailbox/intercom remains",
+                    }),
+                    horizonItem(h, {
+                      tone: "missing",
+                      title: "talkto",
+                      detail: "rejected this milestone · private hosted app · desk remains",
+                    }),
+                    horizonItem(h, {
+                      tone: "missing",
+                      title: "orb lifecycle",
+                      detail: "spawn / pause / delete provider contract; borrowed from Amp",
+                    }),
                   ],
                 ),
               ],
@@ -635,7 +736,7 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
           [
             sceneHeader(h, {
               title: "The horizon",
-              caption: "today is a directory; the target is a VM with a preview network",
+              caption: "local rooms work; embedded agentOS adds the VM wall",
             }),
             h.div(
               [h.Class("horizon-stack")],
@@ -650,9 +751,9 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
                       detail: "worktree + process + port",
                     }),
                     horizonItem(h, {
-                      tone: "partial",
+                      tone: "built",
                       title: "room",
-                      detail: "one service, shared host",
+                      detail: "one service · one port · one preview · isolated checkout",
                     }),
                   ],
                 ),
@@ -661,9 +762,19 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
                   [
                     h.span([h.Class("horizon-title")], ["next"]),
                     horizonItem(h, {
+                      tone: "built",
+                      title: "agentOS provider",
+                      detail: "embedded VM per room · separate filesystem and process",
+                    }),
+                    horizonItem(h, {
+                      tone: "missing",
+                      title: "agentOS preview bridge",
+                      detail: "board still forwards host ports; VM network.preview is next",
+                    }),
+                    horizonItem(h, {
                       tone: "missing",
                       title: "container",
-                      detail: "Docker · published port · private home",
+                      detail: "not chosen for this milestone",
                     }),
                   ],
                 ),
@@ -672,9 +783,9 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
                   [
                     h.span([h.Class("horizon-title")], ["target"]),
                     horizonItem(h, {
-                      tone: "missing",
+                      tone: "built",
                       title: "agentOS",
-                      detail: "VM · durable fs · network.preview · digest software",
+                      detail: "embedded VM · own filesystem and process · local host",
                     }),
                   ],
                 ),
@@ -682,7 +793,7 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
                   [h.Class("horizon-outside")],
                   [
                     horizonItem(h, {
-                      tone: "partial",
+                      tone: "built",
                       title: "Linear dependencies",
                       detail: "events, not a queue gate",
                     }),
@@ -692,9 +803,14 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
                       detail: "no listener or product-context feed",
                     }),
                     horizonItem(h, {
-                      tone: "partial",
+                      tone: "missing",
                       title: "Rat King transport",
-                      detail: "procedures + relay fixtures; no live delivery",
+                      detail: "pre-alpha; rejected for this milestone; mailbox/intercom remains",
+                    }),
+                    horizonItem(h, {
+                      tone: "missing",
+                      title: "TalkTo surface",
+                      detail: "private hosted app; rejected for this milestone; desk remains",
                     }),
                   ],
                 ),

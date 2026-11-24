@@ -1,3 +1,4 @@
+export { createAgentOsRoom, AgentOsRoomError, type AgentOsRoom } from "./AgentOs.ts"
 export { Worktree, WorktreeLive, WorktreeError, type WorktreeService } from "./Worktree.ts"
 export {
   agentOsRoomProvider,

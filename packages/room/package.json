@@ -35,6 +35,7 @@
     "@alchemy.run/domain": "2.0.0-beta.87",
     "@effect/platform-node": "catalog:",
     "@ipld/dag-cbor": "11.0.0",
+    "@rivet-dev/agentos-core": "0.4.9",
     "effect": "catalog:",
     "safe-stable-stringify": "3.0.1"
   },
