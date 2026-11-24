@@ -69,6 +69,7 @@ export const Workstream = Schema.Struct({
           durationMs: Schema.Finite,
           output: Schema.String,
           failure: Schema.optional(Schema.String),
+          failureKind: Schema.optional(Schema.Literals(["ok", "load-error", "failed"])),
         }),
       ),
     }),

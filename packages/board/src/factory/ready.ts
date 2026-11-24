@@ -9,6 +9,8 @@ import { receiptsDir } from "./kernel.ts"
 import { readWorkstream, writeWorkstream, type Workstream } from "./store.ts"
 
 /** One declared gate's exact outcome, kept with the workstream that earned it. */
+export type GateFailureKind = "ok" | "load-error" | "failed"
+
 export interface GateResult {
   readonly name: string
   readonly command: string
@@ -16,6 +18,7 @@ export interface GateResult {
   readonly durationMs: number
   readonly output: string
   readonly failure: string
+  readonly failureKind: GateFailureKind
 }
 
 export interface ReadyResult {
@@ -30,6 +33,18 @@ const CompressionProof = Schema.Struct({
   consolidated: Schema.Finite,
   deleted: Schema.Finite,
   locNet: Schema.Finite,
+  effectBefore: Schema.Struct({
+    bespokeErrorUnion: Schema.Finite,
+    throwCount: Schema.Finite,
+    dateNow: Schema.Finite,
+    consoleLog: Schema.Finite,
+  }),
+  effectAfter: Schema.Struct({
+    bespokeErrorUnion: Schema.Finite,
+    throwCount: Schema.Finite,
+    dateNow: Schema.Finite,
+    consoleLog: Schema.Finite,
+  }),
   ruleGaps: Schema.Array(Schema.String),
 })
 
@@ -55,6 +70,17 @@ const hasCompressionProof = async (input: {
     if (Result.isSuccess(proof)) return true
   }
   return false
+}
+
+const failureKind = (exit: number, output: string): GateFailureKind => {
+  if (exit === 0) return "ok"
+  if (
+    /(SyntaxError|Cannot find module|does not provide an export|MODULE_NOT_FOUND|ERR_MODULE_NOT_FOUND)/iu.test(
+      output,
+    )
+  )
+    return "load-error"
+  return "failed"
 }
 
 const failureExcerpt = (output: string): string => {
@@ -84,6 +110,7 @@ const runGate = (input: {
     durationMs: Date.now() - started,
     output: output.slice(-4000),
     failure: failureExcerpt(output),
+    failureKind: failureKind(result.status ?? -1, output),
   }
 }
 
@@ -155,6 +182,8 @@ export const runReady = async (input: {
           check.name +
           " (exit " +
           check.exit +
+          ", " +
+          check.failureKind +
           "): " +
           check.command +
           "\n  " +
