@@ -431,6 +431,9 @@ const promptOf = (input: {
   readonly events: ReadonlyArray<Event>
 }): string => {
   const recent = recentCommits(input.record)
+  const reviewPending = input.events.some(
+    (event) => event.kind === "review" || event.kind === "comment",
+  )
   return [
     "Workstream " +
       input.record.id +
@@ -492,6 +495,14 @@ const promptOf = (input: {
     ...input.events.map(
       (event) => "- " + event.kind + " " + event.id + " " + JSON.stringify(event.payload),
     ),
+    ...(reviewPending
+      ? [
+          "REVIEW RESPONSE OVERRIDES THE PHASE. The pending review/comment is the work, not compression or landing.",
+          "Read the review threads. Address every unresolved comment with one coherent commit (one commit per thread when they are separate changes), push, and reply in the thread with the commit sha and what changed. Mark the thread resolved where the tool permits.",
+          "Derive a decision from the SOW and the code and say the derivation in the reply; do not open a desk for it. If a comment cannot be addressed, reply with the reason and stop rather than committing unrelated work.",
+          "Do not re-run landing and do not merge.",
+        ]
+      : []),
     ...(input.events.some((event) => event.kind === "adopt-commits")
       ? [
           "For adopt-commits: fetch the source ref, cherry-pick the listed commits with -x, resolve conflicts under the named policy, run the gates, and push with --force-with-lease=<branch>:<expectedHead>. Report source, commits, conflicts, and gate exits.",

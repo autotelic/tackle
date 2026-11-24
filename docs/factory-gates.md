@@ -57,6 +57,15 @@ A normal pass no longer measures jig/joggle before and after. Its receipt record
 `available: false`, `complete: false`, and `note: "not measured (conformance is a landing gate)"`.
 That is the honest state; the landing gate is where the measurement belongs.
 
+## Review responses
+
+A pending PR review or comment overrides the phase. The pass reads the threads, addresses every
+unresolved comment with one coherent commit per thread, pushes, and replies in the thread with the
+commit sha and what changed. It resolves the thread where the host permits. A decision is derived
+from the SOW and code and stated in the reply; it does not become a desk card. If a comment cannot
+be addressed, the pass replies with the reason and stops instead of committing unrelated work. It
+does not re-run landing and does not merge.
+
 ## The jig rung contract
 
 When `jig.config.json` declares the joggle process engine, its `args` must **not** repeat the
