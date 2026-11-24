@@ -55,9 +55,10 @@ export const scopeReport = (report: Report, touched: ReadonlySet<string>): Repor
       }
     }),
   }
+  const measured =
+    report.elapsedMs === undefined ? scopedInput : { ...scopedInput, elapsedMs: report.elapsedMs }
   return makeReport({
-    ...scopedInput,
-    ...(report.elapsedMs === undefined ? {} : { elapsedMs: report.elapsedMs }),
+    ...measured,
     // The fact the consumer needs: this report looked at a change set, not the whole tree.
     scope: "touched-files",
   })
