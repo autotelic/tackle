@@ -766,11 +766,16 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
     journal,
   }
   await writeReceipt({ id: record.id, receipt: done, home: input.home })
+  // The record must describe the branch the receipt just pushed, not the adopt-time snapshot.
+  // A successful branch push makes the current head the PR head; a failed push must not move it.
+  const nextPrHead = pushed ? currentHead : record.prHead
   await writeWorkstream({
     record: {
       ...record,
       head: currentHead,
-      checkpoint: captured.value,
+      prHead: nextPrHead,
+      diverged: currentHead !== nextPrHead,
+      checkpoint: { ...captured.value, pushed },
       updatedAt: input.at,
     },
     home: input.home,
