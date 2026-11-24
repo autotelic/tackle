@@ -725,6 +725,64 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
                       title: "orb lifecycle",
                       detail: "spawn / pause / delete provider contract; borrowed from Amp",
                     }),
+                    horizonItem(h, {
+                      tone: "missing",
+                      title: "Executor",
+                      detail: "evaluated · gateway/catalog/credentials · not the authority",
+                    }),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+        h.section(
+          [h.Class("vision-scene")],
+          [
+            sceneHeader(h, {
+              title: "Executor is a gateway, not the authority",
+              caption:
+                "The catalog, credential and policy plane. A missing capability is a startup failure, not a browser fallback.",
+            }),
+            h.div(
+              [h.Class("horizon-stack")],
+              [
+                h.div(
+                  [h.Class("horizon-layer today")],
+                  [
+                    h.span([h.Class("horizon-title")], ["today"]),
+                    horizonItem(h, {
+                      tone: "built",
+                      title: "room tools",
+                      detail: "host MCP config + prompt; a missing Linear tool can become browse",
+                    }),
+                  ],
+                ),
+                h.div(
+                  [h.Class("horizon-layer next")],
+                  [
+                    h.span([h.Class("horizon-title")], ["next"]),
+                    horizonItem(h, {
+                      tone: "missing",
+                      title: "capability manifest",
+                      detail: "required linear.read.document; resolve before the worker starts",
+                    }),
+                    horizonItem(h, {
+                      tone: "missing",
+                      title: "Executor gateway",
+                      detail: "one catalog · scoped Linear token · allow / approve / block",
+                    }),
+                  ],
+                ),
+                h.div(
+                  [h.Class("horizon-layer target")],
+                  [
+                    h.span([h.Class("horizon-title")], ["target"]),
+                    horizonItem(h, {
+                      tone: "missing",
+                      title: "room requires · Executor resolves",
+                      detail: "fail closed; browse is app-origin only",
+                    }),
                   ],
                 ),
               ],
@@ -769,12 +827,12 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
                     horizonItem(h, {
                       tone: "missing",
                       title: "agentOS preview bridge",
-                      detail: "board still forwards host ports; VM network.preview is next",
+                      detail: "next: board route → VM network.preview; host ports until then",
                     }),
                     horizonItem(h, {
                       tone: "missing",
                       title: "container",
-                      detail: "not chosen for this milestone",
+                      detail: "deferred: directory now; Docker/agentOS after the loop",
                     }),
                   ],
                 ),
