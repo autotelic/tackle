@@ -2,8 +2,9 @@
 import { Effect, Option } from "effect"
 import { spawnSync } from "node:child_process"
 import { existsSync } from "node:fs"
+import { mkdir, symlink } from "node:fs/promises"
 import { homedir } from "node:os"
-import { join } from "node:path"
+import { dirname, join, resolve } from "node:path"
 import { parseArgs } from "node:util"
 import { localRoomProvider } from "./Provider.ts"
 import { Worktree, WorktreeLive } from "./Worktree.ts"
@@ -28,7 +29,7 @@ const usage = [
   "room — one durable place per scope",
   "",
   "Usage:",
-  "  room new --repo <path> --scope <name> [--base main] [--branch <existing>] [--id <id>] [--root .room]",
+  "  room new --repo <path> --scope <name> [--base main] [--branch <existing>] [--worktree <existing>] [--id <id>] [--root .room]",
   "  room up --id <id> [--exec <command>] [--service <name>] [--health <path>] [--root .room]",
   "  room down --id <id> [--root .room]",
   "  room status [--id <id>] [--root .room] [--json]",
@@ -53,6 +54,7 @@ const options = {
   scope: { type: "string" },
   base: { type: "string", default: "main" },
   branch: { type: "string" },
+  worktree: { type: "string" },
   id: { type: "string" },
   root: { type: "string", default: ".room" },
   to: { type: "string" },
@@ -138,26 +140,38 @@ const main = async (): Promise<void> => {
     if (values.repo === undefined || values.scope === undefined)
       return fail("new needs --repo and --scope (see room --help)", EXIT.usage)
     const id = values.id ?? slug(values.scope + "-" + (values.repo.split("/").at(-1) ?? "repo"))
-    // SAFETY: the room provider is a process boundary; its failure is infrastructure.
     let worktree: string
-    // oxlint-disable-next-line plumb-effect/no-try-catch -- the CLI owns the process boundary.
-    try {
-      worktree =
-        values.branch === undefined
-          ? await ensureWorktree({
-              id,
-              repo: values.repo,
-              base: values.base,
-              root,
-            })
-          : await attachWorktree({
-              id,
-              repo: values.repo,
-              branch: values.branch,
-              root,
-            })
-    } catch (cause) {
-      return fail("worktree failed: " + String(cause), EXIT.infrastructure)
+    if (values.worktree !== undefined) {
+      const source = resolve(values.worktree)
+      if (!existsSync(source)) return fail("worktree does not exist: " + source, EXIT.usage)
+      if ((await readRoom({ root, id })) !== undefined)
+        return fail("RoomAlreadyExists", EXIT.declined)
+      const link = join(roomDir({ root, id }), "worktree")
+      await mkdir(dirname(link), { recursive: true })
+      // The room directory is a lease over an existing checkout, not a second copy of it.
+      await symlink(source, link)
+      worktree = source
+    } else {
+      // SAFETY: the room provider is a process boundary; its failure is infrastructure.
+      // oxlint-disable-next-line plumb-effect/no-try-catch -- the CLI owns the process boundary.
+      try {
+        worktree =
+          values.branch === undefined
+            ? await ensureWorktree({
+                id,
+                repo: values.repo,
+                base: values.base,
+                root,
+              })
+            : await attachWorktree({
+                id,
+                repo: values.repo,
+                branch: values.branch,
+                root,
+              })
+      } catch (cause) {
+        return fail("worktree failed: " + String(cause), EXIT.infrastructure)
+      }
     }
     const created = await createRoom({
       root,

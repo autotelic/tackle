@@ -199,6 +199,23 @@ describe("a verb that prints a completion is a claim", () => {
     }
   })
 
+  it("binds an existing child worktree instead of creating a third", () => {
+    const { root, close } = scratch()
+    try {
+      const repo = repository(root)
+      const external = join(root, "child-worktree")
+      git(repo, "worktree", "add", "-b", "child", external, "main")
+      const created = room(root, "new", "--repo", repo, "--scope", "bound", "--worktree", external)
+      expect(created.status).toBe(0)
+      expect(created.stdout).toContain("room bound-repo ready")
+      const link = join(root, ".room", "bound-repo", "worktree")
+      expect(readFileSync(join(link, "README.md"), "utf8")).toBe("room\n")
+      expect(existsSync(join(root, ".room", "bound-repo", "room.json"))).toBe(true)
+    } finally {
+      close()
+    }
+  })
+
   it("labels this Herdr terminal only when asked", () => {
     const { root, close } = scratch()
     try {
