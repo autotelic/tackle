@@ -45,6 +45,8 @@ export interface CompressReport {
   readonly locNet?: number | undefined
   readonly generatedLocNet?: number | undefined
   readonly generatedFiles?: number | undefined
+  readonly effectBefore?: EffectCounts | undefined
+  readonly effectAfter?: EffectCounts | undefined
   readonly ruleGaps?: ReadonlyArray<string> | undefined
   readonly note?: string | undefined
 }
@@ -73,9 +75,55 @@ const CompressFile = Schema.Struct({
   locNet: Schema.optional(Schema.Finite),
   generatedLocNet: Schema.optional(Schema.Finite),
   generatedFiles: Schema.optional(Schema.Finite),
+  effectBefore: Schema.optional(
+    Schema.Struct({
+      bespokeErrorUnion: Schema.Finite,
+      throwCount: Schema.Finite,
+      dateNow: Schema.Finite,
+      consoleLog: Schema.Finite,
+    }),
+  ),
+  effectAfter: Schema.optional(
+    Schema.Struct({
+      bespokeErrorUnion: Schema.Finite,
+      throwCount: Schema.Finite,
+      dateNow: Schema.Finite,
+      consoleLog: Schema.Finite,
+    }),
+  ),
   ruleGaps: Schema.optional(Schema.Array(Schema.String)),
   note: Schema.optional(Schema.String),
 })
+
+const EffectCount = (text: string): EffectCounts => ({
+  bespokeErrorUnion: (
+    text.match(/\b(?:export\s+)?type\s+\w*Refusal\w*[^=]*=\s*\{[^}]*\brefusal\s*:/gu) ?? []
+  ).length,
+  throwCount: (text.match(/\bthrow\s+new\b/gu) ?? []).length,
+  dateNow: (text.match(/\bDate\.now\s*\(/gu) ?? []).length,
+  consoleLog: (text.match(/\bconsole\.log\s*\(/gu) ?? []).length,
+})
+
+const effectCounts = (input: {
+  readonly path: string
+  readonly head: string
+  readonly files: ReadonlyArray<string>
+}): EffectCounts => {
+  const total = { bespokeErrorUnion: 0, throwCount: 0, dateNow: 0, consoleLog: 0 }
+  for (const file of input.files) {
+    const shown = spawnSync("git", ["-C", input.path, "show", input.head + ":" + file], {
+      encoding: "utf8",
+      maxBuffer: 2_000_000,
+    })
+    if (shown.status !== 0) continue
+    const counts = EffectCount(shown.stdout)
+    total.bespokeErrorUnion += counts.bespokeErrorUnion
+    total.throwCount += counts.throwCount
+    total.dateNow += counts.dateNow
+    total.consoleLog += counts.consoleLog
+  }
+  return total
+}
 
 const compressionOf = async (input: {
   readonly path: string
@@ -93,6 +141,7 @@ const compressionOf = async (input: {
   let deleted = 0
   let generatedLocNet = 0
   let generatedFiles = 0
+  const changedFiles: Array<string> = []
   for (const line of (diff.stdout ?? "").split("\n")) {
     const [added, removed, file] = line.split("\t")
     if (file === undefined) continue
@@ -102,6 +151,7 @@ const compressionOf = async (input: {
         generatedLocNet += (Number(added) || 0) - (Number(removed) || 0)
       continue
     }
+    changedFiles.push(file)
     if (added === "-" && removed === "-") {
       deleted += 1
       continue
@@ -113,13 +163,28 @@ const compressionOf = async (input: {
   const decoded =
     text === undefined ? undefined : Schema.decodeResult(Schema.fromJsonString(CompressFile))(text)
   const reported = decoded !== undefined && Result.isSuccess(decoded) ? decoded.success : {}
+  const effectBefore =
+    reported.effectBefore ??
+    effectCounts({ path: input.path, head: input.startHead, files: changedFiles })
+  const effectAfter =
+    reported.effectAfter ??
+    effectCounts({ path: input.path, head: input.currentHead, files: changedFiles })
   return {
     ...reported,
     deleted: reported.deleted ?? deleted,
     locNet: reported.locNet ?? additions - deletions,
     generatedLocNet: reported.generatedLocNet ?? generatedLocNet,
     generatedFiles: reported.generatedFiles ?? generatedFiles,
+    effectBefore,
+    effectAfter,
   }
+}
+
+export interface EffectCounts {
+  readonly bespokeErrorUnion: number
+  readonly throwCount: number
+  readonly dateNow: number
+  readonly consoleLog: number
 }
 
 export interface Receipt {
@@ -347,6 +412,7 @@ const promptOf = (input: {
           "Compression has five obligations. 1) Remove memorialisation: docs, prior-pass notes, generated facts, one-off scripts, and proof-of-work artifacts the branch no longer needs; fix every reference you delete.",
           "2) Cutlist the UI this branch touched: assemble from existing primitives where you hand-rolled, then compress. Hoist at the third use, delete the old copies in the same commit, and record before/after counts.",
           "3) Atomicity audit: for each component you built, name the primitives it should be made of; fix the ones that are not made of them.",
+          "3b) Effect v4 target: typed failures use Data.TaggedError and Effect.catchTag; time uses Clock; logging uses Logger; boundary validation uses Schema.decodeUnknown; services use Context.Tag + Layer; retries/limits use Schedule. Move the modules this branch touched, starting with the new domain files. The receipt counts bespokeErrorUnion, throwCount, dateNow, and consoleLog before and after.",
           "4) Rule feedback: where plumb/joggle did not push toward the atomic or consolidated shape, that is a rule gap. Report it to the tackle session with the file and rule id; do not silently work around it.",
           "5) Net-better proof: write a machine-readable JSON object to `$FACTORY_COMPRESS_REPORT` with `findingsBefore`, `findingsAfter`, `consolidated`, `deleted`, `locNet`, `generatedLocNet`, `generatedFiles`, and `ruleGaps`. The commit body must carry the same before/after numbers. Generated catalog/snapshot churn is reported separately, not counted as compression.",
           "Run only static conformance lenses (jig, joggle, cutlist) in this pass. Do not execute tests or wait for CI; landing runs them once. One coherent compression cut, commit, push, stop. If another cut is needed, it becomes the next event.",

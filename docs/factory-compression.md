@@ -38,9 +38,9 @@ A compression pass is one cut in that loop, with five obligations:
   patterns;
 - tightens a rule or baseline only with evidence;
 - writes `findingsBefore`, `findingsAfter`, `consolidated`, `deleted`, `locNet`,
-  `generatedLocNet`, `generatedFiles`, and `ruleGaps` to `$FACTORY_COMPRESS_REPORT`; the commit
-  body carries the same numbers. Generated catalog/snapshot churn is reported separately; it is
-  not counted as compression;
+  `generatedLocNet`, `generatedFiles`, `effectBefore`, `effectAfter`, and `ruleGaps` to
+  `$FACTORY_COMPRESS_REPORT`; the commit body carries the same numbers. Generated catalog/snapshot
+  churn is reported separately; it is not counted as compression;
 - makes one coherent compression commit, pushes, and stops; the next compression event is another cut.
 
 It does not add a new feature, ticket, or a document that only explains the branch. It does not
@@ -71,6 +71,17 @@ The phase is also an audit of the engines:
 - **joggle duplicate implementation** — the rule saw four copies of the folder column list and a
   duplicate `VIEWERS` constant, then declined. They were consolidated by hand. The rule needs a
   “duplicate structure, not just duplicate name” path.
+- **same-file repeated scan** — projects `route.tsx` had four memos scanning one list for different
+  columns; no engine flagged it. Add a repeated-predicate/repeated-scan rule.
+- **joggle/single-path false positives** — it matched unrelated imports to a resource constant,
+  query string, and boolean. Bind the flagged value to the construction, not the file’s imports.
+- **joggle/unaccounted-drop misfires** — pure partition/group helpers return every item and are not
+  funnels that drop a count; the rule should not ask for explanatory prose there.
+
+Effect v4 target: `Data.TaggedError` + `Effect.catchTag` for typed failures, `Clock`, `Logger`,
+`Schema.decodeUnknown`, `Context.Tag` + `Layer`, `Schedule`/`Effect` for retries and limits. The
+receipt reports `bespokeErrorUnion`, `throwCount`, `dateNow`, and `consoleLog` before/after for the
+touched set, so “we left it better” is measured instead of asserted.
 
 These belong in the rule backlog with file and rule id attached; they are not reasons to weaken
 compression.
