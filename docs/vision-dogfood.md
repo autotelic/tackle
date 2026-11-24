@@ -82,11 +82,30 @@ dependency tree cannot enter a checkpoint. No checkpoint carries an absolute hos
 - checkpoint contents are clean of host dependency symlinks;
 - the Shakti target was not touched.
 
+## Real GitHub reads
+
+The lifecycle dogfood used a local PR double, but the same parser was checked against two
+real PRs without mutating either target:
+
+```text
+real merged PR #11 (autotelic/tackle)
+  github:merged:11:8ba6fee6...
+  factory status: real-merge  PR 11  done
+
+real open PR #1862 (Shakti-Reforestation/forestbuilder)
+  github:review:PRR_kwDOK7o5SM8AAAABZoIWoA  COMMENTED
+  github:check:b80d696a...:passed            passed (27 checks)
+  github:conflict:b80d696a...:1beb66bf...     CONFLICTING
+```
+
+`watchOnce` used the real merged event to move a temporary record to `done`; PR #1862 was
+read-only and was not adopted, edited, or merged.
+
 ## Limits
 
-- The PR is a local test double. It exercises the same GitHub event parser and the same
-  factory lifecycle, but it is not a remote GitHub PR. Real target PRs remain out of scope
-  until the operator launches them.
+- The two-workstream lifecycle PR is a local test double. It exercises the same GitHub
+  event parser and the same factory lifecycle, but it is not a remote GitHub PR. Real target
+  PRs remain out of scope until the operator launches them.
 - The dogfood edits are documentation-only. They prove orchestration, not a target feature.
 - Embedded agentOS isolation is proven separately in `packages/room/test/agentos.test.ts`;
   the board preview bridge still forwards host ports.
