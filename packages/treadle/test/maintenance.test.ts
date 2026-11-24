@@ -706,10 +706,18 @@ describe('maintenance', () => {
     expect(ghCalls.some((c) => c.startsWith('pr create'))).toBe(false)
   })
 
-  it('auto-merge: nags once about a PR conflicted with the integration branch, then stays silent', async () => {
+  it('auto-merge: a PR conflicted only on the engine scratch note is rebased, not paged', async () => {
     notifyMessages.length = 0
     const { repoDir, trackerDir } = await makeShiftWorld()
     await writeIssue(trackerDir, '001-a.md', '')
+    // Both branches write the same root note: the conflict every pair of
+    // sibling ticket branches used to hit. The loop drops it and moves on.
+    git(repoDir, 'checkout', 'loop/1')
+    await writeFile(join(repoDir, 'PROGRESS.md'), 'note from issue 1\n')
+    git(repoDir, 'add', '-A')
+    git(repoDir, 'commit', '-m', 'note 1')
+    git(repoDir, 'push', 'origin', 'loop/1')
+    const before = git(repoDir, 'rev-parse', 'origin/loop/1')
     const handlers = {
       'pr list --state open': [
         loopPr(11, 'loop/1', 'feature/x', {
@@ -721,17 +729,67 @@ describe('maintenance', () => {
       'pr list --state closed': [],
       'pr list --state all --head feature/x': [],
     }
-    await maintenance({
+    const report = await maintenance({
       repoDir,
       config: shiftConfig(trackerDir),
       withLock: false,
       deps: fakeGh(handlers).deps,
       notify,
     })
-    const nags = () => notifyMessages.filter((m) => m.includes('conflicts with feature/x')).length
+    expect(report.rebased).toEqual([1])
+    expect(report.conflicts).toEqual([])
+    expect(notifyMessages.some((m) => m.includes('needs to rebase it by hand'))).toBe(false)
+    expect(notifyMessages.some((m) => m.includes('rebased loop/1'))).toBe(true)
+    // The note survives: dropping it means dropping it from the merge, not
+    // from the branch the session keeps working on.
+    void before
+    expect(
+      execFileSync('git', ['show', 'origin/loop/1:PROGRESS.md'], {
+        cwd: repoDir,
+        stdio: ['ignore', 'pipe', 'ignore'],
+      }).toString(),
+    ).toBe('note from issue 1\n')
+  })
+
+  it('auto-merge: a conflict outside the engine files still pages once, then stays silent', async () => {
+    notifyMessages.length = 0
+    const { repoDir, trackerDir } = await makeShiftWorld()
+    await writeIssue(trackerDir, '001-a.md', '')
+    // Real code conflict: the integration branch changes app.txt after the
+    // branch was cut, and the branch changes the same line.
+    git(repoDir, 'checkout', 'feature/x')
+    await writeFile(join(repoDir, 'app.txt'), 'integration change\n')
+    git(repoDir, 'add', '-A')
+    git(repoDir, 'commit', '-m', 'integration moved')
+    git(repoDir, 'push', 'origin', 'feature/x')
+    git(repoDir, 'checkout', 'loop/1')
+    await writeFile(join(repoDir, 'app.txt'), 'branch change\n')
+    git(repoDir, 'add', '-A')
+    git(repoDir, 'commit', '-m', 'branch moved')
+    git(repoDir, 'push', 'origin', 'loop/1')
+    git(repoDir, 'checkout', 'develop')
+    const handlers = {
+      'pr list --state open': [
+        loopPr(11, 'loop/1', 'feature/x', {
+          mergeable: 'CONFLICTING',
+          mergeStateStatus: 'DIRTY',
+        }),
+      ],
+      'pr list --state merged': [],
+      'pr list --state closed': [],
+      'pr list --state all --head feature/x': [],
+    }
+    const report = await maintenance({
+      repoDir,
+      config: shiftConfig(trackerDir),
+      withLock: false,
+      deps: fakeGh(handlers).deps,
+      notify,
+    })
+    expect(report.conflicts).toEqual(['loop/1'])
+    const nags = () => notifyMessages.filter((m) => m.includes('needs to rebase it by hand')).length
     expect(nags()).toBe(1)
-    // Same state next pass: silent. No merge was faked, so the PR stays
-    // conflicted and nothing else pages.
+    // Same state next pass: silent. Genuine code conflicts still dedupe.
     await maintenance({
       repoDir,
       config: shiftConfig(trackerDir),

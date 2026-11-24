@@ -159,6 +159,47 @@ function loopIssueNumber(headRefName: string): number | null {
   return match?.[1] ? Number.parseInt(match[1], 10) : null
 }
 
+/**
+ * Files the engine itself writes into a worktree, never the subject of a real
+ * conflict. PROGRESS.md is the session's own note: two branches writing it is
+ * what makes every sibling PR conflict on scratch state rather than on code,
+ * so a merge drops it instead of stopping for a person.
+ */
+const ENGINE_SCRATCH_FILES = ['PROGRESS.md']
+
+/** Resolve a conflicted engine-owned scratch file by dropping it. False when none is conflicted. */
+async function dropEngineScratch(dir: string): Promise<boolean> {
+  let dropped = false
+  for (const file of ENGINE_SCRATCH_FILES) {
+    const status = await git(dir, 'status', '--porcelain', '--', file).catch(() => '')
+    if (!/^(UU|AA|DU|UD|AU|UA|DD)/m.test(status)) continue
+    // --cached and the working copy both: the file is not wanted on either side.
+    await git(dir, 'rm', '--quiet', '--force', '--', file).catch(() => undefined)
+    dropped = true
+  }
+  return dropped
+}
+
+/**
+ * Rebase, resolving only the engine's own scratch files between attempts. Any
+ * other conflict is the caller's to report: this never guesses at code.
+ */
+async function rebaseResolvingScratch(dir: string, ...args: string[]): Promise<void> {
+  for (let attempt = 0; attempt < ENGINE_SCRATCH_FILES.length * 8; attempt += 1) {
+    try {
+      if (attempt === 0) await git(dir, 'rebase', ...args)
+      else await git(dir, '-c', 'core.editor=true', 'rebase', '--continue')
+      return
+    } catch (error) {
+      if (!(await dropEngineScratch(dir))) throw error
+      await git(dir, 'add', '-A').catch(() => undefined)
+      // A commit that only touched the dropped file is now empty; skip it.
+      if (attempt % 2 === 1) await git(dir, 'rebase', '--skip').catch(() => undefined)
+    }
+  }
+  throw new Error('rebase kept conflicting after resolving engine scratch files')
+}
+
 /** The issue's current state: markdown = its one label; GitHub = its treadle label. */
 async function issueState(
   repoDir: string,
@@ -372,16 +413,63 @@ export async function maintenance(options: {
         const candidates = open
           .filter((pr) => pr.baseRefName === integrationBranch)
           .map((pr) => ({ pr, issue: loopIssueNumber(pr.headRefName) }))
-        // Conflicts with the integration branch need a human rebase.
+        // A PR conflicted with the integration branch: rebase it here rather
+        // than paging a person. Only a branch a session is actively working on
+        // is untouchable, and only a conflict this engine cannot resolve (one
+        // outside its own scratch files) still reaches a human.
         for (const { pr, issue } of candidates) {
-          if (pr.mergeable === 'CONFLICTING' || pr.mergeStateStatus === 'DIRTY') {
-            const ref = issue === null ? pr.headRefName : `${pr.headRefName} (issue #${issue})`
-            await noteConflict(
-              pr.headRefName,
-              `Stack maintenance: ${ref} conflicts with ${integrationBranch} — ` +
-                'a person needs to rebase it by hand.',
-            )
+          if (pr.mergeable !== 'CONFLICTING' && pr.mergeStateStatus !== 'DIRTY') continue
+          const branch = pr.headRefName
+          const ref = issue === null ? branch : `${branch} (issue #${issue})`
+          if (issue !== null) {
+            const state = await issueState(repoDir, config, issue, deps).catch(() => null)
+            if (state === config.issues.working) {
+              report.skippedWorking.push(issue)
+              continue
+            }
           }
+          if (!(await branchExists(repoDir, `origin/${branch}`))) {
+            await noteConflict(
+              branch,
+              `Stack maintenance: ${ref} conflicts with ${integrationBranch} and has no branch on ` +
+                'origin — a person needs to look at it.',
+            )
+            continue
+          }
+          const tmpWorktree = join(repoDir, '.treadle', 'maintenance-worktrees', `pr-${pr.number}`)
+          await git(repoDir, 'worktree', 'remove', tmpWorktree, '--force').catch(() => undefined)
+          let resolved = true
+          const expected = await git(repoDir, 'rev-parse', `origin/${branch}`)
+          try {
+            await git(repoDir, 'worktree', 'add', '--detach', tmpWorktree, `origin/${branch}`)
+            await rebaseResolvingScratch(tmpWorktree, `origin/${integrationBranch}`)
+            await git(
+              tmpWorktree,
+              'push',
+              `--force-with-lease=${branch}:${expected}`,
+              'origin',
+              `HEAD:${branch}`,
+            )
+          } catch {
+            resolved = false
+            await git(tmpWorktree, 'rebase', '--abort').catch(() => undefined)
+          } finally {
+            await git(repoDir, 'worktree', 'remove', tmpWorktree, '--force').catch(() => undefined)
+          }
+          if (resolved) {
+            if (issue !== null) report.rebased.push(issue)
+            await notify(
+              `Stack maintenance: rebased ${ref} onto ${integrationBranch} (a conflict in engine ` +
+                'scratch files only). No action needed.',
+            )
+            continue
+          }
+          report.conflicts.push(branch)
+          await noteConflict(
+            branch,
+            `Stack maintenance: ${ref} conflicts with ${integrationBranch} outside the engine's ` +
+              'own files — a person needs to rebase it by hand.',
+          )
         }
         let issueFiles: IssueFile[] | null = null
         // The issue's state gates loop/* merges: 'missing' = the tracker
