@@ -12,6 +12,7 @@ import { listWorkstreams, Phase, readWorkstream, writeWorkstream } from "./store
 import { deliverReport, fingerprintOf, ReportKind, writeReport, type Report } from "./report.ts"
 import { answerDesk, listDesk, raiseDesk, readAnswer, withdrawDesk, type DeskItem } from "./desk.ts"
 import { runDaemon, startDaemon, stopDaemon } from "./daemon.ts"
+import { readTelemetry } from "./telemetry.ts"
 import { watchOnce } from "./watch.ts"
 
 const usage = [
@@ -20,6 +21,7 @@ const usage = [
   "Usage:",
   "  factory adopt --path <worktree> --project <linear> --label <label> [--pr <n> | --delivery trunk] [--reports <dir>] [--repo <owner/name>] [--phase reconcile|build|land] [--id <id>]",
   "  factory status [--json]",
+  "  factory telemetry [--since <iso>] [--json]",
   "  factory event --id <id> --kind <kind> [--payload <json>] [--at <iso>]",
   "  factory event retire --id <id> --event <event-id>",
   "  factory adopt-commits --id <id> --from <ref> --commits <sha,sha> [--policy keep-parent|prefer-source] --expected-head <sha>",
@@ -59,6 +61,37 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
   const command = argv[0]
   if (command === undefined || command === "--help" || command === "-h") {
     console.log(usage)
+    return
+  }
+
+  if (command === "telemetry") {
+    const parsed = parseArgs({
+      args: argv.slice(1),
+      options: { since: { type: "string" }, json: { type: "boolean", default: false } },
+      allowPositionals: false,
+    })
+    const since = parsed.values.since ?? new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    if (Number.isNaN(Date.parse(since))) return fail("--since must be an ISO instant")
+    const sessions = await readTelemetry({ since })
+    if (parsed.values.json) {
+      console.log(JSON.stringify(sessions, null, 2))
+      return
+    }
+    for (const session of sessions)
+      console.log(
+        [
+          session.workstream.padEnd(26),
+          session.startedAt.slice(11, 19),
+          String(session.wallSeconds).padStart(5) + "s wall",
+          String(session.modelSeconds).padStart(5) + "s model",
+          String(session.toolSeconds).padStart(5) + "s tool",
+          String(session.toolCalls).padStart(3) + " calls",
+          String(session.measurementCalls).padStart(3) + " measure",
+          String(session.editCalls).padStart(3) + " edit",
+          String(session.commits).padStart(3) + " commit",
+          "$" + session.costUsd.toFixed(3),
+        ].join("  "),
+      )
     return
   }
 
