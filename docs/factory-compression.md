@@ -77,6 +77,15 @@ The phase is also an audit of the engines:
   query string, and boolean. Bind the flagged value to the construction, not the file’s imports.
 - **joggle/unaccounted-drop misfires** — pure partition/group helpers return every item and are not
   funnels that drop a count; the rule should not ask for explanatory prose there.
+- **plumb/effect/typed-error missing** — `documentation/refusals.ts` shipped
+  `type Refusal<R> = { refusal: R }` plus eleven literals and plumb reported zero. The shipped
+  `tools/oxlint/guardrails/effect.cjs` is a no-op shim, so no rule asked for `Data.TaggedError`.
+- **joggle tagged-error factory** — joggle/duplicate-implementation saw eleven one-line refusal
+  classes, judged “same shape, nothing to change,” and proposed no factory. The cut was done by
+  hand instead of by the engine.
+- **jig joggle rung** — unchanged: joggle exits 3 through jig and 0 in a shell, so the gate still
+  counts zero joggle findings. Direct `joggle check --since origin/main` was clean (169 judgements,
+  1 unjudged), but the jig rung must be fixed rather than bypassed.
 
 Effect v4 target: `Data.TaggedError` + `Effect.catchTag` for typed failures, `Clock`, `Logger`,
 `Schema.decodeUnknown`, `Context.Tag` + `Layer`, `Schedule`/`Effect` for retries and limits. The
