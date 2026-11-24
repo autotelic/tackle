@@ -3,7 +3,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import net from 'node:net'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { runChecks } from '../src/checks.ts'
+import { runChecks, withCallerPath } from '../src/checks.ts'
 import { loadConfig } from '../src/config.ts'
 import {
   FIXTURE_PORT,
@@ -162,5 +162,39 @@ describe('runChecks', () => {
     const report = await runChecks(broken, { repoDir, outDir: join(repoDir, '.treadle', 'out') })
     expect(report.infrastructureFailure?.kind).toBe('app-not-healthy')
     expect(report.steps).toHaveLength(0)
+  })
+})
+
+describe('withCallerPath', () => {
+  it('re-asserts the caller PATH ahead of whatever the login profile assembled', () => {
+    const wrapped = withCallerPath('node -v', '/Users/daemon/bin:/usr/bin')
+    expect(wrapped).toBe(`PATH='/Users/daemon/bin:/usr/bin':"$PATH"; export PATH; node -v`)
+  })
+
+  it('leaves the command alone when the caller declared no PATH', () => {
+    expect(withCallerPath('node -v', undefined)).toBe('node -v')
+    expect(withCallerPath('node -v', '')).toBe('node -v')
+  })
+
+  it('survives a single quote inside the PATH value', () => {
+    const wrapped = withCallerPath('true', "/opt/d'arcy/bin:/usr/bin")
+    expect(wrapped).toContain(`PATH='/opt/d'\\''arcy/bin:/usr/bin'`)
+  })
+
+  it('the re-asserted PATH wins over a profile prepend, and the rest of the profile PATH stays visible', async () => {
+    // Simulates the profile-prepend failure mode: a login shell that prepends its own
+    // node ahead of the caller's. The wrapper puts the caller PATH back in front.
+    const wrapped = withCallerPath('echo $PATH', '/caller-first:/caller-second')
+    const child = spawn('/bin/sh', ['-c', `${wrapped}`], {
+      env: { PATH: '/profile/prepends-first:/usr/bin:/bin' },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+    const out = await new Promise<string>((resolve) => {
+      let text = ''
+      child.stdout?.on('data', (c: Buffer) => (text += c.toString()))
+      child.on('close', () => resolve(text.trim()))
+    })
+    expect(out.startsWith('/caller-first:/caller-second:')).toBe(true)
+    expect(out).toContain('/profile/prepends-first')
   })
 })

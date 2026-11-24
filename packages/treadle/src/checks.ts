@@ -81,6 +81,28 @@ function loginShell(): { command: string; args: ReadonlyArray<string> } {
 }
 
 /**
+ * Re-assert the caller's PATH after the login profile has sourced.
+ *
+ * The login shell is what makes a toolchain behind fnm visible to a daemon with a minimal
+ * PATH — and it is also what can undo the daemon's own ordering: a `brew shellenv` line in
+ * ~/.zprofile prepends homebrew's node over the PATH the plist declared, and two v26.12.1
+ * builds with different bundled ICU then disagree about a December date (the collab smoke's
+ * ui-vitest failed exactly this way for a whole night). So the command runs with the caller's
+ * PATH re-asserted ahead of whatever the profile assembled: the daemon's declared order wins,
+ * and the toolchain the profile adds stays visible behind it.
+ */
+export function withCallerPath(command: string, envPath: string | undefined): string {
+  if (envPath === undefined || envPath === '') return command
+  // The shell's own assembled PATH is appended at execution time, after the profile ran —
+  // caller first, profile behind.
+  return `PATH=${shellSingleQuote(envPath)}:"$PATH"; export PATH; ${command}`
+}
+
+function shellSingleQuote(value: string): string {
+  return `'${value.replaceAll("'", `'\\''`)}'`
+}
+
+/**
  * Run a shell command from `cwd`, streaming combined output to `logPath`.
  * On timeout the whole process group is killed and the result is marked timedOut.
  */
@@ -91,7 +113,7 @@ function spawnLogged(
   const start = Date.now()
   return new Promise((resolve, reject) => {
     const shell = loginShell()
-    const child = spawn(shell.command, [...shell.args, command], {
+    const child = spawn(shell.command, [...shell.args, withCallerPath(command, options.env.PATH)], {
       cwd: options.cwd,
       env: options.env,
       detached: true,
@@ -259,12 +281,16 @@ export async function runChecks(
     } else {
       const appLog = join(logsDir, 'app.log')
       const shell = loginShell()
-      const app = spawn(shell.command, [...shell.args, config.app.start], {
-        cwd: repoDir,
-        env: { ...env, ...config.app.env },
-        detached: true,
-        stdio: ['ignore', 'pipe', 'pipe'],
-      })
+      const app = spawn(
+        shell.command,
+        [...shell.args, withCallerPath(config.app.start, env.PATH)],
+        {
+          cwd: repoDir,
+          env: { ...env, ...config.app.env },
+          detached: true,
+          stdio: ['ignore', 'pipe', 'pipe'],
+        },
+      )
       if (app.pid === undefined) {
         infrastructureFailure = {
           kind: 'app-not-healthy',
