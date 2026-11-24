@@ -68,6 +68,7 @@ export const Workstream = Schema.Struct({
           exit: Schema.Finite,
           durationMs: Schema.Finite,
           output: Schema.String,
+          failure: Schema.optional(Schema.String),
         }),
       ),
     }),

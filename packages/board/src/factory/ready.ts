@@ -15,6 +15,7 @@ export interface GateResult {
   readonly exit: number
   readonly durationMs: number
   readonly output: string
+  readonly failure: string
 }
 
 export interface ReadyResult {
@@ -45,6 +46,14 @@ const hasCompressionProof = async (input: {
   return false
 }
 
+const failureExcerpt = (output: string): string => {
+  const lines = output.split("\n")
+  const interesting = lines.filter((line) =>
+    /(fail|error|assert|✗|not ok|failing|expected)/iu.test(line),
+  )
+  return (interesting.length === 0 ? lines : interesting).slice(0, 16).join("\n").slice(0, 1400)
+}
+
 const runGate = (input: {
   readonly workstream: Workstream
   readonly gate: { readonly name: string; readonly command: string }
@@ -63,6 +72,7 @@ const runGate = (input: {
     exit: result.status ?? -1,
     durationMs: Date.now() - started,
     output: output.slice(-4000),
+    failure: failureExcerpt(output),
   }
 }
 
@@ -137,7 +147,7 @@ export const runReady = async (input: {
           "): " +
           check.command +
           "\n  " +
-          check.output.slice(0, 1200),
+          check.failure,
       ),
     ].join("\n")
     await appendEvent({
