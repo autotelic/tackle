@@ -95,7 +95,7 @@ const runCapture = (
 const measureQuality = async (input: { readonly path: string }): Promise<Quality> => {
   const local = join(input.path, "node_modules", ".bin", "jig")
   const command = existsSync(local) ? local : "jig"
-  const result = await runCapture(command, ["check", "--format", "json"], {
+  const result = await runCapture(command, ["check", "--format", "json", "--cwd", input.path], {
     cwd: input.path,
     timeout: 120_000,
   })
