@@ -108,7 +108,11 @@ export const telemetryOfSession = (input: {
       if (code.includes("pi.edit") || code.includes("pi.write")) editCalls += 1
       if (code.includes("git commit")) commits += 1
       if (code.includes("git push")) pushes += 1
-      if (code.includes("mcp__browse") && code.includes("linear.app")) linearBrowserCalls += 1
+      if (
+        (code.includes("mcp.browse") || code.includes("mcp__browse")) &&
+        code.includes("linear.app")
+      )
+        linearBrowserCalls += 1
     }
   }
 
