@@ -429,6 +429,7 @@ const promptOf = (input: {
     "Do not run the full jig/joggle gate after every edit. Make the coherent change, commit and push it, then measure once. If a gate fails, fix it and rerun only the touched scope.",
     "Before pushing, stage every new and modified file and run the formatter on the staged set. `git diff --name-only origin/<base>...HEAD` omits uncommitted and untracked files; use `git status --porcelain` as well.",
     "Touched-file scope is a fast gate, not the merge gate. Before calling a pass ready, run the same unscoped `jig check` CI runs and leave it green. If the repo-wide gate is red, fix it or report it; do not call the pass ready.",
+    "A green count is not a boot. Run the root integration suite that would catch import-time and app-boot failures before calling ready; a pass can compile, count clean, and still fail every test shard at its root hook."
     "If a commit is already pushed and a mechanical gate failed afterward, do not redo the work. Report the gate with the commit, and resolve the stale event explicitly instead of replaying the committed change.",
     "Handle only these events, then stop. The kernel writes the pass receipt; do not write one yourself.",
     ...input.events.map(
