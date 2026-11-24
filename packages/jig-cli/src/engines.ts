@@ -49,20 +49,28 @@ const DEFAULT_ARGS: Readonly<Record<string, ReadonlyArray<string>>> = {
 }
 
 /** The engine's default args, then whatever the project configured on top. */
-export const argsFor = (engine: EngineRef): ReadonlyArray<string> => [
-  ...(engine.id === "cutlist"
-    ? ["build", "--check"]
-    : engine.kind === "oxlint-plugin"
-      ? ["--format", "json"]
-      : (DEFAULT_ARGS[engine.id] ?? [])),
-  // `config` names the engine's own config file, relative to the root. Only the oxlint kind
-  // has a flag `jig` can write for it; cutlist and joggle discover theirs by convention, so
-  // for them the field is a pointer for a reader and never an argument.
-  ...(engine.kind === "oxlint-plugin" && engine.config !== undefined
-    ? ["--config", engine.config]
-    : []),
-  ...(engine.args ?? []),
-]
+export const argsFor = (engine: EngineRef): ReadonlyArray<string> => {
+  const configured = engine.args ?? []
+  // A joggle config may spell the subcommand itself. Pairing it with the default would
+  // produce `check ... check ...`, which joggle rejects as a usage error; keep the format
+  // flag and append only the config's remaining arguments.
+  const extra =
+    engine.id === "joggle" && configured[0] === "check" ? configured.slice(1) : configured
+  return [
+    ...(engine.id === "cutlist"
+      ? ["build", "--check"]
+      : engine.kind === "oxlint-plugin"
+        ? ["--format", "json"]
+        : (DEFAULT_ARGS[engine.id] ?? [])),
+    // `config` names the engine's own config file, relative to the root. Only the oxlint kind
+    // has a flag `jig` can write for it; cutlist and joggle discover theirs by convention, so
+    // for them the field is a pointer for a reader and never an argument.
+    ...(engine.kind === "oxlint-plugin" && engine.config !== undefined
+      ? ["--config", engine.config]
+      : []),
+    ...extra,
+  ]
+}
 
 /**
  * The command `jig` spawns for an engine.

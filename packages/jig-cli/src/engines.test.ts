@@ -222,6 +222,24 @@ describe("argsFor", () => {
     ])
   })
 
+  it("does not duplicate the joggle subcommand when the config spells it", () => {
+    expect(
+      argsFor({
+        id: "joggle",
+        kind: "process",
+        args: ["check", "--types", "--no-replay", "--baseline", ".joggle-baseline.json"],
+      }),
+    ).toEqual([
+      "check",
+      "--format",
+      "json",
+      "--types",
+      "--no-replay",
+      "--baseline",
+      ".joggle-baseline.json",
+    ])
+  })
+
   it("leaves the base args alone when the engine declares none", () => {
     expect(argsFor({ id: "joggle", kind: "process" })).toEqual(["check", "--format", "json"])
   })
