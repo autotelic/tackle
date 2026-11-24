@@ -26,8 +26,9 @@ export interface SessionTelemetry {
 const sessionsDir = (home: string = join(homedir(), ".factory")): string => join(home, "sessions")
 
 const workstreamOf = (session: string): string => {
-  const match = session.match(/^(.+?)-\d{8}T\d{6}Z$/u)
-  return match?.[1] ?? "unknown"
+  const name = session.replace(/^factory-/u, "")
+  const match = name.match(/^(.+?)-\d{8}T\d{6}Z$/u)
+  return match?.[1] ?? name
 }
 
 const number = (value: unknown): number => (typeof value === "number" ? value : 0)
