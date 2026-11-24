@@ -56,3 +56,21 @@ CompressRequired: set phase compress and run the compression pass before ready
 
 That makes the sequence structural rather than a habit. A red landing gate queues a scoped fix task
 and stays in `compress`; it does not bounce to per-commit verification.
+
+## Rule feedback from the first compression passes
+
+The phase is also an audit of the engines:
+
+- **jig rung / `joggle/unparsed-output`** — the joggle engine exits 3 with “unparsed output”
+  through jig while the same command exits 0 in a shell. The branch gate therefore counts zero
+  joggle findings. Fix: a JSON or structured invocation in the jig engine config, or a parser that
+  understands joggle’s native report; do not let “engine could not run” become “no findings”.
+- **cutlist primitive adoption** — a route hand-rolled two `<button>` elements while
+  `components/ui/button.tsx` existed, and cutlist reported zero. Add a primitive-adoption finding
+  for hand-rolled button/link where a tier-“primitive” component matches.
+- **joggle duplicate implementation** — the rule saw four copies of the folder column list and a
+  duplicate `VIEWERS` constant, then declined. They were consolidated by hand. The rule needs a
+  “duplicate structure, not just duplicate name” path.
+
+These belong in the rule backlog with file and rule id attached; they are not reasons to weaken
+compression.
