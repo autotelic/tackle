@@ -182,6 +182,37 @@ test("a merged PR becomes a retirement event and nothing else", () => {
   expect(events[0]?.id).toBe("github:merged:1862:abc123")
 })
 
+test("an exhausted pass budget raises one desk item instead of going silent", async () => {
+  const root = mkdtempSync(join(tmpdir(), "factory-cap-"))
+  try {
+    const record = {
+      ...base(),
+      phase: "build" as const,
+      budgets: { ...base().budgets, passesPerPhase: 0 },
+    }
+    await writeWorkstream({ record, home: root })
+    const outcome = await watchOnce({
+      id: record.id,
+      home: root,
+      at: "2026-11-24T00:00:00.000Z",
+      events: [
+        {
+          id: "task-1",
+          kind: "task",
+          at: "2026-11-24T00:00:00.000Z",
+          payload: {},
+        },
+      ],
+      runGh: githubChecks([]),
+    })
+    expect(outcome.passes).toEqual([])
+    const desks = await listDesk({ home: root })
+    expect(desks.some((item) => item.title === "Pass budget reached: 0")).toBe(true)
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
 test("a merged PR closes the pending ready desk", async () => {
   const root = mkdtempSync(join(tmpdir(), "factory-merged-desk-"))
   try {

@@ -8,7 +8,7 @@ import * as Schema from "effect/Schema"
 import { appendEvent, consumeEvents, readEvents } from "./events.ts"
 import { isProtectedPath, passesUsed, runPass, type PassOutcome } from "./kernel.ts"
 import { readWorkstream, writeWorkstream, type Workstream } from "./store.ts"
-import { answerDesk, listAnswers, listDesk, readDesk } from "./desk.ts"
+import { answerDesk, listAnswers, listDesk, raiseDesk, readDesk } from "./desk.ts"
 import { Report } from "./report.ts"
 
 /** A source event already normalized to the shape the kernel consumes. */
@@ -546,12 +546,57 @@ export const watchOnce = async (input: {
       record = { ...record, phase: "build", updatedAt: event.at }
       await writeWorkstream({ record, home: input.home })
     }
+    const passesSoFar = used + passes.length
+    if (event.kind === "desk" && choice === "increase-budget") {
+      record = {
+        ...record,
+        budgets: {
+          ...record.budgets,
+          passesPerPhase: Math.max(record.budgets.passesPerPhase + 1, passesSoFar + 1),
+        },
+        updatedAt: event.at,
+      }
+      await writeWorkstream({ record, home: input.home })
+      // The budget answer is administrative: consume it, then let the pending work event
+      // run on the next poll. It must not spend the new pass on the desk answer itself.
+      if (previous === undefined)
+        await appendEvent({
+          id: input.id,
+          home: input.home,
+          event: { ...event, status: "consumed" },
+        })
+      else await consumeEvents({ id: input.id, ids: [event.id], home: input.home })
+      appended.push(event.id)
+      continue
+    }
     const decision = shouldWake({
       record,
       event,
       consumed,
-      passesUsed: used + passes.length,
+      passesUsed: passesSoFar,
     })
+    if (decision.reason.startsWith("cap-stopped")) {
+      const capId = "desk-" + input.id + "-cap-" + record.budgets.passesPerPhase
+      if ((await readDesk({ id: capId, home: input.home })) === undefined) {
+        await raiseDesk({
+          home: input.home,
+          item: {
+            id: capId,
+            workstream: input.id,
+            kind: "decision",
+            title: "Pass budget reached: " + record.budgets.passesPerPhase,
+            body:
+              "The workstream stopped because it used all " +
+              record.budgets.passesPerPhase +
+              " passes. Answer increase-budget to allow one more pass, or done to retire.",
+            choices: ["increase-budget", "done"],
+            route: "live",
+            at: event.at,
+          },
+        })
+        console.log("factory: " + input.id + " " + decision.reason + "; desk " + capId + " raised")
+      }
+    }
     if (previous === undefined) {
       await appendEvent({
         id: input.id,
