@@ -78,7 +78,7 @@ export interface LexiconRef {
 const lexicons: Readonly<Record<LexiconName, Lexicon>> = {
   report: {
     name: "report",
-    version: 1,
+    version: 2,
     kind: "derived",
     owner: "@autotelic/jig-cli",
     schema: "schema/report.json",
@@ -225,4 +225,10 @@ export const isReadable = ({
 }: {
   readonly seen: LexiconRef
   readonly known: LexiconRef
-}): boolean => seen.name === known.name && seen.version >= known.version
+}): boolean =>
+  // Same lexicon, either direction. An OLDER record is readable because the reader's schema is a
+  // superset of the one that wrote it; a NEWER record is readable because the evolution rule only
+  // ever adds optional fields, so the fields this reader knows are all still there. Requiring
+  // `>=` here was a latent bug that nothing caught while every lexicon sat at version 1 — bumping
+  // `report` to 2 exposed it: it rejected the records the rule exists to keep readable.
+  seen.name === known.name

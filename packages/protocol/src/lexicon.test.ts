@@ -16,7 +16,7 @@ describe("the lexicon registry", () => {
   })
 
   it("versions each lexicon on its own line", () => {
-    expect(lexiconRef("report")).toEqual({ name: "report", version: 1 })
+    expect(lexiconRef("report")).toEqual({ name: "report", version: 2 })
     expect(lexiconRef("catalog")).toEqual({ name: "catalog", version: 1 })
     // The independence that matters: they are separate references, not one constant.
     expect(lexiconRef("report")).not.toEqual(lexiconRef("catalog"))
@@ -41,16 +41,36 @@ describe("the lexicon registry", () => {
 })
 
 describe("isReadable (property)", () => {
-  it("reads a ref exactly when it names the lexicon at a not-older version", () => {
+  it("reads any version of the same lexicon, and nothing else", () => {
     fc.assert(
       fc.property(
         fc.constantFrom(...LEXICON_NAMES),
         fc.integer({ min: 1, max: 5 }),
         fc.integer({ min: 1, max: 5 }),
         (name, version, known) => {
-          expect(isReadable({ seen: { name, version }, known: { name, version: known } })).toBe(
-            version >= known,
-          )
+          // Version is not the question: an older record was written to a schema the reader's is a
+          // superset of, and a newer one only ever added optional fields. The name is the question.
+          expect(isReadable({ seen: { name, version }, known: { name, version: known } })).toBe(true)
+        },
+      ),
+    )
+  })
+
+  it("never reads a different lexicon, at any version", () => {
+    fc.assert(
+      fc.property(
+        fc.constantFrom(...LEXICON_NAMES),
+        fc.constantFrom(...LEXICON_NAMES),
+        fc.integer({ min: 1, max: 5 }),
+        fc.integer({ min: 1, max: 5 }),
+        (seen, known, seenVersion, knownVersion) => {
+          fc.pre(seen !== known)
+          expect(
+            isReadable({
+              seen: { name: seen, version: seenVersion },
+              known: { name: known, version: knownVersion },
+            }),
+          ).toBe(false)
         },
       ),
     )

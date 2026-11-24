@@ -167,6 +167,9 @@ export interface EngineSummary {
   readonly drops?: ReadonlyArray<DropCount>
 }
 
+/** The scope a report actually read. */
+export type ReportScope = "all" | "touched-files"
+
 /** One run, across every engine, in one shape. */
 export interface Report {
   readonly lexicon: LexiconRef
@@ -175,6 +178,13 @@ export interface Report {
   readonly diagnostics: ReadonlyArray<Diagnostic>
   readonly generators: ReadonlyArray<EngineSummary>
   readonly elapsedMs?: number
+  /**
+   * What the run actually looked at: `all` for a whole-tree pass, `touched-files` for a change
+   * set. Absent means the record predates the field, so a consumer must treat the scope as
+   * unknown rather than assuming one — a repo-wide count presented as a PR's count is the defect
+   * this field exists to make impossible.
+   */
+  readonly scope?: ReportScope
 }
 
 /** Tally a set of findings by severity. */
@@ -221,6 +231,7 @@ export const makeReport = (input: {
   readonly files: number
   readonly generators: ReadonlyArray<EngineSummary>
   readonly elapsedMs?: number
+  readonly scope?: ReportScope
 }): Report => ({
   lexicon: lexiconRef("report"),
   counts: countsOf(input.diagnostics),
@@ -228,6 +239,7 @@ export const makeReport = (input: {
   diagnostics: sortDiagnostics(input.diagnostics),
   generators: input.generators,
   ...(input.elapsedMs === undefined ? {} : { elapsedMs: input.elapsedMs }),
+  ...(input.scope === undefined ? {} : { scope: input.scope }),
 })
 
 /**

@@ -55,9 +55,12 @@ export const scopeReport = (report: Report, touched: ReadonlySet<string>): Repor
       }
     }),
   }
-  return makeReport(
-    report.elapsedMs === undefined ? scopedInput : { ...scopedInput, elapsedMs: report.elapsedMs },
-  )
+  return makeReport({
+    ...scopedInput,
+    ...(report.elapsedMs === undefined ? {} : { elapsedMs: report.elapsedMs }),
+    // The fact the consumer needs: this report looked at a change set, not the whole tree.
+    scope: "touched-files",
+  })
 }
 
 /**
@@ -84,6 +87,7 @@ export const harnessRun = (
       files: new Set(diagnostics.map((diagnostic) => diagnostic.location.file)).size,
       generators: outcomes.map((outcome) => outcome.summary),
       elapsedMs: Date.now() - started,
+      scope: "all",
     })
     const report = touched === undefined ? whole : scopeReport(whole, touched)
     const diff = diffBaseline(baseline, report.diagnostics)

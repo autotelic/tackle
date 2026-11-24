@@ -4,137 +4,360 @@
   "title": "Report",
   "description": "One run, across every engine, in one oxlint-shaped stream. A derived snapshot: its counts are a rendering, not the state. A record carries either its `lexicon` reference or, from before per-lexicon versioning, the legacy `protocolVersion`.",
   "type": "object",
-  "required": ["counts", "files", "diagnostics", "generators"],
-  "anyOf": [{ "required": ["lexicon"] }, { "required": ["protocolVersion"] }],
+  "required": [
+    "counts",
+    "files",
+    "diagnostics",
+    "generators"
+  ],
+  "anyOf": [
+    {
+      "required": [
+        "lexicon"
+      ]
+    },
+    {
+      "required": [
+        "protocolVersion"
+      ]
+    }
+  ],
   "additionalProperties": false,
   "properties": {
-    "lexicon": { "$ref": "#/$defs/lexicon" },
+    "lexicon": {
+      "$ref": "#/$defs/lexicon"
+    },
     "protocolVersion": {
       "type": "string",
       "description": "Legacy: the single version the format carried before per-lexicon versioning. Accepted forever; superseded by `lexicon`."
     },
-    "counts": { "$ref": "#/$defs/counts" },
-    "files": { "type": "integer", "minimum": 0 },
-    "diagnostics": { "type": "array", "items": { "$ref": "#/$defs/diagnostic" } },
-    "generators": { "type": "array", "items": { "$ref": "#/$defs/generator" } },
-    "elapsedMs": { "type": "number" }
+    "counts": {
+      "$ref": "#/$defs/counts"
+    },
+    "files": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/diagnostic"
+      }
+    },
+    "generators": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/generator"
+      }
+    },
+    "elapsedMs": {
+      "type": "number"
+    },
+    "scope": {
+      "enum": [
+        "all",
+        "touched-files"
+      ],
+      "description": "The scope the run actually read: `all` for a whole-tree pass, `touched-files` for a change set. Absent means the record predates the field; a consumer must treat the scope as unknown, never assume one."
+    }
   },
   "$defs": {
     "lexicon": {
       "type": "object",
-      "required": ["name", "version"],
+      "required": [
+        "name",
+        "version"
+      ],
       "additionalProperties": false,
       "properties": {
-        "name": { "enum": ["report"] },
-        "version": { "type": "integer", "minimum": 1 }
+        "name": {
+          "enum": [
+            "report"
+          ]
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        }
       }
     },
-    "severity": { "enum": ["error", "warn", "info"] },
+    "severity": {
+      "enum": [
+        "error",
+        "warn",
+        "info"
+      ]
+    },
     "counts": {
       "type": "object",
-      "required": ["error", "warn", "info"],
+      "required": [
+        "error",
+        "warn",
+        "info"
+      ],
       "additionalProperties": false,
       "properties": {
-        "error": { "type": "integer", "minimum": 0 },
-        "warn": { "type": "integer", "minimum": 0 },
-        "info": { "type": "integer", "minimum": 0 }
+        "error": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "warn": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "info": {
+          "type": "integer",
+          "minimum": 0
+        }
       }
     },
     "location": {
       "type": "object",
-      "required": ["file", "line", "column"],
+      "required": [
+        "file",
+        "line",
+        "column"
+      ],
       "additionalProperties": false,
       "properties": {
-        "file": { "type": "string" },
-        "line": { "type": "integer", "minimum": 1 },
-        "column": { "type": "integer", "minimum": 1 },
-        "endLine": { "type": "integer", "minimum": 1 },
-        "endColumn": { "type": "integer", "minimum": 1 }
+        "file": {
+          "type": "string"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "column": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "endLine": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "endColumn": {
+          "type": "integer",
+          "minimum": 1
+        }
       }
     },
     "diagnostic": {
       "type": "object",
-      "required": ["engine", "ruleId", "severity", "message", "location"],
+      "required": [
+        "engine",
+        "ruleId",
+        "severity",
+        "message",
+        "location"
+      ],
       "additionalProperties": false,
       "properties": {
-        "engine": { "type": "string" },
-        "ruleId": { "type": "string" },
-        "severity": { "$ref": "#/$defs/severity" },
-        "message": { "type": "string" },
-        "help": { "type": "string" },
-        "location": { "$ref": "#/$defs/location" },
-        "identity": { "type": "string" },
-        "judged": { "type": "boolean" },
-        "fixable": { "type": "boolean" },
-        "docsUrl": { "type": "string" },
-        "engineVersion": { "type": "string" },
-        "move": { "$ref": "#/$defs/move" },
-        "score": { "type": "number" },
-        "confidence": { "type": "number" },
-        "repair": { "$ref": "#/$defs/repair" }
+        "engine": {
+          "type": "string"
+        },
+        "ruleId": {
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/$defs/severity"
+        },
+        "message": {
+          "type": "string"
+        },
+        "help": {
+          "type": "string"
+        },
+        "location": {
+          "$ref": "#/$defs/location"
+        },
+        "identity": {
+          "type": "string"
+        },
+        "judged": {
+          "type": "boolean"
+        },
+        "fixable": {
+          "type": "boolean"
+        },
+        "docsUrl": {
+          "type": "string"
+        },
+        "engineVersion": {
+          "type": "string"
+        },
+        "move": {
+          "$ref": "#/$defs/move"
+        },
+        "score": {
+          "type": "number"
+        },
+        "confidence": {
+          "type": "number"
+        },
+        "repair": {
+          "$ref": "#/$defs/repair"
+        }
       }
     },
     "move": {
-      "enum": ["contract", "combine", "expand"],
+      "enum": [
+        "contract",
+        "combine",
+        "expand"
+      ],
       "description": "The entropy reversal a judged finding proposes; absent when the finding is not about entropy."
     },
-    "repairOperation": { "enum": ["merge", "split", "move", "replace", "migrate"] },
+    "repairOperation": {
+      "enum": [
+        "merge",
+        "split",
+        "move",
+        "replace",
+        "migrate"
+      ]
+    },
     "repairEdit": {
       "type": "object",
-      "required": ["file", "line", "column", "instruction"],
+      "required": [
+        "file",
+        "line",
+        "column",
+        "instruction"
+      ],
       "additionalProperties": false,
       "properties": {
-        "file": { "type": "string" },
-        "line": { "type": "integer", "minimum": 1 },
-        "column": { "type": "integer", "minimum": 1 },
-        "instruction": { "type": "string" }
+        "file": {
+          "type": "string"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "column": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "instruction": {
+          "type": "string"
+        }
       }
     },
     "repair": {
       "type": "object",
-      "required": ["operation", "remove", "cascade", "complete", "settled"],
+      "required": [
+        "operation",
+        "remove",
+        "cascade",
+        "complete",
+        "settled"
+      ],
       "additionalProperties": false,
       "properties": {
-        "operation": { "$ref": "#/$defs/repairOperation" },
-        "keep": { "$ref": "#/$defs/location" },
-        "remove": { "type": "array", "items": { "$ref": "#/$defs/location" } },
-        "cascade": { "type": "array", "items": { "$ref": "#/$defs/repairEdit" } },
+        "operation": {
+          "$ref": "#/$defs/repairOperation"
+        },
+        "keep": {
+          "$ref": "#/$defs/location"
+        },
+        "remove": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/location"
+          }
+        },
+        "cascade": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/repairEdit"
+          }
+        },
         "complete": {
           "type": "boolean",
           "description": "True when every affected site is listed, so the repair is a work order an agent can execute without a search of its own."
         },
-        "settled": { "type": "string" }
+        "settled": {
+          "type": "string"
+        }
       }
     },
     "dropCount": {
       "type": "object",
-      "required": ["stage", "count"],
+      "required": [
+        "stage",
+        "count"
+      ],
       "additionalProperties": false,
       "properties": {
-        "stage": { "type": "string" },
-        "count": { "type": "integer", "minimum": 0 }
+        "stage": {
+          "type": "string"
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 0
+        }
       }
     },
     "engineStatus": {
-      "enum": ["ran", "replayed", "skipped", "errored"],
+      "enum": [
+        "ran",
+        "replayed",
+        "skipped",
+        "errored"
+      ],
       "description": "What an engine did, which is not the same as what it found. `replayed` means it served a cache and did not look."
     },
     "generator": {
       "type": "object",
-      "required": ["id", "diagnostics", "error", "warn", "info"],
+      "required": [
+        "id",
+        "diagnostics",
+        "error",
+        "warn",
+        "info"
+      ],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string" },
-        "version": { "type": "string" },
-        "diagnostics": { "type": "integer", "minimum": 0 },
-        "error": { "type": "integer", "minimum": 0 },
-        "warn": { "type": "integer", "minimum": 0 },
-        "info": { "type": "integer", "minimum": 0 },
-        "durationMs": { "type": "number" },
-        "note": { "type": "string" },
-        "status": { "$ref": "#/$defs/engineStatus" },
-        "unjudged": { "type": "integer", "minimum": 0 },
-        "drops": { "type": "array", "items": { "$ref": "#/$defs/dropCount" } }
+        "id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "diagnostics": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "error": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "warn": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "info": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "durationMs": {
+          "type": "number"
+        },
+        "note": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/engineStatus"
+        },
+        "unjudged": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "drops": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/dropCount"
+          }
+        }
       }
     }
   }
