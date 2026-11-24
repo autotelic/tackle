@@ -31,7 +31,7 @@ const usage = [
   "  factory watch --id <id> --worker <command> [--once] [--interval <ms>]",
   "  factory report --workstream <id> --kind <kind> --command <cmd> --expected <text> --actual <text> [--output <text>] [--blocked] [--deliver <session>]",
   "  factory phase --id <id> --set reconcile|build|compress|land|blocked|done [--answer <desk-answer.json>]",
-  "  factory ready --id <id> [--at <iso>]",
+  "  factory ready --id <id> [--at <iso>] [--timeout <ms>]",
   "  factory compress --id <id> [--task <text>] [--answer <desk-answer.json>]",
   "  factory gates --id <id> --file <gates.json>",
   "  factory retire --id <id> [--close-pr]",
@@ -594,13 +594,21 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
   if (command === "ready") {
     const parsed = parseArgs({
       args: argv.slice(1),
-      options: { id: { type: "string" }, at: { type: "string" } },
+      options: {
+        id: { type: "string" },
+        at: { type: "string" },
+        timeout: { type: "string" },
+      },
       allowPositionals: false,
     })
     if (parsed.values.id === undefined) return fail("ready needs --id")
     const at = parsed.values.at ?? new Date().toISOString()
     if (Number.isNaN(Date.parse(at))) return fail("--at must be an ISO instant")
-    const result = await runReady({ id: parsed.values.id, at })
+    const timeoutMs =
+      parsed.values.timeout === undefined ? undefined : Number(parsed.values.timeout)
+    if (timeoutMs !== undefined && (!Number.isInteger(timeoutMs) || timeoutMs < 1))
+      return fail("--timeout must be a positive integer of milliseconds")
+    const result = await runReady({ id: parsed.values.id, at, timeoutMs })
     for (const check of result.checks)
       console.log(
         check.name + "  exit " + check.exit + "  " + Math.round(check.durationMs / 1000) + "s",

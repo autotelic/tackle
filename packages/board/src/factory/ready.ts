@@ -17,7 +17,7 @@ import {
 import { alive } from "@autotelic/room/run"
 
 /** One declared gate's exact outcome, kept with the workstream that earned it. */
-export type GateFailureKind = "ok" | "load-error" | "failed"
+export type GateFailureKind = "ok" | "load-error" | "timeout" | "failed"
 
 export interface GateResult {
   readonly name: string
@@ -28,6 +28,7 @@ export interface GateResult {
   readonly failure: string
   readonly failureKind: GateFailureKind
   readonly failures: ReadonlyArray<string>
+  readonly timeoutMs: number
 }
 
 export interface ReadyResult {
@@ -127,8 +128,12 @@ const runGate = (input: {
     durationMs: Date.now() - started,
     output: output.slice(-4000),
     failure: failureExcerpt(output),
-    failureKind: failureKind(result.status ?? -1, output),
+    failureKind:
+      (result.error as NodeJS.ErrnoException | undefined)?.code === "ETIMEDOUT"
+        ? "timeout"
+        : failureKind(result.status ?? -1, output),
     failures: failureTitles(output),
+    timeoutMs: input.timeoutMs,
   }
 }
 
@@ -235,6 +240,13 @@ const runReadyInner = async (input: {
           check.failureKind +
           "): " +
           check.command +
+          (check.failureKind === "timeout"
+            ? "\n  timed out after " +
+              Math.round(check.durationMs / 1000) +
+              "s (cap " +
+              Math.round(check.timeoutMs / 1000) +
+              "s)"
+            : "") +
           "\n  " +
           (check.failures.length === 0
             ? check.failure
