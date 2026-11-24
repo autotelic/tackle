@@ -21,7 +21,7 @@ const usage = [
   "Usage:",
   "  factory adopt --path <worktree> --project <linear> --label <label> [--pr <n> | --delivery trunk] [--reports <dir>] [--repo <owner/name>] [--phase reconcile|build|land] [--id <id>]",
   "  factory status [--json]",
-  "  factory telemetry [--since <iso>] [--json]",
+  "  factory telemetry [--since <iso>] [--json] [--check]",
   "  factory event --id <id> --kind <kind> [--payload <json>] [--at <iso>]",
   "  factory event retire --id <id> --event <event-id>",
   "  factory adopt-commits --id <id> --from <ref> --commits <sha,sha> [--policy keep-parent|prefer-source] --expected-head <sha>",
@@ -67,12 +67,29 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
   if (command === "telemetry") {
     const parsed = parseArgs({
       args: argv.slice(1),
-      options: { since: { type: "string" }, json: { type: "boolean", default: false } },
+      options: {
+        since: { type: "string" },
+        json: { type: "boolean", default: false },
+        check: { type: "boolean", default: false },
+      },
       allowPositionals: false,
     })
     const since = parsed.values.since ?? new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
     if (Number.isNaN(Date.parse(since))) return fail("--since must be an ISO instant")
     const sessions = await readTelemetry({ since })
+    const browserCalls = sessions.filter((session) => session.linearBrowserCalls > 0)
+    if (parsed.values.check && browserCalls.length > 0) {
+      for (const session of browserCalls)
+        console.error(
+          "factory: " +
+            session.workstream +
+            " opened Linear in browse " +
+            String(session.linearBrowserCalls) +
+            " time(s) at " +
+            session.startedAt,
+        )
+      process.exitCode = 1
+    }
     if (parsed.values.json) {
       console.log(JSON.stringify(sessions, null, 2))
       return
@@ -89,6 +106,7 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
           String(session.measurementCalls).padStart(3) + " measure",
           String(session.editCalls).padStart(3) + " edit",
           String(session.commits).padStart(3) + " commit",
+          String(session.linearBrowserCalls).padStart(3) + " linear-web",
           "$" + session.costUsd.toFixed(3),
         ].join("  "),
       )

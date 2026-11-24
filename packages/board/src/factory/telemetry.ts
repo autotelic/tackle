@@ -17,6 +17,7 @@ export interface SessionTelemetry {
   readonly editCalls: number
   readonly commits: number
   readonly pushes: number
+  readonly linearBrowserCalls: number
   readonly inputTokens: number
   readonly outputTokens: number
   readonly cacheReadTokens: number
@@ -49,6 +50,7 @@ export const telemetryOfSession = (input: {
   let editCalls = 0
   let commits = 0
   let pushes = 0
+  let linearBrowserCalls = 0
   let inputTokens = 0
   let outputTokens = 0
   let cacheReadTokens = 0
@@ -106,6 +108,7 @@ export const telemetryOfSession = (input: {
       if (code.includes("pi.edit") || code.includes("pi.write")) editCalls += 1
       if (code.includes("git commit")) commits += 1
       if (code.includes("git push")) pushes += 1
+      if (code.includes("mcp__browse") && code.includes("linear.app")) linearBrowserCalls += 1
     }
   }
 
@@ -129,6 +132,7 @@ export const telemetryOfSession = (input: {
     editCalls,
     commits,
     pushes,
+    linearBrowserCalls,
     inputTokens,
     outputTokens,
     cacheReadTokens,

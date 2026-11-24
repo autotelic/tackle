@@ -6,7 +6,12 @@ question a status line cannot: **where did the minutes go?**
 ```sh
 factory telemetry --since 2026-11-24T17:30:00Z
 factory telemetry --since 2026-11-24T17:30:00Z --json
+factory telemetry --since 2026-11-24T17:30:00Z --check
 ```
+
+`--check` exits non-zero and names the session when a pass used `mcp__browse` against a
+`linear.app` URL. That is a tool-policy violation: Linear documents are read through the Linear
+MCP, not the browser.
 
 One row is one worker session:
 
