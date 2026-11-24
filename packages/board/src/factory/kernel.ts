@@ -252,6 +252,8 @@ const promptOf = (input: {
     "Before raising a desk item, decide from the written record: the Linear project and issue body/done-when first, then repository convention and existing code. If those resolve it, write a short ADR with the passages and code paths, withdraw any stale desk item with `factory desk withdraw --item <id> --by factory --reason <derivation>`, and continue. Escalate only if both are silent or genuinely contradictory; the card must name what was checked, the options left open, and the missing fact.",
     "Commit and push each coherent change as you make it. Do not hold commits until the pass ends; the PR should show the work while the pass is still running.",
     "Run only the checks the change needs: the touched test, `pnpm lint:errors:changed`, `pnpm check-typescript-errors:changed`, and `node scripts/spec-check.mjs` when the spec changed.",
+    "Run exactly the ticket's own acceptance test. Do not run neighbouring suites for confidence: a cross-cutting check belongs to the landing tier, not this pass.",
+    "Do not wrap tests in a background task and `tasks.wait` on it repeatedly. Run the command in the foreground with one timeout. If it needs a second wait, it is not this ticket's acceptance test.",
     "Never run `gh pr checks`, `gh pr view --json statusCheckRollup`, or any --watch. Do not wait for CI, do not re-request review, do not comment that a check passed. CI is a landing gate.",
     "Do not run jig or joggle. Conformance is a landing gate; the kernel measures at ready.",
     "A pass ends with: one ticket, its acceptance test, one commit, one push, and a receipt. Nothing else.",
