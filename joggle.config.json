@@ -179,6 +179,15 @@
       "rule": "joggle/reversal",
       "path": "packages/board/src/fleet.ts",
       "reason": "RemoteSource is the board's decode of the served presence shape; the view has the same schema because it reads the same bytes in a browser. The duplication is the wire contract."
+    },
+    {
+      "path": ".worktrees/**",
+      "reason": "A nested git worktree is a second checkout of this repository, so judging it reports this tree's own sentences and declarations a second time under another path. The worktrees directory already sits in .git/info/exclude; joggle reads the working directory rather than that file, and the factory view there is disposable."
+    },
+    {
+      "rule": "joggle/duplicate-meaning",
+      "path": "packages/room/src/cli.ts",
+      "reason": "The fail helper is four lines that write the tool's own name and exit with the shared exit-code contract. Board and room are separate command entrypoints, so a shared helper would make one tool's stderr prefix depend on the other's entrypoint. Board already links room as a library; it does not link room's CLI."
     }
   ],
   "architecture": {

@@ -1,4 +1,4 @@
-import { createServer, type IncomingMessage, type ServerResponse } from "node:http"
+import { createServer, type IncomingMessage } from "node:http"
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises"
 import { dirname } from "node:path"
 import {
@@ -18,6 +18,7 @@ import {
 import { Data, Option } from "effect"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
+import { json } from "../http.ts"
 
 /*
  * The mailbox as a process: the Rat King procedures over HTTP, one in-memory log.
@@ -148,24 +149,6 @@ type Reply = { readonly status: number; readonly body: unknown }
 
 const okay = <A>(result: ProcedureResult<A>): Reply =>
   result.ok ? { status: 200, body: result } : { status: failureStatus(result.error), body: result }
-
-const json = ({
-  response,
-  status,
-  body,
-}: {
-  readonly response: ServerResponse
-  readonly status: number
-  readonly body: unknown
-}): void => {
-  const text = JSON.stringify(body) + "\n"
-  response.writeHead(status, {
-    "content-type": "application/json; charset=utf-8",
-    "cache-control": "no-store",
-    "content-length": Buffer.byteLength(text),
-  })
-  response.end(text)
-}
 
 const readBody = (request: IncomingMessage): Promise<string> =>
   new Promise((resolve, reject) => {

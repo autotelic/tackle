@@ -50,7 +50,9 @@ describe("isReadable (property)", () => {
         (name, version, known) => {
           // Version is not the question: an older record was written to a schema the reader's is a
           // superset of, and a newer one only ever added optional fields. The name is the question.
-          expect(isReadable({ seen: { name, version }, known: { name, version: known } })).toBe(true)
+          expect(isReadable({ seen: { name, version }, known: { name, version: known } })).toBe(
+            true,
+          )
         },
       ),
     )

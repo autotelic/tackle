@@ -4,22 +4,13 @@
   "title": "Report",
   "description": "One run, across every engine, in one oxlint-shaped stream. A derived snapshot: its counts are a rendering, not the state. A record carries either its `lexicon` reference or, from before per-lexicon versioning, the legacy `protocolVersion`.",
   "type": "object",
-  "required": [
-    "counts",
-    "files",
-    "diagnostics",
-    "generators"
-  ],
+  "required": ["counts", "files", "diagnostics", "generators"],
   "anyOf": [
     {
-      "required": [
-        "lexicon"
-      ]
+      "required": ["lexicon"]
     },
     {
-      "required": [
-        "protocolVersion"
-      ]
+      "required": ["protocolVersion"]
     }
   ],
   "additionalProperties": false,
@@ -54,26 +45,18 @@
       "type": "number"
     },
     "scope": {
-      "enum": [
-        "all",
-        "touched-files"
-      ],
+      "enum": ["all", "touched-files"],
       "description": "The scope the run actually read: `all` for a whole-tree pass, `touched-files` for a change set. Absent means the record predates the field; a consumer must treat the scope as unknown, never assume one."
     }
   },
   "$defs": {
     "lexicon": {
       "type": "object",
-      "required": [
-        "name",
-        "version"
-      ],
+      "required": ["name", "version"],
       "additionalProperties": false,
       "properties": {
         "name": {
-          "enum": [
-            "report"
-          ]
+          "enum": ["report"]
         },
         "version": {
           "type": "integer",
@@ -82,19 +65,11 @@
       }
     },
     "severity": {
-      "enum": [
-        "error",
-        "warn",
-        "info"
-      ]
+      "enum": ["error", "warn", "info"]
     },
     "counts": {
       "type": "object",
-      "required": [
-        "error",
-        "warn",
-        "info"
-      ],
+      "required": ["error", "warn", "info"],
       "additionalProperties": false,
       "properties": {
         "error": {
@@ -113,11 +88,7 @@
     },
     "location": {
       "type": "object",
-      "required": [
-        "file",
-        "line",
-        "column"
-      ],
+      "required": ["file", "line", "column"],
       "additionalProperties": false,
       "properties": {
         "file": {
@@ -143,13 +114,7 @@
     },
     "diagnostic": {
       "type": "object",
-      "required": [
-        "engine",
-        "ruleId",
-        "severity",
-        "message",
-        "location"
-      ],
+      "required": ["engine", "ruleId", "severity", "message", "location"],
       "additionalProperties": false,
       "properties": {
         "engine": {
@@ -200,30 +165,15 @@
       }
     },
     "move": {
-      "enum": [
-        "contract",
-        "combine",
-        "expand"
-      ],
+      "enum": ["contract", "combine", "expand"],
       "description": "The entropy reversal a judged finding proposes; absent when the finding is not about entropy."
     },
     "repairOperation": {
-      "enum": [
-        "merge",
-        "split",
-        "move",
-        "replace",
-        "migrate"
-      ]
+      "enum": ["merge", "split", "move", "replace", "migrate"]
     },
     "repairEdit": {
       "type": "object",
-      "required": [
-        "file",
-        "line",
-        "column",
-        "instruction"
-      ],
+      "required": ["file", "line", "column", "instruction"],
       "additionalProperties": false,
       "properties": {
         "file": {
@@ -244,13 +194,7 @@
     },
     "repair": {
       "type": "object",
-      "required": [
-        "operation",
-        "remove",
-        "cascade",
-        "complete",
-        "settled"
-      ],
+      "required": ["operation", "remove", "cascade", "complete", "settled"],
       "additionalProperties": false,
       "properties": {
         "operation": {
@@ -282,10 +226,7 @@
     },
     "dropCount": {
       "type": "object",
-      "required": [
-        "stage",
-        "count"
-      ],
+      "required": ["stage", "count"],
       "additionalProperties": false,
       "properties": {
         "stage": {
@@ -298,23 +239,12 @@
       }
     },
     "engineStatus": {
-      "enum": [
-        "ran",
-        "replayed",
-        "skipped",
-        "errored"
-      ],
+      "enum": ["ran", "replayed", "skipped", "errored"],
       "description": "What an engine did, which is not the same as what it found. `replayed` means it served a cache and did not look."
     },
     "generator": {
       "type": "object",
-      "required": [
-        "id",
-        "diagnostics",
-        "error",
-        "warn",
-        "info"
-      ],
+      "required": ["id", "diagnostics", "error", "warn", "info"],
       "additionalProperties": false,
       "properties": {
         "id": {

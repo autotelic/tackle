@@ -95,6 +95,22 @@ export const clusterOf = (
   typed: members.some((member) => member.typed),
 })
 
+/**
+ * A stable name for a finding: the rule and the MEMBERS, never the verdict.
+ *
+ * This used to include the kept symbol, which is the model's answer. So the same cluster had
+ * one name when a judgement reached it and another when it did not, and a ledger written by a
+ * keyed run matched none of the identities a keyless run (and CI) reported. Membership is
+ * decided by the detector, before any question is asked, so it is the same in both modes:
+ * `file:name` per member, sorted, with no line numbers (code moves; a baseline that renames a
+ * finding on every edit is a baseline nobody reads).
+ */
+export const identityOf = (ruleId: string, cluster: Cluster): string =>
+  [
+    ruleId,
+    ...[...new Set(cluster.members.map((member) => `${member.file}:${member.name}`))].sort(Order.String),
+  ].join("\u0000")
+
 /** The distinct declaration names in a cluster, in member order. */
 export const namesOf = (cluster: Cluster): ReadonlyArray<string> => [
   ...new Set(cluster.members.map((member) => member.name)),

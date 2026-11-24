@@ -18,7 +18,7 @@ import { factoryHome } from "./store.ts"
  * fingerprint would split one defect once per reporter and break the count that dedupe relies on.
  */
 
-/** The two faucets: tackle reporting on its own tooling, and a product reporting on itself. */
+/** Two sources produce candidates: this repository's own tooling, and a product observing itself. */
 export const CandidateKind = Schema.Literals(["self-observation", "experience"])
 export type CandidateKind = typeof CandidateKind.Type
 

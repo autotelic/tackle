@@ -1,9 +1,9 @@
 /* oxlint-disable plumb/no-reinterpret-cast -- DecisionAnswers erases each plan's own result type; the read function is where the plan's shape is restored. */
-import { Effect, Order, Schema } from "effect"
+import { Effect, Schema } from "effect"
 import { Decision } from "effect/ai"
 
 import { Atoms } from "../atoms.ts"
-import { clusterOf, type Cluster } from "../cluster.ts"
+import { clusterOf, identityOf, type Cluster } from "../cluster.ts"
 import { policy } from "../policy.ts"
 import { budgetNote, inScope, outcome, qualityOf, type DecisionAnswers, type PlannedRule, type Scope } from "../rule.ts"
 import { locator, messages, reporter, type Reporter } from "../reporting.ts"
@@ -107,13 +107,6 @@ const sampleOf = (clusters: ReadonlyArray<{ readonly table: string; readonly clu
     .slice(0, 3)
     .map((entry) => `${entry.cluster.members.length}× \`${entry.table}\``)
 
-const identityOf = (ruleId: string, cluster: Cluster): string =>
-  [
-    ruleId,
-    ...[...new Set(cluster.members.map((member) => `${member.file}:${member.name}`))].sort(
-      Order.String,
-    ),
-  ].join("\u0000")
 
 const writerList = (cluster: Cluster): string =>
   cluster.members

@@ -1,5 +1,6 @@
 import { Effect, FileSystem, Path, Result, Schema, SchemaParser } from "effect"
 import type { ChildProcessSpawner } from "effect/process/ChildProcessSpawner"
+import { isRecord } from "@autotelic/protocol"
 import { Service as Tsgo } from "./tsgo.ts"
 
 /* -------------------------------------------------------------------------- */
@@ -101,9 +102,6 @@ interface RawType {
   readonly unionTypes: ReadonlyArray<number>
   readonly declaration: { readonly file: string; readonly line: number } | undefined
 }
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value)
 
 const stringsOf = (value: unknown): ReadonlyArray<string> =>
   Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : []

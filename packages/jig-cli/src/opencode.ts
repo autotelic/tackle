@@ -533,7 +533,7 @@ const server = async () => {
         execute: tool(["init", "--cwd", root]),
       },
       jig_menu: {
-        description: "Read the cutlist artifact's stable shape.",
+        description: "Return the cutlist artifact as JSON: parts, recipes, and where each is used.",
         args: {},
         execute: tool(["menu", "--cwd", root, "--format", "json"]),
       },

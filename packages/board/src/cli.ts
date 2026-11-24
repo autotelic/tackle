@@ -7,6 +7,7 @@ import {
   type ServerResponse,
 } from "node:http"
 import { existsSync } from "node:fs"
+import { json } from "./http.ts"
 import { chmod, mkdir, readFile, realpath, rm, writeFile } from "node:fs/promises"
 import { homedir } from "node:os"
 import { dirname, join, resolve } from "node:path"
@@ -160,24 +161,6 @@ const claim = async ({
     () => false,
   )
   return second ? { ok: true } : { ok: false, message: "ShopBusy: another board claimed " + root }
-}
-
-const json = ({
-  response,
-  status,
-  body,
-}: {
-  readonly response: import("node:http").ServerResponse
-  readonly status: number
-  readonly body: object
-}): void => {
-  const text = JSON.stringify(body) + "\n"
-  response.writeHead(status, {
-    "content-type": "application/json; charset=utf-8",
-    "cache-control": "no-store",
-    "content-length": Buffer.byteLength(text),
-  })
-  response.end(text)
 }
 
 const observe = async (root: string) => {

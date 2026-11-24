@@ -1,5 +1,6 @@
 import { Effect } from "effect"
 import { parseSync } from "oxc-parser"
+import { isRecord } from "@autotelic/protocol"
 import { blockingErrors, isAstro, parseInputOf } from "../astro.ts"
 import { Decision } from "effect/ai"
 import { Atoms } from "../atoms.ts"
@@ -52,8 +53,6 @@ const STATUS_METHODS = new Set(["code", "status", "statusCode"])
 /** The node kinds that make a scope for the status walk. */
 const FUNCTION_KINDS = new Set(["FunctionDeclaration", "FunctionExpression", "ArrowFunctionExpression"])
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value)
 
 /**
  * The name a call names, bare or dotted: `getComments` -> `getComments`,

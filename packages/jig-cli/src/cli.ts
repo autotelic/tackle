@@ -305,7 +305,7 @@ const checkCommand = Command.make(
     }),
 ).pipe(
   Command.withDescription("Run every engine and fail on errors and new findings."),
-  Command.withShortDescription("Run every engine; hold the ratchet."),
+  Command.withShortDescription("Run every engine and enforce the baseline."),
   Command.withExamples([
     { command: "jig check", description: "Run everything and print the census." },
     { command: "jig check --format github", description: "Emit GitHub Actions annotations." },
@@ -609,7 +609,7 @@ const explainCommand = Command.make(
       yield* write(explainRule(run.report, options.rule, configured))
     }),
 ).pipe(
-  Command.withDescription("Everything jig knows about one rule in this repo, right now."),
+  Command.withDescription("Show one rule's findings and configuration in this repository."),
   Command.withShortDescription("Explain one rule."),
   Command.withExamples([
     {
@@ -771,7 +771,7 @@ const menuCommand = Command.make(
     }),
 ).pipe(
   Command.withDescription(
-    "Read the cutlist artifact: the stable shape, the parts and recipes that answer a query, or the graph questions — what a page renders, where a part appears, what a name resembles. This is the agent door to the menu; it does not re-analyse the tree.",
+    "Show the cutlist artifact: its stable shape, the parts and recipes that match a query, or graph answers about what a page renders, where a part appears, and which names resemble each other. This is the agent door to the menu; it does not re-analyse the tree.",
   ),
   Command.withShortDescription("Find a part in the cutlist menu."),
   Command.withExamples([
@@ -786,9 +786,12 @@ const menuCommand = Command.make(
     },
     {
       command: "jig menu --similar TablePanel",
-      description: "What already exists before a new part is invented.",
+      description: "Find existing parts with a similar name before inventing one.",
     },
-    { command: "jig menu wizard --format json", description: "Return the same view for a tool." },
+    {
+      command: "jig menu wizard --format json",
+      description: "Emit the same view as JSON for a tool.",
+    },
   ]),
 )
 

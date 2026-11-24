@@ -1,4 +1,4 @@
-import { Effect, Order, Schema } from "effect"
+import { Effect, Schema } from "effect"
 import * as AiError from "effect/ai/AiError"
 import { Decision, DecisionModel } from "effect/ai"
 import { Atoms } from "../atoms.ts"
@@ -28,7 +28,7 @@ import {
 } from "../rule.ts"
 import { duplicateVocabulary } from "../vocabulary.ts"
 import type { Diagnostic, Drop, DropStage, JudgementPanel, Operation, Severity } from "../schema.ts"
-import { namesOf, type Cluster } from "../cluster.ts"
+import { identityOf, namesOf, type Cluster } from "../cluster.ts"
 import type { ImportGraph } from "../imports.ts"
 import type { Unit, Workspace } from "../workspace.ts"
 
@@ -560,21 +560,6 @@ const memberList = (units: ReadonlyArray<Unit>): string => {
   return rest > 0 ? `${listed} and ${rest} more` : listed
 }
 
-/**
- * A stable name for a finding: the rule and the MEMBERS, never the verdict.
- *
- * This used to include the kept symbol, which is the model's answer. So the same cluster had
- * one name when a judgement reached it and another when it did not, and a ledger written by a
- * keyed run matched none of the identities a keyless run (and CI) reported. Membership is
- * decided by the detector, before any question is asked, so it is the same in both modes:
- * `file:name` per member, sorted, with no line numbers (code moves; a baseline that renames a
- * finding on every edit is a baseline nobody reads).
- */
-const identityOf = (ruleId: string, cluster: Cluster): string =>
-  [
-    ruleId,
-    ...[...new Set(cluster.members.map((member) => `${member.file}:${member.name}`))].sort(Order.String),
-  ].join("\u0000")
 
 /** Prescriptions that mean expected duplication: reported, but as a notice. */
 const EXPECTED_DUPLICATION: ReadonlySet<string> = new Set(["leave_it", "share_a_contract"])
