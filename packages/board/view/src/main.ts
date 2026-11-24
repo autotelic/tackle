@@ -502,7 +502,7 @@ const workstreamBrands = (h: HtmlBuilder<Message>, ws: typeof Workstream.Type) =
         : [
             brandLink(h, {
               kind: "github",
-              label: "PR #" + ws.pr,
+              label: "PR #" + ws.pr + " · " + ws.label,
               href: githubPrUrl(repo, ws.pr),
             }),
           ]),

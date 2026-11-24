@@ -9,7 +9,7 @@ import * as Option from "effect/Option"
 import * as Predicate from "effect/Predicate"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
-import { captureCheckpoint } from "./adopt.ts"
+import { captureCheckpoint, ensurePullRequestLabel } from "./adopt.ts"
 import { branchGuard } from "./branch.ts"
 import { raiseDesk } from "./desk.ts"
 import { appendEvent, consumeEvents, readEvents, type Event } from "./events.ts"
@@ -632,6 +632,17 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
   // run is not charged and its events stay pending for whoever fixes the branch.
   const guard = await branchGuard({ path: record.path, record, home: input.home })
   if (guard._tag === "Mismatch") return { ok: false, reason: guard.reason }
+  if (record.delivery === "pr" && record.pr !== undefined) {
+    const labeled = ensurePullRequestLabel({
+      repo: record.repo,
+      pr: record.pr,
+      label: record.label,
+      cwd: record.path,
+    })
+    // A label is a fact the record already holds. Re-assert it, but never stop a pass when
+    // GitHub is temporarily unreachable; the next pass will try again.
+    if (!labeled.ok) console.log("factory: " + record.id + " label: " + labeled.detail)
+  }
 
   const used = await passesUsed({ id: input.id, home: input.home })
   const alreadyRunning = await runningPass({ id: input.id, home: input.home })

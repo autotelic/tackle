@@ -76,6 +76,7 @@ const PrView = Schema.Struct({
   baseRefName: Schema.String,
   baseRefOid: Schema.String,
   url: Schema.String,
+  labels: Schema.optional(Schema.Array(Schema.Struct({ name: Schema.String }))),
 })
 
 const pullRequest = (input: {
@@ -92,7 +93,7 @@ const pullRequest = (input: {
       "--repo",
       input.repo,
       "--json",
-      "number,headRefName,headRefOid,baseRefName,baseRefOid,url",
+      "number,headRefName,headRefOid,baseRefName,baseRefOid,url,labels",
     ],
     cwd: input.cwd,
   })
@@ -101,6 +102,27 @@ const pullRequest = (input: {
   return Result.isSuccess(decoded)
     ? ok(decoded.success)
     : fail({ step: "pull request", detail: "the PR response does not decode" })
+}
+
+/**
+ * Apply the workstream label to an existing PR. The record already knows it; a human should
+ * never have to restate it. Idempotent: an already-labelled PR is a no-op.
+ */
+export const ensurePullRequestLabel = (input: {
+  readonly repo: string
+  readonly pr: number
+  readonly label: string
+  readonly cwd: string
+}): { readonly ok: true } | { readonly ok: false; readonly detail: string } => {
+  const viewed = pullRequest(input)
+  if (!viewed.ok) return { ok: false, detail: viewed.error.detail }
+  if ((viewed.value.labels ?? []).some((label) => label.name === input.label)) return { ok: true }
+  const edited = run({
+    command: ghBin(),
+    args: ["pr", "edit", String(input.pr), "--repo", input.repo, "--add-label", input.label],
+    cwd: input.cwd,
+  })
+  return edited.ok ? { ok: true } : { ok: false, detail: edited.detail }
 }
 
 const slugOf = (remote: string): Option.Option<string> => {
@@ -229,6 +251,13 @@ export const adopt = async (input: AdoptInput): Promise<Outcome<Workstream>> => 
       return fail({ step: "pull request", detail: "PR delivery needs --pr" })
     const pr = pullRequest({ repo, pr: input.pr, cwd: path })
     if (!pr.ok) return pr
+    const labeled = ensurePullRequestLabel({
+      repo,
+      pr: input.pr,
+      label: input.label,
+      cwd: path,
+    })
+    if (!labeled.ok) return fail({ step: "pull request label", detail: labeled.detail })
     if (pr.value.headRefName !== branch.value)
       return fail({
         step: "pull request",

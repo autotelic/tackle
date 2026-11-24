@@ -13,7 +13,7 @@ import {
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { expect, test } from "vitest"
-import { adopt } from "../src/factory/adopt.ts"
+import { adopt, ensurePullRequestLabel } from "../src/factory/adopt.ts"
 import { listWorkstreams } from "../src/factory/store.ts"
 
 /* oxlint-disable plumb/prefer-property-tests -- fixed scratch repositories and one fake gh. */
@@ -70,6 +70,41 @@ const adoptInput = (root: string, path: string, overrides: Overrides = {}) => ({
   at: "2026-11-21T00:00:00.000Z",
   home: join(root, "home"),
   ...overrides,
+})
+
+test("a missing PR label is applied from the workstream record", async () => {
+  const root = mkdtempSync(join(tmpdir(), "factory-label-"))
+  try {
+    const repo = repository(root)
+    const gh = join(root, "gh-label")
+    const log = join(root, "gh-label.log")
+    writeFileSync(
+      gh,
+      [
+        "#!/bin/sh",
+        'printf "%s\\n" "$*" >> "$GH_LABEL_LOG"',
+        'if [ "$1 $2" = "pr view" ]; then',
+        'printf \'%s\' \'{"number":1862,"headRefName":"main","headRefOid":"abc","baseRefName":"main","baseRefOid":"abc","url":"https://github.com/acme/app/pull/1862","labels":[]}\'',
+        "fi",
+      ].join("\n"),
+    )
+    chmodSync(gh, 0o755)
+    process.env.GH_BIN = gh
+    process.env.GH_LABEL_LOG = log
+    const result = ensurePullRequestLabel({
+      repo: "acme/app",
+      pr: 1862,
+      label: "permissions-overhaul",
+      cwd: repo,
+    })
+    expect(result).toEqual({ ok: true })
+    expect(readFileSync(log, "utf8")).toContain(
+      "pr edit 1862 --repo acme/app --add-label permissions-overhaul",
+    )
+  } finally {
+    delete process.env.GH_LABEL_LOG
+    rmSync(root, { recursive: true, force: true })
+  }
 })
 
 test("adopts an existing worktree in place and checkpoints dirty work", async () => {
