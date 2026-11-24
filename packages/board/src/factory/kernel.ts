@@ -348,6 +348,7 @@ const promptOf = (input: {
           "Work the project in this phase. Do not merge, edit the SOW, or touch another workstream.",
       ),
     ),
+    "Before raising a desk item, decide from the written record: the Linear project and issue body/done-when first, then repository convention and existing code. If those resolve it, write a short ADR with the passages and code paths, withdraw any stale desk item with `factory desk withdraw --item <id> --by factory --reason <derivation>`, and continue. Escalate only if both are silent or genuinely contradictory; the card must name what was checked, the options left open, and the missing fact.",
     "Handle only these events, then stop and write a receipt:",
     ...input.events.map(
       (event) => "- " + event.kind + " " + event.id + " " + JSON.stringify(event.payload),
