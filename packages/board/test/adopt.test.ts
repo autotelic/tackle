@@ -7,6 +7,7 @@ import {
   readFileSync,
   realpathSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs"
 import { tmpdir } from "node:os"
@@ -151,6 +152,28 @@ test("refuses a second workstream for the same PR", async () => {
     const again = await adopt(adoptInput(root, second, { id: "other" }))
     expect(again.ok).toBe(false)
     if (!again.ok) expect(again.error.detail).toContain("permissions-1862")
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+}, 20_000)
+
+test("a checkpoint does not capture a node_modules symlink", async () => {
+  const root = mkdtempSync(join(tmpdir(), "factory-"))
+  try {
+    process.env.GH_BIN = fakeGh(root)
+    const repo = repository(root)
+    writeFileSync(join(repo, ".gitignore"), "node_modules\n")
+    symlinkSync("/tmp/dependency-tree", join(repo, "node_modules"))
+    const result = await adopt(adoptInput(root, repo))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const files = execFileSync(
+      "git",
+      ["-C", repo, "ls-tree", "-r", "--name-only", result.value.checkpoint.sha],
+      { encoding: "utf8" },
+    )
+    expect(files).toContain(".gitignore")
+    expect(files).not.toContain("node_modules")
   } finally {
     rmSync(root, { recursive: true, force: true })
   }

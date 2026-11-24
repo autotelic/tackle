@@ -1,109 +1,92 @@
-# Vision dogfood — two feature branches
+# Vision dogfood — two feature branches, cleanly
 
-Date: 2026-11-23  
-Target: a scratch clone of `autotelic/tackle` at `8366e99b`  
+Date: 2026-11-24  
+Target: a scratch clone of `autotelic/tackle` at `e79aa763`  
 Target repository: untouched. No Shakti checkout was opened.
 
 ## What ran
 
 ```text
-scratch clone   /tmp/vision-dogfood
-factory home    /tmp/vision-factory-home
-worktree A      /tmp/vision-perms       branch dogfood/permissions
-worktree B      /tmp/vision-enterprise  branch dogfood/enterprise
-PR metadata     fake gh returning PR 9901 / 9902
+scratch clone   /tmp/vision-dogfood3
+factory home    /tmp/vision-factory-home4
+worktree A      /tmp/vision-perms3       branch dogfood/permissions3
+worktree B      /tmp/vision-enterprise3  branch dogfood/enterprise3
+PR metadata     local gh double returning PR 9903 / 9904
 ```
 
-Both workstreams were adopted as PR workstreams, each with its own branch and worktree. The
-factory read the same PR-shaped document a real run would read, but `gh` was a local test
-double; this dogfood did not open or merge a real pull request.
+Each worktree links the repository's package dependencies so the **whole** project gate
+runs, not just a partial dependency graph. The earlier dogfood's 184 errors were a broken
+dependency graph in the scratch worktree (missing package-level `node_modules` links), not
+a "raw census". That run is superseded by this one.
 
 ## Passes
 
-| workstream        | branch                | checkpoint | receipts | local gate    |
-| ----------------- | --------------------- | ---------- | -------- | ------------- |
-| `permissions-dog` | `dogfood/permissions` | `320f1eac` | 3        | `jig check` 0 |
-| `enterprise-dog`  | `dogfood/enterprise`  | `ab215095` | 3        | `jig check` 0 |
-
-The first pass for each workstream ran concurrently in its own process:
+Both workstreams received a **real check event** from the PR double and a bounded task:
 
 ```text
-factory: permissions-dog pass 1 done; checkpoint cf215232
-factory: enterprise-dog pass 1 done; checkpoint 196fc16a
+github:check:e79aa763…:passed
+task-1795478460000
 ```
 
-A fresh process then ran a second set of events against the persisted records. The first retry
-failed because the worker's edit was not idempotent ("nothing added to commit"); after fixing
-the worker to append, pass 3 completed in both worktrees. That is the restart evidence: the
-records, events, locks, and worktrees survived the process, and a stale failed pass did not
-silently become a success.
+| workstream         | branch                 | checkpoints            | quality                | ready handoff                   |
+| ------------------ | ---------------------- | ---------------------- | ---------------------- | ------------------------------- |
+| `permissions-dog4` | `dogfood/permissions3` | `e5806a27`, `9da1dffd` | before 0/0 · after 0/0 | `desk-permissions-dog4-ready-1` |
+| `enterprise-dog4`  | `dogfood/enterprise3`  | `31988f65`, `b5cbcdfa` | before 0/0 · after 0/0 | `desk-enterprise-dog4-ready-1`  |
+
+There are no stalled-quality desk items. Both ready items were raised by `readyForHuman`,
+which only fires when a check event and a zero-error local gate meet.
+
+## Retirement
+
+Both lifecycle exits were exercised:
 
 ```text
-factory: permissions-dog pass 3 done; checkpoint 320f1eac
-factory: enterprise-dog pass 3 done; checkpoint ab215095
+enterprise-dog4  desk done answer  → phase done, no pass
+permissions-dog4 merged PR event   → phase done, no pass
 ```
-
-## Rooms and previews
-
-Two room records were attached to the same worktrees:
 
 ```text
-/tmp/vision-shop/permissions-dog  web :4400  healthy
-/tmp/vision-shop/enterprise-dog   web :4401  healthy
+enterprise-dog4  P-DOGFOOD  PR 9904  done  checkpoint b5cbcdfa
+permissions-dog4 P-DOGFOOD  PR 9903  done  checkpoint 9da1dffd
 ```
 
-The board was started with `--root /tmp/vision-shop` and `FACTORY_HOME=/tmp/vision-factory-home`.
-It joined each room's `worktree` symlink to the workstream record and advertised both routes:
+The merge path used the real `merged` event parser against the PR double; the desk path used
+the real answer store. The target's real PRs were not opened or merged.
+
+## Checkpoint hygiene
 
 ```text
-presence:
-  permissions-dog  port 4400  preview /preview/permissions-dog/  web healthy
-  enterprise-dog   port 4401  preview /preview/enterprise-dog/   web healthy
-
-GET /preview/permissions-dog/  -> permissions-dog /
-GET /preview/enterprise-dog/   -> enterprise-dog /
+git show --name-only ad5843e8... | grep node_modules   → none
+git show --name-only 31988f65... | grep node_modules   → none
 ```
 
-This is the isolation boundary the two-project launch needs: separate room directories, ports,
-processes and previews over separate worktrees. The rooms were stopped and their ports released
-after the check.
+The `.gitignore` now ignores `node_modules` as a name as well as a directory, so a symlinked
+dependency tree cannot enter a checkpoint. No checkpoint carries an absolute host path.
 
 ## Evidence
 
 ```text
-/tmp/vision-perms/docs/vision-dogfood-permissions-dog.md
-/tmp/vision-enterprise/docs/vision-dogfood-enterprise-dog.md
-/tmp/vision-factory-home/workstreams/permissions-dog.receipts/000{1,2,3}.json
-/tmp/vision-factory-home/workstreams/enterprise-dog.receipts/000{1,2,3}.json
+/tmp/vision-perms3/docs/vision-dogfood-permissions-dog4.md
+/tmp/vision-enterprise3/docs/vision-dogfood-enterprise-dog4.md
+/tmp/vision-factory-home4/workstreams/permissions-dog4.receipts/000{1,2}.json
+/tmp/vision-factory-home4/workstreams/enterprise-dog4.receipts/000{1,2}.json
+/tmp/vision-factory-home4/desk/desk-{permissions,enterprise}-dog4-ready-1.json
 ```
-
-Each worktree's own `jig check` exited 0:
-
-```text
-A=0 B=0
-plumb: 0 finding(s)
-plumb-plumb: 0 finding(s)
-plumb-joggle: 0 finding(s)
-joggle: 0 finding(s)
-```
-
-The receipt's quality counter is the raw diagnostic count, not the gated count; it was 184 in
-both worktrees, while the gated `jig check` was clean. That difference is worth keeping: the
-receipt records the census, the gate records what the baseline allows.
 
 ## What this proves
 
-- two feature-branch workstreams can be adopted, worked, and receipted concurrently;
-- each has its own worktree, branch, room, port, service, preview, checkpoint, and event stream;
-- the factory survives a fresh process and does not lose the workstream state;
-- a failed worker pass leaves the record accountable rather than pretending success;
-- the board joins both rooms to their workstreams and serves both previews;
+- two feature-branch workstreams can run concurrently with their own branches, worktrees,
+  checkpoints, events, receipts, and quality measurements;
+- a check-passed event and a zero-error gate produce the explicit ready-to-merge handoff;
+- a done answer and a merged PR both retire without spending another pass;
+- checkpoint contents are clean of host dependency symlinks;
 - the Shakti target was not touched.
 
 ## Limits
 
-- The PR read was a local fake, not GitHub. Real check runs, review comments, and merge events
-  remain covered by the unit tests and the launch runbook, but this dogfood did not exercise a
-  remote PR.
-- The dogfood edits are documentation-only. They prove the orchestration and gate path, not a
-  target feature.
+- The PR is a local test double. It exercises the same GitHub event parser and the same
+  factory lifecycle, but it is not a remote GitHub PR. Real target PRs remain out of scope
+  until the operator launches them.
+- The dogfood edits are documentation-only. They prove orchestration, not a target feature.
+- Embedded agentOS isolation is proven separately in `packages/room/test/agentos.test.ts`;
+  the board preview bridge still forwards host ports.

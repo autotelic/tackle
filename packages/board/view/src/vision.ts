@@ -380,7 +380,7 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
                     horizonItem(h, {
                       tone: "built",
                       title: "main",
-                      detail: "73993178 · pnpm check · jig check · CI green",
+                      detail: "main · pnpm check · jig check · CI green",
                     }),
                     horizonItem(h, {
                       tone: "built",
