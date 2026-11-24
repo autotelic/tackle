@@ -201,6 +201,56 @@ test("a clean check pass is ready for a human", async () => {
   }
 }, 20_000)
 
+test("a pass that changes nothing reuses its before measurement", async () => {
+  const f = fixture()
+  const originalPath = process.env.PATH
+  try {
+    await adoptIt(f)
+    await appendEvent({
+      id: "permissions-1862",
+      home: f.home,
+      event: {
+        id: "ticket-1",
+        kind: "ticket",
+        at: "2026-11-21T00:01:00.000Z",
+        payload: {},
+        status: "pending",
+      },
+    })
+    const bin = join(f.root, "bin")
+    mkdirSync(bin, { recursive: true })
+    const jig = join(bin, "jig")
+    const argsFile = join(f.root, "jig-once.txt")
+    writeFileSync(
+      jig,
+      [
+        "#!/bin/sh",
+        'printf "%s\\n" "$*" >> "$JIG_ONCE"',
+        'printf \'{"generators":[],"diagnostics":[]}\'',
+      ].join("\n"),
+    )
+    chmodSync(jig, 0o755)
+    process.env.JIG_ONCE = argsFile
+    process.env.PATH = bin + ":" + (originalPath ?? "")
+
+    const result = await runPass({
+      id: "permissions-1862",
+      worker: "/bin/sh -c true",
+      at: "2026-11-21T00:02:00.000Z",
+      home: f.home,
+    })
+    expect(result.ok).toBe(true)
+    const checks = readFileSync(argsFile, "utf8")
+      .split("\n")
+      .filter((line) => line.startsWith("check"))
+    expect(checks).toHaveLength(1)
+  } finally {
+    delete process.env.JIG_ONCE
+    process.env.PATH = originalPath
+    rmSync(f.root, { recursive: true, force: true })
+  }
+}, 20_000)
+
 test("a PR workstream scopes its quality check to the PR", async () => {
   const f = fixture()
   try {

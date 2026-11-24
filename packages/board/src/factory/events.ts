@@ -11,6 +11,8 @@ export const Event = Schema.Struct({
   kind: Schema.String,
   at: Schema.String,
   payload: Schema.Unknown,
+  headSha: Schema.optional(Schema.String),
+  actor: Schema.optional(Schema.String),
   status: Schema.Literals(["pending", "consumed"]),
 })
 export type Event = typeof Event.Type

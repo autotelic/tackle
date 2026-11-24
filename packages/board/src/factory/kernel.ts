@@ -110,6 +110,37 @@ const runCapture = (
     child.on("close", (status) => finish({ status, stdout, stderr }))
   })
 
+const qualityCache = new Map<string, Quality>()
+
+/** A clean tree at a known head is the only safe cache key; a dirty tree keeps its own gate. */
+const qualityKey = (input: {
+  readonly path: string
+  readonly head: string
+}): string | undefined => {
+  const status = spawnSync(
+    "git",
+    ["-C", input.path, "status", "--porcelain=v1", "--untracked-files=all"],
+    {
+      encoding: "utf8",
+    },
+  )
+  if (status.status !== 0 || status.stdout.trim() !== "") return undefined
+  return input.path + "|" + input.head
+}
+
+const measureQualityCached = async (input: {
+  readonly path: string
+  readonly pr?: number | undefined
+  readonly head: string
+}): Promise<Quality> => {
+  const key = qualityKey(input)
+  const cached = key === undefined ? undefined : qualityCache.get(key)
+  if (cached !== undefined) return cached
+  const measured = await measureQuality(input)
+  if (key !== undefined) qualityCache.set(key, measured)
+  return measured
+}
+
 const measureQuality = async (input: {
   readonly path: string
   readonly pr?: number | undefined
@@ -341,11 +372,19 @@ export const readyForHuman: Predicate.Predicate<{
   )
 }
 
+const recentCommits = (record: Workstream): string => {
+  const result = spawnSync("git", ["-C", record.path, "log", "-3", "--format=%h %s"], {
+    encoding: "utf8",
+  })
+  return result.status === 0 ? result.stdout.trim() : ""
+}
+
 const promptOf = (input: {
   readonly record: Workstream
   readonly events: ReadonlyArray<Event>
-}): string =>
-  [
+}): string => {
+  const recent = recentCommits(input.record)
+  return [
     "Workstream " +
       input.record.id +
       " (" +
@@ -355,6 +394,7 @@ const promptOf = (input: {
       ").",
     "Phase: " + input.record.phase + ". Worktree: " + input.record.path + ".",
     "PR " + input.record.pr + " on " + input.record.repo + ".",
+    ...(recent === "" ? [] : ["Recent commits:\n" + recent]),
     Match.value(input.record.phase).pipe(
       Match.when(
         "reconcile",
@@ -371,8 +411,10 @@ const promptOf = (input: {
           "Work the project in this phase. Do not merge, edit the SOW, or touch another workstream.",
       ),
     ),
+    "Linear state is part of the work. Move a ticket to In Progress when you claim it, and to Done in the same pass that produces its evidence comment. Do not leave a finished ticket in Backlog; a comment without the state transition is not a complete claim.",
     "Before raising a desk item, decide from the written record: the Linear project and issue body/done-when first, then repository convention and existing code. If those resolve it, write a short ADR with the passages and code paths, withdraw any stale desk item with `factory desk withdraw --item <id> --by factory --reason <derivation>`, and continue. Escalate only if both are silent or genuinely contradictory; the card must name what was checked, the options left open, and the missing fact.",
     "Commit and push each coherent change as you make it. Do not hold commits until the pass ends; the PR should show the work while the pass is still running.",
+    "Do not run the full jig/joggle gate after every edit. Make the coherent change, commit and push it, then measure once. If a gate fails, fix it and rerun only the touched scope.",
     "Handle only these events, then stop. The kernel writes the pass receipt; do not write one yourself.",
     ...input.events.map(
       (event) => "- " + event.kind + " " + event.id + " " + JSON.stringify(event.payload),
@@ -384,6 +426,7 @@ const promptOf = (input: {
       : []),
     "Do not merge. Do not edit the SOW. Do not touch another workstream.",
   ].join("\n")
+}
 
 /** Whether a path a pass changed matches one of the record's protected patterns. */
 export const isProtectedPath: Predicate.Predicate<{
@@ -598,7 +641,7 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
     encoding: "utf8",
   })
   const startHead = startHeadResult.status === 0 ? startHeadResult.stdout.trim() : record.head
-  const before = await measureQuality({ path: record.path, pr: record.pr })
+  const before = await measureQualityCached({ path: record.path, pr: record.pr, head: startHead })
   const receipt: Receipt = {
     workstream: record.id,
     pass,
@@ -709,15 +752,15 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
     }
   }
 
-  const after = await measureQuality({ path: record.path, pr: record.pr })
+  const head = spawnSync("git", ["-C", record.path, "rev-parse", "HEAD"], { encoding: "utf8" })
+  const currentHead = head.status === 0 ? head.stdout.trim() : record.head
+  const after = await measureQualityCached({ path: record.path, pr: record.pr, head: currentHead })
   const comparable =
     before.complete !== false &&
     after.complete !== false &&
     before.command === after.command &&
     before.version === after.version
   const regressed = comparable && (after.errors > before.errors || after.warnings > before.warnings)
-  const head = spawnSync("git", ["-C", record.path, "rev-parse", "HEAD"], { encoding: "utf8" })
-  const currentHead = head.status === 0 ? head.stdout.trim() : record.head
   const commitAtResult = spawnSync(
     "git",
     ["-C", record.path, "show", "-s", "--format=%cI", currentHead],

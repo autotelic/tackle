@@ -429,7 +429,10 @@ export const shouldWake = (input: {
 }
 
 const CommitPayload = Schema.Struct({ sha: Schema.String })
-const CheckPayload = Schema.Struct({ state: Schema.String })
+const CheckPayload = Schema.Struct({
+  state: Schema.String,
+  headRefOid: Schema.optional(Schema.String),
+})
 
 /** A commit already in the worktree's history is not new work for this workstream. */
 const ownCommit = (input: {
@@ -450,9 +453,13 @@ const ownPassedCheck = (input: {
   readonly event: WatchEvent
   readonly record: Workstream
 }): boolean => {
-  if (input.event.kind !== "check" || input.event.headSha !== input.record.head) return false
+  if (input.event.kind !== "check") return false
   const decoded = Schema.decodeUnknownResult(CheckPayload)(input.event.payload)
-  return Result.isSuccess(decoded) && decoded.success.state === "passed"
+  if (Result.isFailure(decoded) || decoded.success.state !== "passed") return false
+  // Older logs dropped headSha; the event id and payload still carry the head. The checkpoint
+  // is the durable head this kernel wrote, so either match retires the check.
+  const head = input.event.headSha ?? decoded.success.headRefOid
+  return head === input.record.head || head === input.record.checkpoint.sha
 }
 
 export interface WatchOutcome {
