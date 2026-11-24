@@ -16,6 +16,7 @@ import { appendEvent, consumeEvents, readEvents, type Event } from "./events.ts"
 import { snapshotJournal } from "./journal.ts"
 import {
   factoryHome,
+  landingLock,
   readWorkstream,
   workstreamDir,
   writeWorkstream,
@@ -686,6 +687,10 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
   if (record === undefined) return { ok: false, reason: "WorkstreamNotFound" }
   if (record.phase === "done") return { ok: false, reason: "WorkstreamDone" }
   if (record.phase === "blocked") return { ok: false, reason: "WorkstreamBlocked" }
+  const landingText = await readFile(landingLock(input.home), "utf8").catch(() => undefined)
+  const landingPid = landingText === undefined ? NaN : Number(landingText)
+  if (Number.isFinite(landingPid) && alive(landingPid))
+    return { ok: false, reason: "ReadyInProgress: " + landingPid }
 
   // The lease stops a second pass, not a hand session: HEAD can be switched under a worktree
   // between adopt and a pass. Refuse before the receipt exists, so a pass that could not have

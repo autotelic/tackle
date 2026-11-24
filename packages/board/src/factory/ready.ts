@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process"
-import { readFile, readdir } from "node:fs/promises"
+import { readFile, readdir, rm, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
@@ -7,7 +7,14 @@ import { raiseDesk } from "./desk.ts"
 import { appendEvent } from "./events.ts"
 import { activityOf } from "./activity.ts"
 import { receiptsDir } from "./kernel.ts"
-import { listWorkstreams, readWorkstream, writeWorkstream, type Workstream } from "./store.ts"
+import {
+  landingLock,
+  listWorkstreams,
+  readWorkstream,
+  writeWorkstream,
+  type Workstream,
+} from "./store.ts"
+import { alive } from "@autotelic/room/run"
 
 /** One declared gate's exact outcome, kept with the workstream that earned it. */
 export type GateFailureKind = "ok" | "load-error" | "failed"
@@ -120,6 +127,25 @@ const runGate = (input: {
  * of a pass: conformance is a landing gate, while the pass gate is the change's touched test.
  */
 export const runReady = async (input: {
+  readonly id: string
+  readonly at: string
+  readonly home?: string | undefined
+  readonly timeoutMs?: number | undefined
+}): Promise<ReadyResult> => {
+  const lock = landingLock(input.home)
+  const held = await readFile(lock, "utf8").catch(() => undefined)
+  const heldPid = held === undefined ? NaN : Number(held)
+  if (Number.isFinite(heldPid) && heldPid !== process.pid && alive(heldPid))
+    return { ok: false, checks: [], reason: "ReadyBlocked: landing already running in " + heldPid }
+  await writeFile(lock, String(process.pid))
+  try {
+    return await runReadyInner(input)
+  } finally {
+    await rm(lock, { force: true })
+  }
+}
+
+const runReadyInner = async (input: {
   readonly id: string
   readonly at: string
   readonly home?: string | undefined

@@ -120,6 +120,10 @@ export interface Facts {
 /** The root for workstream records, outside every governed repository. */
 export const factoryHome = (): string => process.env.FACTORY_HOME ?? join(homedir(), ".factory")
 
+/** The one-landing-at-a-time lock, shared by ready and the pass kernel. */
+export const landingLock = (home?: string | undefined): string =>
+  join(home ?? factoryHome(), "ready.lock")
+
 /**
  * The directory holding every workstream record.
  *
