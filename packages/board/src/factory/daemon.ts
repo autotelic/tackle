@@ -1,4 +1,6 @@
 import { Data } from "effect"
+import * as Result from "effect/Result"
+import * as Schema from "effect/Schema"
 import { spawn } from "node:child_process"
 import { closeSync, openSync } from "node:fs"
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
@@ -20,7 +22,7 @@ export const startDaemon = async (input: {
   readonly intervalMs: number
   readonly home?: string | undefined
 }): Promise<number> => {
-  await mkdir(factoryHome(), { recursive: true })
+  await mkdir(input.home ?? factoryHome(), { recursive: true })
   const existing = await readFile(daemonLock(input.home), "utf8").catch(() => undefined)
   if (existing !== undefined) {
     const pid = Number(JSON.parse(existing).pid)
@@ -62,6 +64,27 @@ export const runDaemon = async (input: {
   readonly home?: string | undefined
   readonly once?: boolean
 }): Promise<void> => {
+  // A manually launched `daemon run` (for example under `doppler run`) must publish the same
+  // one-owner lock as `daemon start`; otherwise a second start sees no owner and can duplicate
+  // the generation. The wrapper parent is allowed because it is the process that holds the
+  // outer command, not a second daemon.
+  if (input.once !== true) {
+    const existing = await readFile(daemonLock(input.home), "utf8").catch(() => undefined)
+    if (existing !== undefined) {
+      const decoded = Schema.decodeResult(Schema.fromJsonString(Schema.Unknown))(existing)
+      const pid =
+        Result.isSuccess(decoded) && typeof decoded.success === "object" && decoded.success !== null
+          ? Number((decoded.success as { readonly pid?: unknown }).pid)
+          : NaN
+      if (Number.isFinite(pid) && pid !== process.pid && pid !== process.ppid && alive(pid))
+        throw new DaemonError({ detail: "factory daemon already running: " + pid })
+    }
+    await mkdir(input.home ?? factoryHome(), { recursive: true })
+    await writeFile(
+      daemonLock(input.home),
+      JSON.stringify({ pid: process.pid, at: Date.now(), worker: input.worker }, null, 2) + "\n",
+    )
+  }
   // One gate cache per daemon process: the same clean tree at the same head is measured once,
   // however many polls a pass spans. It is daemon-local state, so it dies with the process.
   const cache: QualityCache = new Map()
