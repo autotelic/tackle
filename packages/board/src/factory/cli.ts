@@ -7,7 +7,7 @@ import * as Schema from "effect/Schema"
 import { adopt } from "./adopt.ts"
 import { branchGuard } from "./branch.ts"
 import { appendEvent, consumeEvents } from "./events.ts"
-import { runPass } from "./kernel.ts"
+import { runPass, type QualityCache } from "./kernel.ts"
 import { listWorkstreams, Phase, readWorkstream, writeWorkstream } from "./store.ts"
 import { deliverReport, fingerprintOf, ReportKind, writeReport, type Report } from "./report.ts"
 import { answerDesk, listDesk, raiseDesk, readAnswer, withdrawDesk, type DeskItem } from "./desk.ts"
@@ -590,11 +590,14 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
     const interval = Number(parsed.values.interval)
     if (!Number.isInteger(interval) || interval < 1)
       return fail("--interval must be a positive integer")
+    // A watch loop is one session: hold its gate cache here rather than in the kernel module.
+    const cache: QualityCache = new Map()
     for (;;) {
       const outcome = await watchOnce({
         id: parsed.values.id,
         worker: parsed.values.worker,
         at: new Date().toISOString(),
+        cache,
       })
       console.log(
         "factory: watch " +

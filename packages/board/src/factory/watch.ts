@@ -7,7 +7,13 @@ import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 import { activityOf } from "./activity.ts"
 import { appendEvent, consumeEvents, readEvents } from "./events.ts"
-import { isProtectedPath, passesUsed, runPass, type PassOutcome } from "./kernel.ts"
+import {
+  isProtectedPath,
+  passesUsed,
+  runPass,
+  type PassOutcome,
+  type QualityCache,
+} from "./kernel.ts"
 import { readWorkstream, writeWorkstream, type Workstream } from "./store.ts"
 import { answerDesk, listAnswers, listDesk, raiseDesk, readDesk } from "./desk.ts"
 import { Report } from "./report.ts"
@@ -482,6 +488,7 @@ export const watchOnce = async (input: {
   readonly runGh?: ((args: ReadonlyArray<string>) => Result.Result<string, string>) | undefined
   readonly runGit?: ((args: ReadonlyArray<string>) => Result.Result<string, string>) | undefined
   readonly runLinear?: ((args: ReadonlyArray<string>) => Result.Result<string, string>) | undefined
+  readonly cache?: QualityCache | undefined
 }): Promise<WatchOutcome> => {
   const found = await readWorkstream({ id: input.id, home: input.home })
   if (found === undefined) return { appended: [], passes: [] }
@@ -641,6 +648,7 @@ export const watchOnce = async (input: {
       at: input.at,
       home: input.home,
       eventIds: [event.id],
+      cache: input.cache,
     })
     passes.push(pass)
     if (pass.ok) {

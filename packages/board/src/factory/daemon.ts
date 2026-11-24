@@ -5,6 +5,7 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { factoryHome, listWorkstreams } from "./store.ts"
 import { alive } from "@autotelic/room/run"
+import type { QualityCache } from "./kernel.ts"
 import { watchOnce } from "./watch.ts"
 
 /** A daemon start that cannot proceed. */
@@ -61,6 +62,9 @@ export const runDaemon = async (input: {
   readonly home?: string | undefined
   readonly once?: boolean
 }): Promise<void> => {
+  // One gate cache per daemon process: the same clean tree at the same head is measured once,
+  // however many polls a pass spans. It is daemon-local state, so it dies with the process.
+  const cache: QualityCache = new Map()
   const watch = async (record: { readonly id: string }): Promise<void> => {
     for (;;) {
       // SAFETY: the daemon is a process boundary and the loop is its retry: one failed pass is
@@ -71,6 +75,7 @@ export const runDaemon = async (input: {
           worker: input.worker,
           at: new Date().toISOString(),
           home: input.home,
+          cache,
         })
         if (outcome.appended.length > 0)
           console.log(
@@ -100,6 +105,7 @@ export const runDaemon = async (input: {
             worker: input.worker,
             at: new Date().toISOString(),
             home: input.home,
+            cache,
           })
           if (outcome.appended.length > 0)
             console.log(

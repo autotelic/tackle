@@ -110,13 +110,17 @@ const runCapture = (
     child.on("close", (status) => finish({ status, stdout, stderr }))
   })
 
-const qualityCache = new Map<string, Quality>()
+/**
+ * Gate results keyed by worktree and head. The caller that runs passes owns it, so a second
+ * measurement of the same clean tree is free and no module-scope map is mutated.
+ */
+export type QualityCache = Map<string, Quality>
 
 /** A clean tree at a known head is the only safe cache key; a dirty tree keeps its own gate. */
 const qualityKey = (input: {
   readonly path: string
   readonly head: string
-}): string | undefined => {
+}): Option.Option<string> => {
   const status = spawnSync(
     "git",
     ["-C", input.path, "status", "--porcelain=v1", "--untracked-files=all"],
@@ -124,20 +128,26 @@ const qualityKey = (input: {
       encoding: "utf8",
     },
   )
-  if (status.status !== 0 || status.stdout.trim() !== "") return undefined
-  return input.path + "|" + input.head
+  if (status.status !== 0 || status.stdout.trim() !== "") return Option.none()
+  return Option.some(input.path + "|" + input.head)
 }
 
 const measureQualityCached = async (input: {
   readonly path: string
   readonly pr?: number | undefined
   readonly head: string
+  readonly cache?: QualityCache | undefined
 }): Promise<Quality> => {
   const key = qualityKey(input)
-  const cached = key === undefined ? undefined : qualityCache.get(key)
-  if (cached !== undefined) return cached
+  const cached = key.pipe(
+    Option.flatMap((value) => {
+      const hit = input.cache?.get(value)
+      return hit === undefined ? Option.none<Quality>() : Option.some(hit)
+    }),
+  )
+  if (Option.isSome(cached)) return cached.value
   const measured = await measureQuality(input)
-  if (key !== undefined) qualityCache.set(key, measured)
+  if (input.cache !== undefined && Option.isSome(key)) input.cache.set(key.value, measured)
   return measured
 }
 
@@ -308,10 +318,10 @@ const eventState = (event: Event): Option.Option<string> => {
 }
 
 /**
- * A pass that improved local quality but is not at zero asks for another pass. A pass that
- * did not improve does not loop: it raises a desk item instead, so a human decides whether
- * to keep spending passes. A pass at zero is silent here; the check event opens the merge
- * handoff.
+ * Returns a quality event only when the pass lowered its errors, or held errors and lowered
+ * its warnings, while errors remain. A pass that did not improve gets no follow-up here: the
+ * caller raises a desk item so a human decides whether to keep spending passes. A pass at
+ * zero errors gets no follow-up either — the check event is what starts the merge handoff.
  */
 export const followUpEvent = (input: {
   readonly record: Workstream
@@ -584,6 +594,7 @@ interface RunPassInput {
   readonly at: string
   readonly home?: string | undefined
   readonly eventIds?: ReadonlyArray<string>
+  readonly cache?: QualityCache | undefined
 }
 
 const passLock = (input: { readonly id: string; readonly home?: string | undefined }): string =>
@@ -641,7 +652,13 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
     encoding: "utf8",
   })
   const startHead = startHeadResult.status === 0 ? startHeadResult.stdout.trim() : record.head
-  const before = await measureQualityCached({ path: record.path, pr: record.pr, head: startHead })
+  const cache: QualityCache = input.cache ?? new Map()
+  const before = await measureQualityCached({
+    path: record.path,
+    pr: record.pr,
+    head: startHead,
+    cache,
+  })
   const receipt: Receipt = {
     workstream: record.id,
     pass,
@@ -754,7 +771,12 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
 
   const head = spawnSync("git", ["-C", record.path, "rev-parse", "HEAD"], { encoding: "utf8" })
   const currentHead = head.status === 0 ? head.stdout.trim() : record.head
-  const after = await measureQualityCached({ path: record.path, pr: record.pr, head: currentHead })
+  const after = await measureQualityCached({
+    path: record.path,
+    pr: record.pr,
+    head: currentHead,
+    cache,
+  })
   const comparable =
     before.complete !== false &&
     after.complete !== false &&
