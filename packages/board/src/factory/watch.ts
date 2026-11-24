@@ -8,7 +8,7 @@ import * as Schema from "effect/Schema"
 import { appendEvent, consumeEvents, readEvents } from "./events.ts"
 import { isProtectedPath, passesUsed, runPass, type PassOutcome } from "./kernel.ts"
 import { readWorkstream, writeWorkstream, type Workstream } from "./store.ts"
-import { listAnswers, readDesk } from "./desk.ts"
+import { answerDesk, listAnswers, listDesk, readDesk } from "./desk.ts"
 import { Report } from "./report.ts"
 
 /** A source event already normalized to the shape the kernel consumes. */
@@ -502,6 +502,15 @@ export const watchOnce = async (input: {
       if (record.phase !== "done") {
         record = { ...record, phase: "done", updatedAt: event.at }
         await writeWorkstream({ record, home: input.home })
+      }
+      // A merged PR closes the ready-to-merge question too. Leaving it pending would
+      // tell the operator to merge a PR the factory has already retired.
+      for (const item of await listDesk({ home: input.home })) {
+        if (item.workstream !== record.id || !item.choices.includes("done")) continue
+        await answerDesk({
+          home: input.home,
+          answer: { item: item.id, choice: "done", by: "factory", at: event.at },
+        })
       }
       if (previous === undefined)
         await appendEvent({

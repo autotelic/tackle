@@ -4,7 +4,7 @@ import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import * as Result from "effect/Result"
 import { expect, test } from "vitest"
-import { answerDesk, raiseDesk } from "../src/factory/desk.ts"
+import { answerDesk, listDesk, raiseDesk } from "../src/factory/desk.ts"
 import { readWorkstream, recordOf, writeWorkstream, type Workstream } from "../src/factory/store.ts"
 import {
   baseEvents,
@@ -180,6 +180,47 @@ test("a merged PR becomes a retirement event and nothing else", () => {
   expect(events).toHaveLength(1)
   expect(events[0]?.kind).toBe("merged")
   expect(events[0]?.id).toBe("github:merged:1862:abc123")
+})
+
+test("a merged PR closes the pending ready desk", async () => {
+  const root = mkdtempSync(join(tmpdir(), "factory-merged-desk-"))
+  try {
+    const record = { ...base(), phase: "build" as const }
+    await writeWorkstream({ record, home: root })
+    await raiseDesk({
+      home: root,
+      item: {
+        id: "ready-1",
+        workstream: record.id,
+        kind: "decision",
+        title: "Ready to merge",
+        body: "Land it?",
+        choices: ["done", "continue"],
+        route: "live",
+        at: "2026-11-22T00:00:00.000Z",
+      },
+    })
+    await watchOnce({
+      id: record.id,
+      home: root,
+      at: "2026-11-22T00:06:00.000Z",
+      runGh: () =>
+        Result.succeed(
+          JSON.stringify({
+            headRefOid: record.head,
+            reviews: [],
+            comments: [],
+            state: "MERGED",
+            mergedAt: "2026-11-22T00:05:00.000Z",
+            mergeCommit: { oid: "abc123" },
+          }),
+        ),
+    })
+    expect(await listDesk({ home: root })).toEqual([])
+    expect((await readWorkstream({ id: record.id, home: root }))?.phase).toBe("done")
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
 })
 
 test("a done desk answer retires the workstream without a pass", async () => {

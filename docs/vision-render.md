@@ -5,13 +5,14 @@ This is an inspected browser render, not a model-level assertion.
 ## How it was served
 
 ```sh
-FACTORY_HOME=/tmp/vision-factory-home4 \
+FACTORY_HOME=/tmp/vision-factory-home5 \
   node --conditions=development packages/board/src/cli.ts up \
   --root /tmp/vision-shop3 --port 4811 --host 127.0.0.1 --detach
 ```
 
-The factory home contains `permissions-dog4` and `enterprise-dog4`; the room root has
-two healthy services on 4400/4401, and each workstream has a preview route.
+The factory home contains `permissions-dog5` and `enterprise-dog5`; the room root has
+two healthy services on 4400/4401, and each workstream has a preview route. Both are done
+and the ready desks are closed.
 
 ## Browser evidence
 
@@ -31,12 +32,12 @@ important parts:
 
 /factory
   2 workstreams · 1 repo
-  enterprise-dog4  Done  checkpoint b5cbcdfa
-  permissions-dog4 Done  checkpoint 9da1dffd
+  enterprise-dog5  Done  checkpoint e8a695dc
+  permissions-dog5 Done  checkpoint 485769a1
   ENVIRONMENT
-  port 4401 · web healthy · preview /preview/enterprise-dog4/
-  port 4400 · web healthy · preview /preview/permissions-dog4/
-  NEEDS YOU  Ready to merge PR #9903
+  port 4401 · web healthy · preview /preview/enterprise-dog5/
+  port 4400 · web healthy · preview /preview/permissions-dog5/
+  desk: empty
 ```
 
 Screenshots are committed beside this note:

@@ -1,4 +1,4 @@
-# Vision dogfood — two feature branches, cleanly
+# Vision dogfood — two feature branches, two processes
 
 Date: 2026-11-24  
 Target: a scratch clone of `autotelic/tackle` at `e79aa763`  
@@ -8,104 +8,68 @@ Target repository: untouched. No Shakti checkout was opened.
 
 ```text
 scratch clone   /tmp/vision-dogfood3
-factory home    /tmp/vision-factory-home4
+factory home    /tmp/vision-factory-home5
 worktree A      /tmp/vision-perms3       branch dogfood/permissions3
 worktree B      /tmp/vision-enterprise3  branch dogfood/enterprise3
-PR metadata     local gh double returning PR 9903 / 9904
+PR metadata     local gh double returning PR 9905 / 9906
 ```
 
-Each worktree links the repository's package dependencies so the **whole** project gate
-runs, not just a partial dependency graph. The earlier dogfood's 184 errors were a broken
-dependency graph in the scratch worktree (missing package-level `node_modules` links), not
-a "raw census". That run is superseded by this one.
+The worktrees link every package's dependencies, so the whole project gate runs. The earlier
+184-error run was a broken dependency graph in that scratch worktree; it is superseded.
 
-## Passes
+## Passes across processes
 
-Both workstreams received a **real check event** from the PR double and a bounded task:
+Pass 1 was a real check event, run in one process per workstream. Pass 2 was a task event,
+run in a **new process** per workstream.
+
+| workstream         | pass 1                | pass 2                | quality                    |
+| ------------------ | --------------------- | --------------------- | -------------------------- |
+| `permissions-dog5` | pid 75253 · 03:20:48Z | pid 76712 · 03:21:04Z | 0 errors / 0 warnings both |
+| `enterprise-dog5`  | pid 75254 · 03:20:48Z | pid 76713 · 03:21:04Z | 0 errors / 0 warnings both |
+
+The records, events, locks, worktrees, and checkpoints survived the process boundary. The
+two workstreams ran concurrently in the first process pair and again in the second.
+
+## Ready, done, merge
+
+Both pass-1 receipts produced the explicit handoff:
 
 ```text
-github:check:e79aa763…:passed
-task-1795478460000
+desk-permissions-dog5-ready-1  Ready to merge PR #9905
+desk-enterprise-dog5-ready-1   Ready to merge PR #9906
 ```
 
-| workstream         | branch                 | checkpoints            | quality                | ready handoff                   |
-| ------------------ | ---------------------- | ---------------------- | ---------------------- | ------------------------------- |
-| `permissions-dog4` | `dogfood/permissions3` | `e5806a27`, `9da1dffd` | before 0/0 · after 0/0 | `desk-permissions-dog4-ready-1` |
-| `enterprise-dog4`  | `dogfood/enterprise3`  | `31988f65`, `b5cbcdfa` | before 0/0 · after 0/0 | `desk-enterprise-dog4-ready-1`  |
-
-There are no stalled-quality desk items. Both ready items were raised by `readyForHuman`,
-which only fires when a check event and a zero-error local gate meet.
-
-## Retirement
-
-Both lifecycle exits were exercised:
+Both exits were exercised:
 
 ```text
-enterprise-dog4  desk done answer  → phase done, no pass
-permissions-dog4 merged PR event   → phase done, no pass
+enterprise-dog5  desk done answer  → phase done, no pass
+permissions-dog5 merged PR event   → phase done, no pass
 ```
 
-```text
-enterprise-dog4  P-DOGFOOD  PR 9904  done  checkpoint b5cbcdfa
-permissions-dog4 P-DOGFOOD  PR 9903  done  checkpoint 9da1dffd
-```
-
-The merge path used the real `merged` event parser against the PR double; the desk path used
-the real answer store. The target's real PRs were not opened or merged.
+After merge retirement the ready desk is closed automatically; `factory desk list` is empty.
+The merged event parser was also exercised against the real merged PR #11
+(`github:merged:11:8ba6fee6...`), and the real open PR #1862 was read without touching it.
 
 ## Checkpoint hygiene
 
-```text
-git show --name-only ad5843e8... | grep node_modules   → none
-git show --name-only 31988f65... | grep node_modules   → none
-```
-
-The `.gitignore` now ignores `node_modules` as a name as well as a directory, so a symlinked
-dependency tree cannot enter a checkpoint. No checkpoint carries an absolute host path.
+Checkpoints `4f5cbec1`, `485769a1`, `6ffcda4a`, and `e8a695dc` contain no
+`node_modules` entries. The `.gitignore` ignores the name as well as the directory, and
+`adopt.test.ts` has a regression test for a symlinked dependency tree.
 
 ## Evidence
 
 ```text
-/tmp/vision-perms3/docs/vision-dogfood-permissions-dog4.md
-/tmp/vision-enterprise3/docs/vision-dogfood-enterprise-dog4.md
-/tmp/vision-factory-home4/workstreams/permissions-dog4.receipts/000{1,2}.json
-/tmp/vision-factory-home4/workstreams/enterprise-dog4.receipts/000{1,2}.json
-/tmp/vision-factory-home4/desk/desk-{permissions,enterprise}-dog4-ready-1.json
+/tmp/vision-perms3/docs/vision-dogfood-permissions-dog5.md
+/tmp/vision-enterprise3/docs/vision-dogfood-enterprise-dog5.md
+/tmp/vision-factory-home5/workstreams/permissions-dog5.receipts/000{1,2}.json
+/tmp/vision-factory-home5/workstreams/enterprise-dog5.receipts/000{1,2}.json
+/tmp/vision-factory-home5/desk/  (empty after retirement)
 ```
-
-## What this proves
-
-- two feature-branch workstreams can run concurrently with their own branches, worktrees,
-  checkpoints, events, receipts, and quality measurements;
-- a check-passed event and a zero-error gate produce the explicit ready-to-merge handoff;
-- a done answer and a merged PR both retire without spending another pass;
-- checkpoint contents are clean of host dependency symlinks;
-- the Shakti target was not touched.
-
-## Real GitHub reads
-
-The lifecycle dogfood used a local PR double, but the same parser was checked against two
-real PRs without mutating either target:
-
-```text
-real merged PR #11 (autotelic/tackle)
-  github:merged:11:8ba6fee6...
-  factory status: real-merge  PR 11  done
-
-real open PR #1862 (Shakti-Reforestation/forestbuilder)
-  github:review:PRR_kwDOK7o5SM8AAAABZoIWoA  COMMENTED
-  github:check:b80d696a...:passed            passed (27 checks)
-  github:conflict:b80d696a...:1beb66bf...     CONFLICTING
-```
-
-`watchOnce` used the real merged event to move a temporary record to `done`; PR #1862 was
-read-only and was not adopted, edited, or merged.
 
 ## Limits
 
-- The two-workstream lifecycle PR is a local test double. It exercises the same GitHub
-  event parser and the same factory lifecycle, but it is not a remote GitHub PR. Real target
-  PRs remain out of scope until the operator launches them.
-- The dogfood edits are documentation-only. They prove orchestration, not a target feature.
+- The two-workstream PR is a local test double. It exercises the same GitHub event parser and
+  factory lifecycle, but it is not a remote GitHub PR. Real target PRs remain out of scope.
+- The dogfood edits are documentation-only; they prove orchestration, not a target feature.
 - Embedded agentOS isolation is proven separately in `packages/room/test/agentos.test.ts`;
   the board preview bridge still forwards host ports.
