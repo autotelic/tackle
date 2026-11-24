@@ -86,7 +86,12 @@ const failureTitles = (output: string): ReadonlyArray<string> => {
   const titles = output
     .split("\n")
     .map((line) => line.trim())
-    .filter((line) => /^\d+\)\s+\S/u.test(line) || /^(FAIL|✗)\b/u.test(line))
+    .filter(
+      (line) =>
+        /^\d+\)\s+\S/u.test(line) ||
+        /^(FAIL|✗)\b/u.test(line) ||
+        /^(AssertionError|Error|TypeError|ReferenceError):\s/u.test(line),
+    )
   return [...new Set(titles)].slice(0, 24)
 }
 
@@ -118,6 +123,9 @@ const runGate = (input: {
   const result = spawnSync("sh", ["-c", input.gate.command], {
     cwd: input.workstream.path,
     encoding: "utf8",
+    // The suite can print well over the 1 MB default; a full mocha block has to survive the
+    // buffer or readiness cannot name the failing test.
+    maxBuffer: 32 * 1024 * 1024,
     timeout: input.timeoutMs,
   })
   const output = ((result.stdout ?? "") + (result.stderr ?? "")).trim()
