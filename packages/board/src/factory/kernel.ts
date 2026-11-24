@@ -305,6 +305,11 @@ const promptOf = (input: {
     ...input.events.map(
       (event) => "- " + event.kind + " " + event.id + " " + JSON.stringify(event.payload),
     ),
+    ...(input.events.some((event) => event.kind === "adopt-commits")
+      ? [
+          "For adopt-commits: fetch the source ref, cherry-pick the listed commits with -x, resolve conflicts under the named policy, run the gates, and push with --force-with-lease=<branch>:<expectedHead>. Report source, commits, conflicts, and gate exits.",
+        ]
+      : []),
     "Do not merge. Do not edit the SOW. Do not touch another workstream.",
   ].join("\n")
 

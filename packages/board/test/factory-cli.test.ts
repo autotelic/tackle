@@ -40,6 +40,50 @@ const record = {
   updatedAt: "2026-11-23T00:00:00.000Z",
 }
 
+test("adopt-commits queues a provenance-bearing task event", () => {
+  const root = mkdtempSync(join(tmpdir(), "factory-adopt-"))
+  try {
+    const home = join(root, "home")
+    mkdirSync(join(home, "workstreams"), { recursive: true })
+    writeFileSync(
+      join(home, "workstreams", record.id + ".json"),
+      JSON.stringify(record, null, 2) + "\n",
+    )
+    execFileSync(
+      process.execPath,
+      [
+        "--conditions=development",
+        cli,
+        "adopt-commits",
+        "--id",
+        record.id,
+        "--from",
+        "refs/pull/1693/head",
+        "--commits",
+        "4bb912a,42d9240",
+        "--policy",
+        "keep-parent",
+        "--expected-head",
+        record.head,
+      ],
+      { encoding: "utf8", env: { ...process.env, FACTORY_HOME: home } },
+    )
+    const lines = readFileSync(join(home, "workstreams", record.id + ".events.jsonl"), "utf8")
+      .trim()
+      .split("\n")
+    const event = JSON.parse(lines[0]!)
+    expect(event.kind).toBe("adopt-commits")
+    expect(event.payload).toEqual({
+      source: "refs/pull/1693/head",
+      commits: ["4bb912a", "42d9240"],
+      policy: "keep-parent",
+      expectedHead: record.head,
+    })
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
 test("retire turns a workstream off without deleting its record", () => {
   const root = mkdtempSync(join(tmpdir(), "factory-retire-"))
   try {

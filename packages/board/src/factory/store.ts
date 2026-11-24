@@ -250,7 +250,7 @@ export const recordOf = (input: { readonly id: string; readonly facts: Facts }):
     tokensPerDay: 0,
     roundsOfChanges: 2,
   },
-  autonomy: ["comment", "label", "push", "pr-body", "rebase", "ci-fix"],
+  autonomy: ["comment", "label", "push", "pr-body", "rebase", "ci-fix", "adopt-commits"],
   desk: [],
   sources:
     input.facts.delivery === "trunk"

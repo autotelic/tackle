@@ -21,6 +21,7 @@ const usage = [
   "  factory adopt --path <worktree> --project <linear> --label <label> [--pr <n> | --delivery trunk] [--reports <dir>] [--repo <owner/name>] [--phase reconcile|build|land] [--id <id>]",
   "  factory status [--json]",
   "  factory event --id <id> --kind <kind> [--payload <json>] [--at <iso>]",
+  "  factory adopt-commits --id <id> --from <ref> --commits <sha,sha> [--policy keep-parent|prefer-source] --expected-head <sha>",
   "  factory run --id <id> --worker <command> [--at <iso>]",
   "  factory watch --id <id> --worker <command> [--once] [--interval <ms>]",
   "  factory report --workstream <id> --kind <kind> --command <cmd> --expected <text> --actual <text> [--output <text>] [--blocked] [--deliver <session>]",
@@ -114,6 +115,47 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
       },
     })
     console.log("factory: event " + id + " queued for " + parsed.values.id)
+    return
+  }
+
+  if (command === "adopt-commits") {
+    const parsed = parseArgs({
+      args: argv.slice(1),
+      options: {
+        id: { type: "string" },
+        from: { type: "string" },
+        commits: { type: "string" },
+        policy: { type: "string", default: "keep-parent" },
+        "expected-head": { type: "string" },
+      },
+      allowPositionals: false,
+    })
+    const id = parsed.values.id
+    const source = parsed.values.from
+    const commits = parsed.values.commits
+      ?.split(",")
+      .map((commit) => commit.trim())
+      .filter(Boolean)
+    const policy = parsed.values.policy
+    const expectedHead = parsed.values["expected-head"]
+    if (id === undefined || source === undefined || commits === undefined || commits.length === 0)
+      return fail("adopt-commits needs --id, --from and --commits")
+    if (expectedHead === undefined) return fail("adopt-commits needs --expected-head")
+    if (policy !== "keep-parent" && policy !== "prefer-source")
+      return fail("--policy must be keep-parent or prefer-source")
+    const at = new Date().toISOString()
+    const eventId = "adopt-commits-" + Date.parse(at)
+    await appendEvent({
+      id,
+      event: {
+        id: eventId,
+        kind: "adopt-commits",
+        at,
+        payload: { source, commits, policy, expectedHead },
+        status: "pending",
+      },
+    })
+    console.log("factory: adopt-commits " + eventId + " queued for " + id)
     return
   }
 
