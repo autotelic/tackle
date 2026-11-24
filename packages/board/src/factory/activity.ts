@@ -82,7 +82,8 @@ export const progressOfPasses = (passes: ReadonlyArray<ActivityPass>): Progress 
   const signature = signatureOf(last)
   let consecutive = 0
   for (let index = completed.length - 1; index >= 0; index -= 1) {
-    if (signatureOf(completed[index]!) !== signature) break
+    const pass = completed[index]
+    if (pass === undefined || signatureOf(pass) !== signature) break
     consecutive += 1
   }
   return { consecutive, stalled: consecutive >= STALL_AFTER, signature }

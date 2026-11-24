@@ -335,7 +335,6 @@ const activityBlock = (h: HtmlBuilder<Message>, activity: typeof Activity.Type |
   const waiting = activity.pending.length
   const stalled = activity.progress?.stalled === true
   const stalledPasses = activity.progress?.consecutive ?? 0
-  const capped = activity.blockedBy.some((reason) => reason.startsWith("budget:"))
   const age = formatDuration(activity.ageMinutes)
   const push =
     pass?.commit === undefined ? "" : pass.pushed === true ? " · pushed" : " · not pushed"
@@ -354,7 +353,7 @@ const activityBlock = (h: HtmlBuilder<Message>, activity: typeof Activity.Type |
   const lastEvent = activity.lastEvent
   if (last === "" && waiting === 0 && gate === "") return h.span([], [])
   return h.div(
-    [h.Class("activity" + (capped ? " capped" : "") + (running ? " running" : ""))],
+    [h.Class("activity" + (stalled ? " capped" : "") + (running ? " running" : ""))],
     [
       last === ""
         ? h.span([], [])
@@ -362,11 +361,8 @@ const activityBlock = (h: HtmlBuilder<Message>, activity: typeof Activity.Type |
             [h.Class("activity-head")],
             [
               h.span([h.Class("activity-last")], [last]),
-              capped
-                ? h.span(
-                    [h.Class("stale-flag")],
-                    [activity.budget.used + "/" + activity.budget.passesPerPhase + " passes"],
-                  )
+              stalled
+                ? h.span([h.Class("stale-flag")], [stalledPasses + " passes without progress"])
                 : h.span([], []),
             ],
           ),
