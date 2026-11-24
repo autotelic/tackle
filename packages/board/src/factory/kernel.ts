@@ -211,12 +211,18 @@ const measureQuality = async (input: {
   const generators = decoded.success.generators ?? []
   const unjudged = generators.reduce((total, generator) => total + (generator.unjudged ?? 0), 0)
   const actualScope = decoded.success.scope ?? "absent"
+  // Older jig versions accept --pr-number but omit the resulting scope from their JSON. Infer
+  // the requested scope for those reports, mark the measurement incomplete, and keep the counts;
+  // a missing field in the instrument is not the same as an unmeasured or mismatched run.
+  const inferredScope = actualScope === "absent" && input.pr !== undefined
+  const effectiveScope = inferredScope ? requestedScope : actualScope
   const complete =
-    actualScope === requestedScope &&
+    !inferredScope &&
+    effectiveScope === requestedScope &&
     generators.length > 0 &&
     generators.every((generator) => generator.status === "ran") &&
     unjudged === 0
-  if (actualScope !== requestedScope)
+  if (!inferredScope && actualScope !== requestedScope)
     return {
       available: false,
       errors: 0,
@@ -232,10 +238,14 @@ const measureQuality = async (input: {
     available: true,
     errors,
     warnings,
-    note: unjudged === 0 ? "jig check" : "jig check · " + unjudged + " unjudged",
+    note: inferredScope
+      ? "jig report has no scope; treated as " + effectiveScope
+      : unjudged === 0
+        ? "jig check"
+        : "jig check · " + unjudged + " unjudged",
     command,
     version: version.stdout.trim(),
-    scope: actualScope,
+    scope: effectiveScope,
     requestedScope,
     unjudged,
     complete,
