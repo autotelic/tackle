@@ -25,7 +25,7 @@ const fixture = async (command: string) => {
       base: "main",
       baseSha: "b".repeat(40),
       prHead: "a".repeat(40),
-      phase: "build",
+      phase: "compress",
       at: "2026-11-24T00:00:00.000Z",
       checkpoint: {
         sha: "a".repeat(40),
@@ -62,7 +62,7 @@ test("a red landing gate stays in build and queues a scoped fix task", async () 
   try {
     const result = await runReady({ id: "probe-1", home: f.home, at: "2026-11-24T00:01:00.000Z" })
     expect(result.ok).toBe(false)
-    expect((await readWorkstream({ id: "probe-1", home: f.home }))?.phase).toBe("build")
+    expect((await readWorkstream({ id: "probe-1", home: f.home }))?.phase).toBe("compress")
     const events = await readEvents({ id: "probe-1", home: f.home })
     expect(events[0]?.kind).toBe("task")
     expect(events[0]?.payload).toMatchObject({ task: expect.stringContaining("exit 7") })

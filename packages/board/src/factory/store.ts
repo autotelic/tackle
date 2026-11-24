@@ -7,7 +7,7 @@ import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 
 /** The phases a workstream can be in. `blocked` is a state, never a crash. */
-export const Phase = Schema.Literals(["reconcile", "build", "land", "blocked", "done"])
+export const Phase = Schema.Literals(["reconcile", "build", "compress", "land", "blocked", "done"])
 export type Phase = typeof Phase.Type
 
 export const Gate = Schema.Struct({

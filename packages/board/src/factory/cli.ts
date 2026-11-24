@@ -20,7 +20,7 @@ const usage = [
   "factory — adopt in-flight work as durable workstreams",
   "",
   "Usage:",
-  "  factory adopt --path <worktree> --project <linear> --label <label> [--pr <n> | --delivery trunk] [--reports <dir>] [--repo <owner/name>] [--phase reconcile|build|land] [--id <id>]",
+  "  factory adopt --path <worktree> --project <linear> --label <label> [--pr <n> | --delivery trunk] [--reports <dir>] [--repo <owner/name>] [--phase reconcile|build|compress|land] [--id <id>]",
   "  factory status [--json]",
   "  factory telemetry [--since <iso>] [--json] [--check]",
   "  factory event --id <id> --kind <kind> [--payload <json>] [--at <iso>]",
@@ -30,7 +30,7 @@ const usage = [
   "  factory run --id <id> --worker <command> [--at <iso>]",
   "  factory watch --id <id> --worker <command> [--once] [--interval <ms>]",
   "  factory report --workstream <id> --kind <kind> --command <cmd> --expected <text> --actual <text> [--output <text>] [--blocked] [--deliver <session>]",
-  "  factory phase --id <id> --set reconcile|build|land|blocked|done [--answer <desk-answer.json>]",
+  "  factory phase --id <id> --set reconcile|build|compress|land|blocked|done [--answer <desk-answer.json>]",
   "  factory ready --id <id> [--at <iso>]",
   "  factory gates --id <id> --file <gates.json>",
   "  factory retire --id <id> [--close-pr]",
@@ -569,7 +569,7 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
     if (parsed.values.id === undefined || parsed.values.set === undefined)
       return fail("phase needs --id and --set")
     if (!Schema.is(Phase)(parsed.values.set))
-      return fail("--set must be one of reconcile, build, land, blocked, done")
+      return fail("--set must be one of reconcile, build, compress, land, blocked, done")
     const record = await readWorkstream({ id: parsed.values.id })
     if (record === undefined) return fail("WorkstreamNotFound")
 
@@ -762,7 +762,7 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
     return fail("--pr must be a positive integer")
   const phase = parsed.values.phase
   if (!Schema.is(Phase)(phase))
-    return fail("--phase must be one of reconcile, build, land, blocked, done")
+    return fail("--phase must be one of reconcile, build, compress, land, blocked, done")
   const id = parsed.values.id ?? slug(number === undefined ? label : label + "-" + number)
 
   const result = await adopt({

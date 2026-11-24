@@ -234,10 +234,11 @@ export const subscriptions = ticks<Model, Message>({
   onTick: () => Message.Ticked(),
 })
 
-const phaseOrder = ["reconcile", "build", "land", "blocked", "done"] as const
+const phaseOrder = ["reconcile", "build", "compress", "land", "blocked", "done"] as const
 const phaseName = {
   reconcile: "Reconcile",
   build: "Build",
+  compress: "Compress",
   land: "Land",
   blocked: "Blocked",
   done: "Done",
@@ -248,6 +249,8 @@ const phaseLabel = (phase: string): string => {
       return phaseName.reconcile
     case "build":
       return phaseName.build
+    case "compress":
+      return phaseName.compress
     case "land":
       return phaseName.land
     case "blocked":

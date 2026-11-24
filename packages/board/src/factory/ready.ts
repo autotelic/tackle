@@ -51,6 +51,12 @@ export const runReady = async (input: {
 }): Promise<ReadyResult> => {
   const record = await readWorkstream({ id: input.id, home: input.home })
   if (record === undefined) return { ok: false, checks: [], reason: "WorkstreamNotFound" }
+  if (record.phase === "reconcile" || record.phase === "build")
+    return {
+      ok: false,
+      checks: [],
+      reason: "CompressRequired: set phase compress and run the compression pass before ready",
+    }
   const gates = record.gates?.onReady ?? []
   if (gates.length === 0)
     return { ok: false, checks: [], reason: "NoOnReadyGates: declare gates.onReady" }
