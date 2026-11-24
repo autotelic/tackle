@@ -481,6 +481,7 @@ const promptOf = (input: {
           "One pass is one small ticket. Do not re-reconnoitre the project: read the named ticket, the last receipt, and the ADR/SOW passages it points at, then make the smallest coherent change, commit, push, and stop. If the ticket needs more, it becomes the next event, not a longer pass.",
           "Build: write the code, write the tests it needs (the ticket's acceptance test included), commit, push. Do not run the tests, lint, tsc, jig, or joggle. Do not wait for anything.",
           "Landing (ready event only): run the ticket's acceptance tests, the rest suite, jig, joggle, spec-check, policy-snapshots, and read CI. Fix what is red, then re-run landing.",
+          "The landing gate owns shared external services. Bring the test database up once and leave it running for the whole landing; a suite must not stop a shared database in its afterAll while another request is in flight.",
           "A red test found during build costs a turn and a re-run; the same test at landing costs one turn for the whole PR. Building is the throughput phase; verification is a phase.",
           "Build may commit code that does not compile or fails its own test; that is expected. The first ready may be red. That is the gate working.",
           "Before pushing, stage every new and modified file; use `git status --porcelain` as well as the committed diff.",

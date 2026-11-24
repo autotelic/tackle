@@ -48,6 +48,11 @@ Landing is serialised. `factory ready` refuses while any workstream has a live p
 the cut and the suite would edit/read the same worktree and the shakti-test compose project is
 shared. Run one ready at a time, after every build/compress cut has stopped.
 
+The landing gate owns shared external services. Bring the test database up once and leave it
+running for the whole landing. A test suite must not stop a shared database in `afterAll` while
+another request is in flight; that produces an admin-termination 500 and a teardown cascade,
+which is infrastructure noise, not a query failure.
+
 A normal pass no longer measures jig/joggle before and after. Its receipt records
 `available: false`, `complete: false`, and `note: "not measured (conformance is a landing gate)"`.
 That is the honest state; the landing gate is where the measurement belongs.
