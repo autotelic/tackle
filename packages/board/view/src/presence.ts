@@ -54,7 +54,17 @@ export const ActivityPass = Schema.Struct({
   // The card draws one number from the gate — the newest pass's error count — so that is all
   // this decodes. Re-declaring the receipt's whole quality record would be a second copy of a
   // shape board already owns; a decoder ignores the fields it does not name.
-  quality: Schema.optional(Schema.Struct({ after: Schema.Struct({ errors: Schema.Finite }) })),
+  quality: Schema.optional(
+    Schema.Struct({
+      after: Schema.Struct({
+        errors: Schema.Finite,
+        available: Schema.optional(Schema.Boolean),
+        complete: Schema.optional(Schema.Boolean),
+        unjudged: Schema.optional(Schema.Finite),
+        scope: Schema.optional(Schema.String),
+      }),
+    }),
+  ),
 })
 export const Activity = Schema.Struct({
   workstream: Schema.String,

@@ -344,12 +344,20 @@ const activityBlock = (h: HtmlBuilder<Message>, activity: typeof Activity.Type |
       : running
         ? "Pass #" + pass.pass + " running" + push
         : "Pass #" + pass.pass + " · " + age + " ago" + push
+  const quality = pass?.quality?.after
   const gate =
-    pass?.quality === undefined
+    quality === undefined
       ? ""
-      : pass.quality.after.errors === 0
-        ? "Gate green"
-        : "Gate red · " + pass.quality.after.errors + " errors"
+      : quality.available === false
+        ? "Gate unmeasured"
+        : quality.complete === false
+          ? "Gate incomplete · " +
+            (quality.unjudged ?? 0) +
+            " unjudged" +
+            (quality.scope === undefined ? "" : " · " + quality.scope)
+          : quality.errors === 0
+            ? "Gate green"
+            : "Gate red · " + quality.errors + " errors"
   const lastEvent = activity.lastEvent
   if (last === "" && waiting === 0 && gate === "") return h.span([], [])
   return h.div(
