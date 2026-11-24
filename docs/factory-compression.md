@@ -37,8 +37,10 @@ A compression pass is one cut in that loop, with five obligations:
 - moves business logic toward the domain/Effect service, and UI toward the shared composition
   patterns;
 - tightens a rule or baseline only with evidence;
-- writes `findingsBefore`, `findingsAfter`, `consolidated`, `deleted`, `locNet`, and `ruleGaps` to
-  `$FACTORY_COMPRESS_REPORT`; the commit body carries the same numbers;
+- writes `findingsBefore`, `findingsAfter`, `consolidated`, `deleted`, `locNet`,
+  `generatedLocNet`, `generatedFiles`, and `ruleGaps` to `$FACTORY_COMPRESS_REPORT`; the commit
+  body carries the same numbers. Generated catalog/snapshot churn is reported separately; it is
+  not counted as compression;
 - makes one coherent compression commit, pushes, and stops; the next compression event is another cut.
 
 It does not add a new feature, ticket, or a document that only explains the branch. It does not

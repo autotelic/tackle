@@ -43,9 +43,27 @@ export interface CompressReport {
   readonly consolidated?: number | undefined
   readonly deleted?: number | undefined
   readonly locNet?: number | undefined
+  readonly generatedLocNet?: number | undefined
+  readonly generatedFiles?: number | undefined
   readonly ruleGaps?: ReadonlyArray<string> | undefined
   readonly note?: string | undefined
 }
+
+const GENERATED_PATHS = [
+  "tools/ui-catalog/**",
+  "docs/policy-snapshots/**",
+  "**/generated/**",
+  "**/*.generated.*",
+]
+
+const isGeneratedPath = (file: string): boolean =>
+  GENERATED_PATHS.some((pattern) =>
+    pattern.endsWith("/**")
+      ? file.startsWith(pattern.slice(0, -3) + "/")
+      : pattern.startsWith("**/")
+        ? file.endsWith(pattern.slice(3))
+        : file === pattern,
+  )
 
 const CompressFile = Schema.Struct({
   findingsBefore: Schema.optional(Schema.Finite),
@@ -53,6 +71,8 @@ const CompressFile = Schema.Struct({
   consolidated: Schema.optional(Schema.Finite),
   deleted: Schema.optional(Schema.Finite),
   locNet: Schema.optional(Schema.Finite),
+  generatedLocNet: Schema.optional(Schema.Finite),
+  generatedFiles: Schema.optional(Schema.Finite),
   ruleGaps: Schema.optional(Schema.Array(Schema.String)),
   note: Schema.optional(Schema.String),
 })
@@ -71,9 +91,17 @@ const compressionOf = async (input: {
   let additions = 0
   let deletions = 0
   let deleted = 0
+  let generatedLocNet = 0
+  let generatedFiles = 0
   for (const line of (diff.stdout ?? "").split("\n")) {
     const [added, removed, file] = line.split("\t")
     if (file === undefined) continue
+    if (isGeneratedPath(file)) {
+      generatedFiles += 1
+      if (added !== "-" && removed !== "-")
+        generatedLocNet += (Number(added) || 0) - (Number(removed) || 0)
+      continue
+    }
     if (added === "-" && removed === "-") {
       deleted += 1
       continue
@@ -89,6 +117,8 @@ const compressionOf = async (input: {
     ...reported,
     deleted: reported.deleted ?? deleted,
     locNet: reported.locNet ?? additions - deletions,
+    generatedLocNet: reported.generatedLocNet ?? generatedLocNet,
+    generatedFiles: reported.generatedFiles ?? generatedFiles,
   }
 }
 
@@ -318,7 +348,7 @@ const promptOf = (input: {
           "2) Cutlist the UI this branch touched: assemble from existing primitives where you hand-rolled, then compress. Hoist at the third use, delete the old copies in the same commit, and record before/after counts.",
           "3) Atomicity audit: for each component you built, name the primitives it should be made of; fix the ones that are not made of them.",
           "4) Rule feedback: where plumb/joggle did not push toward the atomic or consolidated shape, that is a rule gap. Report it to the tackle session with the file and rule id; do not silently work around it.",
-          "5) Net-better proof: write a machine-readable JSON object to `$FACTORY_COMPRESS_REPORT` with `findingsBefore`, `findingsAfter`, `consolidated`, `deleted`, `locNet`, and `ruleGaps`. The commit body must carry the same before/after numbers.",
+          "5) Net-better proof: write a machine-readable JSON object to `$FACTORY_COMPRESS_REPORT` with `findingsBefore`, `findingsAfter`, `consolidated`, `deleted`, `locNet`, `generatedLocNet`, `generatedFiles`, and `ruleGaps`. The commit body must carry the same before/after numbers. Generated catalog/snapshot churn is reported separately, not counted as compression.",
           "Run only static conformance lenses (jig, joggle, cutlist) in this pass. Do not execute tests or wait for CI; landing runs them once. One coherent compression cut, commit, push, stop. If another cut is needed, it becomes the next event.",
         ]
       : [
