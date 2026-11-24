@@ -29,6 +29,7 @@ import { join, resolve } from 'node:path'
 import { type LoopConfig, loadConfig } from './config.ts'
 import { branchExists, gh, ghJson, git } from './loop/git-exec.ts'
 import { commitAndPush, type IssueFile, readIssueFiles } from './loop/markdown-tracker.ts'
+import { rebaseResolvingScratch } from './loop/rebase.ts'
 import { takeLock } from './loop/reconcile.ts'
 import { parseBaseFromBody, relabel, resolveBaseRef } from './loop/tracker.ts'
 import { loadTelePiConfig, sendTelegramMessage } from './telepi.ts'
@@ -157,47 +158,6 @@ async function writeConflicts(
 function loopIssueNumber(headRefName: string): number | null {
   const match = headRefName.match(/^loop\/(\d+)$/)
   return match?.[1] ? Number.parseInt(match[1], 10) : null
-}
-
-/**
- * Files the engine itself writes into a worktree, never the subject of a real
- * conflict. PROGRESS.md is the session's own note: two branches writing it is
- * what makes every sibling PR conflict on scratch state rather than on code,
- * so a merge drops it instead of stopping for a person.
- */
-const ENGINE_SCRATCH_FILES = ['PROGRESS.md']
-
-/** Resolve a conflicted engine-owned scratch file by dropping it. False when none is conflicted. */
-async function dropEngineScratch(dir: string): Promise<boolean> {
-  let dropped = false
-  for (const file of ENGINE_SCRATCH_FILES) {
-    const status = await git(dir, 'status', '--porcelain', '--', file).catch(() => '')
-    if (!/^(UU|AA|DU|UD|AU|UA|DD)/m.test(status)) continue
-    // --cached and the working copy both: the file is not wanted on either side.
-    await git(dir, 'rm', '--quiet', '--force', '--', file).catch(() => undefined)
-    dropped = true
-  }
-  return dropped
-}
-
-/**
- * Rebase, resolving only the engine's own scratch files between attempts. Any
- * other conflict is the caller's to report: this never guesses at code.
- */
-async function rebaseResolvingScratch(dir: string, ...args: string[]): Promise<void> {
-  for (let attempt = 0; attempt < ENGINE_SCRATCH_FILES.length * 8; attempt += 1) {
-    try {
-      if (attempt === 0) await git(dir, 'rebase', ...args)
-      else await git(dir, '-c', 'core.editor=true', 'rebase', '--continue')
-      return
-    } catch (error) {
-      if (!(await dropEngineScratch(dir))) throw error
-      await git(dir, 'add', '-A').catch(() => undefined)
-      // A commit that only touched the dropped file is now empty; skip it.
-      if (attempt % 2 === 1) await git(dir, 'rebase', '--skip').catch(() => undefined)
-    }
-  }
-  throw new Error('rebase kept conflicting after resolving engine scratch files')
 }
 
 /** The issue's current state: markdown = its one label; GitHub = its treadle label. */

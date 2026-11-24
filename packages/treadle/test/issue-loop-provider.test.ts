@@ -78,3 +78,48 @@ describe('sessionWithPause', () => {
     expect(exits).toEqual([])
   })
 })
+
+describe('checkpoint scratch resolution', () => {
+  it('a branch differing only on PROGRESS.md replays onto the remote tip instead of parking', async () => {
+    const { execFileSync } = await import('node:child_process')
+    const { mkdtemp, rm, writeFile } = await import('node:fs/promises')
+    const { tmpdir } = await import('node:os')
+    const { join } = await import('node:path')
+    const { rebaseResolvingScratch } = await import('../src/loop/rebase.ts')
+    const git = (cwd: string, ...args: string[]) =>
+      execFileSync('git', args, { cwd, stdio: ['ignore', 'pipe', 'pipe'] })
+        .toString()
+        .trim()
+
+    const dir = await mkdtemp(join(tmpdir(), 'treadle-scratch-'))
+    try {
+      git(dir, 'init', '-b', 'main')
+      git(dir, 'config', 'user.email', 't@t')
+      git(dir, 'config', 'user.name', 't')
+      await writeFile(join(dir, 'code.ts'), 'export const x = 1\n')
+      await writeFile(join(dir, 'PROGRESS.md'), 'base note\n')
+      git(dir, 'add', '-A')
+      git(dir, 'commit', '-m', 'base')
+      git(dir, 'checkout', '-b', 'loop/1')
+      // The remote side moves the note.
+      git(dir, 'checkout', 'main')
+      await writeFile(join(dir, 'PROGRESS.md'), 'remote note\n')
+      git(dir, 'commit', '-am', 'remote note')
+      git(dir, 'checkout', 'loop/1')
+      // The branch moves the note and adds code.
+      await writeFile(join(dir, 'PROGRESS.md'), 'branch note\n')
+      await writeFile(join(dir, 'more.ts'), 'export const y = 2\n')
+      git(dir, 'add', '-A')
+      git(dir, 'commit', '-m', 'branch note + code')
+
+      await rebaseResolvingScratch(dir, 'main')
+      // The code landed; the scratch file did not fight over its content.
+      expect(git(dir, 'log', '--oneline', 'main..HEAD')).toContain('branch note + code')
+      expect(git(dir, 'show', 'HEAD:more.ts')).toBe('export const y = 2')
+      expect(() => git(dir, 'status', '--porcelain')).not.toThrow()
+      expect(git(dir, 'status', '--porcelain')).toBe('')
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+})

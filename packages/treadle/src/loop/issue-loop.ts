@@ -15,6 +15,7 @@ import { runSession, type SessionOutcome } from '../session.ts'
 import { extractHandoff } from './distill.ts'
 import type { NightlyBudget } from './nightly.ts'
 import { isProviderFailure } from './provider.ts'
+import { rebaseResolvingScratch } from './rebase.ts'
 import { isStalled, matchRule, type RuleContext } from './rules.ts'
 import {
   comment,
@@ -932,7 +933,9 @@ async function checkpoint(
   let conflicted = false
   await git(worktreeDir, 'push', '-u', 'origin', branch).catch(async () => {
     await git(worktreeDir, 'fetch', 'origin', branch)
-    const rebased = await git(worktreeDir, 'rebase', `origin/${branch}`).then(
+    // The engine's own scratch note is not a reason to park: a conflict on it
+    // is resolved by dropping the file, the same rule maintenance applies.
+    const rebased = await rebaseResolvingScratch(worktreeDir, `origin/${branch}`).then(
       () => true,
       () => {
         git(worktreeDir, 'rebase', '--abort').catch(() => undefined)
