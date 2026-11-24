@@ -72,12 +72,14 @@ const fixture = async (command: string) => {
 
 test("a green landing gate moves to land and raises one ready desk", async () => {
   const f = await fixture("true")
+  process.env.GH_BIN = "/bin/true"
   try {
     const result = await runReady({ id: "probe-1", home: f.home, at: "2026-11-24T00:01:00.000Z" })
     expect(result.ok).toBe(true)
     expect((await readWorkstream({ id: "probe-1", home: f.home }))?.phase).toBe("land")
-    expect((await listDesk({ home: f.home }))[0]?.title).toContain("Ready to merge")
+    expect((await listDesk({ home: f.home }))[0]?.title).toContain("Ready for review")
   } finally {
+    delete process.env.GH_BIN
     rmSync(f.root, { recursive: true, force: true })
   }
 })

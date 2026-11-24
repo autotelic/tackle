@@ -218,21 +218,37 @@ const runReadyInner = async (input: {
     },
   })
   const id = "desk-" + record.id + (ok ? "-ready-" : "-gate-") + Date.parse(input.at)
-  if (ok)
+  if (ok) {
+    const marked =
+      record.delivery === "pr" && record.pr !== undefined
+        ? spawnSync(
+            process.env.GH_BIN ?? "gh",
+            ["pr", "ready", String(record.pr), "--repo", record.repo],
+            {
+              cwd: record.path,
+              encoding: "utf8",
+            },
+          )
+        : undefined
     await raiseDesk({
       home: input.home,
       item: {
         id,
         workstream: record.id,
         kind: "decision",
-        title: "Ready to merge PR #" + String(record.pr ?? ""),
-        body: "Every onReady gate passed at the landing head. Answer done to retire, or continue to keep building.",
+        title: "Ready for review PR #" + String(record.pr ?? ""),
+        body:
+          "Every onReady gate passed at the landing head. The PR is ready for human review; merging is a separate human act." +
+          (marked === undefined || marked.status === 0
+            ? ""
+            : "\n\nThe PR could not be marked ready for review: " +
+              (marked.stderr ?? marked.stdout ?? "")),
         choices: ["done", "continue"],
         route: "live",
         at: input.at,
       },
     })
-  else {
+  } else {
     const failed = checks.filter((check) => check.exit !== 0)
     const task = [
       "Landing gate failed. Fix only these failures, then commit, push, and stop.",

@@ -40,7 +40,7 @@ Conformance is a landing gate, not a per-pass tax.
 factory ready --id projects-list-1862
 ```
 
-- green: workstream moves to `land`, one "Ready to merge" desk is raised
+- green: workstream moves to `land`, the PR is marked ready for review, and one "Ready for review" desk is raised; merging is a separate human act
 - red: workstream stays in `build`, one "Landing gate failed" desk names the command and output
 - no `onReady` gates: refuses with `NoOnReadyGates`
 

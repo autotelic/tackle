@@ -456,7 +456,7 @@ const promptOf = (input: {
       Match.when(
         "land",
         () =>
-          "This is a land pass: make the PR mergeable (conflicts, checks, description, reviewers). Do not merge, edit the SOW, or open another PR.",
+          "This is a handoff pass: make the PR reviewable (conflicts, description, review guide, reviewers), mark it ready for review, and stop. Do not merge, edit the SOW, or open another PR; the human merge is a separate act outside the factory.",
       ),
       Match.orElse(
         () =>
@@ -1059,7 +1059,7 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
         id: "desk-" + record.id + "-ready-" + pass,
         workstream: record.id,
         kind: "decision",
-        title: "Ready to merge PR #" + record.pr,
+        title: "Ready for review PR #" + record.pr,
         body:
           "Pass " +
           pass +
