@@ -28,6 +28,15 @@ export const DeskAnswer = Schema.Struct({
 })
 export type DeskAnswer = typeof DeskAnswer.Type
 
+/** A pass withdrew a question because the SOW or repository answered it. */
+export const DeskWithdrawal = Schema.Struct({
+  item: Schema.String,
+  by: Schema.String,
+  reason: Schema.String,
+  at: Schema.String,
+})
+export type DeskWithdrawal = typeof DeskWithdrawal.Type
+
 /** A desk failure that carries its record kind rather than prose only. */
 class DeskError extends Data.TaggedError("DeskError")<{ readonly detail: string }> {}
 
@@ -58,6 +67,11 @@ export const deskAnswerFile = (input: {
   readonly id: string
   readonly home?: string | undefined
 }): string => join(deskDir(input.home), input.id + ".answer.json")
+/** The file that records a withdrawn question and its derivation. */
+export const deskWithdrawalFile = (input: {
+  readonly id: string
+  readonly home?: string | undefined
+}): string => join(deskDir(input.home), input.id + ".withdrawn.json")
 
 /** Raise one desk item outside every governed repo. */
 export const raiseDesk = async (input: {
@@ -116,6 +130,34 @@ export const readAnswer = async (input: {
 }
 
 /** Every answer on disk, including answers whose item is no longer pending. */
+/** Read a withdrawal, if one exists. */
+export const readWithdrawal = async (input: {
+  readonly id: string
+  readonly home?: string | undefined
+}): Promise<DeskWithdrawal | undefined> => {
+  const text = await readFile(deskWithdrawalFile(input), "utf8").catch(() => undefined)
+  if (text === undefined) return undefined
+  const decoded = Schema.decodeResult(Schema.fromJsonString(DeskWithdrawal))(text)
+  return Result.isSuccess(decoded) ? decoded.success : undefined
+}
+
+/** Withdraw a question that the SOW or repository already answered. */
+export const withdrawDesk = async (input: {
+  readonly withdrawal: DeskWithdrawal
+  readonly home?: string | undefined
+}): Promise<void> => {
+  const item = await readDesk({ id: input.withdrawal.item, home: input.home })
+  if (item === undefined)
+    throw new DeskError({ detail: "desk item not found: " + input.withdrawal.item })
+  if ((await readAnswer({ id: item.id, home: input.home })) !== undefined)
+    throw new DeskError({ detail: "desk item already answered: " + item.id })
+  await mkdir(deskDir(input.home), { recursive: true })
+  await writeFile(
+    deskWithdrawalFile({ id: item.id, home: input.home }),
+    JSON.stringify(input.withdrawal, null, 2) + "\n",
+  )
+}
+
 export const listAnswers = async (input?: {
   readonly home?: string | undefined
 }): Promise<ReadonlyArray<DeskAnswer>> => {
@@ -140,7 +182,11 @@ export const listDesk = async (input?: {
   for (const name of names.sort((left, right) => left.localeCompare(right))) {
     if (!name.endsWith(".json") || name.endsWith(".answer.json")) continue
     const item = await readDesk({ id: name.slice(0, -5), home: input?.home })
-    if (item !== undefined && (await readAnswer({ id: item.id, home: input?.home })) === undefined)
+    if (
+      item !== undefined &&
+      (await readAnswer({ id: item.id, home: input?.home })) === undefined &&
+      (await readWithdrawal({ id: item.id, home: input?.home })) === undefined
+    )
       items.push(item)
   }
   return items

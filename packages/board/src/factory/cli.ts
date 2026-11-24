@@ -10,7 +10,7 @@ import { appendEvent } from "./events.ts"
 import { runPass } from "./kernel.ts"
 import { listWorkstreams, Phase, readWorkstream, writeWorkstream } from "./store.ts"
 import { deliverReport, fingerprintOf, ReportKind, writeReport, type Report } from "./report.ts"
-import { answerDesk, listDesk, raiseDesk, readAnswer, type DeskItem } from "./desk.ts"
+import { answerDesk, listDesk, raiseDesk, readAnswer, withdrawDesk, type DeskItem } from "./desk.ts"
 import { runDaemon, startDaemon, stopDaemon } from "./daemon.ts"
 import { watchOnce } from "./watch.ts"
 
@@ -38,6 +38,7 @@ const usage = [
   "  factory desk list [--json]",
   "  factory desk answer --item <id> --choice <choice> --by <did-or-name>",
   "  factory desk raise --workstream <id> --title <text> [--body <text>] [--choices <a,b>] [--route live|github|slack]",
+  "  factory desk withdraw --item <id> --by <did-or-name> --reason <text>",
   "",
   "FACTORY_HOME defaults to ~/.factory; records live outside the governed repository.",
 ].join("\n")
@@ -223,6 +224,29 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
         },
       })
       console.log("factory: answered " + parsed.values.item + " = " + parsed.values.choice)
+      return
+    }
+    if (sub === "withdraw") {
+      const parsed = parseArgs({
+        args: argv.slice(2),
+        options: {
+          item: { type: "string" },
+          by: { type: "string", default: process.env.USER ?? "factory" },
+          reason: { type: "string" },
+        },
+        allowPositionals: false,
+      })
+      if (parsed.values.item === undefined || parsed.values.reason === undefined)
+        return fail("desk withdraw needs --item and --reason")
+      await withdrawDesk({
+        withdrawal: {
+          item: parsed.values.item,
+          by: parsed.values.by,
+          reason: parsed.values.reason,
+          at: new Date().toISOString(),
+        },
+      })
+      console.log("factory: withdrew " + parsed.values.item)
       return
     }
     if (sub === "raise") {
