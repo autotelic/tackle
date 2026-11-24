@@ -199,23 +199,27 @@ function checksWithPause(args: {
 
 /**
  * Sessions get the same #9 treatment as Checks: a provider failure retries
- * the Pass with backoff (1, 5, 15 min), then the Loop Pauses — no Passes,
- * a cheap probe Session every 15 minutes, a message on pause and resume.
- * Only a non-provider outcome reaches the caller, so infra never burns
- * the issue budget or the nightly cap.
+ * the Pass with backoff (1, 5, 15 min), then the process EXITS — launchd's
+ * KeepAlive restarts it within the throttle interval. A probe used to run
+ * in-process instead, and that is why: pi's SDK installs a pooled undici
+ * dispatcher for model calls, and a provider that caps connection lifetime
+ * (the go inference route drops them around seven minutes) leaves the pool
+ * holding a silently dead socket — every later request in that process fails
+ * instantly, probes included, while any fresh process works. A restart is the
+ * only cure, and KeepAlive makes it cheap. Only a non-provider outcome reaches
+ * the caller, so infra never burns the issue budget or the nightly cap.
  */
-function sessionWithPause(args: {
+export function sessionWithPause(args: {
   run: () => Promise<SessionOutcome>
-  probe: () => Promise<boolean>
   notify: (text: string) => Promise<void>
   issue: number
   sleepFn: (ms: number) => Effect.Effect<void>
+  exitFn: (code: number) => void
 }): Effect.Effect<SessionOutcome, Error> {
   const minute = 60_000
   return Effect.gen(function* () {
     let outcome = yield* Effect.tryPromise(() => args.run())
     let retries = 0
-    let paused = false
     while (isProviderFailure(outcome.reason)) {
       if (retries < INFRA_BACKOFF_MINUTES.length) {
         const waitMinutes = INFRA_BACKOFF_MINUTES[retries] as number
@@ -228,25 +232,16 @@ function sessionWithPause(args: {
         retries += 1
         yield* args.sleepFn(waitMinutes * minute)
       } else {
-        if (!paused) {
-          yield* Effect.tryPromise(() =>
-            args.notify(
-              `Treadle PAUSED: the provider keeps failing (${outcome.reason?.slice(0, 120)}). ` +
-                `Probing every ${PROBE_MINUTES} min; no budget is being spent.`,
-            ),
-          )
-          paused = true
-        }
-        yield* args.sleepFn(PROBE_MINUTES * minute)
-        const healthy = yield* Effect.tryPromise(() => args.probe()).pipe(
-          Effect.orElseSucceed(() => false),
-        )
-        if (!healthy) continue
         yield* Effect.tryPromise(() =>
-          args.notify('Treadle resumed: the provider is answering again.'),
+          args.notify(
+            `Treadle EXITING: the provider keeps failing (${outcome.reason?.slice(0, 120)}). ` +
+              `KeepAlive restarts us with a fresh connection pool in under a minute; ` +
+              `working issues re-enter where they left off.`,
+          ),
         )
-        paused = false
-        retries = 0
+        args.exitFn(255)
+        // Unreachable in a live process; the type needs a tail for the generator.
+        return outcome
       }
       outcome = yield* Effect.tryPromise(() => args.run())
     }
@@ -581,21 +576,10 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
               }).then((report) => ({ report, reportDir }))
             },
           }),
-        probe: async () => {
-          const probe = await runSessionFn({
-            cwd: worktreeDir,
-            prompt: 'Reply with exactly: ok',
-            maxTurns: 2,
-            timeoutMs: 120_000,
-            askHumanTimeoutMs: 60_000,
-            askHuman: async () => '',
-            logPath: join(treadleDir, 'sessions', `issue-${issue.number}-probe-${stamp()}.jsonl`),
-          })
-          return probe.terminal === 'completed'
-        },
         notify,
         issue: issue.number,
         sleepFn,
+        exitFn: (code) => process.exit(code),
       })
       yield* tryP(() => deps.passesTonight.recordPass(outcome.costUsd))
       // Seconda volta: a failed Session usually leaves no note, and the
