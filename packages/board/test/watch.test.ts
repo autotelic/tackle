@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url"
 import * as Result from "effect/Result"
 import { expect, test } from "vitest"
 import { answerDesk, listDesk, raiseDesk } from "../src/factory/desk.ts"
+import { readEvents } from "../src/factory/events.ts"
 import { readWorkstream, recordOf, writeWorkstream, type Workstream } from "../src/factory/store.ts"
 import {
   baseEvents,
@@ -180,6 +181,33 @@ test("a merged PR becomes a retirement event and nothing else", () => {
   expect(events).toHaveLength(1)
   expect(events[0]?.kind).toBe("merged")
   expect(events[0]?.id).toBe("github:merged:1862:abc123")
+})
+
+test("a passed check at the current checkpoint is consumed without a pass", async () => {
+  const root = mkdtempSync(join(tmpdir(), "factory-check-head-"))
+  try {
+    const record = { ...base(), phase: "build" as const }
+    await writeWorkstream({ record, home: root })
+    const outcome = await watchOnce({
+      id: record.id,
+      home: root,
+      at: "2026-11-24T00:00:00.000Z",
+      events: [
+        {
+          id: "check-1",
+          kind: "check",
+          at: "2026-11-24T00:00:00.000Z",
+          payload: { state: "passed" },
+          headSha: record.head,
+        },
+      ],
+      runGh: githubChecks([]),
+    })
+    expect(outcome.passes).toEqual([])
+    expect((await readEvents({ id: record.id, home: root }))[0]?.status).toBe("consumed")
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
 })
 
 test("an exhausted pass budget raises one desk item instead of going silent", async () => {

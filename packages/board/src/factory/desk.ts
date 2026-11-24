@@ -129,7 +129,6 @@ export const readAnswer = async (input: {
   return Result.isSuccess(decoded) ? decoded.success : undefined
 }
 
-/** Every answer on disk, including answers whose item is no longer pending. */
 /** Read a withdrawal, if one exists. */
 export const readWithdrawal = async (input: {
   readonly id: string
@@ -158,6 +157,7 @@ export const withdrawDesk = async (input: {
   )
 }
 
+/** Every answer on disk, including answers whose item is no longer pending. */
 export const listAnswers = async (input?: {
   readonly home?: string | undefined
 }): Promise<ReadonlyArray<DeskAnswer>> => {

@@ -6,7 +6,7 @@ import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 import { adopt } from "./adopt.ts"
 import { branchGuard } from "./branch.ts"
-import { appendEvent } from "./events.ts"
+import { appendEvent, consumeEvents } from "./events.ts"
 import { runPass } from "./kernel.ts"
 import { listWorkstreams, Phase, readWorkstream, writeWorkstream } from "./store.ts"
 import { deliverReport, fingerprintOf, ReportKind, writeReport, type Report } from "./report.ts"
@@ -21,6 +21,7 @@ const usage = [
   "  factory adopt --path <worktree> --project <linear> --label <label> [--pr <n> | --delivery trunk] [--reports <dir>] [--repo <owner/name>] [--phase reconcile|build|land] [--id <id>]",
   "  factory status [--json]",
   "  factory event --id <id> --kind <kind> [--payload <json>] [--at <iso>]",
+  "  factory event retire --id <id> --event <event-id>",
   "  factory adopt-commits --id <id> --from <ref> --commits <sha,sha> [--policy keep-parent|prefer-source] --expected-head <sha>",
   "  factory run --id <id> --worker <command> [--at <iso>]",
   "  factory watch --id <id> --worker <command> [--once] [--interval <ms>]",
@@ -87,6 +88,19 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
       )
     for (const item of await listDesk())
       console.log("desk " + item.id + "  " + item.workstream + "  " + item.title)
+    return
+  }
+
+  if (command === "event" && argv[1] === "retire") {
+    const parsed = parseArgs({
+      args: argv.slice(2),
+      options: { id: { type: "string" }, event: { type: "string" } },
+      allowPositionals: false,
+    })
+    if (parsed.values.id === undefined || parsed.values.event === undefined)
+      return fail("event retire needs --id and --event")
+    await consumeEvents({ id: parsed.values.id, ids: [parsed.values.event] })
+    console.log("factory: event " + parsed.values.event + " retired for " + parsed.values.id)
     return
   }
 

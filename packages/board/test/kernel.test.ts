@@ -223,9 +223,11 @@ test("a PR workstream scopes its quality check to the PR", async () => {
     const argsFile = join(f.root, "jig-args.txt")
     writeFileSync(
       jig,
-      ["#!/bin/sh", 'printf "%s\\n" "$@" >> "$JIG_ARGS"', "printf '{\"diagnostics\":[]}'"].join(
-        "\n",
-      ),
+      [
+        "#!/bin/sh",
+        'printf "%s\\n" "$@" >> "$JIG_ARGS"',
+        'printf \'{"scope":"touched-files","generators":[],"diagnostics":[]}\'',
+      ].join("\n"),
     )
     chmodSync(jig, 0o755)
     process.env.JIG_ARGS = argsFile

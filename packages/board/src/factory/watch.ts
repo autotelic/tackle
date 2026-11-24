@@ -430,6 +430,7 @@ export const shouldWake = (input: {
 }
 
 const CommitPayload = Schema.Struct({ sha: Schema.String })
+const CheckPayload = Schema.Struct({ state: Schema.String })
 
 /** A commit already in the worktree's history is not new work for this workstream. */
 const ownCommit = (input: {
@@ -443,6 +444,16 @@ const ownCommit = (input: {
   const git =
     input.runGit ?? ((args) => run({ command: "git", args: ["-C", input.record.path, ...args] }))
   return Result.isSuccess(git(["merge-base", "--is-ancestor", decoded.success.sha, "HEAD"]))
+}
+
+/** A passed check at the current checkpoint cannot change code, so it is not a pass. */
+const ownPassedCheck = (input: {
+  readonly event: WatchEvent
+  readonly record: Workstream
+}): boolean => {
+  if (input.event.kind !== "check" || input.event.headSha !== input.record.head) return false
+  const decoded = Schema.decodeUnknownResult(CheckPayload)(input.event.payload)
+  return Result.isSuccess(decoded) && decoded.success.state === "passed"
 }
 
 export interface WatchOutcome {
@@ -510,6 +521,17 @@ export const watchOnce = async (input: {
   )) {
     const previous = known.get(event.id)
     if (previous?.status === "consumed") continue
+    if (ownPassedCheck({ event, record })) {
+      if (previous === undefined)
+        await appendEvent({
+          id: input.id,
+          home: input.home,
+          event: { ...event, status: "consumed" },
+        })
+      else await consumeEvents({ id: input.id, ids: [event.id], home: input.home })
+      appended.push(event.id)
+      continue
+    }
     const answer = Schema.decodeUnknownResult(
       Schema.Struct({ choice: Schema.optional(Schema.String) }),
     )(event.payload)

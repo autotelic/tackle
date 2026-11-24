@@ -31,6 +31,7 @@ export interface Quality {
   readonly command?: string
   readonly version?: string
   readonly scope?: string
+  readonly requestedScope?: string
   readonly unjudged?: number
   readonly complete?: boolean
 }
@@ -62,6 +63,7 @@ const JigGenerator = Schema.Struct({
 const JigReport = Schema.Struct({
   diagnostics: Schema.Array(Schema.Struct({ severity: Schema.String })),
   generators: Schema.optional(Schema.Array(JigGenerator)),
+  scope: Schema.optional(Schema.String),
 })
 
 type CaptureResult = {
@@ -129,7 +131,7 @@ const measureQuality = async (input: {
     cwd: input.path,
     timeout: 10_000,
   })
-  const scope = input.pr === undefined ? "repo" : "pr:" + input.pr
+  const requestedScope = input.pr === undefined ? "all" : "touched-files"
   if (result.error !== undefined)
     return {
       available: false,
@@ -138,7 +140,8 @@ const measureQuality = async (input: {
       note: String(result.error),
       command,
       version: version.stdout.trim(),
-      scope,
+      scope: "absent",
+      requestedScope,
       complete: false,
     }
   const decoded = Schema.decodeResult(Schema.fromJsonString(JigReport))(result.stdout)
@@ -150,7 +153,8 @@ const measureQuality = async (input: {
       note: "jig output did not decode (exit " + result.status + ")",
       command,
       version: version.stdout.trim(),
-      scope,
+      scope: "absent",
+      requestedScope,
       complete: false,
     }
   let errors = 0
@@ -161,10 +165,24 @@ const measureQuality = async (input: {
   }
   const generators = decoded.success.generators ?? []
   const unjudged = generators.reduce((total, generator) => total + (generator.unjudged ?? 0), 0)
+  const actualScope = decoded.success.scope ?? "absent"
   const complete =
+    actualScope === requestedScope &&
     generators.length > 0 &&
     generators.every((generator) => generator.status === "ran") &&
     unjudged === 0
+  if (actualScope !== requestedScope)
+    return {
+      available: false,
+      errors: 0,
+      warnings: 0,
+      note: "jig scope mismatch: requested " + requestedScope + ", report " + actualScope,
+      command,
+      version: version.stdout.trim(),
+      scope: actualScope,
+      requestedScope,
+      complete: false,
+    }
   return {
     available: true,
     errors,
@@ -172,7 +190,8 @@ const measureQuality = async (input: {
     note: unjudged === 0 ? "jig check" : "jig check · " + unjudged + " unjudged",
     command,
     version: version.stdout.trim(),
-    scope,
+    scope: actualScope,
+    requestedScope,
     unjudged,
     complete,
   }
