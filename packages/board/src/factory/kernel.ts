@@ -427,6 +427,9 @@ const promptOf = (input: {
     "Before raising a desk item, decide from the written record: the Linear project and issue body/done-when first, then repository convention and existing code. If those resolve it, write a short ADR with the passages and code paths, withdraw any stale desk item with `factory desk withdraw --item <id> --by factory --reason <derivation>`, and continue. Escalate only if both are silent or genuinely contradictory; the card must name what was checked, the options left open, and the missing fact.",
     "Commit and push each coherent change as you make it. Do not hold commits until the pass ends; the PR should show the work while the pass is still running.",
     "Do not run the full jig/joggle gate after every edit. Make the coherent change, commit and push it, then measure once. If a gate fails, fix it and rerun only the touched scope.",
+    "Before pushing, stage every new and modified file and run the formatter on the staged set. `git diff --name-only origin/<base>...HEAD` omits uncommitted and untracked files; use `git status --porcelain` as well.",
+    "Touched-file scope is a fast gate, not the merge gate. Before calling a pass ready, run the same unscoped `jig check` CI runs and leave it green. If the repo-wide gate is red, fix it or report it; do not call the pass ready.",
+    "If a commit is already pushed and a mechanical gate failed afterward, do not redo the work. Report the gate with the commit, and resolve the stale event explicitly instead of replaying the committed change.",
     "Handle only these events, then stop. The kernel writes the pass receipt; do not write one yourself.",
     ...input.events.map(
       (event) => "- " + event.kind + " " + event.id + " " + JSON.stringify(event.payload),

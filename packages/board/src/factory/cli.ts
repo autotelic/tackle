@@ -24,6 +24,7 @@ const usage = [
   "  factory telemetry [--since <iso>] [--json] [--check]",
   "  factory event --id <id> --kind <kind> [--payload <json>] [--at <iso>]",
   "  factory event retire --id <id> --event <event-id>",
+  "  factory event resolve --id <id> --event <event-id> --reason <text>",
   "  factory adopt-commits --id <id> --from <ref> --commits <sha,sha> [--policy keep-parent|prefer-source] --expected-head <sha>",
   "  factory run --id <id> --worker <command> [--at <iso>]",
   "  factory watch --id <id> --worker <command> [--once] [--interval <ms>]",
@@ -142,16 +143,28 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
     return
   }
 
-  if (command === "event" && argv[1] === "retire") {
+  if (command === "event" && (argv[1] === "retire" || argv[1] === "resolve")) {
     const parsed = parseArgs({
       args: argv.slice(2),
-      options: { id: { type: "string" }, event: { type: "string" } },
+      options: {
+        id: { type: "string" },
+        event: { type: "string" },
+        reason: { type: "string" },
+      },
       allowPositionals: false,
     })
     if (parsed.values.id === undefined || parsed.values.event === undefined)
-      return fail("event retire needs --id and --event")
+      return fail("event " + argv[1] + " needs --id and --event")
     await consumeEvents({ id: parsed.values.id, ids: [parsed.values.event] })
-    console.log("factory: event " + parsed.values.event + " retired for " + parsed.values.id)
+    console.log(
+      "factory: event " +
+        parsed.values.event +
+        " " +
+        (argv[1] === "resolve" ? "resolved" : "retired") +
+        " for " +
+        parsed.values.id +
+        (parsed.values.reason === undefined ? "" : " — " + parsed.values.reason),
+    )
     return
   }
 
