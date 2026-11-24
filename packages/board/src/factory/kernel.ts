@@ -28,6 +28,11 @@ export interface Quality {
   readonly errors: number
   readonly warnings: number
   readonly note: string
+  readonly command?: string
+  readonly version?: string
+  readonly scope?: string
+  readonly unjudged?: number
+  readonly complete?: boolean
 }
 
 export interface Receipt {
@@ -48,8 +53,15 @@ export interface Receipt {
   readonly journal?: string
 }
 
+const JigGenerator = Schema.Struct({
+  id: Schema.String,
+  status: Schema.optional(Schema.String),
+  unjudged: Schema.optional(Schema.Finite),
+})
+
 const JigReport = Schema.Struct({
   diagnostics: Schema.Array(Schema.Struct({ severity: Schema.String })),
+  generators: Schema.optional(Schema.Array(JigGenerator)),
 })
 
 type CaptureResult = {
@@ -113,8 +125,22 @@ const measureQuality = async (input: {
       timeout: 120_000,
     },
   )
+  const version = await runCapture(command, ["--version"], {
+    cwd: input.path,
+    timeout: 10_000,
+  })
+  const scope = input.pr === undefined ? "repo" : "pr:" + input.pr
   if (result.error !== undefined)
-    return { available: false, errors: 0, warnings: 0, note: String(result.error) }
+    return {
+      available: false,
+      errors: 0,
+      warnings: 0,
+      note: String(result.error),
+      command,
+      version: version.stdout.trim(),
+      scope,
+      complete: false,
+    }
   const decoded = Schema.decodeResult(Schema.fromJsonString(JigReport))(result.stdout)
   if (Result.isFailure(decoded))
     return {
@@ -122,6 +148,10 @@ const measureQuality = async (input: {
       errors: 0,
       warnings: 0,
       note: "jig output did not decode (exit " + result.status + ")",
+      command,
+      version: version.stdout.trim(),
+      scope,
+      complete: false,
     }
   let errors = 0
   let warnings = 0
@@ -129,7 +159,23 @@ const measureQuality = async (input: {
     if (diagnostic.severity === "error") errors += 1
     if (diagnostic.severity === "warn") warnings += 1
   }
-  return { available: true, errors, warnings, note: "jig check" }
+  const generators = decoded.success.generators ?? []
+  const unjudged = generators.reduce((total, generator) => total + (generator.unjudged ?? 0), 0)
+  const complete =
+    generators.length > 0 &&
+    generators.every((generator) => generator.status === "ran") &&
+    unjudged === 0
+  return {
+    available: true,
+    errors,
+    warnings,
+    note: unjudged === 0 ? "jig check" : "jig check · " + unjudged + " unjudged",
+    command,
+    version: version.stdout.trim(),
+    scope,
+    unjudged,
+    complete,
+  }
 }
 
 /**
@@ -261,6 +307,7 @@ export const readyForHuman: Predicate.Predicate<{
   return (
     quality !== undefined &&
     quality.available &&
+    quality.complete !== false &&
     quality.errors === 0 &&
     input.record.delivery === "pr" &&
     input.record.pr !== undefined &&
@@ -640,7 +687,12 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
   }
 
   const after = await measureQuality({ path: record.path, pr: record.pr })
-  const regressed = after.errors > before.errors || after.warnings > before.warnings
+  const comparable =
+    before.complete !== false &&
+    after.complete !== false &&
+    before.command === after.command &&
+    before.version === after.version
+  const regressed = comparable && (after.errors > before.errors || after.warnings > before.warnings)
   const head = spawnSync("git", ["-C", record.path, "rev-parse", "HEAD"], { encoding: "utf8" })
   const currentHead = head.status === 0 ? head.stdout.trim() : record.head
   const changed = (() => {
