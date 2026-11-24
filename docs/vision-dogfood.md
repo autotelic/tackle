@@ -43,6 +43,31 @@ factory: permissions-dog pass 3 done; checkpoint 320f1eac
 factory: enterprise-dog pass 3 done; checkpoint ab215095
 ```
 
+## Rooms and previews
+
+Two room records were attached to the same worktrees:
+
+```text
+/tmp/vision-shop/permissions-dog  web :4400  healthy
+/tmp/vision-shop/enterprise-dog   web :4401  healthy
+```
+
+The board was started with `--root /tmp/vision-shop` and `FACTORY_HOME=/tmp/vision-factory-home`.
+It joined each room's `worktree` symlink to the workstream record and advertised both routes:
+
+```text
+presence:
+  permissions-dog  port 4400  preview /preview/permissions-dog/  web healthy
+  enterprise-dog   port 4401  preview /preview/enterprise-dog/   web healthy
+
+GET /preview/permissions-dog/  -> permissions-dog /
+GET /preview/enterprise-dog/   -> enterprise-dog /
+```
+
+This is the isolation boundary the two-project launch needs: separate room directories, ports,
+processes and previews over separate worktrees. The rooms were stopped and their ports released
+after the check.
+
 ## Evidence
 
 ```text
@@ -69,9 +94,10 @@ receipt records the census, the gate records what the baseline allows.
 ## What this proves
 
 - two feature-branch workstreams can be adopted, worked, and receipted concurrently;
-- each has its own worktree, branch, checkpoint, and event stream;
+- each has its own worktree, branch, room, port, service, preview, checkpoint, and event stream;
 - the factory survives a fresh process and does not lose the workstream state;
 - a failed worker pass leaves the record accountable rather than pretending success;
+- the board joins both rooms to their workstreams and serves both previews;
 - the Shakti target was not touched.
 
 ## Limits
