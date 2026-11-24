@@ -61,6 +61,8 @@ const fixture = async (command: string) => {
         consolidated: 2,
         deleted: 1,
         locNet: -20,
+        effectBefore: { bespokeErrorUnion: 1, throwCount: 2, dateNow: 3, consoleLog: 4 },
+        effectAfter: { bespokeErrorUnion: 0, throwCount: 1, dateNow: 2, consoleLog: 3 },
         ruleGaps: [],
       },
     }),

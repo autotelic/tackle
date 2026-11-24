@@ -77,7 +77,24 @@ const findingCount = (value: unknown): number | undefined => {
   const direct = numberValue(value)
   if (direct !== undefined) return direct
   const record = recordAt(value)
-  return numberValue(record?.inScope) ?? numberValue(record?.outsideScope)
+  if (record === undefined) return undefined
+  const total = numberValue(record.total)
+  if (total !== undefined) return total
+  const scoped = numberValue(record.inScope) ?? numberValue(record.outsideScope)
+  if (scoped !== undefined) return scoped
+  const errors = numberValue(record.errors)
+  const warnings = numberValue(record.warnings)
+  const notices = numberValue(record.notices)
+  if (errors !== undefined || warnings !== undefined || notices !== undefined)
+    return (errors ?? 0) + (warnings ?? 0) + (notices ?? 0)
+  const engines = recordAt(record.engines)
+  if (engines !== undefined) {
+    const numeric = Object.values(engines).filter(
+      (entry): entry is number => typeof entry === "number",
+    )
+    if (numeric.length > 0) return numeric.reduce((sum, entry) => sum + entry, 0)
+  }
+  return undefined
 }
 
 const consolidatedCount = (value: unknown): number | undefined => {
