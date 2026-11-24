@@ -32,7 +32,7 @@ const usage = [
   "  factory report --workstream <id> --kind <kind> --command <cmd> --expected <text> --actual <text> [--output <text>] [--blocked] [--deliver <session>]",
   "  factory phase --id <id> --set reconcile|build|compress|land|blocked|done [--answer <desk-answer.json>]",
   "  factory ready --id <id> [--at <iso>]",
-  "  factory compress --id <id> [--task <text>]",
+  "  factory compress --id <id> [--task <text>] [--answer <desk-answer.json>]",
   "  factory gates --id <id> --file <gates.json>",
   "  factory retire --id <id> [--close-pr]",
   "  factory daemon start --worker <command> [--interval <ms>]",
@@ -537,14 +537,36 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
   if (command === "compress") {
     const parsed = parseArgs({
       args: argv.slice(1),
-      options: { id: { type: "string" }, task: { type: "string" } },
+      options: {
+        id: { type: "string" },
+        task: { type: "string" },
+        answer: { type: "string" },
+      },
       allowPositionals: false,
     })
     if (parsed.values.id === undefined) return fail("compress needs --id")
     const record = await readWorkstream({ id: parsed.values.id })
     if (record === undefined) return fail("WorkstreamNotFound")
-    if (record.phase === "blocked" || record.phase === "reconcile")
-      return fail("compress cannot leave " + record.phase + " without answering the desk")
+    if (record.phase === "blocked" || record.phase === "reconcile") {
+      if (parsed.values.answer === undefined)
+        return fail(
+          "compress cannot leave " + record.phase + " without --answer <desk-answer.json>",
+        )
+      const text = await readFile(parsed.values.answer, "utf8").catch(() => undefined)
+      if (text === undefined) return fail("desk answer not found: " + parsed.values.answer)
+      const decoded = Schema.decodeResult(Schema.fromJsonString(Schema.Unknown))(text)
+      if (Result.isFailure(decoded)) return fail("desk answer is not JSON")
+      const answer = Schema.decodeUnknownResult(Schema.Struct({ choice: Schema.String }))(
+        decoded.success,
+      )
+      if (Result.isFailure(answer)) return fail("desk answer has no choice")
+      if (
+        answer.success.choice !== "accept" &&
+        answer.success.choice !== "accept-and-continue" &&
+        answer.success.choice !== "apply-evidenced"
+      )
+        return fail("desk answer must choose accept, accept-and-continue or apply-evidenced")
+    }
     if (record.phase === "land" || record.phase === "done")
       return fail("workstream is already " + record.phase)
     const at = new Date().toISOString()
