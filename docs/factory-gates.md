@@ -44,6 +44,10 @@ factory ready --id projects-list-1862
 - red: workstream stays in `build`, one "Landing gate failed" desk names the command and output
 - no `onReady` gates: refuses with `NoOnReadyGates`
 
+Landing is serialised. `factory ready` refuses while any workstream has a live pass, because
+the cut and the suite would edit/read the same worktree and the shakti-test compose project is
+shared. Run one ready at a time, after every build/compress cut has stopped.
+
 A normal pass no longer measures jig/joggle before and after. Its receipt records
 `available: false`, `complete: false`, and `note: "not measured (conformance is a landing gate)"`.
 That is the honest state; the landing gate is where the measurement belongs.

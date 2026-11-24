@@ -5,8 +5,9 @@ import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 import { raiseDesk } from "./desk.ts"
 import { appendEvent } from "./events.ts"
+import { activityOf } from "./activity.ts"
 import { receiptsDir } from "./kernel.ts"
-import { readWorkstream, writeWorkstream, type Workstream } from "./store.ts"
+import { listWorkstreams, readWorkstream, writeWorkstream, type Workstream } from "./store.ts"
 
 /** One declared gate's exact outcome, kept with the workstream that earned it. */
 export type GateFailureKind = "ok" | "load-error" | "failed"
@@ -126,6 +127,18 @@ export const runReady = async (input: {
 }): Promise<ReadyResult> => {
   const record = await readWorkstream({ id: input.id, home: input.home })
   if (record === undefined) return { ok: false, checks: [], reason: "WorkstreamNotFound" }
+  const activities = await Promise.all(
+    (await listWorkstreams({ home: input.home })).map((candidate) =>
+      activityOf({ record: candidate, home: input.home, now: Date.parse(input.at) }),
+    ),
+  )
+  const busy = activities.find((activity) => activity.state === "working")
+  if (busy !== undefined)
+    return {
+      ok: false,
+      checks: [],
+      reason: "ReadyBlocked: pass running on " + busy.workstream,
+    }
   if (record.phase === "reconcile" || record.phase === "build")
     return {
       ok: false,
