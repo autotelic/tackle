@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process"
 import { raiseDesk } from "./desk.ts"
+import { appendEvent } from "./events.ts"
 import { readWorkstream, writeWorkstream, type Workstream } from "./store.ts"
 
 /** One declared gate's exact outcome, kept with the workstream that earned it. */
@@ -83,22 +84,31 @@ export const runReady = async (input: {
     })
   else {
     const failed = checks.filter((check) => check.exit !== 0)
-    await raiseDesk({
+    const task = [
+      "Landing gate failed. Fix only these failures, then commit, push, and stop.",
+      "Do not run the gates in this build pass; `factory ready` will re-run them.",
+      "",
+      ...failed.map(
+        (check) =>
+          "- " +
+          check.name +
+          " (exit " +
+          check.exit +
+          "): " +
+          check.command +
+          "\n  " +
+          check.output.slice(0, 1200),
+      ),
+    ].join("\n")
+    await appendEvent({
+      id: record.id,
       home: input.home,
-      item: {
-        id,
-        workstream: record.id,
-        kind: "decision",
-        title: "Landing gate failed",
-        body:
-          failed
-            .map(
-              (check) => check.name + " exited " + check.exit + ": " + check.output.slice(0, 800),
-            )
-            .join("\n\n") + "\n\nThe workstream stays in build. Fix the gate and run ready again.",
-        choices: ["retry", "done"],
-        route: "live",
+      event: {
+        id: "ready-fix-" + Date.parse(input.at),
+        kind: "task",
         at: input.at,
+        payload: { task },
+        status: "pending",
       },
     })
   }

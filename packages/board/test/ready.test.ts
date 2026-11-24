@@ -4,6 +4,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { expect, test } from "vitest"
 import { listDesk } from "../src/factory/desk.ts"
+import { readEvents } from "../src/factory/events.ts"
 import { runReady } from "../src/factory/ready.ts"
 import { readWorkstream, recordOf, writeWorkstream } from "../src/factory/store.ts"
 
@@ -56,13 +57,16 @@ test("a green landing gate moves to land and raises one ready desk", async () =>
   }
 })
 
-test("a red landing gate stays in build and names the failing command", async () => {
+test("a red landing gate stays in build and queues a scoped fix task", async () => {
   const f = await fixture("exit 7")
   try {
     const result = await runReady({ id: "probe-1", home: f.home, at: "2026-11-24T00:01:00.000Z" })
     expect(result.ok).toBe(false)
     expect((await readWorkstream({ id: "probe-1", home: f.home }))?.phase).toBe("build")
-    expect((await listDesk({ home: f.home }))[0]?.title).toBe("Landing gate failed")
+    const events = await readEvents({ id: "probe-1", home: f.home })
+    expect(events[0]?.kind).toBe("task")
+    expect(events[0]?.payload).toMatchObject({ task: expect.stringContaining("exit 7") })
+    expect(await listDesk({ home: f.home })).toEqual([])
   } finally {
     rmSync(f.root, { recursive: true, force: true })
   }
