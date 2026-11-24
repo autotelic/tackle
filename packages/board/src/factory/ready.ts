@@ -1,6 +1,11 @@
 import { spawnSync } from "node:child_process"
+import { readFile, readdir } from "node:fs/promises"
+import { join } from "node:path"
+import * as Result from "effect/Result"
+import * as Schema from "effect/Schema"
 import { raiseDesk } from "./desk.ts"
 import { appendEvent } from "./events.ts"
+import { receiptsDir } from "./kernel.ts"
 import { readWorkstream, writeWorkstream, type Workstream } from "./store.ts"
 
 /** One declared gate's exact outcome, kept with the workstream that earned it. */
@@ -16,6 +21,28 @@ export interface ReadyResult {
   readonly ok: boolean
   readonly checks: ReadonlyArray<GateResult>
   readonly reason?: string | undefined
+}
+
+const CompressionReceipt = Schema.Struct({
+  phase: Schema.optional(Schema.String),
+  compress: Schema.optional(Schema.Unknown),
+})
+
+const hasCompressionProof = async (input: {
+  readonly id: string
+  readonly home?: string | undefined
+}): Promise<boolean> => {
+  const names = (await readdir(receiptsDir(input)).catch(() => [])).filter((name) =>
+    name.endsWith(".json"),
+  )
+  for (const name of names.sort((left, right) => right.localeCompare(left))) {
+    const text = await readFile(join(receiptsDir(input), name), "utf8").catch(() => undefined)
+    if (text === undefined) continue
+    const decoded = Schema.decodeResult(Schema.fromJsonString(CompressionReceipt))(text)
+    if (Result.isFailure(decoded)) continue
+    if (decoded.success.phase === "compress" && decoded.success.compress !== undefined) return true
+  }
+  return false
 }
 
 const runGate = (input: {
@@ -56,6 +83,13 @@ export const runReady = async (input: {
       ok: false,
       checks: [],
       reason: "CompressRequired: set phase compress and run the compression pass before ready",
+    }
+  if (!(await hasCompressionProof({ id: record.id, home: input.home })))
+    return {
+      ok: false,
+      checks: [],
+      reason:
+        "CompressionProofRequired: a compress receipt must carry findingsBefore, findingsAfter, consolidated, deleted, locNet, and ruleGaps",
     }
   const gates = record.gates?.onReady ?? []
   if (gates.length === 0)

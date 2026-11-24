@@ -1,5 +1,5 @@
 /* oxlint-disable plumb/prefer-property-tests -- fixed temporary workstream and two shell gates. */
-import { mkdtempSync, rmSync } from "node:fs"
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { expect, test } from "vitest"
@@ -42,6 +42,29 @@ const fixture = async (command: string) => {
       gates: { perPass: [], onReady: [{ name: "probe", command }] },
     },
   })
+  const receipts = join(home, "workstreams", "probe-1.receipts")
+  mkdirSync(receipts, { recursive: true })
+  writeFileSync(
+    join(receipts, "0001.json"),
+    JSON.stringify({
+      workstream: "probe-1",
+      pass: 1,
+      at: "2026-11-24T00:00:30.000Z",
+      status: "done",
+      phase: "compress",
+      events: [],
+      checkpoint: "a".repeat(40),
+      exit: 0,
+      compress: {
+        findingsBefore: 10,
+        findingsAfter: 7,
+        consolidated: 2,
+        deleted: 1,
+        locNet: -20,
+        ruleGaps: [],
+      },
+    }),
+  )
   return { root, home }
 }
 
