@@ -263,6 +263,31 @@ test("a done desk answer retires the workstream without a pass", async () => {
   }
 })
 
+test("a moved parent branch becomes a parent wake", () => {
+  const record = base()
+  const events = githubEvents({
+    record,
+    at: "2026-11-24T00:00:00.000Z",
+    runGh: () =>
+      Result.succeed(
+        JSON.stringify({
+          headRefOid: record.head,
+          baseRefOid: "new-parent-sha",
+          reviews: [],
+          comments: [],
+          statusCheckRollup: [],
+        }),
+      ),
+  })
+  expect(events).toContainEqual(
+    expect.objectContaining({
+      id: "github:parent:new-parent-sha",
+      kind: "parent",
+      payload: expect.objectContaining({ baseRefOid: "new-parent-sha" }),
+    }),
+  )
+})
+
 test("a check rollup without timestamps keeps a stable event id", () => {
   const runGh = githubChecks([{ __typename: "StatusContext", context: "vercel", state: "SUCCESS" }])
   const first = githubEvents({ record: base(), at: "2026-11-21T23:30:00.000Z", runGh })

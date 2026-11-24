@@ -204,12 +204,15 @@ export const collision = (input: {
   readonly records: ReadonlyArray<Workstream>
   readonly path: string
   readonly repo: string
+  readonly branch: string
   readonly pr: number | undefined
 }): Collision => {
   const pathOwner = ownerOfPath({ records: input.records, path: input.path })
   if (pathOwner._tag === "Owned") return pathOwner
   const found = input.records.find(
-    (record) => input.pr !== undefined && record.repo === input.repo && record.pr === input.pr,
+    (record) =>
+      (input.pr !== undefined && record.repo === input.repo && record.pr === input.pr) ||
+      (record.repo === input.repo && record.branch === input.branch),
   )
   return found === undefined ? Collision.Free() : Collision.Owned({ workstream: found })
 }

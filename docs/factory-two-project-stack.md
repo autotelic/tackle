@@ -18,7 +18,9 @@ origin/develop
 ```
 
 The two child branches are **siblings**. Neither is stacked on the other. Each starts at one
-recorded Permissions tip and rebases onto a newer tip when Permissions moves.
+recorded Permissions tip and rebases onto a newer tip when Permissions moves. The factory now
+watches the PR base OID and emits a `parent` wake when the parent advances; a successful pass
+records the new `baseSha`.
 
 No per-ticket branches and no per-ticket PRs. The canonical Permissions session established the
 reason: 73 open PRs, five useful fixes 72–133 commits behind, one 198-file foundation. One project
@@ -202,8 +204,9 @@ the child PR cannot be called ready until the dependency is green.
 
 1. **One parent, two siblings.** Never stack A on B. Never let A and B share a worktree, branch,
    room, port, or PR.
-2. **One project, one PR.** Commits are per ticket; PRs are per project. The stack is the
-   dependency, not a ladder of review artifacts.
+2. **One project, one PR; one branch owner.** Commits are per ticket; PRs are per project.
+   The stack is the dependency, not a ladder of review artifacts. Adoption now refuses a second
+   workstream for the same repository branch as well as the same path or PR.
 
 The remaining launch decision is only the two project names and their Linear URLs. The topology,
 map, gate matrix, worker, and monitoring surface are ready.

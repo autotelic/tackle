@@ -241,7 +241,7 @@ export const adopt = async (input: AdoptInput): Promise<Outcome<Workstream>> => 
   }
 
   const records = await listWorkstreams({ home: input.home })
-  const owner = collision({ records, path, repo, pr: input.pr })
+  const owner = collision({ records, path, repo, branch: branch.value, pr: input.pr })
   if (owner._tag === "Owned")
     return fail({
       step: "collision",

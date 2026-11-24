@@ -159,6 +159,25 @@ export const githubEvents = (input: {
   })
   if (Option.isSome(checkEvent)) events.push(checkEvent.value)
 
+  // A stacked child branch must hear when its parent moved. The PR base OID is the
+  // dependency watermark; a new value means the child should rebase before its next pass.
+  if (
+    decoded.success.baseRefOid !== undefined &&
+    decoded.success.baseRefOid !== input.record.baseSha
+  )
+    events.push({
+      id: "github:parent:" + decoded.success.baseRefOid,
+      kind: "parent",
+      at: input.at,
+      payload: {
+        base: input.record.base,
+        previous: input.record.baseSha,
+        baseRefOid: decoded.success.baseRefOid,
+      },
+      headSha: decoded.success.headRefOid,
+      actor: "base",
+    })
+
   // A conflict is a state, not a review: emit it while it is true, with an id tied to the
   // head and base so a rebase or a base move makes a new event and a consumed success does
   // not wake the same conflict again.
@@ -561,15 +580,18 @@ export const watchOnce = async (input: {
           : event.id.startsWith("base:") || event.kind === "review" || event.kind === "comment"
             ? "github"
             : null
-        if (key !== null)
-          await writeWorkstream({
-            record: {
-              ...current,
-              cursors: { ...current.cursors, [key]: event.at },
-              updatedAt: input.at,
-            },
-            home: input.home,
-          })
+        const parent =
+          event.kind === "parent"
+            ? Schema.decodeUnknownResult(Schema.Struct({ baseRefOid: Schema.String }))(
+                event.payload,
+              )
+            : undefined
+        let next = { ...current, updatedAt: input.at }
+        if (key !== null) next = { ...next, cursors: { ...current.cursors, [key]: event.at } }
+        if (parent !== undefined && Result.isSuccess(parent))
+          next = { ...next, baseSha: parent.success.baseRefOid }
+        if (key !== null || (parent !== undefined && Result.isSuccess(parent)))
+          await writeWorkstream({ record: next, home: input.home })
       }
     }
   }
