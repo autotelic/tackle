@@ -10,6 +10,16 @@ import * as Schema from "effect/Schema"
 export const Phase = Schema.Literals(["reconcile", "build", "land", "blocked", "done"])
 export type Phase = typeof Phase.Type
 
+export const Gate = Schema.Struct({
+  name: Schema.String,
+  command: Schema.String,
+})
+
+export const Gates = Schema.Struct({
+  perPass: Schema.Array(Gate),
+  onReady: Schema.Array(Gate),
+})
+
 export const Workstream = Schema.Struct({
   version: Schema.Literal(1),
   id: Schema.String,
@@ -46,12 +56,7 @@ export const Workstream = Schema.Struct({
     tokensPerDay: Schema.Finite,
     roundsOfChanges: Schema.Finite,
   }),
-  gates: Schema.optional(
-    Schema.Struct({
-      perPass: Schema.Array(Schema.Struct({ name: Schema.String, command: Schema.String })),
-      onReady: Schema.Array(Schema.Struct({ name: Schema.String, command: Schema.String })),
-    }),
-  ),
+  gates: Schema.optional(Gates),
   readiness: Schema.optional(
     Schema.Struct({
       at: Schema.String,
@@ -182,6 +187,8 @@ export const writeWorkstream = async (input: {
         budgets: current.budgets,
         desk: current.desk,
         phase: current.phase,
+        gates: current.gates,
+        readiness: current.readiness,
         autonomy: current.autonomy,
         protectedPaths: current.protectedPaths,
         updatedAt: current.updatedAt,

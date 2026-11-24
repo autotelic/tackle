@@ -8,7 +8,7 @@ import { adopt } from "./adopt.ts"
 import { branchGuard } from "./branch.ts"
 import { appendEvent, consumeEvents } from "./events.ts"
 import { runPass } from "./kernel.ts"
-import { listWorkstreams, Phase, readWorkstream, writeWorkstream } from "./store.ts"
+import { Gates, listWorkstreams, Phase, readWorkstream, writeWorkstream } from "./store.ts"
 import { deliverReport, fingerprintOf, ReportKind, writeReport, type Report } from "./report.ts"
 import { answerDesk, listDesk, raiseDesk, readAnswer, withdrawDesk, type DeskItem } from "./desk.ts"
 import { runDaemon, startDaemon, stopDaemon } from "./daemon.ts"
@@ -32,6 +32,7 @@ const usage = [
   "  factory report --workstream <id> --kind <kind> --command <cmd> --expected <text> --actual <text> [--output <text>] [--blocked] [--deliver <session>]",
   "  factory phase --id <id> --set reconcile|build|land|blocked|done [--answer <desk-answer.json>]",
   "  factory ready --id <id> [--at <iso>]",
+  "  factory gates --id <id> --file <gates.json>",
   "  factory retire --id <id> [--close-pr]",
   "  factory daemon start --worker <command> [--interval <ms>]",
   "  factory daemon run --worker <command> [--interval <ms>]",
@@ -508,6 +509,27 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
         " retired" +
         (record.pr === undefined ? "" : " (PR #" + record.pr + ")"),
     )
+    return
+  }
+
+  if (command === "gates") {
+    const parsed = parseArgs({
+      args: argv.slice(1),
+      options: { id: { type: "string" }, file: { type: "string" } },
+      allowPositionals: false,
+    })
+    if (parsed.values.id === undefined || parsed.values.file === undefined)
+      return fail("gates needs --id and --file")
+    const record = await readWorkstream({ id: parsed.values.id })
+    if (record === undefined) return fail("WorkstreamNotFound")
+    const text = await readFile(parsed.values.file, "utf8").catch(() => undefined)
+    if (text === undefined) return fail("gates file not found: " + parsed.values.file)
+    const decoded = Schema.decodeResult(Schema.fromJsonString(Gates))(text)
+    if (Result.isFailure(decoded)) return fail("gates file does not decode")
+    await writeWorkstream({
+      record: { ...record, gates: decoded.success, updatedAt: new Date().toISOString() },
+    })
+    console.log("factory: " + record.id + " gates installed")
     return
   }
 
