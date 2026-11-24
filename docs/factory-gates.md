@@ -48,6 +48,17 @@ A normal pass no longer measures jig/joggle before and after. Its receipt record
 `available: false`, `complete: false`, and `note: "not measured (conformance is a landing gate)"`.
 That is the honest state; the landing gate is where the measurement belongs.
 
+## The jig rung contract
+
+When `jig.config.json` declares the joggle process engine, its `args` must **not** repeat the
+`check` subcommand. jig prepends `check --format json`; a config that also starts with `check`
+produces `check ... check ...`, and joggle exits 3 without looking at the branch.
+
+Until the fixed jig is published, a landing run may use the individual engines directly
+(`joggle check --pr-number`, plumb via oxlint, cutlist, spec-check, policy sync) and leave the
+composite jig check to CI. Do not call that a jig pass. The composite gate is the thing being
+repaired, not the thing that earns the green.
+
 ## Why
 
 The per-pass measurement was both the largest tool-time cost and a source of false confidence:
