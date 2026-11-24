@@ -58,6 +58,8 @@ passes after, the gates are green for the touched scope, and the ticket records 
 ### The gates
 
 ```sh
+pnpm install --frozen-lockfile
+bash scripts/build-workspaces.sh
 jig check
 joggle --types --no-replay --baseline .joggle-baseline.json
 cutlist
@@ -66,14 +68,23 @@ pnpm check-typescript-errors:changed
 FILE=<test> pnpm test:rest:file
 pnpm test:ui
 node scripts/spec-check.mjs
-node scripts/policy-snapshots.mjs --check
-node scripts/derive-tree-facts.mjs --tree permissions
+node services/rest/scripts/policy-snapshots.mjs --check
 ```
 
 Run the commands from the child worktree; use the parent's installed dependencies and the same
-gate configuration. A baseline edit to make a gate pass is a failure. A scoped jig check can
-report 0 errors and still carry `unjudged > 0`; the factory records `complete: false` and does
-not call that clean. A tool defect is reported, not worked around.
+gate configuration. The first two lines are the fresh-worktree prerequisite, not a gate: both
+`spec-check` (the domain's compiled check rules) and `policy-snapshots`
+(`services/rest/dist/authorization`) read `dist/`, so without the build the first gate fails
+with "cannot load @forestbuilder/domain — build it first". `policy-snapshots` lives under
+`services/rest/scripts/`, not the repository root. The earlier
+`node scripts/derive-tree-facts.mjs --tree permissions` line named a planning script that is on
+none of the branches a child starts from; it is dropped rather than carried as a gate that
+cannot run. The permissions tree facts stay in the parent's
+`docs/permissions-overhaul-tree/`.
+
+A baseline edit to make a gate pass is a failure. A scoped jig check can report 0 errors and still
+carry `unjudged > 0`; the factory records `complete: false` and does not call that clean. A tool
+defect is reported, not worked around.
 
 ### Effect and composition
 
@@ -155,6 +166,12 @@ git -C "$TARGET" worktree add /Users/togmund/autotelic/shakti-<project-a> \
   -b feature/<project-a> "$PARENT_SHA"
 git -C "$TARGET" worktree add /Users/togmund/autotelic/shakti-<project-b> \
   -b feature/<project-b> "$PARENT_SHA"
+
+# A fresh worktree has no node_modules and no dist/; the gates read the built workspaces.
+for CHILD in /Users/togmund/autotelic/shakti-<project-a> \
+             /Users/togmund/autotelic/shakti-<project-b>; do
+  (cd "$CHILD" && pnpm install --frozen-lockfile && bash scripts/build-workspaces.sh)
+done
 ```
 
 Open one draft PR per child branch with base `feature/permissions-overhaul` (or the project's
