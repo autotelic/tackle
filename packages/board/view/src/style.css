@@ -344,12 +344,50 @@ button:hover {
   color: #5f6d7a;
   overflow-wrap: anywhere;
 }
+.activity-event {
+  margin-top: 4px;
+  color: #4b5b69;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
 .activity-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 12px;
   color: #65717e;
   font-size: 11px;
+}
+.factory-pulse {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 18px;
+}
+.pulse-stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 4px 9px;
+  border: 1px solid #dce4ea;
+  border-radius: 999px;
+  background: #fff;
+  color: #5f6d7a;
+  font-size: 11px;
+}
+.pulse-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: #27343f;
+}
+.pulse-stat.working .pulse-value {
+  color: #1d6b46;
+}
+.pulse-stat.queued .pulse-value {
+  color: #8a5a12;
+}
+.pulse-stat.blocked .pulse-value,
+.pulse-stat.desk .pulse-value {
+  color: #a33a2b;
 }
 .stale-flag {
   color: #a33a2b;

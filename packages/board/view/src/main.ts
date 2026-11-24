@@ -347,6 +347,7 @@ const activityBlock = (h: HtmlBuilder<Message>, activity: typeof Activity.Type |
       : pass.quality.after.errors === 0
         ? "Gate green"
         : "Gate red · " + pass.quality.after.errors + " errors"
+  const lastEvent = activity.lastEvent
   if (last === "" && waiting === 0 && gate === "") return h.span([], [])
   return h.div(
     [h.Class("activity" + (capped ? " capped" : "") + (running ? " running" : ""))],
@@ -384,6 +385,12 @@ const activityBlock = (h: HtmlBuilder<Message>, activity: typeof Activity.Type |
               ],
             ),
           ]),
+      lastEvent === null
+        ? h.span([], [])
+        : h.div(
+            [h.Class("activity-event")],
+            [h.span([], ["Last event · " + (lastEvent.summary ?? queueTitle(lastEvent))])],
+          ),
       gate === "" ? h.span([], []) : h.div([h.Class("activity-meta")], [h.span([], [gate])]),
     ],
   )
@@ -853,6 +860,28 @@ const factoryFloor = (
   )
 }
 
+const factoryPulse = (h: HtmlBuilder<Message>, presence: NonNullable<Model["presence"]>) => {
+  const activities = presence.factory.activity
+  const count = (state: typeof Activity.Type.state): number =>
+    activities.filter((activity) => activity.state === state).length
+  const desk = presence.factory.desk.length
+  const stats = [
+    { label: "working", value: count("working"), className: "working" },
+    { label: "queued", value: count("queued"), className: "queued" },
+    { label: "blocked", value: count("blocked"), className: "blocked" },
+    { label: "needs you", value: desk, className: "desk" },
+  ]
+  return h.div(
+    [h.Class("factory-pulse")],
+    stats.map((stat) =>
+      h.span(
+        [h.Class("pulse-stat " + stat.className)],
+        [h.span([h.Class("pulse-value")], [String(stat.value)]), h.span([], [stat.label])],
+      ),
+    ),
+  )
+}
+
 const factoryView = (model: Model, h: HtmlBuilder<Message>): Document => {
   const presence = model.presence
   const summary =
@@ -884,6 +913,7 @@ const factoryView = (model: Model, h: HtmlBuilder<Message>): Document => {
           ? []
           : [h.p([h.Class("error")], ["Could not read /presence: " + model.error])]),
         ...(model.notice === null ? [] : [h.p([h.Class("notice")], [model.notice])]),
+        ...(presence === null ? [] : [factoryPulse(h, presence)]),
         ...(presence === null
           ? []
           : [
