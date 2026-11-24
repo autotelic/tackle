@@ -27,6 +27,7 @@ export interface GateResult {
   readonly output: string
   readonly failure: string
   readonly failureKind: GateFailureKind
+  readonly failures: ReadonlyArray<string>
 }
 
 export interface ReadyResult {
@@ -80,6 +81,14 @@ const hasCompressionProof = async (input: {
   return false
 }
 
+const failureTitles = (output: string): ReadonlyArray<string> => {
+  const titles = output
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => /^\d+\)\s+\S/u.test(line) || /^(FAIL|✗)\b/u.test(line))
+  return [...new Set(titles)].slice(0, 24)
+}
+
 const failureKind = (exit: number, output: string): GateFailureKind => {
   if (exit === 0) return "ok"
   if (
@@ -119,6 +128,7 @@ const runGate = (input: {
     output: output.slice(-4000),
     failure: failureExcerpt(output),
     failureKind: failureKind(result.status ?? -1, output),
+    failures: failureTitles(output),
   }
 }
 
@@ -137,7 +147,7 @@ export const runReady = async (input: {
   const heldPid = held === undefined ? NaN : Number(held)
   if (Number.isFinite(heldPid) && heldPid !== process.pid && alive(heldPid))
     return { ok: false, checks: [], reason: "ReadyBlocked: landing already running in " + heldPid }
-  await writeFile(lock, String(process.pid))
+  await writeFile(lock, JSON.stringify({ pid: process.pid, at: input.at }))
   try {
     return await runReadyInner(input)
   } finally {
@@ -190,7 +200,7 @@ const runReadyInner = async (input: {
     record: {
       ...record,
       phase: ok ? "land" : record.phase,
-      readiness: { at: input.at, ok, checks },
+      readiness: { at: input.at, ok, checks, head: record.head },
       updatedAt: input.at,
     },
   })
@@ -226,7 +236,9 @@ const runReadyInner = async (input: {
           "): " +
           check.command +
           "\n  " +
-          check.failure,
+          (check.failures.length === 0
+            ? check.failure
+            : "Failing tests:\n" + check.failures.map((title) => "  " + title).join("\n")),
       ),
     ].join("\n")
     await appendEvent({

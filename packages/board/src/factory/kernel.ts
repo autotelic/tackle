@@ -688,7 +688,15 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
   if (record.phase === "done") return { ok: false, reason: "WorkstreamDone" }
   if (record.phase === "blocked") return { ok: false, reason: "WorkstreamBlocked" }
   const landingText = await readFile(landingLock(input.home), "utf8").catch(() => undefined)
-  const landingPid = landingText === undefined ? NaN : Number(landingText)
+  let landingPid = NaN
+  if (landingText !== undefined) {
+    try {
+      const parsed = JSON.parse(landingText)
+      landingPid = Number(typeof parsed === "object" && parsed !== null ? parsed.pid : parsed)
+    } catch {
+      landingPid = Number(landingText)
+    }
+  }
   if (Number.isFinite(landingPid) && alive(landingPid))
     return { ok: false, reason: "ReadyInProgress: " + landingPid }
 

@@ -61,6 +61,7 @@ export const Workstream = Schema.Struct({
     Schema.Struct({
       at: Schema.String,
       ok: Schema.Boolean,
+      head: Schema.optional(Schema.String),
       checks: Schema.Array(
         Schema.Struct({
           name: Schema.String,
@@ -70,6 +71,7 @@ export const Workstream = Schema.Struct({
           output: Schema.String,
           failure: Schema.optional(Schema.String),
           failureKind: Schema.optional(Schema.Literals(["ok", "load-error", "failed"])),
+          failures: Schema.optional(Schema.Array(Schema.String)),
         }),
       ),
     }),
