@@ -136,6 +136,34 @@ test("a second pass on the same workstream refuses while the first holds the loc
   }
 }, 30_000)
 
+test("a stale pass write preserves an operator budget change", async () => {
+  const root = mkdtempSync(join(tmpdir(), "factory-stale-record-"))
+  try {
+    const repo = repository(root, "a")
+    await adoptTrunk({ root, repo, id: "a" })
+    const started = await readWorkstream({ id: "a", home: join(root, "home") })
+    expect(started).toBeDefined()
+    if (started === undefined) return
+    await writeWorkstream({
+      home: join(root, "home"),
+      record: {
+        ...started,
+        budgets: { ...started.budgets, passesPerPhase: 100 },
+        updatedAt: "2026-11-24T18:00:00.000Z",
+      },
+    })
+    await writeWorkstream({
+      home: join(root, "home"),
+      record: { ...started, head: "f".repeat(40), updatedAt: started.updatedAt },
+    })
+    const after = await readWorkstream({ id: "a", home: join(root, "home") })
+    expect(after?.budgets.passesPerPhase).toBe(100)
+    expect(after?.head).toBe("f".repeat(40))
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
 test("a stale pass lock from a dead process is reclaimed after restart", async () => {
   const root = mkdtempSync(join(tmpdir(), "factory-stale-lock-"))
   try {

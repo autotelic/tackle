@@ -5,6 +5,7 @@ import { join } from "node:path"
 import { Option } from "effect"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
+import { activityOf } from "./activity.ts"
 import { appendEvent, consumeEvents, readEvents } from "./events.ts"
 import { isProtectedPath, passesUsed, runPass, type PassOutcome } from "./kernel.ts"
 import { readWorkstream, writeWorkstream, type Workstream } from "./store.ts"
@@ -421,11 +422,9 @@ export const shouldWake = (input: {
   if (input.record.phase === "done") return { wake: false, reason: "done" }
   if (input.consumed.includes(input.event.id)) return { wake: false, reason: "already-consumed" }
   if (input.event.actor?.endsWith("[bot]") === true) return { wake: false, reason: "self-authored" }
-  if (input.passesUsed >= input.record.budgets.passesPerPhase)
-    return {
-      wake: false,
-      reason: "cap-stopped: passes " + input.passesUsed + "/" + input.record.budgets.passesPerPhase,
-    }
+  // Pass count is a safety ceiling, not a stop signal. `progressOfPasses` is what distinguishes
+  // a productive branch from a stall; a queued event must never wait for a human to lift a
+  // budget button.
   return { wake: true, reason: "event" }
 }
 
@@ -514,6 +513,29 @@ export const watchOnce = async (input: {
   }
   const consumed = existing.filter((event) => event.status === "consumed").map((event) => event.id)
   const used = await passesUsed({ id: input.id, home: input.home })
+  const progress = (await activityOf({ record, home: input.home, now: Date.parse(input.at) }))
+    .progress
+  if (progress.stalled && progress.signature !== null) {
+    // A stall is a question worth recording, but not a gate on the queue. The card says what
+    // changed and what did not; silence keeps the event moving.
+    const key = progress.signature.replace(/[^a-zA-Z0-9]/gu, "").slice(0, 16)
+    const progressId = "desk-" + input.id + "-stalled-" + key
+    if ((await readDesk({ id: progressId, home: input.home })) === undefined) {
+      await raiseDesk({
+        home: input.home,
+        item: {
+          id: progressId,
+          workstream: input.id,
+          kind: "decision",
+          title: "No measurable progress after " + progress.consecutive + " passes",
+          body: "These passes ended at the same head, gate, and ticket set. The queue is still moving; this is not a budget prompt. Answer done to retire the workstream, or continue to acknowledge the stall.",
+          choices: ["continue", "done"],
+          route: "live",
+          at: input.at,
+        },
+      })
+    }
+  }
   const appended: Array<string> = []
   const passes: Array<PassOutcome> = []
   for (const event of [...queued.values()].sort(
@@ -597,28 +619,6 @@ export const watchOnce = async (input: {
       consumed,
       passesUsed: passesSoFar,
     })
-    if (decision.reason.startsWith("cap-stopped")) {
-      const capId = "desk-" + input.id + "-cap-" + record.budgets.passesPerPhase
-      if ((await readDesk({ id: capId, home: input.home })) === undefined) {
-        await raiseDesk({
-          home: input.home,
-          item: {
-            id: capId,
-            workstream: input.id,
-            kind: "decision",
-            title: "Pass budget reached: " + record.budgets.passesPerPhase,
-            body:
-              "The workstream stopped because it used all " +
-              record.budgets.passesPerPhase +
-              " passes. Answer increase-budget to allow one more pass, or done to retire.",
-            choices: ["increase-budget", "done"],
-            route: "live",
-            at: event.at,
-          },
-        })
-        console.log("factory: " + input.id + " " + decision.reason + "; desk " + capId + " raised")
-      }
-    }
     if (previous === undefined) {
       await appendEvent({
         id: input.id,

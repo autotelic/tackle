@@ -44,6 +44,10 @@ export interface Receipt {
   readonly phase: Workstream["phase"]
   readonly events: ReadonlyArray<string>
   readonly checkpoint: string | undefined
+  readonly commit?: string | undefined
+  readonly commitAt?: string | undefined
+  readonly pushed?: boolean | undefined
+  readonly pushedAt?: string | undefined
   readonly exit: number | undefined
   readonly pid?: number | undefined
   readonly quality?: {
@@ -368,6 +372,7 @@ const promptOf = (input: {
       ),
     ),
     "Before raising a desk item, decide from the written record: the Linear project and issue body/done-when first, then repository convention and existing code. If those resolve it, write a short ADR with the passages and code paths, withdraw any stale desk item with `factory desk withdraw --item <id> --by factory --reason <derivation>`, and continue. Escalate only if both are silent or genuinely contradictory; the card must name what was checked, the options left open, and the missing fact.",
+    "Commit and push each coherent change as you make it. Do not hold commits until the pass ends; the PR should show the work while the pass is still running.",
     "Handle only these events, then stop and write a receipt:",
     ...input.events.map(
       (event) => "- " + event.kind + " " + event.id + " " + JSON.stringify(event.payload),
@@ -575,8 +580,6 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
   if (guard._tag === "Mismatch") return { ok: false, reason: guard.reason }
 
   const used = await passesUsed({ id: input.id, home: input.home })
-  if (used >= record.budgets.passesPerPhase)
-    return { ok: false, reason: "budget: passesPerPhase " + record.budgets.passesPerPhase }
   const alreadyRunning = await runningPass({ id: input.id, home: input.home })
   if (alreadyRunning !== undefined)
     return { ok: false, reason: "PassRunning: pass " + alreadyRunning }
@@ -715,6 +718,18 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
   const regressed = comparable && (after.errors > before.errors || after.warnings > before.warnings)
   const head = spawnSync("git", ["-C", record.path, "rev-parse", "HEAD"], { encoding: "utf8" })
   const currentHead = head.status === 0 ? head.stdout.trim() : record.head
+  const commitAtResult = spawnSync(
+    "git",
+    ["-C", record.path, "show", "-s", "--format=%cI", currentHead],
+    {
+      encoding: "utf8",
+    },
+  )
+  const commitAt = commitAtResult.status === 0 ? commitAtResult.stdout.trim() : undefined
+  const remote = spawnSync("git", ["-C", record.path, "rev-parse", "origin/" + record.branch], {
+    encoding: "utf8",
+  })
+  const pushed = remote.status === 0 && remote.stdout.trim() === currentHead
   const changed = (() => {
     const diff = spawnSync(
       "git",
@@ -833,6 +848,10 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
     status: "done",
     exit: 0,
     checkpoint: captured.value.sha,
+    commit: currentHead,
+    commitAt,
+    pushed,
+    pushedAt: pushed ? commitAt : undefined,
     quality: { before, after, regressed },
     journal,
   }

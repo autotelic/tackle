@@ -2,10 +2,46 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { expect, test } from "vitest"
-import { activityOf } from "../src/factory/activity.ts"
+import { activityOf, progressOfPasses } from "../src/factory/activity.ts"
 import { recordOf } from "../src/factory/store.ts"
 
 /* oxlint-disable plumb/prefer-property-tests -- fixed local receipt and event fixtures. */
+
+const completed = (pass: number, checkpoint: string, errors: number) => ({
+  pass,
+  at: "2026-11-22T00:00:00.000Z",
+  status: "done" as const,
+  phase: "build" as const,
+  events: ["task-1"],
+  checkpoint,
+  exit: 0,
+  quality: {
+    before: { available: true, errors, warnings: 0, note: "" },
+    after: { available: true, errors, warnings: 0, note: "" },
+    regressed: false,
+  },
+})
+
+test("three passes with the same head, gate, and ticket are a stall", () => {
+  expect(
+    progressOfPasses([completed(1, "abc", 2), completed(2, "abc", 2), completed(3, "abc", 2)]),
+  ).toEqual({
+    consecutive: 3,
+    stalled: true,
+    signature: "abc|2|0|task-1",
+  })
+})
+
+test("a changed head or a changed gate resets the stall count", () => {
+  expect(
+    progressOfPasses([completed(1, "abc", 2), completed(2, "def", 2), completed(3, "def", 2)])
+      .consecutive,
+  ).toBe(2)
+  expect(
+    progressOfPasses([completed(1, "abc", 2), completed(2, "abc", 1), completed(3, "abc", 1)])
+      .stalled,
+  ).toBe(false)
+})
 
 test("activity reports the last pass and the queued event's own words", async () => {
   const root = mkdtempSync(join(tmpdir(), "factory-activity-"))
@@ -62,7 +98,7 @@ test("activity reports the last pass and the queued event's own words", async ()
     })
     expect(activity.lastPass?.pass).toBe(1)
     expect(activity.ageMinutes).toBe(30)
-    expect(activity.budget).toEqual({ used: 1, passesPerPhase: 5 })
+    expect(activity.budget).toEqual({ used: 1, passesPerPhase: 100 })
     expect(activity.pending[0]?.summary).toBe("the queue should say this")
   } finally {
     rmSync(root, { recursive: true, force: true })

@@ -46,6 +46,10 @@ export const ActivityPass = Schema.Struct({
   phase: Schema.String,
   events: Schema.Array(Schema.String),
   checkpoint: Schema.optional(Schema.String),
+  commit: Schema.optional(Schema.String),
+  commitAt: Schema.optional(Schema.String),
+  pushed: Schema.optional(Schema.Boolean),
+  pushedAt: Schema.optional(Schema.String),
   exit: Schema.optional(Schema.Finite),
   // The card draws one number from the gate — the newest pass's error count — so that is all
   // this decodes. Re-declaring the receipt's whole quality record would be a second copy of a
@@ -73,6 +77,13 @@ export const Activity = Schema.Struct({
   ),
   ageMinutes: Schema.NullOr(Schema.Finite),
   budget: Schema.Struct({ used: Schema.Finite, passesPerPhase: Schema.Finite }),
+  progress: Schema.optional(
+    Schema.Struct({
+      consecutive: Schema.Finite,
+      stalled: Schema.Boolean,
+      signature: Schema.NullOr(Schema.String),
+    }),
+  ),
   phase: Schema.String,
   state: Schema.Literals(["working", "queued", "blocked", "idle", "done"]),
   blockedBy: Schema.Array(Schema.String),

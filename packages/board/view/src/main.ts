@@ -333,14 +333,18 @@ const activityBlock = (h: HtmlBuilder<Message>, activity: typeof Activity.Type |
   const pass = activity.lastPass
   const running = activity.state === "working"
   const waiting = activity.pending.length
+  const stalled = activity.progress?.stalled === true
+  const stalledPasses = activity.progress?.consecutive ?? 0
   const capped = activity.blockedBy.some((reason) => reason.startsWith("budget:"))
   const age = formatDuration(activity.ageMinutes)
+  const push =
+    pass?.commit === undefined ? "" : pass.pushed === true ? " · pushed" : " · not pushed"
   const last =
     pass === null
       ? ""
       : running
-        ? "Pass #" + pass.pass + " running"
-        : "Pass #" + pass.pass + " · " + age + " ago"
+        ? "Pass #" + pass.pass + " running" + push
+        : "Pass #" + pass.pass + " · " + age + " ago" + push
   const gate =
     pass?.quality === undefined
       ? ""
@@ -385,6 +389,12 @@ const activityBlock = (h: HtmlBuilder<Message>, activity: typeof Activity.Type |
               ],
             ),
           ]),
+      stalled
+        ? h.div(
+            [h.Class("activity-event stale")],
+            ["No measurable progress for " + stalledPasses + " passes"],
+          )
+        : h.span([], []),
       lastEvent === null
         ? h.span([], [])
         : h.div(

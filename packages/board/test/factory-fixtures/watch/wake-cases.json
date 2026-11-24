@@ -114,8 +114,8 @@
           "headSha": "55aa5293a4b9d0f7f0e1c1b6a1f0d3c8e7b6a5d4"
         }
       },
-      "expected": { "wake": false, "reason": "cap stop: passes 5/5", "records": true },
-      "why": "A cap stop is a state, not a typo. The event is recorded and would be picked up by a pass after the cap is raised — and the reason names the dimension and the counts, not the word 'blocked'."
+      "expected": { "wake": true, "reason": "event", "records": true },
+      "why": "A pass count is a safety ceiling, not a stop. The event wakes immediately; progress is judged by the receipt signature, not by a human raising a budget button."
     }
   ]
 }

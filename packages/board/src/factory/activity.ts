@@ -51,6 +51,43 @@ const summaryOf = (event: Event): Option.Option<string> => {
 
 export type ActivityPass = Omit<Receipt, "workstream" | "journal">
 
+/** A run of completed passes that ended with the same head, gate, and tickets. */
+export interface Progress {
+  readonly consecutive: number
+  readonly stalled: boolean
+  readonly signature: string | null
+}
+
+/** Three identical completed passes is a stall, not a budget. */
+export const STALL_AFTER = 3
+
+const signatureOf = (pass: ActivityPass): string =>
+  [
+    pass.checkpoint ?? "no-checkpoint",
+    pass.quality?.after.errors ?? "unmeasured-errors",
+    pass.quality?.after.warnings ?? "unmeasured-warnings",
+    [...pass.events].sort((left, right) => left.localeCompare(right)).join(","),
+  ].join("|")
+
+/**
+ * Count the trailing run of passes that changed nothing observable.
+ *
+ * A pass that moves HEAD, the gate counts, or the ticket set has made progress even if the
+ * result is still red. Only the same head + same gate + same tickets across passes is a stall.
+ */
+export const progressOfPasses = (passes: ReadonlyArray<ActivityPass>): Progress => {
+  const completed = passes.filter((pass) => pass.status !== "running")
+  const last = completed.at(-1)
+  if (last === undefined) return { consecutive: 0, stalled: false, signature: null }
+  const signature = signatureOf(last)
+  let consecutive = 0
+  for (let index = completed.length - 1; index >= 0; index -= 1) {
+    if (signatureOf(completed[index]!) !== signature) break
+    consecutive += 1
+  }
+  return { consecutive, stalled: consecutive >= STALL_AFTER, signature }
+}
+
 export interface Activity {
   readonly workstream: string
   readonly lastPass: ActivityPass | null
@@ -68,6 +105,7 @@ export interface Activity {
   } | null
   readonly ageMinutes: number | null
   readonly budget: { readonly used: number; readonly passesPerPhase: number }
+  readonly progress: Progress
   readonly phase: Workstream["phase"]
   readonly state: "working" | "queued" | "blocked" | "idle" | "done"
   readonly blockedBy: ReadonlyArray<string>
@@ -123,23 +161,18 @@ export const activityOf = async (input: {
   const latestEvent = events.at(-1)
   const lastAt = lastPass?.at ?? latestEvent?.at ?? input.record.checkpoint.at
   const used = await passesUsed({ id: input.record.id, home: input.home })
-  const capped = pending.length > 0 && used >= input.record.budgets.passesPerPhase
+  const progress = progressOfPasses(passes)
   const state =
     input.record.phase === "done"
       ? ("done" as const)
       : lastPass?.status === "running"
         ? ("working" as const)
-        : input.record.phase === "blocked" || capped
+        : input.record.phase === "blocked"
           ? ("blocked" as const)
           : pending.length > 0
             ? ("queued" as const)
             : ("idle" as const)
-  const blockedBy =
-    input.record.phase === "blocked"
-      ? ["phase:blocked"]
-      : capped
-        ? ["budget:passes " + used + "/" + input.record.budgets.passesPerPhase]
-        : []
+  const blockedBy = input.record.phase === "blocked" ? ["phase:blocked"] : []
   return {
     workstream: input.record.id,
     lastPass,
@@ -155,6 +188,7 @@ export const activityOf = async (input: {
           },
     ageMinutes: minutesSince(lastAt, input.now),
     budget: { used, passesPerPhase: input.record.budgets.passesPerPhase },
+    progress,
     phase: input.record.phase,
     state,
     blockedBy,

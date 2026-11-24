@@ -149,9 +149,26 @@ export const writeWorkstream = async (input: {
   readonly home?: string | undefined
 }): Promise<void> => {
   await mkdir(workstreamDir(input.home), { recursive: true })
-  const path = workstreamFile({ id: input.record.id, home: input.home })
+  const current = await readWorkstream({ id: input.record.id, home: input.home })
+  // A pass holds its start record for minutes. If an operator edited settings while it ran,
+  // the pass must merge them back rather than clobber them with its stale copy. The pass owns
+  // head/checkpoint/PR fields; the operator owns the controls here.
+  const stale =
+    current !== undefined && Date.parse(current.updatedAt) > Date.parse(input.record.updatedAt)
+  const record: Workstream = stale
+    ? {
+        ...input.record,
+        budgets: current.budgets,
+        desk: current.desk,
+        phase: current.phase,
+        autonomy: current.autonomy,
+        protectedPaths: current.protectedPaths,
+        updatedAt: current.updatedAt,
+      }
+    : input.record
+  const path = workstreamFile({ id: record.id, home: input.home })
   const temporary = path + ".tmp"
-  await writeFile(temporary, JSON.stringify(input.record, null, 2) + "\n")
+  await writeFile(temporary, JSON.stringify(record, null, 2) + "\n")
   await rename(temporary, path)
 }
 
@@ -245,7 +262,9 @@ export const recordOf = (input: { readonly id: string; readonly facts: Facts }):
     reports: input.facts.delivery === "trunk" ? input.facts.at : undefined,
   },
   budgets: {
-    passesPerPhase: 5,
+    // A hard ceiling, not a normal stop: progress is judged by the receipt signature. It is
+    // deliberately high so a productive branch never turns a human into a budget button.
+    passesPerPhase: 100,
     wallMinutesPerPass: 30,
     tokensPerDay: 0,
     roundsOfChanges: 2,

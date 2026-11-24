@@ -44,6 +44,7 @@ const activity = (input: {
   lastEvent: null,
   ageMinutes: 1,
   budget: { used: 1, passesPerPhase: 5 },
+  progress: { consecutive: 1, stalled: false, signature: "abc|2|1|" },
   phase: "build",
   state: "idle",
   blockedBy: [],

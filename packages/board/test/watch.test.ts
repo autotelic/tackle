@@ -210,7 +210,7 @@ test("a passed check at the current checkpoint is consumed without a pass", asyn
   }
 })
 
-test("an exhausted pass budget raises one desk item instead of going silent", async () => {
+test("an exhausted pass budget no longer stops a queued event or raises a cap card", async () => {
   const root = mkdtempSync(join(tmpdir(), "factory-cap-"))
   try {
     const record = {
@@ -219,7 +219,7 @@ test("an exhausted pass budget raises one desk item instead of going silent", as
       budgets: { ...base().budgets, passesPerPhase: 0 },
     }
     await writeWorkstream({ record, home: root })
-    const outcome = await watchOnce({
+    await watchOnce({
       id: record.id,
       home: root,
       at: "2026-11-24T00:00:00.000Z",
@@ -233,9 +233,8 @@ test("an exhausted pass budget raises one desk item instead of going silent", as
       ],
       runGh: githubChecks([]),
     })
-    expect(outcome.passes).toEqual([])
     const desks = await listDesk({ home: root })
-    expect(desks.some((item) => item.title === "Pass budget reached: 0")).toBe(true)
+    expect(desks.some((item) => item.title.startsWith("Pass budget reached"))).toBe(false)
   } finally {
     rmSync(root, { recursive: true, force: true })
   }
