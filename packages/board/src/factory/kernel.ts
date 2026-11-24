@@ -36,6 +36,62 @@ export interface Quality {
   readonly complete?: boolean
 }
 
+/** Machine-readable proof that a compression cut left the branch better than it found it. */
+export interface CompressReport {
+  readonly findingsBefore?: number | undefined
+  readonly findingsAfter?: number | undefined
+  readonly consolidated?: number | undefined
+  readonly deleted?: number | undefined
+  readonly locNet?: number | undefined
+  readonly ruleGaps?: ReadonlyArray<string> | undefined
+  readonly note?: string | undefined
+}
+
+const CompressFile = Schema.Struct({
+  findingsBefore: Schema.optional(Schema.Finite),
+  findingsAfter: Schema.optional(Schema.Finite),
+  consolidated: Schema.optional(Schema.Finite),
+  deleted: Schema.optional(Schema.Finite),
+  locNet: Schema.optional(Schema.Finite),
+  ruleGaps: Schema.optional(Schema.Array(Schema.String)),
+  note: Schema.optional(Schema.String),
+})
+
+const compressionOf = async (input: {
+  readonly path: string
+  readonly startHead: string
+  readonly currentHead: string
+  readonly report: string
+}): Promise<CompressReport> => {
+  const diff = spawnSync(
+    "git",
+    ["-C", input.path, "diff", "--numstat", input.startHead + ".." + input.currentHead],
+    { encoding: "utf8" },
+  )
+  let additions = 0
+  let deletions = 0
+  let deleted = 0
+  for (const line of (diff.stdout ?? "").split("\n")) {
+    const [added, removed, file] = line.split("\t")
+    if (file === undefined) continue
+    if (added === "-" && removed === "-") {
+      deleted += 1
+      continue
+    }
+    additions += Number(added) || 0
+    deletions += Number(removed) || 0
+  }
+  const text = await readFile(input.report, "utf8").catch(() => undefined)
+  const decoded =
+    text === undefined ? undefined : Schema.decodeResult(Schema.fromJsonString(CompressFile))(text)
+  const reported = decoded !== undefined && Result.isSuccess(decoded) ? decoded.success : {}
+  return {
+    ...reported,
+    deleted: reported.deleted ?? deleted,
+    locNet: reported.locNet ?? additions - deletions,
+  }
+}
+
 export interface Receipt {
   readonly workstream: string
   readonly pass: number
@@ -56,6 +112,7 @@ export interface Receipt {
     readonly regressed: boolean
   }
   readonly journal?: string
+  readonly compress?: CompressReport | undefined
 }
 
 /** Conformance is a landing gate; a pass records that it was deliberately not measured. */
@@ -257,9 +314,12 @@ const promptOf = (input: {
     "Commit and push each coherent change as you make it. Do not hold commits until the pass ends; the PR should show the work while the pass is still running.",
     ...(input.record.phase === "compress"
       ? [
-          "A compression pass does not add a new feature, a new ticket, or a new doc that only explains the branch. Delete generated evidence and proof scaffolding; fix every reference to what you delete.",
-          "Run only static conformance lenses (jig, joggle, cutlist) in this pass. Do not execute tests or wait for CI; landing runs them once.",
-          "One coherent compression commit, push, stop. If another compression pass is needed, it becomes the next event.",
+          "Compression has five obligations. 1) Remove memorialisation: docs, prior-pass notes, generated facts, one-off scripts, and proof-of-work artifacts the branch no longer needs; fix every reference you delete.",
+          "2) Cutlist the UI this branch touched: assemble from existing primitives where you hand-rolled, then compress. Hoist at the third use, delete the old copies in the same commit, and record before/after counts.",
+          "3) Atomicity audit: for each component you built, name the primitives it should be made of; fix the ones that are not made of them.",
+          "4) Rule feedback: where plumb/joggle did not push toward the atomic or consolidated shape, that is a rule gap. Report it to the tackle session with the file and rule id; do not silently work around it.",
+          "5) Net-better proof: write a machine-readable JSON object to `$FACTORY_COMPRESS_REPORT` with `findingsBefore`, `findingsAfter`, `consolidated`, `deleted`, `locNet`, and `ruleGaps`. The commit body must carry the same before/after numbers.",
+          "Run only static conformance lenses (jig, joggle, cutlist) in this pass. Do not execute tests or wait for CI; landing runs them once. One coherent compression cut, commit, push, stop. If another cut is needed, it becomes the next event.",
         ]
       : [
           "One pass is one small ticket. Do not re-reconnoitre the project: read the named ticket, the last receipt, and the ADR/SOW passages it points at, then make the smallest coherent change, commit, push, and stop. If the ticket needs more, it becomes the next event, not a longer pass.",
@@ -523,6 +583,8 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
   await writeReceipt({ id: input.id, receipt, home: input.home })
 
   const wallMs = record.budgets.wallMinutesPerPass * 60_000
+  const compressReport = join(factoryHome(), "compress", record.id + "-" + pass + ".json")
+  await mkdir(join(factoryHome(), "compress"), { recursive: true, mode: 0o700 })
   const workerEnv = {
     ...process.env,
     // The worker is an agent this factory creates. Low thinking is the default; a Pi
@@ -534,6 +596,7 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
     FACTORY_PHASE: record.phase,
     FACTORY_EVENTS: JSON.stringify(events),
     FACTORY_REPORT_DIR: join(factoryHome(), "reports"),
+    FACTORY_COMPRESS_REPORT: compressReport,
     FACTORY_PROMPT: promptOf({ record, events }),
   }
   const result = worker.startsWith("intercom:")
@@ -753,6 +816,15 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
     status: "done",
     home: input.home,
   })
+  const compress =
+    record.phase === "compress"
+      ? await compressionOf({
+          path: record.path,
+          startHead,
+          currentHead,
+          report: compressReport,
+        })
+      : undefined
   const done: Receipt = {
     ...receipt,
     status: "done",
@@ -764,6 +836,7 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
     pushedAt: pushed ? commitAt : undefined,
     quality: { before, after, regressed },
     journal,
+    ...(compress === undefined ? {} : { compress }),
   }
   await writeReceipt({ id: record.id, receipt: done, home: input.home })
   // The record must describe the branch the receipt just pushed, not the adopt-time snapshot.

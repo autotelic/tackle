@@ -24,16 +24,21 @@ The workstream phase is `compress`:
 reconcile -> build -> compress -> land -> done
 ```
 
-A compression pass is one cut in that loop:
+A compression pass is one cut in that loop, with five obligations:
 
-- inventories the branch diff and every new doc or script;
+- inventories the branch diff and every new doc or script (remove memorialisation);
 - deletes scaffolding and fixes every reference to it;
 - keeps only files referenced by build, CI, tests, or runtime;
+- cutlists the UI this branch touched and assembles from existing primitives, hoisting at the third use;
+- names the primitives each new component should be made of and fixes the ones that are not;
+- reports every rule gap to the tackle session with file and rule id, instead of silently working around it;
 - uses jig/joggle/cutlist to find duplicated behavior, missing domain boundaries, and UI that is
   not composed through the normal loader/action/component shape;
 - moves business logic toward the domain/Effect service, and UI toward the shared composition
   patterns;
 - tightens a rule or baseline only with evidence;
+- writes `findingsBefore`, `findingsAfter`, `consolidated`, `deleted`, `locNet`, and `ruleGaps` to
+  `$FACTORY_COMPRESS_REPORT`; the commit body carries the same numbers;
 - makes one coherent compression commit, pushes, and stops; the next compression event is another cut.
 
 It does not add a new feature, ticket, or a document that only explains the branch. It does not
