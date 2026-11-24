@@ -67,33 +67,54 @@ const isGeneratedPath = (file: string): boolean =>
         : file === pattern,
   )
 
-const CompressFile = Schema.Struct({
-  findingsBefore: Schema.optional(Schema.Finite),
-  findingsAfter: Schema.optional(Schema.Finite),
-  consolidated: Schema.optional(Schema.Finite),
-  deleted: Schema.optional(Schema.Finite),
-  locNet: Schema.optional(Schema.Finite),
-  generatedLocNet: Schema.optional(Schema.Finite),
-  generatedFiles: Schema.optional(Schema.Finite),
-  effectBefore: Schema.optional(
-    Schema.Struct({
-      bespokeErrorUnion: Schema.Finite,
-      throwCount: Schema.Finite,
-      dateNow: Schema.Finite,
-      consoleLog: Schema.Finite,
-    }),
-  ),
-  effectAfter: Schema.optional(
-    Schema.Struct({
-      bespokeErrorUnion: Schema.Finite,
-      throwCount: Schema.Finite,
-      dateNow: Schema.Finite,
-      consoleLog: Schema.Finite,
-    }),
-  ),
-  ruleGaps: Schema.optional(Schema.Array(Schema.String)),
-  note: Schema.optional(Schema.String),
-})
+const recordAt = (value: unknown): Record<string, unknown> | undefined =>
+  typeof value === "object" && value !== null ? (value as Record<string, unknown>) : undefined
+
+const numberValue = (value: unknown): number | undefined =>
+  typeof value === "number" && Number.isFinite(value) ? value : undefined
+
+const findingCount = (value: unknown): number | undefined => {
+  const direct = numberValue(value)
+  if (direct !== undefined) return direct
+  const record = recordAt(value)
+  return numberValue(record?.inScope) ?? numberValue(record?.outsideScope)
+}
+
+const consolidatedCount = (value: unknown): number | undefined => {
+  const direct = numberValue(value)
+  if (direct !== undefined) return direct
+  return Array.isArray(value) ? value.length : undefined
+}
+
+const ruleGapsOf = (value: unknown): ReadonlyArray<string> | undefined => {
+  if (!Array.isArray(value)) return undefined
+  return value.map((item) => {
+    if (typeof item === "string") return item
+    const record = recordAt(item)
+    if (record === undefined) return JSON.stringify(item)
+    const engine = typeof record.engine === "string" ? record.engine : "engine"
+    const rule = typeof record.rule === "string" ? record.rule : "rule"
+    const detail = typeof record.detail === "string" ? record.detail : JSON.stringify(item)
+    return engine + "/" + rule + ": " + detail
+  })
+}
+
+const effectValue = (value: unknown): EffectCounts | undefined => {
+  const record = recordAt(value)
+  if (record === undefined) return undefined
+  const bespokeErrorUnion = numberValue(record.bespokeErrorUnion)
+  const throwCount = numberValue(record.throwCount)
+  const dateNow = numberValue(record.dateNow)
+  const consoleLog = numberValue(record.consoleLog)
+  if (
+    bespokeErrorUnion === undefined ||
+    throwCount === undefined ||
+    dateNow === undefined ||
+    consoleLog === undefined
+  )
+    return undefined
+  return { bespokeErrorUnion, throwCount, dateNow, consoleLog }
+}
 
 const EffectCount = (text: string): EffectCounts => ({
   bespokeErrorUnion: (
@@ -160,23 +181,44 @@ const compressionOf = async (input: {
     deletions += Number(removed) || 0
   }
   const text = await readFile(input.report, "utf8").catch(() => undefined)
-  const decoded =
-    text === undefined ? undefined : Schema.decodeResult(Schema.fromJsonString(CompressFile))(text)
-  const reported = decoded !== undefined && Result.isSuccess(decoded) ? decoded.success : {}
+  let reported: Record<string, unknown> = {}
+  let note: string | undefined
+  if (text !== undefined) {
+    try {
+      const parsed = JSON.parse(text)
+      if (typeof parsed === "object" && parsed !== null)
+        reported = parsed as Record<string, unknown>
+      else note = "compress sidecar found but not merged: not an object"
+    } catch (cause) {
+      note = "compress sidecar found but not merged: " + String(cause)
+    }
+  }
   const effectBefore =
-    reported.effectBefore ??
+    effectValue(reported.effectBefore) ??
     effectCounts({ path: input.path, head: input.startHead, files: changedFiles })
   const effectAfter =
-    reported.effectAfter ??
+    effectValue(reported.effectAfter) ??
     effectCounts({ path: input.path, head: input.currentHead, files: changedFiles })
   return {
-    ...reported,
-    deleted: reported.deleted ?? deleted,
-    locNet: reported.locNet ?? additions - deletions,
-    generatedLocNet: reported.generatedLocNet ?? generatedLocNet,
-    generatedFiles: reported.generatedFiles ?? generatedFiles,
+    ...(findingCount(reported.findingsBefore) === undefined
+      ? {}
+      : { findingsBefore: findingCount(reported.findingsBefore) }),
+    ...(findingCount(reported.findingsAfter) === undefined
+      ? {}
+      : { findingsAfter: findingCount(reported.findingsAfter) }),
+    ...(consolidatedCount(reported.consolidated) === undefined
+      ? {}
+      : { consolidated: consolidatedCount(reported.consolidated) }),
+    deleted: numberValue(reported.deleted) ?? deleted,
+    locNet: numberValue(reported.locNet) ?? additions - deletions,
+    generatedLocNet: numberValue(reported.generatedLocNet) ?? generatedLocNet,
+    generatedFiles: numberValue(reported.generatedFiles) ?? generatedFiles,
     effectBefore,
     effectAfter,
+    ...(ruleGapsOf(reported.ruleGaps) === undefined
+      ? {}
+      : { ruleGaps: ruleGapsOf(reported.ruleGaps) }),
+    ...(note === undefined ? {} : { note }),
   }
 }
 
