@@ -201,6 +201,53 @@ test("a clean check pass is ready for a human", async () => {
   }
 }, 20_000)
 
+test("a PR workstream scopes its quality check to the PR", async () => {
+  const f = fixture()
+  try {
+    writeFileSync(join(f.repo, ".gitignore"), "node_modules\n")
+    await adoptIt(f)
+    await appendEvent({
+      id: "permissions-1862",
+      home: f.home,
+      event: {
+        id: "ticket-1",
+        kind: "ticket",
+        at: "2026-11-21T00:01:00.000Z",
+        payload: {},
+        status: "pending",
+      },
+    })
+    const bin = join(f.repo, "node_modules", ".bin")
+    mkdirSync(bin, { recursive: true })
+    const jig = join(bin, "jig")
+    const argsFile = join(f.root, "jig-args.txt")
+    writeFileSync(
+      jig,
+      ["#!/bin/sh", 'printf "%s\\n" "$@" > "$JIG_ARGS"', "printf '{\"diagnostics\":[]}'"].join(
+        "\n",
+      ),
+    )
+    chmodSync(jig, 0o755)
+    process.env.JIG_ARGS = argsFile
+
+    const result = await runPass({
+      id: "permissions-1862",
+      worker: "/bin/sh -c 'echo handled > handled.txt'",
+      at: "2026-11-21T00:02:00.000Z",
+      home: f.home,
+    })
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.receipt.quality?.after.errors).toBe(0)
+    const args = readFileSync(argsFile, "utf8")
+    expect(args).toContain("--pr-number")
+    expect(args).toContain("1862")
+  } finally {
+    delete process.env.JIG_ARGS
+    rmSync(f.root, { recursive: true, force: true })
+  }
+}, 20_000)
+
 test("a worker exit 2 blocks the workstream and leaves the event pending", async () => {
   const f = fixture()
   try {

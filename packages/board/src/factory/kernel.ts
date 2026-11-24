@@ -92,13 +92,27 @@ const runCapture = (
     child.on("close", (status) => finish({ status, stdout, stderr }))
   })
 
-const measureQuality = async (input: { readonly path: string }): Promise<Quality> => {
+const measureQuality = async (input: {
+  readonly path: string
+  readonly pr?: number | undefined
+}): Promise<Quality> => {
   const local = join(input.path, "node_modules", ".bin", "jig")
   const command = existsSync(local) ? local : "jig"
-  const result = await runCapture(command, ["check", "--format", "json", "--cwd", input.path], {
-    cwd: input.path,
-    timeout: 120_000,
-  })
+  const result = await runCapture(
+    command,
+    [
+      "check",
+      "--format",
+      "json",
+      "--cwd",
+      input.path,
+      ...(input.pr === undefined ? [] : ["--pr-number", String(input.pr)]),
+    ],
+    {
+      cwd: input.path,
+      timeout: 120_000,
+    },
+  )
   if (result.error !== undefined)
     return { available: false, errors: 0, warnings: 0, note: String(result.error) }
   const decoded = Schema.decodeResult(Schema.fromJsonString(JigReport))(result.stdout)
@@ -509,7 +523,7 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
     encoding: "utf8",
   })
   const startHead = startHeadResult.status === 0 ? startHeadResult.stdout.trim() : record.head
-  const before = await measureQuality({ path: record.path })
+  const before = await measureQuality({ path: record.path, pr: record.pr })
   const receipt: Receipt = {
     workstream: record.id,
     pass,
@@ -620,7 +634,7 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
     }
   }
 
-  const after = await measureQuality({ path: record.path })
+  const after = await measureQuality({ path: record.path, pr: record.pr })
   const regressed = after.errors > before.errors || after.warnings > before.warnings
   const head = spawnSync("git", ["-C", record.path, "rev-parse", "HEAD"], { encoding: "utf8" })
   const currentHead = head.status === 0 ? head.stdout.trim() : record.head
