@@ -10,8 +10,11 @@ The permissions session on 2026-11-22 showed the shape we want:
 3. **Land.** Run the declared landing gates once at the real head, fix the failures, and only then
    raise the ready desk.
 
-The permissions pass removed 47 documents and 11 scripts in one commit — 5,959 lines — then moved on
-to joggle/cutlist/lint, route composition, and shared components. That is the model.
+The permissions pass removed 47 documents and 11 scripts in one commit — 5,959 lines — then kept
+cutting: 27 commits over about two and a half hours covered joggle/cutlist/lint, route composition,
+shared components, hooks, and decoded API boundaries. Compression is a loop of small cuts, not one
+mythical pass. Each cut is its own commit/push; the phase ends when the branch stops yielding
+duplication or scaffolding.
 
 ## Compress prompt
 
@@ -21,7 +24,7 @@ The workstream phase is `compress`:
 reconcile -> build -> compress -> land -> done
 ```
 
-A compression pass:
+A compression pass is one cut in that loop:
 
 - inventories the branch diff and every new doc or script;
 - deletes scaffolding and fixes every reference to it;
@@ -31,7 +34,7 @@ A compression pass:
 - moves business logic toward the domain/Effect service, and UI toward the shared composition
   patterns;
 - tightens a rule or baseline only with evidence;
-- makes one coherent compression commit and stops.
+- makes one coherent compression commit, pushes, and stops; the next compression event is another cut.
 
 It does not add a new feature, ticket, or a document that only explains the branch. It does not
 execute tests; static engines are the lens, landing is the execution.

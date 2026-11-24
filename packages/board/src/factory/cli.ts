@@ -32,6 +32,7 @@ const usage = [
   "  factory report --workstream <id> --kind <kind> --command <cmd> --expected <text> --actual <text> [--output <text>] [--blocked] [--deliver <session>]",
   "  factory phase --id <id> --set reconcile|build|compress|land|blocked|done [--answer <desk-answer.json>]",
   "  factory ready --id <id> [--at <iso>]",
+  "  factory compress --id <id> [--task <text>]",
   "  factory gates --id <id> --file <gates.json>",
   "  factory retire --id <id> [--close-pr]",
   "  factory daemon start --worker <command> [--interval <ms>]",
@@ -530,6 +531,41 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
       record: { ...record, gates: decoded.success, updatedAt: new Date().toISOString() },
     })
     console.log("factory: " + record.id + " gates installed")
+    return
+  }
+
+  if (command === "compress") {
+    const parsed = parseArgs({
+      args: argv.slice(1),
+      options: { id: { type: "string" }, task: { type: "string" } },
+      allowPositionals: false,
+    })
+    if (parsed.values.id === undefined) return fail("compress needs --id")
+    const record = await readWorkstream({ id: parsed.values.id })
+    if (record === undefined) return fail("WorkstreamNotFound")
+    if (record.phase === "blocked" || record.phase === "reconcile")
+      return fail("compress cannot leave " + record.phase + " without answering the desk")
+    if (record.phase === "land" || record.phase === "done")
+      return fail("workstream is already " + record.phase)
+    const at = new Date().toISOString()
+    await writeWorkstream({
+      record: { ...record, phase: "compress", updatedAt: at },
+    })
+    await appendEvent({
+      id: record.id,
+      event: {
+        id: "compress-" + Date.parse(at),
+        kind: "task",
+        at,
+        payload: {
+          task:
+            parsed.values.task ??
+            "Run one compression cut: inventory the branch changes, remove scaffolding, keep load-bearing files, and compress one duplication or domain/composition seam. One commit, push, stop. Static lenses only; no tests or CI.",
+        },
+        status: "pending",
+      },
+    })
+    console.log("factory: " + record.id + " compression event queued; phase compress")
     return
   }
 
