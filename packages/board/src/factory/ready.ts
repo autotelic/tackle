@@ -24,6 +24,15 @@ export interface ReadyResult {
   readonly reason?: string | undefined
 }
 
+const CompressionProof = Schema.Struct({
+  findingsBefore: Schema.Finite,
+  findingsAfter: Schema.Finite,
+  consolidated: Schema.Finite,
+  deleted: Schema.Finite,
+  locNet: Schema.Finite,
+  ruleGaps: Schema.Array(Schema.String),
+})
+
 const CompressionReceipt = Schema.Struct({
   phase: Schema.optional(Schema.String),
   compress: Schema.optional(Schema.Unknown),
@@ -41,7 +50,9 @@ const hasCompressionProof = async (input: {
     if (text === undefined) continue
     const decoded = Schema.decodeResult(Schema.fromJsonString(CompressionReceipt))(text)
     if (Result.isFailure(decoded)) continue
-    if (decoded.success.phase === "compress" && decoded.success.compress !== undefined) return true
+    if (decoded.success.phase !== "compress" || decoded.success.compress === undefined) continue
+    const proof = Schema.decodeUnknownResult(CompressionProof)(decoded.success.compress)
+    if (Result.isSuccess(proof)) return true
   }
   return false
 }
