@@ -790,6 +790,104 @@ export const visionView = (model: Model, h: HtmlBuilder<Message>): Document => {
           ],
         ),
         h.section(
+          [h.Class("vision-scene generation-scene")],
+          [
+            sceneHeader(h, {
+              title: "A generation hands off; it does not patch itself",
+              caption:
+                "Node cannot safely unload a live module. The unit of update is a generation, and the handoff is the protocol.",
+            }),
+            h.div(
+              [h.Class("generation-flow")],
+              [
+                h.div(
+                  [h.Class("generation-lane old")],
+                  [
+                    h.span([h.Class("generation-kicker")], ["OLD GENERATION"]),
+                    h.strong([], ["daemon"]),
+                    h.span([], ["draining · no new passes"]),
+                  ],
+                ),
+                h.div([h.Class("generation-arrow")], ["wait live passes"]),
+                h.div(
+                  [h.Class("generation-lane supervisor")],
+                  [
+                    h.span([h.Class("generation-kicker")], ["SUPERVISOR"]),
+                    h.strong([], ["one owner"]),
+                    h.span([], ["start · drain · health · rollback"]),
+                  ],
+                ),
+                h.div([h.Class("generation-arrow")], ["health check"]),
+                h.div(
+                  [h.Class("generation-lane new")],
+                  [
+                    h.span([h.Class("generation-kicker")], ["NEW GENERATION"]),
+                    h.strong([], ["daemon + board"]),
+                    h.span([], ["owns shop.lock · next pass"]),
+                  ],
+                ),
+              ],
+            ),
+            h.div(
+              [h.Class("generation-steps")],
+              [
+                [
+                  "Promoted generation",
+                  "git sha, schema version, launcher; only a promoted ref is eligible",
+                ],
+                ["Drain", "stop dispatch, wait live passes, release pass/shop locks, exit"],
+                [
+                  "Handoff",
+                  "start new process, health check, take shop.lock; next pass runs new code",
+                ],
+                [
+                  "Rollback",
+                  "if health fails, start the previous generation; never run two owners",
+                ],
+              ].map((step, index) =>
+                h.div(
+                  [h.Class("generation-step")],
+                  [
+                    h.span([h.Class("generation-number")], [String(index + 1).padStart(2, "0")]),
+                    h.strong([], [step[0] ?? ""]),
+                    h.span([], [step[1] ?? ""]),
+                  ],
+                ),
+              ),
+            ),
+            h.div(
+              [h.Class("generation-erlang")],
+              [
+                h.h3([], ["What Erlang taught us"]),
+                h.p(
+                  [],
+                  [
+                    "The BEAM can hold two module versions and call code_change/3 on a live process. We borrow the protocol, not the trick: one supervisor, an explicit handoff, and a state migration.",
+                  ],
+                ),
+                h.div(
+                  [h.Class("generation-table")],
+                  [
+                    ["supervisor", "one owner; restart strategy"],
+                    ["code_change/3", "workstream/receipt schema migration"],
+                    ["release_handler / appup", "generation descriptor + drain + health"],
+                    ["sys:suspend → change_code → resume", "drain → handoff → new owner"],
+                    ["two module versions", "not in Node; old and new processes, never mixed"],
+                  ].map((row) =>
+                    h.div(
+                      [h.Class("generation-row")],
+                      [
+                        h.span([h.Class("generation-term")], [row[0] ?? ""]),
+                        h.span([], [row[1] ?? ""]),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        h.section(
           [h.Class("vision-scene horizon-scene")],
           [
             sceneHeader(h, {
