@@ -77,15 +77,25 @@ const hasCompressionProof = async (input: {
 }
 
 const failureTitles = (output: string): ReadonlyArray<string> => {
-  const titles = output
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(
-      (line) =>
-        /^\d+\)\s+\S/u.test(line) ||
-        /^(FAIL|✗)\b/u.test(line) ||
-        /^(AssertionError|Error|TypeError|ReferenceError):\s/u.test(line),
+  const lines = output.split("\n")
+  const titles: Array<string> = []
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index]?.trim() ?? ""
+    if (/^\d+\)\s+\S/u.test(line)) {
+      const next = lines[index + 1]?.trim() ?? ""
+      titles.push(
+        next === "" || /^(AssertionError|Error|TypeError|ReferenceError):/u.test(next)
+          ? line
+          : line + " — " + next,
+      )
+      continue
+    }
+    if (
+      /^(FAIL|✗)\b/u.test(line) ||
+      /^(AssertionError|Error|TypeError|ReferenceError):\s/u.test(line)
     )
+      titles.push(line)
+  }
   return [...new Set(titles)].slice(0, 24)
 }
 
@@ -119,7 +129,7 @@ const runGate = (input: {
     encoding: "utf8",
     // The suite can print well over the 1 MB default; a full mocha block has to survive the
     // buffer or readiness cannot name the failing test.
-    maxBuffer: 32 * 1024 * 1024,
+    maxBuffer: 256 * 1024 * 1024,
     timeout: input.timeoutMs,
   })
   const output = ((result.stdout ?? "") + (result.stderr ?? "")).trim()
