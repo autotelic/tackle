@@ -105,6 +105,50 @@ describe('sessionWithPause', () => {
   })
 })
 
+describe('ledger union', () => {
+  it('unions both sides of a conflicted ledger instead of dropping either', async () => {
+    const { execFileSync } = await import('node:child_process')
+    const { mkdtemp, rm, writeFile, readFile } = await import('node:fs/promises')
+    const { tmpdir } = await import('node:os')
+    const { join } = await import('node:path')
+    const { unionLedgerConflict } = await import('../src/loop/rebase.ts')
+    const git = (cwd: string, ...args: string[]) =>
+      execFileSync('git', args, { cwd, stdio: ['ignore', 'pipe', 'pipe'] })
+        .toString()
+        .trim()
+
+    const dir = await mkdtemp(join(tmpdir(), 'treadle-ledger-'))
+    const ledger = join(dir, '.jig-baseline.json')
+    try {
+      git(dir, 'init', '-b', 'main')
+      git(dir, 'config', 'user.email', 't@t')
+      git(dir, 'config', 'user.name', 't')
+      await writeFile(ledger, JSON.stringify({ identities: ['a', 'b'] }, null, 1))
+      git(dir, 'add', '-A')
+      git(dir, 'commit', '-m', 'base')
+      git(dir, 'checkout', '-b', 'side')
+      await writeFile(ledger, JSON.stringify({ identities: ['a', 'b', 'theirs'] }, null, 1))
+      git(dir, 'commit', '-am', 'theirs')
+      git(dir, 'checkout', 'main')
+      await writeFile(ledger, JSON.stringify({ identities: ['a', 'b', 'ours'] }, null, 1))
+      git(dir, 'commit', '-am', 'ours')
+      // Produce a real conflict on the ledger.
+      try {
+        execFileSync('git', ['merge', 'side'], { cwd: dir, stdio: 'ignore' })
+      } catch {
+        // A conflicting merge exits non-zero; that is the state we want.
+      }
+      expect(git(dir, 'status', '--porcelain', '--', '.jig-baseline.json')).toContain('UU')
+
+      await expect(unionLedgerConflict(dir)).resolves.toBe(true)
+      const merged = JSON.parse(await readFile(ledger, 'utf8'))
+      expect([...merged.identities].sort()).toEqual(['a', 'b', 'ours', 'theirs'])
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+})
+
 describe('checkpoint scratch resolution', () => {
   it('a branch differing only on PROGRESS.md replays onto the remote tip instead of parking', async () => {
     const { execFileSync } = await import('node:child_process')
