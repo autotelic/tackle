@@ -75,6 +75,7 @@ const fixture = async (command: string) => {
     "The problems in the order they bit, and the decisions taken from the SOW.",
     "## For the code review",
     "The shape in five lines, and what was checked with real numbers.",
+    "![The running screen](https://private-user-images.githubusercontent.com/example.png)",
     "The recordings are attached to this description.",
     "Context: " + "the review evidence is written down here. ".repeat(40),
   ].join("\n")

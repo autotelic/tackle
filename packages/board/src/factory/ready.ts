@@ -207,13 +207,23 @@ const runReadyInner = async (input: {
     const missing = ["## Summary", "## The walkthrough", "## For the code review"].filter(
       (heading) => !description.includes(heading),
     )
-    if (description.trim().length < 1200 || missing.length > 0)
+    const hasVisual =
+      /!\[[^\]]*\]\([^)]+\)/u.test(description) ||
+      /<img\s/iu.test(description) ||
+      /(user-attachments|private-user-images|raw\.githubusercontent\.com)/u.test(description)
+    const visualPending =
+      /captures?\s+(are\s+)?(not attached|pending)/iu.test(description) ||
+      /visuals?\s+(are\s+)?(not attached|pending)/iu.test(description)
+    if (description.trim().length < 1200 || missing.length > 0 || (!hasVisual && !visualPending))
       return {
         ok: false,
         checks: [],
         reason:
           "PrBodyRequired: the PR description must follow the #1862 handoff shape" +
-          (missing.length === 0 ? " and be substantive" : " (missing " + missing.join(", ") + ")"),
+          (missing.length === 0 ? "" : " (missing " + missing.join(", ") + ")") +
+          (hasVisual || visualPending
+            ? " and be substantive"
+            : " and either show a visual or say why captures are pending"),
       }
   }
   const gates = record.gates?.onReady ?? []
