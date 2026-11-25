@@ -529,6 +529,7 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
     if (Result.isFailure(decoded)) return fail("gates file does not decode")
     await writeWorkstream({
       record: { ...record, gates: decoded.success, updatedAt: new Date().toISOString() },
+      control: true,
     })
     console.log("factory: " + record.id + " gates installed")
     return
@@ -572,6 +573,7 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
     const at = new Date().toISOString()
     await writeWorkstream({
       record: { ...record, phase: "compress", updatedAt: at },
+      control: true,
     })
     await appendEvent({
       id: record.id,
@@ -671,6 +673,7 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
 
     await writeWorkstream({
       record: { ...record, phase: parsed.values.set, updatedAt: new Date().toISOString() },
+      control: true,
     })
     console.log("factory: " + record.id + " phase " + parsed.values.set)
     return
@@ -696,6 +699,7 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
         budgets: { ...record.budgets, passesPerPhase: passes },
         updatedAt: new Date().toISOString(),
       },
+      control: true,
     })
     console.log("factory: " + id + " passes per phase -> " + passes)
     return

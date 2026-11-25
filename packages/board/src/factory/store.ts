@@ -57,6 +57,13 @@ export const Workstream = Schema.Struct({
     roundsOfChanges: Schema.Finite,
   }),
   gates: Schema.optional(Gates),
+  conventions: Schema.optional(
+    Schema.Struct({
+      path: Schema.String,
+      sha: Schema.String,
+      at: Schema.String,
+    }),
+  ),
   readiness: Schema.optional(
     Schema.Struct({
       at: Schema.String,
@@ -211,6 +218,8 @@ export const listWorkstreams = async (input?: { readonly home?: string | undefin
 export const writeWorkstream = async (input: {
   readonly record: Workstream
   readonly home?: string | undefined
+  /** Operator writes are authoritative even if a pass wrote a later timestamp. */
+  readonly control?: boolean | undefined
 }): Promise<void> => {
   await mkdir(workstreamDir(input.home), { recursive: true })
   const current = await readWorkstream({ id: input.record.id, home: input.home })
@@ -218,7 +227,9 @@ export const writeWorkstream = async (input: {
   // the pass must merge them back rather than clobber them with its stale copy. The pass owns
   // head/checkpoint/PR fields; the operator owns the controls here.
   const stale =
-    current !== undefined && Date.parse(current.updatedAt) > Date.parse(input.record.updatedAt)
+    input.control !== true &&
+    current !== undefined &&
+    Date.parse(current.updatedAt) > Date.parse(input.record.updatedAt)
   const record: Workstream = stale
     ? {
         ...input.record,
@@ -227,6 +238,7 @@ export const writeWorkstream = async (input: {
         phase: current.phase,
         cursors: current.cursors,
         gates: current.gates,
+        conventions: current.conventions,
         readiness: current.readiness,
         autonomy: current.autonomy,
         protectedPaths: current.protectedPaths,

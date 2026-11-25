@@ -472,6 +472,7 @@ const promptOf = (input: {
     "If a ticket's done-when requires a resource or credential this workstream does not have (bucket access, an external environment, a human decision), raise one desk card naming the exact resource when you claim it. Do not leave the ticket silently open.",
     "Before raising a desk item, decide from the written record: the Linear project and issue body/done-when first, then repository convention and existing code. If those resolve it, write a short ADR with the passages and code paths, withdraw any stale desk item with `factory desk withdraw --item <id> --by factory --reason <derivation>`, and continue. Escalate only if both are silent or genuinely contradictory; the card must name what was checked, the options left open, and the missing fact.",
     "Commit and push each coherent change as you make it. Do not hold commits until the pass ends; the PR should show the work while the pass is still running.",
+    "Format every touched file with `pnpm exec oxfmt <files>` before committing. A green build with unformatted changes becomes a red lint gate.",
     ...(input.record.phase === "compress"
       ? [
           "Compression has five obligations. 1) Remove memorialisation: docs, prior-pass notes, generated facts, one-off scripts, and proof-of-work artifacts the branch no longer needs; fix every reference you delete.",
