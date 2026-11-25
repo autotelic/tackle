@@ -67,15 +67,15 @@ export async function askByFile(
 }
 
 export function createTerminalHumanChannel(options?: {
-  askHuman?: (question: string) => Promise<string>
+  askHuman?: (question: string, signal?: AbortSignal) => Promise<string>
 }): {
-  askHuman: (question: string) => Promise<string>
+  askHuman: (question: string, signal?: AbortSignal) => Promise<string>
   close: () => void
 } {
   // A daemon has no terminal to answer on: the files are the channel.
   if (options?.askHuman !== undefined || process.stdin.isTTY !== true) {
     return {
-      askHuman: options?.askHuman ?? ((question) => askByFile(question)),
+      askHuman: options?.askHuman ?? ((question, signal) => askByFile(question, undefined, signal)),
       close: () => {},
     }
   }
@@ -87,7 +87,7 @@ export function createTerminalHumanChannel(options?: {
     rlClosed = true
     pendingReject?.(new Error('stdin closed'))
   })
-  const askHuman = (question: string): Promise<string> =>
+  const askHuman = (question: string, signal?: AbortSignal): Promise<string> =>
     new Promise((resolveAnswer, reject) => {
       if (rlClosed) {
         reject(new Error('stdin is closed'))
