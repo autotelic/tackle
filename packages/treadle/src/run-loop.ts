@@ -19,6 +19,7 @@ import { createIssueAnswerHandler, watchAnswers } from './answer-watcher.ts'
 import { hashConfigText, loadConfig } from './config.ts'
 import { createHumanChannel, type HumanChannel } from './human-channel.ts'
 import { makeEscalate } from './loop/escalate.ts'
+import { tuneHttpDispatcher } from './loop/http-tuning.ts'
 import { appendQa, pickNextIssue, runIssueLoop } from './loop/issue-loop.ts'
 import { buildLoopMachine, type LoopMachineDeps } from './loop/machine.ts'
 import { installFetchDiagnostics } from './loop/netlog.ts'
@@ -96,6 +97,10 @@ const notify = async (text: string) => {
 installFetchDiagnostics((failure) => {
   console.error(`[net] ${JSON.stringify(failure)}`)
 })
+
+// The SDK only installs its HTTP/2-disabled dispatcher on its own CLI path; the
+// embedded one inherits a pool that serves dead h2 sessions (see the module).
+console.error(`[net] dispatcher: ${await tuneHttpDispatcher()}`)
 
 // Stack maintenance on startup (#17): merges land at human pace; catch up
 // on marking done, rebasing stacked branches and retargeting PRs before
