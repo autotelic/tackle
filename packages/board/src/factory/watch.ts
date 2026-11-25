@@ -557,8 +557,10 @@ export const watchOnce = async (input: {
   }
   const appended: Array<string> = []
   const passes: Array<PassOutcome> = []
+  const priority = (kind: string): number => (kind === "review" ? 0 : kind === "comment" ? 1 : 2)
   for (const event of [...queued.values()].sort(
-    (left, right) => Date.parse(left.at) - Date.parse(right.at),
+    (left, right) =>
+      priority(left.kind) - priority(right.kind) || Date.parse(left.at) - Date.parse(right.at),
   )) {
     const previous = known.get(event.id)
     if (previous?.status === "consumed") continue

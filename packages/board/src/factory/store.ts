@@ -225,6 +225,7 @@ export const writeWorkstream = async (input: {
         budgets: current.budgets,
         desk: current.desk,
         phase: current.phase,
+        cursors: current.cursors,
         gates: current.gates,
         readiness: current.readiness,
         autonomy: current.autonomy,
