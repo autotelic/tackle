@@ -1,5 +1,7 @@
 import { spawnSync } from "node:child_process"
+import { createHash } from "node:crypto"
 import { readFile } from "node:fs/promises"
+import { join } from "node:path"
 import { pathToFileURL } from "node:url"
 import { parseArgs } from "node:util"
 import * as Result from "effect/Result"
@@ -34,6 +36,7 @@ const usage = [
   "  factory ready --id <id> [--at <iso>] [--timeout <ms>]",
   "  factory compress --id <id> [--task <text>] [--answer <desk-answer.json>]",
   "  factory gates --id <id> --file <gates.json>",
+  "  factory conventions --id <id> [--path AGENTS.md]",
   "  factory retire --id <id> [--close-pr]",
   "  factory daemon start --worker <command> [--interval <ms>]",
   "  factory daemon run --worker <command> [--interval <ms>]",
@@ -510,6 +513,28 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
         " retired" +
         (record.pr === undefined ? "" : " (PR #" + record.pr + ")"),
     )
+    return
+  }
+
+  if (command === "conventions") {
+    const parsed = parseArgs({
+      args: argv.slice(1),
+      options: { id: { type: "string" }, path: { type: "string", default: "AGENTS.md" } },
+      allowPositionals: false,
+    })
+    if (parsed.values.id === undefined) return fail("conventions needs --id")
+    const record = await readWorkstream({ id: parsed.values.id })
+    if (record === undefined) return fail("WorkstreamNotFound")
+    const path = parsed.values.path
+    const text = await readFile(join(record.path, path), "utf8").catch(() => undefined)
+    if (text === undefined) return fail("conventions file not found: " + path)
+    const at = new Date().toISOString()
+    const sha = createHash("sha256").update(text).digest("hex")
+    await writeWorkstream({
+      record: { ...record, conventions: { path, sha, at }, updatedAt: at },
+      control: true,
+    })
+    console.log("factory: " + record.id + " conventions " + path + " @ " + sha.slice(0, 12))
     return
   }
 
