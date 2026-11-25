@@ -60,7 +60,7 @@ const Github = Schema.Struct({
   ),
   comments: Schema.Array(
     Schema.Struct({
-      id: Schema.Finite,
+      id: Schema.String,
       body: Schema.String,
       createdAt: Schema.String,
       author: Schema.optional(Schema.Struct({ login: Schema.String })),
@@ -104,7 +104,17 @@ export const githubEvents = (input: {
   const json = Schema.decodeResult(Schema.fromJsonString(Schema.Unknown))(result.success)
   if (Result.isFailure(json)) return []
   const decoded = Schema.decodeUnknownResult(Github)(json.success)
-  if (Result.isFailure(decoded)) return []
+  if (Result.isFailure(decoded)) {
+    // A decode error is not "nothing happened": the whole review/comment feed would go
+    // silent. Name it once per poll so the operator can see the shape that changed.
+    console.error(
+      "factory: github payload did not decode for " +
+        input.record.id +
+        ": " +
+        String(decoded.failure),
+    )
+    return []
+  }
   // A merge is the one PR state that retires the workstream. Return only that event:
   // replaying the comments and checks that led to it after the merge would ask a worker
   // to change a branch whose landing is already decided.
