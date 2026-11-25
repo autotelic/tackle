@@ -19,8 +19,8 @@ import { rebaseResolvingScratch } from './rebase.ts'
 import { isStalled, matchRule, type RuleContext } from './rules.ts'
 import {
   comment,
-  gh,
   ghJson,
+  ghRetry,
   git,
   type Issue,
   issueUrl,
@@ -735,7 +735,7 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
           yield* tryP(() => openPrIfNeeded())
           const rule = matchRule(config.rules ?? [], 'feature.done', 'feature-check', ruleContext)
           if (rule?.action.type === 'effect' && rule.action.effect === 'mark-ready-and-notify') {
-            yield* tryP(() => gh(repoDir, 'pr', 'ready', branch))
+            yield* tryP(() => ghRetry(repoDir, ['pr', 'ready', branch]))
             const url =
               (yield* tryP(() => issueUrl(repoDir, config, issue.number))) ?? `#${issue.number}`
             yield* tryP(() =>
@@ -831,15 +831,14 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
     }
 
     async function openPrIfNeeded(): Promise<void> {
-      const existing = await gh(repoDir, 'pr', 'list', '--head', branch, '--json', 'number')
+      const existing = await ghRetry(repoDir, ['pr', 'list', '--head', branch, '--json', 'number'])
       if ((JSON.parse(existing) as unknown[]).length > 0) return
       const body =
         config.issues.tracker === 'markdown'
           ? `Built by Treadle from markdown issue ${String(issue.number).padStart(3, '0')} "${issue.title}". ` +
             `Receipts (one per Pass) are in the tracker repo under log/${String(issue.number).padStart(3, '0')}/.`
           : `Closes #${issue.number}\n\nBuilt by Treadle. Receipts (one per pass) are in the issue comments.`
-      await gh(
-        repoDir,
+      await ghRetry(repoDir, [
         'pr',
         'create',
         '--draft',
@@ -851,7 +850,7 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
         `${issue.title} (#${issue.number})`,
         '--body',
         body,
-      )
+      ])
     }
   })
 }
