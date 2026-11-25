@@ -86,6 +86,18 @@ The phase is also an audit of the engines:
 - **jig joggle rung** — unchanged: joggle exits 3 through jig and 0 in a shell, so the gate still
   counts zero joggle findings. Direct `joggle check --since origin/main` was clean (169 judgements,
   1 unjudged), but the jig rung must be fixed rather than bypassed.
+- **joggle/duplicate-implementation, sibling scripts** — a branch-local
+  `documentation-files-tenant-count.mjs` re-listed bucket prefixes and recounted objects already
+  computed and printed by `planBackfill`/`countSkip` in the sibling backfill script. Scoped to PR
+  1874 the rule was silent; it appears to compare expression shapes within a module pair, not a
+  reporting path duplicated by a sibling script in the same directory.
+- **joggle/doc-matches-code, branch-local ADRs** — six ADRs were cited only from two script
+  comments and otherwise unread. Nothing treats a decision note as a reference target that must
+  resolve to code, or as stale when it only restates code; `joggle/declared-staleness` fired 66
+  times elsewhere on the PR and zero times on the ADRs.
+
+Both were deleted in the docs compression cut (`6096ce8f5`) and reported in the receipt’s
+`ruleGaps`; the missing rules are the engine backlog, not a reason to keep the documents.
 
 Effect v4 target: `Data.TaggedError` + `Effect.catchTag` for typed failures, `Clock`, `Logger`,
 `Schema.decodeUnknown`, `Context.Tag` + `Layer`, `Schedule`/`Effect` for retries and limits. The
