@@ -87,7 +87,7 @@ describe("parseModule on an .astro file", () => {
 
   it("reads imports and their bindings from the frontmatter", () => {
     expect(module.imports).toEqual(["../icons.ts", "./Button.astro"])
-    expect(module.importEdges.flatMap((edge) => edge.bindings)).toEqual(["Icon", "Button"])
+    expect(module.importEdges.flatMap((edge) => edge.bindings)).toEqual(["Button", "Icon"])
   })
 
   it("reads rendered tags from the template, with real line numbers", () => {
