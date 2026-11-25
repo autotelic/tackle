@@ -1,5 +1,6 @@
 import { Effect, FileSystem, Order, Path, Predicate } from "effect"
 import { parseSync } from "oxc-parser"
+import { astroToTsx } from "./astro.ts"
 import type { CatalogDeclaration } from "@autotelic/protocol"
 
 /*
@@ -571,7 +572,33 @@ const importEdgesOf = (
  * ordinary JavaScript too, so this is a superset rather than a guess.
  */
 const langOf = (file: string): "ts" | "tsx" | "jsx" =>
-  file.endsWith(".tsx") ? "tsx" : file.endsWith(".ts") ? "ts" : "jsx"
+  file.endsWith(".tsx") || file.endsWith(".astro") ? "tsx" : file.endsWith(".ts") ? "ts" : "jsx"
+
+/**
+ * An Astro component's props are declared, not destructured from a parameter: `interface Props`
+ * (or `type Props = {…}`) in the frontmatter is the contract editors and callers read.
+ */
+const astroPropsOf = (program: Ast): ReadonlyArray<string> => {
+  const props = new Set<string>()
+  const members = (body: unknown): void => {
+    for (const member of asArray(asRecord(body)?.body ?? body)) {
+      const name = nameOf(asRecord(member)?.key)
+      if (name !== undefined) props.add(name)
+    }
+  }
+  walk(program, (node) => {
+    if (node.type === "TSInterfaceDeclaration" && nameOf(node.id) === "Props") members(node.body)
+    else if (node.type === "TSTypeAliasDeclaration" && nameOf(node.id) === "Props") {
+      const literal = asRecord(node.typeAnnotation)
+      if (literal?.type === "TSTypeLiteral") members(literal.members)
+    }
+  })
+  return [...props].sort(Order.String)
+}
+
+/** oxc picks its dialect from the filename as well as `lang`; an `.astro` name would confuse it. */
+const astroSyntheticName = (file: string): string =>
+  file.endsWith(".astro") ? `${file}.tsx` : file
 
 /** Parse one module. Parsing never throws: a syntax error yields an empty record. */
 export const parseModule = ({
@@ -581,9 +608,15 @@ export const parseModule = ({
   readonly filename: string
   readonly text: string
 }): SourceModule => {
-  const parsed = parseSync(filename, text, { sourceType: "module", lang: langOf(filename) })
+  // An Astro file is read as the TSX module `astroToTsx` makes of it; the path stays the
+  // original, so the catalog names `Card.astro`, not a synthetic file.
+  const source = filename.endsWith(".astro") ? astroToTsx(text) : text
+  const parsed = parseSync(astroSyntheticName(filename), source, {
+    sourceType: "module",
+    lang: langOf(filename),
+  })
   const program = asRecord(parsed.program) ?? {}
-  const lineAt = lineIndex(text)
+  const lineAt = lineIndex(source)
   const tags = new Set<string>()
   const foldkitCalls = new Set<string>()
   const hooks = new Set<string>()
@@ -650,7 +683,7 @@ export const parseModule = ({
     renders: renderSites,
     foldkitCalls: [...foldkitCalls].sort(Order.String),
     hooks: [...hooks].sort(Order.String),
-    props: propsOf(program),
+    props: filename.endsWith(".astro") ? astroPropsOf(program) : propsOf(program),
     objects,
     declarations: declarationsOf(program),
     createsContext,
@@ -660,7 +693,7 @@ export const parseModule = ({
   }
 }
 
-const SOURCE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx"] as const
+const SOURCE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".astro"] as const
 
 /**
  * A test, story, or declaration is source, but not a part of the UI model.

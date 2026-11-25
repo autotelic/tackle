@@ -60,9 +60,10 @@ export const dirnamePosix = (path: string): string => {
  * extension set is a fact about source files, so it lives beside the other path helpers.
  *
  * @param path - A repository-relative module path.
- * @returns The path without a trailing `.ts`, `.tsx`, `.js`, or `.jsx`.
+ * @returns The path without a trailing `.ts`, `.tsx`, `.js`, `.jsx`, or `.astro`.
  */
-export const stripSourceExtension = (path: string): string => path.replace(/\.(?:tsx?|jsx?)$/u, "")
+export const stripSourceExtension = (path: string): string =>
+  path.replace(/\.(?:tsx?|jsx?|astro)$/u, "")
 
 /** Drop the app root from a repository-relative module path. */
 export const relativeToRoot = ({
@@ -145,6 +146,9 @@ export const isRouteEntry: Predicate.Predicate<RoutedModule> = ({
   const tail = afterRouteDir({ modulePath, roots, routeDir })
   if (tail === undefined || tail === "") return false
   const segments = tail.split("/").filter((segment) => segment !== "")
+  // Astro routes by file: every `.astro` page under `pages/` is an entry, however deep, except
+  // those with an underscore-prefixed segment, which Astro itself leaves out of routing.
+  if (modulePath.endsWith(".astro")) return !segments.some((segment) => segment.startsWith("_"))
   if (segments.length === 1) return true
   const last = segments[segments.length - 1]
   return segments.length === 2 && last !== undefined && ROUTE_FILE.test(last)
