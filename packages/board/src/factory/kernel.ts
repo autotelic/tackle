@@ -460,7 +460,8 @@ const promptOf = (input: {
       Match.when(
         "land",
         () =>
-          "This is a handoff pass: make the PR reviewable (conflicts, description, review guide, reviewers), mark it ready for review, and stop. Do not merge, edit the SOW, or open another PR; the human merge is a separate act outside the factory.",
+          "This is a handoff writing pass: make the PR reviewable, delete the remaining branch-local ADRs/scripts, build the PR description in the #1862 shape (Summary, what users notice, the walkthrough, code-review details, how to see it), attach real captures from the running app, mark it ready for review, and stop. A thin or blank description blocks Ready. Do not merge, edit the SOW, or open another PR; the human merge is a separate act outside the factory. " +
+          "Use the browse MCP for the captures: sign in as brant.broome@example.com against the running app, capture one screen per claim in what-users-notice with a real tenant, and give each a one-line caption. Never commit assets to the feature branch or develop: put them on a disposable assets/pr-<number> branch, reference the raw URL pinned to that asset commit, and state in the PR body that the branch is disposable. Validate that the first image renders in the PR before capturing the rest; if the private-repo raw URL does not render, use a prerelease asset in the same repo instead.",
       ),
       Match.orElse(
         () =>
@@ -475,7 +476,7 @@ const promptOf = (input: {
     "Format every touched file with `pnpm exec oxfmt <files>` before committing. A green build with unformatted changes becomes a red lint gate.",
     ...(input.record.phase === "compress"
       ? [
-          "Compression has five obligations. 1) Remove memorialisation: docs, prior-pass notes, generated facts, one-off scripts, and proof-of-work artifacts the branch no longer needs; fix every reference you delete.",
+          "Compression has five obligations. 1) Remove memorialisation: every ADR, decision note, prior-pass recap, generated fact, and branch-local one-off script must be gone before ready. Only code/tooling-cited or generated docs survive; the reasoning moves to the PR description. Fix every reference you delete.",
           "2) Cutlist the UI this branch touched: assemble from existing primitives where you hand-rolled, then compress. Hoist at the third use, delete the old copies in the same commit, and record before/after counts.",
           "3) Atomicity audit: for each component you built, name the primitives it should be made of; fix the ones that are not made of them.",
           "3b) Effect v4 target: typed failures use Data.TaggedError and Effect.catchTag; time uses Clock; logging uses Logger; boundary validation uses Schema.decodeUnknown; services use Context.Tag + Layer; retries/limits use Schedule. Move one coherent target per cut, starting with the new domain files; do not attempt every touched module at once. Remaining targets become the next compression event. The receipt counts bespokeErrorUnion, throwCount, dateNow, and consoleLog before and after.",

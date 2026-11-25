@@ -190,6 +190,32 @@ const runReadyInner = async (input: {
       reason:
         "CompressionProofRequired: a compress receipt must carry findingsBefore, findingsAfter, consolidated, deleted, locNet, and ruleGaps",
     }
+  if (record.delivery === "pr" && record.pr !== undefined) {
+    const body = spawnSync(
+      process.env.GH_BIN ?? "gh",
+      ["pr", "view", String(record.pr), "--repo", record.repo, "--json", "body"],
+      { cwd: record.path, encoding: "utf8" },
+    )
+    if (body.status !== 0)
+      return { ok: false, checks: [], reason: "PrBodyUnreadable: cannot read PR #" + record.pr }
+    const decoded = Schema.decodeResult(Schema.fromJsonString(Schema.Unknown))(body.stdout)
+    const text =
+      Result.isSuccess(decoded) && typeof decoded.success === "object" && decoded.success !== null
+        ? (decoded.success as { readonly body?: unknown }).body
+        : undefined
+    const description = typeof text === "string" ? text : ""
+    const missing = ["## Summary", "## The walkthrough", "## For the code review"].filter(
+      (heading) => !description.includes(heading),
+    )
+    if (description.trim().length < 1200 || missing.length > 0)
+      return {
+        ok: false,
+        checks: [],
+        reason:
+          "PrBodyRequired: the PR description must follow the #1862 handoff shape" +
+          (missing.length === 0 ? " and be substantive" : " (missing " + missing.join(", ") + ")"),
+      }
+  }
   const gates = record.gates?.onReady ?? []
   if (gates.length === 0)
     return { ok: false, checks: [], reason: "NoOnReadyGates: declare gates.onReady" }

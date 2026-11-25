@@ -1,5 +1,5 @@
 /* oxlint-disable plumb/prefer-property-tests -- fixed temporary workstream and two shell gates. */
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { expect, test } from "vitest"
@@ -67,12 +67,28 @@ const fixture = async (command: string) => {
       },
     }),
   )
-  return { root, home }
+  const gh = join(root, "gh")
+  const body = [
+    "## Summary",
+    "A substantive handoff body that explains what ships and why.",
+    "## The walkthrough",
+    "The problems in the order they bit, and the decisions taken from the SOW.",
+    "## For the code review",
+    "The shape in five lines, and what was checked with real numbers.",
+    "The recordings are attached to this description.",
+    "Context: " + "the review evidence is written down here. ".repeat(40),
+  ].join("\n")
+  writeFileSync(
+    gh,
+    "#!/usr/bin/env node\nconsole.log(" + JSON.stringify(JSON.stringify({ body })) + ")\n",
+  )
+  chmodSync(gh, 0o755)
+  return { root, home, gh }
 }
 
 test("a green landing gate moves to land and raises one ready desk", async () => {
   const f = await fixture("true")
-  process.env.GH_BIN = "/bin/true"
+  process.env.GH_BIN = f.gh
   try {
     const result = await runReady({ id: "probe-1", home: f.home, at: "2026-11-24T00:01:00.000Z" })
     expect(result.ok).toBe(true)
@@ -86,6 +102,7 @@ test("a green landing gate moves to land and raises one ready desk", async () =>
 
 test("a red landing gate stays in build and queues a scoped fix task", async () => {
   const f = await fixture("exit 7")
+  process.env.GH_BIN = f.gh
   try {
     const result = await runReady({ id: "probe-1", home: f.home, at: "2026-11-24T00:01:00.000Z" })
     expect(result.ok).toBe(false)
