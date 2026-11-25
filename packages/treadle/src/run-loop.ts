@@ -21,6 +21,7 @@ import { createHumanChannel, type HumanChannel } from './human-channel.ts'
 import { makeEscalate } from './loop/escalate.ts'
 import { appendQa, pickNextIssue, runIssueLoop } from './loop/issue-loop.ts'
 import { buildLoopMachine, type LoopMachineDeps } from './loop/machine.ts'
+import { installFetchDiagnostics } from './loop/netlog.ts'
 import { createNightlyBudget } from './loop/nightly.ts'
 import { reconcile } from './loop/reconcile.ts'
 import { lintRules } from './loop/rules.ts'
@@ -88,6 +89,13 @@ const notify = async (text: string) => {
     console.warn(`telegram notify failed: ${String(error)}`)
   }
 }
+
+// Record WHY a provider call failed (code, syscall, hostname) instead of the
+// SDK's single "Connection error." string. Behaviour is unchanged; the cause is
+// kept for the loop's notices and written to .treadle/net-errors.jsonl.
+installFetchDiagnostics((failure) => {
+  console.error(`[net] ${JSON.stringify(failure)}`)
+})
 
 // Stack maintenance on startup (#17): merges land at human pace; catch up
 // on marking done, rebasing stacked branches and retargeting PRs before

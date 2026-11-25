@@ -13,6 +13,7 @@ import { type Receipt, renderReceipt } from '../receipt.ts'
 import type { CheckReport, FailureSetEntry } from '../report.ts'
 import { runSession, type SessionOutcome } from '../session.ts'
 import { extractHandoff } from './distill.ts'
+import { formatFailure, lastFetchFailure } from './netlog.ts'
 import type { NightlyBudget } from './nightly.ts'
 import { isProviderFailure } from './provider.ts'
 import { rebaseResolvingScratch } from './rebase.ts'
@@ -118,6 +119,17 @@ const INFRA_BACKOFF_MINUTES = [1, 5, 15]
  * ladder is for real outages, where waiting can help; this cannot be waited out.
  */
 const DEAD_POOL_MS = 20_000
+
+/**
+ * The transport cause behind a provider failure, when this process saw one. The
+ * SDK reduces every transport error to "Connection error."; this names the code
+ * so a notice says ECONNRESET or ENOTFOUND instead of leaving it to guesswork.
+ */
+function causeSuffix(): string {
+  const failure = lastFetchFailure()
+  if (failure === null) return ''
+  return ` Cause: ${formatFailure(failure)}.`
+}
 const PROBE_MINUTES = 15
 
 function qaPath(repoDir: string, issue: number): string {
@@ -248,7 +260,7 @@ export function sessionWithPause(args: {
         yield* Effect.tryPromise(() =>
           args.notify(
             `Provider failure on issue #${args.issue} (${outcome.reason?.slice(0, 120)}). ` +
-              `Retrying the Pass in ${waitMinutes} min.`,
+              `Retrying the Pass in ${waitMinutes} min.${causeSuffix()}`,
           ),
         )
         retries += 1
