@@ -623,7 +623,7 @@ export const watchOnce = async (input: {
       const failed = Result.isSuccess(check) && check.success.state === "failed"
       const head = Result.isSuccess(check) ? (check.success.headRefOid ?? event.headSha) : undefined
       if (failed && head === record.head) {
-        const taskId = "check-failed:" + head + ":" + event.id.replace(/^github:check:/u, "")
+        const taskId = "check-failed:" + head
         const task: Event = {
           id: taskId,
           kind: "check-failed",
@@ -640,6 +640,27 @@ export const watchOnce = async (input: {
           },
           status: "pending",
           actor: "github",
+        }
+        const fresh = await readEvents({ id: input.id, home: input.home }).catch(() => [])
+        const jobs = check.success.failed ?? []
+        const coveredByTask = fresh.some((candidate) => {
+          if (candidate.status !== "pending" || candidate.kind !== "task") return false
+          if (candidate.headSha === head) return true
+          if ((candidate.payload as { readonly headSha?: unknown } | null)?.headSha === head)
+            return true
+          const text = JSON.stringify(candidate.payload).toLowerCase()
+          return jobs.some((job) => text.includes(job.toLowerCase()))
+        })
+        if (coveredByTask) {
+          if (previous === undefined)
+            await appendEvent({
+              id: input.id,
+              home: input.home,
+              event: { ...event, status: "consumed" },
+            })
+          else await consumeEvents({ id: input.id, ids: [event.id], home: input.home })
+          appended.push(event.id)
+          continue
         }
         const knownTask = known.has(taskId)
         if (!knownTask) {
@@ -714,7 +735,11 @@ export const watchOnce = async (input: {
       await appendEvent({
         id: input.id,
         home: input.home,
-        event: { ...event, status: "pending" },
+        event: {
+          ...event,
+          headSha: event.headSha ?? (event.kind === "task" ? record.head : undefined),
+          status: "pending",
+        },
       })
       appended.push(event.id)
     }
