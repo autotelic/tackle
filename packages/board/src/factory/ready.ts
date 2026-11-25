@@ -242,7 +242,8 @@ const runReadyInner = async (input: {
       updatedAt: input.at,
     },
   })
-  const id = "desk-" + record.id + (ok ? "-ready-" : "-gate-") + Date.parse(input.at)
+  const readyKey = String(record.pr ?? "trunk") + "-" + record.head.slice(0, 12)
+  const id = "desk-" + record.id + (ok ? "-ready-" + readyKey : "-gate-" + Date.parse(input.at))
   if (ok) {
     const marked =
       record.delivery === "pr" && record.pr !== undefined
