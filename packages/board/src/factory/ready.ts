@@ -7,13 +7,7 @@ import { raiseDesk } from "./desk.ts"
 import { appendEvent } from "./events.ts"
 import { activityOf } from "./activity.ts"
 import { receiptsDir } from "./kernel.ts"
-import {
-  landingLock,
-  listWorkstreams,
-  readWorkstream,
-  writeWorkstream,
-  type Workstream,
-} from "./store.ts"
+import { landingLock, readWorkstream, writeWorkstream, type Workstream } from "./store.ts"
 import { alive } from "@autotelic/room/run"
 
 /** One declared gate's exact outcome, kept with the workstream that earned it. */
@@ -160,7 +154,7 @@ export const runReady = async (input: {
   const heldPid = held === undefined ? NaN : Number(held)
   if (Number.isFinite(heldPid) && heldPid !== process.pid && alive(heldPid))
     return { ok: false, checks: [], reason: "ReadyBlocked: landing already running in " + heldPid }
-  await writeFile(lock, JSON.stringify({ pid: process.pid, at: input.at }))
+  await writeFile(lock, JSON.stringify({ pid: process.pid, at: input.at, workstream: input.id }))
   try {
     return await runReadyInner(input)
   } finally {
@@ -176,17 +170,12 @@ const runReadyInner = async (input: {
 }): Promise<ReadyResult> => {
   const record = await readWorkstream({ id: input.id, home: input.home })
   if (record === undefined) return { ok: false, checks: [], reason: "WorkstreamNotFound" }
-  const activities = await Promise.all(
-    (await listWorkstreams({ home: input.home })).map((candidate) =>
-      activityOf({ record: candidate, home: input.home, now: Date.parse(input.at) }),
-    ),
-  )
-  const busy = activities.find((activity) => activity.state === "working")
-  if (busy !== undefined)
+  const activity = await activityOf({ record, home: input.home, now: Date.parse(input.at) })
+  if (activity.state === "working")
     return {
       ok: false,
       checks: [],
-      reason: "ReadyBlocked: pass running on " + busy.workstream,
+      reason: "ReadyBlocked: pass running on " + record.id,
     }
   if (record.phase === "reconcile" || record.phase === "build")
     return {

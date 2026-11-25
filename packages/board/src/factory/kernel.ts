@@ -710,15 +710,26 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
   if (record.phase === "blocked") return { ok: false, reason: "WorkstreamBlocked" }
   const landingText = await readFile(landingLock(input.home), "utf8").catch(() => undefined)
   let landingPid = NaN
+  let landingWorkstream: string | undefined
   if (landingText !== undefined) {
     try {
       const parsed = JSON.parse(landingText)
-      landingPid = Number(typeof parsed === "object" && parsed !== null ? parsed.pid : parsed)
+      if (typeof parsed === "object" && parsed !== null) {
+        landingPid = Number((parsed as { readonly pid?: unknown }).pid)
+        const named = (parsed as { readonly workstream?: unknown }).workstream
+        landingWorkstream = typeof named === "string" ? named : undefined
+      } else landingPid = Number(parsed)
     } catch {
       landingPid = Number(landingText)
     }
   }
-  if (Number.isFinite(landingPid) && alive(landingPid))
+  // A landing run only owns its own worktree. An unrelated pass may continue; a legacy lock
+  // without a workstream is treated as global.
+  if (
+    Number.isFinite(landingPid) &&
+    alive(landingPid) &&
+    (landingWorkstream === undefined || landingWorkstream === record.id)
+  )
     return { ok: false, reason: "ReadyInProgress: " + landingPid }
 
   // The lease stops a second pass, not a hand session: HEAD can be switched under a worktree

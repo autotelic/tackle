@@ -44,9 +44,10 @@ factory ready --id projects-list-1862
 - red: workstream stays in `build`, one "Landing gate failed" desk names the command and output
 - no `onReady` gates: refuses with `NoOnReadyGates`
 
-Landing is serialised. `factory ready` refuses while any workstream has a live pass, because
-the cut and the suite would edit/read the same worktree and the shakti-test compose project is
-shared. Run one ready at a time, after every build/compress cut has stopped.
+Landing is serialised per workstream and globally by the landing lock. `factory ready` refuses
+when the **target** workstream has a live pass, or when another ready is already running; an
+unrelated workstream may keep building. The suite reads its own worktree, and the landing gate
+owns the shared test database.
 
 The landing gate owns shared external services. Bring the test database up once and leave it
 running for the whole landing. A test suite must not stop a shared database in `afterAll` while
