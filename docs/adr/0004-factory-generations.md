@@ -63,6 +63,19 @@ can would be worse than restarting.
 - A supervisor that cannot health-check the new generation must keep the old one; an unverified
   generation is not an update.
 
+## Related: terminal program resume (OSC 7577)
+
+Rex’s Program Resume Protocol is a useful layer **below** this ADR. It lets a program report a
+resume command to its terminal, authenticated by a per-terminal `OSC7577_TOKEN` and a
+SHA-256 MAC. The terminal may restore the command later; it is a hint, not a guarantee. It
+carries `argv`, `cwd`, and a program-owned state file, but no environment and no process tree.
+
+That is not a daemon update protocol. It restores an interactive program after a terminal
+restart; our supervisor still owns generation choice, drain, schema compatibility, and rollback.
+It is worth adopting for Pi/Rex sessions if the terminal host supports it, with the resume
+command naming an explicit session/state file and no secrets in `argv`. It does not replace
+receipts, checkpoints, leases, or the factory pass model.
+
 ## First implementation slice
 
 Write `~/.factory/generation.json` from the release/deploy step; add `factory daemon status` and
