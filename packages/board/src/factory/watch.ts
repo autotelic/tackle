@@ -6,7 +6,7 @@ import { Option } from "effect"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 import { activityOf } from "./activity.ts"
-import { appendEvent, consumeEvents, readEvents } from "./events.ts"
+import { appendEvent, consumeEvents, readEvents, type Event } from "./events.ts"
 import { isProtectedPath, passesUsed, runPass, type PassOutcome } from "./kernel.ts"
 import { readWorkstream, writeWorkstream, type Workstream } from "./store.ts"
 import { answerDesk, listAnswers, listDesk, raiseDesk, readDesk } from "./desk.ts"
@@ -444,6 +444,7 @@ const CommitPayload = Schema.Struct({ sha: Schema.String })
 const CheckPayload = Schema.Struct({
   state: Schema.String,
   headRefOid: Schema.optional(Schema.String),
+  failed: Schema.optional(Schema.Array(Schema.String)),
 })
 
 /** A commit already in the worktree's history is not new work for this workstream. */
@@ -520,7 +521,17 @@ export const watchOnce = async (input: {
       (event) => event.status === "pending" && ownCommit({ event, record, runGit: input.runGit }),
     )
     .map((event) => event.id)
-  const retired = [...own, ...staleDesk]
+  // A check-failed task belongs to one head. Once the head moves, the old task is resolved
+  // rather than allowed to wake a pass against a tree that no longer exists.
+  const staleChecks = readExisting
+    .filter((event) => {
+      if (event.status !== "pending" || event.kind !== "check-failed") return false
+      const payload = event.payload
+      if (typeof payload !== "object" || payload === null) return false
+      return (payload as { readonly headSha?: unknown }).headSha !== record.head
+    })
+    .map((event) => event.id)
+  const retired = [...own, ...staleDesk, ...staleChecks]
   if (retired.length > 0) await consumeEvents({ id: input.id, ids: retired, home: input.home })
   const existing =
     retired.length === 0 ? readExisting : await readEvents({ id: input.id, home: input.home })
@@ -608,7 +619,54 @@ export const watchOnce = async (input: {
     }
 
     if (event.kind === "check") {
-      // Record the check for the landing audit, but never spend a build pass on it.
+      const check = Schema.decodeUnknownResult(CheckPayload)(event.payload)
+      const failed = Result.isSuccess(check) && check.success.state === "failed"
+      const head = Result.isSuccess(check) ? (check.success.headRefOid ?? event.headSha) : undefined
+      if (failed && head === record.head) {
+        const taskId = "check-failed:" + head + ":" + event.id.replace(/^github:check:/u, "")
+        const task: Event = {
+          id: taskId,
+          kind: "check-failed",
+          at: event.at,
+          payload: {
+            headSha: head,
+            failed: check.success.failed ?? [],
+            task:
+              "CI is red at " +
+              head +
+              " for: " +
+              (check.success.failed ?? []).join(", ") +
+              ". Fix these jobs, commit, push, and stop. Do not wait for CI.",
+          },
+          status: "pending",
+          actor: "github",
+        }
+        const knownTask = known.has(taskId)
+        if (!knownTask) {
+          await appendEvent({ id: input.id, home: input.home, event: task })
+          appended.push(taskId)
+        }
+        if (previous === undefined)
+          await appendEvent({
+            id: input.id,
+            home: input.home,
+            event: { ...event, status: "consumed" },
+          })
+        else await consumeEvents({ id: input.id, ids: [event.id], home: input.home })
+        appended.push(event.id)
+        if (!knownTask) {
+          const pass = await runPass({
+            id: input.id,
+            worker: input.worker,
+            at: input.at,
+            home: input.home,
+            eventIds: [taskId],
+          })
+          passes.push(pass)
+        }
+        continue
+      }
+      // Passing checks, and failures at an old head, stay advisory for landing.
       if (previous === undefined)
         await appendEvent({
           id: input.id,

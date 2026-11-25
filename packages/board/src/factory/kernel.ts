@@ -434,6 +434,7 @@ const promptOf = (input: {
   const reviewPending = input.events.some(
     (event) => event.kind === "review" || event.kind === "comment",
   )
+  const ciFailurePending = input.events.some((event) => event.kind === "check-failed")
   return [
     "Workstream " +
       input.record.id +
@@ -484,6 +485,7 @@ const promptOf = (input: {
       : [
           "One pass is one small ticket. Do not re-reconnoitre the project: read the named ticket, the last receipt, and the ADR/SOW passages it points at, then make the smallest coherent change, commit, push, and stop. If the ticket needs more, it becomes the next event, not a longer pass.",
           "Build: write the code, write the tests it needs (the ticket's acceptance test included), commit, push. Do not run the tests, lint, tsc, jig, or joggle. Do not wait for anything.",
+          "A check-failed event names failing CI jobs at the current head. Fix those jobs, commit, push, and stop. Do not poll or wait for CI, and do not re-queue the same job unless a new commit changes the failure.",
           "Landing (ready event only): run the ticket's acceptance tests, the rest suite, jig, joggle, spec-check, policy-snapshots, and read CI. Fix what is red, then re-run landing.",
           "The landing gate owns shared external services. Bring the test database up once and leave it running for the whole landing; a suite must not stop a shared database in its afterAll while another request is in flight.",
           "A red test found during build costs a turn and a re-run; the same test at landing costs one turn for the whole PR. Building is the throughput phase; verification is a phase.",
@@ -496,6 +498,11 @@ const promptOf = (input: {
     ...input.events.map(
       (event) => "- " + event.kind + " " + event.id + " " + JSON.stringify(event.payload),
     ),
+    ...(ciFailurePending
+      ? [
+          "CI FIX OVERRIDES THE PHASE. The pending check-failed event names the failing jobs at the current head. Fix those jobs, commit, push, and stop. Do not wait for CI and do not re-queue a job unless a new commit changes the failure.",
+        ]
+      : []),
     ...(reviewPending
       ? [
           "REVIEW RESPONSE OVERRIDES THE PHASE. The pending review/comment is the work, not compression or landing.",

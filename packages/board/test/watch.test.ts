@@ -209,7 +209,7 @@ test("a passed check at the current checkpoint is consumed without a pass", asyn
   }
 })
 
-test("a failed check is recorded as advisory and never starts a pass", async () => {
+test("a failed check at the current head queues a CI-fix task and starts a pass", async () => {
   const root = mkdtempSync(join(tmpdir(), "factory-check-advisory-"))
   try {
     const record = { ...base(), phase: "build" as const }
@@ -228,8 +228,12 @@ test("a failed check is recorded as advisory and never starts a pass", async () 
       ],
       runGh: githubChecks([]),
     })
-    expect(outcome.passes).toEqual([])
-    expect((await readEvents({ id: record.id, home: root }))[0]?.status).toBe("consumed")
+    expect(outcome.passes).toHaveLength(1)
+    const events = await readEvents({ id: record.id, home: root })
+    expect(
+      events.some((event) => event.kind === "check-failed" && event.status === "pending"),
+    ).toBe(true)
+    expect(events.find((event) => event.kind === "check")?.status).toBe("consumed")
   } finally {
     rmSync(root, { recursive: true, force: true })
   }
