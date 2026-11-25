@@ -32,6 +32,32 @@ const healthyOutcome = {
 const immediate = () => Effect.void
 
 describe('sessionWithPause', () => {
+  it('exits at once when a session dies before its first turn (dead pool, not an outage)', async () => {
+    const notifications: string[] = []
+    const exits: number[] = []
+    let runs = 0
+    await Effect.runPromise(
+      sessionWithPause({
+        run: async () => {
+          runs += 1
+          // Zero turns, 300ms: the request never left the process.
+          return { ...providerOutcome('Connection error.'), turns: 0, durationMs: 300 }
+        },
+        notify: async (text) => {
+          notifications.push(text)
+        },
+        issue: 21,
+        sleepFn: immediate,
+        exitFn: (code) => {
+          exits.push(code)
+        },
+      }),
+    )
+    expect(runs).toBe(1) // no ladder at all
+    expect(exits).toEqual([255])
+    expect(notifications.some((n) => n.includes('connection pool is dead'))).toBe(true)
+  })
+
   it('retries the ladder, then exits the process instead of probing in-process', async () => {
     const notifications: string[] = []
     const runs: number[] = []

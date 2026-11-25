@@ -113,6 +113,11 @@ export type IssueLoopDeps = {
 }
 
 const INFRA_BACKOFF_MINUTES = [1, 5, 15]
+/**
+ * A session that ends this fast with no turn never contacted the provider. The
+ * ladder is for real outages, where waiting can help; this cannot be waited out.
+ */
+const DEAD_POOL_MS = 20_000
 const PROBE_MINUTES = 15
 
 function qaPath(repoDir: string, issue: number): string {
@@ -222,6 +227,22 @@ export function sessionWithPause(args: {
     let outcome = yield* Effect.tryPromise(() => args.run())
     let retries = 0
     while (isProviderFailure(outcome.reason)) {
+      // A session that produced no turn and died within seconds never reached
+      // the provider: the process's connection pool is poisoned, and retrying
+      // INSIDE it cannot help. Measured on the collab loop: 22 passes hit this,
+      // 66 retries, zero recoveries — every one was cured by a restart and by
+      // nothing else. So exit at once instead of burning 21 minutes of ladder.
+      if (outcome.turns === 0 && outcome.durationMs < DEAD_POOL_MS) {
+        yield* Effect.tryPromise(() =>
+          args.notify(
+            `Treadle EXITING: no request left this process (${outcome.reason?.slice(0, 80)} ` +
+              `after ${Math.round(outcome.durationMs / 1000)}s). The connection pool is dead; ` +
+              `KeepAlive restarts us in under a minute and the pass re-enters.`,
+          ),
+        )
+        args.exitFn(255)
+        return outcome
+      }
       if (retries < INFRA_BACKOFF_MINUTES.length) {
         const waitMinutes = INFRA_BACKOFF_MINUTES[retries] as number
         yield* Effect.tryPromise(() =>
