@@ -318,7 +318,11 @@ const observe = async (root: string) => {
       // Candidate lanes are joined the same way and by the same facts: a candidate is a room, so
       // its lease and its service are its own and never the workstream's.
       candidates: candidateEnvironmentsOf({
-        candidates: await listCandidateEnvironments(),
+        // A candidate record is global to the factory home; this presence is for one shop root.
+        // Only the candidates whose room is in this root belong on this floor.
+        candidates: (await listCandidateEnvironments()).filter((candidate) =>
+          roomFacts.some(({ worktree }) => pathKey(worktree) === pathKey(candidate.path)),
+        ),
         leases,
         services,
         vmPreviews,

@@ -23,9 +23,9 @@ export interface EnvironmentMachine {
   readonly dnsName: string | undefined
 }
 
-/** How the workstream's code is held. A workstream is a git worktree today, and only that. */
+/** How the workstream's code is held: a host worktree or an agentOS VM over one. */
 export interface EnvironmentRuntime {
-  readonly kind: "worktree"
+  readonly kind: "worktree" | "agentos"
   readonly path: string
 }
 
@@ -286,7 +286,11 @@ export const candidateEnvironmentsOf = (input: {
     head: candidate.head,
     label: candidate.label,
     state: candidate.state,
-    runtime: { kind: "worktree" as const, path: candidate.path },
+    runtime: (input.vmPreviews ?? []).some(
+      (preview) => pathKey(preview.worktree) === pathKey(candidate.path),
+    )
+      ? { kind: "agentos" as const, path: candidate.path }
+      : { kind: "worktree" as const, path: candidate.path },
     ...placementOf({
       path: candidate.path,
       route: candidate.id,

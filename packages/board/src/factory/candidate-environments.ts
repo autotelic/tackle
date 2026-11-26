@@ -2,7 +2,8 @@ import { spawnSync } from "node:child_process"
 import { existsSync } from "node:fs"
 import { mkdir, readFile, readdir, rename, writeFile } from "node:fs/promises"
 import { join, resolve } from "node:path"
-import { createRoom } from "@autotelic/room/store"
+import { createRoom, roomDir, setRoomRuntime } from "@autotelic/room/store"
+import { startVmSupervisor } from "@autotelic/room/VmSupervisor"
 import { Data } from "effect"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
@@ -221,6 +222,8 @@ export const createCandidateEnvironment = async (input: {
   readonly roomRoot: string
   readonly home?: string | undefined
   readonly at?: string | undefined
+  /** Start the candidate room's agentOS supervisor. The CLI defaults this on. */
+  readonly vm?: boolean | undefined
 }): Promise<CandidateEnvironment> => {
   const workstream = await readWorkstream({ id: input.workstream, home: input.home })
   if (workstream === undefined)
@@ -232,13 +235,36 @@ export const createCandidateEnvironment = async (input: {
   const branch = candidateBranchOf({ workstream: workstream.id, label: input.label })
   const root = resolve(input.roomRoot)
   const path = join(root, id, "worktree")
+  // The record can lag the checkout after a manual fix or a merge. A candidate branches from
+  // what the workstream actually has now, not from the last pass receipt.
+  const actual = spawnSync("git", ["rev-parse", "HEAD"], {
+    cwd: workstream.path,
+    encoding: "utf8",
+  })
+  const head =
+    actual.status === 0 && actual.stdout.trim() !== "" ? actual.stdout.trim() : workstream.head
   if (!existsSync(join(path, ".git"))) {
     // The workstream's own checkout is the repository git resolves the new worktree against;
-    // `record.repo` is the GitHub slug, which is not a directory.
-    const added = spawnSync("git", ["worktree", "add", "-b", branch, path, workstream.head], {
+    // `record.repo` is the GitHub slug, which is not a directory. A directory removed outside
+    // git leaves a registration behind; prune it before the branch check so a re-created
+    // candidate takes its own path back.
+    spawnSync("git", ["worktree", "prune"], { cwd: workstream.path, encoding: "utf8" })
+    const exists = spawnSync("git", ["show-ref", "--verify", "--quiet", "refs/heads/" + branch], {
       cwd: workstream.path,
       encoding: "utf8",
     })
+    // A branch can outlive its worktree (a previous candidate was removed). Reattach it
+    // rather than resetting it: the branch may hold the only copy of that candidate's work.
+    const added =
+      exists.status === 0
+        ? spawnSync("git", ["worktree", "add", path, branch], {
+            cwd: workstream.path,
+            encoding: "utf8",
+          })
+        : spawnSync("git", ["worktree", "add", "-b", branch, path, head], {
+            cwd: workstream.path,
+            encoding: "utf8",
+          })
     if (added.status !== 0)
       throw new CandidateEnvironmentRefused({
         id,
@@ -257,6 +283,19 @@ export const createCandidateEnvironment = async (input: {
   // worktree above was reused for the same reason.
   if (!room.ok && room.error !== "RoomAlreadyExists")
     throw new CandidateEnvironmentRefused({ id, detail: "RoomRefused: " + room.error })
+  if (input.vm === true) {
+    const started = await startVmSupervisor({
+      root,
+      id,
+      worktree: path,
+      stateDir: roomDir({ root, id }),
+    })
+    if (!started.ok)
+      throw new CandidateEnvironmentRefused({ id, detail: "VmFailed: " + started.reason })
+    const runtime = await setRoomRuntime({ root, id, runtime: { kind: "agentos" } })
+    if (!runtime.ok)
+      throw new CandidateEnvironmentRefused({ id, detail: "RuntimeRefused: " + runtime.error })
+  }
   const at = input.at ?? new Date().toISOString()
   return writeCandidateEnvironment({
     record: {
@@ -266,7 +305,7 @@ export const createCandidateEnvironment = async (input: {
       room: id,
       path,
       branch,
-      head: workstream.head,
+      head,
       label: input.label,
       state: "open",
       createdAt: at,

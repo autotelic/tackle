@@ -220,6 +220,8 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
           workstream: { type: "string" },
           label: { type: "string", default: "candidate" },
           root: { type: "string", default: ".room" },
+          vm: { type: "boolean", default: true },
+          "no-vm": { type: "boolean", default: false },
         },
         allowPositionals: false,
       })
@@ -229,6 +231,7 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
         workstream: parsed.values.workstream,
         label: parsed.values.label,
         roomRoot: parsed.values.root,
+        vm: parsed.values.vm && !parsed.values["no-vm"],
       }).catch(refused)
       console.log("factory: candidate " + record.id + " " + record.state + " at " + record.path)
       return
