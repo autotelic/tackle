@@ -538,6 +538,18 @@ export const policy = {
     minTokens: 20,
   },
 
+  restatedValue: {
+    maxClusters: 200,
+    /**
+     * Values below which two declarations are the same constant, not the same
+     * vocabulary. One shared string is a fact about a value; two shared strings
+     * are a fact about a set of them, and only the second is worth a question.
+     */
+    minValues: 2,
+    /** A vocabulary of two values is a few tokens; the shape floor does not apply. */
+    minTokens: 1,
+  },
+
   duplicateImplementation: {
     maxClusters: 500,
     /**
