@@ -123,12 +123,12 @@ aggregates, views, policies, projections, streams, sagas, and queries (`dist/lib
 - **Projections, CatchUp, Query.** The mailbox keeps its own log and state in
   `packages/protocol/src/mailbox.ts` and `packages/board/src/mailbox/service.ts`; it is a third
   state machine with its own receipts.
-- **The stack declaration.** ADR 0001 records "`alchemy.run.ts` is a real stack declaration and
-  `alchemy plan --no-input` resolves it locally" (`docs/adr/0001-vision-tech-seams.md`, the Alchemy
-  row). No such file exists at this HEAD, and `git log --all -- '*alchemy*'` finds no committed
-  stack. The dependency survives only as the hosting layer. Either the declaration comes back with
-  its plan test, or the ADR sentence is corrected in the same change that removes the dependency
-  it names.
+- **The stack declaration.** `packages/board/alchemy.run.ts` exists and is committed
+  (`e7d99e2e`), so ADR 0001's file claim is true. The stack is empty: `providers: Layer.empty` and
+  `Effect.succeed({})` declare no room, worktree, or service resources. `alchemy plan --no-input`
+  resolves an empty plan, which is not the same as a resource plan. Either the stack grows the
+  resources the ADR names, with a plan test, or the ADR's `plan` sentence is narrowed to "the
+  authoring path resolves". ADR 0001 is wrong only about the resources, not the file.
 
 **Where we duplicate.** The Workstream phase machine and the mailbox state machine are the two
 places. Neither duplicates Alchemy's hosting; they duplicate the idea of a state machine that
