@@ -147,7 +147,9 @@ it.effect("a served preview draws a link to the board's route", () =>
     })
     const { scene, text } = yield* draw("[" + withPreview + "]")
     assert.include(text, "preview /preview/shakti-perms/")
-    assert.isDefined(scene.query(Locator.attr("href", "/preview/shakti-perms/")))
+    // The route is drawn on the workstream card and again in the floor summary; both are the
+    // same stable board path, so the assertion is that it is present, not that it is unique.
+    assert.isAbove(scene.all(Locator.attr("href", "/preview/shakti-perms/")).length, 0)
   }),
 )
 

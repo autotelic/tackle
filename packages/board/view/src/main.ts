@@ -58,7 +58,7 @@ export const Message = UiSchema.TaggedEnum({
 export type Message = typeof Message.Type
 
 /** One message the view can draw: the type a helper threads through `h`. */
-type Content = View.Input<Message>
+type Content = View.Input<Message, any>
 
 const fetchJson = (path: string) =>
   Effect.tryPromise({
@@ -403,7 +403,7 @@ const activityBlock = (h: Html.H<Message>, activity: typeof Activity.Type | unde
         ? undefined
         : h.div
             .class("activity-queue")
-            .children(h.div.class("queue-count").children(waiting + " waiting"), queue),
+            .children(h.div.class("queue-count").children(waiting + " waiting"), ...queue),
       stalled
         ? h.div
             .class("activity-event stale")
@@ -804,17 +804,29 @@ const factoryFloor = (
                               " · " +
                               environment.runtime.path.split("/").at(-1),
                       ),
-                    h.span
-                      .class("floor-service")
-                      .children(
-                        port === null || port === undefined ? "no port" : "port " + port.number,
-                        " · ",
-                        services.length === 0
-                          ? "no service"
-                          : services
-                              .map((service) => service.name + " · " + service.status)
-                              .join(", "),
-                      ),
+                    port === null || port === undefined
+                      ? services.length === 0
+                        ? undefined
+                        : h.span
+                            .class("floor-service")
+                            .children(
+                              services
+                                .map((service) => service.name + " · " + service.status)
+                                .join(", "),
+                            )
+                      : h.span
+                          .class("floor-service")
+                          .children(
+                            "port " + port.number,
+                            ...(services.length === 0
+                              ? []
+                              : [
+                                  " · ",
+                                  services
+                                    .map((service) => service.name + " · " + service.status)
+                                    .join(", "),
+                                ]),
+                          ),
                     agent === null || agent === undefined
                       ? undefined
                       : h.span
