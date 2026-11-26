@@ -104,6 +104,7 @@ test("a VM service advertises the board preview route without a host port", () =
     workstreams: [{ id: "dev", path: "/tmp/dev" }],
     vmPreviews: [{ worktree: "/tmp/dev", room: "dev", port: 4819 }],
   })
+  if (served === undefined) throw new Error("no environment")
   expect(served.preview).toBe("/preview/dev/")
   expect(served.port).toBe(null)
   expect(served.services).toEqual([])
