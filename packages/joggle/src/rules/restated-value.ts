@@ -8,6 +8,7 @@ import type { Unit, Workspace } from "../workspace.ts"
 import {
   clusterReporter,
   collapseQuestionnaire,
+  largestClusters,
   planClusters,
   readClusters,
   unverifiedFinding,
@@ -62,21 +63,10 @@ const spec: ClusterRule = {
 const independentOf = (workspace: Workspace, members: ReadonlyArray<Unit>): ReadonlyArray<Unit> =>
   members.filter((member) => {
     const from = workspace.imports.edges.filter((edge) => edge.importer === member.file)
-    const homed = members.some(
-      (other) =>
-        other.file !== member.file &&
-        other.values.join("\u0000") === member.values.join("\u0000") &&
-        from.some((edge) => edge.to === other.file),
+    return !members.some(
+      (other) => other.file !== member.file && from.some((edge) => edge.to === other.file),
     )
-    return !homed
   })
-
-/** Largest clusters first when a budget bites, so the note names what matters. */
-const largestOf = (clusters: ReadonlyArray<Cluster>): ReadonlyArray<string> =>
-  [...clusters]
-    .sort((a, b) => b.members.length - a.members.length)
-    .slice(0, 3)
-    .map((cluster) => `${cluster.members.length}× ${spec.nameOf(cluster)}`)
 
 const find = (workspace: Workspace, scope: Scope): ReadonlyArray<Cluster> =>
   exactGroups({
@@ -108,10 +98,7 @@ export const restatedValue: PlannedRule = {
     if (clusters.length === 0) {
       return {
         plans: [],
-        read: () =>
-          outcome([], [
-            "no two declarations name the same set of literal values",
-          ]),
+        read: () => outcome([], ["no two declarations name the same set of literal values"]),
       }
     }
     const budget = policy.restatedValue.maxClusters
@@ -127,7 +114,7 @@ export const restatedValue: PlannedRule = {
         unitKind: "clusters",
         judged: budget,
         candidates: clusters.length,
-        sample: largestOf(clusters.slice(budget)),
+        sample: largestClusters(clusters.slice(budget), spec.nameOf),
       }),
     ]
     return {

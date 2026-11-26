@@ -3,7 +3,7 @@ import { policy } from "../policy.ts"
 import { rankSpeculative, similarClusters, similarPairs, strengthOf } from "../candidates.ts"
 import { type Cluster } from "../cluster.ts"
 import { budgetNote, outcome, type PlannedRule, type Scope } from "../rule.ts"
-import { collapseQuestionnaire, planClusters, readClusters, type ClusterRule } from "./cluster-verdict.ts"
+import { collapseQuestionnaire, largestClusters, planClusters, readClusters, type ClusterRule } from "./cluster-verdict.ts"
 import { layersFrom } from "../architecture.ts"
 import type { Workspace } from "../workspace.ts"
 import { nameList } from "../cluster.ts"
@@ -101,11 +101,7 @@ export const duplicateMeaning: PlannedRule = {
     })
     const phase = yield* planClusters(spec, ordered.slice(0, budget), scope, workspace)
     const layers = layersFrom(context.config)
-    const largest = ordered
-      .slice(budget)
-      .sort((a, b) => b.members.length - a.members.length)
-      .slice(0, 3)
-      .map((cluster) => `${cluster.members.length}× ${spec.nameOf(cluster)}`)
+    const largest = largestClusters(ordered.slice(budget), spec.nameOf)
 
     // Reported as drops rather than dropped silently: "476 declarations across 9
     // clusters were generated from one template" is a fact about the codebase,
