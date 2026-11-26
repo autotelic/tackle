@@ -30,6 +30,8 @@ import {
   readVmStatus,
   stopVmSupervisor,
   vmExec,
+  vmHttp,
+  vmService,
   type VmExecRequest,
 } from "./VmSupervisor.ts"
 import { observeService } from "./Service.ts"
@@ -48,6 +50,8 @@ const usage = [
   "  room run --id <id> [--root .room] -- <command...>",
   "  room vm --id <id> [--root .room] [--json] [--executor-lease <file>] -- <command...>   (run it in the room's VM supervisor)",
   "  room vm start|stop|status --id <id> [--root .room] [--json]   (the room's VM supervisor)",
+  "  room vm serve --id <id> --port <vm-port> --exec <command>   (start a VM service)",
+  "  room vm preview --id <id> --port <vm-port> [--path /] [--json]   (ask the VM service)",
   "  room move --id <id> --to <host> [--root .room] [--json]  (not implemented; refuses)",
   "",
   "Exit codes: 0 ok, 1 declined, 2 usage, 3 infrastructure.",
@@ -74,6 +78,8 @@ const options = {
   service: { type: "string" },
   health: { type: "string" },
   "executor-lease": { type: "string" },
+  port: { type: "string" },
+  path: { type: "string" },
   help: { type: "boolean", short: "h", default: false },
 } as const
 
@@ -332,6 +338,66 @@ const main = async (): Promise<void> => {
       return
     }
 
+    if (verb === "serve") {
+      const port = Number(values.port)
+      if (values.exec === undefined || !Number.isInteger(port) || port < 1 || port > 65535)
+        return fail("vm serve needs --exec and a --port in 1-65535", EXIT.usage)
+      const started = await ensureVmSupervisor({ root, id, worktree, stateDir })
+      if (!started.ok) return fail(started.reason, EXIT.infrastructure)
+      const response = await vmService({
+        socket: started.run.socket,
+        request: { kind: "service", command: "sh", args: ["-c", values.exec] },
+      }).catch((cause) => fail("vm service: " + String(cause), EXIT.infrastructure))
+      if (response.kind === "error")
+        return fail("vm service: " + response.message, EXIT.infrastructure)
+      if (response.kind !== "service")
+        return fail("vm service: unexpected response " + response.kind, EXIT.infrastructure)
+      const saved = await setRoomRuntime({
+        root,
+        id,
+        runtime: { kind: "agentos", previewPort: port },
+      })
+      if (!saved.ok) return fail(saved.error, EXIT.declined)
+      if (values.json) console.log(JSON.stringify({ id, port, pid: response.pid }, null, 2))
+      else console.log("room " + id + " vm service pid " + response.pid + " on guest port " + port)
+      return
+    }
+
+    if (verb === "preview") {
+      const port = Number(values.port)
+      if (!Number.isInteger(port) || port < 1 || port > 65535)
+        return fail("vm preview needs a --port in 1-65535", EXIT.usage)
+      const started = await ensureVmSupervisor({ root, id, worktree, stateDir })
+      if (!started.ok) return fail(started.reason, EXIT.infrastructure)
+      const response = await vmHttp({
+        socket: started.run.socket,
+        request: { kind: "http", port, path: values.path ?? "/", method: "GET" },
+      }).catch((cause) => fail("vm preview: " + String(cause), EXIT.infrastructure))
+      if (response.kind === "error")
+        return fail("vm preview: " + response.message, EXIT.infrastructure)
+      if (response.kind !== "http")
+        return fail("vm preview: unexpected response " + response.kind, EXIT.infrastructure)
+      const body = Buffer.from(response.body, "base64")
+      if (values.json)
+        console.log(
+          JSON.stringify(
+            {
+              id,
+              port,
+              path: values.path ?? "/",
+              status: response.status,
+              statusText: response.statusText,
+              headers: response.headers,
+              body: body.toString("utf8"),
+            },
+            null,
+            2,
+          ),
+        )
+      else process.stdout.write(body)
+      return
+    }
+
     const program = parsed.positionals[0]
     if (program === undefined)
       return fail("vm needs a command after -- (see room --help)", EXIT.usage)
@@ -375,6 +441,8 @@ const main = async (): Promise<void> => {
     )
     if (response.kind === "error")
       return fail("vm failed: " + response.message, EXIT.infrastructure)
+    if (response.kind !== "result")
+      return fail("vm failed: unexpected response " + response.kind, EXIT.infrastructure)
     if (values.json)
       console.log(
         JSON.stringify(

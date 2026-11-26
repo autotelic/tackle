@@ -12,6 +12,8 @@ import {
   startVmSupervisor,
   stopVmSupervisor,
   vmExec,
+  vmHttp,
+  vmService,
   vmSocketFile,
   type VmExecResponse,
 } from "../src/VmSupervisor.ts"
@@ -70,7 +72,7 @@ const runIn = async (
   args: ReadonlyArray<string>,
 ): Promise<VmExecResponse> => {
   const response = await vmExec({ socket, request: { kind: "exec", command, args } })
-  if (response.kind !== "result") throw new Error(response.message)
+  if (response.kind !== "result") throw new Error("unexpected exec response: " + response.kind)
   return response
 }
 
@@ -143,6 +145,45 @@ test("a second command sees the state the first one left in the same VM", async 
     await room.close()
   }
 }, 120_000)
+
+test("a VM service answers an HTTP preview through the supervisor", async () => {
+  const room = await scratchRoom("preview")
+  try {
+    const run = await started(room)
+    const service = await vmService({
+      socket: run.socket,
+      request: {
+        kind: "service",
+        command: "node",
+        args: [
+          "-e",
+          "require('http').createServer((q,r)=>{r.writeHead(200,{'content-type':'text/plain'});r.end('preview-ok')}).listen(4817)",
+        ],
+      },
+    })
+    if (service.kind !== "service") throw new Error("unexpected service response: " + service.kind)
+    expect(service.pid).toBeGreaterThan(0)
+
+    // The service is inside the guest; the answer travels over the supervisor socket, not a
+    // host port. Poll only until the listener is up, then assert the one answer.
+    let answer
+    for (let attempt = 0; attempt < 40; attempt++) {
+      const candidate = await vmHttp({
+        socket: run.socket,
+        request: { kind: "http", port: 4817, path: "/", method: "GET" },
+      })
+      if (candidate.kind === "http" && candidate.status === 200) {
+        answer = candidate
+        break
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
+    if (answer === undefined) throw new Error("preview did not answer")
+    expect(Buffer.from(answer.body, "base64").toString("utf8")).toBe("preview-ok")
+  } finally {
+    await room.close()
+  }
+}, 60_000)
 
 test("an expired executor lease is refused before any VM starts", async () => {
   const root = await mkdtemp(join(tmpdir(), "room-vm-"))

@@ -20,6 +20,8 @@ room run --id dev-1575 -- pnpm test
 room vm --id dev-1575 -- sh -c 'pwd'
 room vm --id dev-1575 --json -- cat package.json
 room vm start|stop|status --id dev-1575 [--json]
+room vm serve --id dev-1575 --port 4800 --exec 'node server.js'
+room vm preview --id dev-1575 --port 4800 --path /health
 room vm --id dev-1575 --executor-lease .room/lease.json -- pnpm test
 ```
 
@@ -71,6 +73,13 @@ worktree room, which is still what `room new` creates — nothing about the loca
 `--executor-lease` still works through the supervisor. The lease is read and expiry-checked
 _before_ anything starts, so an expired lease refuses the command without a VM boot, and its
 environment is passed per request: the host environment is never forwarded.
+
+`room vm serve` starts a long-lived command in the guest and records its port as
+`runtime: { kind: "agentos", previewPort }`. `room vm preview` asks that guest service for one
+HTTP response over the supervisor socket; no host port is bound. The board preview route uses
+the same path when the room has an agentOS runtime, so `/preview/<workstream>/` reaches the VM
+service without publishing its port. A service that is not listening is a 502, never an empty
+success.
 
 `up` also leases one port for the room, from 4400 to 4499, and records it in
 `room.json` as `port: { number, leasedAt }`. The lease is idempotent; a second

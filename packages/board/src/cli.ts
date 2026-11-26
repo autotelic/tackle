@@ -18,6 +18,7 @@ import { alive } from "@autotelic/room/run"
 import { listRooms } from "@autotelic/room/store"
 import { readRun, startRoomRun } from "@autotelic/room/run"
 import { observeService } from "@autotelic/room/Service"
+import { vmHttp, vmSocketFile } from "@autotelic/room/VmSupervisor"
 import { activityOf } from "./factory/activity.ts"
 import { answerDesk, listDesk } from "./factory/desk.ts"
 import { listReports } from "./factory/report.ts"
@@ -437,16 +438,25 @@ const serveView = async ({
  * @param input - the shop root and the workstream's recorded checkout.
  * @returns the leased port, or undefined when no room with a service owns this worktree.
  */
+type PreviewTarget =
+  | { readonly kind: "host"; readonly port: number }
+  | { readonly kind: "vm"; readonly room: string; readonly port: number }
+
 const previewPortOf = async (input: {
   readonly root: string
   readonly path: string
-}): Promise<number | undefined> => {
+}): Promise<PreviewTarget | undefined> => {
   const wanted = await realpath(input.path).catch(() => resolve(input.path))
   for (const room of await listRooms(input.root)) {
-    if (room.service === undefined || room.port === undefined) continue
     const worktree = join(input.root, room.id, "worktree")
     const candidate = await realpath(worktree).catch(() => resolve(worktree))
-    if (candidate === wanted) return room.port.number
+    if (candidate !== wanted) continue
+    // A VM service has no host lease: its port lives inside the guest, and the board asks the
+    // room supervisor for the answer. A local room keeps forwarding to its leased host port.
+    if (room.runtime?.kind === "agentos" && room.runtime.previewPort !== undefined)
+      return { kind: "vm", room: room.id, port: room.runtime.previewPort }
+    if (room.service !== undefined && room.port !== undefined)
+      return { kind: "host", port: room.port.number }
   }
   return undefined
 }
@@ -495,15 +505,37 @@ const servePreview = async ({
     json({ response, status: 404, body: { error: "no workstream " + preview.value.segment } })
     return
   }
-  const port = await previewPortOf({ root, path: record.path })
-  if (port === undefined) {
+  const target = await previewPortOf({ root, path: record.path })
+  if (target === undefined) {
     json({ response, status: 404, body: { error: "no service is leased for " + record.id } })
+    return
+  }
+  if (target.kind === "vm") {
+    const answer = await vmHttp({
+      socket: vmSocketFile({ root, id: target.room }),
+      request: {
+        kind: "http",
+        port: target.port,
+        path: preview.value.path,
+        method: "GET",
+      },
+    }).catch(() => undefined)
+    if (answer === undefined || answer.kind === "error" || answer.kind !== "http") {
+      json({ response, status: 502, body: { error: "preview did not answer" } })
+      return
+    }
+    const body = Buffer.from(answer.body, "base64")
+    response.writeHead(answer.status, {
+      ...answer.headers,
+      "content-length": String(body.length),
+    })
+    response.end(body)
     return
   }
   const upstream = requestUpstream(
     {
       host: "127.0.0.1",
-      port,
+      port: target.port,
       path: preview.value.path,
       method: "GET",
       // One connection per preview request, closed with the answer: no pool outlives the page.

@@ -6,13 +6,7 @@ import { createServer } from "node:net"
 import { parseArgs } from "node:util"
 import { agentOsDatabaseFile, createAgentOsRoom, type AgentOsRoom } from "./AgentOs.ts"
 import { alive } from "./run.ts"
-import {
-  readVmRun,
-  removeVmRun,
-  VmExecRequest,
-  writeVmRun,
-  type VmResponse,
-} from "./VmSupervisor.ts"
+import { readVmRun, removeVmRun, VmRequest, writeVmRun, type VmResponse } from "./VmSupervisor.ts"
 
 /*
  * One room's VM supervisor, as a process. It boots the room's agentOS instance once, binds
@@ -23,10 +17,33 @@ import {
 
 /** Answer one request line: decode it, run it in the room's workspace, report what happened. */
 const execute = async (room: AgentOsRoom, line: string): Promise<VmResponse> => {
-  const decoded = Schema.decodeResult(Schema.fromJsonString(VmExecRequest))(line)
+  const decoded = Schema.decodeResult(Schema.fromJsonString(VmRequest))(line)
   if (Result.isFailure(decoded))
     return { kind: "error", message: "request does not decode: " + line.slice(0, 200) }
   const request = decoded.success
+  if (request.kind === "http") {
+    const answer = await room.vm.network.httpRequest({
+      port: request.port,
+      path: request.path,
+      ...(request.method === undefined ? {} : { method: request.method }),
+      ...(request.headers === undefined ? {} : { headers: request.headers }),
+      ...(request.body === undefined ? {} : { body: request.body }),
+    })
+    return {
+      kind: "http",
+      status: answer.status,
+      statusText: answer.statusText,
+      headers: answer.headers,
+      body: Buffer.from(answer.body).toString("base64"),
+    }
+  }
+  if (request.kind === "service") {
+    const spawned = await room.vm.process.spawn(request.command, [...request.args], {
+      cwd: room.workspace,
+      ...(request.env === undefined ? {} : { env: request.env }),
+    })
+    return { kind: "service", pid: spawned.pid }
+  }
   const options: NonNullable<Parameters<typeof room.vm.process.execFile>[2]> = {
     cwd: room.workspace,
     output: { capture: "all" },

@@ -120,13 +120,57 @@ export const VmExecResponse = Schema.Struct({
   error: Schema.NullOr(Schema.String),
 })
 
+/** One HTTP request to a service listening inside the VM. */
+export const VmHttpRequest = Schema.Struct({
+  kind: Schema.Literal("http"),
+  port: Schema.Int,
+  path: Schema.String,
+  method: Schema.optional(Schema.String),
+  headers: Schema.optional(Schema.Record(Schema.String, Schema.String)),
+  body: Schema.optional(Schema.String),
+})
+export type VmHttpRequest = typeof VmHttpRequest.Type
+
+/** The service answer, body encoded as base64 so arbitrary bytes survive the socket. */
+export const VmHttpResponse = Schema.Struct({
+  kind: Schema.Literal("http"),
+  status: Schema.Int,
+  statusText: Schema.String,
+  headers: Schema.Record(Schema.String, Schema.String),
+  body: Schema.String,
+})
+export type VmHttpResponse = typeof VmHttpResponse.Type
+
+/** Start a long-lived process in the VM; the supervisor keeps it until the room stops. */
+export const VmServiceRequest = Schema.Struct({
+  kind: Schema.Literal("service"),
+  command: Schema.String,
+  args: Schema.Array(Schema.String),
+  env: Schema.optional(Schema.Record(Schema.String, Schema.String)),
+})
+export type VmServiceRequest = typeof VmServiceRequest.Type
+
+export const VmServiceResponse = Schema.Struct({
+  kind: Schema.Literal("service"),
+  pid: Schema.Int,
+})
+export type VmServiceResponse = typeof VmServiceResponse.Type
+
 /** A request the supervisor could not run at all; it carries no stdout or exit code. */
 export const VmFailureResponse = Schema.Struct({
   kind: Schema.Literal("error"),
   message: Schema.String,
 })
 
-export const VmResponse = Schema.Union([VmExecResponse, VmFailureResponse])
+export const VmRequest = Schema.Union([VmExecRequest, VmHttpRequest, VmServiceRequest])
+export type VmRequest = typeof VmRequest.Type
+
+export const VmResponse = Schema.Union([
+  VmExecResponse,
+  VmHttpResponse,
+  VmServiceResponse,
+  VmFailureResponse,
+])
 export type VmResponse = typeof VmResponse.Type
 export type VmExecResponse = typeof VmExecResponse.Type
 
@@ -137,9 +181,9 @@ export type VmExecResponse = typeof VmExecResponse.Type
  * this socket exists, so a response timeout would cut off exactly the work it was started for.
  * A socket that is missing, refused or silent is a rejection, never an empty success.
  */
-export const vmExec = (input: {
+const sendVm = (input: {
   readonly socket: string
-  readonly request: VmExecRequest
+  readonly request: VmExecRequest | VmHttpRequest | VmServiceRequest
   readonly connectTimeoutMs?: number | undefined
 }): Promise<VmResponse> =>
   new Promise((resolve, reject) => {
@@ -184,6 +228,26 @@ export const vmExec = (input: {
       }),
     )
   })
+
+export const vmExec = (input: {
+  readonly socket: string
+  readonly request: VmExecRequest
+  readonly connectTimeoutMs?: number | undefined
+}): Promise<VmResponse> => sendVm(input)
+
+/** Ask a service inside the room's VM for one HTTP response. */
+export const vmHttp = (input: {
+  readonly socket: string
+  readonly request: VmHttpRequest
+  readonly connectTimeoutMs?: number | undefined
+}): Promise<VmResponse> => sendVm(input)
+
+/** Start a long-lived command inside the room's VM and return its guest pid. */
+export const vmService = (input: {
+  readonly socket: string
+  readonly request: VmServiceRequest
+  readonly connectTimeoutMs?: number | undefined
+}): Promise<VmResponse> => sendVm(input)
 
 /** The supervisor script, source in development and build after a build. */
 const supervisorPath = (): string => {

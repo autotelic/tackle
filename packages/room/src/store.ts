@@ -18,7 +18,11 @@ import { ServiceDeclaration } from "./Service.ts"
  * Absent is the local git worktree — the placement every room had before a runtime could be
  * recorded — so a room file written by an older `room` decodes unchanged.
  */
-export const RoomRuntime = Schema.Struct({ kind: Schema.Literal("agentos") })
+export const RoomRuntime = Schema.Struct({
+  kind: Schema.Literal("agentos"),
+  /** The guest port a started VM service answers on; absent until `room vm serve`. */
+  previewPort: Schema.optional(Schema.Int),
+})
 export type RoomRuntime = typeof RoomRuntime.Type
 
 const RoomFileSchema = Schema.Struct({
@@ -329,7 +333,9 @@ export const setRoomRuntime = async (input: {
 }): Promise<StoreResult<RoomFile>> => {
   const room = await readRoom({ root: input.root, id: input.id })
   if (room === undefined) return { ok: false, error: "RoomNotFound" }
-  const next: RoomFile = { ...room, runtime: input.runtime }
+  // Runtime facts accumulate: `room vm` records placement without forgetting the preview
+  // port a previous `room vm serve` wrote.
+  const next: RoomFile = { ...room, runtime: { ...room.runtime, ...input.runtime } }
   await write({ root: input.root, room: next })
   return { ok: true, value: next }
 }
