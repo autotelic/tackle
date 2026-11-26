@@ -11,7 +11,7 @@ import { landingLock, readWorkstream, writeWorkstream, type Workstream } from ".
 import { alive } from "@autotelic/room/run"
 
 /** One declared gate's exact outcome, kept with the workstream that earned it. */
-export type GateFailureKind = "ok" | "load-error" | "timeout" | "failed"
+export type GateFailureKind = "ok" | "load-error" | "timeout" | "test-timeout" | "failed"
 
 export interface GateResult {
   readonly name: string
@@ -107,6 +107,7 @@ const failureKind = (exit: number, output: string): GateFailureKind => {
     )
   )
     return "load-error"
+  if (/Timeout of \d+ms exceeded/iu.test(output)) return "test-timeout"
   return "failed"
 }
 
