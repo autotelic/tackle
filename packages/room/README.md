@@ -21,6 +21,7 @@ room vm --id dev-1575 -- sh -c 'pwd'
 room vm --id dev-1575 --json -- cat package.json
 room vm start|stop|status --id dev-1575 [--json]
 room vm serve --id dev-1575 --port 4800 --exec 'node server.js'
+room vm serve --id dev-1575 --port 4800 --command node --arg server.js
 room vm preview --id dev-1575 --port 4800 --path /health
 room vm --id dev-1575 --executor-lease .room/lease.json -- pnpm test
 ```

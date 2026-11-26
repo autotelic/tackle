@@ -51,6 +51,7 @@ const usage = [
   "  room vm --id <id> [--root .room] [--json] [--executor-lease <file>] -- <command...>   (run it in the room's VM supervisor)",
   "  room vm start|stop|status --id <id> [--root .room] [--json]   (the room's VM supervisor)",
   "  room vm serve --id <id> --port <vm-port> --exec <command>   (start a VM service)",
+  "  room vm serve --id <id> --port <vm-port> --command <program> [--arg <arg>...]   (direct, no shell)",
   "  room vm preview --id <id> --port <vm-port> [--path /] [--json]   (ask the VM service)",
   "  room move --id <id> --to <host> [--root .room] [--json]  (not implemented; refuses)",
   "",
@@ -80,6 +81,8 @@ const options = {
   "executor-lease": { type: "string" },
   port: { type: "string" },
   path: { type: "string" },
+  command: { type: "string" },
+  arg: { type: "string", multiple: true },
   help: { type: "boolean", short: "h", default: false },
 } as const
 
@@ -340,13 +343,28 @@ const main = async (): Promise<void> => {
 
     if (verb === "serve") {
       const port = Number(values.port)
-      if (values.exec === undefined || !Number.isInteger(port) || port < 1 || port > 65535)
-        return fail("vm serve needs --exec and a --port in 1-65535", EXIT.usage)
+      if (
+        (values.exec === undefined && values.command === undefined) ||
+        !Number.isInteger(port) ||
+        port < 1 ||
+        port > 65535
+      )
+        return fail(
+          "vm serve needs --exec (shell) or --command/--arg and a --port in 1-65535",
+          EXIT.usage,
+        )
       const started = await ensureVmSupervisor({ root, id, worktree, stateDir })
       if (!started.ok) return fail(started.reason, EXIT.infrastructure)
+      // A direct command avoids a shell between the supervisor and the guest program. Some
+      // guest binaries cannot be exec'd through sh -c; --command node --arg … is the path for
+      // those services, while --exec remains the convenience shell form.
+      const service =
+        values.command === undefined
+          ? { command: "sh", args: ["-c", values.exec ?? ""] }
+          : { command: values.command, args: values.arg ?? [] }
       const response = await vmService({
         socket: started.run.socket,
-        request: { kind: "service", command: "sh", args: ["-c", values.exec] },
+        request: { kind: "service", ...service },
       }).catch((cause) => fail("vm service: " + String(cause), EXIT.infrastructure))
       if (response.kind === "error")
         return fail("vm service: " + response.message, EXIT.infrastructure)
