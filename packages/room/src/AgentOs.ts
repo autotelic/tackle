@@ -46,7 +46,14 @@ export const createAgentOsRoom = (
       // project onto, and sqlite will not create the room's state directory itself.
       if (input.stateDir !== undefined) await mkdir(input.stateDir, { recursive: true })
       if (worktree !== undefined) await mkdir(worktree, { recursive: true })
+      // The guest must run as the host user that owns the mounted worktree. A default VM
+      // user (1000) is not the host uid, so a host mount of a 0700 temp dir or a 0600 checkout
+      // answers EACCES even though the mount itself is read-write. The mount is the room, and
+      // the room belongs to this user; matching the ids is what makes the projection usable.
+      const uid = process.getuid?.() ?? 1000
+      const gid = process.getgid?.() ?? 1000
       const vm = await AgentOs.create({
+        user: { uid, gid, euid: uid, egid: gid },
         ...(input.stateDir === undefined
           ? {}
           : {
