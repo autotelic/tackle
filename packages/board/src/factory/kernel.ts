@@ -13,6 +13,7 @@ import { captureCheckpoint, ensurePullRequestLabel } from "./adopt.ts"
 import { branchGuard } from "./branch.ts"
 import { raiseDesk } from "./desk.ts"
 import { appendEvent, consumeEvents, readEvents, type Event } from "./events.ts"
+import { baseWorkerEnv, prepareWorkstreamCredentials, resolveCredentialEnv } from "./executor.ts"
 import { snapshotJournal } from "./journal.ts"
 import {
   factoryHome,
@@ -767,6 +768,28 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
   if (worker === undefined)
     return { ok: false, reason: "NoWorker: set the workstream worker or pass --worker" }
 
+  // A repository credential manifest is authority, not advice: if it names an account the
+  // executor cannot satisfy, the pass stops before it is charged and before a worker starts.
+  // A repo with no manifest keeps the legacy host environment until it opts in.
+  let workerBase: NodeJS.ProcessEnv = process.env
+  // SAFETY: a malformed manifest or missing account is a configuration refusal; it is not a
+  // crash in the pass itself. The executor owns its own decode errors, so the boundary is here.
+  // oxlint-disable-next-line plumb-effect/no-try-catch -- the refusal is the pass result.
+  try {
+    const prepared = await prepareWorkstreamCredentials({
+      home: input.home,
+      repo: record.path,
+      workstream: record.id,
+    })
+    if (prepared.managed)
+      workerBase = {
+        ...baseWorkerEnv(process.env),
+        ...(await resolveCredentialEnv({ home: input.home, workstream: record.id })).env,
+      }
+  } catch (cause) {
+    return { ok: false, reason: "Executor: " + String(cause) }
+  }
+
   const pass = used + 1
   const startHeadResult = spawnSync("git", ["-C", record.path, "rev-parse", "HEAD"], {
     encoding: "utf8",
@@ -790,7 +813,7 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
   const compressReport = join(factoryHome(), "compress", record.id + "-" + pass + ".json")
   await mkdir(join(factoryHome(), "compress"), { recursive: true, mode: 0o700 })
   const workerEnv = {
-    ...process.env,
+    ...workerBase,
     // The worker is an agent this factory creates. Low thinking is the default; a Pi
     // worker must pass it to `pi --thinking` because this env is a descriptor, not a flag.
     FACTORY_THINKING: "low",

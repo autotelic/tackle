@@ -8,6 +8,7 @@ export {
   type AgentOsRoom,
   type AgentOsRoomOptions,
 } from "./AgentOs.ts"
+export { ExecutorLease, ExecutorLeaseError, readExecutorLease } from "./ExecutorLease.ts"
 export { Worktree, WorktreeLive, WorktreeError, type WorktreeService } from "./Worktree.ts"
 export {
   agentOsRoomProvider,

@@ -7,6 +7,7 @@ import { homedir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { parseArgs } from "node:util"
 import { runAgentOsCommand } from "./AgentOs.ts"
+import { readExecutorLease } from "./ExecutorLease.ts"
 import { localRoomProvider } from "./Provider.ts"
 import { Worktree, WorktreeLive } from "./Worktree.ts"
 import {
@@ -38,7 +39,7 @@ const usage = [
   "  room resume --id <id> [--root .room]",
   "  room use --id <id> [--root .room]   (label this Herdr terminal with room=<id>)",
   "  room run --id <id> [--root .room] -- <command...>",
-  "  room vm --id <id> [--root .room] [--json] -- <command...>   (run it in the room's isolated VM)",
+  "  room vm --id <id> [--root .room] [--json] [--executor-lease <file>] -- <command...>   (run it in the room's isolated VM)",
   "  room move --id <id> --to <host> [--root .room] [--json]  (not implemented; refuses)",
   "",
   "Exit codes: 0 ok, 1 declined, 2 usage, 3 infrastructure.",
@@ -64,6 +65,7 @@ const options = {
   exec: { type: "string" },
   service: { type: "string" },
   health: { type: "string" },
+  "executor-lease": { type: "string" },
   help: { type: "boolean", short: "h", default: false },
 } as const
 
@@ -275,6 +277,23 @@ const main = async (): Promise<void> => {
     const worktree = join(stateDir, "worktree")
     if (!existsSync(worktree))
       return fail("room " + id + " has no worktree at " + worktree, EXIT.declined)
+    // The executor lease is the room's only path to a credential. It is read before the VM
+    // starts, expiry-checked, and passed per command; the host environment is never forwarded.
+    const leasePath = values["executor-lease"]
+    const lease =
+      leasePath === undefined
+        ? undefined
+        : await readExecutorLease(resolve(leasePath), Date.now()).catch((cause) =>
+            fail("executor lease: " + String(cause), EXIT.declined),
+          )
+    const env =
+      lease === undefined
+        ? undefined
+        : {
+            ...lease.env,
+            EXECUTOR_WORKSTREAM: lease.workstream,
+            EXECUTOR_EXPIRES_AT: lease.expiresAt,
+          }
     // The VM is this command's whole lifetime: the mount is the room's checkout, and the
     // database is the room's directory, so a later vm sees the earlier one's state.
     const result = await Effect.runPromise(
@@ -284,6 +303,7 @@ const main = async (): Promise<void> => {
         stateDir,
         command: program,
         args: parsed.positionals.slice(1),
+        env,
       }),
     ).catch((cause) => fail("vm failed: " + String(cause), EXIT.infrastructure))
     if (values.json) console.log(JSON.stringify(result, null, 2))

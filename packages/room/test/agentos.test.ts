@@ -86,6 +86,28 @@ test("two VMs mounted over separate worktrees cannot read each other's files", a
   }
 }, 60_000)
 
+test("an executor lease env reaches the VM command without losing the base env", async () => {
+  const worktree = await scratchWorktree("env")
+  const stateDir = await stateDirOf("env")
+  try {
+    const ran = await Effect.runPromise(
+      runAgentOsCommand({
+        id: "env",
+        worktree,
+        stateDir,
+        command: "sh",
+        args: ["-c", 'test "$GH_TOKEN" = "lease-secret" && test -n "$HOME" && echo leased'],
+        env: { GH_TOKEN: "lease-secret" },
+      }),
+    )
+    expect(ran.exitCode).toBe(0)
+    expect(ran.stdout).toBe("leased\n")
+  } finally {
+    await rm(worktree, { recursive: true, force: true })
+    await rm(stateDir, { recursive: true, force: true })
+  }
+}, 60_000)
+
 test("a VM write reaches its own host worktree", async () => {
   const worktree = await scratchWorktree("writer")
   const stateDir = await stateDirOf("writer")

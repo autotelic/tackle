@@ -85,6 +85,8 @@ export interface AgentOsCommand {
   readonly stateDir?: string
   readonly command: string
   readonly args?: ReadonlyArray<string>
+  /** The resolved executor lease environment; absent means the VM's own base environment. */
+  readonly env?: Record<string, string> | undefined
 }
 
 /** What one command in a room's VM did, in the shape a caller can print and exit on. */
@@ -114,10 +116,12 @@ export const runAgentOsCommand = (
     (room) =>
       Effect.tryPromise({
         try: async () => {
-          const result = await room.vm.process.execFile(input.command, [...args], {
+          const options: NonNullable<Parameters<typeof room.vm.process.execFile>[2]> = {
             cwd: room.workspace,
             output: { capture: "all" },
-          })
+          }
+          if (input.env !== undefined) options.env = input.env
+          const result = await room.vm.process.execFile(input.command, [...args], options)
           return {
             id: input.id,
             command: input.command,

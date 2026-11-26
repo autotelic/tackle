@@ -7,6 +7,18 @@ import { parseArgs } from "node:util"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 import { adopt } from "./adopt.ts"
+import {
+  checkRepositoryCredentials,
+  CredentialKind,
+  leaseFor,
+  listCredentials,
+  prepareWorkstreamCredentials,
+  removeCredential,
+  setCredential,
+  setGrants,
+  grantsFor,
+  writeLease,
+} from "./executor.ts"
 import { branchGuard } from "./branch.ts"
 import { appendEvent, consumeEvents } from "./events.ts"
 import { runPass } from "./kernel.ts"
@@ -24,6 +36,15 @@ const usage = [
   "Usage:",
   "  factory adopt --path <worktree> --project <linear> --label <label> [--pr <n> | --delivery trunk] [--reports <dir>] [--repo <owner/name>] [--phase reconcile|build|compress|land] [--id <id>]",
   "  factory status [--json]",
+  "  factory credentials list [--json]",
+  "  factory credentials set --id <id> --kind github|opencode|mcp|service|generic --env NAME[=HOST] [--env ...] [--description <text>]",
+  "  factory credentials remove --id <id>",
+  "  factory credentials check --path <repo> [--json]",
+  "  factory grant set --workstream <id> --credential <id> [--credential ...]",
+  "  factory grant list --workstream <id> [--json]",
+  "  factory grant revoke --workstream <id> --credential <id>",
+  "  factory executor prepare --id <id>",
+  "  factory executor lease --id <id> [--ttl <seconds>] [--out <file>]",
   "  factory telemetry [--since <iso>] [--json] [--check]",
   "  factory event --id <id> --kind <kind> [--payload <json>] [--at <iso>]",
   "  factory event retire --id <id> --event <event-id>",
@@ -815,6 +836,201 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
       if (parsed.values.once) return
       await new Promise((resolve) => setTimeout(resolve, interval))
     }
+  }
+
+  if (command === "credentials") {
+    const sub = argv[1]
+    if (sub === "list") {
+      const parsed = parseArgs({
+        args: argv.slice(2),
+        options: { json: { type: "boolean", default: false } },
+        allowPositionals: false,
+      })
+      const credentials = await listCredentials()
+      if (parsed.values.json) console.log(JSON.stringify(credentials, null, 2))
+      else if (credentials.length === 0) console.log("no credentials configured")
+      else
+        for (const credential of credentials)
+          console.log(
+            credential.id.padEnd(18) +
+              credential.kind.padEnd(10) +
+              credential.env.join(",") +
+              (credential.description === undefined ? "" : "  " + credential.description),
+          )
+      return
+    }
+    if (sub === "set") {
+      const parsed = parseArgs({
+        args: argv.slice(2),
+        options: {
+          id: { type: "string" },
+          kind: { type: "string" },
+          env: { type: "string", multiple: true },
+          description: { type: "string" },
+        },
+        allowPositionals: false,
+      })
+      const { id, kind } = parsed.values
+      if (id === undefined || kind === undefined)
+        return fail("credentials set needs --id and --kind")
+      if (!Schema.is(CredentialKind)(kind))
+        return fail("--kind must be github, opencode, mcp, service or generic")
+      const specs = parsed.values.env ?? []
+      if (specs.length === 0)
+        return fail("credentials set needs at least one --env NAME or --env NAME=HOST_VAR")
+      const env: Record<string, string> = {}
+      for (const spec of specs) {
+        const [target, source] = spec.includes("=") ? spec.split("=", 2) : [spec, spec]
+        if (target === undefined || target === "" || source === undefined || source === "")
+          return fail("--env needs NAME or NAME=HOST_VAR")
+        const value = process.env[source]
+        if (value === undefined || value === "")
+          return fail("host environment has no " + source + " for --env " + spec)
+        env[target] = value
+      }
+      const summary = await setCredential({
+        id,
+        kind,
+        description: parsed.values.description,
+        env,
+        at: new Date().toISOString(),
+      })
+      console.log(
+        "credential " +
+          summary.id +
+          " (" +
+          summary.kind +
+          ") stores " +
+          summary.env.join(", ") +
+          "; secret values were not printed",
+      )
+      return
+    }
+    if (sub === "remove") {
+      const parsed = parseArgs({
+        args: argv.slice(2),
+        options: { id: { type: "string" } },
+        allowPositionals: false,
+      })
+      if (parsed.values.id === undefined) return fail("credentials remove needs --id")
+      const removed = await removeCredential({ id: parsed.values.id })
+      if (!removed) return fail("no credential " + parsed.values.id)
+      console.log("credential " + parsed.values.id + " removed")
+      return
+    }
+    if (sub === "check") {
+      const parsed = parseArgs({
+        args: argv.slice(2),
+        options: { path: { type: "string" }, json: { type: "boolean", default: false } },
+        allowPositionals: false,
+      })
+      if (parsed.values.path === undefined) return fail("credentials check needs --path")
+      const checks = await checkRepositoryCredentials({ repo: parsed.values.path })
+      if (parsed.values.json) console.log(JSON.stringify(checks, null, 2))
+      else if (checks.length === 0) console.log("no repository credential manifest")
+      else
+        for (const check of checks)
+          console.log(
+            check.id.padEnd(18) +
+              check.kind.padEnd(10) +
+              check.env.join(",").padEnd(24) +
+              (check.present ? "ready" : "MISSING " + check.missingEnv.join(",")) +
+              "  " +
+              check.reason,
+          )
+      if (checks.some((check) => check.required && !check.present)) process.exitCode = 1
+      return
+    }
+    return fail("credentials needs list, set, remove or check")
+  }
+
+  if (command === "grant") {
+    const sub = argv[1]
+    const parsed = parseArgs({
+      args: argv.slice(2),
+      options: {
+        workstream: { type: "string" },
+        credential: { type: "string", multiple: true },
+        json: { type: "boolean", default: false },
+      },
+      allowPositionals: false,
+    })
+    const workstream = parsed.values.workstream
+    if (workstream === undefined) return fail("grant needs --workstream")
+    if (sub === "list") {
+      const ids = await grantsFor({ workstream })
+      if (parsed.values.json) console.log(JSON.stringify(ids, null, 2))
+      else if (ids.length === 0) console.log("no credentials granted to " + workstream)
+      else console.log(ids.join("\n"))
+      return
+    }
+    if (sub === "set") {
+      const ids = parsed.values.credential ?? []
+      if (ids.length === 0) return fail("grant set needs --credential")
+      const granted = await setGrants({ workstream, credentials: ids })
+      console.log("granted " + granted.join(", ") + " to " + workstream)
+      return
+    }
+    if (sub === "revoke") {
+      const ids = parsed.values.credential ?? []
+      if (ids.length === 0) return fail("grant revoke needs --credential")
+      const current = await grantsFor({ workstream })
+      const next = current.filter((id) => !ids.includes(id))
+      await setGrants({ workstream, credentials: next })
+      console.log(
+        "granted to " + workstream + ": " + (next.length === 0 ? "none" : next.join(", ")),
+      )
+      return
+    }
+    return fail("grant needs set, list or revoke")
+  }
+
+  if (command === "executor") {
+    const sub = argv[1]
+    const parsed = parseArgs({
+      args: argv.slice(2),
+      options: {
+        id: { type: "string" },
+        ttl: { type: "string", default: "900" },
+        out: { type: "string" },
+      },
+      allowPositionals: false,
+    })
+    if (parsed.values.id === undefined) return fail("executor needs --id")
+    const record = await readWorkstream({ id: parsed.values.id })
+    if (record === undefined) return fail("WorkstreamNotFound")
+    if (sub === "prepare") {
+      const prepared = await prepareWorkstreamCredentials({
+        repo: record.path,
+        workstream: record.id,
+      })
+      if (!prepared.managed)
+        console.log(
+          "no repository credential manifest; " + record.id + " keeps the legacy host env",
+        )
+      else
+        console.log(
+          "prepared " +
+            record.id +
+            "; " +
+            prepared.checks.filter((check) => check.present).length +
+            " credential(s) granted",
+        )
+      return
+    }
+    if (sub === "lease") {
+      const seconds = Number(parsed.values.ttl)
+      if (!Number.isInteger(seconds) || seconds < 1) return fail("--ttl must be a positive integer")
+      const lease = await leaseFor({
+        workstream: record.id,
+        ttlMs: seconds * 1000,
+        at: Date.now(),
+      })
+      const path = await writeLease({ lease, out: parsed.values.out })
+      console.log(path)
+      return
+    }
+    return fail("executor needs prepare or lease")
   }
 
   if (command !== "adopt") return fail("unknown command " + command + " (see --help)")
