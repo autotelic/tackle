@@ -1,5 +1,26 @@
 # @autotelic/joggle
 
+## 0.12.0
+
+### Minor Changes
+
+- New rule `joggle/restated-value`: a vocabulary declared in more than one place.
+  It claims the `values` join key, which the candidate generator has declared and
+  implemented since it was written and which no rule read.
+
+  Two fixes the rule made visible in the shared layer:
+
+  - `unit.typeSignature` now resolves a name by what it is rather than by where it
+    was mentioned. A global such as `ReadonlyArray` resolves to its bare name, a
+    locally declared type keeps its own file, and an imported name keeps its
+    exporting file. `joggle/duplicate-implementation` reported zero findings on
+    this repository before this change -- identical helpers in different files
+    carried different signatures, so the shape join never grouped them -- and
+    reports five clusters after it.
+  - `joggle/restated-value` excuses a declaration only when its file imports that
+    declaration from its home, not when it imports anything at all from the same
+    file.
+
 ## 0.11.0
 
 ### Minor Changes
