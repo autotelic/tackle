@@ -17,6 +17,8 @@ room resume --id dev-1575
 room down --id dev-1575
 room use --id dev-1575
 room run --id dev-1575 -- pnpm test
+room vm --id dev-1575 -- sh -c 'pwd'
+room vm --id dev-1575 --json -- cat package.json
 ```
 
 `new` creates `.room/<id>/worktree` and `.room/<id>/room.json`. `up` is
@@ -41,6 +43,12 @@ terminal: it is idempotent and may run in CI or another agent's shell.
 
 `room run` starts a child with `hc run --label room=<id> --cwd <worktree> -- <command>`,
 so the child is labeled at spawn rather than after the fact.
+
+`room vm` runs the same command in an embedded agentOS VM instead of a host shell: the
+room's worktree is mounted at `/workspace` read-write, the VM's sqlite database lives in
+`.room/<id>/agentos.sqlite`, and the command's own exit status becomes the exit status.
+The VM exists for that one command — it is disposed on every path — so nothing a VM run
+leaves behind is reachable from the next one except what it wrote to the worktree.
 
 `up` also leases one port for the room, from 4400 to 4499, and records it in
 `room.json` as `port: { number, leasedAt }`. The lease is idempotent; a second

@@ -6,6 +6,7 @@ import { mkdir, symlink } from "node:fs/promises"
 import { homedir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { parseArgs } from "node:util"
+import { runAgentOsCommand } from "./AgentOs.ts"
 import { localRoomProvider } from "./Provider.ts"
 import { Worktree, WorktreeLive } from "./Worktree.ts"
 import {
@@ -37,6 +38,7 @@ const usage = [
   "  room resume --id <id> [--root .room]",
   "  room use --id <id> [--root .room]   (label this Herdr terminal with room=<id>)",
   "  room run --id <id> [--root .room] -- <command...>",
+  "  room vm --id <id> [--root .room] [--json] -- <command...>   (run it in the room's isolated VM)",
   "  room move --id <id> --to <host> [--root .room] [--json]  (not implemented; refuses)",
   "",
   "Exit codes: 0 ok, 1 declined, 2 usage, 3 infrastructure.",
@@ -260,6 +262,36 @@ const main = async (): Promise<void> => {
       { stdio: "inherit" },
     )
     return process.exit(child.status ?? EXIT.infrastructure)
+  }
+
+  if (command === "vm") {
+    const room = await readRoom({ root, id })
+    if (room === undefined || room.state._tag === "Absent")
+      return fail("RoomNotFound", EXIT.declined)
+    const program = parsed.positionals[0]
+    if (program === undefined)
+      return fail("vm needs a command after -- (see room --help)", EXIT.usage)
+    const stateDir = roomDir({ root, id })
+    const worktree = join(stateDir, "worktree")
+    if (!existsSync(worktree))
+      return fail("room " + id + " has no worktree at " + worktree, EXIT.declined)
+    // The VM is this command's whole lifetime: the mount is the room's checkout, and the
+    // database is the room's directory, so a later vm sees the earlier one's state.
+    const result = await Effect.runPromise(
+      runAgentOsCommand({
+        id,
+        worktree,
+        stateDir,
+        command: program,
+        args: parsed.positionals.slice(1),
+      }),
+    ).catch((cause) => fail("vm failed: " + String(cause), EXIT.infrastructure))
+    if (values.json) console.log(JSON.stringify(result, null, 2))
+    else {
+      if (result.stdout !== "") process.stdout.write(result.stdout)
+      if (result.stderr !== "") process.stderr.write(result.stderr)
+    }
+    return process.exit(result.exitCode)
   }
 
   if (command === "use") {
