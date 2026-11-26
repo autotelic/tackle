@@ -78,6 +78,8 @@ export interface Environment {
   readonly machine: EnvironmentMachine | null
   readonly runtime: EnvironmentRuntime
   readonly port: EnvironmentPort | null
+  /** The guest port a VM service answers on; null for a local room. */
+  readonly vmPort: number | null
   readonly services: ReadonlyArray<EnvironmentService>
   readonly agent: EnvironmentAgent | null
   /**
@@ -171,6 +173,7 @@ export const environmentsOf = (input: {
         lease === undefined
           ? null
           : { room: lease.room, number: lease.number, leasedAt: lease.leasedAt },
+      vmPort: vm?.port ?? null,
       // A room that declares no service contributes no element, and an observed service keeps
       // the status the probe earned. The worktree is the join's evidence, not a served field.
       services: observed.map(({ worktree: _worktree, ...service }) => service),

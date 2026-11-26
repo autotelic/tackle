@@ -79,6 +79,7 @@ const rowOf = ({ workstream, activity, sessions, environment }) => {
     runtime: textOf(runtime.kind),
     runtimePath: textOf(runtime.path),
     port: numberOrNull(recordOf(facts.port).number),
+    vmPort: numberOrNull(facts.vmPort),
     services: listOf(facts.services)
       .map((service) => textOf(recordOf(service).name))
       .filter((name) => name !== null),
@@ -172,6 +173,7 @@ const environmentText = (row) =>
         ? row.runtime
         : row.runtime + " " + row.runtimePath,
     row.port === null ? null : "port " + row.port,
+    row.vmPort === null ? null : "vm port " + row.vmPort,
     row.services.length === 0 ? null : row.services.join(", "),
     row.preview,
   ]

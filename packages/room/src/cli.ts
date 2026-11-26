@@ -370,13 +370,32 @@ const main = async (): Promise<void> => {
         return fail("vm service: " + response.message, EXIT.infrastructure)
       if (response.kind !== "service")
         return fail("vm service: unexpected response " + response.kind, EXIT.infrastructure)
+      const healthPath = values.health ?? "/"
+      if (!healthPath.startsWith("/"))
+        return fail("--health must be a path such as /healthz", EXIT.usage)
+      const declared = await setRoomService({
+        root,
+        id,
+        service: {
+          name: values.service ?? "web",
+          command:
+            values.command === undefined
+              ? (values.exec ?? "")
+              : [values.command, ...(values.arg ?? [])].join(" "),
+          healthPath,
+        },
+      })
+      if (!declared.ok) return fail(declared.error, EXIT.declined)
       const saved = await setRoomRuntime({
         root,
         id,
         runtime: { kind: "agentos", previewPort: port },
       })
       if (!saved.ok) return fail(saved.error, EXIT.declined)
-      if (values.json) console.log(JSON.stringify({ id, port, pid: response.pid }, null, 2))
+      if (values.json)
+        console.log(
+          JSON.stringify({ id, port, pid: response.pid, service: declared.value.service }, null, 2),
+        )
       else console.log("room " + id + " vm service pid " + response.pid + " on guest port " + port)
       return
     }

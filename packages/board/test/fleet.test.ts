@@ -83,6 +83,7 @@ describe("fleet pulls presence from the tailnet", () => {
         ok: true,
         rooms: 1,
         sessions: 1,
+        environments: undefined,
         error: undefined,
       },
       {
@@ -94,6 +95,7 @@ describe("fleet pulls presence from the tailnet", () => {
         ok: true,
         rooms: 1,
         sessions: 1,
+        environments: undefined,
         error: undefined,
       },
       {
@@ -105,6 +107,7 @@ describe("fleet pulls presence from the tailnet", () => {
         ok: false,
         rooms: undefined,
         sessions: undefined,
+        environments: undefined,
         error: "offline",
       },
       {
@@ -116,6 +119,7 @@ describe("fleet pulls presence from the tailnet", () => {
         ok: false,
         rooms: undefined,
         sessions: undefined,
+        environments: undefined,
         error: "unreachable",
       },
     ])
@@ -123,6 +127,7 @@ describe("fleet pulls presence from the tailnet", () => {
       { host: "self", id: "local", state: "Ready", process: null },
       { host: "remote", id: "remote-room", state: "Paused", process: null },
     ])
+    expect(result.environments).toEqual([])
     expect(result.sessions).toEqual([
       { host: "self", source: "herdr", address: "t1", roomId: "local", joinedBy: undefined },
       {
@@ -151,6 +156,7 @@ describe("fleet pulls presence from the tailnet", () => {
       expect.objectContaining({ ok: false, error: "duplicate host", rooms: undefined }),
     ])
     expect(result.rooms).toEqual([{ host: "self", id: "local", state: "Ready", process: null }])
+    expect(result.environments).toEqual([])
     expect(result.sessions.map((session) => session.host)).toEqual(["self"])
   })
 })

@@ -155,6 +155,7 @@ export const Environment = Schema.Struct({
   // A room's lease is a fact the board may not have served yet; absent and null both mean no
   // port to draw, never a port guessed from a neighbour.
   port: Schema.optional(Schema.NullOr(EnvironmentPort)),
+  vmPort: Schema.optional(Schema.NullOr(Schema.Finite)),
   // A room's declared services, each with the status the board observed. Absent means no
   // declaration, which draws no service at all.
   services: Schema.optional(Schema.Array(EnvironmentService)),

@@ -92,6 +92,7 @@ test("a workstream with no service declaration serves no services and no agent o
     machine: { host: "macbook-pro", dnsName: "macbook-pro.tail.ts.net" },
     runtime: { kind: "worktree", path: "/Users/togmund/shakti-perms" },
     port: null,
+    vmPort: null,
     services: [],
     agent: null,
     preview: null,
@@ -108,6 +109,39 @@ test("a VM service advertises the board preview route without a host port", () =
   expect(served.preview).toBe("/preview/dev/")
   expect(served.port).toBe(null)
   expect(served.services).toEqual([])
+})
+
+test("a VM service carries its guest port and the preview route", () => {
+  const [served] = serve({
+    workstreams: [{ id: "dev", path: "/tmp/dev" }],
+    vmPreviews: [{ worktree: "/tmp/dev", room: "dev", port: 4819 }],
+    services: [
+      {
+        worktree: "/tmp/dev",
+        name: "web",
+        command: "node server.js",
+        port: 4819,
+        healthPath: "/healthz",
+        status: "healthy",
+        detail: null,
+        checkedAt: at,
+      },
+    ],
+  })
+  if (served === undefined) throw new Error("no environment")
+  expect(served.vmPort).toBe(4819)
+  expect(served.preview).toBe("/preview/dev/")
+  expect(served.services).toEqual([
+    {
+      name: "web",
+      command: "node server.js",
+      port: 4819,
+      healthPath: "/healthz",
+      status: "healthy",
+      detail: null,
+      checkedAt: at,
+    },
+  ])
 })
 
 test("a room lease fills the port for the workstream whose worktree it names", () => {

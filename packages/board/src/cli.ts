@@ -18,7 +18,7 @@ import { alive } from "@autotelic/room/run"
 import { listRooms } from "@autotelic/room/store"
 import { readRun, startRoomRun } from "@autotelic/room/run"
 import { observeService } from "@autotelic/room/Service"
-import { vmHttp, vmSocketFile } from "@autotelic/room/VmSupervisor"
+import { readVmStatus, vmHttp, vmSocketFile } from "@autotelic/room/VmSupervisor"
 import { activityOf } from "./factory/activity.ts"
 import { answerDesk, listDesk } from "./factory/desk.ts"
 import { listReports } from "./factory/report.ts"
@@ -212,6 +212,59 @@ const observe = async (root: string) => {
   const services = (
     await Promise.all(
       roomFacts.map(async ({ room, run, worktree }) => {
+        // A VM service has no host lease: its port lives inside the guest, and the board asks
+        // the supervisor for the health path instead of probing a host port.
+        if (room.runtime?.kind === "agentos") {
+          const declared = room.service
+          const port = room.runtime.previewPort
+          if (declared === undefined || port === undefined) return undefined
+          const status = await readVmStatus({ root, id: room.id })
+          if (status.state !== "running")
+            return {
+              worktree,
+              name: declared.name,
+              command: declared.command,
+              port,
+              healthPath: declared.healthPath,
+              status: "stopped" as const,
+              detail: "no vm supervisor",
+              checkedAt: observedAt,
+            }
+          const answer = await vmHttp({
+            socket: vmSocketFile({ root, id: room.id }),
+            request: {
+              kind: "http",
+              port,
+              path: declared.healthPath,
+              method: "GET",
+            },
+          }).catch(() => undefined)
+          if (answer === undefined || answer.kind === "error" || answer.kind !== "http")
+            return {
+              worktree,
+              name: declared.name,
+              command: declared.command,
+              port,
+              healthPath: declared.healthPath,
+              status: "unhealthy" as const,
+              detail: "no answer from the guest service",
+              checkedAt: observedAt,
+            }
+          return {
+            worktree,
+            name: declared.name,
+            command: declared.command,
+            port,
+            healthPath: declared.healthPath,
+            status:
+              answer.status >= 200 && answer.status < 300
+                ? ("healthy" as const)
+                : ("unhealthy" as const),
+            detail:
+              answer.status >= 200 && answer.status < 300 ? null : "answered " + answer.status,
+            checkedAt: observedAt,
+          }
+        }
         const port = room.port
         if (room.service === undefined || port === undefined) return undefined
         const observed = await observeService({
@@ -927,7 +980,12 @@ const main = async (): Promise<void> => {
           (host.self ? " (self)" : "") +
           ": " +
           (host.ok
-            ? host.rooms + " rooms, " + host.sessions + " sessions"
+            ? host.rooms +
+              " rooms, " +
+              (host.environments ?? 0) +
+              " environments, " +
+              host.sessions +
+              " sessions"
             : safe(host.error ?? "unknown")),
       )
     console.log(result.rooms.length + " rooms, " + result.sessions.length + " sessions total")

@@ -25,6 +25,11 @@ const RemotePresence = Schema.Struct({
   observedAt: Schema.String,
   authority: Schema.optional(Schema.String),
   rooms: Schema.Array(RemoteRoom),
+  factory: Schema.optional(
+    Schema.Struct({
+      environments: Schema.optional(Schema.Array(UnknownRecord)),
+    }),
+  ),
   sessions: Schema.Struct({ herdr: RemoteSource, rex: RemoteSource }),
   network: Schema.optional(
     Schema.Struct({
@@ -44,6 +49,16 @@ export interface FleetRoom {
   readonly process: unknown
 }
 
+export interface FleetEnvironment {
+  readonly host: string
+  readonly workstream: unknown
+  readonly machine: unknown
+  readonly runtime: unknown
+  readonly vmPort: unknown
+  readonly services: unknown
+  readonly preview: unknown
+}
+
 export interface FleetSession {
   readonly host: string
   readonly source: unknown
@@ -61,6 +76,7 @@ export interface FleetHost {
   readonly ok: boolean
   readonly rooms: number | undefined
   readonly sessions: number | undefined
+  readonly environments: number | undefined
   readonly error: string | undefined
 }
 
@@ -68,6 +84,7 @@ export interface Fleet {
   readonly observedAt: string
   readonly hosts: ReadonlyArray<FleetHost>
   readonly rooms: ReadonlyArray<FleetRoom>
+  readonly environments: ReadonlyArray<FleetEnvironment>
   readonly sessions: ReadonlyArray<FleetSession>
 }
 
@@ -125,6 +142,7 @@ export const fleet = async (input: {
   const self = decode(input.self)
   const hosts: Array<FleetHost> = []
   const rooms: Array<FleetRoom> = []
+  const environments: Array<FleetEnvironment> = []
   const sessions: Array<FleetSession> = []
 
   if (input.tailnet.self !== undefined) {
@@ -140,9 +158,20 @@ export const fleet = async (input: {
         self === undefined
           ? undefined
           : self.sessions.herdr.sessions.length + self.sessions.rex.sessions.length,
+      environments: self?.factory?.environments?.length,
       error: self === undefined ? "local presence did not decode" : undefined,
     })
     for (const room of self?.rooms ?? []) rooms.push({ host: input.tailnet.self.host, ...room })
+    for (const environment of self?.factory?.environments ?? [])
+      environments.push({
+        host: input.tailnet.self.host,
+        workstream: environment.workstream,
+        machine: environment.machine,
+        runtime: environment.runtime,
+        vmPort: environment.vmPort,
+        services: environment.services,
+        preview: environment.preview,
+      })
     for (const session of self?.sessions.herdr.sessions ?? [])
       sessions.push({
         host: input.tailnet.self.host,
@@ -175,6 +204,7 @@ export const fleet = async (input: {
           ok: false,
           rooms: undefined,
           sessions: undefined,
+          environments: undefined,
           error: "offline",
         })
         return
@@ -189,6 +219,7 @@ export const fleet = async (input: {
           ok: false,
           rooms: undefined,
           sessions: undefined,
+          environments: undefined,
           error: "no address",
         })
         return
@@ -210,9 +241,20 @@ export const fleet = async (input: {
           ok: true,
           rooms: decoded.rooms.length,
           sessions: decoded.sessions.herdr.sessions.length + decoded.sessions.rex.sessions.length,
+          environments: decoded.factory?.environments?.length,
           error: undefined,
         })
         for (const room of decoded.rooms) rooms.push({ host: peer.host, ...room })
+        for (const environment of decoded.factory?.environments ?? [])
+          environments.push({
+            host: peer.host,
+            workstream: environment.workstream,
+            machine: environment.machine,
+            runtime: environment.runtime,
+            vmPort: environment.vmPort,
+            services: environment.services,
+            preview: environment.preview,
+          })
         for (const session of decoded.sessions.herdr.sessions)
           sessions.push({
             host: peer.host,
@@ -239,6 +281,7 @@ export const fleet = async (input: {
           ok: false,
           rooms: undefined,
           sessions: undefined,
+          environments: undefined,
           error: cause instanceof Error ? cause.message : String(cause),
         })
       }
@@ -281,6 +324,7 @@ export const fleet = async (input: {
     observedAt: self?.observedAt ?? new Date().toISOString(),
     hosts,
     rooms: rooms.filter((room) => !duplicated.has(room.host)),
+    environments: environments.filter((environment) => !duplicated.has(environment.host)),
     sessions: sessions.filter((session) => !duplicated.has(session.host)),
   }
 }

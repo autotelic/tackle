@@ -431,6 +431,7 @@ const environmentLine = (h: Html.H<Message>, environment: Environment | undefine
   const machine = environment.machine
   const runtime = environment.runtime
   const port = environment.port
+  const vmPort = environment.vmPort
   const services = environment.services ?? []
   const preview = environment.preview
   const agent = environment.agent
@@ -444,6 +445,9 @@ const environmentLine = (h: Html.H<Message>, environment: Environment | undefine
     ...(port === null || port === undefined
       ? []
       : [h.span.class("mono").children("port " + port.number)]),
+    ...(vmPort === null || vmPort === undefined
+      ? []
+      : [h.span.class("mono").children("vm port " + vmPort)]),
     // One span, because a service is one fact: the name the room declared and the word the probe
     // earned. The card never says "healthy" for a service the board did not observe answering.
     ...(services.length === 0
