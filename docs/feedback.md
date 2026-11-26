@@ -62,7 +62,7 @@ reporter read the artefact it had, and the artefact was wrong for it.
 | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `report-permissions-1862-1795303302409` | `conformance:gh run view --job 136075695353 --log:bf49d72626a9`                                                                                            | conformance | `owner-repo`  | permissions-1862: its `test-rest` shard; count 2 — repeat delivered to `tackle-underused-primitive` on 2026-11-26, same fingerprint, not re-triaged           |
 | `report-permissions-1862-1795303401889` | `conformance:gh api .../actions/jobs/136075695353; cd services/rest; npx mocha <shard 2 files>:7712854710d8`                                               | conformance | `duplicate`   | cited: `report-permissions-1862-1795303302409` — same job; count 2 — backfilled to `tackle-underused-primitive` with the inbox on 2026-11-26                  |
-| `report-permissions-1862-1795303503690` | `ergonomics:read a long file (docs/permissions-overhaul-tree/05-audit.md) through the agent's read tool, then paste the result into a commit:93a81a7d8cb3` | ergonomics  | `owner-repo`  | permissions-1862: restore §16 from `580049816`, delete both notices                                                                                           |
+| `report-permissions-1862-1795303503690` | `ergonomics:read a long file (docs/permissions-overhaul-tree/05-audit.md) through the agent's read tool, then paste the result into a commit:93a81a7d8cb3` | ergonomics  | `owner-repo`  | permissions-1862: restore §16 from `580049816`, delete both notices; count 2 — backfilled to `tackle-underused-primitive` with the inbox on 2026-11-26        |
 | `report-permissions-1862-1795303853012` | `ergonomics:node packages/factory/bin/factory.js --help:5997bc3147b1`                                                                                      | ergonomics  | `fixed`       | fixed in `559d8bcc`; the reported bytes predate `0173a342`                                                                                                    |
 | `report-enterprise-1854-1795303934346`  | `ergonomics:gh api …/jobs/137021854184/logs; gh run view 44961528061 --log:9827a001f031`                                                                   | ergonomics  | `owner-repo`  | enterprise-1854: its `test-rest (3)` shard — re-read with `--allow-escape-sequences`                                                                          |
 | `report-tackle-factory-1795311764988`   | `ergonomics:factory-view Open (herdr t18):54dd1b16c105`                                                                                                    | ergonomics  | `fixed`       | fixed in `3018aa4f`; the posted address is now checked against discovery, not a charset                                                                       |
@@ -168,6 +168,12 @@ The one surface tackle owns is the prompt the kernel writes (`promptOf` in
 notice is not content — would blunt the class in every pass. `packages/factory/**` is a protected
 path in this workstream's record, so that is a gate decision rather than a trunk edit; the hazard is
 written into `docs/worker-invocation.md` §4 so the line is there when the prompt is next opened.
+
+**The repeat.** The same fingerprint reached `tackle-underused-primitive` on 2026-11-26, five days
+after this verdict and in the same backfill as the REST-shard pair: `reportEvents` reads every file
+in the shared reports directory and skips only reports addressed to its own workstream, so a newly
+adopted trunk workstream receives exactly the reports it does not own. Nothing was re-triaged; the
+row takes the count, and the repair named above is still the owner's.
 
 **What would change it:** a second repo pasting the same notice (a shared hazard, which makes the
 prompt line the fix and the gate the place to decide it); a Pi release that machine-marks the
