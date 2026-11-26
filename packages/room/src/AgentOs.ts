@@ -52,19 +52,19 @@ export const createAgentOsRoom = (
       // the room belongs to this user; matching the ids is what makes the projection usable.
       const uid = process.getuid?.() ?? 1000
       const gid = process.getgid?.() ?? 1000
-      const vm = await AgentOs.create({
+      const options: Parameters<typeof AgentOs.create>[0] = {
         user: { uid, gid, euid: uid, egid: gid },
-        ...(input.stateDir === undefined
-          ? {}
-          : {
-              database: { type: "sqlite_file" as const, path: agentOsDatabaseFile(input.stateDir) },
-            }),
-        // Read-write on purpose: a write in the guest is the room's edit, and a read-only
-        // mount would make the VM a viewer rather than the place the work happens.
-        ...(worktree === undefined
-          ? {}
-          : { mounts: [hostDirMount(WORKSPACE, worktree, { readOnly: false })] }),
-      })
+      }
+      if (input.stateDir !== undefined)
+        options.database = {
+          type: "sqlite_file",
+          path: agentOsDatabaseFile(input.stateDir),
+        }
+      // Read-write on purpose: a write in the guest is the room's edit, and a read-only
+      // mount would make the VM a viewer rather than the place the work happens.
+      if (worktree !== undefined)
+        options.mounts = [hostDirMount(WORKSPACE, worktree, { readOnly: false })]
+      const vm = await AgentOs.create(options)
       // A mounted /workspace already exists; only an unmounted VM needs one created.
       if (worktree === undefined) await vm.filesystem.mkdir(WORKSPACE, { recursive: true })
       return {
