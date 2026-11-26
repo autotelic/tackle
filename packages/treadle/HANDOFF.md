@@ -245,9 +245,25 @@ at the next triage cadence.
   (single-owner gap); different repos with owned ports are fine.
 - glm-5.3-flash is free-catalog pricing: nightly dollars measure retries, not
   rates — judge work by progress, not dollars, on this model.
+- **pnpm is NOT on the launchd PATH** (`/opt/homebrew/bin`): it lives at
+  `/Users/home/Library/pnpm`. The engine's install step runs `sh -c`
+  (non-login, deliberately — see `runStep` in `src/loop/issue-loop.ts`), so
+  every loop plist's PATH must include `/Users/home/Library/pnpm` — a loop
+  without it dies at the first worktree install with `EffectFailure: Command
+  failed: sh -c pnpm install --frozen-lockfile` (the 2026-11-26 jig-loop
+  crash; fixed in `com.treadle-jig{,-maintenance}.plist`). NOTE: an install
+  failure at worktree creation currently stops the whole loop instead of
+  Pausing — engine hardening candidate.
+- Loops were stopped and quarantined 2026-11-23
+  (`~/Library/LaunchAgents/disabled-treadle-loops-2026-11-23/` — old-path
+  plists, reference only); the live plists point at
+  `tackle/packages/treadle`.
 - This overnight session cost **$2.31** (443 calls, 96% cache re-reads; long
   sessions get expensive per turn — end-and-rehandoff keeps the curve flat).
-- The vault mirror on the mini is read-only in practice; never write it directly.
+- The vault: official local copy on the mini (`/Users/home/vaults/main`,
+  hourly `com.vault-mirror` sync from the hub `~/backups/main.git`); the
+  laptop is the edit location; the stale fork was removed 2026-11-23 with the
+  22 fork-only notes merged into the vault at `attic/stale-fork-2026-07-21/`.
 
 ## 7. Next actions, ordered
 
