@@ -1052,7 +1052,9 @@ const peerSection = (h: Html.H<Message>, fleet: Fleet | null | undefined) => {
                 : h.span
                     .class("floor-service")
                     .children(
-                      services.map((service) => service.name + " · " + service.status).join(", "),
+                      services
+                        .map((service) => "service " + service.name + " " + service.status)
+                        .join(", "),
                     ),
               // A peer's preview is a path on that peer's own board, so it is drawn as text:
               // this page's origin would answer it, and the answer would not be the peer's.

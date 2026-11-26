@@ -424,6 +424,7 @@ test("presence carries an environment for every workstream", () => {
                 number: environment.port.number,
                 leasedAt: environment.port.leasedAt,
               },
+        vmPort: null,
         // Nothing declares a service and nothing routes to a preview, so both stay at their
         // empty value rather than being filled by a neighbour.
         services: [],
