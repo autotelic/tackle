@@ -61,7 +61,7 @@ reporter read the artefact it had, and the artefact was wrong for it.
 | id                                      | fingerprint                                                                                                                                                | kind        | verdict       | route                                                                                                                                                         |
 | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `report-permissions-1862-1795303302409` | `conformance:gh run view --job 136075695353 --log:bf49d72626a9`                                                                                            | conformance | `owner-repo`  | permissions-1862: its `test-rest` shard; count 2 — repeat delivered to `tackle-underused-primitive` on 2026-11-26, same fingerprint, not re-triaged           |
-| `report-permissions-1862-1795303401889` | `conformance:gh api .../actions/jobs/136075695353; cd services/rest; npx mocha <shard 2 files>:7712854710d8`                                               | conformance | `duplicate`   | cited: `report-permissions-1862-1795303302409` — same job                                                                                                     |
+| `report-permissions-1862-1795303401889` | `conformance:gh api .../actions/jobs/136075695353; cd services/rest; npx mocha <shard 2 files>:7712854710d8`                                               | conformance | `duplicate`   | cited: `report-permissions-1862-1795303302409` — same job; count 2 — backfilled to `tackle-underused-primitive` with the inbox on 2026-11-26                  |
 | `report-permissions-1862-1795303503690` | `ergonomics:read a long file (docs/permissions-overhaul-tree/05-audit.md) through the agent's read tool, then paste the result into a commit:93a81a7d8cb3` | ergonomics  | `owner-repo`  | permissions-1862: restore §16 from `580049816`, delete both notices                                                                                           |
 | `report-permissions-1862-1795303853012` | `ergonomics:node packages/factory/bin/factory.js --help:5997bc3147b1`                                                                                      | ergonomics  | `fixed`       | fixed in `559d8bcc`; the reported bytes predate `0173a342`                                                                                                    |
 | `report-enterprise-1854-1795303934346`  | `ergonomics:gh api …/jobs/137021854184/logs; gh run view 44961528061 --log:9827a001f031`                                                                   | ergonomics  | `owner-repo`  | enterprise-1854: its `test-rest (3)` shard — re-read with `--allow-escape-sequences`                                                                          |
@@ -89,15 +89,18 @@ workstream may not edit. So the verdict is `owner-repo`, with the cause named so
 repeat the same log read. This pass did not run `gh` against `shakti-perms`: the evidence was already
 on this machine, and a read is still a visit to another workstream.
 
-**The repeat.** The same fingerprint reached `tackle-underused-primitive` on 2026-11-26, five days
-after this verdict. That is the inbox, not a second defect. The reports source is wired for every
-trunk workstream (`recordOf` in `packages/board/src/factory/store.ts`) and `reportEvents` in
-`packages/board/src/factory/watch.ts` reads every `.json` in the shared directory without comparing
-`report.at` to `cursors.reports`, the watermark `recordOf` already sets at adoption. A new trunk
-workstream therefore backfills the whole inbox; because the reader skips reports addressed to its
-own workstream, it receives exactly the ones it does not own. Closing that backfill is the
-`cursors.reports` watermark named as unbuilt in `docs/faucets-sinks.md` §1, and the path is
-protected.
+**The repeat.** Both files on this subject — this report and its duplicate
+(`report-permissions-1862-1795303401889`) — reached `tackle-underused-primitive` on 2026-11-26, five
+days after this verdict, in two consecutive passes. That is the inbox, not a second defect. The
+reports source is wired for every trunk workstream (`recordOf` in
+`packages/board/src/factory/store.ts`) and `reportEvents` in `packages/board/src/factory/watch.ts`
+reads every `.json` in the shared directory without comparing `report.at` to `cursors.reports`, the
+watermark `recordOf` already sets at adoption. A new trunk workstream therefore backfills the whole
+inbox; because the reader skips reports addressed to its own workstream, it receives exactly the
+ones it does not own — which is why the backfill arrives as two files that the ledger had already
+closed, and why a fingerprint count alone cannot say how many were replayed. Closing that backfill
+is the `cursors.reports` watermark named as unbuilt in `docs/faucets-sinks.md` §1, and the path is
+protected (`packages/board/src/factory/**`).
 
 **What would change it:** a run where mocha printed a summary and the reader lost it (that would be a
 `factory-defect` in whatever read it); a run that failed an assertion without printing the name (the
