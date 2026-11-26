@@ -40,6 +40,7 @@ board /presence
     workstream
     candidate { id, head, runtime, state }
     services [{ name, port, health, preview }]
+    traces { endpoint, queryTool }   // the environment's trace store, if it has one
     agent { session, status }
 ```
 

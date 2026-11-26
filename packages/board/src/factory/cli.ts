@@ -874,7 +874,7 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
       if (id === undefined || kind === undefined)
         return fail("credentials set needs --id and --kind")
       if (!Schema.is(CredentialKind)(kind))
-        return fail("--kind must be github, opencode, mcp, service or generic")
+        return fail("--kind must be github, opencode, mcp, service, observability or generic")
       const specs = parsed.values.env ?? []
       if (specs.length === 0)
         return fail("credentials set needs at least one --env NAME or --env NAME=HOST_VAR")

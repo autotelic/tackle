@@ -30,6 +30,12 @@ A repository commits `.factory/credentials.json`:
       "kind": "mcp",
       "env": ["BROWSE_MCP_URL", "BROWSE_MCP_TOKEN"],
       "reason": "capture the handoff screenshots"
+    },
+    {
+      "id": "traces",
+      "kind": "observability",
+      "env": ["TRACE_QUERY_URL", "TRACE_QUERY_TOKEN"],
+      "reason": "let the agent query this environment's traces"
     }
   ]
 }

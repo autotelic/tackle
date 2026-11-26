@@ -6,7 +6,14 @@ import * as Result from "effect/Result"
 import { factoryHome } from "./store.ts"
 
 /** The kinds of accounts a repository can declare. Kind is a hint for the setup card, not authority. */
-export const CredentialKind = Schema.Literals(["github", "opencode", "mcp", "service", "generic"])
+export const CredentialKind = Schema.Literals([
+  "github",
+  "opencode",
+  "mcp",
+  "service",
+  "observability",
+  "generic",
+])
 export type CredentialKind = typeof CredentialKind.Type
 
 /**
