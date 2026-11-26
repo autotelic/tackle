@@ -2480,13 +2480,30 @@ export const loadWorkspace = (
       if (existing === undefined) outward.set(edge.importer, [edge])
       else existing.push(edge)
     }
-    const resolveRef = (file: string, name: string): string => {
+    /**
+     * Resolve a name to the declaration it means.
+     *
+     * An imported name resolves to the file that exports it. A name the file
+     * declares itself keeps the file as its qualifier, because two files can each
+     * declare `Payload` and they are not one type.
+     *
+     * A name the file neither imports NOR declares is external -- a global such as
+     * `ReadonlyArray`, or a package type -- and resolves to the BARE name. The
+     * qualifier would record where the name was mentioned rather than what it is.
+     * The fallback used to be `file#name` for everything, which baked the
+     * referring file into `typeSignature`; two identical helpers in different
+     * files then carried different signatures and the shape join in `candidates.ts`
+     * could never group them. `duplicate-implementation` reported zero on this
+     * repository because of it, and zero read as clean.
+     */
+    const resolveRef = (file: string, name: string, local: ReadonlySet<string>): string => {
       for (const edge of outward.get(file) ?? []) {
         if (edge.names.includes(name)) return `${edge.to}#${name}`
       }
-      return `${file}#${name}`
+      return local.has(name) ? `${file}#${name}` : name
     }
     parsed.forEach((file) => {
+      const local = new Set(file.units.map((unit) => unit.name))
       file.units.forEach((unit) => {
         // Calls made inside this declaration's span, in the order they are made,
         // resolved to the declaration they reach. `resolveRef` is the same
@@ -2494,16 +2511,16 @@ export const loadWorkspace = (
         // type position or before a pair of parentheses.
         unit.calls = file.facts.callSites
           .filter((site) => site.start >= unit.start && site.end <= unit.end)
-          .map((site) => resolveRef(file.path, site.name))
+          .map((site) => resolveRef(file.path, site.name, local))
         unit.callSignature = unit.calls.join("|")
         // The types this declaration composes, resolved the same way. A field
         // set is only complete once `extends`/`&` bases are followed.
         unit.composed = unit.composed.map((base) => ({
           name: base.name,
-          resolvedTo: resolveRef(file.path, base.name),
+          resolvedTo: resolveRef(file.path, base.name, local),
         }))
         unit.typeSignature = unit.typeRefs
-          .map((name) => resolveRef(file.path, name))
+          .map((name) => resolveRef(file.path, name, local))
           .sort(Order.String)
           .join("|")
         // `typeFacts` is filled by the checker pass, after this one: it is a
