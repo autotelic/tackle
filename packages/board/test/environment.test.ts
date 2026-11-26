@@ -6,6 +6,7 @@ import {
   environmentsOf,
   type RoomPortLease,
   type RoomServiceObservation,
+  type RoomVmPreview,
 } from "../src/environment.ts"
 
 const at = "2026-11-22T12:00:00.000Z"
@@ -45,6 +46,7 @@ const serve = (input: {
   readonly tailnet?: Tailnet
   readonly leases?: ReadonlyArray<RoomPortLease>
   readonly services?: ReadonlyArray<RoomServiceObservation>
+  readonly vmPreviews?: ReadonlyArray<RoomVmPreview>
 }) =>
   environmentsOf({
     workstreams: input.workstreams ?? [{ id: "shakti-perms", path: "/Users/togmund/shakti-perms" }],
@@ -52,6 +54,7 @@ const serve = (input: {
     tailnet: input.tailnet ?? tailnet({ host: "macbook-pro", dnsName: "macbook-pro.tail.ts.net" }),
     leases: input.leases,
     services: input.services,
+    vmPreviews: input.vmPreviews,
     observedAt: at,
   })
 
@@ -94,6 +97,16 @@ test("a workstream with no service declaration serves no services and no agent o
     preview: null,
     observedAt: at,
   })
+})
+
+test("a VM service advertises the board preview route without a host port", () => {
+  const [served] = serve({
+    workstreams: [{ id: "dev", path: "/tmp/dev" }],
+    vmPreviews: [{ worktree: "/tmp/dev", room: "dev", port: 4819 }],
+  })
+  expect(served.preview).toBe("/preview/dev/")
+  expect(served.port).toBe(null)
+  expect(served.services).toEqual([])
 })
 
 test("a room lease fills the port for the workstream whose worktree it names", () => {

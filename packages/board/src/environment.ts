@@ -1,7 +1,7 @@
 import { Option } from "effect"
 import { resolve } from "node:path"
 import type { ServiceObservation } from "@autotelic/room/Service"
-import { previewOf } from "./preview.ts"
+import { previewOf, previewRoute } from "./preview.ts"
 import type { Session } from "./sessions.ts"
 import type { Tailnet } from "./tailnet.ts"
 
@@ -57,6 +57,13 @@ export interface RoomPortLease extends EnvironmentPort {
 /** One observed service, named by the worktree the room owns. */
 export interface RoomServiceObservation extends EnvironmentService {
   readonly worktree: string
+}
+
+/** A room whose service answers inside an agentOS VM; the board asks the supervisor. */
+export interface RoomVmPreview {
+  readonly worktree: string
+  readonly room: string
+  readonly port: number
 }
 
 /** The session working this workstream: the projection's own match, not a guess. */
@@ -131,6 +138,7 @@ export const environmentsOf = (input: {
   readonly tailnet: Tailnet
   readonly leases?: ReadonlyArray<RoomPortLease> | undefined
   readonly services?: ReadonlyArray<RoomServiceObservation> | undefined
+  readonly vmPreviews?: ReadonlyArray<RoomVmPreview> | undefined
   /**
    * How two names for the same directory are compared; a plain resolve by default.
    *
@@ -143,6 +151,7 @@ export const environmentsOf = (input: {
   const machine = Option.getOrNull(machineOf(input.tailnet))
   const leases = input.leases ?? []
   const services = input.services ?? []
+  const vmPreviews = input.vmPreviews ?? []
   const pathKey = input.pathKey ?? resolve
   return input.workstreams.map((record) => {
     // The worktree is the join: both documents observe a path, so a match is evidence rather
@@ -151,6 +160,9 @@ export const environmentsOf = (input: {
     const observed = services.filter(
       (candidate) => pathKey(candidate.worktree) === pathKey(record.path),
     )
+    // A VM service has no host lease to probe here yet; the route is advertised from the
+    // recorded guest port, and a service that is down answers 502 at the route.
+    const vm = vmPreviews.find((candidate) => pathKey(candidate.worktree) === pathKey(record.path))
     return {
       workstream: record.id,
       machine,
@@ -165,7 +177,10 @@ export const environmentsOf = (input: {
       agent: Option.getOrNull(agentOf(input.sessions, record.id)),
       // The rule lives with the route: a preview is advertised only for a service a probe found
       // answering, never for one that merely declared itself.
-      preview: Option.getOrNull(previewOf({ workstream: record.id, services: observed })),
+      preview:
+        vm === undefined
+          ? Option.getOrNull(previewOf({ workstream: record.id, services: observed }))
+          : previewRoute(record.id),
       observedAt: input.observedAt,
     }
   })

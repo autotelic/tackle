@@ -224,6 +224,11 @@ const observe = async (root: string) => {
       }),
     )
   ).filter((service): service is RoomServiceObservation => service !== undefined)
+  const vmPreviews = roomFacts.flatMap(({ room, worktree }) =>
+    room.runtime?.kind === "agentos" && room.runtime.previewPort !== undefined
+      ? [{ worktree, room: room.id, port: room.runtime.previewPort }]
+      : [],
+  )
   for (const record of records) await canonicalOf(record.path)
   const pathKey = (path: string): string => canonical.get(path) ?? resolve(path)
   return {
@@ -247,6 +252,7 @@ const observe = async (root: string) => {
         tailnet,
         leases,
         services,
+        vmPreviews,
         pathKey,
         observedAt,
       }),
