@@ -16,14 +16,18 @@ import { answerPlans, PlanAnswers, type Plan, type Questionnaire } from "../plan
 import { locator, messages, reporter, type Reporter } from "../reporting.ts"
 import type { Move } from "../moves.ts"
 import { policy } from "../policy.ts"
-import { canImport, sharedLayerFor, type Layer } from "../architecture.ts"
+import { canImport, layersFrom, sharedLayerFor, type Layer } from "../architecture.ts"
 import {
+  budgetNote,
   declined,
   everyFile,
   marginOfAnswer,
+  outcome,
   qualityOf,
   type DecisionAnswers,
+  type Planned,
   type Quality,
+  type RunContext,
   type Scope,
 } from "../rule.ts"
 import { duplicateVocabulary } from "../vocabulary.ts"
@@ -152,23 +156,6 @@ export const describedMembers = (cluster: Cluster, scope: Scope): ReadonlyArray<
         )
   return ordered.slice(0, policy.evidence.maxMembers)
 }
-
-/**
- * The largest clusters, named, for a budget note.
- *
- * Every clustered rule that hits its budget needs the same sentence fragment, and
- * three rules had each written it: duplicate-implementation and restated-value as
- * an identical helper, duplicate-meaning inline. The wording is a rule's, so the
- * caller supplies `nameOf`; the ordering is the budget's, so it lives here.
- */
-export const largestClusters = (
-  clusters: ReadonlyArray<Cluster>,
-  nameOf: (cluster: Cluster) => string,
-): ReadonlyArray<string> =>
-  [...clusters]
-    .sort((left, right) => right.members.length - left.members.length)
-    .slice(0, 3)
-    .map((cluster) => `${cluster.members.length}× ${nameOf(cluster)}`)
 
 /**
  * One declaration as the model sees it.
@@ -946,6 +933,91 @@ export const planClusters = (
       planned.push({ cluster, plan })
     })
     return { unreadable, planned }
+  })
+
+/**
+ * Plan a cluster rule's clusters under its budget, and read their answers.
+ *
+ * Every cluster rule needs the same four facts around the same bound: judge the
+ * first `budget` clusters, account for the rest in one note, report the unjudged
+ * ones when the rule's finding is a fact rather than a guess, and hand the
+ * findings back with the funnel. The three rules that share it had each written
+ * the same fifteen lines; a fourth would have written them again.
+ *
+ * A rule's own extra notes and drops stay its own -- duplicate-meaning has facts
+ * about oversized and chained clusters that no other rule can compute -- so they
+ * are passed in rather than folded into this helper's vocabulary.
+ */
+export const planBudgetedClusters = ({
+  rule,
+  clusters,
+  budget,
+  scope,
+  workspace,
+  context,
+  notes: extraNotes = [],
+  drops: extraDrops = [],
+  emptyNote,
+}: {
+  readonly rule: ClusterRule
+  readonly clusters: ReadonlyArray<Cluster>
+  readonly budget: number
+  readonly scope: Scope
+  readonly workspace: Workspace
+  readonly context: RunContext
+  readonly notes?: ReadonlyArray<string>
+  readonly drops?: ReadonlyArray<Drop>
+  /** What to say when the rule found no clusters at all. */
+  readonly emptyNote?: string
+}): Effect.Effect<Planned, never, Atoms> =>
+  Effect.gen(function* () {
+    if (clusters.length === 0) {
+      return {
+        plans: [],
+        read: () =>
+          outcome(
+            [],
+            [...(emptyNote === undefined ? [] : [emptyNote]), ...extraNotes],
+            extraDrops,
+          ),
+      }
+    }
+    const unjudged = clusters.slice(budget)
+    const phase = yield* planClusters(rule, clusters.slice(0, budget), scope, workspace)
+    const layers = layersFrom(context.config)
+    const report = clusterReporter(rule, workspace)
+    // A guessed rule has nothing to stand on without a judgement, so an
+    // unjudged cluster is silence; a fact rule still reports the fact.
+    const overflow =
+      rule.onUnavailable === "report"
+        ? unjudged
+            .map((cluster) => unverifiedFinding({ report, rule, cluster }))
+            .filter((entry): entry is NonNullable<typeof entry> => entry !== undefined)
+        : []
+    const notes = [
+      ...budgetNote({
+        unitKind: "clusters",
+        judged: budget,
+        candidates: clusters.length,
+        // The wording is a rule's; the ordering is the budget's.
+        sample: [...unjudged]
+          .sort((left, right) => right.members.length - left.members.length)
+          .slice(0, 3)
+          .map((cluster) => `${cluster.members.length}× ${rule.nameOf(cluster)}`),
+      }),
+      ...extraNotes,
+    ]
+    return {
+      plans: phase.planned.map((entry) => entry.plan),
+      read: (answers) => {
+        const judged = readClusters(rule, workspace, phase, layers, answers)
+        return outcome(
+          [...judged.diagnostics, ...overflow],
+          notes,
+          [...extraDrops, ...judged.drops],
+        )
+      },
+    }
   })
 
 /** Turn a phase's answers into findings, in the phase's own order. */
