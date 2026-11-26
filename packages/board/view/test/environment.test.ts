@@ -1,15 +1,15 @@
 /* oxlint-disable plumb/prefer-property-tests -- four fixed served documents; the rendered line, not a generated claim, is what these pin. */
-import { Result, Schema } from "effect"
-import { Scene } from "foldkit/test"
-import { expect, test } from "vitest"
-import { update, view, type Model } from "../src/main.ts"
+import { Locator, Scene } from "@effect/ui/testing"
+import { assert, it } from "@effect/vitest"
+import { Effect, Result, Schema } from "effect"
+import { BoardView, type Model } from "../src/main.ts"
 import { Presence } from "../src/presence.ts"
 
 /**
  * The served document as text.
  *
  * The seam is bytes: the board writes JSON and the view decodes it, so these cases start from
- * the document the board serves and read the markup the card renders from it.
+ * the document the board serves and read the card the view renders from it.
  */
 const served = (environments?: string): string => {
   const workstream = JSON.stringify({
@@ -59,98 +59,113 @@ const environment = JSON.stringify({
 })
 
 /**
- * Render the card for one served document and return its markup as text.
+ * Render the card for one served document and return it.
  *
  * The bytes are the assertion surface: a line the projection did not send has to be absent from
- * the markup, not merely null in a model the polyfill could have filled in.
+ * the page, not merely null in a model the view could have filled in.
  */
-const draw = (environments?: string): string => {
-  let markup = ""
-  Scene.scene(
-    { update, view },
-    Scene.given(model(environments)),
-    Scene.tap((simulation) => {
-      markup = JSON.stringify(simulation.html)
-    }),
-  )
-  return markup
-}
-
-test("the card draws the served machine, runtime and agent", () => {
-  const markup = draw("[" + environment + "]")
-  expect(markup).toContain('"Environment"')
-  expect(markup).toContain('"machine macbook-pro"')
-  expect(markup).toContain('"worktree /Users/togmund/autotelic/shakti-perms"')
-  expect(markup).toContain('"port 4400"')
-  expect(markup).toContain('"agent t19 · working"')
-})
-
-test("an environment with no leased port draws no port", () => {
-  const nullPort = JSON.stringify({ ...JSON.parse(environment), port: null })
-  const { port: _port, ...withoutPort } = JSON.parse(environment)
-  for (const served of ["[" + nullPort + "]", "[" + JSON.stringify(withoutPort) + "]"]) {
-    const markup = draw(served)
-    expect(markup).toContain('"Environment"')
-    expect(markup).not.toContain('"port ')
-  }
-})
-
-test("a board that serves no environments draws no Environment line", () => {
-  const markup = draw()
-  expect(markup).not.toContain('"Environment"')
-  expect(markup).not.toContain('"environment"')
-})
-
-test("a half-served environment draws no Environment line", () => {
-  expect(draw('[{"workstream":"shakti-perms"}]')).not.toContain('"Environment"')
-})
-
-test("a served service draws the status the board observed", () => {
-  const withService = JSON.stringify({
-    ...JSON.parse(environment),
-    services: [
-      {
-        name: "web",
-        command: "pnpm dev",
-        port: 4400,
-        healthPath: "/healthz",
-        status: "unhealthy",
-        detail: "HTTP 503",
-        checkedAt: "2026-11-22T12:00:00.000Z",
-      },
-    ],
+const draw = (environments?: string) =>
+  Effect.gen(function* () {
+    const s = yield* Scene.make(BoardView, {})
+    const drawn = s.given(model(environments))
+    return { scene: drawn, text: Locator.textOf(drawn.root) }
   })
-  const markup = draw("[" + withService + "]")
-  expect(markup).toContain('"service web unhealthy"')
-  // The card repeats the observed word; it never upgrades one to a health nobody saw.
-  expect(markup).not.toMatch(/service web healthy/u)
-})
 
-test("an empty service list draws no service", () => {
-  expect(draw("[" + environment + "]")).not.toContain('"service ')
-})
+it.effect("the card draws the served machine, runtime and agent", () =>
+  Effect.gen(function* () {
+    const { text } = yield* draw("[" + environment + "]")
+    assert.include(text, "Environment")
+    assert.include(text, "machine macbook-pro")
+    assert.include(text, "worktree /Users/togmund/autotelic/shakti-perms")
+    assert.include(text, "port 4400")
+    assert.include(text, "agent t19 · working")
+  }),
+)
 
-test("a served preview draws a link to the board's route", () => {
-  const withPreview = JSON.stringify({
-    ...JSON.parse(environment),
-    preview: "/preview/shakti-perms/",
-  })
-  const markup = draw("[" + withPreview + "]")
-  expect(markup).toContain('"/preview/shakti-perms/"')
-  expect(markup).toContain('"preview /preview/shakti-perms/"')
-})
+it.effect("an environment with no leased port draws no port", () =>
+  Effect.gen(function* () {
+    const nullPort = JSON.stringify({ ...JSON.parse(environment), port: null })
+    const { port: _port, ...withoutPort } = JSON.parse(environment)
+    for (const served of ["[" + nullPort + "]", "[" + JSON.stringify(withoutPort) + "]"]) {
+      const { text } = yield* draw(served)
+      assert.include(text, "Environment")
+      assert.notInclude(text, "port ")
+    }
+  }),
+)
 
-test("a null preview draws no link", () => {
-  const markup = draw("[" + environment + "]")
-  expect(markup).not.toContain('"preview ')
-})
+it.effect("a board that serves no environments draws no Environment line", () =>
+  Effect.gen(function* () {
+    const { text } = yield* draw()
+    assert.notInclude(text, "Environment")
+    assert.notInclude(text, "environment")
+  }),
+)
 
-test("an agent with no status names only its session", () => {
-  const statusless = JSON.stringify({
-    ...JSON.parse(environment),
-    agent: { session: "t19", status: "" },
-  })
-  const markup = draw("[" + statusless + "]")
-  expect(markup).toContain('"agent t19"')
-  expect(markup).not.toContain("agent t19 ·")
-})
+it.effect("a half-served environment draws no Environment line", () =>
+  Effect.gen(function* () {
+    const { text } = yield* draw('[{"workstream":"shakti-perms"}]')
+    assert.notInclude(text, "Environment")
+  }),
+)
+
+it.effect("a served service draws the status the board observed", () =>
+  Effect.gen(function* () {
+    const withService = JSON.stringify({
+      ...JSON.parse(environment),
+      services: [
+        {
+          name: "web",
+          command: "pnpm dev",
+          port: 4400,
+          healthPath: "/healthz",
+          status: "unhealthy",
+          detail: "HTTP 503",
+          checkedAt: "2026-11-22T12:00:00.000Z",
+        },
+      ],
+    })
+    const { text } = yield* draw("[" + withService + "]")
+    assert.include(text, "service web unhealthy")
+    // The card repeats the observed word; it never upgrades one to a health nobody saw.
+    assert.notMatch(text, /service web healthy/u)
+  }),
+)
+
+it.effect("an empty service list draws no service", () =>
+  Effect.gen(function* () {
+    const { text } = yield* draw("[" + environment + "]")
+    assert.notInclude(text, "service ")
+  }),
+)
+
+it.effect("a served preview draws a link to the board's route", () =>
+  Effect.gen(function* () {
+    const withPreview = JSON.stringify({
+      ...JSON.parse(environment),
+      preview: "/preview/shakti-perms/",
+    })
+    const { scene, text } = yield* draw("[" + withPreview + "]")
+    assert.include(text, "preview /preview/shakti-perms/")
+    assert.isDefined(scene.query(Locator.attr("href", "/preview/shakti-perms/")))
+  }),
+)
+
+it.effect("a null preview draws no link", () =>
+  Effect.gen(function* () {
+    const { text } = yield* draw("[" + environment + "]")
+    assert.notInclude(text, "preview ")
+  }),
+)
+
+it.effect("an agent with no status names only its session", () =>
+  Effect.gen(function* () {
+    const statusless = JSON.stringify({
+      ...JSON.parse(environment),
+      agent: { session: "t19", status: "" },
+    })
+    const { text } = yield* draw("[" + statusless + "]")
+    assert.include(text, "agent t19")
+    assert.notInclude(text, "agent t19 ·")
+  }),
+)

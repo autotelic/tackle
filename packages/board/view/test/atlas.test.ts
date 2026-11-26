@@ -1,9 +1,9 @@
 /* oxlint-disable plumb/prefer-property-tests -- one fixed atlas document; the rendered route, not a generated claim, is what this pins. */
-import { Result, Schema } from "effect"
-import { Scene } from "foldkit/test"
-import { expect, test } from "vitest"
+import { Locator, Scene } from "@effect/ui/testing"
+import { assert, it } from "@effect/vitest"
+import { Effect, Result, Schema } from "effect"
 import { Atlas } from "../src/atlas.ts"
-import { update, view, type Model } from "../src/main.ts"
+import { BoardView, type Model } from "../src/main.ts"
 
 const served = JSON.stringify({
   generatedAt: "2026-11-23T01:00:00.000Z",
@@ -34,7 +34,7 @@ const served = JSON.stringify({
 
 const model = (): Model => {
   const decoded = Schema.decodeResult(Schema.fromJsonString(Atlas))(served)
-  if (Result.isFailure(decoded)) throw new Error("atlas did not decode: " + String(decoded.failure))
+  if (Result.isFailure(decoded)) throw new Error("atlas did not decode")
   return {
     route: "tackle",
     presence: null,
@@ -45,19 +45,27 @@ const model = (): Model => {
   }
 }
 
-test("the tackle route draws every package and its workspace edges", () => {
-  let markup = ""
-  Scene.scene(
-    { update, view },
-    Scene.given(model()),
-    Scene.tap((simulation) => {
-      markup = JSON.stringify(simulation.html)
-    }),
-  )
-  expect(markup).toContain("Tackle")
-  expect(markup).toContain("protocol")
-  expect(markup).toContain("board")
-  expect(markup).toContain("2 packages")
-  expect(markup).toContain("depends on")
-  expect(markup).toContain("used by")
-})
+/**
+ * Start the view from a served document.
+ *
+ * `given` replaces what `init` produced, the route's fetch included, so a test reads the
+ * rendered page without a request.
+ */
+const scene = (given: Model) =>
+  Effect.gen(function* () {
+    const s = yield* Scene.make(BoardView, {})
+    return s.given(given)
+  })
+
+it.effect("the tackle route draws every package and its workspace edges", () =>
+  Effect.gen(function* () {
+    const s = yield* scene(model())
+    const text = Locator.textOf(s.root)
+    assert.include(text, "Tackle")
+    assert.include(text, "protocol")
+    assert.include(text, "board")
+    assert.include(text, "2 packages")
+    assert.include(text, "depends on")
+    assert.include(text, "used by")
+  }),
+)

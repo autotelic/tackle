@@ -122,6 +122,9 @@ catalogs:
     '@effect/tsgo':
       specifier: 0.56.0
       version: 0.56.0
+    '@effect/ui':
+      specifier: https://pkg.pr.new/Effect-TS/ui/@effect/ui@87a704b
+      version: https://pkg.pr.new/Effect-TS/ui/@effect/ui@87a704b
     '@effect/vitest':
       specifier: 4.1.5
       version: 4.1.5
@@ -146,12 +149,6 @@ catalogs:
     fast-check:
       specifier: 4.10.2
       version: 4.10.2
-    foldkit:
-      specifier: 0.171.0
-      version: 0.171.0
-    foldkit-primitives:
-      specifier: 0.23.0
-      version: 0.23.0
     oxc-parser:
       specifier: 0.150.0
       version: 0.150.0
@@ -296,19 +293,19 @@ importers:
       '@effect/platform-browser':
         specifier: 'catalog:'
         version: 4.1.5(effect@4.1.5)
+      '@effect/ui':
+        specifier: 'catalog:'
+        version: https://pkg.pr.new/Effect-TS/ui/@effect/ui@87a704b(effect@4.1.5)
       effect:
         specifier: 4.1.5
         version: 4.1.5
-      foldkit:
-        specifier: 'catalog:'
-        version: 0.171.0(@effect/platform-browser@4.1.5(effect@4.1.5))(effect@4.1.5)
-      foldkit-primitives:
-        specifier: 'catalog:'
-        version: 0.23.0(effect@4.1.5)(foldkit@0.171.0(@effect/platform-browser@4.1.5(effect@4.1.5))(effect@4.1.5))
     devDependencies:
       '@effect/tsgo':
         specifier: 'catalog:'
         version: 0.56.0
+      '@effect/vitest':
+        specifier: 'catalog:'
+        version: 4.1.5(effect@4.1.5)(vitest@5.0.1(@opentelemetry/api@1.9.0)(@types/node@24.13.5)(vite@8.3.1(@types/node@24.13.5)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)))
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.5
@@ -541,7 +538,7 @@ importers:
     dependencies:
       '@earendil-works/pi-coding-agent':
         specifier: 'catalog:'
-        version: 1.5.0(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.5)(ws@8.22.0)
+        version: 1.5.0(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.5)(ws@8.22.0)(zod@4.6.7)
       '@xstate/effect':
         specifier: 'catalog:'
         version: 1.0.0-alpha.12(@oxlint/plugins@1.89.0)(effect@4.1.5)(xstate@6.0.0-alpha.73)
@@ -1180,6 +1177,12 @@ packages:
   '@effect/tsgo@0.56.0':
     resolution: {integrity: sha512-/S5G8RJjtaVjE/RhwFNTvWQwFAQyDGc+3Ig4Oynvlo3gJu8le4MUgM/DBjoiwkwBsQ+BhufGDCBpwojplerGlw==}
     hasBin: true
+
+  '@effect/ui@https://pkg.pr.new/Effect-TS/ui/@effect/ui@87a704b':
+    resolution: {integrity: sha512-wiZ/TVbVGpkRoW/Js2x4OhnQiLvCYOw8DOmObSHYM8mhcbxyqFW0RmMrCKtd+iPqMoPTVp4ugIOWDYVQELOpHA==, tarball: https://pkg.pr.new/Effect-TS/ui/@effect/ui@87a704b}
+    version: 0.0.0
+    peerDependencies:
+      effect: 4.1.5
 
   '@effect/vitest@4.1.5':
     resolution: {integrity: sha512-18u1013wkJtSelk1ZYLc/5aUnluTQyDfi2hAemkJW1GQ9qXw4mtPSiSf0AXZPhesmGCvG1Dk2C4JYD2sz+R72w==}
@@ -3035,10 +3038,6 @@ packages:
     resolution: {integrity: sha512-rRqJg/6gd538VHvR3PSrdRBb/1Vy2YfzHqzvbhGIQpDRKIa4FgV/54b5Q1xYSxOOwKvjXweS26E0Q+nAMwp2pQ==}
     engines: {node: '>=8.6'}
 
-  entities@9.0.0:
-    resolution: {integrity: sha512-oJFNDJg3kTPwAD1cNn2+WmUq4wFoo09npc3Ydf1D7ED4smRiWrsKnaLxykrTWgyGEcusc87P5dxlAleol9kpkg==}
-    engines: {node: '>=20.19.0'}
-
   env-paths@2.2.1:
     resolution: {integrity: sha512-+h1lkLKhZMTYjog1VEpJNG7NZJWcuc2DDk/qsqSTRRCOXiLjeQ1d1/udrUGhqMxUgAlwKNZ0cf2uqan5GLuS2A==}
     engines: {node: '>=6'}
@@ -3184,29 +3183,6 @@ packages:
 
   flatted@3.4.4:
     resolution: {integrity: sha512-5+ybhBZANEJxaH3X5evAFatUxLfEHSr7n6kYJ+1Qd0mUqr4eu9gIf6GDbWHf8RJijHrjjO8G+la14SlL2SeS1Q==}
-
-  foldkit-bundle@0.14.0:
-    resolution: {integrity: sha512-odo6MuWoISpJOsrd4IkhDJRRQdWVLBw8k7xRS6OpI8SWVRTJ3Pm3JcAx7ZC1PokqpX+1q35LjaU1F+uro9AaYA==}
-    peerDependencies:
-      effect: 4.1.5
-      foldkit: ^0.170.0
-
-  foldkit-primitives@0.23.0:
-    resolution: {integrity: sha512-wPQ/rbdT82CO9+5fqIB77z6qAJYwJm12QbC5IJjnIz5ou9kP6TiNDFcHD/iz+KkBgMGz4Wwc4eg6OuGqZR8NZA==}
-    peerDependencies:
-      effect: 4.1.5
-      foldkit: ^0.170.0
-      foldkit-mixins: ^0.28.0
-    peerDependenciesMeta:
-      foldkit-mixins:
-        optional: true
-
-  foldkit@0.171.0:
-    resolution: {integrity: sha512-85T5T69XJd8S6hcjU9d8uXje8UmPf+WIvQvQVYyQvJYPo3L8iLl+W62Req7PxOiQtCw0AuSNPJfiyy+A1OBucA==}
-    engines: {node: '>=20.19.0'}
-    peerDependencies:
-      '@effect/platform-browser': ~4.1.0
-      effect: 4.1.5
 
   foreground-child@3.3.1:
     resolution: {integrity: sha512-gIXjKqtFuWEgzFRJA9WCQeSJLZDjgJUOMCMzxtvFq/37KojM1BFGufqsCy0r4qSQmYLsZYMeyRqzIWOMup03sw==}
@@ -3864,9 +3840,6 @@ packages:
   parse-conflict-json@5.0.1:
     resolution: {integrity: sha512-ZHEmNKMq1wyJXNwLxyHnluPfRAFSIliBvbK/UiOceROt4Xh9Pz0fq49NytIaeaCUf5VR86hwQ/34FCcNU5/LKQ==}
     engines: {node: ^20.17.0 || >=22.9.0}
-
-  parse5@8.1.1:
-    resolution: {integrity: sha512-EcR/6WDcU7b2N3vQSxKALCk9lXGtUMQxXio008OEMBE0kavu/7JLfBEeFPzi43nMqVDSbEn3QCK+BMCc9zO//w==}
 
   partial-json@0.1.7:
     resolution: {integrity: sha512-Njv/59hHaokb/hRUjce3Hdv12wd60MtM9Z5Olmn+nehe0QDAsRtRbJPvJ0Z91TusF0SuZRIvnM+S4l6EIP8leA==}
@@ -4608,10 +4581,12 @@ snapshots:
       alchemy: 2.0.0-beta.87(@effect/platform-node@4.1.5(effect@4.1.5)(redis@6.3.0(@opentelemetry/api@1.9.0)))(effect@4.1.5)(vite@8.3.4(@types/node@24.13.5)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))(ws@8.22.0)
       effect: 4.1.5
 
-  '@anthropic-ai/sdk@0.129.0':
+  '@anthropic-ai/sdk@0.129.0(zod@4.6.7)':
     dependencies:
       json-schema-to-ts: 3.1.1
       standardwebhooks: 1.1.1
+    optionalDependencies:
+      zod: 4.6.7
 
   '@aws-crypto/crc32@5.2.0':
     dependencies:
@@ -5155,9 +5130,9 @@ snapshots:
       '@distilled.cloud/core': 1.0.0-rc.20(effect@4.1.5)
       effect: 4.1.5
 
-  '@earendil-works/pi-agent-core@1.5.0(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.5)(undici@8.12.3)(ws@8.22.0)':
+  '@earendil-works/pi-agent-core@1.5.0(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.5)(undici@8.12.3)(ws@8.22.0)(zod@4.6.7)':
     dependencies:
-      '@earendil-works/pi-ai': 1.5.0(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.5)(undici@8.12.3)(ws@8.22.0)
+      '@earendil-works/pi-ai': 1.5.0(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.5)(undici@8.12.3)(ws@8.22.0)(zod@4.6.7)
       '@earendil-works/pi-schema': 1.5.0
     transitivePeerDependencies:
       - '@aws-sdk/credential-provider-node'
@@ -5172,9 +5147,9 @@ snapshots:
       - ws
       - zod
 
-  '@earendil-works/pi-ai@1.5.0(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.5)(undici@8.12.3)(ws@8.22.0)':
+  '@earendil-works/pi-ai@1.5.0(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.5)(undici@8.12.3)(ws@8.22.0)(zod@4.6.7)':
     dependencies:
-      '@anthropic-ai/sdk': 0.129.0
+      '@anthropic-ai/sdk': 0.129.0(zod@4.6.7)
       '@aws-sdk/client-bedrock-runtime': 3.1127.0
       '@earendil-works/pi-schema': 1.5.0
       '@earendil-works/pi-telemetry': 1.5.0
@@ -5182,7 +5157,7 @@ snapshots:
       '@smithy/node-http-handler': 4.12.1
       http-proxy-agent: 9.1.0
       https-proxy-agent: 9.1.0
-      openai: 7.19.0(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.5)(undici@8.12.3)(ws@8.22.0)
+      openai: 7.19.0(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.5)(undici@8.12.3)(ws@8.22.0)(zod@4.6.7)
       partial-json: 0.1.7
     transitivePeerDependencies:
       - '@aws-sdk/credential-provider-node'
@@ -5201,10 +5176,10 @@ snapshots:
     dependencies:
       quickjs-wasi: 3.6.2
 
-  '@earendil-works/pi-coding-agent@1.5.0(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.5)(ws@8.22.0)':
+  '@earendil-works/pi-coding-agent@1.5.0(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.5)(ws@8.22.0)(zod@4.6.7)':
     dependencies:
-      '@earendil-works/pi-agent-core': 1.5.0(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.5)(undici@8.12.3)(ws@8.22.0)
-      '@earendil-works/pi-ai': 1.5.0(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.5)(undici@8.12.3)(ws@8.22.0)
+      '@earendil-works/pi-agent-core': 1.5.0(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.5)(undici@8.12.3)(ws@8.22.0)(zod@4.6.7)
+      '@earendil-works/pi-ai': 1.5.0(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.5)(undici@8.12.3)(ws@8.22.0)(zod@4.6.7)
       '@earendil-works/pi-codemode': 1.5.0
       '@earendil-works/pi-mcp': 1.5.0
       '@earendil-works/pi-tui': 1.5.0
@@ -5326,6 +5301,15 @@ snapshots:
       '@effect/tsgo-linux-x64': 0.56.0
       '@effect/tsgo-win32-arm64': 0.56.0
       '@effect/tsgo-win32-x64': 0.56.0
+
+  '@effect/ui@https://pkg.pr.new/Effect-TS/ui/@effect/ui@87a704b(effect@4.1.5)':
+    dependencies:
+      effect: 4.1.5
+
+  '@effect/vitest@4.1.5(effect@4.1.5)(vitest@5.0.1(@opentelemetry/api@1.9.0)(@types/node@24.13.5)(vite@8.3.1(@types/node@24.13.5)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)))':
+    dependencies:
+      effect: 4.1.5
+      vitest: 5.0.1(@opentelemetry/api@1.9.0)(@types/node@24.13.5)(vite@8.3.1(@types/node@24.13.5)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
 
   '@effect/vitest@4.1.5(effect@4.1.5)(vitest@5.0.1(@opentelemetry/api@1.9.0)(@types/node@24.13.5)(vite@8.3.4(@types/node@24.13.5)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)))':
     dependencies:
@@ -6814,8 +6798,6 @@ snapshots:
       ansi-colors: 4.1.3
       strip-ansi: 6.0.1
 
-  entities@9.0.0: {}
-
   env-paths@2.2.1: {}
 
   es-module-lexer@2.3.2: {}
@@ -6996,23 +6978,6 @@ snapshots:
       hookified: 1.15.1
 
   flatted@3.4.4: {}
-
-  foldkit-bundle@0.14.0(effect@4.1.5)(foldkit@0.171.0(@effect/platform-browser@4.1.5(effect@4.1.5))(effect@4.1.5)):
-    dependencies:
-      effect: 4.1.5
-      foldkit: 0.171.0(@effect/platform-browser@4.1.5(effect@4.1.5))(effect@4.1.5)
-
-  foldkit-primitives@0.23.0(effect@4.1.5)(foldkit@0.171.0(@effect/platform-browser@4.1.5(effect@4.1.5))(effect@4.1.5)):
-    dependencies:
-      effect: 4.1.5
-      foldkit: 0.171.0(@effect/platform-browser@4.1.5(effect@4.1.5))(effect@4.1.5)
-      foldkit-bundle: 0.14.0(effect@4.1.5)(foldkit@0.171.0(@effect/platform-browser@4.1.5(effect@4.1.5))(effect@4.1.5))
-
-  foldkit@0.171.0(@effect/platform-browser@4.1.5(effect@4.1.5))(effect@4.1.5):
-    dependencies:
-      '@effect/platform-browser': 4.1.5(effect@4.1.5)
-      effect: 4.1.5
-      parse5: 8.1.1
 
   foreground-child@3.3.1:
     dependencies:
@@ -7552,12 +7517,13 @@ snapshots:
       powershell-utils: 0.2.1
       wsl-utils: 1.0.1
 
-  openai@7.19.0(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.5)(undici@8.12.3)(ws@8.22.0):
+  openai@7.19.0(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.5)(undici@8.12.3)(ws@8.22.0)(zod@4.6.7):
     optionalDependencies:
       '@aws-sdk/credential-provider-node': 3.972.86
       '@smithy/signature-v4': 5.7.5
       undici: 8.12.3
       ws: 8.22.0
+      zod: 4.6.7
 
   optionator@0.9.4:
     dependencies:
@@ -7714,10 +7680,6 @@ snapshots:
       json-parse-even-better-errors: 5.0.0
       just-diff: 6.0.2
       just-diff-apply: 5.5.0
-
-  parse5@8.1.1:
-    dependencies:
-      entities: 9.0.0
 
   partial-json@0.1.7: {}
 

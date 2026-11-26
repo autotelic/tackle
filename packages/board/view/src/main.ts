@@ -1,8 +1,7 @@
-import { Effect, Match, Option, Result, Schema } from "effect"
-import { Command, Runtime, Update } from "foldkit"
-import type { Document, Html, HtmlBuilder } from "foldkit/html"
-import { defineMessageUnion } from "foldkit/message"
-import { ticks } from "foldkit-primitives/time"
+import { Command, Head, Subscription, UiSchema } from "@effect/ui"
+import type { View } from "@effect/ui"
+import { Html } from "@effect/ui/html"
+import { Effect, Match, Result, Schema, Stream } from "effect"
 
 import { Atlas, type AtlasPackage } from "./atlas.ts"
 import { visionView } from "./vision.ts"
@@ -14,6 +13,7 @@ import {
   Report,
   Session,
   SessionSource,
+  type Tailnet,
   Workstream,
   environmentsByWorkstream,
 } from "./presence.ts"
@@ -34,7 +34,13 @@ export const Model = Schema.Struct({
 })
 export type Model = typeof Model.Type
 
-export const Message = defineMessageUnion({
+/**
+ * Every fact the page can report.
+ *
+ * The two fetches carry one message each, with the error beside the value, because the view's
+ * whole response to either is the same: draw the document or draw the failure.
+ */
+export const Message = UiSchema.TaggedEnum({
   ClickedRefresh: {},
   Settled: { value: Schema.Unknown, error: Schema.NullOr(Schema.String) },
   AtlasSettled: { value: Schema.Unknown, error: Schema.NullOr(Schema.String) },
@@ -51,141 +57,49 @@ export const Message = defineMessageUnion({
 })
 export type Message = typeof Message.Type
 
-type UpdateReturn = Update.Return<Model, Message>
+/** One message the view can draw: the type a helper threads through `h`. */
+type Content = View.Input<Message>
 
-/** The Foldkit update function: every transition is explicit here. */
-export const update = (model: Model, message: Message): UpdateReturn =>
-  Message.match<UpdateReturn>(message, {
-    ClickedRefresh: () =>
-      model.route === "vision"
-        ? { model }
-        : {
-            model: { ...model, loading: true },
-            commands: [model.route === "tackle" ? FetchAtlas() : FetchPresence()],
-          },
-    Ticked: () =>
-      model.loading || model.route === "vision"
-        ? { model }
-        : {
-            model: { ...model, loading: true },
-            commands: [model.route === "tackle" ? FetchAtlas() : FetchPresence()],
-          },
-    Settled: ({ value, error }) => {
-      if (error !== null) return { model: { ...model, presence: null, error, loading: false } }
-      const decoded = Schema.decodeUnknownResult(Presence)(value)
-      return Result.isSuccess(decoded)
-        ? { model: { ...model, presence: decoded.success, error: null, loading: false } }
-        : { model: { ...model, presence: null, error: String(decoded.failure), loading: false } }
-    },
-    AtlasSettled: ({ value, error }) => {
-      if (error !== null) return { model: { ...model, atlas: null, error, loading: false } }
-      const decoded = Schema.decodeUnknownResult(Atlas)(value)
-      return Result.isSuccess(decoded)
-        ? { model: { ...model, atlas: decoded.success, error: null, loading: false } }
-        : { model: { ...model, atlas: null, error: String(decoded.failure), loading: false } }
-    },
-    ClickedOpen: ({ source, address }) => ({
-      model,
-      commands: [OpenSession({ source, address })],
-    }),
-    Opened: ({ ok, error }) => ({
-      model: {
-        ...model,
-        notice: ok ? "Opened in its app" : "Could not open: " + (error ?? "unknown error"),
-      },
-    }),
-    ClickedAnswer: ({ item, choice }) => ({
-      model,
-      commands: [AnswerDesk({ item, choice })],
-    }),
-    VisionStep: ({ step }) => ({ model: { ...model, visionStep: step } }),
-    VisionNext: () => ({
-      model: {
-        ...model,
-        visionStep: (model.visionStep ?? 0) >= 5 ? 0 : (model.visionStep ?? 0) + 1,
-      },
-    }),
-    VisionReset: () => ({ model: { ...model, visionStep: 0 } }),
-    VisionFocus: ({ focus }) => ({ model: { ...model, visionFocus: focus } }),
-    VisionMachine: ({ machine }) => ({ model: { ...model, visionMachine: machine } }),
-    Answered: ({ ok, error }) => ({
-      model: {
-        ...model,
-        notice: ok ? "Decision recorded" : "Could not record: " + (error ?? "unknown error"),
-      },
-      commands: ok ? [FetchPresence()] : [],
-    }),
-  })
-
-/** Start with a fetch and an empty model. */
-const routeOf = (): Route => {
-  if (typeof window === "undefined") return "factory"
-  if (window.location.pathname.startsWith("/tackle")) return "tackle"
-  if (window.location.pathname.startsWith("/vision")) return "vision"
-  return "factory"
-}
-
-/**
- * Start the application: the route comes from the path, and every other field is empty.
- *
- * @returns the initial model, plus the one fetch the route needs to fill it.
- */
-export const init: Runtime.ApplicationInit<Model, Message> = () => {
-  const route = routeOf()
-  return {
-    model: {
-      route,
-      presence: null,
-      atlas: null,
-      error: null,
-      loading: route !== "vision",
-      notice: null,
-      visionStep: 0,
-      visionFocus: "permissions",
-      visionMachine: "mbp1",
-    },
-    commands: route === "vision" ? [] : [route === "tackle" ? FetchAtlas() : FetchPresence()],
-  }
-}
-
-export const FetchPresence = Command.define("FetchPresence", {
-  messages: [Message.Settled],
-  execute: Effect.tryPromise({
+const fetchJson = (path: string) =>
+  Effect.tryPromise({
     try: async () => {
-      const response = await fetch("/presence")
+      const response = await fetch(path)
       if (!response.ok) return Promise.reject("HTTP " + response.status)
       return await response.json()
     },
     catch: (cause) => String(cause),
-  }).pipe(
+  })
+
+/**
+ * The two reads.
+ *
+ * Written with `Command.make` over the page's own `fetch`, as the page's source of truth is
+ * the board's JSON, not a service the view owns. The cost is that a test cannot fake the
+ * request in a Story; the seam is covered by decoding the served documents instead.
+ */
+export const FetchPresence = Command.make("board/FetchPresence", { args: {} }, () =>
+  fetchJson("/presence").pipe(
     Effect.match({
-      onFailure: (error) => Message.Settled({ value: null, error: String(error) }),
+      onFailure: (error) => Message.Settled({ value: null, error }),
       onSuccess: (value) => Message.Settled({ value, error: null }),
     }),
   ),
-})
+)
 
-export const FetchAtlas = Command.define("FetchAtlas", {
-  messages: [Message.AtlasSettled],
-  execute: Effect.tryPromise({
-    try: async () => {
-      const response = await fetch("/atlas")
-      if (!response.ok) return Promise.reject("HTTP " + response.status)
-      return await response.json()
-    },
-    catch: (cause) => String(cause),
-  }).pipe(
+export const FetchAtlas = Command.make("board/FetchAtlas", { args: {} }, () =>
+  fetchJson("/atlas").pipe(
     Effect.match({
-      onFailure: (error) => Message.AtlasSettled({ value: null, error: String(error) }),
+      onFailure: (error) => Message.AtlasSettled({ value: null, error }),
       onSuccess: (value) => Message.AtlasSettled({ value, error: null }),
     }),
   ),
-})
+)
 
-export const AnswerDesk = Command.define("AnswerDesk", {
-  args: { item: Schema.String, choice: Schema.String },
-  messages: [Message.Answered],
-  execute: ({ item, choice }: { readonly item: string; readonly choice: string }) =>
+/** The one action the view takes: record a choice on the desk. */
+export const AnswerDesk = Command.make(
+  "board/AnswerDesk",
+  { args: { item: Schema.String, choice: Schema.String }, mode: "switch" },
+  ({ item, choice }) =>
     Effect.tryPromise({
       try: async () => {
         const response = await fetch("/desk/answer", {
@@ -203,12 +117,13 @@ export const AnswerDesk = Command.define("AnswerDesk", {
         onSuccess: () => Message.Answered({ ok: true, error: null }),
       }),
     ),
-})
+)
 
-export const OpenSession = Command.define("OpenSession", {
-  args: { source: SessionSource, address: Schema.String },
-  messages: [Message.Opened],
-  execute: ({ source, address }: { readonly source: "herdr" | "rex"; readonly address: string }) =>
+/** Focus a session in the app that owns it; the board validates the address it is handed. */
+export const OpenSession = Command.make(
+  "board/OpenSession",
+  { args: { source: SessionSource, address: Schema.String }, mode: "switch" },
+  ({ source, address }) =>
     Effect.tryPromise({
       try: async () => {
         const response = await fetch("/open", {
@@ -226,12 +141,122 @@ export const OpenSession = Command.define("OpenSession", {
         onSuccess: () => Message.Opened({ ok: true, error: null }),
       }),
     ),
-})
+)
 
-/** Presence refreshes itself; the button is for impatience, not the only path. */
-export const subscriptions = ticks<Model, Message>({
-  intervalMs: () => Option.some(20_000),
-  onTick: () => Message.Ticked(),
+/**
+ * Presence refreshes itself; the button is for impatience, not the only path.
+ *
+ * A Subscription rather than a timer the view owns: its lifetime is the Model's, and the
+ * vision route reads no presence, so it asks for none.
+ */
+const presenceTicks = Subscription.make(
+  "presence-ticks",
+  Stream.tick("20 seconds").pipe(Stream.as(Message.Ticked())),
+)
+
+/** Start with a fetch and an empty model. */
+const routeOf = (): Route => {
+  if (typeof window === "undefined") return "factory"
+  if (window.location.pathname.startsWith("/tackle")) return "tackle"
+  if (window.location.pathname.startsWith("/vision")) return "vision"
+  return "factory"
+}
+
+/** The one fetch a route needs to fill an empty model. */
+const fetchFor = (route: Route) => (route === "tackle" ? FetchAtlas.make() : FetchPresence.make())
+
+const titleOf = (route: Route): string =>
+  Match.value(route).pipe(
+    Match.when("tackle", () => "Tackle overview"),
+    Match.when("vision", () => "Tackle — how the factory moves"),
+    Match.when("factory", () => "Software factory"),
+    Match.exhaustive,
+  )
+
+export const BoardView = Html.component({
+  name: "BoardView",
+  model: Model,
+  message: Message,
+}).make({
+  /**
+   * Start the application: the route comes from the path, and every other field is empty.
+   *
+   * @returns the initial model, plus the one fetch the route needs to fill it.
+   */
+  init: ($) => {
+    const route = routeOf()
+    const initial = $.set({
+      route,
+      presence: null,
+      atlas: null,
+      error: null,
+      loading: route !== "vision",
+      notice: null,
+      visionStep: 0,
+      visionFocus: "permissions" as const,
+      visionMachine: "mbp1",
+    })
+    return route === "vision" ? initial : initial.run(fetchFor(route))
+  },
+
+  /** The update function: every transition is explicit here. */
+  update: {
+    ClickedRefresh: ($) =>
+      $.model.route === "vision"
+        ? $.model
+        : $.evolve({ loading: true }).run(fetchFor($.model.route)),
+    Ticked: ($) =>
+      $.model.loading || $.model.route === "vision"
+        ? $.model
+        : $.evolve({ loading: true }).run(fetchFor($.model.route)),
+    Settled: ($, { value, error }) => {
+      if (error !== null) return $.evolve({ presence: null, error, loading: false })
+      const decoded = Schema.decodeUnknownResult(Presence)(value)
+      return Result.isSuccess(decoded)
+        ? $.evolve({ presence: decoded.success, error: null, loading: false })
+        : $.evolve({ presence: null, error: String(decoded.failure), loading: false })
+    },
+    AtlasSettled: ($, { value, error }) => {
+      if (error !== null) return $.evolve({ atlas: null, error, loading: false })
+      const decoded = Schema.decodeUnknownResult(Atlas)(value)
+      return Result.isSuccess(decoded)
+        ? $.evolve({ atlas: decoded.success, error: null, loading: false })
+        : $.evolve({ atlas: null, error: String(decoded.failure), loading: false })
+    },
+    ClickedOpen: ($, { source, address }) =>
+      $.set($.model).run(OpenSession.make({ source, address })),
+    Opened: ($, { ok, error }) =>
+      $.evolve({
+        notice: ok ? "Opened in its app" : "Could not open: " + (error ?? "unknown error"),
+      }),
+    ClickedAnswer: ($, { item, choice }) => $.set($.model).run(AnswerDesk.make({ item, choice })),
+    Answered: ($, { ok, error }) => {
+      const evolved = $.evolve({
+        notice: ok ? "Decision recorded" : "Could not record: " + (error ?? "unknown error"),
+      })
+      return ok ? evolved.run(FetchPresence.make()) : evolved
+    },
+    VisionStep: ($, { step }) => $.evolve({ visionStep: step }),
+    VisionNext: ($) =>
+      $.evolve({
+        visionStep: (step) => ((step ?? 0) >= 5 ? 0 : (step ?? 0) + 1),
+      }),
+    VisionReset: ($) => $.evolve({ visionStep: 0 }),
+    VisionFocus: ($, { focus }) => $.evolve({ visionFocus: focus }),
+    VisionMachine: ($, { machine }) => $.evolve({ visionMachine: machine }),
+  },
+
+  subscriptions: ({ model }) => (model.route === "vision" ? [] : [presenceTicks]),
+
+  head: ({ model }) => [Head.title(titleOf(model.route))],
+
+  view: (h, model) =>
+    Match.value(model.route).pipe(
+      Match.when("tackle", () => atlasView(h, model)),
+      Match.when("vision", () => visionView(h, model)),
+      Match.when("factory", () => factoryView(h, model)),
+      Match.exhaustive,
+    ),
 })
 
 const phaseOrder = ["reconcile", "build", "compress", "land", "blocked", "done"] as const
@@ -263,30 +288,20 @@ const phaseLabel = (phase: string): string => {
 }
 const repoName = (ws: typeof Workstream.Type): string => ws.repo ?? "unknown repository"
 
-const sessionRow = (h: HtmlBuilder<Message>, session: typeof Session.Type) =>
-  h.div(
-    [h.Class("session")],
-    [
-      h.div(
-        [h.Class("session-main")],
-        [
-          h.span([h.Class("session-id")], [session.source + " " + session.address]),
-          h.span([h.Class("muted")], [session.where ?? session.agent ?? ""]),
-        ],
+const sessionRow = (h: Html.H<Message>, session: typeof Session.Type) =>
+  h.div.class("session").children(
+    h.div
+      .class("session-main")
+      .children(
+        h.span.class("session-id").children(session.source + " " + session.address),
+        h.span.class("muted").children(session.where ?? session.agent ?? ""),
       ),
-      h.div(
-        [h.Class("session-actions")],
-        [
-          h.button(
-            [
-              h.Class("brand " + session.source),
-              h.OnClick(Message.ClickedOpen({ source: session.source, address: session.address })),
-            ],
-            [session.source === "herdr" ? "Herdr" : "Rex"],
-          ),
-        ],
-      ),
-    ],
+    h.div.class("session-actions").children(
+      h.button
+        .class("brand " + session.source)
+        .on("click", Message.ClickedOpen({ source: session.source, address: session.address }))
+        .children(session.source === "herdr" ? "Herdr" : "Rex"),
+    ),
   )
 
 const stateName = (state: typeof Activity.Type.state): string => {
@@ -331,8 +346,8 @@ const queueTitle = (event: {
   return event.kind.split("-").join(" ")
 }
 
-const activityBlock = (h: HtmlBuilder<Message>, activity: typeof Activity.Type | undefined) => {
-  if (activity === undefined) return h.span([], [])
+const activityBlock = (h: Html.H<Message>, activity: typeof Activity.Type | undefined) => {
+  if (activity === undefined) return undefined
   const pass = activity.lastPass
   const running = activity.state === "working"
   const waiting = activity.pending.length
@@ -362,55 +377,47 @@ const activityBlock = (h: HtmlBuilder<Message>, activity: typeof Activity.Type |
             ? "Gate green"
             : "Gate red · " + quality.errors + " errors"
   const lastEvent = activity.lastEvent
-  if (last === "" && waiting === 0 && gate === "") return h.span([], [])
-  return h.div(
-    [h.Class("activity" + (stalled ? " capped" : "") + (running ? " running" : ""))],
-    [
-      last === ""
-        ? h.span([], [])
-        : h.div(
-            [h.Class("activity-head")],
-            [
-              h.span([h.Class("activity-last")], [last]),
-              stalled
-                ? h.span([h.Class("stale-flag")], [stalledPasses + " passes without progress"])
-                : h.span([], []),
-            ],
-          ),
-      ...(waiting === 0
-        ? []
-        : [
-            h.div(
-              [h.Class("activity-queue")],
-              [
-                h.div([h.Class("queue-count")], [waiting + " waiting"]),
-                ...activity.pending.map((event) =>
-                  h.details(
-                    [h.Class("queue-item")],
-                    [
-                      h.summary([], [queueTitle(event)]),
-                      h.p([h.Class("queue-detail")], [event.summary ?? "No further detail."]),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ]),
-      stalled
-        ? h.div(
-            [h.Class("activity-event stale")],
-            ["No measurable progress for " + stalledPasses + " passes"],
-          )
-        : h.span([], []),
-      lastEvent === null
-        ? h.span([], [])
-        : h.div(
-            [h.Class("activity-event")],
-            [h.span([], ["Last event · " + (lastEvent.summary ?? queueTitle(lastEvent))])],
-          ),
-      gate === "" ? h.span([], []) : h.div([h.Class("activity-meta")], [h.span([], [gate])]),
-    ],
+  if (last === "" && waiting === 0 && gate === "") return undefined
+  const queue: ReadonlyArray<Content> = activity.pending.map((event) =>
+    h.details
+      .class("queue-item")
+      .children(
+        h.summary.children(queueTitle(event)),
+        h.p.class("queue-detail").children(event.summary ?? "No further detail."),
+      ),
   )
+  return h.div
+    .class("activity", stalled && "capped", running && "running")
+    .children(
+      last === ""
+        ? undefined
+        : h.div
+            .class("activity-head")
+            .children(
+              h.span.class("activity-last").children(last),
+              stalled
+                ? h.span.class("stale-flag").children(stalledPasses + " passes without progress")
+                : undefined,
+            ),
+      waiting === 0
+        ? undefined
+        : h.div
+            .class("activity-queue")
+            .children(h.div.class("queue-count").children(waiting + " waiting"), queue),
+      stalled
+        ? h.div
+            .class("activity-event stale")
+            .children("No measurable progress for " + stalledPasses + " passes")
+        : undefined,
+      lastEvent === null
+        ? undefined
+        : h.div
+            .class("activity-event")
+            .children(
+              h.span.children("Last event · " + (lastEvent.summary ?? queueTitle(lastEvent))),
+            ),
+      gate === "" ? undefined : h.div.class("activity-meta").children(h.span.children(gate)),
+    )
 }
 
 /**
@@ -419,68 +426,65 @@ const activityBlock = (h: HtmlBuilder<Message>, activity: typeof Activity.Type |
  * Each part is drawn only when the projection sent it, and a card with no environment at all
  * draws no line. A worktree is named by its path because that is what "runtime" means today.
  */
-const environmentLine = (h: HtmlBuilder<Message>, environment: Environment | undefined) => {
-  if (environment === undefined) return h.span([], [])
+const environmentLine = (h: Html.H<Message>, environment: Environment | undefined) => {
+  if (environment === undefined) return undefined
   const machine = environment.machine
   const runtime = environment.runtime
   const port = environment.port
   const services = environment.services ?? []
   const preview = environment.preview
   const agent = environment.agent
-  const parts = [
+  const parts: ReadonlyArray<Content> = [
     ...(machine === null || machine === undefined
       ? []
-      : [h.span([h.Class("mono")], ["machine " + machine.host])]),
+      : [h.span.class("mono").children("machine " + machine.host)]),
     ...(runtime === undefined
       ? []
-      : [h.span([h.Class("mono")], [runtime.kind + " " + runtime.path])]),
+      : [h.span.class("mono").children(runtime.kind + " " + runtime.path)]),
     ...(port === null || port === undefined
       ? []
-      : [h.span([h.Class("mono")], ["port " + port.number])]),
+      : [h.span.class("mono").children("port " + port.number)]),
     // One span, because a service is one fact: the name the room declared and the word the probe
     // earned. The card never says "healthy" for a service the board did not observe answering.
     ...(services.length === 0
       ? []
       : [
-          h.span(
-            [h.Class("mono")],
-            [
+          h.span
+            .class("mono")
+            .children(
               services
                 .map((service) => "service " + service.name + " " + service.status)
                 .join(", "),
-            ],
-          ),
+            ),
         ]),
     // The route is the board's own path, so it is resolved against the origin that served the
     // card. A null preview is no route: the card never links to a service nobody saw answering.
     ...(preview === null || preview === undefined
       ? []
       : [
-          h.a(
-            [h.Href(preview), h.Target("_blank"), h.Rel("noreferrer"), h.Class("mono")],
-            ["preview " + preview],
-          ),
+          h.a
+            .class("mono")
+            .attr("href", preview)
+            .attr("target", "_blank")
+            .attr("rel", "noreferrer")
+            .children("preview " + preview),
         ]),
+    // A session the board could not read a status for names only itself; an empty status is not
+    // a word, and Herdr draws no badge for it either.
     ...(agent === null || agent === undefined
       ? []
       : [
-          h.span(
-            [],
-            // A session the board could not read a status for names only itself; an empty
-            // status is not a word, and Herdr draws no badge for it either.
-            [
-              agent.status === ""
-                ? "agent " + agent.session
-                : "agent " + agent.session + " · " + agent.status,
-            ],
+          h.span.children(
+            agent.status === ""
+              ? "agent " + agent.session
+              : "agent " + agent.session + " · " + agent.status,
           ),
         ]),
   ]
-  if (parts.length === 0) return h.span([], [])
-  return h.div(
-    [h.Class("environment")],
-    [h.span([h.Class("environment-label")], ["Environment"]), ...parts],
-  )
+  if (parts.length === 0) return undefined
+  return h.div
+    .class("environment")
+    .children(h.span.class("environment-label").children("Environment"), ...parts)
 }
 
 const githubRepoUrl = (repo: string): string => "https://github.com/" + repo
@@ -492,244 +496,223 @@ const githubLabelUrl = (input: { readonly repo: string; readonly label: string }
   "https://github.com/" + input.repo + "/issues?q=label%3A" + encodeURIComponent(input.label)
 
 const brandLink = (
-  h: HtmlBuilder<Message>,
+  h: Html.H<Message>,
   input: { readonly kind: string; readonly label: string; readonly href: string },
-): Html =>
-  h.a(
-    [h.Class("brand " + input.kind), h.Href(input.href), h.Target("_blank"), h.Rel("noreferrer")],
-    [input.label],
-  )
+) =>
+  h.a
+    .class("brand " + input.kind)
+    .attr("href", input.href)
+    .attr("target", "_blank")
+    .attr("rel", "noreferrer")
+    .children(input.label)
 
-const workstreamBrands = (h: HtmlBuilder<Message>, ws: typeof Workstream.Type) => {
+const workstreamBrands = (h: Html.H<Message>, ws: typeof Workstream.Type) => {
   const repo = ws.repo
-  return h.div(
-    [h.Class("brand-row")],
-    [
-      ...(repo === undefined
-        ? []
-        : [brandLink(h, { kind: "github", label: "GitHub · " + repo, href: githubRepoUrl(repo) })]),
-      ...(repo === undefined || ws.pr === undefined
-        ? []
-        : [
-            brandLink(h, {
-              kind: "github",
-              label: "PR #" + ws.pr + " · " + ws.label,
-              href: githubPrUrl(repo, ws.pr),
-            }),
-          ]),
-      ...(repo === undefined
-        ? []
-        : [
-            brandLink(h, {
-              kind: "label",
-              label: "Label · " + ws.label,
-              href: githubLabelUrl({ repo, label: ws.label }),
-            }),
-          ]),
-      ...(ws.linearUrl === undefined
-        ? []
-        : [
-            brandLink(h, {
-              kind: "linear",
-              label: "Linear · " + ws.project,
-              href: ws.linearUrl,
-            }),
-          ]),
-    ],
+  return h.div.class("brand-row").children(
+    repo === undefined
+      ? undefined
+      : brandLink(h, { kind: "github", label: "GitHub · " + repo, href: githubRepoUrl(repo) }),
+    repo === undefined || ws.pr === undefined
+      ? undefined
+      : brandLink(h, {
+          kind: "github",
+          label: "PR #" + ws.pr + " · " + ws.label,
+          href: githubPrUrl(repo, ws.pr),
+        }),
+    repo === undefined
+      ? undefined
+      : brandLink(h, {
+          kind: "label",
+          label: "Label · " + ws.label,
+          href: githubLabelUrl({ repo, label: ws.label }),
+        }),
+    ws.linearUrl === undefined
+      ? undefined
+      : brandLink(h, {
+          kind: "linear",
+          label: "Linear · " + ws.project,
+          href: ws.linearUrl,
+        }),
   )
 }
 
 const workstreamCard = (
-  h: HtmlBuilder<Message>,
+  h: Html.H<Message>,
   ws: typeof Workstream.Type,
   activity: typeof Activity.Type | undefined,
   sessions: ReadonlyArray<typeof Session.Type>,
   environment: Environment | undefined,
 ) =>
-  h.article(
-    [h.Class("workstream"), h.Id(ws.id)],
-    [
-      h.div(
-        [h.Class("workstream-head")],
-        [
-          h.div([], [h.h3([], [ws.label]), h.div([h.Class("mono muted")], [ws.id])]),
-          h.div(
-            [h.Class("pills")],
-            [
+  h.article
+    .attr("id", ws.id)
+    .class("workstream")
+    .children(
+      h.div
+        .class("workstream-head")
+        .children(
+          h.div.children(h.h3.children(ws.label), h.div.class("mono muted").children(ws.id)),
+          h.div
+            .class("pills")
+            .children(
               activity === undefined
-                ? h.span([], [])
-                : h.span([h.Class("state-pill " + activity.state)], [stateName(activity.state)]),
-            ],
-          ),
-        ],
-      ),
-      h.div(
-        [h.Class("workstream-meta")],
-        [
-          ws.repo === undefined
-            ? h.span([], ["unknown repo"])
-            : h.a(
-                [h.Href("https://github.com/" + ws.repo), h.Target("_blank"), h.Rel("noreferrer")],
-                [ws.repo],
-              ),
-          h.span([], [ws.branch ?? "no branch"]),
-          ws.pr === undefined
-            ? h.span([], ["trunk"])
-            : h.a(
-                [
-                  h.Href("https://github.com/" + (ws.repo ?? "") + "/pull/" + ws.pr),
-                  h.Target("_blank"),
-                  h.Rel("noreferrer"),
-                ],
-                ["PR #" + ws.pr],
-              ),
-          h.span([h.Class("mono")], ["checkpoint " + ws.checkpoint.sha.slice(0, 8)]),
-          ...(ws.worker === undefined ? [] : [h.span([h.Class("mono")], ["worker " + ws.worker])]),
-        ],
+                ? undefined
+                : h.span.class("state-pill " + activity.state).children(stateName(activity.state)),
+            ),
+        ),
+      h.div.class("workstream-meta").children(
+        ws.repo === undefined
+          ? h.span.children("unknown repo")
+          : h.a
+              .attr("href", "https://github.com/" + ws.repo)
+              .attr("target", "_blank")
+              .attr("rel", "noreferrer")
+              .children(ws.repo),
+        h.span.children(ws.branch ?? "no branch"),
+        ws.pr === undefined
+          ? h.span.children("trunk")
+          : h.a
+              .attr("href", "https://github.com/" + (ws.repo ?? "") + "/pull/" + ws.pr)
+              .attr("target", "_blank")
+              .attr("rel", "noreferrer")
+              .children("PR #" + ws.pr),
+        h.span.class("mono").children("checkpoint " + ws.checkpoint.sha.slice(0, 8)),
+        ws.worker === undefined ? undefined : h.span.class("mono").children("worker " + ws.worker),
       ),
       workstreamBrands(h, ws),
       environmentLine(h, environment),
       activityBlock(h, activity),
       sessions.length === 0
-        ? h.span([], [])
-        : h.div(
-            [h.Class("session-list")],
-            sessions.map((session) => sessionRow(h, session)),
-          ),
-    ],
-  )
+        ? undefined
+        : h.div.class("session-list").children(sessions.map((session) => sessionRow(h, session))),
+    )
 
 const repoSection = (
-  h: HtmlBuilder<Message>,
+  h: Html.H<Message>,
   repo: string,
   workstreams: ReadonlyArray<typeof Workstream.Type>,
   activities: ReadonlyArray<typeof Activity.Type>,
   sessions: ReadonlyArray<typeof Session.Type>,
   environments: Readonly<Record<string, Environment>>,
-) =>
-  h.section(
-    [h.Class("repo")],
-    [
-      h.div(
-        [h.Class("repo-head")],
-        [
-          h.h2([], [repo]),
-          h.span(
-            [h.Class("muted")],
-            [workstreams.length + (workstreams.length === 1 ? " workstream" : " workstreams")],
+) => {
+  const lanes: ReadonlyArray<Content> = phaseOrder.flatMap((phase) => {
+    const inPhase = workstreams.filter((ws) => ws.phase === phase)
+    if (inPhase.length === 0) return []
+    return [
+      h.div.class("lane").children(
+        h.h3
+          .class("lane-title")
+          .children(phaseLabel(phase), h.span.class("count").children(String(inPhase.length))),
+        ...inPhase.map((ws) =>
+          workstreamCard(
+            h,
+            ws,
+            activities.find((activity) => activity.workstream === ws.id),
+            sessions.filter((session) => session.workstream === ws.id),
+            environments[ws.id],
           ),
-        ],
+        ),
       ),
-      ...phaseOrder.flatMap((phase) => {
-        const inPhase = workstreams.filter((ws) => ws.phase === phase)
-        if (inPhase.length === 0) return []
-        return [
-          h.div(
-            [h.Class("lane")],
-            [
-              h.h3(
-                [h.Class("lane-title")],
-                [phaseLabel(phase), h.span([h.Class("count")], [String(inPhase.length)])],
-              ),
-              ...inPhase.map((ws) =>
-                workstreamCard(
-                  h,
-                  ws,
-                  activities.find((activity) => activity.workstream === ws.id),
-                  sessions.filter((session) => session.workstream === ws.id),
-                  environments[ws.id],
-                ),
-              ),
-            ],
-          ),
-        ]
-      }),
-    ],
-  )
+    ]
+  })
+  return h.section
+    .class("repo")
+    .children(
+      h.div
+        .class("repo-head")
+        .children(
+          h.h2.children(repo),
+          h.span
+            .class("muted")
+            .children(
+              workstreams.length + (workstreams.length === 1 ? " workstream" : " workstreams"),
+            ),
+        ),
+      ...lanes,
+    )
+}
 
 const card = (
-  h: HtmlBuilder<Message>,
+  h: Html.H<Message>,
   input: {
     readonly title: string
-    readonly children: ReadonlyArray<Html>
+    readonly children: ReadonlyArray<Content>
     readonly id?: string
   },
 ) =>
-  h.div(
-    [h.Class("card"), ...(input.id === undefined ? [] : [h.Id(input.id)])],
-    [h.h2([], [input.title]), ...input.children],
-  )
+  h.div
+    .class("card")
+    .attr("id", input.id)
+    .children(h.h2.children(input.title), ...input.children)
 
-const deskRow = (h: HtmlBuilder<Message>, item: typeof Desk.Type) =>
-  h.div(
-    [h.Class("desk-item"), h.Id(item.id)],
-    [
-      h.div(
-        [h.Class("desk-head")],
-        [
-          h.span([h.Class("desk-title")], [item.title]),
-          h.a([h.Href("#" + item.workstream)], [item.workstream]),
-        ],
-      ),
-      h.p([h.Class("desk-body")], [item.body]),
-      h.div(
-        [h.Class("desk-choices")],
-        item.choices.map((choice) =>
-          h.button([h.OnClick(Message.ClickedAnswer({ item: item.id, choice }))], [choice]),
+const deskRow = (h: Html.H<Message>, item: typeof Desk.Type) =>
+  h.div
+    .attr("id", item.id)
+    .class("desk-item")
+    .children(
+      h.div
+        .class("desk-head")
+        .children(
+          h.span.class("desk-title").children(item.title),
+          h.a.attr("href", "#" + item.workstream).children(item.workstream),
         ),
-      ),
-    ],
-  )
+      h.p.class("desk-body").children(item.body),
+      h.div
+        .class("desk-choices")
+        .children(
+          item.choices.map((choice) =>
+            h.button.on("click", Message.ClickedAnswer({ item: item.id, choice })).children(choice),
+          ),
+        ),
+    )
 
-const reportRow = (h: HtmlBuilder<Message>, report: typeof Report.Type) =>
-  h.div(
-    [h.Class("report")],
-    [
-      h.div(
-        [h.Class("report-head")],
-        [
-          h.span([h.Class("id")], [report.kind]),
-          h.a([h.Href("#" + report.workstream)], [report.workstream]),
-          report.blocked ? h.span([h.Class("blocked-flag")], ["blocked"]) : h.span([], []),
-        ],
-      ),
-      h.p([h.Class("report-body")], [report.actual]),
-    ],
-  )
+const reportRow = (h: Html.H<Message>, report: typeof Report.Type) =>
+  h.div
+    .class("report")
+    .children(
+      h.div
+        .class("report-head")
+        .children(
+          h.span.class("id").children(report.kind),
+          h.a.attr("href", "#" + report.workstream).children(report.workstream),
+          report.blocked ? h.span.class("blocked-flag").children("blocked") : undefined,
+        ),
+      h.p.class("report-body").children(report.actual),
+    )
 
-const routeNav = (h: HtmlBuilder<Message>, active: Route) =>
-  h.div(
-    [h.Class("nav")],
-    [
-      h.a([h.Href("/"), ...(active === "factory" ? [h.Class("active")] : [])], ["Factory"]),
-      h.a([h.Href("/tackle"), ...(active === "tackle" ? [h.Class("active")] : [])], ["Tackle"]),
-      h.a([h.Href("/vision"), ...(active === "vision" ? [h.Class("active")] : [])], ["Vision"]),
-    ],
+const routeNav = (h: Html.H<Message>, active: Route) =>
+  h.div.class("nav").children(
+    h.a
+      .class(active === "factory" && "active")
+      .attr("href", "/")
+      .children("Factory"),
+    h.a
+      .class(active === "tackle" && "active")
+      .attr("href", "/tackle")
+      .children("Tackle"),
+    h.a
+      .class(active === "vision" && "active")
+      .attr("href", "/vision")
+      .children("Vision"),
   )
 
 const appHeader = (
-  h: HtmlBuilder<Message>,
+  h: Html.H<Message>,
   input: { readonly model: Model; readonly title: string; readonly summary: string },
-): Html =>
-  h.header(
-    [h.Class("header")],
-    [
-      h.div(
-        [],
-        [
-          h.h1([], [input.title]),
-          h.span([h.Class("muted")], [input.summary]),
-          routeNav(h, input.model.route),
-        ],
+) =>
+  h.header
+    .class("header")
+    .children(
+      h.div.children(
+        h.h1.children(input.title),
+        h.span.class("muted").children(input.summary),
+        routeNav(h, input.model.route),
       ),
       input.model.route === "vision"
-        ? h.span([h.Class("muted")], ["static map"])
-        : h.button(
-            [h.OnClick(Message.ClickedRefresh())],
-            [input.model.loading ? "Refreshing…" : "Refresh"],
-          ),
-    ],
-  )
+        ? h.span.class("muted").children("static map")
+        : h.button
+            .on("click", Message.ClickedRefresh())
+            .children(input.model.loading ? "Refreshing…" : "Refresh"),
+    )
 
 /**
  * Tailnet presence is three states, and the border class and the word beside it disagree on
@@ -749,12 +732,12 @@ const onlineStatus = (
 
 /** Render the factory state; every field comes from /presence. */
 const factoryFloor = (
-  h: HtmlBuilder<Message>,
+  h: Html.H<Message>,
   environments: ReadonlyArray<Environment>,
-  tailnet: import("./presence.ts").Tailnet | undefined,
+  tailnet: Tailnet | undefined,
   workstreams: ReadonlyArray<typeof Workstream.Type>,
 ) => {
-  if (environments.length === 0 && tailnet === undefined) return h.span([], [])
+  if (environments.length === 0 && tailnet === undefined) return undefined
   const machines = new Map<
     string,
     { readonly online: boolean | undefined; readonly entries: Array<Environment> }
@@ -771,113 +754,95 @@ const factoryFloor = (
     machines.set(host, current)
   }
   const online = [...machines.values()].filter((machine) => machine.online === true).length
-  return h.section(
-    [h.Class("factory-floor")],
-    [
-      h.div(
-        [h.Class("floor-head")],
-        [
-          h.h2([], ["Factory floor"]),
-          h.span(
-            [h.Class("muted")],
-            [
-              (tailnet === undefined || !tailnet.available
-                ? "tailnet unavailable"
-                : online + " online · " + machines.size + " machines") +
-                " · " +
-                environments.length +
-                (environments.length === 1 ? " workstream" : " workstreams"),
-            ],
-          ),
-        ],
-      ),
-      h.div(
-        [h.Class("floor-grid")],
-        [...machines.entries()]
-          .sort(([left], [right]) => left.localeCompare(right))
-          .map(([host, machine]) =>
-            h.div(
-              [h.Class("floor-machine")],
-              [
-                h.div(
-                  [h.Class("floor-machine-head")],
-                  [
-                    h.h3([], [host]),
-                    h.span(
-                      [h.Class("floor-status " + onlineStatus(machine.online).cls)],
-                      [onlineStatus(machine.online).word],
-                    ),
-                  ],
-                ),
-                ...(machine.entries.length === 0
-                  ? [h.span([h.Class("muted")], ["no workstream observed"])]
-                  : machine.entries.map((environment) => {
-                      const services = environment.services ?? []
-                      const preview = environment.preview
-                      const port = environment.port
-                      const agent = environment.agent
-                      const storedWorker = workstreams.find(
-                        (entry) => entry.id === environment.workstream,
-                      )?.worker
-                      return h.div(
-                        [h.Class("floor-workstream")],
-                        [
-                          h.a([h.Href("#" + environment.workstream)], [environment.workstream]),
-                          h.span(
-                            [h.Class("muted")],
-                            [
-                              environment.runtime === undefined
-                                ? "no runtime"
-                                : environment.runtime.kind +
-                                  " · " +
-                                  environment.runtime.path.split("/").at(-1),
-                            ],
-                          ),
-                          h.span(
-                            [h.Class("floor-service")],
-                            [
-                              port === null || port === undefined
-                                ? "no port"
-                                : "port " + port.number,
-                              " · ",
-                              services.length === 0
-                                ? "no service"
-                                : services
-                                    .map((service) => service.name + " · " + service.status)
-                                    .join(", "),
-                            ],
-                          ),
-                          agent === null || agent === undefined
-                            ? h.span([], [])
-                            : h.span(
-                                [h.Class("floor-service")],
-                                [
-                                  "agent " +
-                                    agent.session +
-                                    (agent.status === "" ? "" : " · " + agent.status),
-                                ],
-                              ),
-                          ...(storedWorker === undefined
-                            ? []
-                            : [h.span([h.Class("floor-service")], ["worker " + storedWorker])]),
-                          preview === null || preview === undefined
-                            ? h.span([], [])
-                            : h.a(
-                                [h.Href(preview), h.Target("_blank"), h.Rel("noreferrer")],
-                                ["preview " + preview],
-                              ),
-                        ],
-                      )
-                    })),
-              ],
-            ),
+  return h.section.class("factory-floor").children(
+    h.div
+      .class("floor-head")
+      .children(
+        h.h2.children("Factory floor"),
+        h.span
+          .class("muted")
+          .children(
+            (tailnet === undefined || !tailnet.available
+              ? "tailnet unavailable"
+              : online + " online · " + machines.size + " machines") +
+              " · " +
+              environments.length +
+              (environments.length === 1 ? " workstream" : " workstreams"),
           ),
       ),
-    ],
+    h.div.class("floor-grid").children(
+      [...machines.entries()]
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([host, machine]) =>
+          h.div.class("floor-machine").children(
+            h.div
+              .class("floor-machine-head")
+              .children(
+                h.h3.children(host),
+                h.span
+                  .class("floor-status " + onlineStatus(machine.online).cls)
+                  .children(onlineStatus(machine.online).word),
+              ),
+            ...(machine.entries.length === 0
+              ? [h.span.class("muted").children("no workstream observed")]
+              : machine.entries.map((environment) => {
+                  const services = environment.services ?? []
+                  const preview = environment.preview
+                  const port = environment.port
+                  const agent = environment.agent
+                  const storedWorker = workstreams.find(
+                    (entry) => entry.id === environment.workstream,
+                  )?.worker
+                  return h.div.class("floor-workstream").children(
+                    h.a.attr("href", "#" + environment.workstream).children(environment.workstream),
+                    h.span
+                      .class("muted")
+                      .children(
+                        environment.runtime === undefined
+                          ? "no runtime"
+                          : environment.runtime.kind +
+                              " · " +
+                              environment.runtime.path.split("/").at(-1),
+                      ),
+                    h.span
+                      .class("floor-service")
+                      .children(
+                        port === null || port === undefined ? "no port" : "port " + port.number,
+                        " · ",
+                        services.length === 0
+                          ? "no service"
+                          : services
+                              .map((service) => service.name + " · " + service.status)
+                              .join(", "),
+                      ),
+                    agent === null || agent === undefined
+                      ? undefined
+                      : h.span
+                          .class("floor-service")
+                          .children(
+                            "agent " +
+                              agent.session +
+                              (agent.status === "" ? "" : " · " + agent.status),
+                          ),
+                    storedWorker === undefined
+                      ? undefined
+                      : h.span.class("floor-service").children("worker " + storedWorker),
+                    preview === null || preview === undefined
+                      ? undefined
+                      : h.a
+                          .attr("href", preview)
+                          .attr("target", "_blank")
+                          .attr("rel", "noreferrer")
+                          .children("preview " + preview),
+                  )
+                })),
+          ),
+        ),
+    ),
   )
 }
 
-const factoryPulse = (h: HtmlBuilder<Message>, presence: NonNullable<Model["presence"]>) => {
+const factoryPulse = (h: Html.H<Message>, presence: NonNullable<Model["presence"]>) => {
   const activities = presence.factory.activity
   const count = (state: typeof Activity.Type.state): number =>
     activities.filter((activity) => activity.state === state).length
@@ -888,18 +853,21 @@ const factoryPulse = (h: HtmlBuilder<Message>, presence: NonNullable<Model["pres
     { label: "blocked", value: count("blocked"), className: "blocked" },
     { label: "needs you", value: desk, className: "desk" },
   ]
-  return h.div(
-    [h.Class("factory-pulse")],
-    stats.map((stat) =>
-      h.span(
-        [h.Class("pulse-stat " + stat.className)],
-        [h.span([h.Class("pulse-value")], [String(stat.value)]), h.span([], [stat.label])],
+  return h.div
+    .class("factory-pulse")
+    .children(
+      stats.map((stat) =>
+        h.span
+          .class("pulse-stat " + stat.className)
+          .children(
+            h.span.class("pulse-value").children(String(stat.value)),
+            h.span.children(stat.label),
+          ),
       ),
-    ),
-  )
+    )
 }
 
-const factoryView = (model: Model, h: HtmlBuilder<Message>): Document => {
+const factoryView = (h: Html.H<Message>, model: Model) => {
   const presence = model.presence
   const summary =
     presence === null
@@ -920,78 +888,64 @@ const factoryView = (model: Model, h: HtmlBuilder<Message>): Document => {
             (waiting === 0 ? "" : " · " + waiting + " waiting")
           )
         })()
-  return {
-    title: "Software factory",
-    body: h.div(
-      [h.Class("shell")],
-      [
-        appHeader(h, { model, title: "Software factory", summary }),
-        ...(model.error === null
-          ? []
-          : [h.p([h.Class("error")], ["Could not read /presence: " + model.error])]),
-        ...(model.notice === null ? [] : [h.p([h.Class("notice")], [model.notice])]),
-        ...(presence === null ? [] : [factoryPulse(h, presence)]),
-        ...(presence === null || (presence.factory.workstreamIssues ?? []).length === 0
-          ? []
-          : [
-              card(h, {
-                title: "Unreadable workstreams",
-                id: "workstream-issues",
-                children: (presence.factory.workstreamIssues ?? []).map((issue) =>
-                  h.div(
-                    [h.Class("error")],
-                    [
-                      h.strong([], [issue.id]),
-                      h.span([h.Class("muted")], [" · " + issue.path]),
-                      h.p([], [issue.detail]),
-                    ],
-                  ),
-                ),
+  return h.div.class("shell").children(
+    appHeader(h, { model, title: "Software factory", summary }),
+    model.error === null
+      ? undefined
+      : h.p.class("error").children("Could not read /presence: " + model.error),
+    model.notice === null ? undefined : h.p.class("notice").children(model.notice),
+    presence === null ? undefined : factoryPulse(h, presence),
+    presence === null || (presence.factory.workstreamIssues ?? []).length === 0
+      ? undefined
+      : card(h, {
+          title: "Unreadable workstreams",
+          id: "workstream-issues",
+          children: (presence.factory.workstreamIssues ?? []).map((issue) =>
+            h.div
+              .class("error")
+              .children(
+                h.strong.children(issue.id),
+                h.span.class("muted").children(" · " + issue.path),
+                h.p.children(issue.detail),
+              ),
+          ),
+        }),
+    presence === null
+      ? undefined
+      : [
+          factoryFloor(
+            h,
+            presence.factory.environments ?? [],
+            presence.network?.tailscale,
+            presence.factory.workstreams,
+          ),
+          ...Array.from(new Set(presence.factory.workstreams.map(repoName))).map((repo) =>
+            repoSection(
+              h,
+              repo,
+              presence.factory.workstreams.filter((ws) => repoName(ws) === repo),
+              presence.factory.activity,
+              [...presence.sessions.herdr.sessions, ...presence.sessions.rex.sessions],
+              environmentsByWorkstream(presence.factory.environments),
+            ),
+          ),
+          presence.factory.desk.length === 0
+            ? undefined
+            : card(h, {
+                title: "Needs you",
+                children: presence.factory.desk.map((item) => deskRow(h, item)),
+                id: "desk",
               }),
-            ]),
-        ...(presence === null
-          ? []
-          : [
-              factoryFloor(
-                h,
-                presence.factory.environments ?? [],
-                presence.network?.tailscale,
-                presence.factory.workstreams,
-              ),
-              ...Array.from(new Set(presence.factory.workstreams.map(repoName))).map((repo) =>
-                repoSection(
-                  h,
-                  repo,
-                  presence.factory.workstreams.filter((ws) => repoName(ws) === repo),
-                  presence.factory.activity,
-                  [...presence.sessions.herdr.sessions, ...presence.sessions.rex.sessions],
-                  environmentsByWorkstream(presence.factory.environments),
+          presence.factory.reports.length === 0
+            ? undefined
+            : h.details
+                .class("card reports-card")
+                .children(
+                  h.summary.children("Reports (" + presence.factory.reports.length + ")"),
+                  ...presence.factory.reports.map((item) => reportRow(h, item)),
                 ),
-              ),
-              ...(presence.factory.desk.length === 0
-                ? []
-                : [
-                    card(h, {
-                      title: "Needs you",
-                      children: presence.factory.desk.map((item) => deskRow(h, item)),
-                      id: "desk",
-                    }),
-                  ]),
-              ...(presence.factory.reports.length === 0
-                ? []
-                : [
-                    h.details(
-                      [h.Class("card reports-card")],
-                      [
-                        h.summary([], ["Reports (" + presence.factory.reports.length + ")"]),
-                        ...presence.factory.reports.map((item) => reportRow(h, item)),
-                      ],
-                    ),
-                  ]),
-            ]),
-      ],
-    ),
-  }
+        ],
+  )
 }
 
 interface AtlasLayer {
@@ -1023,7 +977,7 @@ const ATLAS_LAYERS: ReadonlyArray<AtlasLayer> = [
   {
     id: "view",
     title: "Board UI",
-    note: "The board's FoldKit client. It reads /presence and /atlas; it imports neither.",
+    note: "The board's Effect UI client. It reads /presence and /atlas; it imports neither.",
     names: ["@autotelic/board-view"],
   },
   {
@@ -1037,10 +991,10 @@ const ATLAS_LAYERS: ReadonlyArray<AtlasLayer> = [
 const shortName = (name: string): string => name.replace("@autotelic/", "")
 const githubUrl = (path: string): string => "https://github.com/autotelic/tackle/tree/main/" + path
 
-const chip = (h: HtmlBuilder<Message>, text: string) => h.span([h.Class("chip")], [text])
+const chip = (h: Html.H<Message>, text: string) => h.span.class("chip").children(text)
 
 const atlasPackageCard = (
-  h: HtmlBuilder<Message>,
+  h: Html.H<Message>,
   entry: AtlasPackage,
   edges: ReadonlyArray<{ readonly from: string; readonly to: string }>,
 ) => {
@@ -1051,71 +1005,72 @@ const atlasPackageCard = (
   // fallback for a package that has none, not a second first paragraph.
   const showSummary = description === "" && summary !== ""
   const usedBy = edges.filter((edge) => edge.to === entry.name).map((edge) => shortName(edge.from))
-  return h.div(
-    [h.Class("package-card")],
-    [
-      h.div(
-        [h.Class("package-head")],
-        [
-          h.h3([], [h.a([h.Href(githubUrl(entry.path))], [shortName(entry.name)])]),
-          h.span([h.Class("package-version")], [entry.version ?? "0.0.0"]),
-        ],
-      ),
+  return h.div
+    .class("package-card")
+    .children(
+      h.div
+        .class("package-head")
+        .children(
+          h.h3.children(h.a.attr("href", githubUrl(entry.path)).children(shortName(entry.name))),
+          h.span.class("package-version").children(entry.version ?? "0.0.0"),
+        ),
       entry.description === undefined || entry.description === ""
-        ? h.span([], [])
-        : h.p([h.Class("package-description")], [entry.description]),
-      showSummary ? h.p([h.Class("package-summary")], [summary]) : h.span([], []),
-      h.div(
-        [h.Class("package-meta")],
-        [
-          h.span([h.Class("mono")], [entry.path]),
+        ? undefined
+        : h.p.class("package-description").children(entry.description),
+      showSummary ? h.p.class("package-summary").children(summary) : undefined,
+      h.div
+        .class("package-meta")
+        .children(
+          h.span.class("mono").children(entry.path),
           entry.private === true ? chip(h, "private") : chip(h, "published"),
           ...(entry.scripts ?? []).slice(0, 4).map((script) => chip(h, script)),
-        ],
-      ),
-      h.div(
-        [h.Class("package-deps")],
-        dependencies.length === 0
-          ? [h.span([h.Class("muted")], ["no workspace dependencies"])]
-          : [
-              h.span([h.Class("muted")], ["depends on"]),
-              ...dependencies.map((dependency) => chip(h, shortName(dependency))),
-            ],
-      ),
+        ),
+      h.div
+        .class("package-deps")
+        .children(
+          dependencies.length === 0
+            ? h.span.class("muted").children("no workspace dependencies")
+            : [
+                h.span.class("muted").children("depends on"),
+                ...dependencies.map((dependency) => chip(h, shortName(dependency))),
+              ],
+        ),
       usedBy.length === 0
-        ? h.span([], [])
-        : h.div(
-            [h.Class("package-deps")],
-            [h.span([h.Class("muted")], ["used by"]), ...usedBy.map((name) => chip(h, name))],
-          ),
-    ],
-  )
+        ? undefined
+        : h.div
+            .class("package-deps")
+            .children(
+              h.span.class("muted").children("used by"),
+              ...usedBy.map((name) => chip(h, name)),
+            ),
+    )
 }
 
 const atlasLayer = (
-  h: HtmlBuilder<Message>,
+  h: Html.H<Message>,
   layer: AtlasLayer,
   packages: ReadonlyArray<AtlasPackage>,
   edges: ReadonlyArray<{ readonly from: string; readonly to: string }>,
 ) =>
   packages.length === 0
-    ? h.span([], [])
-    : h.section(
-        [h.Id(layer.id), h.Class("atlas-layer")],
-        [
-          h.div(
-            [h.Class("atlas-layer-head")],
-            [h.h2([], [layer.title]), h.span([h.Class("count")], [String(packages.length)])],
-          ),
-          h.p([h.Class("atlas-layer-note")], [layer.note]),
-          h.div(
-            [h.Class("package-grid")],
-            packages.map((entry) => atlasPackageCard(h, entry, edges)),
-          ),
-        ],
-      )
+    ? undefined
+    : h.section
+        .attr("id", layer.id)
+        .class("atlas-layer")
+        .children(
+          h.div
+            .class("atlas-layer-head")
+            .children(
+              h.h2.children(layer.title),
+              h.span.class("count").children(String(packages.length)),
+            ),
+          h.p.class("atlas-layer-note").children(layer.note),
+          h.div
+            .class("package-grid")
+            .children(packages.map((entry) => atlasPackageCard(h, entry, edges))),
+        )
 
-const atlasView = (model: Model, h: HtmlBuilder<Message>): Document => {
+const atlasView = (h: Html.H<Message>, model: Model) => {
   const atlas = model.atlas
   const packages = atlas?.packages ?? []
   const edges = atlas?.edges ?? []
@@ -1129,71 +1084,50 @@ const atlasView = (model: Model, h: HtmlBuilder<Message>): Document => {
         " · " +
         edges.length +
         (edges.length === 1 ? " workspace edge" : " workspace edges")
-  return {
-    title: "Tackle overview",
-    body: h.div(
-      [h.Class("shell")],
-      [
-        appHeader(h, { model, title: "Tackle", summary }),
-        ...(model.error === null
-          ? []
-          : [h.p([h.Class("error")], ["Could not read /atlas: " + model.error])]),
-        ...(atlas === null
-          ? []
-          : [
-              card(h, {
-                title: "What this is",
-                children: [
-                  h.p(
-                    [],
-                    [
-                      "The workspace is a set of small tools that agree on formats, not a monolith. " +
-                        "The seam is @autotelic/protocol; everything else is a role that reads or writes a format.",
-                    ],
-                  ),
-                  h.p(
-                    [h.Class("muted")],
-                    [
-                      "Every card is read from its package.json and README at request time. " +
-                        "The dependency chips are workspace edges; external packages are deliberately left out.",
-                    ],
-                  ),
-                ],
-              }),
-              ...ATLAS_LAYERS.map((layer) =>
-                atlasLayer(
-                  h,
-                  layer,
-                  packages.filter((entry) => layer.names.includes(entry.name)),
-                  edges,
-                ),
+  return h.div.class("shell").children(
+    appHeader(h, { model, title: "Tackle", summary }),
+    model.error === null
+      ? undefined
+      : h.p.class("error").children("Could not read /atlas: " + model.error),
+    atlas === null
+      ? undefined
+      : [
+          card(h, {
+            title: "What this is",
+            children: [
+              h.p.children(
+                "The workspace is a set of small tools that agree on formats, not a monolith. " +
+                  "The seam is @autotelic/protocol; everything else is a role that reads or writes a format.",
               ),
-              ...(other.length === 0
-                ? []
-                : [
-                    atlasLayer(
-                      h,
-                      {
-                        id: "other",
-                        title: "Other",
-                        note: "Packages this page has not classified yet.",
-                        names: [],
-                      },
-                      other,
-                      edges,
-                    ),
-                  ]),
-            ]),
-      ],
-    ),
-  }
-}
-
-/** The route selector: /tackle is the workspace atlas, everything else is the factory. */
-export const view = (model: Model, h: HtmlBuilder<Message>): Document =>
-  Match.value(model.route).pipe(
-    Match.when("tackle", () => atlasView(model, h)),
-    Match.when("vision", () => visionView(model, h)),
-    Match.when("factory", () => factoryView(model, h)),
-    Match.exhaustive,
+              h.p
+                .class("muted")
+                .children(
+                  "Every card is read from its package.json and README at request time. " +
+                    "The dependency chips are workspace edges; external packages are deliberately left out.",
+                ),
+            ],
+          }),
+          ...ATLAS_LAYERS.map((layer) =>
+            atlasLayer(
+              h,
+              layer,
+              packages.filter((entry) => layer.names.includes(entry.name)),
+              edges,
+            ),
+          ),
+          other.length === 0
+            ? undefined
+            : atlasLayer(
+                h,
+                {
+                  id: "other",
+                  title: "Other",
+                  note: "Packages this page has not classified yet.",
+                  names: [],
+                },
+                other,
+                edges,
+              ),
+        ],
   )
+}

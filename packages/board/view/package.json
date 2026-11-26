@@ -14,12 +14,12 @@
   },
   "dependencies": {
     "@effect/platform-browser": "catalog:",
-    "effect": "catalog:",
-    "foldkit": "catalog:",
-    "foldkit-primitives": "catalog:"
+    "@effect/ui": "catalog:",
+    "effect": "catalog:"
   },
   "devDependencies": {
     "@effect/tsgo": "catalog:",
+    "@effect/vitest": "catalog:",
     "@types/node": "catalog:",
     "@typescript/native": "catalog:",
     "vite": "catalog:",

@@ -1,15 +1,8 @@
-import { Runtime } from "foldkit"
+import { BrowserHost } from "@effect/ui/html"
+import { Effect, Layer } from "effect"
 import "./style.css"
-import { Message, Model, init, subscriptions, update, view } from "./main.ts"
+import { BoardView } from "./main.ts"
 
-const application = Runtime.makeApplication({
-  Model,
-  init,
-  update,
-  view,
-  subscriptions: { presenceTicks: subscriptions },
-  container: document.getElementById("root"),
-  devTools: { Message },
-})
+const Main = BrowserHost.mount(BoardView, {}, document.getElementById("root")!)
 
-Runtime.run(application)
+Layer.launch(Main).pipe(Effect.runFork)
