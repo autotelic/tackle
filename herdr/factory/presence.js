@@ -42,10 +42,10 @@ const repoName = (repo) => {
  * environment line. The agent is the projection's own match when it sent one, and the session
  * join is the older evidence path kept for a board that serves no environments.
  *
- * @param {{ workstream: Record<string, any>, activity: Record<string, any>, sessions: Record<string, any>[], environment: any }} input
+ * @param {{ workstream: Record<string, any>, activity: Record<string, any>, sessions: Record<string, any>[], environment: any, candidates?: Record<string, any>[] }} input
  * @returns {Record<string, any> | null} the row, or null when the workstream has no identity.
  */
-const rowOf = ({ workstream, activity, sessions, environment }) => {
+const rowOf = ({ workstream, activity, sessions, environment, candidates }) => {
   const id = textOf(workstream.id)
   if (id === null) return null
   const live = recordOf(activity)
@@ -84,10 +84,60 @@ const rowOf = ({ workstream, activity, sessions, environment }) => {
       .map((service) => textOf(recordOf(service).name))
       .filter((name) => name !== null),
     preview: textOf(facts.preview),
+    // The lanes are the workstream's own: a candidate id is never matched across workstreams,
+    // because a lane is a place this workstream could go and nobody else's.
+    candidates: laneRows(candidates),
     address: matched === undefined ? null : textOf(matched.address),
     agent:
       textOf(environmentAgent.status) ?? (matched === undefined ? null : textOf(matched.status)),
   }
+}
+
+/**
+ * The candidate lanes of one workstream, in the order the board served them.
+ *
+ * The state travels unchanged and a dropped lane is kept: the panel folds it into one line
+ * rather than dropping the fact that it existed.
+ *
+ * @param {Record<string, any>[] | undefined} candidates - factory.candidates entries for this row.
+ * @returns {Record<string, any>[]} the drawn lanes.
+ */
+const laneRows = (candidates) =>
+  listOf(candidates)
+    .map((entry) => {
+      const lane = recordOf(entry)
+      const id = textOf(lane.id)
+      if (id === null) return null
+      const port = recordOf(lane.port)
+      return {
+        id,
+        label: textOf(lane.label) ?? id,
+        state: textOf(lane.state),
+        branch: textOf(lane.branch),
+        port: numberOrNull(port.number),
+        preview: textOf(lane.preview),
+      }
+    })
+    .filter((lane) => lane !== null)
+
+/**
+ * One line for a row's lanes: the open ones first, each named with its state, then a count of the
+ * dropped ones. Two open lanes are two entries, never one merged sentence.
+ *
+ * @param {Record<string, any>} row - one drawn row.
+ * @returns {string} the joined line, empty when the workstream has no lane.
+ */
+const candidateText = (row) => {
+  const lanes = row.candidates ?? []
+  if (lanes.length === 0) return ""
+  const open = lanes.filter((lane) => lane.state !== "dropped")
+  const dropped = lanes.length - open.length
+  return [
+    ...open.map((lane) => lane.label + " " + (lane.state ?? "candidate")),
+    dropped === 0 ? null : dropped + " dropped",
+  ]
+    .filter((part) => part !== null)
+    .join(" · ")
 }
 
 const deskRows = (desk) =>
@@ -122,12 +172,20 @@ const readPresence = (body) => {
   const sessions = listOf(recordOf(recordOf(root.sessions).herdr).sessions).map(recordOf)
   const activities = listOf(factory.activity).map(recordOf)
   const environments = listOf(factory.environments).map(recordOf)
+  const candidates = listOf(factory.candidates).map(recordOf)
   const rows = listOf(factory.workstreams)
     .map((workstream) => {
       const record = recordOf(workstream)
-      const activity = activities.find((candidate) => candidate.workstream === record.id)
-      const environment = environments.find((candidate) => candidate.workstream === record.id)
-      return rowOf({ workstream: record, activity: recordOf(activity), sessions, environment })
+      const activity = activities.find((entry) => entry.workstream === record.id)
+      const environment = environments.find((entry) => entry.workstream === record.id)
+      const lanes = candidates.filter((entry) => entry.workstream === record.id)
+      return rowOf({
+        workstream: record,
+        activity: recordOf(activity),
+        sessions,
+        environment,
+        candidates: lanes,
+      })
     })
     .filter((row) => row !== null)
     .sort(
@@ -180,4 +238,4 @@ const environmentText = (row) =>
     .filter((part) => part !== null && part !== undefined && part !== "")
     .join(" · ")
 
-export { environmentText, metaLine, readPresence }
+export { candidateText, environmentText, metaLine, readPresence }

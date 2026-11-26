@@ -11,7 +11,7 @@ import { Presence } from "../src/presence.ts"
  * The seam is bytes: the board writes JSON and the view decodes it, so these cases start from
  * the document the board serves and read the card the view renders from it.
  */
-const served = (environments?: string): string => {
+const served = (environments?: string, candidates?: string): string => {
   const workstream = JSON.stringify({
     id: "shakti-perms",
     project: "factory",
@@ -25,6 +25,7 @@ const served = (environments?: string): string => {
     workstream +
     '],"activity":[],"desk":[],"reports":[]' +
     (environments === undefined ? "" : ',"environments":' + environments) +
+    (candidates === undefined ? "" : ',"candidates":' + candidates) +
     "}"
   return (
     '{"factory":' +
@@ -33,8 +34,10 @@ const served = (environments?: string): string => {
   )
 }
 
-const model = (environments?: string): Model => {
-  const decoded = Schema.decodeResult(Schema.fromJsonString(Presence))(served(environments))
+const model = (environments?: string, candidates?: string): Model => {
+  const decoded = Schema.decodeResult(Schema.fromJsonString(Presence))(
+    served(environments, candidates),
+  )
   if (Result.isFailure(decoded))
     throw new Error("presence did not decode: " + String(decoded.failure))
   return {
@@ -64,10 +67,10 @@ const environment = JSON.stringify({
  * The bytes are the assertion surface: a line the projection did not send has to be absent from
  * the page, not merely null in a model the view could have filled in.
  */
-const draw = (environments?: string) =>
+const draw = (environments?: string, candidates?: string) =>
   Effect.gen(function* () {
     const s = yield* Scene.make(BoardView, {})
-    const drawn = s.given(model(environments))
+    const drawn = s.given(model(environments, candidates))
     return { scene: drawn, text: Locator.textOf(drawn.root) }
   })
 
@@ -157,6 +160,75 @@ it.effect("a null preview draws no link", () =>
   Effect.gen(function* () {
     const { text } = yield* draw("[" + environment + "]")
     assert.notInclude(text, "preview ")
+  }),
+)
+
+/** One candidate lane as the board serves it, with the fields the card draws. */
+const lane = {
+  workstream: "shakti-perms",
+  id: "shakti-perms-spike",
+  room: "shakti-perms-spike",
+  path: "/Users/togmund/autotelic/.room/shakti-perms-spike/worktree",
+  branch: "candidate/shakti-perms/spike",
+  head: "1".repeat(40),
+  label: "spike",
+  state: "open",
+  runtime: { kind: "worktree", path: "/Users/togmund/autotelic/.room/shakti-perms-spike/worktree" },
+  port: null,
+  vmPort: null,
+  services: [],
+  preview: null,
+  observedAt: "2026-11-22T12:00:00.000Z",
+}
+
+it.effect("two open candidates are two separate rows on the card", () =>
+  Effect.gen(function* () {
+    const second = { ...lane, id: "shakti-perms-probe", label: "probe", room: "shakti-perms-probe" }
+    const { text } = yield* draw(
+      undefined,
+      "[" + JSON.stringify(lane) + "," + JSON.stringify(second) + "]",
+    )
+    assert.include(text, "Candidates")
+    assert.include(text, "spike")
+    assert.include(text, "probe")
+    // Two lanes, two state words: the card never folds them into one count.
+    assert.isAtLeast(text.split("open").length - 1, 2)
+  }),
+)
+
+it.effect("a dropped candidate folds into one line and offers no route", () =>
+  Effect.gen(function* () {
+    const dropped = {
+      ...lane,
+      id: "shakti-perms-old",
+      label: "old",
+      state: "dropped",
+      preview: "/preview/shakti-perms-old/",
+    }
+    const { text } = yield* draw(undefined, "[" + JSON.stringify(dropped) + "]")
+    assert.include(text, "dropped lane")
+    assert.include(text, "old")
+    // A dropped lane is folded, so its route is not drawn even if the board sent one.
+    assert.notInclude(text, "preview")
+  }),
+)
+
+it.effect("a board that serves no candidates draws no Candidates line", () =>
+  Effect.gen(function* () {
+    const { text } = yield* draw("[" + environment + "]")
+    assert.notInclude(text, "Candidates")
+  }),
+)
+
+it.effect("a half-served candidate draws its state and invents nothing", () =>
+  Effect.gen(function* () {
+    const { text } = yield* draw(
+      undefined,
+      '[{"workstream":"shakti-perms","id":"shakti-perms-spike","state":"open"}]',
+    )
+    assert.include(text, "Candidates")
+    assert.include(text, "open")
+    assert.notInclude(text, "preview")
   }),
 )
 

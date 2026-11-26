@@ -3,6 +3,7 @@ import type { Session } from "../src/sessions.ts"
 import type { Tailnet } from "../src/tailnet.ts"
 import { expect, test } from "vitest"
 import {
+  candidateEnvironmentsOf,
   environmentsOf,
   type RoomPortLease,
   type RoomServiceObservation,
@@ -243,6 +244,68 @@ test("an unhealthy service keeps the evidence, and a stopped one is not healthy"
 test("an observation for another worktree names no service here", () => {
   const [served] = serve({ services: [observed({ worktree: "/Users/togmund/other" })] })
   expect(served?.services).toEqual([])
+})
+
+/** One candidate record, as the store writes it, with the facts the projection reads. */
+const candidate = (input: {
+  readonly id: string
+  readonly label?: string
+  readonly state?: string
+  readonly workstream?: string
+}) => ({
+  workstream: input.workstream ?? "shakti-perms",
+  id: input.id,
+  room: input.id,
+  path: "/Users/togmund/autotelic/.room/" + input.id + "/worktree",
+  branch: "candidate/shakti-perms/" + (input.label ?? input.id),
+  head: "1".repeat(40),
+  label: input.label ?? input.id,
+  state: input.state ?? "open",
+})
+
+test("two open candidates for one workstream stay two served lanes", () => {
+  const served = candidateEnvironmentsOf({
+    candidates: [candidate({ id: "a", label: "spike" }), candidate({ id: "b", label: "probe" })],
+    observedAt: at,
+  })
+  expect(served.map((lane) => lane.id)).toEqual(["a", "b"])
+  expect(served.every((lane) => lane.state === "open")).toBe(true)
+  // Both name the workstream they isolate, which is the key the floor groups by.
+  expect(served.every((lane) => lane.workstream === "shakti-perms")).toBe(true)
+})
+
+test("a candidate's lease, service and preview are its own, never a neighbour's", () => {
+  const [first, second] = candidateEnvironmentsOf({
+    candidates: [candidate({ id: "a" }), candidate({ id: "b" })],
+    leases: [
+      {
+        worktree: "/Users/togmund/autotelic/.room/a/worktree",
+        room: "a",
+        number: 4400,
+        leasedAt: at,
+      },
+    ],
+    services: [observed({ worktree: "/Users/togmund/autotelic/.room/a/worktree" })],
+    observedAt: at,
+  })
+  expect(first?.port?.number).toBe(4400)
+  expect(first?.preview).toBe("/preview/a/")
+  expect(second?.port).toBeNull()
+  expect(second?.services).toEqual([])
+  // A lane with no healthy answer has no route: the projection does not compose one.
+  expect(second?.preview).toBeNull()
+})
+
+test("a dropped candidate is still served, with its state unchanged", () => {
+  const [served] = candidateEnvironmentsOf({
+    candidates: [candidate({ id: "a", state: "dropped" })],
+    observedAt: at,
+  })
+  expect(served?.state).toBe("dropped")
+  expect(served?.runtime).toEqual({
+    kind: "worktree",
+    path: "/Users/togmund/autotelic/.room/a/worktree",
+  })
 })
 
 test("no tailnet self means no machine, never a guessed hostname", () => {

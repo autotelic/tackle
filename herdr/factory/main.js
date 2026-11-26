@@ -8,12 +8,13 @@ import { View, div } from "gpui-kit"
 import { h_flex, v_flex } from "gpui-base"
 import { appHome, checking, exec, run, theme, window } from "herdr"
 import { readdir } from "fs/promises"
-import { environmentText, metaLine, readPresence } from "./presence.js"
+import { candidateText, environmentText, metaLine, readPresence } from "./presence.js"
 
 // One seam, one address. The board binds loopback by default and adds a loopback listener
 // beside a tailnet address, so the panel carries no address book of its own.
-const PRESENCE = "http://127.0.0.1:4780/presence"
-const VIEW = "http://127.0.0.1:4780/factory"
+const ORIGIN = "http://127.0.0.1:4780"
+const PRESENCE = ORIGIN + "/presence"
+const VIEW = ORIGIN + "/factory"
 const POLL = 15000
 const STATES = {
   blocked: "Blocked",
@@ -219,9 +220,10 @@ export default class Factory extends View {
     const color = stateColor({ theme: t, state: row.state })
     const meta = metaLine(row)
     const environment = environmentText(row)
+    const candidates = candidateText(row)
     const canFocus = row.address !== null
     const review = row.state === "idle" ? prUrl(row) : null
-    return h_flex()
+    const element = h_flex()
       .id("factory-" + row.id)
       .flex_none()
       .items_center()
@@ -257,6 +259,9 @@ export default class Factory extends View {
           )
           .when(environment !== "", (el) =>
             el.child(div().text_size(11).text_color(t.dim).truncate().child(environment)),
+          )
+          .when(candidates !== "", (el) =>
+            el.child(div().text_size(11).text_color(t.dim).truncate().child(candidates)),
           ),
       )
       .when(review !== null, (el) =>
@@ -271,6 +276,19 @@ export default class Factory extends View {
             run("agent.focus", { terminal: row.address }),
           ),
         ),
+      )
+    // One action per open lane, each naming itself: two candidates must be two buttons, or a
+    // click would have to guess which checkout the human meant. A dropped lane has no route.
+    return (row.candidates ?? [])
+      .filter((lane) => lane.state !== "dropped" && lane.preview !== null)
+      .reduce(
+        (chain, lane) =>
+          chain.child(
+            action(t, "factory-lane-" + lane.id, "Lane " + lane.label, () =>
+              openView(ORIGIN + lane.preview),
+            ),
+          ),
+        element,
       )
   }
 

@@ -35,7 +35,13 @@ import {
 } from "./sessions.ts"
 import { atlasOf } from "./atlas.ts"
 import { loopbackHostFor } from "./bind.ts"
-import { environmentsOf, type RoomPortLease, type RoomServiceObservation } from "./environment.ts"
+import {
+  candidateEnvironmentsOf,
+  environmentsOf,
+  type RoomPortLease,
+  type RoomServiceObservation,
+} from "./environment.ts"
+import { listCandidateEnvironments } from "./factory/candidate-environments.ts"
 import { previewPrefix, previewRequestOf } from "./preview.ts"
 import { workstreamsWithGates } from "./gate.ts"
 import { discoverTailnet } from "./tailnet.ts"
@@ -309,6 +315,16 @@ const observe = async (root: string) => {
         pathKey,
         observedAt,
       }),
+      // Candidate lanes are joined the same way and by the same facts: a candidate is a room, so
+      // its lease and its service are its own and never the workstream's.
+      candidates: candidateEnvironmentsOf({
+        candidates: await listCandidateEnvironments(),
+        leases,
+        services,
+        vmPreviews,
+        pathKey,
+        observedAt,
+      }),
       activity,
       desk: await listDesk(),
       reports: await listReports(),
@@ -558,15 +574,25 @@ const servePreview = async ({
   // Compared in the encoded form `previewRoute` writes, so an id with a space or a slash needs
   // no decoding here and a malformed escape names nothing.
   const record = (await listWorkstreams()).find(
-    (candidate) => encodeURIComponent(candidate.id) === preview.value.segment,
+    (entry) => encodeURIComponent(entry.id) === preview.value.segment,
   )
-  if (record === undefined) {
+  // A candidate's route is its own id, and it must resolve or a candidate would serve a preview
+  // link the board cannot answer. A dropped lane keeps its record but stops answering.
+  const lane =
+    record === undefined
+      ? (await listCandidateEnvironments()).find(
+          (entry) =>
+            entry.state !== "dropped" && encodeURIComponent(entry.id) === preview.value.segment,
+        )
+      : undefined
+  const served = record ?? lane
+  if (served === undefined) {
     json({ response, status: 404, body: { error: "no workstream " + preview.value.segment } })
     return
   }
-  const target = await previewPortOf({ root, path: record.path })
+  const target = await previewPortOf({ root, path: served.path })
   if (target === undefined) {
-    json({ response, status: 404, body: { error: "no service is leased for " + record.id } })
+    json({ response, status: 404, body: { error: "no service is leased for " + served.id } })
     return
   }
   if (target.kind === "vm") {

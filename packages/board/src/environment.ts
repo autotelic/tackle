@@ -128,6 +128,57 @@ const agentOf = (
     (matched) => ({ session: matched.address, status: matched.status }),
   )
 
+/** What the room facts say about one directory, whichever record names it. */
+interface Placement {
+  readonly port: EnvironmentPort | null
+  readonly vmPort: number | null
+  readonly services: ReadonlyArray<EnvironmentService>
+  readonly preview: string | null
+}
+
+/**
+ * Join one directory to the room facts that name it.
+ *
+ * The path is the join, because both documents observe a directory rather than an id: a workstream
+ * id and a room id are different names for the same place, and comparing them would be an
+ * assumption. `route` is the id the preview route is addressed by, so a candidate's route names
+ * the candidate rather than the workstream whose head it started from.
+ *
+ * @param input - the directory, the route's id, and the room facts.
+ * @returns the placement, with nulls where nothing observed the field.
+ */
+const placementOf = (input: {
+  readonly path: string
+  readonly route: string
+  readonly leases: ReadonlyArray<RoomPortLease>
+  readonly services: ReadonlyArray<RoomServiceObservation>
+  readonly vmPreviews: ReadonlyArray<RoomVmPreview>
+  readonly pathKey: (path: string) => string
+}): Placement => {
+  const key = input.pathKey(input.path)
+  const lease = input.leases.find((entry) => input.pathKey(entry.worktree) === key)
+  const observed = input.services.filter((entry) => input.pathKey(entry.worktree) === key)
+  const vm = input.vmPreviews.find((entry) => input.pathKey(entry.worktree) === key)
+  return {
+    port:
+      lease === undefined
+        ? null
+        : { room: lease.room, number: lease.number, leasedAt: lease.leasedAt },
+    vmPort: vm?.port ?? null,
+    // A room that declares no service contributes no element, and an observed service keeps
+    // the status the probe earned. The worktree is the join's evidence, not a served field.
+    services: observed.map(({ worktree: _worktree, ...service }) => service),
+    // The rule lives with the route: a preview is advertised only for a service a probe found
+    // answering, never for one that merely declared itself. A VM service has no host lease to
+    // probe here yet; the route is advertised from the recorded guest port, and a service that
+    // is down answers 502 at the route.
+    preview:
+      vm === undefined
+        ? Option.getOrNull(previewOf({ workstream: input.route, services: observed }))
+        : previewRoute(input.route),
+  }
+}
+
 /**
  * Project one environment per workstream from facts the board already observes.
  *
@@ -155,36 +206,95 @@ export const environmentsOf = (input: {
   const services = input.services ?? []
   const vmPreviews = input.vmPreviews ?? []
   const pathKey = input.pathKey ?? resolve
-  return input.workstreams.map((record) => {
-    // The worktree is the join: both documents observe a path, so a match is evidence rather
-    // than an assumption that a workstream id and a room id happen to be the same string.
-    const lease = leases.find((candidate) => pathKey(candidate.worktree) === pathKey(record.path))
-    const observed = services.filter(
-      (candidate) => pathKey(candidate.worktree) === pathKey(record.path),
-    )
-    // A VM service has no host lease to probe here yet; the route is advertised from the
-    // recorded guest port, and a service that is down answers 502 at the route.
-    const vm = vmPreviews.find((candidate) => pathKey(candidate.worktree) === pathKey(record.path))
-    return {
-      workstream: record.id,
-      machine,
-      runtime: { kind: "worktree", path: record.path },
-      port:
-        lease === undefined
-          ? null
-          : { room: lease.room, number: lease.number, leasedAt: lease.leasedAt },
-      vmPort: vm?.port ?? null,
-      // A room that declares no service contributes no element, and an observed service keeps
-      // the status the probe earned. The worktree is the join's evidence, not a served field.
-      services: observed.map(({ worktree: _worktree, ...service }) => service),
-      agent: Option.getOrNull(agentOf(input.sessions, record.id)),
-      // The rule lives with the route: a preview is advertised only for a service a probe found
-      // answering, never for one that merely declared itself.
-      preview:
-        vm === undefined
-          ? Option.getOrNull(previewOf({ workstream: record.id, services: observed }))
-          : previewRoute(record.id),
-      observedAt: input.observedAt,
-    }
-  })
+  return input.workstreams.map((record) => ({
+    workstream: record.id,
+    machine,
+    runtime: { kind: "worktree" as const, path: record.path },
+    ...placementOf({
+      path: record.path,
+      route: record.id,
+      leases,
+      services,
+      vmPreviews,
+      pathKey,
+    }),
+    agent: Option.getOrNull(agentOf(input.sessions, record.id)),
+    observedAt: input.observedAt,
+  }))
+}
+
+/**
+ * One candidate checkout, as /presence serves it under `factory.candidates`.
+ *
+ * A candidate is a room of its own, so its port, service and preview are joined by its own
+ * worktree path: a neighbour's lease must not fill a candidate's field. There is no `agent` and no
+ * `machine`: the projection knows no session claimed the lane, and a candidate runs where the
+ * board runs — naming that machine here would repeat the workstream's line, not observe a new
+ * fact.
+ */
+export interface CandidateEnvironmentView {
+  readonly workstream: string
+  readonly id: string
+  readonly room: string
+  readonly path: string
+  readonly branch: string
+  readonly head: string
+  readonly label: string
+  readonly state: string
+  readonly runtime: EnvironmentRuntime
+  readonly port: EnvironmentPort | null
+  readonly vmPort: number | null
+  readonly services: ReadonlyArray<EnvironmentService>
+  readonly preview: string | null
+  readonly observedAt: string
+}
+
+/**
+ * Project every recorded candidate, in record order.
+ *
+ * The state travels unchanged: a dropped candidate is still served, because the floor folds it
+ * rather than the projection hiding it. Two open candidates for one workstream are two elements,
+ * and nothing here merges them.
+ *
+ * @param input - the candidate records and the same room facts the workstream projection uses.
+ * @returns one view per candidate, in record order.
+ */
+export const candidateEnvironmentsOf = (input: {
+  readonly candidates: ReadonlyArray<{
+    readonly workstream: string
+    readonly id: string
+    readonly room: string
+    readonly path: string
+    readonly branch: string
+    readonly head: string
+    readonly label: string
+    readonly state: string
+  }>
+  readonly leases?: ReadonlyArray<RoomPortLease> | undefined
+  readonly services?: ReadonlyArray<RoomServiceObservation> | undefined
+  readonly vmPreviews?: ReadonlyArray<RoomVmPreview> | undefined
+  readonly pathKey?: ((path: string) => string) | undefined
+  readonly observedAt: string
+}): ReadonlyArray<CandidateEnvironmentView> => {
+  const pathKey = input.pathKey ?? resolve
+  return input.candidates.map((candidate) => ({
+    workstream: candidate.workstream,
+    id: candidate.id,
+    room: candidate.room,
+    path: candidate.path,
+    branch: candidate.branch,
+    head: candidate.head,
+    label: candidate.label,
+    state: candidate.state,
+    runtime: { kind: "worktree" as const, path: candidate.path },
+    ...placementOf({
+      path: candidate.path,
+      route: candidate.id,
+      leases: input.leases ?? [],
+      services: input.services ?? [],
+      vmPreviews: input.vmPreviews ?? [],
+      pathKey,
+    }),
+    observedAt: input.observedAt,
+  }))
 }

@@ -2,7 +2,7 @@
    generated claim, is what these pin. */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { environmentText, metaLine, readPresence } from "./presence.js"
+import { candidateText, environmentText, metaLine, readPresence } from "./presence.js"
 
 // The seam is bytes and the board owns them, so these cases start from the document the board
 // serves and read the model the panel draws. A test that handed over an already-shaped value
@@ -17,7 +17,7 @@ const workstream = (id) => ({
   checkpoint: { sha: "0".repeat(40), at: "2026-11-22T10:00:00.000Z" },
 })
 
-const presence = ({ environments } = {}) => {
+const presence = ({ environments, candidates } = {}) => {
   const factory = {
     workstreams: [workstream("shakti-perms")],
     activity: [
@@ -39,6 +39,7 @@ const presence = ({ environments } = {}) => {
   // A board that serves no environments omits the key; the property is added only when the
   // case has one, so the absent case is a real absence rather than an undefined value.
   if (environments !== undefined) factory.environments = environments
+  if (candidates !== undefined) factory.candidates = candidates
   return {
     factory,
     sessions: {
@@ -131,6 +132,83 @@ test("a half-served environment keeps its missing parts missing", () => {
   assert.equal(row.agent, null)
   assert.equal(row.preview, null)
   assert.equal(environmentText(row), "")
+})
+
+/** One candidate lane as the board serves it. */
+const lane = {
+  workstream: "shakti-perms",
+  id: "shakti-perms-spike",
+  room: "shakti-perms-spike",
+  path: "/Users/togmund/autotelic/.room/shakti-perms-spike/worktree",
+  branch: "candidate/shakti-perms/spike",
+  head: "1".repeat(40),
+  label: "spike",
+  state: "open",
+  runtime: { kind: "worktree", path: "/Users/togmund/autotelic/.room/shakti-perms-spike/worktree" },
+  port: { room: "shakti-perms-spike", number: 4401, leasedAt: "2026-11-22T11:00:00.000Z" },
+  services: [],
+  preview: "/preview/shakti-perms-spike/",
+  observedAt: "2026-11-22T12:00:00.000Z",
+}
+
+test("two open candidates are two entries in the row's lane line", () => {
+  const second = {
+    ...lane,
+    id: "shakti-perms-probe",
+    room: "shakti-perms-probe",
+    label: "probe",
+    port: null,
+    preview: null,
+  }
+  const [row] = readPresence(presence({ candidates: [lane, second] })).rows
+  assert.deepEqual(
+    row.candidates.map((entry) => [entry.id, entry.state, entry.preview]),
+    [
+      ["shakti-perms-spike", "open", "/preview/shakti-perms-spike/"],
+      ["shakti-perms-probe", "open", null],
+    ],
+  )
+  assert.equal(candidateText(row), "spike open · probe open")
+})
+
+test("a dropped candidate folds into one count and keeps its name", () => {
+  const dropped = { ...lane, id: "shakti-perms-old", label: "old", state: "dropped", preview: null }
+  const [row] = readPresence(presence({ candidates: [lane, dropped] })).rows
+  assert.equal(candidateText(row), "spike open · 1 dropped")
+})
+
+test("a board that serves no candidates draws no lane line", () => {
+  const [row] = readPresence(presence()).rows
+  assert.deepEqual(row.candidates, [])
+  assert.equal(candidateText(row), "")
+  // The row itself is untouched: a missing field may not hide a workstream.
+  assert.equal(row.label, "shakti-perms")
+})
+
+test("a half-served candidate keeps its missing parts missing", () => {
+  const [row] = readPresence(
+    presence({
+      candidates: [{ workstream: "shakti-perms", id: "shakti-perms-spike", state: "open" }],
+    }),
+  ).rows
+  assert.deepEqual(row.candidates, [
+    {
+      id: "shakti-perms-spike",
+      label: "shakti-perms-spike",
+      state: "open",
+      branch: null,
+      port: null,
+      preview: null,
+    },
+  ])
+  assert.equal(candidateText(row), "shakti-perms-spike open")
+})
+
+test("a candidate naming another workstream never joins this row", () => {
+  const [row] = readPresence(
+    presence({ candidates: [{ ...lane, workstream: "enterprise-1854" }] }),
+  ).rows
+  assert.deepEqual(row.candidates, [])
 })
 
 test("a null machine and a null agent draw nothing, and the session join is the fallback", () => {

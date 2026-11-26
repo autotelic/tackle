@@ -265,6 +265,46 @@ button:hover {
   font-size: 12px;
   overflow-wrap: anywhere;
 }
+.candidates {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0 0;
+  padding: 6px 8px;
+  border: 1px solid #edf1f4;
+  border-radius: 8px;
+  color: #4c5a67;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+/* One row per lane: two open candidates must be two lines, never one merged sentence. */
+.candidate {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: baseline;
+}
+.candidate-state {
+  min-width: 5.5em;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #5f6d7a;
+}
+.candidate.promoted .candidate-state {
+  color: #2f7d32;
+}
+.candidate.dropped .candidate-state {
+  color: #9aa5b1;
+}
+.candidate-dropped {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: baseline;
+  opacity: 0.7;
+}
 .environment-label {
   font-size: 10px;
   font-weight: 600;

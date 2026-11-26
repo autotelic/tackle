@@ -167,6 +167,30 @@ export const Environment = Schema.Struct({
 })
 export type Environment = typeof Environment.Type
 
+/**
+ * One candidate checkout served under `factory.candidates`.
+ *
+ * Every field but the id and the state is optional: a board that serves fewer facts draws fewer
+ * of them, and a card with no candidate key at all draws no list.
+ */
+export const Candidate = Schema.Struct({
+  workstream: Schema.String,
+  id: Schema.String,
+  room: Schema.optional(Schema.String),
+  path: Schema.optional(Schema.String),
+  branch: Schema.optional(Schema.String),
+  head: Schema.optional(Schema.String),
+  label: Schema.optional(Schema.String),
+  state: Schema.String,
+  runtime: Schema.optional(EnvironmentRuntime),
+  port: Schema.optional(Schema.NullOr(EnvironmentPort)),
+  vmPort: Schema.optional(Schema.NullOr(Schema.Finite)),
+  services: Schema.optional(Schema.Array(EnvironmentService)),
+  preview: Schema.optional(Schema.NullOr(Schema.String)),
+  observedAt: Schema.optional(Schema.String),
+})
+export type Candidate = typeof Candidate.Type
+
 const TailnetPeer = Schema.Struct({
   host: Schema.String,
   dnsName: Schema.optional(Schema.String),
@@ -196,6 +220,13 @@ export const Presence = Schema.Struct({
     ),
     // Absent on a board that does not serve it yet: the card then draws no Environment line.
     environments: Schema.optional(Schema.Array(Environment)),
+    /**
+     * The workstream's candidate lanes, absent on a board that does not serve them yet.
+     *
+     * A list rather than an object because two candidates for one workstream are the case this
+     * field exists for, and a map keyed by workstream would have to drop one.
+     */
+    candidates: Schema.optional(Schema.Array(Candidate)),
     activity: Schema.Array(Activity),
     desk: Schema.Array(Desk),
     reports: Schema.Array(Report),
@@ -220,3 +251,20 @@ export const environmentsByWorkstream = (
   Object.fromEntries(
     (environments ?? []).map((environment) => [environment.workstream, environment]),
   )
+
+/**
+ * The served candidates, grouped under the workstream each one isolates.
+ *
+ * A workstream with no candidate is an absent key rather than an empty list, so the card can tell
+ * "nothing to draw" from "one lane, folded".
+ *
+ * @param candidates - `factory.candidates`, absent when the board did not serve it.
+ * @returns every served candidate, keyed by workstream id, in record order.
+ */
+export const candidatesByWorkstream = (
+  candidates: ReadonlyArray<Candidate> | undefined,
+): Readonly<Record<string, ReadonlyArray<Candidate>>> => {
+  const grouped: Record<string, Array<Candidate>> = {}
+  for (const candidate of candidates ?? []) (grouped[candidate.workstream] ??= []).push(candidate)
+  return grouped
+}

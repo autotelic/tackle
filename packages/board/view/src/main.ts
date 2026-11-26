@@ -7,6 +7,7 @@ import { Atlas, type AtlasPackage } from "./atlas.ts"
 import { visionView } from "./vision.ts"
 import {
   Activity,
+  type Candidate,
   Desk,
   type Environment,
   Presence,
@@ -15,6 +16,7 @@ import {
   SessionSource,
   type Tailnet,
   Workstream,
+  candidatesByWorkstream,
   environmentsByWorkstream,
 } from "./presence.ts"
 
@@ -491,6 +493,80 @@ const environmentLine = (h: Html.H<Message>, environment: Environment | undefine
     .children(h.span.class("environment-label").children("Environment"), ...parts)
 }
 
+/**
+ * One candidate lane, compact.
+ *
+ * Two open lanes are two rows: the card never folds them into a count, or a reader could not tell
+ * which one the preview belongs to. A dropped lane carries no route, because the board stops
+ * answering it.
+ */
+const candidateRow = (h: Html.H<Message>, candidate: Candidate) => {
+  const preview = candidate.preview
+  const services = candidate.services ?? []
+  const port = candidate.port
+  return h.div.class("candidate " + candidate.state).children(
+    h.span.class("candidate-state").children(candidate.state),
+    h.span.class("mono").children(candidate.label ?? candidate.id),
+    h.span.class("mono muted").children(candidate.branch ?? candidate.id),
+    candidate.head === undefined
+      ? undefined
+      : h.span.class("mono muted").children(candidate.head.slice(0, 8)),
+    // The lease and the probe are the candidate's own room, not the workstream's: a lane with no
+    // service says nothing rather than borrowing the row above it.
+    port === null || port === undefined
+      ? undefined
+      : h.span.class("mono").children("port " + port.number),
+    services.length === 0
+      ? undefined
+      : h.span
+          .class("mono")
+          .children(services.map((service) => service.name + " · " + service.status).join(", ")),
+    preview === null || preview === undefined
+      ? undefined
+      : h.a
+          .class("mono")
+          .attr("href", preview)
+          .attr("target", "_blank")
+          .attr("rel", "noreferrer")
+          .children("preview"),
+  )
+}
+
+/**
+ * The candidate lanes of one workstream, under its environment line.
+ *
+ * A dropped lane folds into one line: it is still a fact a human may want back, and hiding it
+ * would make "where did that go" a question the floor cannot answer.
+ *
+ * @param candidates - the lanes the projection served for this workstream.
+ * @returns the list, or nothing when the workstream has no candidate.
+ */
+const candidateList = (h: Html.H<Message>, candidates: ReadonlyArray<Candidate>) => {
+  if (candidates.length === 0) return undefined
+  const open = candidates.filter((candidate) => candidate.state !== "dropped")
+  const dropped = candidates.length - open.length
+  return h.div
+    .class("candidates")
+    .children(
+      h.span.class("environment-label").children("Candidates"),
+      ...open.map((candidate) => candidateRow(h, candidate)),
+      dropped === 0
+        ? undefined
+        : h.div
+            .class("candidate-dropped")
+            .children(
+              h.span
+                .class("mono muted")
+                .children(dropped + (dropped === 1 ? " dropped lane" : " dropped lanes")),
+              ...candidates
+                .filter((candidate) => candidate.state === "dropped")
+                .map((candidate) =>
+                  h.span.class("mono muted").children(candidate.label ?? candidate.id),
+                ),
+            ),
+    )
+}
+
 const githubRepoUrl = (repo: string): string => "https://github.com/" + repo
 
 const githubPrUrl = (repo: string, pr: number): string =>
@@ -546,6 +622,7 @@ const workstreamCard = (
   activity: typeof Activity.Type | undefined,
   sessions: ReadonlyArray<typeof Session.Type>,
   environment: Environment | undefined,
+  candidates: ReadonlyArray<Candidate>,
 ) =>
   h.article
     .attr("id", ws.id)
@@ -584,6 +661,7 @@ const workstreamCard = (
       ),
       workstreamBrands(h, ws),
       environmentLine(h, environment),
+      candidateList(h, candidates),
       activityBlock(h, activity),
       sessions.length === 0
         ? undefined
@@ -597,6 +675,7 @@ const repoSection = (
   activities: ReadonlyArray<typeof Activity.Type>,
   sessions: ReadonlyArray<typeof Session.Type>,
   environments: Readonly<Record<string, Environment>>,
+  candidates: Readonly<Record<string, ReadonlyArray<Candidate>>>,
 ) => {
   const lanes: ReadonlyArray<Content> = phaseOrder.flatMap((phase) => {
     const inPhase = workstreams.filter((ws) => ws.phase === phase)
@@ -613,6 +692,7 @@ const repoSection = (
             activities.find((activity) => activity.workstream === ws.id),
             sessions.filter((session) => session.workstream === ws.id),
             environments[ws.id],
+            candidates[ws.id] ?? [],
           ),
         ),
       ),
@@ -740,6 +820,7 @@ const factoryFloor = (
   environments: ReadonlyArray<Environment>,
   tailnet: Tailnet | undefined,
   workstreams: ReadonlyArray<typeof Workstream.Type>,
+  candidates: Readonly<Record<string, ReadonlyArray<Candidate>>>,
 ) => {
   if (environments.length === 0 && tailnet === undefined) return undefined
   const machines = new Map<
@@ -797,6 +878,11 @@ const factoryFloor = (
                   const storedWorker = workstreams.find(
                     (entry) => entry.id === environment.workstream,
                   )?.worker
+                  // A lane is a place the workstream could go, so the machine line counts them
+                  // beside the workstream it belongs to instead of repeating every path.
+                  const lanes = (candidates[environment.workstream] ?? []).filter(
+                    (candidate) => candidate.state !== "dropped",
+                  )
                   return h.div.class("floor-workstream").children(
                     h.a.attr("href", "#" + environment.workstream).children(environment.workstream),
                     h.span
@@ -843,6 +929,14 @@ const factoryFloor = (
                     storedWorker === undefined
                       ? undefined
                       : h.span.class("floor-service").children("worker " + storedWorker),
+                    lanes.length === 0
+                      ? undefined
+                      : h.span
+                          .class("floor-service")
+                          .children(
+                            lanes.length +
+                              (lanes.length === 1 ? " candidate lane" : " candidate lanes"),
+                          ),
                     preview === null || preview === undefined
                       ? undefined
                       : h.a
@@ -934,6 +1028,7 @@ const factoryView = (h: Html.H<Message>, model: Model) => {
             presence.factory.environments ?? [],
             presence.network?.tailscale,
             presence.factory.workstreams,
+            candidatesByWorkstream(presence.factory.candidates),
           ),
           ...Array.from(new Set(presence.factory.workstreams.map(repoName))).map((repo) =>
             repoSection(
@@ -943,6 +1038,7 @@ const factoryView = (h: Html.H<Message>, model: Model) => {
               presence.factory.activity,
               [...presence.sessions.herdr.sessions, ...presence.sessions.rex.sessions],
               environmentsByWorkstream(presence.factory.environments),
+              candidatesByWorkstream(presence.factory.candidates),
             ),
           ),
           presence.factory.desk.length === 0

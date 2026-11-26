@@ -25,6 +25,13 @@ import { runPass } from "./kernel.ts"
 import { Gates, listWorkstreams, Phase, readWorkstream, writeWorkstream } from "./store.ts"
 import { deliverReport, fingerprintOf, ReportKind, writeReport, type Report } from "./report.ts"
 import { answerDesk, listDesk, raiseDesk, readAnswer, withdrawDesk, type DeskItem } from "./desk.ts"
+import {
+  CandidateEnvironmentRefused,
+  createCandidateEnvironment,
+  listCandidateEnvironments,
+  registerCandidateEnvironment,
+  setCandidateEnvironmentState,
+} from "./candidate-environments.ts"
 import { runDaemon, startDaemon, stopDaemon } from "./daemon.ts"
 import { runReady } from "./ready.ts"
 import { readTelemetry } from "./telemetry.ts"
@@ -71,6 +78,11 @@ const usage = [
   "  factory desk answer --item <id> --choice <choice> --by <did-or-name>",
   "  factory desk raise --workstream <id> --title <text> [--body <text>] [--choices <a,b>] [--route live|github|slack]",
   "  factory desk withdraw --item <id> --by <did-or-name> --reason <text>",
+  "  factory candidate new --workstream <id> [--label <text>] [--root .room]",
+  "  factory candidate register --workstream <id> --label <text> --path <dir> --branch <branch> [--head <sha>] [--room <id>]",
+  "  factory candidate list [--workstream <id>] [--json]",
+  "  factory candidate promote --id <id>",
+  "  factory candidate drop --id <id>",
   "",
   "FACTORY_HOME defaults to ~/.factory; records live outside the governed repository.",
 ].join("\n")
@@ -169,6 +181,105 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
     for (const item of await listDesk())
       console.log("desk " + item.id + "  " + item.workstream + "  " + item.title)
     return
+  }
+
+  if (command === "candidate") {
+    const verb = argv[1]
+    // One refusal path for every verb: the store names what it would not write, and the CLI
+    // prints that rather than a stack trace a human would have to decode.
+    const refused = (cause: unknown): never =>
+      fail(cause instanceof CandidateEnvironmentRefused ? cause.detail : String(cause))
+    if (verb === "list") {
+      const parsed = parseArgs({
+        args: argv.slice(2),
+        options: { workstream: { type: "string" }, json: { type: "boolean", default: false } },
+        allowPositionals: false,
+      })
+      const records = await listCandidateEnvironments({ workstream: parsed.values.workstream })
+      if (parsed.values.json) {
+        console.log(JSON.stringify(records, null, 2))
+        return
+      }
+      for (const record of records)
+        console.log(
+          [
+            record.workstream,
+            record.id,
+            record.state,
+            record.branch,
+            record.head.slice(0, 8),
+            record.path,
+          ].join("  "),
+        )
+      return
+    }
+    if (verb === "new") {
+      const parsed = parseArgs({
+        args: argv.slice(2),
+        options: {
+          workstream: { type: "string" },
+          label: { type: "string", default: "candidate" },
+          root: { type: "string", default: ".room" },
+        },
+        allowPositionals: false,
+      })
+      if (parsed.values.workstream === undefined)
+        return fail("candidate new needs --workstream (see factory --help)")
+      const record = await createCandidateEnvironment({
+        workstream: parsed.values.workstream,
+        label: parsed.values.label,
+        roomRoot: parsed.values.root,
+      }).catch(refused)
+      console.log("factory: candidate " + record.id + " " + record.state + " at " + record.path)
+      return
+    }
+    if (verb === "register") {
+      const parsed = parseArgs({
+        args: argv.slice(2),
+        options: {
+          workstream: { type: "string" },
+          label: { type: "string" },
+          path: { type: "string" },
+          branch: { type: "string" },
+          head: { type: "string" },
+          room: { type: "string" },
+        },
+        allowPositionals: false,
+      })
+      const values = parsed.values
+      if (
+        values.workstream === undefined ||
+        values.label === undefined ||
+        values.path === undefined ||
+        values.branch === undefined
+      )
+        return fail("candidate register needs --workstream, --label, --path and --branch")
+      const record = await registerCandidateEnvironment({
+        workstream: values.workstream,
+        label: values.label,
+        path: values.path,
+        branch: values.branch,
+        head: values.head ?? (await readWorkstream({ id: values.workstream }))?.head ?? "",
+        room: values.room,
+      }).catch(refused)
+      console.log("factory: candidate " + record.id + " registered at " + record.path)
+      return
+    }
+    if (verb === "promote" || verb === "drop") {
+      const parsed = parseArgs({
+        args: argv.slice(2),
+        options: { id: { type: "string" } },
+        allowPositionals: false,
+      })
+      if (parsed.values.id === undefined) return fail("candidate " + verb + " needs --id")
+      const record = await setCandidateEnvironmentState({
+        id: parsed.values.id,
+        state: verb === "promote" ? "promoted" : "dropped",
+      }).catch(refused)
+      console.log("factory: candidate " + record.id + " " + record.state)
+      return
+    }
+    return fail("candidate needs one of new, register, list, promote, drop")
   }
 
   if (command === "event" && (argv[1] === "retire" || argv[1] === "resolve")) {
