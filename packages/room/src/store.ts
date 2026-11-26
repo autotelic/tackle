@@ -12,6 +12,15 @@ import { ResumeRoom } from "./Room/ResumeRoom.command.ts"
 import { RoomState } from "./Room/Room.aggregate.ts"
 import { ServiceDeclaration } from "./Service.ts"
 
+/**
+ * Where a room is placed.
+ *
+ * Absent is the local git worktree — the placement every room had before a runtime could be
+ * recorded — so a room file written by an older `room` decodes unchanged.
+ */
+export const RoomRuntime = Schema.Struct({ kind: Schema.Literal("agentos") })
+export type RoomRuntime = typeof RoomRuntime.Type
+
 const RoomFileSchema = Schema.Struct({
   id: Schema.String,
   base: Schema.String,
@@ -20,6 +29,7 @@ const RoomFileSchema = Schema.Struct({
   desired: Schema.optional(Schema.Boolean),
   port: Schema.optional(PortLease),
   service: Schema.optional(ServiceDeclaration),
+  runtime: Schema.optional(RoomRuntime),
 })
 
 /** The file a room is: its id, its base branch, and the control-plane state. */
@@ -302,6 +312,24 @@ export const setRoomService = async (input: {
   if (room === undefined) return { ok: false, error: "RoomNotFound" }
   const { exec: _exec, ...rest } = room
   const next: RoomFile = { ...rest, service: input.service }
+  await write({ root: input.root, room: next })
+  return { ok: true, value: next }
+}
+
+/**
+ * Record where the room is placed.
+ *
+ * The runtime is a fact about the room, not a command run against it: writing it here is what
+ * lets `room status` name the VM a later command will actually use.
+ */
+export const setRoomRuntime = async (input: {
+  readonly root: string
+  readonly id: string
+  readonly runtime: RoomRuntime
+}): Promise<StoreResult<RoomFile>> => {
+  const room = await readRoom({ root: input.root, id: input.id })
+  if (room === undefined) return { ok: false, error: "RoomNotFound" }
+  const next: RoomFile = { ...room, runtime: input.runtime }
   await write({ root: input.root, room: next })
   return { ok: true, value: next }
 }

@@ -19,6 +19,8 @@ room use --id dev-1575
 room run --id dev-1575 -- pnpm test
 room vm --id dev-1575 -- sh -c 'pwd'
 room vm --id dev-1575 --json -- cat package.json
+room vm start|stop|status --id dev-1575 [--json]
+room vm --id dev-1575 --executor-lease .room/lease.json -- pnpm test
 ```
 
 `new` creates `.room/<id>/worktree` and `.room/<id>/room.json`. `up` is
@@ -44,11 +46,31 @@ terminal: it is idempotent and may run in CI or another agent's shell.
 `room run` starts a child with `hc run --label room=<id> --cwd <worktree> -- <command>`,
 so the child is labeled at spawn rather than after the fact.
 
-`room vm` runs the same command in an embedded agentOS VM instead of a host shell: the
-room's worktree is mounted at `/workspace` read-write, the VM's sqlite database lives in
+`room vm` runs the command in an embedded agentOS VM instead of a host shell: the room's
+worktree is mounted at `/workspace` read-write, the VM's sqlite database lives in
 `.room/<id>/agentos.sqlite`, and the command's own exit status becomes the exit status.
-The VM exists for that one command — it is disposed on every path — so nothing a VM run
-leaves behind is reachable from the next one except what it wrote to the worktree.
+
+The VM belongs to a **supervisor**, not to the command. `room vm start` (and any `room vm
+-- <command>` when none is running) spawns a detached process, recorded in `.room/<id>/vm.json`
+and logged to `.room/<id>/vm.log`, that boots one agentOS instance and answers exec requests on
+a Unix socket at `.room/<id>/vm.sock`. A second command joins that VM rather than booting a new
+one, which is what makes state outside the mount — a guest `/tmp`, a running process, an
+installed package — outlive the command that created it. Commands are answered one at a time:
+two commands racing inside one VM would make "the second sees the first" a claim about luck.
+
+`room vm status` reports `running`, `stale` or `absent`. A record whose pid no longer answers is
+**stale**, never live: nothing is behind the socket file, and a start takes both. `room vm stop`
+signals the supervisor's process group (the agentOS sidecar is its child) and releases the
+socket; `room down` does the same before it stops the room's command, because a room whose VM
+still answers is not stopped.
+
+Once a room has a VM the placement is recorded in `room.json` as `runtime: { kind: "agentos" }`,
+and `room status` names it. The field is optional: a room file without it is a local git
+worktree room, which is still what `room new` creates — nothing about the local provider moved.
+
+`--executor-lease` still works through the supervisor. The lease is read and expiry-checked
+_before_ anything starts, so an expired lease refuses the command without a VM boot, and its
+environment is passed per request: the host environment is never forwarded.
 
 `up` also leases one port for the room, from 4400 to 4499, and records it in
 `room.json` as `port: { number, leasedAt }`. The lease is idempotent; a second

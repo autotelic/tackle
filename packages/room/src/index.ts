@@ -9,6 +9,30 @@ export {
   type AgentOsRoomOptions,
 } from "./AgentOs.ts"
 export { ExecutorLease, ExecutorLeaseError, readExecutorLease } from "./ExecutorLease.ts"
+export {
+  ensureVmSupervisor,
+  readVmRun,
+  readVmStatus,
+  removeVmRun,
+  startVmSupervisor,
+  stopVmSupervisor,
+  vmExec,
+  vmLogFile,
+  vmRunFile,
+  vmSocketFile,
+  VmExecRequest,
+  VmExecResponse,
+  VmFailureResponse,
+  VmResponse,
+  VmRun,
+  writeVmRun,
+  type VmStartInput,
+  type VmStartOutcome,
+  type VmState,
+  type VmStatus,
+  type VmStopOutcome,
+} from "./VmSupervisor.ts"
+export { RoomRuntime, setRoomRuntime } from "./store.ts"
 export { Worktree, WorktreeLive, WorktreeError, type WorktreeService } from "./Worktree.ts"
 export {
   agentOsRoomProvider,

@@ -6,7 +6,6 @@ import { mkdir, symlink } from "node:fs/promises"
 import { homedir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { parseArgs } from "node:util"
-import { runAgentOsCommand } from "./AgentOs.ts"
 import { readExecutorLease } from "./ExecutorLease.ts"
 import { localRoomProvider } from "./Provider.ts"
 import { Worktree, WorktreeLive } from "./Worktree.ts"
@@ -20,11 +19,19 @@ import {
   resumeRoom,
   setRoomDesired,
   setRoomExec,
+  setRoomRuntime,
   setRoomService,
   roomDir,
   RoomDecodeError,
 } from "./store.ts"
 import { alive, readRun, removeRun, signalRun, startRoomRun } from "./run.ts"
+import {
+  ensureVmSupervisor,
+  readVmStatus,
+  stopVmSupervisor,
+  vmExec,
+  type VmExecRequest,
+} from "./VmSupervisor.ts"
 import { observeService } from "./Service.ts"
 
 const usage = [
@@ -39,7 +46,8 @@ const usage = [
   "  room resume --id <id> [--root .room]",
   "  room use --id <id> [--root .room]   (label this Herdr terminal with room=<id>)",
   "  room run --id <id> [--root .room] -- <command...>",
-  "  room vm --id <id> [--root .room] [--json] [--executor-lease <file>] -- <command...>   (run it in the room's isolated VM)",
+  "  room vm --id <id> [--root .room] [--json] [--executor-lease <file>] -- <command...>   (run it in the room's VM supervisor)",
+  "  room vm start|stop|status --id <id> [--root .room] [--json]   (the room's VM supervisor)",
   "  room move --id <id> --to <host> [--root .room] [--json]  (not implemented; refuses)",
   "",
   "Exit codes: 0 ok, 1 declined, 2 usage, 3 infrastructure.",
@@ -213,6 +221,7 @@ const main = async (): Promise<void> => {
           room.id +
             " " +
             room.state._tag +
+            (room.runtime === undefined ? "" : " runtime " + room.runtime.kind) +
             (room.port === undefined ? "" : " port " + room.port.number) +
             (service === null
               ? ""
@@ -270,14 +279,63 @@ const main = async (): Promise<void> => {
     const room = await readRoom({ root, id })
     if (room === undefined || room.state._tag === "Absent")
       return fail("RoomNotFound", EXIT.declined)
-    const program = parsed.positionals[0]
-    if (program === undefined)
-      return fail("vm needs a command after -- (see room --help)", EXIT.usage)
     const stateDir = roomDir({ root, id })
     const worktree = join(stateDir, "worktree")
     if (!existsSync(worktree))
       return fail("room " + id + " has no worktree at " + worktree, EXIT.declined)
-    // The executor lease is the room's only path to a credential. It is read before the VM
+    const verb = parsed.positionals[0]
+
+    if (verb === "start") {
+      const started = await ensureVmSupervisor({ root, id, worktree, stateDir })
+      if (!started.ok) return fail(started.reason, EXIT.infrastructure)
+      // The runtime is recorded once a VM is actually behind the room, so a room that never
+      // started one keeps the local placement its file has always implied.
+      const saved = await setRoomRuntime({ root, id, runtime: { kind: "agentos" } })
+      if (!saved.ok) return fail(saved.error, EXIT.declined)
+      if (values.json) console.log(JSON.stringify(started.run, null, 2))
+      else
+        console.log(
+          "room " + id + " vm supervisor " + started.run.pid + " at " + started.run.socket,
+        )
+      return
+    }
+
+    if (verb === "stop") {
+      const stopped = await stopVmSupervisor({ root, id })
+      if (values.json) console.log(JSON.stringify(stopped, null, 2))
+      else if (stopped.detail === "absent") console.log("room " + id + " had no vm supervisor")
+      else if (stopped.detail === "stale")
+        console.log(
+          "room " + id + " had a stale vm supervisor " + stopped.pid + "; socket released",
+        )
+      else console.log("room " + id + " vm supervisor " + stopped.pid + " stopped")
+      return
+    }
+
+    if (verb === "status") {
+      const status = await readVmStatus({ root, id })
+      if (values.json) console.log(JSON.stringify(status, null, 2))
+      else if (status.state === "absent")
+        console.log(
+          "room " + id + " has no vm supervisor" + (status.socket ? "; socket present" : ""),
+        )
+      else
+        console.log(
+          "room " +
+            id +
+            " vm supervisor " +
+            status.run?.pid +
+            " " +
+            status.state +
+            (status.socket ? " socket " + status.run?.socket : " no socket"),
+        )
+      return
+    }
+
+    const program = parsed.positionals[0]
+    if (program === undefined)
+      return fail("vm needs a command after -- (see room --help)", EXIT.usage)
+    // The executor lease is the room's only path to a credential. It is read before anything
     // starts, expiry-checked, and passed per command; the host environment is never forwarded.
     const leasePath = values["executor-lease"]
     const lease =
@@ -294,24 +352,45 @@ const main = async (): Promise<void> => {
             EXECUTOR_WORKSTREAM: lease.workstream,
             EXECUTOR_EXPIRES_AT: lease.expiresAt,
           }
-    // The VM is this command's whole lifetime: the mount is the room's checkout, and the
-    // database is the room's directory, so a later vm sees the earlier one's state.
-    const result = await Effect.runPromise(
-      runAgentOsCommand({
-        id,
-        worktree,
-        stateDir,
-        command: program,
-        args: parsed.positionals.slice(1),
-        env,
-      }),
-    ).catch((cause) => fail("vm failed: " + String(cause), EXIT.infrastructure))
-    if (values.json) console.log(JSON.stringify(result, null, 2))
+    // The supervisor owns the VM, so this command joins the room's VM instead of booting one:
+    // the mount is the room's checkout and the database is the room's directory, so the state
+    // a previous command left behind is the state this one starts from.
+    const started = await ensureVmSupervisor({ root, id, worktree, stateDir })
+    if (!started.ok) return fail(started.reason, EXIT.infrastructure)
+    const saved = await setRoomRuntime({ root, id, runtime: { kind: "agentos" } })
+    if (!saved.ok) return fail(saved.error, EXIT.declined)
+    const args = parsed.positionals.slice(1)
+    const request: VmExecRequest =
+      env === undefined
+        ? { kind: "exec", command: program, args }
+        : { kind: "exec", command: program, args, env }
+    const response = await vmExec({ socket: started.run.socket, request }).catch((cause) =>
+      fail("vm failed: " + String(cause), EXIT.infrastructure),
+    )
+    if (response.kind === "error")
+      return fail("vm failed: " + response.message, EXIT.infrastructure)
+    if (values.json)
+      console.log(
+        JSON.stringify(
+          {
+            id,
+            command: program,
+            args,
+            stdout: response.stdout,
+            stderr: response.stderr,
+            exitCode: response.exitCode,
+            outcome: response.outcome,
+            error: response.error,
+          },
+          null,
+          2,
+        ),
+      )
     else {
-      if (result.stdout !== "") process.stdout.write(result.stdout)
-      if (result.stderr !== "") process.stderr.write(result.stderr)
+      if (response.stdout !== "") process.stdout.write(response.stdout)
+      if (response.stderr !== "") process.stderr.write(response.stderr)
     }
-    return process.exit(result.exitCode)
+    return process.exit(response.exitCode)
   }
 
   if (command === "use") {
@@ -419,11 +498,17 @@ const main = async (): Promise<void> => {
     const room = await readRoom({ root, id })
     if (room === undefined) return fail("RoomNotFound", EXIT.declined)
     const run = await readRun({ root, id })
+    // A dead supervisor pid is stale, not a live pass: a room whose record outlived its process
+    // has nothing to stop, and `down` is what clears the debris.
+    const vm = await readVmStatus({ root, id })
     // A room that was raised without a supervisor still owns a lease; `down` is what releases it.
-    if (run === undefined && room.port === undefined)
+    if (run === undefined && room.port === undefined && vm.state === "absent")
       return fail("room " + id + " has no process", EXIT.declined)
     // Clear desire before the signal: the shop must not restart it during the stop.
     await setRoomDesired({ root, id, desired: false })
+    // The VM supervisor goes first: it holds the socket, and a room that stops its command
+    // while its VM still answers is not stopped.
+    const vmStop = vm.state === "absent" ? undefined : await stopVmSupervisor({ root, id })
     if (run !== undefined) {
       // A supervisor that died between the read and the signal needs no wait; the room is
       // stopped either way, so only the signalled case has a process to wait for.
@@ -440,12 +525,12 @@ const main = async (): Promise<void> => {
     // hand the next room a port this one is still bound to.
     const released = await releaseRoomPort({ root, id })
     if (!released.ok) return fail(released.error, EXIT.declined)
-    const lease = room.port === undefined ? "" : "; released port " + room.port.number
-    console.log(
-      run === undefined
-        ? "room " + id + " stopped" + lease
-        : "room " + id + " stopped; supervisor " + run.pid + lease,
-    )
+    const parts = ["room " + id + " stopped"]
+    if (run !== undefined) parts.push("supervisor " + run.pid)
+    if (vmStop !== undefined && vmStop.pid !== undefined)
+      parts.push("vm supervisor " + vmStop.pid + (vmStop.detail === "stale" ? " (stale)" : ""))
+    if (room.port !== undefined) parts.push("released port " + room.port.number)
+    console.log(parts.join("; "))
     return
   }
 
