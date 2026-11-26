@@ -4,7 +4,7 @@ import { join } from "node:path"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 import { readEvents, type Event } from "./events.ts"
-import { passesUsed, receiptsDir, type Receipt } from "./kernel.ts"
+import { passesUsed, receiptsDir, runningPass, type Receipt } from "./kernel.ts"
 import { Phase, type Workstream } from "./store.ts"
 
 const Quality = Schema.Struct({
@@ -163,10 +163,16 @@ export const activityOf = async (input: {
   const lastAt = lastPass?.at ?? latestEvent?.at ?? input.record.checkpoint.at
   const used = await passesUsed({ id: input.record.id, home: input.home })
   const progress = progressOfPasses(passes)
+  // A receipt that says `running` is a claim about a process, so the process is
+  // asked. The extra read happens only when the last receipt makes the claim.
+  const live =
+    lastPass?.status === "running"
+      ? await runningPass({ id: input.record.id, home: input.home })
+      : undefined
   const state =
     input.record.phase === "done"
       ? ("done" as const)
-      : lastPass?.status === "running"
+      : live !== undefined
         ? ("working" as const)
         : input.record.phase === "blocked"
           ? ("blocked" as const)

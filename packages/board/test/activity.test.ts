@@ -104,3 +104,67 @@ test("activity reports the last pass and the queued event's own words", async ()
     rmSync(root, { recursive: true, force: true })
   }
 })
+
+/**
+ * A receipt that says \`running\` is a claim about a process. These two pin the
+ * difference between the claim and the fact: the panel and \`factory ready\` both
+ * read this state, and a dead writer used to read as busy forever.
+ */
+const withRunningPass = async (pid: number) => {
+  const root = mkdtempSync(join(tmpdir(), "factory-running-"))
+  const home = join(root, "home")
+  const directory = join(home, "workstreams", "tackle-factory.receipts")
+  mkdirSync(directory, { recursive: true })
+  writeFileSync(
+    join(directory, "0001.json"),
+    JSON.stringify({
+      workstream: "tackle-factory",
+      pass: 1,
+      at: "2026-11-22T00:00:00.000Z",
+      status: "running",
+      phase: "land",
+      events: [],
+      checkpoint: "abc",
+      pid,
+    }),
+  )
+  const record = recordOf({
+    id: "tackle-factory",
+    facts: {
+      project: "factory",
+      label: "factory-feedback",
+      repo: "autotelic/tackle",
+      path: "/tmp/tackle",
+      branch: "main",
+      head: "abc",
+      delivery: "trunk",
+      pr: undefined,
+      base: "main",
+      baseSha: "abc",
+      prHead: "abc",
+      phase: "land",
+      at: "2026-11-22T00:00:00.000Z",
+      checkpoint: { sha: "abc", ref: "refs/bench/tackle-factory", at: "2026-11-22T00:00:00.000Z", pushed: false },
+    },
+  })
+  const activity = await activityOf({ record, home, now: Date.parse("2026-11-22T00:01:00.000Z") })
+  return { root, activity }
+}
+
+test("a running receipt whose process is alive is working", async () => {
+  const { root, activity } = await withRunningPass(process.pid)
+  try {
+    expect(activity.state).toBe("working")
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test("a running receipt whose process is gone is not working", async () => {
+  const { root, activity } = await withRunningPass(999_999_999)
+  try {
+    expect(activity.state).not.toBe("working")
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})

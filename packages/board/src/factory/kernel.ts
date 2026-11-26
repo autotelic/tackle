@@ -316,8 +316,18 @@ const RunningReceipt = Schema.Struct({
   pid: Schema.optional(Schema.Finite),
 })
 
-/** A pass already running in this home, if its receipt's process is alive. */
-const runningPass = async (input: {
+/**
+ * A pass already running in this home, if its receipt's process is alive.
+ *
+ * Exported because it is the policy, not an implementation detail: a receipt
+ * saying `running` is a claim about a process, and only the process can confirm
+ * it. `activityOf` reads the same receipts and must ask the same question -- a
+ * pass whose writer died (a killed daemon, a hard exit) leaves the word "running"
+ * on disk forever, and every reader that trusts the word rather than the process
+ * reports a workstream as busy when nothing is running. That is how a finished
+ * pass wedged `factory ready` behind an owner that no longer existed.
+ */
+export const runningPass = async (input: {
   readonly id: string
   readonly home?: string | undefined
 }): Promise<number | undefined> => {
