@@ -57,9 +57,15 @@ const spec: ClusterRule = {
  */
 const independentOf = (workspace: Workspace, members: ReadonlyArray<Unit>): ReadonlyArray<Unit> =>
   members.filter((member) => {
-    const from = workspace.imports.edges.filter((edge) => edge.importer === member.file)
+    // Importing ANYTHING from a sibling's file is not a home for the vocabulary:
+    // a copy can sit beside an unrelated shared helper and still be a copy. The
+    // edge has to name THIS declaration, which the import graph already answers.
     return !members.some(
-      (other) => other.file !== member.file && from.some((edge) => edge.to === other.file),
+      (other) =>
+        other.file !== member.file &&
+        workspace.imports
+          .importersOfName(other.file, other.name)
+          .some((edge) => edge.importer === member.file),
     )
   })
 

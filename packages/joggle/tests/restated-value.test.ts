@@ -22,6 +22,9 @@ it.effect("one vocabulary in two independent files is one finding", () =>
     const result = yield* plannedDiagnosticsOf(restatedValue, workspace)
     expect(result.diagnostics.length).toBe(1)
     expect(result.diagnostics[0]?.message).toContain("admin")
+    // auth.ts, ui.ts and the enum are three homes: an enum's member values are
+    // the same vocabulary as a const array, so both spellings join one cluster.
+    expect(result.diagnostics[0]?.message).toContain("3 times")
     expect(result.diagnostics[0]?.move).toBe("contract")
     expect(result.diagnostics[0]?.judged).toBe(true)
   }).pipe(
@@ -38,6 +41,21 @@ it.effect("a declaration beside the file it imports is not a second home", () =>
     expect(messages).not.toContain("same-home")
     // And the single-value pair is a constant, not a vocabulary.
     expect(messages).not.toContain("us-east-1")
+  }).pipe(
+    Effect.provide(modelStub({ redundant: noul(0.95) })),
+    Effect.provide(NodeServices.layer),
+  ),
+)
+
+it.effect("importing a sibling's helper does not make this declaration homed", () =>
+  Effect.gen(function* () {
+    // ui.ts imports `allowed` from permissions.ts, which also declares the same
+    // vocabulary. An import of ANY name used to excuse the copy; it has to be an
+    // import of THIS declaration.
+    const workspace = yield* loadWorkspace("tests/fixtures/values-unrelated-helper", ["src"])
+    const result = yield* plannedDiagnosticsOf(restatedValue, workspace)
+    expect(result.diagnostics.length).toBe(1)
+    expect(result.diagnostics[0]?.message).toContain("admin")
   }).pipe(
     Effect.provide(modelStub({ redundant: noul(0.95) })),
     Effect.provide(NodeServices.layer),
