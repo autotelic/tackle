@@ -4,7 +4,7 @@ import { spawn } from "node:child_process"
 import { closeSync, existsSync, openSync } from "node:fs"
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import { connect } from "node:net"
-import { dirname, join } from "node:path"
+import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { alive } from "./run.ts"
 import { roomDir } from "./store.ts"
@@ -128,6 +128,7 @@ export const VmFailureResponse = Schema.Struct({
 
 export const VmResponse = Schema.Union([VmExecResponse, VmFailureResponse])
 export type VmResponse = typeof VmResponse.Type
+export type VmExecResponse = typeof VmExecResponse.Type
 
 /**
  * Send one request to a room's supervisor and read its one answer.
@@ -218,7 +219,12 @@ export interface VmStartInput {
  * @returns the live record, or the reason no supervisor claimed the room.
  */
 export const startVmSupervisor = async (input: VmStartInput): Promise<VmStartOutcome> => {
-  const paths = { root: input.root, id: input.id }
+  // The room file may be addressed relative to the caller's cwd; the supervisor is a detached
+  // process with a different cwd, so every path it receives must already be absolute.
+  const root = resolve(input.root)
+  const worktree = resolve(input.worktree)
+  const stateDir = resolve(input.stateDir)
+  const paths = { root, id: input.id }
   const status = await readVmStatus(paths)
   if (status.state === "running" && status.run !== undefined) return { ok: true, run: status.run }
   // A stale record names a process that no longer answers, so it owns neither the socket nor
@@ -233,13 +239,13 @@ export const startVmSupervisor = async (input: VmStartInput): Promise<VmStartOut
       "--conditions=development",
       supervisorPath(),
       "--root",
-      input.root,
+      root,
       "--id",
       input.id,
       "--worktree",
-      input.worktree,
+      worktree,
       "--state-dir",
-      input.stateDir,
+      stateDir,
       "--socket",
       vmSocketFile(paths),
       "--log",

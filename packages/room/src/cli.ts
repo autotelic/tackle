@@ -6,7 +6,7 @@ import { mkdir, symlink } from "node:fs/promises"
 import { homedir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { parseArgs } from "node:util"
-import { readExecutorLease } from "./ExecutorLease.ts"
+import { ExecutorLeaseError, readExecutorLease } from "./ExecutorLease.ts"
 import { localRoomProvider } from "./Provider.ts"
 import { Worktree, WorktreeLive } from "./Worktree.ts"
 import {
@@ -342,7 +342,13 @@ const main = async (): Promise<void> => {
       leasePath === undefined
         ? undefined
         : await readExecutorLease(resolve(leasePath), Date.now()).catch((cause) =>
-            fail("executor lease: " + String(cause), EXIT.declined),
+            fail(
+              "executor lease: " +
+                (cause instanceof ExecutorLeaseError
+                  ? cause._tag + ": " + cause.message
+                  : String(cause)),
+              EXIT.declined,
+            ),
           )
     const env =
       lease === undefined
