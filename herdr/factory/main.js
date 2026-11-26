@@ -260,9 +260,7 @@ export default class Factory extends View {
           ),
       )
       .when(review !== null, (el) =>
-        el.child(
-          action(t, "factory-review-" + row.id, "Review PR", () => openView(review)),
-        ),
+        el.child(action(t, "factory-review-" + row.id, "Review PR", () => openView(review))),
       )
       .when(row.state === "idle" && review === null, (el) =>
         el.child(action(t, "factory-open-" + row.id, "Open", () => openView(VIEW))),
@@ -400,13 +398,21 @@ export default class Factory extends View {
       .px(12)
       .py(6)
       .when(onToggle !== null, (el) =>
-        el.cursor_pointer().hover((style) => style.bg(t.hover)).on_click(onToggle),
+        el
+          .cursor_pointer()
+          .hover((style) => style.bg(t.hover))
+          .on_click(onToggle),
       )
       .child(div().text_size(11).font_semibold().text_color(t.muted).child(title))
       .child(div().text_size(11).text_color(t.dim).child(String(rows.length)))
       .when(note !== null, (el) => el.child(div().text_size(11).text_color(t.dim).child(note)))
       .when(onToggle !== null, (el) =>
-        el.child(div().text_size(11).text_color(t.dim).child(open ? "▾" : "▸")),
+        el.child(
+          div()
+            .text_size(11)
+            .text_color(t.dim)
+            .child(open ? "▾" : "▸"),
+        ),
       )
     return v_flex()
       .flex_none()

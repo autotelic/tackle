@@ -144,7 +144,12 @@ const withRunningPass = async (pid: number) => {
       prHead: "abc",
       phase: "land",
       at: "2026-11-22T00:00:00.000Z",
-      checkpoint: { sha: "abc", ref: "refs/bench/tackle-factory", at: "2026-11-22T00:00:00.000Z", pushed: false },
+      checkpoint: {
+        sha: "abc",
+        ref: "refs/bench/tackle-factory",
+        at: "2026-11-22T00:00:00.000Z",
+        pushed: false,
+      },
     },
   })
   const activity = await activityOf({ record, home, now: Date.parse("2026-11-22T00:01:00.000Z") })
