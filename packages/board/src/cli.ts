@@ -45,7 +45,7 @@ import { listCandidateEnvironments } from "./factory/candidate-environments.ts"
 import { previewPrefix, previewRequestOf } from "./preview.ts"
 import { workstreamsWithGates } from "./gate.ts"
 import { discoverTailnet } from "./tailnet.ts"
-import { fleet } from "./fleet.ts"
+import { fleet, type Fleet } from "./fleet.ts"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 
@@ -64,7 +64,7 @@ const usage = [
   "  board run|watch|report|phase|cursor|budget|desk … (factory commands)",
   "  board queue [--root .room] [--json]",
   "",
-  "board up serves /health, /presence, /queue, /factory, /preview/<workstream>/ and /open",
+  "board up serves /health, /presence, /fleet, /queue, /factory, /preview/<workstream>/ and /open",
   "while it holds the lock.",
   "Exit codes: 0 ok, 1 declined, 2 usage, 3 infrastructure.",
 ].join("\n")
@@ -346,6 +346,39 @@ const redact = (session: Session): Omit<Session, "cwd" | "labels"> => {
 const withoutIps = <A extends { readonly ips: ReadonlyArray<string> }>(peer: A) => {
   const { ips: _ips, ...rest } = peer
   return rest
+}
+
+/**
+ * One fleet read, reused for a few seconds, and never started twice at once.
+ *
+ * /presence may not carry peers: fleet asks every peer for its /presence, so a peer that asked
+ * back would recurse. The floor therefore reads a separate document, and the two guards here
+ * bound the fan-out — one round of peers per window, whatever the number of open pages.
+ */
+const FLEET_TTL_MS = 15_000
+let fleetCache: { readonly at: number; readonly body: Fleet } | undefined
+let fleetInFlight: Promise<Fleet> | undefined
+
+const fleetOnce = async (input: {
+  readonly root: string
+  readonly port: number
+}): Promise<Fleet> => {
+  if (fleetCache !== undefined && Date.now() - fleetCache.at < FLEET_TTL_MS) return fleetCache.body
+  const reading =
+    fleetInFlight ??
+    (async () => {
+      const body = await fleet({
+        tailnet: await discoverTailnet(),
+        self: await observe(input.root),
+        port: input.port,
+      })
+      fleetCache = { at: Date.now(), body }
+      return body
+    })().finally(() => {
+      fleetInFlight = undefined
+    })
+  fleetInFlight = reading
+  return reading
 }
 
 const presence = async ({
@@ -736,6 +769,13 @@ const serve = async ({
       )
       return
     }
+    if (path === "/fleet") {
+      void fleetOnce({ root, port }).then(
+        (body) => json({ response, status: 200, body }),
+        (cause: unknown) => json({ response, status: 500, body: { error: String(cause) } }),
+      )
+      return
+    }
     if (path === "/atlas") {
       void atlasOf({ root, generatedAt: new Date().toISOString() }).then(
         (body) => json({ response, status: 200, body }),
@@ -782,6 +822,7 @@ const serve = async ({
           "/tackle",
           "/vision",
           "/atlas",
+          "/fleet",
           "/health",
           "/presence",
           "/.well-known/presence.json",

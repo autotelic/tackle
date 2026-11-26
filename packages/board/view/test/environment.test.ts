@@ -3,7 +3,7 @@ import { Locator, Scene } from "@effect/ui/testing"
 import { assert, it } from "@effect/vitest"
 import { Effect, Result, Schema } from "effect"
 import { BoardView, type Model } from "../src/main.ts"
-import { Presence } from "../src/presence.ts"
+import { Fleet, Presence } from "../src/presence.ts"
 
 /**
  * The served document as text.
@@ -180,6 +180,66 @@ const lane = {
   preview: null,
   observedAt: "2026-11-22T12:00:00.000Z",
 }
+
+/**
+ * Render the factory floor for one served /fleet document.
+ *
+ * /fleet is its own document because fleet asks peers for their presence, so these cases start
+ * from the bytes the board's fleet merge writes and never from a folded model.
+ */
+const drawFleet = (fleet: string) =>
+  Effect.gen(function* () {
+    const s = yield* Scene.make(BoardView, {})
+    const decoded = Schema.decodeResult(Schema.fromJsonString(Fleet))(fleet)
+    if (Result.isFailure(decoded))
+      throw new Error("fleet did not decode: " + String(decoded.failure))
+    const drawn = s.given({ ...model(), fleet: decoded.success })
+    return { scene: drawn, text: Locator.textOf(drawn.root) }
+  })
+
+it.effect("a peer's environment is drawn with its own service and preview", () =>
+  Effect.gen(function* () {
+    const { text } = yield* drawFleet(
+      JSON.stringify({
+        observedAt: "2026-11-22T12:00:00.000Z",
+        hosts: [{ host: "studio-mac", online: true, self: false, ok: true }],
+        environments: [
+          {
+            host: "studio-mac",
+            workstream: "shakti-perms",
+            runtime: { kind: "worktree", path: "/Users/togmund/autotelic/shakti-perms" },
+            services: [{ name: "web", status: "healthy" }],
+            preview: "/preview/shakti-perms/",
+          },
+        ],
+      }),
+    )
+    assert.include(text, "Peers")
+    assert.include(text, "studio-mac · shakti-perms")
+    assert.include(text, "service web healthy")
+    assert.include(text, "preview /preview/shakti-perms/")
+  }),
+)
+
+it.effect("a peer that did not answer is drawn with its reason, never an empty machine", () =>
+  Effect.gen(function* () {
+    const { text } = yield* drawFleet(
+      JSON.stringify({
+        hosts: [{ host: "studio-mac", online: true, self: false, ok: false, error: "offline" }],
+        environments: [],
+      }),
+    )
+    assert.include(text, "studio-mac")
+    assert.include(text, "offline")
+  }),
+)
+
+it.effect("a board that serves no fleet draws no Peers section", () =>
+  Effect.gen(function* () {
+    const { text } = yield* draw()
+    assert.notInclude(text, "Peers")
+  }),
+)
 
 it.effect("two open candidates are two separate rows on the card", () =>
   Effect.gen(function* () {

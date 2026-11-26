@@ -10,6 +10,7 @@ import {
   type Candidate,
   Desk,
   type Environment,
+  Fleet,
   Presence,
   Report,
   Session,
@@ -26,6 +27,8 @@ export type Route = typeof Route.Type
 export const Model = Schema.Struct({
   route: Route,
   presence: Schema.NullOr(Presence),
+  // The peers' environments. Absent on a board that serves no /fleet, which draws no section.
+  fleet: Schema.optional(Schema.NullOr(Fleet)),
   atlas: Schema.NullOr(Atlas),
   error: Schema.NullOr(Schema.String),
   loading: Schema.Boolean,
@@ -46,6 +49,7 @@ export const Message = UiSchema.TaggedEnum({
   ClickedRefresh: {},
   Settled: { value: Schema.Unknown, error: Schema.NullOr(Schema.String) },
   AtlasSettled: { value: Schema.Unknown, error: Schema.NullOr(Schema.String) },
+  FleetSettled: { value: Schema.Unknown, error: Schema.NullOr(Schema.String) },
   Ticked: {},
   ClickedOpen: { source: SessionSource, address: Schema.String },
   Opened: { ok: Schema.Boolean, error: Schema.NullOr(Schema.String) },
@@ -84,6 +88,21 @@ export const FetchPresence = Command.make("board/FetchPresence", { args: {} }, (
     Effect.match({
       onFailure: (error) => Message.Settled({ value: null, error }),
       onSuccess: (value) => Message.Settled({ value, error: null }),
+    }),
+  ),
+)
+
+/**
+ * The peers' environments, read separately from /presence.
+ *
+ * A failure here is not the page's failure: the floor is local first, and a peer document that
+ * does not answer draws no Peer section rather than blanking the factory.
+ */
+export const FetchFleet = Command.make("board/FetchFleet", { args: {} }, () =>
+  fetchJson("/fleet").pipe(
+    Effect.match({
+      onFailure: (error) => Message.FleetSettled({ value: null, error }),
+      onSuccess: (value) => Message.FleetSettled({ value, error: null }),
     }),
   ),
 )
@@ -190,6 +209,7 @@ export const BoardView = Html.component({
     const initial = $.set({
       route,
       presence: null,
+      fleet: null,
       atlas: null,
       error: null,
       loading: route !== "vision",
@@ -198,7 +218,12 @@ export const BoardView = Html.component({
       visionFocus: "permissions" as const,
       visionMachine: "mbp1",
     })
-    return route === "vision" ? initial : initial.run(fetchFor(route))
+    if (route === "vision") return initial
+    // The floor reads two documents: its own presence, and the peers' environments. They are
+    // fetched together so a slow peer never delays the local rows.
+    return route === "factory"
+      ? initial.run(FetchPresence.make(), FetchFleet.make())
+      : initial.run(fetchFor(route))
   },
 
   /** The update function: every transition is explicit here. */
@@ -210,13 +235,26 @@ export const BoardView = Html.component({
     Ticked: ($) =>
       $.model.loading || $.model.route === "vision"
         ? $.model
-        : $.evolve({ loading: true }).run(fetchFor($.model.route)),
+        : $.evolve({ loading: true }).run(
+            ...($.model.route === "factory"
+              ? [FetchPresence.make(), FetchFleet.make()]
+              : [fetchFor($.model.route)]),
+          ),
     Settled: ($, { value, error }) => {
       if (error !== null) return $.evolve({ presence: null, error, loading: false })
       const decoded = Schema.decodeUnknownResult(Presence)(value)
       return Result.isSuccess(decoded)
         ? $.evolve({ presence: decoded.success, error: null, loading: false })
         : $.evolve({ presence: null, error: String(decoded.failure), loading: false })
+    },
+    FleetSettled: ($, { value, error }) => {
+      // A peer document that did not arrive clears the peer section and leaves the local floor
+      // exactly as it was: the two reads fail independently.
+      if (error !== null) return $.evolve({ fleet: null })
+      const decoded = Schema.decodeUnknownResult(Fleet)(value)
+      return Result.isSuccess(decoded)
+        ? $.evolve({ fleet: decoded.success })
+        : $.evolve({ fleet: null })
     },
     AtlasSettled: ($, { value, error }) => {
       if (error !== null) return $.evolve({ atlas: null, error, loading: false })
@@ -952,6 +990,83 @@ const factoryFloor = (
   )
 }
 
+/**
+ * The peers' environments, when the board serves /fleet.
+ *
+ * A peer that did not answer is drawn with its reason instead of being dropped: a floor that
+ * hid an unreachable machine would read as a floor with fewer machines. A peer that answered
+ * with no environment draws no row, because there is nothing there to name.
+ */
+const peerSection = (h: Html.H<Message>, fleet: Fleet | null | undefined) => {
+  if (fleet === null || fleet === undefined) return undefined
+  const peers = fleet.hosts.filter((host) => host.self !== true)
+  if (peers.length === 0) return undefined
+  const environments = fleet.environments
+  return h.section.class("factory-floor peers").children(
+    h.div
+      .class("floor-head")
+      .children(
+        h.h2.children("Peers"),
+        h.span
+          .class("muted")
+          .children(
+            environments.length +
+              (environments.length === 1 ? " environment" : " environments") +
+              " · " +
+              peers.length +
+              (peers.length === 1 ? " peer" : " peers"),
+          ),
+      ),
+    h.div.class("floor-grid").children(
+      peers.map((peer) => {
+        const served = environments.filter((entry) => entry.host === peer.host)
+        return h.div.class("floor-machine").children(
+          h.div
+            .class("floor-machine-head")
+            .children(
+              h.h3.children(peer.host),
+              h.span
+                .class("floor-status " + (peer.ok ? "online" : "offline"))
+                .children(peer.ok ? "reachable" : "no answer"),
+            ),
+          peer.ok || peer.error === null || peer.error === undefined
+            ? undefined
+            : h.span.class("muted").children(peer.error),
+          served.length === 0
+            ? h.span.class("muted").children(peer.ok ? "no workstream observed" : "not read")
+            : undefined,
+          ...served.map((entry) => {
+            const preview = entry.preview
+            const services = entry.services ?? []
+            return h.div.class("floor-workstream").children(
+              h.span.children(entry.host + " · " + entry.workstream),
+              h.span
+                .class("muted")
+                .children(
+                  entry.runtime === undefined
+                    ? "no runtime"
+                    : entry.runtime.kind + " · " + entry.runtime.path.split("/").at(-1),
+                ),
+              services.length === 0
+                ? undefined
+                : h.span
+                    .class("floor-service")
+                    .children(
+                      services.map((service) => service.name + " · " + service.status).join(", "),
+                    ),
+              // A peer's preview is a path on that peer's own board, so it is drawn as text:
+              // this page's origin would answer it, and the answer would not be the peer's.
+              preview === null || preview === undefined
+                ? undefined
+                : h.span.class("floor-service").children("preview " + preview),
+            )
+          }),
+        )
+      }),
+    ),
+  )
+}
+
 const factoryPulse = (h: Html.H<Message>, presence: NonNullable<Model["presence"]>) => {
   const activities = presence.factory.activity
   const count = (state: typeof Activity.Type.state): number =>
@@ -1030,6 +1145,7 @@ const factoryView = (h: Html.H<Message>, model: Model) => {
             presence.factory.workstreams,
             candidatesByWorkstream(presence.factory.candidates),
           ),
+          peerSection(h, model.fleet),
           ...Array.from(new Set(presence.factory.workstreams.map(repoName))).map((repo) =>
             repoSection(
               h,

@@ -191,6 +191,51 @@ export const Candidate = Schema.Struct({
 })
 export type Candidate = typeof Candidate.Type
 
+/**
+ * One peer's environment, as `/fleet` serves it.
+ *
+ * The board's fleet merge flattens a peer's own `factory.environments` under a host label, so
+ * these are the fields a floor section draws: where the peer's workstream runs, what answers
+ * there, and the route to it. Everything but the two names is optional, because a peer that
+ * answered with less draws less.
+ */
+export const PeerEnvironment = Schema.Struct({
+  host: Schema.String,
+  workstream: Schema.String,
+  runtime: Schema.optional(EnvironmentRuntime),
+  vmPort: Schema.optional(Schema.NullOr(Schema.Finite)),
+  services: Schema.optional(Schema.Array(EnvironmentService)),
+  preview: Schema.optional(Schema.NullOr(Schema.String)),
+})
+export type PeerEnvironment = typeof PeerEnvironment.Type
+
+/** One machine the fleet asked, with its reason when the answer was nothing. */
+export const FleetHost = Schema.Struct({
+  host: Schema.String,
+  dnsName: Schema.optional(Schema.String),
+  online: Schema.Boolean,
+  self: Schema.optional(Schema.Boolean),
+  ok: Schema.Boolean,
+  url: Schema.optional(Schema.String),
+  error: Schema.optional(Schema.NullOr(Schema.String)),
+  environments: Schema.optional(Schema.Finite),
+})
+export type FleetHost = typeof FleetHost.Type
+
+/**
+ * `/fleet`: the peers' environments, merged by the board.
+ *
+ * It is a document of its own rather than a field on `/presence`: fleet asks each peer for its
+ * presence, so a presence that carried peers would ask itself. `hosts` stays a list — an offline
+ * peer is a fact with a reason, not an absence.
+ */
+export const Fleet = Schema.Struct({
+  observedAt: Schema.optional(Schema.String),
+  hosts: Schema.Array(FleetHost),
+  environments: Schema.Array(PeerEnvironment),
+})
+export type Fleet = typeof Fleet.Type
+
 const TailnetPeer = Schema.Struct({
   host: Schema.String,
   dnsName: Schema.optional(Schema.String),
