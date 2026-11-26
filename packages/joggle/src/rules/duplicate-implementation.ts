@@ -2,17 +2,12 @@ import { Effect } from "effect"
 import { policy } from "../policy.ts"
 import { exactGroups } from "../candidates.ts"
 import { clusterOf, type Cluster } from "../cluster.ts"
-import { budgetNote, outcome, type PlannedRule, type Scope } from "../rule.ts"
+import { type PlannedRule, type Scope } from "../rule.ts"
 import {
-  clusterReporter,
   collapseQuestionnaire,
-  largestClusters,
-  planClusters,
-  readClusters,
-  unverifiedFinding,
+  planBudgetedClusters,
   type ClusterRule,
 } from "./cluster-verdict.ts"
-import { layersFrom } from "../architecture.ts"
 import type { Workspace } from "../workspace.ts"
 
 const spec: ClusterRule = {
@@ -54,45 +49,25 @@ export const duplicateImplementation: PlannedRule = {
   onUnavailable: spec.onUnavailable,
   plan: Effect.fn("joggle/duplicate-implementation")(function* (workspace, scope, context) {
     const clusters = find(workspace, scope)
-    if (clusters.length === 0) {
-      return {
-        plans: [],
-        read: () =>
-          outcome([], ["no two declarations share a shape, so there was nothing to compare"]),
-      }
-    }
     const budget = policy.duplicateImplementation.maxClusters
     const shapeOnly = clusters.filter((cluster) => !cluster.typed).length
-    const phase = yield* planClusters(spec, clusters.slice(0, budget), scope, workspace)
-    const layers = layersFrom(context.config)
-    // Over budget: the fact is still reported, unjudged and labelled as such.
-    const report = clusterReporter(spec, workspace)
-    const overflow = clusters
-      .slice(budget)
-      .map((cluster) => unverifiedFinding({ report, rule: spec, cluster }))
-      .filter((entry): entry is NonNullable<typeof entry> => entry !== undefined)
-    const notes = [
-      ...budgetNote({
-        unitKind: "clusters",
-        judged: budget,
-        candidates: clusters.length,
-        sample: largestClusters(clusters.slice(budget), spec.nameOf),
-      }),
+    return yield* planBudgetedClusters({
+      rule: spec,
+      clusters,
+      budget,
+      scope,
+      workspace,
+      context,
+      emptyNote: "no two declarations share a shape, so there was nothing to compare",
       // Visibility for the missing type signal. In a `.js` codebase every
       // cluster is shape-only, and a reader who cannot see that will read the
       // findings as typed evidence.
-      ...(shapeOnly === 0
-        ? []
-        : [
-            `${shapeOnly} of ${clusters.length} cluster(s) were compared by shape alone: no member carries a type annotation`,
-          ]),
-    ]
-    return {
-      plans: phase.planned.map((entry) => entry.plan),
-      read: (answers) => {
-        const judged = readClusters(spec, workspace, phase, layers, answers)
-        return outcome([...judged.diagnostics, ...overflow], notes, judged.drops)
-      },
-    }
+      notes:
+        shapeOnly === 0
+          ? []
+          : [
+              `${shapeOnly} of ${clusters.length} cluster(s) were compared by shape alone: no member carries a type annotation`,
+            ],
+    })
   }),
 }

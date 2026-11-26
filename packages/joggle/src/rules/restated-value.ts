@@ -1,17 +1,12 @@
 import { Effect } from "effect"
-import { layersFrom } from "../architecture.ts"
 import { exactGroups } from "../candidates.ts"
 import { clusterOf, type Cluster } from "../cluster.ts"
 import { policy } from "../policy.ts"
-import { budgetNote, outcome, type PlannedRule, type Scope } from "../rule.ts"
+import { type PlannedRule, type Scope } from "../rule.ts"
 import type { Unit, Workspace } from "../workspace.ts"
 import {
-  clusterReporter,
   collapseQuestionnaire,
-  largestClusters,
-  planClusters,
-  readClusters,
-  unverifiedFinding,
+  planBudgetedClusters,
   type ClusterRule,
 } from "./cluster-verdict.ts"
 
@@ -95,34 +90,15 @@ export const restatedValue: PlannedRule = {
   onUnavailable: spec.onUnavailable,
   plan: Effect.fn("joggle/restated-value")(function* (workspace, scope, context) {
     const clusters = find(workspace, scope)
-    if (clusters.length === 0) {
-      return {
-        plans: [],
-        read: () => outcome([], ["no two declarations name the same set of literal values"]),
-      }
-    }
     const budget = policy.restatedValue.maxClusters
-    const phase = yield* planClusters(spec, clusters.slice(0, budget), scope, workspace)
-    const layers = layersFrom(context.config)
-    const report = clusterReporter(spec, workspace)
-    const overflow = clusters
-      .slice(budget)
-      .map((cluster) => unverifiedFinding({ report, rule: spec, cluster }))
-      .filter((entry): entry is NonNullable<typeof entry> => entry !== undefined)
-    const notes = [
-      ...budgetNote({
-        unitKind: "clusters",
-        judged: budget,
-        candidates: clusters.length,
-        sample: largestClusters(clusters.slice(budget), spec.nameOf),
-      }),
-    ]
-    return {
-      plans: phase.planned.map((entry) => entry.plan),
-      read: (answers) => {
-        const judged = readClusters(spec, workspace, phase, layers, answers)
-        return outcome([...judged.diagnostics, ...overflow], notes, judged.drops)
-      },
-    }
+    return yield* planBudgetedClusters({
+      rule: spec,
+      clusters,
+      budget,
+      scope,
+      workspace,
+      context,
+      emptyNote: "no two declarations name the same set of literal values",
+    })
   }),
 }
