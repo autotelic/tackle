@@ -16,7 +16,7 @@ import { join, resolve } from 'node:path'
 import { createEffectActor, join as joinActor } from '@xstate/effect'
 import { Effect } from 'effect'
 import { createIssueAnswerHandler, watchAnswers } from './answer-watcher.ts'
-import { hashConfigText, loadConfig } from './config.ts'
+import { assertConfigCurrent, hashConfigText, loadConfig, StaleConfigError } from './config.ts'
 import { createHumanChannel, type HumanChannel } from './human-channel.ts'
 import { makeEscalate } from './loop/escalate.ts'
 import { tuneHttpDispatcher } from './loop/http-tuning.ts'
@@ -163,6 +163,26 @@ let lastMaintenanceAt = Date.now()
 
 const machineDeps: LoopMachineDeps = {
   pickIssue: async () => {
+    // Between passes is the safe moment to adopt a changed config. A pass
+    // already refuses when the gate moved (assertConfigCurrent), but the
+    // PROCESS kept the config it started with — which is how `passesPerIssue: 8`
+    // in the file stayed 4 in memory for hours while tickets parked on a cap
+    // nobody could see. Exiting here hands the new file to a fresh process.
+    try {
+      await assertConfigCurrent(configPath, configHash)
+    } catch (error) {
+      if (error instanceof StaleConfigError) {
+        await notify(
+          `Treadle EXITING: ${configPath} changed since this process loaded it ` +
+            '(loaded ' +
+            configHash +
+            '). Restarting onto the new config at a pass boundary, ' +
+            'so nothing is lost.',
+        )
+        process.exit(255)
+      }
+      throw error
+    }
     if (reenterIssue) {
       const issue = reenterIssue
       reenterIssue = null
