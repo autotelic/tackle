@@ -167,6 +167,119 @@ describe("parseModule (FoldKit)", () => {
   })
 })
 
+const EFFECT_UI = `
+import { Html } from "@effect/ui/html"
+
+const Panel = Html.component({ name: "Panel", model: Model, message: Message }).make({
+  init: () => ({}),
+  update: ($) => $.model,
+  view: (h, model) => h.section.class("panel").children(h.p.children("panel")),
+})
+
+export const Counter = Html.component({
+  name: "Counter",
+  model: Model,
+  message: Message,
+}).make({
+  init: () => 0,
+  update: ($) => $.model + 1,
+  view: (h, count) =>
+    h.div.class("counter").children(
+      h.p.children(String(count)),
+      h.button.on("click", Message.Clicked()).children("+"),
+      // A child by value, and one by service: Effect UI spells a service-provided child
+      // as a member call, and both hand the builder over.
+      Panel(h, { props: {}, onEmit: {} }),
+      NoteActivity.render(h, { key: "activity" }),
+    ),
+})
+`
+
+describe("parseModule (Effect UI)", () => {
+  const module = parseModule({ filename: "src/main.ts", text: EFFECT_UI })
+
+  it("reads a definition by the name written in it, not by the file's name", () => {
+    expect(module.components).toEqual(["Counter", "Panel"])
+  })
+
+  it("reads a fluent builder chain as host elements, and no attribute as one", () => {
+    expect(module.tags).toEqual(expect.arrayContaining(["button", "div", "p", "section"]))
+    // The chain's attributes and combinators describe the element; they are not elements,
+    // and counting them would make every styled primitive look like a component.
+    expect(module.tags).not.toContain("class")
+    expect(module.tags).not.toContain("children")
+    expect(module.tags).not.toContain("component")
+    expect(module.tags).not.toContain("Html")
+    expect(module.renders.every((site) => site.line > 0)).toBe(true)
+  })
+
+  it("reads a nested component in both spellings as a render site", () => {
+    const rendered = module.renders.map((site) => site.tag)
+    // `Panel(h, { … })` by value and `NoteActivity.render(h, { … })` by service.
+    expect(rendered).toContain("Panel")
+    expect(rendered).toContain("NoteActivity")
+    expect(rendered).not.toContain("render")
+  })
+
+  it("keeps host elements out of the signature and child components in it", () => {
+    const skeleton = skeletonOf(module)
+    expect(skeleton).toContain("tag:Panel")
+    expect(skeleton).toContain("tag:NoteActivity")
+    expect(skeleton).not.toContain("tag:div")
+    expect(skeleton).not.toContain("tag:section")
+    // An uppercase child is a "tag:" fact; recording it as a "view:" fact too would
+    // count one composition edge twice.
+    expect(skeleton.filter((fact) => fact.startsWith("view:"))).toEqual([])
+  })
+
+  it("marks the definition's declaration as rendering", () => {
+    const counter = module.declarations.find((declaration) => declaration.name === "Counter")
+    expect(counter?.renders).toBe(true)
+    expect(counter?.tags).toEqual(expect.arrayContaining(["div", "Panel"]))
+  })
+})
+
+describe("buildCatalog (Effect UI)", () => {
+  it("names the part by its component and catalogs its builder composition", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "cutlist-effect-ui-"))
+    try {
+      mkdirSync(join(dir, "app"), { recursive: true })
+      writeFileSync(
+        join(dir, "app", "main.ts"),
+        'import { Html } from "@effect/ui/html"\n' +
+          'const header = (h: unknown, title: string) => h.header.class("head").children(title)\n' +
+          'export const BoardView = Html.component({ name: "BoardView" }).make({\n' +
+          "  init: () => ({}),\n" +
+          "  update: ($: any) => $.model,\n" +
+          "  view: (h: any, model: { readonly title: string }) =>\n" +
+          '    h.div.class("shell").children(header(h, model.title)),\n' +
+          "})\n",
+      )
+      writeFileSync(
+        join(dir, "app", "entry.ts"),
+        'import { BoardView } from "./main.ts"\nexport const run = () => BoardView\n',
+      )
+      const catalog = await Effect.runPromise(
+        buildCatalog(dir, {
+          ...defaultConfig,
+          roots: ["app"],
+          tokens: { from: "app/style.css" },
+          ownership: { ...defaultConfig.ownership, entries: ["app/entry.ts"] },
+        }).pipe(Effect.provide(NodeServices.layer)),
+      )
+      const main = catalog.components.find((component) => component.path === "app/main.ts")
+      // "main" is the filename every application has; "BoardView" is the name the runtime
+      // routes by, and the module defines exactly one of it.
+      expect(main?.name).toBe("BoardView")
+      expect(main?.kind).toBe("component")
+      expect(main?.signature).toContain("view:header")
+      expect(main?.usedBy).toBe(1)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+})
+
 describe("idOfModule", () => {
   it("derives an identity from the path, not the colliding name", () => {
     expect(idOfModule("services/ui/app/components/Comments.tsx")).toBe(

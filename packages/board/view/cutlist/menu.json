@@ -1,0 +1,107 @@
+{
+  "lexicon": {
+    "name": "menu",
+    "version": 1
+  },
+  "title": "UI menu",
+  "hash": "b4cc019618cb9d0714f73ea1f2e98a509c94921acb8a644a92555d072178c18b",
+  "features": [],
+  "health": {
+    "parts": 5,
+    "sharedReach": 0,
+    "localOnly": 2,
+    "duplicateClusters": 0,
+    "documented": 0,
+    "deprecatedInUse": 0
+  },
+  "clusters": [],
+  "entries": [
+    {
+      "id": "src--atlas",
+      "name": "atlas",
+      "path": "src/atlas.ts",
+      "tier": "local",
+      "kind": "module",
+      "roles": [
+        "module"
+      ],
+      "usedBy": 1,
+      "composedOf": []
+    },
+    {
+      "id": "src--entry",
+      "name": "entry",
+      "path": "src/entry.ts",
+      "tier": "local",
+      "kind": "route",
+      "roles": [
+        "route"
+      ],
+      "composedOf": []
+    },
+    {
+      "id": "src--main",
+      "name": "BoardView",
+      "path": "src/main.ts",
+      "tier": "local",
+      "kind": "component",
+      "roles": [
+        "component"
+      ],
+      "exports": [
+        "AnswerDesk",
+        "BoardView",
+        "FetchAtlas",
+        "FetchPresence",
+        "OpenSession"
+      ],
+      "usedBy": 2,
+      "composedOf": []
+    },
+    {
+      "id": "src--presence",
+      "name": "presence",
+      "path": "src/presence.ts",
+      "tier": "local",
+      "kind": "module",
+      "roles": [
+        "module"
+      ],
+      "exports": [
+        "Activity",
+        "ActivityPass",
+        "Desk",
+        "Report",
+        "Session",
+        "SessionSource",
+        "SessionSourceView",
+        "Workstream",
+        "environmentsByWorkstream"
+      ],
+      "usedBy": 1,
+      "composedOf": []
+    },
+    {
+      "id": "src--vision",
+      "name": "vision",
+      "path": "src/vision.ts",
+      "tier": "local",
+      "kind": "component",
+      "roles": [
+        "component"
+      ],
+      "exports": [
+        "visionView"
+      ],
+      "usedBy": 1,
+      "composedOf": []
+    }
+  ],
+  "orphans": [
+    "src/atlas.ts",
+    "src/main.ts",
+    "src/presence.ts",
+    "src/vision.ts"
+  ],
+  "duplicates": []
+}

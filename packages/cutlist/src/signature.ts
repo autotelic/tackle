@@ -41,8 +41,10 @@ const isCompositionTag = (tag: string): boolean => /^[A-Z]/u.test(tag)
 export const skeletonOf = (module: SourceModule): ReadonlyArray<string> => {
   const parts = new Set<string>()
   for (const tag of module.tags) if (isCompositionTag(tag)) parts.add(`tag:${tag}`)
-  // FoldKit threads the builder by hand; a local view function that receives it is the
-  // same composition fact a React tag carries, even though its name is lowercase.
+  // FoldKit and Effect UI both thread the builder by hand; a local view function that
+  // receives it is the same composition fact a React tag carries, even though its name is
+  // lowercase. An Effect UI child (`Collapsible(h, …)`) is capitalised and already arrived
+  // through `tags` as `tag:`, so this set holds only the lowercase local views.
   for (const view of module.foldkitCalls ?? []) parts.add(`view:${view}`)
   for (const hook of module.hooks) parts.add(`hook:${hook}`)
   for (const specifier of module.imports) {

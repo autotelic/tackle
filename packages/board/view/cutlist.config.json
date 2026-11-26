@@ -1,0 +1,30 @@
+{
+  "$schema": "https://autotelic.dev/tackle/protocol/cutlist.config.json",
+  "roots": ["src"],
+  "tiers": {
+    "primitive": [],
+    "shared": [],
+    "local": []
+  },
+  "tokens": {
+    "from": "src/style.css"
+  },
+  "ownership": {
+    "routeOwner": "first-segment",
+    "transitive": false,
+    "entries": ["src/entry.ts"]
+  },
+  "output": {
+    "catalog": "cutlist/catalog.json",
+    "manifest": "cutlist/plumb-ui.config.json",
+    "menuJson": "cutlist/menu.json",
+    "menu": "cutlist/MENU.md",
+    "intent": "cutlist/intent",
+    "patterns": "cutlist/PATTERNS.md",
+    "patternsJson": "cutlist/patterns.json",
+    "recipes": "cutlist/RECIPES.md",
+    "recipesJson": "cutlist/recipes.json",
+    "hooks": "cutlist/hooks.md",
+    "tokens": "cutlist/tokens.md"
+  }
+}

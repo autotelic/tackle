@@ -75,11 +75,20 @@ own root. `ownership.entries` declares the entry points nothing imports by desig
 
 ## Renderers
 
-The same parse pass reads JSX and FoldKit's explicit builder. In a FoldKit view, `h.div(...)`
-is a host element and a local function that receives the builder — `card(h, ...)` or
-`factoryView(model, h)` — is a render edge and a `view:` fact in the signature. A view is
-therefore a component even though it has no JSX, and a FoldKit app is not read as a directory
-of empty modules. Attribute builders such as `h.Class` are not elements.
+The same parse pass reads JSX, FoldKit's explicit builder, and Effect UI's fluent one. In a
+FoldKit view, `h.div(...)` is a host element and a local function that receives the builder —
+`card(h, ...)` or `factoryView(model, h)` — is a render edge and a `view:` fact in the
+signature. A view is therefore a component even though it has no JSX, and a FoldKit app is not
+read as a directory of empty modules. Attribute builders such as `h.Class` are not elements.
+
+Effect UI keeps the same two facts and spells them its own way. Its builder is fluent, so
+`h.div.class("card").children(...)` puts the element at the head of a member chain rather than
+in a call — the crawler reads the member, which is the only reason a whole Effect UI view is not
+an empty module. A component is a value: `Html.component({ name: "Counter", ... }).make({ ... })`
+is the definition, so the component's name is the one written in it (`BoardView` in a file called
+`main.ts`), and a child is rendered by handing it the builder — `Collapsible(h, ...)` by value,
+`NoteActivity.render(h, ...)` by service. Host elements stay out of the signature: an Effect UI
+app is full of `h.div`, and only the child components distinguish one view from another.
 
 ## The signature is the whole point
 

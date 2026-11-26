@@ -63,7 +63,13 @@ export const rolesOf = (module: SourceModule, options: RoleOptions): ReadonlyArr
   const roles = new Set<PartRole>()
   const composition = options.composition
 
-  if (module.declarations.some((declaration) => declaration.exported && declaration.renders)) {
+  if (
+    // An Effect UI component is a value built by `Html.component(…).make(…)`, so the module
+    // that defines one is a component module whether or not the definition is exported under
+    // the name the runtime routes by.
+    (module.components?.length ?? 0) > 0 ||
+    module.declarations.some((declaration) => declaration.exported && declaration.renders)
+  ) {
     roles.add("component")
   }
   if (composition !== undefined) {

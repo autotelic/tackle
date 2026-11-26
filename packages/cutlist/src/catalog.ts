@@ -577,11 +577,15 @@ export const buildCatalog = (
         )
         const exports = module.exports.filter((name) => !typeNames.has(name))
         const usedBy = graph.get(module.path)?.length ?? 0
+        // A module that defines exactly one Effect UI component is named by that component:
+        // `main.ts` defines `BoardView`, and the file name is the one fact the runtime never
+        // uses. Two definitions in one file have no single name, so the file keeps its own.
+        const defined = module.components ?? []
         const renders = rendersByPath.get(module.path) ?? []
         return {
           id: idOfModule(module.path),
           path: module.path,
-          name: nameOfModule(module.path),
+          name: (defined.length === 1 ? defined[0] : undefined) ?? nameOfModule(module.path),
           tier: tierOf(module.path, owners, tierOptions),
           owners,
           props: module.props,

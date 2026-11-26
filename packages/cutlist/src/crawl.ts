@@ -49,6 +49,16 @@ export interface ImportEdge {
   readonly bindings: ReadonlyArray<string>
 }
 
+/** One oxc static import statement, as far as the crawler reads it. */
+interface StaticImport {
+  readonly moduleRequest: { readonly value: string }
+  readonly entries: ReadonlyArray<{
+    readonly importName: { readonly kind: string; readonly name: string | null }
+    readonly localName: { readonly value: string }
+    readonly isType: boolean
+  }>
+}
+
 /** One parsed module, reduced to what the catalog needs. */
 export interface SourceModule {
   /** Repository-relative, forward-slashed. */
@@ -62,8 +72,19 @@ export interface SourceModule {
   /** Every JSX element with its line; `tags` is derived from these. */
   readonly renders: ReadonlyArray<RenderSite>
   readonly hooks: ReadonlyArray<string>
-  /** Local FoldKit view functions called with the builder; the composition the signature reads. */
+  /**
+   * Local views and child components called with the builder; the composition the signature
+   * reads. FoldKit's `card(h, …)` and Effect UI's `Collapsible(h, …)` / `NoteComponent.render(h, …)`.
+   */
   readonly foldkitCalls?: ReadonlyArray<string>
+  /**
+   * Effect UI components DEFINED here, by the name written in the definition.
+   *
+   * `main.ts` is every application's filename; the component it defines is `BoardView`. The
+   * name the runtime uses is the `name` option of `Html.component({…})`, so reading the
+   * definition is what lets the catalog call the part by it.
+   */
+  readonly components?: ReadonlyArray<string>
   readonly props: ReadonlyArray<string>
   /** Object literals in the module. The composition pattern lives in their keys. */
   readonly objects: ReadonlyArray<ObjectLiteral>
@@ -109,15 +130,15 @@ const walk = (root: unknown, visit: (node: Ast) => void): void => {
 }
 
 /**
- * FoldKit's HTML builder names, as written after `h.`.
+ * The HTML element names a builder exposes after `h.`, in FoldKit and in Effect UI.
  *
- * FoldKit has no JSX: a view is a function taking the builder and returning
- * `h.div(...)` calls. Recognizing the builder's element vocabulary is what keeps a
- * FoldKit app from reading as a directory of empty modules. Attribute builders such as
- * `h.Class` and `h.OnClick` are deliberately absent: they describe an element, they are
- * not one.
+ * Neither library uses JSX: a view is a function taking the builder and returning
+ * `h.div(…)` calls. Recognizing the builder's element vocabulary is what keeps such an app
+ * from reading as a directory of empty modules. Attribute builders such as FoldKit's
+ * `h.Class` and `h.OnClick` are deliberately absent: they describe an element, they are not
+ * one, and counting them would make every styled element a component.
  */
-const FOLDKIT_HTML_TAGS = new Set([
+const BUILDER_HTML_TAGS = new Set([
   "a",
   "abbr",
   "address",
@@ -223,27 +244,39 @@ const FOLDKIT_HTML_TAGS = new Set([
   "wbr",
 ])
 
-/** A FoldKit element builder call, `h.div(...)`, or undefined for any other call. */
-const foldkitElementTagOf = (node: Ast): string | undefined => {
-  if (node.type !== "CallExpression") return undefined
-  const callee = asRecord(node.callee)
-  if (callee?.type !== "MemberExpression" || nameOf(callee.object) !== "h") return undefined
-  const tag = nameOf(callee.property)
-  return tag !== undefined && FOLDKIT_HTML_TAGS.has(tag) ? tag : undefined
+/**
+ * The element at the head of a builder chain: FoldKit's `h.div([], [ … ])` or Effect UI's
+ * `h.div.class("card").children(…)`.
+ *
+ * Both libraries reach the host elements through a builder object named `h`, and they spell
+ * the use differently: FoldKit passes the element's children as arguments, while Effect UI's
+ * builder is fluent and the element is the base of a member chain. Recognizing the MEMBER
+ * rather than the call is what sees both — in the fluent form no call has the element as its
+ * callee, so a call-shaped test reads a whole Effect UI view as an empty module. The
+ * vocabulary is the same HTML set either way.
+ */
+const builderElementTagOf = (node: Ast): string | undefined => {
+  if (node.type !== "MemberExpression") return undefined
+  const object = asRecord(node.object)
+  if (object?.type !== "Identifier" || nameOf(object) !== "h") return undefined
+  const tag = nameOf(node.property)
+  return tag !== undefined && BUILDER_HTML_TAGS.has(tag) ? tag : undefined
 }
 
 /**
- * A local view function threaded with the builder, as in `card(h, props)` or
- * `factoryView(model, h)`.
+ * A child view rendered with the builder: FoldKit's `card(h, props)`, Effect UI's
+ * `Collapsible(h, { … })`, or Effect UI's `NoteActivity.render(h, { … })`.
  *
- * FoldKit passes the builder explicitly, so the call itself is the composition edge. A
- * function that never receives the builder is ordinary code, not a render.
+ * Both libraries pass the builder explicitly, so the call itself is the composition edge. A
+ * function that never receives the builder is ordinary code, not a render. The member form
+ * names the child on the callee's object — `NoteActivity.render` renders `NoteActivity` — so
+ * reading the callee's name alone would record "render" and lose the child.
  */
-const foldkitViewNameOf = (node: Ast): string | undefined => {
+const builderChildNameOf = (node: Ast): string | undefined => {
   if (node.type !== "CallExpression") return undefined
   const callee = asRecord(node.callee)
-  if (callee === undefined || callee.type === "MemberExpression") return undefined
-  const name = calleeNameOf(callee)
+  if (callee === undefined) return undefined
+  const name = callee.type === "MemberExpression" ? nameOf(callee.object) : calleeNameOf(callee)
   if (name === undefined || name === "h") return undefined
   const passesBuilder = asArray(node.arguments).some(
     (argument) => asRecord(argument)?.type === "Identifier" && nameOf(argument) === "h",
@@ -251,9 +284,9 @@ const foldkitViewNameOf = (node: Ast): string | undefined => {
   return passesBuilder ? name : undefined
 }
 
-/** One render site in a FoldKit call, or undefined for an ordinary call. */
-const foldkitTagOf = (node: Ast): string | undefined =>
-  foldkitElementTagOf(node) ?? foldkitViewNameOf(node)
+/** One render site in a builder-based view: a host element, or a child view given the builder. */
+const builderRenderTagOf = (node: Ast): string | undefined =>
+  builderElementTagOf(node) ?? builderChildNameOf(node)
 
 const jsxNameOf = (value: unknown): string | undefined => {
   const record = asRecord(value)
@@ -358,6 +391,63 @@ const objectKeysOf = (object: Ast): ReadonlyArray<string> => {
   return keys
 }
 
+/** A string-valued property of an object literal, as in `name: "Counter"`. */
+const objectStringValueOf = (object: Ast, key: string): string | undefined => {
+  for (const property of asArray(object.properties)) {
+    const entry = asRecord(property)
+    if (entry?.type !== "Property" || nameOf(entry.key) !== key) continue
+    const value = stringField(entry.value, "value")
+    if (value !== undefined) return value
+  }
+  return undefined
+}
+
+/**
+ * The local names bound to Effect UI's HTML module.
+ *
+ * `Html.component(…)` is the definition the catalog has to see, and an import may rename it
+ * (`import { Html as ui } from "@effect/ui/html"`), so the binding is read from the import
+ * rather than guessed from the spelling. A namespace import binds the module too.
+ */
+const effectHtmlBindingsOf = (statements: ReadonlyArray<StaticImport>): ReadonlySet<string> => {
+  const bindings = new Set<string>()
+  for (const statement of statements) {
+    if (statement.moduleRequest.value !== "@effect/ui/html") continue
+    for (const entry of statement.entries) {
+      if (entry.isType || entry.localName.value === "") continue
+      if (entry.importName.kind === "NamespaceObject" || entry.importName.name === "Html") {
+        bindings.add(entry.localName.value)
+      }
+    }
+  }
+  return bindings
+}
+
+/**
+ * An Effect UI component definition, `Html.component({ name: "Counter", … }).make({ … })`,
+ * and the name written in it.
+ *
+ * Effect UI has no JSX either: a component is a value, so `const Counter = Html.component(…)
+ * .make(…)` is an ordinary variable assignment to a reader that only looks at initialisers,
+ * and a view is not a function declaration the way a view block looks in FoldKit. The name
+ * comes from the definition's `name` option — not the binding, not the file — because the
+ * runtime works out message routing from it and `main.ts` can define `BoardView`.
+ */
+const effectComponentDefinitionOf = (
+  node: Ast,
+  htmlBindings: ReadonlySet<string>,
+): string | undefined => {
+  if (node.type !== "CallExpression") return undefined
+  const callee = asRecord(node.callee)
+  if (callee?.type !== "MemberExpression" || nameOf(callee.property) !== "component")
+    return undefined
+  const builder = nameOf(callee.object)
+  if (builder === undefined || !htmlBindings.has(builder)) return undefined
+  const options = asRecord(asArray(node.arguments)[0])
+  if (options?.type !== "ObjectExpression") return undefined
+  return objectStringValueOf(options, "name")
+}
+
 /** Callee names anywhere under a node, deduplicated. */
 const calleeNamesIn = (node: Ast): ReadonlyArray<string> => {
   const names = new Set<string>()
@@ -374,7 +464,7 @@ const rendersIn = (node: Ast): boolean => {
   let renders = false
   walk(node, (child) => {
     if (child.type === "JSXOpeningElement") renders = true
-    if (foldkitTagOf(child) !== undefined) renders = true
+    if (builderRenderTagOf(child) !== undefined) renders = true
   })
   return renders
 }
@@ -384,8 +474,8 @@ const tagsIn = (node: Ast): ReadonlyArray<string> => {
   const tags = new Set<string>()
   walk(node, (child) => {
     if (child.type !== "JSXOpeningElement") {
-      const foldkit = foldkitTagOf(child)
-      if (foldkit !== undefined) tags.add(foldkit)
+      const rendered = builderRenderTagOf(child)
+      if (rendered !== undefined) tags.add(rendered)
       return
     }
     const name = jsxNameOf(child.name)
@@ -539,16 +629,7 @@ const declarationsOf = (program: Ast): ReadonlyArray<Declaration> => {
  * means its module is the one resolution this pass must not fake. Those tags stay in `tags`
  * unresolved rather than becoming a wrong edge.
  */
-const importEdgesOf = (
-  statements: ReadonlyArray<{
-    readonly moduleRequest: { readonly value: string }
-    readonly entries: ReadonlyArray<{
-      readonly importName: { readonly kind: string; readonly name: string | null }
-      readonly localName: { readonly value: string }
-      readonly isType: boolean
-    }>
-  }>,
-): ReadonlyArray<ImportEdge> =>
+const importEdgesOf = (statements: ReadonlyArray<StaticImport>): ReadonlyArray<ImportEdge> =>
   statements
     .map((statement) => ({
       specifier: statement.moduleRequest.value,
@@ -586,6 +667,8 @@ export const parseModule = ({
   const lineAt = lineIndex(text)
   const tags = new Set<string>()
   const foldkitCalls = new Set<string>()
+  const components = new Set<string>()
+  const htmlBindings = effectHtmlBindingsOf(parsed.module.staticImports)
   const hooks = new Set<string>()
   const renderSites: Array<RenderSite> = []
   const objectKeys = new Map<object, ReadonlyArray<string>>()
@@ -599,16 +682,28 @@ export const parseModule = ({
         const start = node.start
         if (typeof start === "number") renderSites.push({ tag: name, line: lineAt(start) })
       }
+    } else if (node.type === "MemberExpression") {
+      // The element is the base of a builder chain, so it is a member and not a call.
+      const element = builderElementTagOf(node)
+      const start = node.start
+      if (element !== undefined && typeof start === "number") {
+        tags.add(element)
+        renderSites.push({ tag: element, line: lineAt(start) })
+      }
     } else if (node.type === "CallExpression") {
       const name = calleeNameOf(node.callee)
       if (name !== undefined && name.startsWith("use")) hooks.add(name)
-      const foldkitView = foldkitViewNameOf(node)
-      if (foldkitView !== undefined) foldkitCalls.add(foldkitView)
-      const foldkit = foldkitTagOf(node)
+      const definition = effectComponentDefinitionOf(node, htmlBindings)
+      if (definition !== undefined) components.add(definition)
+      const child = builderChildNameOf(node)
       const start = node.start
-      if (foldkit !== undefined && typeof start === "number") {
-        tags.add(foldkit)
-        renderSites.push({ tag: foldkit, line: lineAt(start) })
+      if (child !== undefined) {
+        // An uppercase child is already a `tag:` fact in the signature; `view:` is the
+        // prefix for the lowercase local views both libraries thread the builder through.
+        // Recording one composition edge under both prefixes would weigh it double.
+        if (!/^[A-Z]/u.test(child)) foldkitCalls.add(child)
+        tags.add(child)
+        if (typeof start === "number") renderSites.push({ tag: child, line: lineAt(start) })
       }
       // `createContext` is the composition pattern's one unambiguous structural signal.
       // React itself is spelled `React.createContext`; a repo alias may add a path, so
@@ -649,6 +744,7 @@ export const parseModule = ({
     tags: [...tags].sort(Order.String),
     renders: renderSites,
     foldkitCalls: [...foldkitCalls].sort(Order.String),
+    components: [...components].sort(Order.String),
     hooks: [...hooks].sort(Order.String),
     props: propsOf(program),
     objects,

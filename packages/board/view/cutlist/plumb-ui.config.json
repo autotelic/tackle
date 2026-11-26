@@ -1,0 +1,198 @@
+{
+  "lexicon": {
+    "name": "manifest",
+    "version": 1
+  },
+  "colors": [],
+  "sharedRoots": [],
+  "localRoots": [],
+  "components": [
+    {
+      "path": "src/atlas.ts",
+      "name": "atlas",
+      "tier": "local",
+      "owners": [],
+      "props": [],
+      "tags": [],
+      "kind": "module",
+      "roles": [
+        "module"
+      ],
+      "usedBy": 1,
+      "signature": []
+    },
+    {
+      "path": "src/entry.ts",
+      "name": "entry",
+      "tier": "local",
+      "owners": [],
+      "props": [],
+      "tags": [],
+      "kind": "route",
+      "roles": [
+        "route"
+      ],
+      "signature": []
+    },
+    {
+      "path": "src/main.ts",
+      "name": "BoardView",
+      "tier": "local",
+      "owners": [],
+      "props": [
+        "address",
+        "choice",
+        "item",
+        "model",
+        "source"
+      ],
+      "tags": [
+        "a",
+        "activityBlock",
+        "appHeader",
+        "article",
+        "atlasLayer",
+        "atlasPackageCard",
+        "atlasView",
+        "brandLink",
+        "button",
+        "card",
+        "chip",
+        "deskRow",
+        "details",
+        "div",
+        "environmentLine",
+        "factoryFloor",
+        "factoryPulse",
+        "factoryView",
+        "h1",
+        "h2",
+        "h3",
+        "header",
+        "p",
+        "repoSection",
+        "reportRow",
+        "routeNav",
+        "section",
+        "sessionRow",
+        "span",
+        "strong",
+        "summary",
+        "visionView",
+        "workstreamBrands",
+        "workstreamCard"
+      ],
+      "kind": "component",
+      "roles": [
+        "component"
+      ],
+      "exports": [
+        "AnswerDesk",
+        "BoardView",
+        "FetchAtlas",
+        "FetchPresence",
+        "OpenSession"
+      ],
+      "usedBy": 2,
+      "signature": [
+        "view:activityBlock",
+        "view:appHeader",
+        "view:atlasLayer",
+        "view:atlasPackageCard",
+        "view:atlasView",
+        "view:brandLink",
+        "view:card",
+        "view:chip",
+        "view:deskRow",
+        "view:environmentLine",
+        "view:factoryFloor",
+        "view:factoryPulse",
+        "view:factoryView",
+        "view:repoSection",
+        "view:reportRow",
+        "view:routeNav",
+        "view:sessionRow",
+        "view:visionView",
+        "view:workstreamBrands",
+        "view:workstreamCard"
+      ]
+    },
+    {
+      "path": "src/presence.ts",
+      "name": "presence",
+      "tier": "local",
+      "owners": [],
+      "props": [],
+      "tags": [],
+      "kind": "module",
+      "roles": [
+        "module"
+      ],
+      "exports": [
+        "Activity",
+        "ActivityPass",
+        "Desk",
+        "Report",
+        "Session",
+        "SessionSource",
+        "SessionSourceView",
+        "Workstream",
+        "environmentsByWorkstream"
+      ],
+      "usedBy": 1,
+      "signature": []
+    },
+    {
+      "path": "src/vision.ts",
+      "name": "vision",
+      "tier": "local",
+      "owners": [],
+      "props": [],
+      "tags": [
+        "a",
+        "badge",
+        "button",
+        "cycleNode",
+        "div",
+        "focusNode",
+        "generationRow",
+        "h1",
+        "h2",
+        "h3",
+        "header",
+        "horizonItem",
+        "machine",
+        "mapMachine",
+        "p",
+        "room",
+        "sceneHeader",
+        "section",
+        "span",
+        "stageNode",
+        "strong",
+        "tailnetMap"
+      ],
+      "kind": "component",
+      "roles": [
+        "component"
+      ],
+      "exports": [
+        "visionView"
+      ],
+      "usedBy": 1,
+      "signature": [
+        "view:badge",
+        "view:cycleNode",
+        "view:focusNode",
+        "view:generationRow",
+        "view:horizonItem",
+        "view:machine",
+        "view:mapMachine",
+        "view:room",
+        "view:sceneHeader",
+        "view:stageNode",
+        "view:tailnetMap"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1623 @@
+{
+  "hash": "b4cc019618cb9d0714f73ea1f2e98a509c94921acb8a644a92555d072178c18b",
+  "lexicon": {
+    "name": "catalog",
+    "version": 1
+  },
+  "root": ".",
+  "tokens": {
+    "colors": [],
+    "type": [],
+    "shape": [],
+    "spacing": [
+      "font-size",
+      "margin"
+    ]
+  },
+  "tiers": {
+    "primitive": [],
+    "shared": [],
+    "local": []
+  },
+  "sharedRoots": [],
+  "localRoots": [],
+  "components": [
+    {
+      "id": "src--atlas",
+      "path": "src/atlas.ts",
+      "name": "atlas",
+      "tier": "local",
+      "owners": [],
+      "props": [],
+      "tags": [],
+      "signature": [],
+      "documented": false,
+      "kind": "module",
+      "roles": [
+        "module"
+      ],
+      "usedBy": 1,
+      "declarations": [
+        {
+          "name": "AtlasPackage",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "Array",
+            "NullOr",
+            "Struct",
+            "optional"
+          ],
+          "tags": []
+        },
+        {
+          "name": "AtlasPackage",
+          "kind": "type",
+          "exported": true,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
+          "name": "AtlasEdge",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "Struct"
+          ],
+          "tags": []
+        },
+        {
+          "name": "AtlasEdge",
+          "kind": "type",
+          "exported": true,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
+          "name": "Atlas",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "Array",
+            "Struct",
+            "optional"
+          ],
+          "tags": []
+        },
+        {
+          "name": "Atlas",
+          "kind": "type",
+          "exported": true,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        }
+      ]
+    },
+    {
+      "id": "src--entry",
+      "path": "src/entry.ts",
+      "name": "entry",
+      "tier": "local",
+      "owners": [],
+      "props": [],
+      "tags": [],
+      "signature": [],
+      "documented": false,
+      "kind": "route",
+      "roles": [
+        "route"
+      ],
+      "declarations": [
+        {
+          "name": "Main",
+          "kind": "variable",
+          "exported": false,
+          "renders": false,
+          "calls": [
+            "getElementById",
+            "mount"
+          ],
+          "tags": []
+        }
+      ]
+    },
+    {
+      "id": "src--main",
+      "path": "src/main.ts",
+      "name": "BoardView",
+      "tier": "local",
+      "owners": [],
+      "props": [
+        "address",
+        "choice",
+        "item",
+        "model",
+        "source"
+      ],
+      "tags": [
+        "a",
+        "activityBlock",
+        "appHeader",
+        "article",
+        "atlasLayer",
+        "atlasPackageCard",
+        "atlasView",
+        "brandLink",
+        "button",
+        "card",
+        "chip",
+        "deskRow",
+        "details",
+        "div",
+        "environmentLine",
+        "factoryFloor",
+        "factoryPulse",
+        "factoryView",
+        "h1",
+        "h2",
+        "h3",
+        "header",
+        "p",
+        "repoSection",
+        "reportRow",
+        "routeNav",
+        "section",
+        "sessionRow",
+        "span",
+        "strong",
+        "summary",
+        "visionView",
+        "workstreamBrands",
+        "workstreamCard"
+      ],
+      "signature": [
+        "view:activityBlock",
+        "view:appHeader",
+        "view:atlasLayer",
+        "view:atlasPackageCard",
+        "view:atlasView",
+        "view:brandLink",
+        "view:card",
+        "view:chip",
+        "view:deskRow",
+        "view:environmentLine",
+        "view:factoryFloor",
+        "view:factoryPulse",
+        "view:factoryView",
+        "view:repoSection",
+        "view:reportRow",
+        "view:routeNav",
+        "view:sessionRow",
+        "view:visionView",
+        "view:workstreamBrands",
+        "view:workstreamCard"
+      ],
+      "documented": true,
+      "kind": "component",
+      "roles": [
+        "component"
+      ],
+      "exports": [
+        "AnswerDesk",
+        "BoardView",
+        "FetchAtlas",
+        "FetchPresence",
+        "OpenSession"
+      ],
+      "usedBy": 2,
+      "declarations": [
+        {
+          "name": "Route",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "Literals"
+          ],
+          "tags": []
+        },
+        {
+          "name": "Route",
+          "kind": "type",
+          "exported": true,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
+          "name": "Model",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "Literals",
+            "NullOr",
+            "Struct",
+            "optional"
+          ],
+          "tags": []
+        },
+        {
+          "name": "Model",
+          "kind": "type",
+          "exported": true,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
+          "name": "Message",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "Literals",
+            "NullOr",
+            "TaggedEnum"
+          ],
+          "tags": []
+        },
+        {
+          "name": "Message",
+          "kind": "type",
+          "exported": true,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
+          "name": "Content",
+          "kind": "type",
+          "exported": false,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
+          "name": "fetchJson",
+          "kind": "function",
+          "exported": false,
+          "renders": false,
+          "calls": [
+            "String",
+            "fetch",
+            "json",
+            "reject",
+            "tryPromise"
+          ],
+          "tags": []
+        },
+        {
+          "name": "FetchPresence",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "Settled",
+            "fetchJson",
+            "make",
+            "match",
+            "pipe"
+          ],
+          "tags": []
+        },
+        {
+          "name": "FetchAtlas",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "AtlasSettled",
+            "fetchJson",
+            "make",
+            "match",
+            "pipe"
+          ],
+          "tags": []
+        },
+        {
+          "name": "AnswerDesk",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "Answered",
+            "String",
+            "fetch",
+            "make",
+            "match",
+            "pipe",
+            "reject",
+            "stringify",
+            "text",
+            "tryPromise"
+          ],
+          "tags": []
+        },
+        {
+          "name": "OpenSession",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "Opened",
+            "String",
+            "fetch",
+            "make",
+            "match",
+            "pipe",
+            "reject",
+            "stringify",
+            "text",
+            "tryPromise"
+          ],
+          "tags": []
+        },
+        {
+          "name": "presenceTicks",
+          "kind": "variable",
+          "exported": false,
+          "renders": false,
+          "calls": [
+            "Ticked",
+            "as",
+            "make",
+            "pipe",
+            "tick"
+          ],
+          "tags": []
+        },
+        {
+          "name": "routeOf",
+          "kind": "function",
+          "exported": false,
+          "renders": false,
+          "calls": [
+            "startsWith"
+          ],
+          "tags": []
+        },
+        {
+          "name": "fetchFor",
+          "kind": "function",
+          "exported": false,
+          "renders": false,
+          "calls": [
+            "make"
+          ],
+          "tags": []
+        },
+        {
+          "name": "titleOf",
+          "kind": "function",
+          "exported": false,
+          "renders": false,
+          "calls": [
+            "pipe",
+            "value",
+            "when"
+          ],
+          "tags": []
+        },
+        {
+          "name": "BoardView",
+          "kind": "variable",
+          "exported": true,
+          "renders": true,
+          "calls": [
+            "String",
+            "atlasView",
+            "component",
+            "decodeUnknownResult",
+            "evolve",
+            "factoryView",
+            "fetchFor",
+            "isSuccess",
+            "make",
+            "pipe",
+            "routeOf",
+            "run",
+            "set",
+            "title",
+            "titleOf",
+            "value",
+            "visionView",
+            "when"
+          ],
+          "tags": [
+            "atlasView",
+            "factoryView",
+            "visionView"
+          ]
+        },
+        {
+          "name": "phaseOrder",
+          "kind": "variable",
+          "exported": false,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
+          "name": "phaseName",
+          "kind": "variable",
+          "exported": false,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
+          "name": "phaseLabel",
+          "kind": "function",
+          "exported": false,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
+          "name": "repoName",
+          "kind": "function",
+          "exported": false,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
+          "name": "sessionRow",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "ClickedOpen",
+            "children",
+            "class",
+            "on"
+          ],
+          "tags": [
+            "button",
+            "div",
+            "span"
+          ]
+        },
+        {
+          "name": "stateName",
+          "kind": "function",
+          "exported": false,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
+          "name": "formatDuration",
+          "kind": "function",
+          "exported": false,
+          "renders": false,
+          "calls": [
+            "floor"
+          ],
+          "tags": []
+        },
+        {
+          "name": "firstClause",
+          "kind": "function",
+          "exported": false,
+          "renders": false,
+          "calls": [
+            "slice",
+            "split"
+          ],
+          "tags": []
+        },
+        {
+          "name": "queueTitle",
+          "kind": "function",
+          "exported": false,
+          "renders": false,
+          "calls": [
+            "firstClause",
+            "includes",
+            "join",
+            "split",
+            "toLowerCase"
+          ],
+          "tags": []
+        },
+        {
+          "name": "activityBlock",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "children",
+            "class",
+            "formatDuration",
+            "map",
+            "queueTitle"
+          ],
+          "tags": [
+            "details",
+            "div",
+            "p",
+            "span",
+            "summary"
+          ]
+        },
+        {
+          "name": "environmentLine",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "attr",
+            "children",
+            "class",
+            "join",
+            "map"
+          ],
+          "tags": [
+            "a",
+            "div",
+            "span"
+          ]
+        },
+        {
+          "name": "githubRepoUrl",
+          "kind": "function",
+          "exported": false,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
+          "name": "githubPrUrl",
+          "kind": "function",
+          "exported": false,
+          "renders": false,
+          "calls": [
+            "String"
+          ],
+          "tags": []
+        },
+        {
+          "name": "githubLabelUrl",
+          "kind": "function",
+          "exported": false,
+          "renders": false,
+          "calls": [
+            "encodeURIComponent"
+          ],
+          "tags": []
+        },
+        {
+          "name": "brandLink",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "attr",
+            "children",
+            "class"
+          ],
+          "tags": [
+            "a"
+          ]
+        },
+        {
+          "name": "workstreamBrands",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "brandLink",
+            "children",
+            "class",
+            "githubLabelUrl",
+            "githubPrUrl",
+            "githubRepoUrl"
+          ],
+          "tags": [
+            "brandLink",
+            "div"
+          ]
+        },
+        {
+          "name": "workstreamCard",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "activityBlock",
+            "attr",
+            "children",
+            "class",
+            "environmentLine",
+            "map",
+            "sessionRow",
+            "slice",
+            "stateName",
+            "workstreamBrands"
+          ],
+          "tags": [
+            "a",
+            "activityBlock",
+            "article",
+            "div",
+            "environmentLine",
+            "h3",
+            "sessionRow",
+            "span",
+            "workstreamBrands"
+          ]
+        },
+        {
+          "name": "repoSection",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "String",
+            "children",
+            "class",
+            "filter",
+            "find",
+            "flatMap",
+            "map",
+            "phaseLabel",
+            "workstreamCard"
+          ],
+          "tags": [
+            "div",
+            "h2",
+            "h3",
+            "section",
+            "span",
+            "workstreamCard"
+          ]
+        },
+        {
+          "name": "card",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "attr",
+            "children",
+            "class"
+          ],
+          "tags": [
+            "div",
+            "h2"
+          ]
+        },
+        {
+          "name": "deskRow",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "ClickedAnswer",
+            "attr",
+            "children",
+            "class",
+            "map",
+            "on"
+          ],
+          "tags": [
+            "a",
+            "button",
+            "div",
+            "p",
+            "span"
+          ]
+        },
+        {
+          "name": "reportRow",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "attr",
+            "children",
+            "class"
+          ],
+          "tags": [
+            "a",
+            "div",
+            "p",
+            "span"
+          ]
+        },
+        {
+          "name": "routeNav",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "attr",
+            "children",
+            "class"
+          ],
+          "tags": [
+            "a",
+            "div"
+          ]
+        },
+        {
+          "name": "appHeader",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "ClickedRefresh",
+            "children",
+            "class",
+            "on",
+            "routeNav"
+          ],
+          "tags": [
+            "button",
+            "div",
+            "h1",
+            "header",
+            "routeNav",
+            "span"
+          ]
+        },
+        {
+          "name": "onlineStatus",
+          "kind": "function",
+          "exported": false,
+          "renders": false,
+          "calls": [
+            "orElse",
+            "pipe",
+            "value",
+            "when"
+          ],
+          "tags": []
+        },
+        {
+          "name": "factoryFloor",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "at",
+            "attr",
+            "children",
+            "class",
+            "entries",
+            "filter",
+            "find",
+            "get",
+            "join",
+            "localeCompare",
+            "map",
+            "onlineStatus",
+            "push",
+            "set",
+            "sort",
+            "split",
+            "values"
+          ],
+          "tags": [
+            "a",
+            "div",
+            "h2",
+            "h3",
+            "section",
+            "span"
+          ]
+        },
+        {
+          "name": "factoryPulse",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "String",
+            "children",
+            "class",
+            "count",
+            "filter",
+            "map"
+          ],
+          "tags": [
+            "div",
+            "span"
+          ]
+        },
+        {
+          "name": "factoryView",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "appHeader",
+            "card",
+            "children",
+            "class",
+            "deskRow",
+            "environmentsByWorkstream",
+            "factoryFloor",
+            "factoryPulse",
+            "filter",
+            "from",
+            "map",
+            "reduce",
+            "repoName",
+            "repoSection",
+            "reportRow"
+          ],
+          "tags": [
+            "appHeader",
+            "card",
+            "deskRow",
+            "details",
+            "div",
+            "factoryFloor",
+            "factoryPulse",
+            "p",
+            "repoSection",
+            "reportRow",
+            "span",
+            "strong",
+            "summary"
+          ]
+        },
+        {
+          "name": "AtlasLayer",
+          "kind": "type",
+          "exported": false,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
+          "name": "ATLAS_LAYERS",
+          "kind": "variable",
+          "exported": false,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
+          "name": "shortName",
+          "kind": "function",
+          "exported": false,
+          "renders": false,
+          "calls": [
+            "replace"
+          ],
+          "tags": []
+        },
+        {
+          "name": "githubUrl",
+          "kind": "function",
+          "exported": false,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
+          "name": "chip",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "children",
+            "class"
+          ],
+          "tags": [
+            "span"
+          ]
+        },
+        {
+          "name": "atlasPackageCard",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "attr",
+            "children",
+            "chip",
+            "class",
+            "filter",
+            "githubUrl",
+            "map",
+            "shortName",
+            "slice",
+            "trim"
+          ],
+          "tags": [
+            "a",
+            "chip",
+            "div",
+            "h3",
+            "p",
+            "span"
+          ]
+        },
+        {
+          "name": "atlasLayer",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "String",
+            "atlasPackageCard",
+            "attr",
+            "children",
+            "class",
+            "map"
+          ],
+          "tags": [
+            "atlasPackageCard",
+            "div",
+            "h2",
+            "p",
+            "section",
+            "span"
+          ]
+        },
+        {
+          "name": "atlasView",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "appHeader",
+            "atlasLayer",
+            "card",
+            "children",
+            "class",
+            "filter",
+            "flatMap",
+            "has",
+            "includes",
+            "map"
+          ],
+          "tags": [
+            "appHeader",
+            "atlasLayer",
+            "card",
+            "div",
+            "p"
+          ]
+        }
+      ],
+      "renders": [
+        {
+          "part": "src/vision.ts",
+          "tag": "visionView",
+          "line": 256,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "src--presence",
+      "path": "src/presence.ts",
+      "name": "presence",
+      "tier": "local",
+      "owners": [],
+      "props": [],
+      "tags": [],
+      "signature": [],
+      "documented": true,
+      "kind": "module",
+      "roles": [
+        "module"
+      ],
+      "exports": [
+        "Activity",
+        "ActivityPass",
+        "Desk",
+        "Report",
+        "Session",
+        "SessionSource",
+        "SessionSourceView",
+        "Workstream",
+        "environmentsByWorkstream"
+      ],
+      "usedBy": 1,
+      "declarations": [
+        {
+          "name": "Workstream",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "Struct",
+            "optional"
+          ],
+          "tags": []
+        },
+        {
+          "name": "Desk",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "Array",
+            "Struct"
+          ],
+          "tags": []
+        },
+        {
+          "name": "Report",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "Struct"
+          ],
+          "tags": []
+        },
+        {
+          "name": "ActivityPass",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "Array",
+            "Struct",
+            "optional"
+          ],
+          "tags": []
+        },
+        {
+          "name": "Activity",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "Array",
+            "Literals",
+            "NullOr",
+            "Struct",
+            "optional"
+          ],
+          "tags": []
+        },
+        {
+          "name": "SessionSource",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "Literal",
+            "Union"
+          ],
+          "tags": []
+        },
+        {
+          "name": "Session",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "Struct",
+            "optional"
+          ],
+          "tags": []
+        },
+        {
+          "name": "SessionSourceView",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "Array",
+            "Struct"
+          ],
+          "tags": []
+        },
+        {
+          "name": "EnvironmentMachine",
+          "kind": "variable",
+          "exported": false,
+          "renders": false,
+          "calls": [
+            "Struct",
+            "optional"
+          ],
+          "tags": []
+        },
+        {
+          "name": "EnvironmentRuntime",
+          "kind": "variable",
+          "exported": false,
+          "renders": false,
+          "calls": [
+            "Struct"
+          ],
+          "tags": []
+        },
+        {
+          "name": "EnvironmentPort",
+          "kind": "variable",
+          "exported": false,
+          "renders": false,
+          "calls": [
+            "Struct"
+          ],
+          "tags": []
+        },
+        {
+          "name": "EnvironmentService",
+          "kind": "variable",
+          "exported": false,
+          "renders": false,
+          "calls": [
+            "NullOr",
+            "Struct",
+            "optional"
+          ],
+          "tags": []
+        },
+        {
+          "name": "EnvironmentAgent",
+          "kind": "variable",
+          "exported": false,
+          "renders": false,
+          "calls": [
+            "Struct"
+          ],
+          "tags": []
+        },
+        {
+          "name": "Environment",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "Array",
+            "NullOr",
+            "Struct",
+            "optional"
+          ],
+          "tags": []
+        },
+        {
+          "name": "Environment",
+          "kind": "type",
+          "exported": true,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
+          "name": "TailnetPeer",
+          "kind": "variable",
+          "exported": false,
+          "renders": false,
+          "calls": [
+            "Struct",
+            "optional"
+          ],
+          "tags": []
+        },
+        {
+          "name": "Tailnet",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "Array",
+            "Struct",
+            "optional"
+          ],
+          "tags": []
+        },
+        {
+          "name": "Tailnet",
+          "kind": "type",
+          "exported": true,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
+          "name": "Presence",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "Array",
+            "Struct",
+            "optional"
+          ],
+          "tags": []
+        },
+        {
+          "name": "Presence",
+          "kind": "type",
+          "exported": false,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
+          "name": "environmentsByWorkstream",
+          "kind": "function",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "fromEntries",
+            "map"
+          ],
+          "tags": []
+        }
+      ]
+    },
+    {
+      "id": "src--vision",
+      "path": "src/vision.ts",
+      "name": "vision",
+      "tier": "local",
+      "owners": [],
+      "props": [],
+      "tags": [
+        "a",
+        "badge",
+        "button",
+        "cycleNode",
+        "div",
+        "focusNode",
+        "generationRow",
+        "h1",
+        "h2",
+        "h3",
+        "header",
+        "horizonItem",
+        "machine",
+        "mapMachine",
+        "p",
+        "room",
+        "sceneHeader",
+        "section",
+        "span",
+        "stageNode",
+        "strong",
+        "tailnetMap"
+      ],
+      "signature": [
+        "view:badge",
+        "view:cycleNode",
+        "view:focusNode",
+        "view:generationRow",
+        "view:horizonItem",
+        "view:machine",
+        "view:mapMachine",
+        "view:room",
+        "view:sceneHeader",
+        "view:stageNode",
+        "view:tailnetMap"
+      ],
+      "documented": true,
+      "kind": "component",
+      "roles": [
+        "component"
+      ],
+      "exports": [
+        "visionView"
+      ],
+      "usedBy": 1,
+      "declarations": [
+        {
+          "name": "Content",
+          "kind": "type",
+          "exported": false,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
+          "name": "Tone",
+          "kind": "type",
+          "exported": false,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
+          "name": "Focus",
+          "kind": "type",
+          "exported": false,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
+          "name": "Stage",
+          "kind": "type",
+          "exported": false,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
+          "name": "STAGES",
+          "kind": "variable",
+          "exported": false,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
+          "name": "stageClass",
+          "kind": "function",
+          "exported": false,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
+          "name": "stageNode",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "String",
+            "VisionStep",
+            "children",
+            "class",
+            "on",
+            "padStart",
+            "stageClass"
+          ],
+          "tags": [
+            "button",
+            "span"
+          ]
+        },
+        {
+          "name": "badge",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "children",
+            "class",
+            "pipe",
+            "value",
+            "when"
+          ],
+          "tags": [
+            "span"
+          ]
+        },
+        {
+          "name": "TailnetMachine",
+          "kind": "type",
+          "exported": false,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
+          "name": "TAILNET_MACHINES",
+          "kind": "variable",
+          "exported": false,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
+          "name": "mapMachine",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "VisionMachine",
+            "children",
+            "class",
+            "map",
+            "on"
+          ],
+          "tags": [
+            "button",
+            "div",
+            "span"
+          ]
+        },
+        {
+          "name": "tailnetMap",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "children",
+            "class",
+            "filter",
+            "find",
+            "map",
+            "mapMachine"
+          ],
+          "tags": [
+            "div",
+            "h3",
+            "mapMachine",
+            "p",
+            "span"
+          ]
+        },
+        {
+          "name": "sceneHeader",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "children",
+            "class"
+          ],
+          "tags": [
+            "div",
+            "h2",
+            "p"
+          ]
+        },
+        {
+          "name": "focusNode",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "VisionFocus",
+            "children",
+            "class",
+            "on"
+          ],
+          "tags": [
+            "button",
+            "span"
+          ]
+        },
+        {
+          "name": "machine",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "children",
+            "class"
+          ],
+          "tags": [
+            "div",
+            "span"
+          ]
+        },
+        {
+          "name": "room",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "children",
+            "class"
+          ],
+          "tags": [
+            "div",
+            "span"
+          ]
+        },
+        {
+          "name": "cycleNode",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "children",
+            "class"
+          ],
+          "tags": [
+            "div",
+            "span"
+          ]
+        },
+        {
+          "name": "horizonItem",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "badge",
+            "children",
+            "class"
+          ],
+          "tags": [
+            "badge",
+            "div",
+            "span"
+          ]
+        },
+        {
+          "name": "generationRow",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "children",
+            "class"
+          ],
+          "tags": [
+            "div",
+            "span"
+          ]
+        },
+        {
+          "name": "visionView",
+          "kind": "function",
+          "exported": true,
+          "renders": true,
+          "calls": [
+            "String",
+            "VisionNext",
+            "VisionReset",
+            "VisionStep",
+            "attr",
+            "children",
+            "class",
+            "cycleNode",
+            "focusNode",
+            "generationRow",
+            "horizonItem",
+            "machine",
+            "map",
+            "max",
+            "min",
+            "on",
+            "padStart",
+            "room",
+            "sceneHeader",
+            "stageNode",
+            "tailnetMap"
+          ],
+          "tags": [
+            "a",
+            "button",
+            "cycleNode",
+            "div",
+            "focusNode",
+            "generationRow",
+            "h1",
+            "h3",
+            "header",
+            "horizonItem",
+            "machine",
+            "p",
+            "room",
+            "sceneHeader",
+            "section",
+            "span",
+            "stageNode",
+            "strong",
+            "tailnetMap"
+          ]
+        }
+      ]
+    }
+  ],
+  "features": [],
+  "health": {
+    "parts": 5,
+    "sharedReach": 0,
+    "localOnly": 2,
+    "duplicateClusters": 0
+  },
+  "clusters": [],
+  "orphans": [
+    "src/atlas.ts",
+    "src/main.ts",
+    "src/presence.ts",
+    "src/vision.ts"
+  ],
+  "duplicates": []
+}

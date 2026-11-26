@@ -40,6 +40,15 @@ and a phase is a lane, not a widget with its own state.
 The view never imports `board` or `factory`. The JSON is the seam; the local
 schema is the wire contract.
 
+## The cutlist catalog
+
+`cutlist.config.json` points cutlist at `src/`, and `pnpm cutlist build --cwd packages/board/view`
+regenerates `cutlist/` — the catalog, menu, manifest, and vocabularies. The catalog is the answer
+to "what is this view made of" for an Effect UI tree: `BoardView` is named by its definition
+rather than by `main.ts`, its signature is the helper views and child components it composes,
+and the host elements (`h.div`, `h.button`) are deliberately not facts. The generated tree is in
+`oxfmt`'s `ignorePatterns`: the generator owns its bytes.
+
 ## Install
 
 `@effect/ui` is experimental and is not on npm. The workspace catalog pins it to
