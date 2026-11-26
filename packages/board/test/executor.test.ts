@@ -30,6 +30,7 @@ const manifest = async (repo: string) => {
     join(repo, ".factory", "credentials.json"),
     JSON.stringify({
       version: 1,
+      mode: "enforce",
       credentials: [
         {
           id: "github",
@@ -97,6 +98,7 @@ test("a repo manifest is the grant list, and a missing account refuses the pass"
     })
     const prepared = await prepareWorkstreamCredentials({ home, repo, workstream: "work" })
     expect(prepared.managed).toBe(true)
+    expect(prepared.mode).toBe("enforce")
     const resolved = await resolveCredentialEnv({ home, workstream: "work" })
     expect(resolved.env).toEqual({ GH_TOKEN: "ghp_secret", OPENCODE_API_KEY: "oc_secret" })
     expect(resolved.credentials.map((credential) => credential.id)).toEqual(["github", "opencode"])
@@ -153,6 +155,29 @@ test("a repository with no manifest is legacy, not an empty grant list", async (
     expect(manifest.credentials).toEqual([])
     const prepared = await prepareWorkstreamCredentials({ home, repo, workstream: "work" })
     expect(prepared.managed).toBe(false)
+  } finally {
+    await rm(home, { recursive: true, force: true })
+    await rm(repo, { recursive: true, force: true })
+  }
+})
+
+test("a manifest without mode is advisory and does not refuse the pass", async () => {
+  const { home, repo } = await scratch()
+  try {
+    await mkdir(join(repo, ".factory"), { recursive: true })
+    await writeFile(
+      join(repo, ".factory", "credentials.json"),
+      JSON.stringify({
+        version: 1,
+        credentials: [
+          { id: "github", kind: "github", env: ["GH_TOKEN"], reason: "read pull requests" },
+        ],
+      }),
+    )
+    const prepared = await prepareWorkstreamCredentials({ home, repo, workstream: "work" })
+    expect(prepared.mode).toBe("advisory")
+    expect(prepared.managed).toBe(false)
+    expect(prepared.checks[0]?.present).toBe(false)
   } finally {
     await rm(home, { recursive: true, force: true })
     await rm(repo, { recursive: true, force: true })

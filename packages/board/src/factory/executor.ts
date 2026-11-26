@@ -51,8 +51,13 @@ export const CredentialRequirement = Schema.Struct({
 })
 export type CredentialRequirement = typeof CredentialRequirement.Type
 
+export const CredentialMode = Schema.Literals(["advisory", "enforce"])
+export type CredentialMode = typeof CredentialMode.Type
+
 export const RepositoryCredentials = Schema.Struct({
   version: Schema.Literal(1),
+  /** Advisory is the default so adding a card cannot break an existing workflow. */
+  mode: Schema.optional(CredentialMode),
   credentials: Schema.Array(CredentialRequirement),
 })
 export type RepositoryCredentials = typeof RepositoryCredentials.Type
@@ -383,11 +388,20 @@ export const prepareWorkstreamCredentials = async (input: {
   readonly home?: string | undefined
   readonly repo: string
   readonly workstream: string
-}): Promise<{ readonly managed: boolean; readonly checks: ReadonlyArray<CredentialCheck> }> => {
+}): Promise<{
+  readonly managed: boolean
+  readonly mode: CredentialMode | null
+  readonly checks: ReadonlyArray<CredentialCheck>
+}> => {
+  const manifest = await readRepositoryCredentials(input.repo)
   const checks = await checkRepositoryCredentials(input)
-  if (checks.length === 0) return { managed: false, checks }
+  if (checks.length === 0) return { managed: false, mode: null, checks }
+  const mode = manifest.mode ?? "advisory"
   const missing = checks.filter((check) => check.required && !check.present)
-  if (missing.length > 0)
+  // Advisory is the onboarding state: the card is visible, grants are recorded, and the
+  // existing host environment still runs. Enforce is the explicit flip after the accounts
+  // are configured, and only then can a missing account refuse a pass.
+  if (mode === "enforce" && missing.length > 0)
     throw new ExecutorError(
       "CredentialMissing",
       "repo " +
@@ -401,7 +415,7 @@ export const prepareWorkstreamCredentials = async (input: {
     workstream: input.workstream,
     credentials: checks.filter((check) => check.present).map((check) => check.id),
   })
-  return { managed: true, checks }
+  return { managed: mode === "enforce", mode, checks }
 }
 
 const SECRET_ENV =

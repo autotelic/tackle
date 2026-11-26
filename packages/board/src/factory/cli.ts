@@ -1004,17 +1004,25 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
         repo: record.path,
         workstream: record.id,
       })
-      if (!prepared.managed)
+      if (prepared.mode === null)
+        console.log("no repository credential manifest; " + record.id + " keeps the host env")
+      else if (!prepared.managed)
         console.log(
-          "no repository credential manifest; " + record.id + " keeps the legacy host env",
-        )
-      else
-        console.log(
-          "prepared " +
+          "advisory " +
             record.id +
             "; " +
             prepared.checks.filter((check) => check.present).length +
-            " credential(s) granted",
+            "/" +
+            prepared.checks.length +
+            " account(s) ready; host env unchanged until mode is enforce",
+        )
+      else
+        console.log(
+          "enforced " +
+            record.id +
+            "; " +
+            prepared.checks.filter((check) => check.present).length +
+            " credential(s) granted; host env is filtered",
         )
       return
     }

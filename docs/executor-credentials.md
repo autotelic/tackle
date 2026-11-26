@@ -12,6 +12,7 @@ A repository commits `.factory/credentials.json`:
 ```json
 {
   "version": 1,
+  "mode": "advisory",
   "credentials": [
     {
       "id": "github",
@@ -42,9 +43,17 @@ A repository commits `.factory/credentials.json`:
 ```
 
 `env` names the variables the tool reads. `reason` is what a person sees when the account is
-missing. `kind` is a hint for the setup card, not an authority decision. A repository with no
-manifest keeps the old host-environment mode; once it has one, the manifest is the only grant
-list.
+missing. `kind` is a hint for the setup card, not an authority decision.
+
+`mode` is the rollout switch:
+
+- `advisory` (the default when omitted) publishes the card, records grants, and leaves the
+  existing host environment unchanged. Missing accounts do not fail a pass.
+- `enforce` makes the manifest the only grant list: missing required accounts refuse the pass
+  before it starts, and unmanaged host secrets are filtered from the worker.
+
+Start every repository in advisory, configure its accounts, then flip to enforce as its own
+commit. A repository with no manifest keeps the host-environment mode.
 
 ## Store the accounts once
 
@@ -73,8 +82,9 @@ is still listed, but does not block the pass.
 ## Grants and leases
 
 `factory executor prepare --id <workstream>` reads the repository manifest from the workstream
-path and replaces that workstream's grants with exactly the declared accounts. A missing
-required account refuses the pass before it is charged and before a worker starts.
+path and replaces that workstream's grants with exactly the declared accounts. In `enforce`, a
+missing required account refuses the pass before it is charged and before a worker starts; in
+`advisory` it only reports the gap.
 
 ```sh
 factory grant list --workstream <id>
