@@ -2,9 +2,12 @@ import { Effect } from "effect"
 import { policy } from "../policy.ts"
 import { rankSpeculative, similarClusters, similarPairs, strengthOf } from "../candidates.ts"
 import { type Cluster } from "../cluster.ts"
-import { budgetNote, outcome, type PlannedRule, type Scope } from "../rule.ts"
-import { collapseQuestionnaire, planClusters, readClusters, type ClusterRule } from "./cluster-verdict.ts"
-import { layersFrom } from "../architecture.ts"
+import { type PlannedRule, type Scope } from "../rule.ts"
+import {
+  collapseQuestionnaire,
+  planBudgetedClusters,
+  type ClusterRule,
+} from "./cluster-verdict.ts"
 import type { Workspace } from "../workspace.ts"
 import { nameList } from "../cluster.ts"
 
@@ -99,59 +102,42 @@ export const duplicateMeaning: PlannedRule = {
         },
       })),
     })
-    const phase = yield* planClusters(spec, ordered.slice(0, budget), scope, workspace)
-    const layers = layersFrom(context.config)
-    const largest = ordered
-      .slice(budget)
-      .sort((a, b) => b.members.length - a.members.length)
-      .slice(0, 3)
-      .map((cluster) => `${cluster.members.length}× ${spec.nameOf(cluster)}`)
-
-    // Reported as drops rather than dropped silently: "476 declarations across 9
-    // clusters were generated from one template" is a fact about the codebase,
-    // and the only thing wrong with it was asking the model to confirm it.
-    const tooManyToShow = oversized.map((cluster) => ({
-      ruleId: spec.ruleId,
-      subject: spec.nameOf(cluster),
-      stage: "no_evidence" as const,
-      reason:
-        cluster.members.length +
-        " declarations share a shape, which is more than the " +
-        policy.evidence.maxMembers +
-        " the evidence panel can show at once",
-    }))
-
-    const notes = [
-      ...budgetNote({
-        unitKind: "clusters",
-        judged: budget,
-        candidates: clusters.length,
-        sample: largest,
-      }),
-      ...(oversized.length === 0
-        ? []
-        : [
-            oversized.length +
-              " cluster(s) were too large to be one decision (" +
-              oversized.reduce((sum, cluster) => sum + cluster.members.length, 0) +
-              " declarations): generated from one template rather than duplicated",
-          ]),
-      // What the clique requirement left out, because a silent narrowing is the
-      // thing this program keeps having to design against. These are members
-      // that resembled their neighbours without resembling each other.
-      ...(chained === 0
-        ? []
-        : [
-            chained +
-              " declaration(s) were left out of a cluster: they resembled a neighbour without resembling every member, so grouping them would have made a chain rather than a family",
-          ]),
-    ]
-    return {
-      plans: phase.planned.map((entry) => entry.plan),
-      read: (answers) => {
-        const judged = readClusters(spec, workspace, phase, layers, answers)
-        return outcome(judged.diagnostics, notes, [...tooManyToShow, ...judged.drops])
-      },
-    }
+    return yield* planBudgetedClusters({
+      rule: spec,
+      clusters: ordered,
+      budget,
+      scope,
+      workspace,
+      context,
+      drops: oversized.map((cluster) => ({
+        ruleId: spec.ruleId,
+        subject: spec.nameOf(cluster),
+        stage: "no_evidence" as const,
+        reason:
+          cluster.members.length +
+          " declarations share a shape, which is more than the " +
+          policy.evidence.maxMembers +
+          " the evidence panel can show at once",
+      })),
+      notes: [
+        ...(oversized.length === 0
+          ? []
+          : [
+              oversized.length +
+                " cluster(s) were too large to be one decision (" +
+                oversized.reduce((sum, cluster) => sum + cluster.members.length, 0) +
+                " declarations): generated from one template rather than duplicated",
+            ]),
+        // What the clique requirement left out, because a silent narrowing is the
+        // thing this program keeps having to design against. These are members
+        // that resembled their neighbours without resembling each other.
+        ...(chained === 0
+          ? []
+          : [
+              chained +
+                " declaration(s) were left out of a cluster: they resembled a neighbour without resembling every member, so grouping them would have made a chain rather than a family",
+            ]),
+      ],
+    })
   }),
 }

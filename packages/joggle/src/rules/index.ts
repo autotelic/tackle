@@ -22,6 +22,7 @@ import { reimplementedPrimitive } from "./reimplemented-primitive.ts"
 import { oneConceptOneType } from "./one-concept-one-type.ts"
 import { reversal } from "./reversal.ts"
 import { structuralCollapse } from "./structural-collapse.ts"
+import { restatedValue } from "./restated-value.ts"
 import { nullabilityDrift } from "./nullability-drift.ts"
 import { dataErrorAsOutage } from "./data-error-as-outage.ts"
 import { typesOverLogic } from "./types-over-logic.ts"
@@ -79,6 +80,7 @@ export const allRules: ReadonlyArray<Rule | PlannedRule> = [
   reimplementedPrimitive,
   oneConceptOneType,
   structuralCollapse,
+  restatedValue,
   reversal,
   nullabilityDrift,
   dataErrorAsOutage,
