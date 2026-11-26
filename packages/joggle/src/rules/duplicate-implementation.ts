@@ -6,6 +6,7 @@ import { budgetNote, outcome, type PlannedRule, type Scope } from "../rule.ts"
 import {
   clusterReporter,
   collapseQuestionnaire,
+  largestClusters,
   planClusters,
   readClusters,
   unverifiedFinding,
@@ -44,13 +45,6 @@ const find = (workspace: Workspace, scope: Scope): ReadonlyArray<Cluster> =>
     scope,
   }).map((group) => clusterOf(group.members, true, 1))
 
-/** Largest clusters first when a budget bites, so the note names what matters. */
-const largestOf = (clusters: ReadonlyArray<Cluster>): ReadonlyArray<string> =>
-  [...clusters]
-    .sort((a, b) => b.members.length - a.members.length)
-    .slice(0, 3)
-    .map((cluster) => `${cluster.members.length}× ${spec.nameOf(cluster)}`)
-
 export const duplicateImplementation: PlannedRule = {
   id: spec.ruleId,
   severity: spec.severity,
@@ -82,7 +76,7 @@ export const duplicateImplementation: PlannedRule = {
         unitKind: "clusters",
         judged: budget,
         candidates: clusters.length,
-        sample: largestOf(clusters.slice(budget)),
+        sample: largestClusters(clusters.slice(budget), spec.nameOf),
       }),
       // Visibility for the missing type signal. In a `.js` codebase every
       // cluster is shape-only, and a reader who cannot see that will read the

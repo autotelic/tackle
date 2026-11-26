@@ -154,6 +154,23 @@ export const describedMembers = (cluster: Cluster, scope: Scope): ReadonlyArray<
 }
 
 /**
+ * The largest clusters, named, for a budget note.
+ *
+ * Every clustered rule that hits its budget needs the same sentence fragment, and
+ * three rules had each written it: duplicate-implementation and restated-value as
+ * an identical helper, duplicate-meaning inline. The wording is a rule's, so the
+ * caller supplies `nameOf`; the ordering is the budget's, so it lives here.
+ */
+export const largestClusters = (
+  clusters: ReadonlyArray<Cluster>,
+  nameOf: (cluster: Cluster) => string,
+): ReadonlyArray<string> =>
+  [...clusters]
+    .sort((left, right) => right.members.length - left.members.length)
+    .slice(0, 3)
+    .map((cluster) => `${cluster.members.length}× ${nameOf(cluster)}`)
+
+/**
  * One declaration as the model sees it.
  *
  * The resolved type is added only when the run asked for a trace, and that is
