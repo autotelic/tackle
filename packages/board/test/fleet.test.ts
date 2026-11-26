@@ -18,6 +18,18 @@ const remotePresence = {
   network: { tailscale: { self: { dnsName: "remote.tail.ts.net." } } },
   observedAt: "2026-11-21T00:00:01.000Z",
   rooms: [{ id: "remote-room", state: "Paused", process: null }],
+  factory: {
+    environments: [
+      {
+        workstream: "remote-ws",
+        machine: { host: "remote" },
+        runtime: { kind: "agentos", path: "/remote/ws" },
+        vmPort: 4819,
+        services: [{ name: "web", port: 4819, status: "healthy" }],
+        preview: "/preview/remote-ws/",
+      },
+    ],
+  },
   sessions: {
     herdr: {
       available: true,
@@ -95,7 +107,7 @@ describe("fleet pulls presence from the tailnet", () => {
         ok: true,
         rooms: 1,
         sessions: 1,
-        environments: undefined,
+        environments: 1,
         error: undefined,
       },
       {
@@ -127,7 +139,17 @@ describe("fleet pulls presence from the tailnet", () => {
       { host: "self", id: "local", state: "Ready", process: null },
       { host: "remote", id: "remote-room", state: "Paused", process: null },
     ])
-    expect(result.environments).toEqual([])
+    expect(result.environments).toEqual([
+      {
+        host: "remote",
+        workstream: "remote-ws",
+        machine: { host: "remote" },
+        runtime: { kind: "agentos", path: "/remote/ws" },
+        vmPort: 4819,
+        services: [{ name: "web", port: 4819, status: "healthy" }],
+        preview: "/preview/remote-ws/",
+      },
+    ])
     expect(result.sessions).toEqual([
       { host: "self", source: "herdr", address: "t1", roomId: "local", joinedBy: undefined },
       {
