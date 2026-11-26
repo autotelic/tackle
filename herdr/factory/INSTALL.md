@@ -6,11 +6,12 @@ person, reading the board's `/presence` projection.
 ## What you see
 
 A 320 px column on the right of the window, beside the panes: a `Factory`
-header with the blocked count, the report count and a desk badge; then one row
-per workstream — a state dot, the workstream label, a state badge, and a meta
-line of repo, last pass, age, `used/cap` passes and queued events, with an
-environment line under it when the projection sends one; then the desk items;
-then Branch Issue / Branch PR when those mods are installed.
+header with the blocked count, the report count and a desk badge; then sections
+by attention — Blocked and Active always open, Idle open with a PR review or
+Open action per row, Done folded with rows older than a day left to the web
+view. Each row has a state dot, label, state badge, a meta line of repo, pass,
+age, `used/cap` and queued events, plus an environment line when the projection
+sends one; then the desk items; then Branch Issue / Branch PR when installed.
 
 ## How it behaves
 
@@ -18,9 +19,15 @@ then Branch Issue / Branch PR when those mods are installed.
   JSON shape is the board's: this mod never re-declares it and never reads
   `~/.factory` directly. A mod is handed no HTTP client, so the read runs
   `curl` through the host's `exec`, as the shipped mods run `git`.
-- One row per `factory.workstreams[]`, ordered by attention: blocked, working,
-  queued, idle, done. A workstream with no `factory.activity[]` entry sorts
-  last and shows no badge — a missing field renders nothing, it is not guessed.
+- One row per `factory.workstreams[]`, grouped by attention: Blocked, Active
+  (working/queued), Idle, Done. A workstream with no `factory.activity[]` entry
+  sorts last and shows no badge — a missing field renders nothing, it is not
+  guessed.
+- An idle row with a PR gets **Review PR**; without one it gets **Open** to the
+  web view. Idle is often "work is done, waiting for feedback", so it stays
+  visible rather than being folded away.
+- Done is folded. A done row whose last activity is older than 24 hours is not
+  drawn in the panel; it remains in the web view, which is the archive.
 - Every meta part is optional: repo, `pass N`, `Nm ago`, `4/20`, `2 queued` —
   each appears only when the projection sent it.
 - The environment line comes from `factory.environments[]`: the machine host, the

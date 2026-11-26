@@ -80,6 +80,26 @@ const openView = (path) => {
   return null
 }
 
+/** A PR link, when the projection named both the repo and the number. */
+const prUrl = (row) =>
+  row.repoFull === null || row.pr === null
+    ? null
+    : "https://github.com/" + row.repoFull + "/pull/" + String(row.pr)
+
+const action = (t, id, label, on_click) =>
+  h_flex()
+    .id(id)
+    .flex_none()
+    .px(7)
+    .py(3)
+    .rounded(6)
+    .border(1)
+    .border_color(t.border)
+    .cursor_pointer()
+    .hover((style) => style.bg(t.hover))
+    .on_click(on_click)
+    .child(div().text_size(11).text_color(t.muted).child(label))
+
 // Branch Issue / Branch PR are someone else's mods: link to them when they are installed,
 // show nothing when they are not.
 const installedLinks = async () => {
@@ -116,6 +136,8 @@ export default class Factory extends View {
     this.online = false
     this.loaded = false
     this.links = []
+    this.showIdle = true
+    this.showDone = false
     if (checking()) return
     cx.spawn(async (cx) => {
       this.links = await installedLinks()
@@ -198,6 +220,7 @@ export default class Factory extends View {
     const meta = metaLine(row)
     const environment = environmentText(row)
     const canFocus = row.address !== null
+    const review = row.state === "idle" ? prUrl(row) : null
     return h_flex()
       .id("factory-" + row.id)
       .flex_none()
@@ -236,20 +259,19 @@ export default class Factory extends View {
             el.child(div().text_size(11).text_color(t.dim).truncate().child(environment)),
           ),
       )
+      .when(review !== null, (el) =>
+        el.child(
+          action(t, "factory-review-" + row.id, "Review PR", () => openView(review)),
+        ),
+      )
+      .when(row.state === "idle" && review === null, (el) =>
+        el.child(action(t, "factory-open-" + row.id, "Open", () => openView(VIEW))),
+      )
       .when(canFocus, (el) =>
         el.child(
-          h_flex()
-            .id("factory-focus-" + row.id)
-            .flex_none()
-            .px(7)
-            .py(3)
-            .rounded(6)
-            .border(1)
-            .border_color(t.border)
-            .cursor_pointer()
-            .hover((style) => style.bg(t.hover))
-            .on_click(() => run("agent.focus", { terminal: row.address }))
-            .child(div().text_size(11).text_color(t.muted).child("Focus")),
+          action(t, "factory-focus-" + row.id, "Focus", () =>
+            run("agent.focus", { terminal: row.address }),
+          ),
         ),
       )
   }
@@ -314,7 +336,7 @@ export default class Factory extends View {
             .child(
               h_flex()
                 .gap(6)
-                .wrap()
+                .flex_wrap()
                 .children(
                   item.choices.map((choice) =>
                     h_flex()
@@ -369,6 +391,71 @@ export default class Factory extends View {
       )
   }
 
+  section(t, title, rows, open, onToggle, note) {
+    if (rows.length === 0) return null
+    const head = h_flex()
+      .id("factory-section-" + title)
+      .items_center()
+      .gap(6)
+      .px(12)
+      .py(6)
+      .when(onToggle !== null, (el) =>
+        el.cursor_pointer().hover((style) => style.bg(t.hover)).on_click(onToggle),
+      )
+      .child(div().text_size(11).font_semibold().text_color(t.muted).child(title))
+      .child(div().text_size(11).text_color(t.dim).child(String(rows.length)))
+      .when(note !== null, (el) => el.child(div().text_size(11).text_color(t.dim).child(note)))
+      .when(onToggle !== null, (el) =>
+        el.child(div().text_size(11).text_color(t.dim).child(open ? "▾" : "▸")),
+      )
+    return v_flex()
+      .flex_none()
+      .child(head)
+      .when(open, (el) => el.children(rows.map((row) => this.row(t, row))))
+  }
+
+  /**
+   * What the panel shows, by what it asks of a person.
+   *
+   * Blocked and active are always open: they are why the panel exists. Idle is folded because
+   * "no queued work" is not an action. Done is folded, and a done row older than a day is left
+   * to the web view: the panel is the attention surface, not the archive.
+   */
+  sections(t) {
+    const blocked = this.rows.filter((row) => row.state === "blocked")
+    const active = this.rows.filter((row) => row.state === "working" || row.state === "queued")
+    const idle = this.rows.filter((row) => row.state === "idle")
+    const done = this.rows.filter((row) => row.state === "done")
+    const freshDone = done.filter((row) => row.ageMinutes === null || row.ageMinutes < 1440)
+    const expired = done.length - freshDone.length
+    return [
+      this.section(t, "Blocked", blocked, true, null, null),
+      this.section(t, "Active", active, true, null, null),
+      this.section(
+        t,
+        "Idle",
+        idle,
+        this.showIdle,
+        () => {
+          this.showIdle = !this.showIdle
+          this.cx.notify()
+        },
+        this.showIdle ? null : idle.filter((row) => row.pr !== null).length + " waiting for review",
+      ),
+      this.section(
+        t,
+        "Done",
+        freshDone,
+        this.showDone,
+        () => {
+          this.showDone = !this.showDone
+          this.cx.notify()
+        },
+        expired === 0 ? null : expired + " archived in the web view",
+      ),
+    ].filter((section) => section !== null)
+  }
+
   render() {
     const t = theme()
     return v_flex()
@@ -384,7 +471,7 @@ export default class Factory extends View {
           .overflow_y_scrollbar()
           .py(4)
           .when(this.rows.length === 0, (el) => el.child(this.empty(t)))
-          .children(this.rows.map((row) => this.row(t, row)))
+          .children(this.sections(t))
           .when(this.desk.length > 0, (el) => el.child(this.deskSection(t))),
       )
       .when(this.links.length > 0, (el) => el.child(this.linkRow(t)))

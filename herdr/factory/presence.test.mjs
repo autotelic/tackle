@@ -59,6 +59,21 @@ const environment = {
   observedAt: "2026-11-22T12:00:00.000Z",
 }
 
+test("an idle row carries the PR and age the panel uses for its review action", () => {
+  const doc = presence()
+  doc.factory.workstreams[0].repo = "Shakti-Reforestation/forestbuilder"
+  doc.factory.workstreams[0].pr = 1874
+  doc.factory.workstreams[0].phase = "land"
+  doc.factory.activity[0].state = "idle"
+  doc.factory.activity[0].ageMinutes = 90
+  const [row] = readPresence(doc).rows
+  assert.equal(row.repo, "forestbuilder")
+  assert.equal(row.repoFull, "Shakti-Reforestation/forestbuilder")
+  assert.equal(row.pr, 1874)
+  assert.equal(row.phase, "land")
+  assert.equal(row.ageMinutes, 90)
+})
+
 test("a stored worker is drawn in the meta line", () => {
   const doc = presence()
   doc.factory.workstreams[0].worker = "intercom:t19"
