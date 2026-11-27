@@ -164,33 +164,34 @@ export interface ScoredPair {
   readonly score: number
 }
 
+/** One entry's place in the sweep: size decides the order, slot the prefix. */
+interface OrderedEntry {
+  readonly size: number
+  readonly slot: number
+  readonly callerIndex: number
+}
+
 /**
- * Every pair at or above a Jaccard threshold, without comparing every pair.
+ * The prefix-filter sweep both joins share.
  *
- * What this replaces compared every pair inside a size window: 3,280,085
- * comparisons for 7,034 declarations on one codebase, and that count grows as
- * n x window -- so ten times the code costs a hundred times the work. This
- * finds the same pairs while only scoring sets that share a rare shingle.
+ * For threshold t with shingles ordered by ascending document frequency, if
+ * containment(A, B) >= t and |A| <= |B| then |A n B| >= t|A|. A's prefix of
+ * size ceil(t|A|) - 1 therefore cannot hold every shared shingle, so the prefix
+ * of the smaller side always has one. Process sets by ascending size, index
+ * prefixes, probe whole sets: every qualifying pair is visited exactly once,
+ * with the smaller side already indexed.
  *
- * The guarantee, for threshold t with shingles ordered by ascending document
- * frequency: if J(A, B) >= t and |A| <= |B|, then |A n B| >= t|A|. A's prefix
- * excludes only ceil(t|A|) - 1 shingles, fewer than t|A|, so at least one shared
- * shingle must lie in A's prefix. Index prefixes, probe whole sets, and no
- * qualifying pair can be missed. A differential test asserts that this finds
- * exactly what the brute-force sweep in rule.ts finds.
+ * The caller supplies the scoring and the bound that scoring implies; this
+ * function only guarantees the visit is complete. Both `allPairs` and
+ * `allContainmentPairs` are differential-tested against a brute-force sweep, so
+ * the guarantee is checked, not argued.
  */
-export const allPairs = (
+const probePrefixes = (
   entries: ReadonlyArray<SizedShingles>,
   threshold: number,
-): ReadonlyArray<ScoredPair> => {
-  if (threshold <= 0) return []
-
-  const frequency = new Map<string, number>()
-  for (const entry of entries) {
-    for (const shingle of entry.shingles) {
-      frequency.set(shingle, (frequency.get(shingle) ?? 0) + 1)
-    }
-  }
+  visit: (candidate: SizedShingles, current: SizedShingles) => void,
+): void => {
+  const frequency = shingleFrequencyOf(entries.map((entry) => entry.shingles))
 
   // Rarest first, so a prefix holds the most discriminating shingles and the
   // posting lists it produces stay short.
@@ -205,7 +206,7 @@ export const allPairs = (
     return sorted.slice(0, keep)
   })
 
-  const order = entries
+  const order: ReadonlyArray<OrderedEntry> = entries
     .map((entry, position) => ({
       size: entry.shingles.size,
       slot: position,
@@ -215,15 +216,13 @@ export const allPairs = (
     .sort((a, b) => a.size - b.size || a.callerIndex - b.callerIndex)
 
   const postings = new Map<string, Array<number>>()
-  const pairs: Array<ScoredPair> = []
 
   for (const current of order) {
     const entry = entries[current.slot]
     if (entry === undefined) continue
 
-    // Probe with the whole set. Only prefixes were indexed, and the argument
-    // above says the shared shingle lies in the smaller side's prefix -- which
-    // is already indexed, because the smaller side is always processed first.
+    // Probe with the whole set: only prefixes were indexed, and the smaller
+    // side is always processed first, so its prefix is already there.
     const seen = new Set<number>()
     for (const shingle of entry.shingles) {
       const list = postings.get(shingle)
@@ -233,14 +232,7 @@ export const allPairs = (
         seen.add(other)
         const candidate = entries[other]
         if (candidate === undefined) continue
-        // Exact size filter: Jaccard cannot exceed the ratio of the smaller side
-        // to the larger, so a pair outside it cannot qualify.
-        if (candidate.shingles.size < threshold * entry.shingles.size) continue
-        const score = similarityOf({ left: candidate.shingles, right: entry.shingles })
-        if (score < threshold) continue
-        const left = candidate.position
-        const right = entry.position
-        pairs.push(left <= right ? { left, right, score } : { left: right, right: left, score })
+        visit(candidate, entry)
       }
     }
 
@@ -252,7 +244,35 @@ export const allPairs = (
       else list.push(current.slot)
     }
   }
+}
 
+/**
+ * Every pair at or above a Jaccard threshold, without comparing every pair.
+ *
+ * What this replaces compared every pair inside a size window: 3,280,085
+ * comparisons for 7,034 declarations on one codebase, and that count grows as
+ * n x window -- so ten times the code costs a hundred times the work. This
+ * finds the same pairs while only scoring sets that share a rare shingle.
+ *
+ * A differential test asserts that this finds exactly what the brute-force
+ * sweep in rule.ts finds.
+ */
+export const allPairs = (
+  entries: ReadonlyArray<SizedShingles>,
+  threshold: number,
+): ReadonlyArray<ScoredPair> => {
+  if (threshold <= 0) return []
+  const pairs: Array<ScoredPair> = []
+  probePrefixes(entries, threshold, (candidate, current) => {
+    // Exact size filter: Jaccard cannot exceed the ratio of the smaller side to
+    // the larger, so a pair outside it cannot qualify.
+    if (candidate.shingles.size < threshold * current.shingles.size) return
+    const score = similarityOf({ left: candidate.shingles, right: current.shingles })
+    if (score < threshold) return
+    const left = candidate.position
+    const right = current.position
+    pairs.push(left <= right ? { left, right, score } : { left: right, right: left, score })
+  })
   return pairs
 }
 
@@ -268,14 +288,9 @@ export interface ContainmentPair {
 /**
  * Every containment pair at or above a threshold, without comparing every pair.
  *
- * The prefix-filter argument is the one `allPairs` uses, with the direction
- * fixed: if containment(A, B) >= t and |A| <= |B|, then |A n B| >= t|A|, so A's
- * prefix of size ceil(t|A|) - 1 cannot hold every shared shingle. One shared
- * shingle is therefore always in A's prefix. Index prefixes by ascending
- * document frequency, process sets by ascending size so the smaller side is the
- * one already indexed, and probe with the whole larger set. Each unordered pair
- * is reported once, with the smaller side named as `part`; equal-sized pairs
- * have no smaller side, and the one processed first is kept as `part`.
+ * The sweep is `probePrefixes`, with the direction fixed: each unordered pair is
+ * reported once, with the smaller side named as `part`. Equal-sized pairs have
+ * no smaller side, and the one processed first is kept as `part`.
  *
  * A differential test against a brute-force sweep is the contract: the join must
  * find exactly the pairs the sweep finds, not merely many of them.
@@ -285,67 +300,12 @@ export const allContainmentPairs = (
   threshold: number,
 ): ReadonlyArray<ContainmentPair> => {
   if (threshold <= 0) return []
-
-  const frequency = new Map<string, number>()
-  for (const entry of entries) {
-    for (const shingle of entry.shingles) {
-      frequency.set(shingle, (frequency.get(shingle) ?? 0) + 1)
-    }
-  }
-
-  // Rarest first, exactly as in `allPairs`: the prefix then carries the most
-  // discriminating shingles and the posting lists stay short.
-  const rank = new Map<string, number>()
-  ;[...frequency.entries()]
-    .sort((a, b) => a[1] - b[1] || (a[0] < b[0] ? -1 : 1))
-    .forEach(([shingle], position) => rank.set(shingle, position))
-
-  const prefixes = entries.map((entry) => {
-    const sorted = [...entry.shingles].sort((a, b) => (rank.get(a) ?? 0) - (rank.get(b) ?? 0))
-    const keep = Math.max(1, sorted.length - Math.ceil(threshold * sorted.length) + 1)
-    return sorted.slice(0, keep)
-  })
-
-  const order = entries
-    .map((entry, position) => ({
-      size: entry.shingles.size,
-      slot: position,
-      callerIndex: entry.position,
-    }))
-    .filter((entry) => entry.size > 0)
-    .sort((a, b) => a.size - b.size || a.callerIndex - b.callerIndex)
-
-  const postings = new Map<string, Array<number>>()
   const pairs: Array<ContainmentPair> = []
-
-  for (const current of order) {
-    const entry = entries[current.slot]
-    if (entry === undefined) continue
-
-    const seen = new Set<number>()
-    for (const shingle of entry.shingles) {
-      const list = postings.get(shingle)
-      if (list === undefined) continue
-      for (const other of list) {
-        if (other === current.slot || seen.has(other)) continue
-        seen.add(other)
-        const candidate = entries[other]
-        if (candidate === undefined) continue
-        // An earlier entry is never larger, because `order` is ascending by size.
-        const score = containmentOf({ left: candidate.shingles, right: entry.shingles })
-        if (score < threshold) continue
-        pairs.push({ whole: entry.position, part: candidate.position, score })
-      }
-    }
-
-    const prefix = prefixes[current.slot]
-    if (prefix === undefined) continue
-    for (const shingle of prefix) {
-      const list = postings.get(shingle)
-      if (list === undefined) postings.set(shingle, [current.slot])
-      else list.push(current.slot)
-    }
-  }
-
+  probePrefixes(entries, threshold, (candidate, current) => {
+    // An earlier entry is never larger, because the sweep is ascending by size.
+    const score = containmentOf({ left: candidate.shingles, right: current.shingles })
+    if (score < threshold) return
+    pairs.push({ whole: current.position, part: candidate.position, score })
+  })
   return pairs
 }

@@ -16,7 +16,13 @@ import {
   type Scope,
 } from "../rule.ts"
 import type { Diagnostic, Drop, SourceLocation } from "../schema.ts"
-import { lineStarts, type SourceFile, type Unit, type Workspace } from "../workspace.ts"
+import {
+  lineStarts,
+  testOrFixturePath,
+  type SourceFile,
+  type Unit,
+  type Workspace,
+} from "../workspace.ts"
 import { lineAt } from "../cascade.ts"
 
 // meta-allow: no-pattern-classifier -- the test asks whether a literal ends in a
@@ -127,16 +133,8 @@ const voiceReview = (id: string, hasNeighbour: boolean) => {
     : Decision.classify({ instructions, criteria: base })
 }
 
-/**
- * A test or a fixture directory.
- *
- * A fixture holds the defect on purpose: the suite asserts that the rule reports
- * it. Judging the rule's own test data reports the fixture, not the repository.
- */
-const TEST_PATH = /\/(?:tests?|__tests__|fixtures)\//u
-
 /** Whether a file's prose is read by a maintainer rather than by a test. */
-const isSourceProse = (file: string): boolean => !TEST_PATH.test("/" + file)
+const isSourceProse = (file: string): boolean => !testOrFixturePath(file)
 
 /** Whether a sentence is long enough to judge and short enough to bound. */
 const usable = (sentence: Sentence): boolean =>

@@ -479,6 +479,17 @@ export interface Workspace {
 export const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value)
 
+/**
+ * A path that holds the suite's shape or a defect on purpose, not a design signal.
+ *
+ * A rule's test file is contained in another rule's test file by construction,
+ * and a fixture exists to carry the thing a rule looks for. Rules that ask about
+ * design therefore share one path predicate rather than each carrying a regex
+ * that drifts from the others.
+ */
+export const testOrFixturePath = (file: string): boolean =>
+  /\/(?:tests?|__tests__|fixtures?)\//u.test("/" + file)
+
 interface IdentifierSite {
   readonly start: number
   readonly end: number

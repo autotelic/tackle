@@ -23,7 +23,7 @@ import {
   type Scope,
 } from "../rule.ts"
 import type { Diagnostic, Drop } from "../schema.ts"
-import type { Unit, Workspace } from "../workspace.ts"
+import { testOrFixturePath, type Unit, type Workspace } from "../workspace.ts"
 
 const RULE_ID = "joggle/containment"
 
@@ -42,17 +42,10 @@ interface Candidate {
   readonly rank: number
 }
 
-/**
- * A test or a fixture path.
- *
- * The same predicate prose-voice uses: a rule's test file is part of the
- * suite's shape, not a design signal, and a fixture holds the defect on purpose.
- * `Unit.test` catches the declarations inside a test file; this catches a
- * fixture that is not named `.test` and lives under `fixtures/`.
- */
-const TEST_PATH = /\/(?:tests?|__tests__|fixtures?)\//u
-
-const isTestOrFixture = (unit: Unit): boolean => unit.test || TEST_PATH.test("/" + unit.file)
+/** A test or a fixture path. `Unit.test` catches declarations inside a test
+ * file; this catches a fixture that is not named `.test` and lives under
+ * `fixtures/`. Both rules that ask about design use the shared predicate. */
+const isTestOrFixture = (unit: Unit): boolean => unit.test || testOrFixturePath(unit.file)
 
 /** The two declarations could be a specialization pair at all. */
 const related = (payload: { readonly part: Unit; readonly whole: Unit }): boolean =>
