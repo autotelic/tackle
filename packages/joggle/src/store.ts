@@ -2,7 +2,7 @@ import { createHash } from "node:crypto"
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { DatabaseSync } from "node:sqlite"
-import { Option } from "effect"
+import { Result, Schema } from "effect"
 import { HASH_VERSION } from "./identity.ts"
 import { shortHash } from "./state.ts"
 import { langOf, type Unit } from "./workspace.ts"
@@ -97,6 +97,30 @@ export interface FactStoreReport {
 }
 
 /**
+ * Why a store lookup did not produce a value.
+ *
+ * A cache miss is `Rejected` rather than an empty success: the caller asked for a
+ * fact this store does not have, and the next step is to derive it. The other
+ * reasons name the boundary that refused -- a corrupt file (`Unreadable`), a
+ * schema from another normaliser (`WrongVersion`), a path that is not a directory
+ * (`NotADirectory`), or a write the database declined (`Rejected`).
+ */
+export const StoreErrorReason = Schema.Literals([
+  "Unreadable",
+  "WrongVersion",
+  "NotADirectory",
+  "Rejected",
+])
+
+export class StoreError extends Schema.TaggedError<
+  StoreError,
+  { readonly brand: unique symbol }
+>()("joggle/StoreError", {
+  reason: StoreErrorReason,
+  detail: Schema.String,
+}) {}
+
+/**
  * One run's handle on the store.
  *
  * A handle, not a module singleton: the state that varies (open database, counts,
@@ -104,14 +128,14 @@ export interface FactStoreReport {
  * and a test never has to tear down global state left by another test.
  */
 export interface FactStore {
-  /** The fragment set already stored for this unit, or none on a miss. */
-  readonly cached: (unit: Unit) => Option.Option<StoredFragments>
+  /** The fragment set already stored for this unit, or the reason there is none. */
+  readonly cached: (unit: Unit) => Result.Result<StoredFragments, StoreError>
   /** Write one unit's fragment set, and keep the document-frequency table truthful. */
   readonly store: (unit: Unit, fragments: StoredFragments) => void
   /** The store's document frequency, keyed by fragment id. */
   readonly frequency: () => ReadonlyMap<string, number>
-  /** Close the store and say which kind of run this was. */
-  readonly close: () => Option.Option<FactStoreReport>
+  /** Close the store and say which kind of run this was, or why it never opened. */
+  readonly close: () => Result.Result<FactStoreReport, StoreError>
 }
 
 interface OpenedStore {
@@ -180,7 +204,12 @@ const rememberStore = (marker: string): void => {
 }
 
 /** Open the file, replacing it when SQLite says it is not a database. */
-const openFile = (file: string, marker: string, version: number): OpenedStore => {
+const openFile = (input: {
+  readonly file: string
+  readonly marker: string
+  readonly version: number
+}): OpenedStore => {
+  const { file, marker, version } = input
   mkdirSync(dirname(file), { recursive: true })
   const existed = existsSync(file)
   const known = existsSync(marker)
@@ -278,20 +307,18 @@ export const createFactStore = (root: string): FactStore => {
   let reused = 0
   let walked = 0
 
-  const ensure = (): Option.Option<DatabaseSync> => {
-    if (db !== undefined) return Option.some(db)
-    const opened = openFile(file, marker, storeVersionOf())
+  const ensure = (): DatabaseSync => {
+    if (db !== undefined) return db
+    const opened = openFile({ file, marker, version: storeVersionOf() })
     db = opened.db
     state = opened.state
     issue = opened.issue
     units = fragmentSetsOf(opened.db)
-    return Option.some(opened.db)
+    return opened.db
   }
 
-  const cached = (unit: Unit): Option.Option<StoredFragments> => {
-    const current = ensure()
-    if (Option.isNone(current)) return Option.none()
-    const database = current.value
+  const cached = (unit: Unit): Result.Result<StoredFragments, StoreError> => {
+    const database = ensure()
     const key = unitKeyOf(unit)
     // SAFETY: reading a cache through `node:sqlite` throws for a row or schema
     // this build cannot decode; a miss is the correct degradation.
@@ -300,7 +327,9 @@ export const createFactStore = (root: string): FactStore => {
         .prepare('SELECT body FROM "object" WHERE id = ? AND kind = ?')
         .get(idBytes(key), "fragment-set") as { body?: Uint8Array } | undefined
       if (row === undefined) {
-        return Option.none()
+        return Result.fail(
+          StoreError.make({ reason: "Rejected", detail: "no stored fragment set for " + key }),
+        )
       }
       const body = JSON.parse(textOf(row.body)) as { cut?: unknown }
       const ids = (
@@ -311,19 +340,18 @@ export const createFactStore = (root: string): FactStore => {
         }>
       ).map((entry) => textOf(entry.id))
       reused += 1
-      return Option.some({ ids, cut: body.cut === true })
+      return Result.succeed({ ids, cut: body.cut === true })
     } catch (cause) {
       // A row this build cannot read is a miss, not a failed run. The walk that
       // follows counts it once, in `store`.
-      issue ??= "a stored fragment set could not be read: " + messageOf(cause)
-      return Option.none()
+      const detail = messageOf(cause)
+      issue ??= "a stored fragment set could not be read: " + detail
+      return Result.fail(StoreError.make({ reason: "Unreadable", detail }))
     }
   }
 
   const storeFragments = (unit: Unit, fragments: StoredFragments): void => {
-    const current = ensure()
-    if (Option.isNone(current)) return
-    const database = current.value
+    const database = ensure()
     const key = unitKeyOf(unit)
     // SAFETY: writing through `node:sqlite` throws on a locked or corrupt file;
     // the walk that produced these facts already succeeded, so the run keeps the
@@ -380,11 +408,10 @@ export const createFactStore = (root: string): FactStore => {
 
   const frequency = (): ReadonlyMap<string, number> => {
     const current = ensure()
-    if (Option.isNone(current)) return new Map()
     // SAFETY: reading the frequency table through `node:sqlite` throws for a
     // damaged file; an empty map is the cache's honest miss, and `issue` says so.
     try {
-      const rows = current.value.prepare("SELECT id, units FROM df").all() as ReadonlyArray<{
+      const rows = current.prepare("SELECT id, units FROM df").all() as ReadonlyArray<{
         id?: Uint8Array
         units?: number
       }>
@@ -395,9 +422,16 @@ export const createFactStore = (root: string): FactStore => {
     }
   }
 
-  const close = (): Option.Option<FactStoreReport> => {
+  const close = (): Result.Result<FactStoreReport, StoreError> => {
     const current = db
-    if (current === undefined) return Option.none()
+    if (current === undefined) {
+      return Result.fail(
+        StoreError.make({
+          reason: "Rejected",
+          detail: "the fact store was never opened by this run",
+        }),
+      )
+    }
     db = undefined
     const report: FactStoreReport = { state, reused, walked, units, issue }
     // SAFETY: closing a `node:sqlite` handle throws if it is already unusable;
@@ -407,7 +441,7 @@ export const createFactStore = (root: string): FactStore => {
     } catch {
       // The answer was already read; a close failure is not a report failure.
     }
-    return Option.some(report)
+    return Result.succeed(report)
   }
 
   return { cached, store: storeFragments, frequency, close }

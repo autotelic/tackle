@@ -1,4 +1,4 @@
-import { Option } from "effect"
+import { Result } from "effect"
 import { policy } from "./policy.ts"
 import type { FactStore, StoredFragments } from "./store.ts"
 import { canonicalRegion, nodeSpansOf, prepareUnit, stableId, type PreparedUnit } from "./identity.ts"
@@ -86,9 +86,11 @@ export interface Fragments {
  * stops at `maxFragments` would make containment under-report, and under-reporting
  * reads as "nothing here" rather than "I stopped looking".
  */
-export const fragmentsOf = (unit: Unit, store?: FactStore): Fragments => {
-  const cached = store === undefined ? Option.none<StoredFragments>() : store.cached(unit)
-  if (Option.isSome(cached)) return cached.value
+export const fragmentsOf = (unit: Unit, store: FactStore | undefined = undefined): Fragments => {
+  if (store !== undefined) {
+    const cached = store.cached(unit)
+    if (Result.isSuccess(cached)) return cached.success
+  }
   const prepared = prepareUnit(unit)
   const ids: Array<string> = []
   const seen = new Set<string>()

@@ -1,5 +1,5 @@
 import { expect, test } from "vitest"
-import { Effect, Option } from "effect"
+import { Effect, Option, Result } from "effect"
 import { cpSync, existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -26,9 +26,9 @@ const fixture = () => loadWorkspace("testdata/containment", ["src"])
 const idsOf = (workspace: Workspace, store?: FactStore): ReadonlyArray<ReadonlyArray<string>> =>
   workspace.units.map((unit) => fragmentsOf(unit, store).ids)
 
-const reportOf = (report: Option.Option<FactStoreReport>): FactStoreReport => {
-  if (Option.isNone(report)) throw new Error("expected a fact store report")
-  return report.value
+const reportOf = (report: Result.Result<FactStoreReport, unknown>): FactStoreReport => {
+  if (Result.isFailure(report)) throw new Error("expected a fact store report: " + report.failure)
+  return report.success
 }
 
 const storeFile = (root: string): string => join(root, STORE_PATH)
