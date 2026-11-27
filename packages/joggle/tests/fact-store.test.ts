@@ -23,7 +23,10 @@ const run = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
 
 const fixture = () => loadWorkspace("testdata/containment", ["src"])
 
-const idsOf = (workspace: Workspace, store?: FactStore): ReadonlyArray<ReadonlyArray<string>> =>
+const idsOf = (
+  workspace: Workspace,
+  store: FactStore | undefined,
+): ReadonlyArray<ReadonlyArray<string>> =>
   workspace.units.map((unit) => fragmentsOf(unit, store).ids)
 
 const reportOf = (report: Result.Result<FactStoreReport, unknown>): FactStoreReport => {
@@ -161,4 +164,26 @@ test("a check says cold, warm, then rebuilt in its census, with the same finding
   const rebuilt = await check()
   expect(noteOf(rebuilt)?.reason).toContain("fragment store: rebuilt")
   expect(rebuilt.diagnostics).toEqual(cold.diagnostics)
+})
+
+test("a row the decoder refuses is a miss, not a wrong answer", async () => {
+  const root = mkdtempSync(join(tmpdir(), "joggle-store-"))
+  const first = await run(fixture())
+  const seeded = createFactStore(root)
+  const expected = idsOf(first, seeded)
+  expect(reportOf(seeded.close()).state).toBe("cold")
+
+  // A TEXT body is not the BLOB the fragment-set query promises. The row decode
+  // refuses it, so the unit is walked again instead of being read as whatever
+  // the column happens to hold.
+  const db = new DatabaseSync(storeFile(root))
+  db.exec("UPDATE \"object\" SET body = 'not a blob' WHERE kind = 'fragment-set'")
+  db.close()
+
+  const store = createFactStore(root)
+  const after = idsOf(first, store)
+  const reread = reportOf(store.close())
+  expect(reread.reused).toBe(0)
+  expect(reread.walked).toBe(first.units.length)
+  expect(after).toEqual(expected)
 })

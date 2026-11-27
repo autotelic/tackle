@@ -2,7 +2,7 @@ import { createHash } from "node:crypto"
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { DatabaseSync } from "node:sqlite"
-import { Result, Schema } from "effect"
+import { Result, Schema, SchemaParser } from "effect"
 import { HASH_VERSION } from "./identity.ts"
 import { shortHash } from "./state.ts"
 import { langOf, type Unit } from "./workspace.ts"
@@ -147,23 +147,64 @@ interface OpenedStore {
 const messageOf = (cause: unknown): string =>
   cause instanceof Error ? cause.message : String(cause)
 
+/**
+ * The columns `node:sqlite` hands back, spelled as the driver spells them.
+ *
+ * Every reader takes this union rather than narrowing its own argument, so the
+ * one place that knows about driver representations is {@link textOf}.
+ */
+type Column = string | number | bigint | Uint8Array | null | undefined
+
+/** One row, as the driver returns it. */
+type ColumnRow = Readonly<Record<string, Column>>
+
+/*
+ * The row shapes this store reads. A decode at the boundary says what the query
+ * promises; a hand-rolled predicate only says what today's rows happen to look
+ * like. A mismatch is a miss, which is what a cache should do when its contract
+ * does not hold.
+ */
+const UserVersionRow = Schema.Struct({ user_version: Schema.optional(Schema.Number) })
+const CountRow = Schema.Struct({ count: Schema.optional(Schema.Number) })
+const NameRow = Schema.Struct({ name: Schema.optional(Schema.String) })
+const BodyRow = Schema.Struct({ body: Schema.optional(Schema.Uint8Array) })
+const IdRow = Schema.Struct({ id: Schema.optional(Schema.Uint8Array) })
+const DfRow = Schema.Struct({
+  id: Schema.optional(Schema.Uint8Array),
+  units: Schema.optional(Schema.Number),
+})
+
+/** Decode one row, or `undefined` when it is not the shape the query promised. */
+function decodeRow<S extends Schema.ConstraintDecoder<unknown>>(
+  schema: S,
+  row: ColumnRow | undefined,
+): S["Type"] | undefined {
+  if (row === undefined) return undefined
+  const decoded = SchemaParser.decodeUnknownResult(schema)(row)
+  return Result.isSuccess(decoded) ? decoded.success : undefined
+}
+
 const userVersionOf = (db: DatabaseSync): number => {
-  const row = db.prepare("PRAGMA user_version").get() as { user_version?: number } | undefined
+  const row = decodeRow(UserVersionRow, db.prepare("PRAGMA user_version").get())
   return Number(row?.user_version ?? 0)
 }
 
 const hasSchema = (db: DatabaseSync): boolean => {
-  const rows = db
-    .prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
-    .all() as ReadonlyArray<{ name?: string }>
-  const names = new Set(rows.map((row) => row.name))
+  const rows = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all()
+  const names = new Set(
+    rows.flatMap((row) => {
+      const name = decodeRow(NameRow, row)?.name
+      return name === undefined ? [] : [name]
+    }),
+  )
   return TABLES.every((table) => names.has(table))
 }
 
 const fragmentSetsOf = (db: DatabaseSync): number => {
-  const row = db
-    .prepare("SELECT COUNT(*) AS count FROM \"object\" WHERE kind = 'fragment-set'")
-    .get() as { count?: number } | undefined
+  const row = decodeRow(
+    CountRow,
+    db.prepare("SELECT COUNT(*) AS count FROM \"object\" WHERE kind = 'fragment-set'").get(),
+  )
   return Number(row?.count ?? 0)
 }
 
@@ -287,7 +328,7 @@ export interface StoredFragments {
 }
 
 const idBytes = (id: string): Uint8Array => Buffer.from(id, "utf8")
-const textOf = (value: unknown): string =>
+const textOf = (value: Column): string =>
   value instanceof Uint8Array ? Buffer.from(value).toString("utf8") : String(value)
 
 /**
@@ -323,22 +364,25 @@ export const createFactStore = (root: string): FactStore => {
     // SAFETY: reading a cache through `node:sqlite` throws for a row or schema
     // this build cannot decode; a miss is the correct degradation.
     try {
-      const row = database
-        .prepare('SELECT body FROM "object" WHERE id = ? AND kind = ?')
-        .get(idBytes(key), "fragment-set") as { body?: Uint8Array } | undefined
-      if (row === undefined) {
+      const row = decodeRow(
+        BodyRow,
+        database
+          .prepare('SELECT body FROM "object" WHERE id = ? AND kind = ?')
+          .get(idBytes(key), "fragment-set"),
+      )
+      if (row?.body === undefined) {
         return Result.fail(
           StoreError.make({ reason: "Rejected", detail: "no stored fragment set for " + key }),
         )
       }
       const body = JSON.parse(textOf(row.body)) as { cut?: unknown }
-      const ids = (
-        database
-          .prepare("SELECT id FROM fragment WHERE unit = ? ORDER BY rowid")
-          .all(key) as ReadonlyArray<{
-          id?: Uint8Array
-        }>
-      ).map((entry) => textOf(entry.id))
+      const ids = database
+        .prepare("SELECT id FROM fragment WHERE unit = ? ORDER BY rowid")
+        .all(key)
+        .flatMap((entry) => {
+          const id = decodeRow(IdRow, entry)?.id
+          return id === undefined ? [] : [textOf(id)]
+        })
       reused += 1
       return Result.succeed({ ids, cut: body.cut === true })
     } catch (cause) {
@@ -358,11 +402,7 @@ export const createFactStore = (root: string): FactStore => {
     // facts and reports that they were not stored.
     try {
       database.exec("BEGIN IMMEDIATE")
-      const before = database
-        .prepare("SELECT id FROM fragment WHERE unit = ?")
-        .all(key) as ReadonlyArray<{
-        id?: Uint8Array
-      }>
+      const before = database.prepare("SELECT id FROM fragment WHERE unit = ?").all(key)
       const existed =
         database
           .prepare('SELECT 1 AS present FROM "object" WHERE id = ? AND kind = ?')
@@ -370,7 +410,9 @@ export const createFactStore = (root: string): FactStore => {
       const decrement = database.prepare("UPDATE df SET units = units - 1 WHERE id = ?")
       const prune = database.prepare("DELETE FROM df WHERE id = ? AND units <= 0")
       for (const entry of before) {
-        const id = idBytes(textOf(entry.id))
+        const stored = decodeRow(IdRow, entry)?.id
+        if (stored === undefined) continue
+        const id = idBytes(textOf(stored))
         decrement.run(id)
         prune.run(id)
       }
@@ -411,11 +453,14 @@ export const createFactStore = (root: string): FactStore => {
     // SAFETY: reading the frequency table through `node:sqlite` throws for a
     // damaged file; an empty map is the cache's honest miss, and `issue` says so.
     try {
-      const rows = current.prepare("SELECT id, units FROM df").all() as ReadonlyArray<{
-        id?: Uint8Array
-        units?: number
-      }>
-      return new Map(rows.map((row) => [textOf(row.id), Number(row.units ?? 0)]))
+      const rows = current.prepare("SELECT id, units FROM df").all()
+      const entries: Array<readonly [string, number]> = []
+      for (const row of rows) {
+        const decoded = decodeRow(DfRow, row)
+        if (decoded?.id === undefined) continue
+        entries.push([textOf(decoded.id), Number(decoded.units ?? 0)])
+      }
+      return new Map(entries)
     } catch (cause) {
       issue ??= "the document frequency table could not be read: " + messageOf(cause)
       return new Map()

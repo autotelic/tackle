@@ -86,7 +86,7 @@ export interface Fragments {
  * stops at `maxFragments` would make containment under-report, and under-reporting
  * reads as "nothing here" rather than "I stopped looking".
  */
-export const fragmentsOf = (unit: Unit, store: FactStore | undefined = undefined): Fragments => {
+export const fragmentsOf = (unit: Unit, store: FactStore | undefined): Fragments => {
   if (store !== undefined) {
     const cached = store.cached(unit)
     if (Result.isSuccess(cached)) return cached.success
