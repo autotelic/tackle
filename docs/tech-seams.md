@@ -127,9 +127,12 @@ aggregates, views, policies, projections, streams, sagas, and queries (`dist/lib
   (`packages/board/src/worker.ts`) and, through the same Room model, the Room Durable Object
   classes. `packages/board/test/alchemy-plan.test.ts` plans the stack under the Alchemist
   runtime and asserts the Worker and `RoomModel.RoomAggregate` / `RoomView` bindings. The
-  authoring path still uses local state, so the plan needs no Cloudflare credentials. This is
-  the first real Alchemy resource graph; it does not yet declare a room VM or an agentOS
-  provider.
+  authoring path still uses local state, so the plan needs no Cloudflare credentials.
+- **The room inventory.** `packages/board/src/alchemy/Room.ts` declares `Tackle.Room` and
+  `Tackle.RoomMachine`. The first calls `readRoom` / `createRoom` / `Worktree.ensure` and
+  retains its worktree on delete; the second calls `ensureVmSupervisor` / `readVmStatus` /
+  `stopVmSupervisor`. ADR 0008 records the ownership line. The board stack does not mint a demo
+  room; a stack composes these resources when it has a real room to declare.
 
 **Where we duplicate.** The Workstream phase machine and the mailbox state machine are the two
 places. Neither duplicates Alchemy's hosting; they duplicate the idea of a state machine that
