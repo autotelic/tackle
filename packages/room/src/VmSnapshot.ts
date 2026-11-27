@@ -133,22 +133,17 @@ export const readSnapshot = async (
 > => {
   const text = await readFile(path, "utf8").catch(() => undefined)
   if (text === undefined) return { ok: false, reason: "there is no snapshot at " + path }
-  let parsed: unknown
-  // SAFETY: the file is this tool's own artifact; a malformed one is a refusal, not a crash.
-  try {
-    parsed = JSON.parse(text)
-  } catch (cause) {
-    return { ok: false, reason: "the snapshot at " + path + " is not JSON: " + String(cause) }
-  }
-  const decoded = Schema.decodeResult(VmSnapshotShape)(parsed)
+  const decoded = Schema.decodeResult(Schema.fromJsonString(VmSnapshotShape))(text)
   if (Result.isFailure(decoded))
     return {
       ok: false,
       reason:
         "the file at " + path + " is not a root filesystem snapshot: " + String(decoded.failure),
     }
-  // SAFETY: the envelope decoded; the whole parsed value goes to the VM so no file content is lost.
-  return { ok: true, value: parsed as VmSnapshotExport, text }
+  // SAFETY: the text decoded as a snapshot envelope above. It is parsed again rather than reusing
+  // `decoded.success`, because the decoder keeps only the fields this schema names — and an entry
+  // whose `content` it dropped would restore as an empty file.
+  return { ok: true, value: JSON.parse(text) as VmSnapshotExport, text }
 }
 
 /**
