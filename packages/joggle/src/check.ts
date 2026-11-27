@@ -1134,8 +1134,8 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
         " parse(s) from the cache",
     })
   }
-  if (Option.isSome(storeReport)) {
-    const report = storeReport.value
+  if (Result.isSuccess(storeReport)) {
+    const report = storeReport.success
     notes.push({
       ruleId: "joggle",
       reason:
