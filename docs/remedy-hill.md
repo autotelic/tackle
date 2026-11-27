@@ -110,6 +110,26 @@ The fix is two-sided: a diagnosis-only experimental-API message now offers the
 implied repair (`Use the non-experimental API`) to the judgement's option set, and
 `none` is never used as a cluster label — it falls back to the witness clause.
 
+The ledger held the second defect beside the first. Every Classify answer the
+remedies run recorded is in `packages/joggle/.joggle/answers/*.jsonl` — 2,574
+answers, of which 830 offered 3 options, 1,180 offered 4, 311 offered 9 and
+**150 offered 55**. 461 answers (18%) were asked with more than eight options.
+`docs/jev.md` rule 4 says a Choice over more than eight options is a decision
+wearing a question's clothes, and the 55-option question is the 83-site cluster's
+bug seen from the other side: one question asked to pick among every witness
+clause in the corpus, so the only answer a model can give for an unfamiliar
+repair is the one that is not a repair. The remedy is now composed in code rather
+than widened: `j_family` names the kind of repair in six options, the clause
+question offers only the clauses code assigned to that family (split again when a
+family outgrows one question), and the identity is the composed `family: clause`,
+which reads as a sentence because it was built, not picked. The duty question was
+the other offender — 9 options at measurement, 12 today — and is now the same
+family-then-clause pair. That is **rung 1.5's gate**: before any further
+clustering, no run may ask a Choice the contract forbids, and after the split no
+question in the corpus exceeds eight options. A judgement that has to choose among
+55 candidates cannot be wrong in a way the ledger can see; a judgement split into
+two bounded questions can.
+
 ### Acceptance
 
 The rung is met when a fresh run reproduces the measured result, with any

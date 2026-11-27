@@ -84,6 +84,17 @@ export const policy = {
      */
     maxRequestChars: 12000,
     /**
+     * Options one Choice may offer.
+     *
+     * `docs/jev.md` rule 4: a Choice over more than eight options is a decision
+     * wearing a question's clothes. The remedy normaliser offered 55 candidate
+     * repair clauses in one question and answered `none` for the 83-site
+     * experimental-API cluster; measured over the committed ledger, 18% of all
+     * Classify answers (461 of 2,574) were asked with more than eight options.
+     * Code composes two bounded questions instead of widening this one.
+     */
+    maxChoiceOptions: 8,
+    /**
      * Input tokens one run may spend on judgement.
      *
      * A backstop, not a target. The per-decision cache means a run pays only for
