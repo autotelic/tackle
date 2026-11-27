@@ -13,11 +13,13 @@ import { readFile } from 'node:fs/promises'
  */
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { createEffectActor, join as joinActor } from '@xstate/effect'
 import { Effect } from 'effect'
 import { createIssueAnswerHandler, watchAnswers } from './answer-watcher.ts'
 import { assertConfigCurrent, hashConfigText, loadConfig, StaleConfigError } from './config.ts'
 import { createHumanChannel, type HumanChannel } from './human-channel.ts'
+import { engineHead } from './loop/engine-version.ts'
 import { makeEscalate } from './loop/escalate.ts'
 import { tuneHttpDispatcher } from './loop/http-tuning.ts'
 import { appendQa, pickNextIssue, runIssueLoop } from './loop/issue-loop.ts'
@@ -58,6 +60,10 @@ const configPath = join(repoDir, 'loop.config.ts')
 const configText = await readFile(configPath, 'utf8')
 const configHash = hashConfigText(configText)
 const config = await loadConfig(configPath)
+// The engine's own commit: a fix committed while the loop is alive is not in the
+// process running it. Compared at each pass boundary below, like the config.
+const engineDir = fileURLToPath(new URL('..', import.meta.url))
+const engineHeadAtStart = await engineHead(engineDir)
 
 for (const warning of lintRules(config.rules ?? [])) console.warn(`rules: ${warning}`)
 
@@ -168,6 +174,14 @@ const machineDeps: LoopMachineDeps = {
     // PROCESS kept the config it started with — which is how `passesPerIssue: 8`
     // in the file stayed 4 in memory for hours while tickets parked on a cap
     // nobody could see. Exiting here hands the new file to a fresh process.
+    const headNow = await engineHead(engineDir)
+    if (engineHeadAtStart !== null && headNow !== null && headNow !== engineHeadAtStart) {
+      await notify(
+        `Treadle EXITING: the engine moved under this process (${engineHeadAtStart.slice(0, 7)} ` +
+          `→ ${headNow.slice(0, 7)}). Restarting onto the new code at a pass boundary.`,
+      )
+      process.exit(255)
+    }
     try {
       await assertConfigCurrent(configPath, configHash)
     } catch (error) {
