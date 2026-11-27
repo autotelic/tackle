@@ -1,4 +1,4 @@
-import { Effect, Predicate, Schema } from "effect"
+import { Effect, Predicate, Result, Schema } from "effect"
 import { Decision } from "effect/ai"
 import type { AiError, DecisionModel } from "effect/ai"
 import { Atoms } from "./atoms.ts"
@@ -257,31 +257,31 @@ const firstWordOf = (text: string): string =>
  * @param clause - a message's witness clause.
  * @returns true when the clause opens with an imperative verb.
  */
-export const isImperativeClause = (clause: string): boolean =>
+export const isImperativeClause: Predicate.Predicate<string> = (clause) =>
   imperativeVerbs.has(firstWordOf(clause))
 
 /**
- * Why a composed remedy is not a repair label, or `undefined` when it is.
+ * Accept a composed remedy as a repair label.
  *
- * This is the cheap gate the first family/clause run lacked: the composed label
- * must not be a bare identifier, and it must not start with `@`, a quote, or a
- * capitalised product name. Those are the shapes a subject takes when it leaks
- * into the label, and they are cheap to reject at the point of composition.
+ * This is the cheap gate the first family/clause run lacked: a repair label
+ * must be a phrase, and it must not start with `@`, a quote, or a capitalised
+ * product name. Those are the shapes a subject takes when it leaks into the
+ * label, and they are cheap to reject at the point of composition.
  *
  * @param label - the composed `family: clause` remedy.
- * @returns a human-readable reason, or `undefined` when the label is a repair.
+ * @returns the accepted label, or the reason it cannot stand as a repair.
  */
-export const repairLabelProblem = (label: string): string | undefined => {
+export const repairLabel = (label: string): Result.Result<string, string> => {
   const trimmed = label.trim()
-  if (trimmed === "") return "is empty"
+  if (trimmed === "") return Result.fail("is empty")
   if (/^[@'"`\u2018\u2019\u201c\u201d]/u.test(trimmed)) {
-    return "starts with a quote or an API name"
+    return Result.fail("starts with a quote or an API name")
   }
-  if (/^[A-Za-z_$][\w$]*$/u.test(trimmed)) return "is a bare identifier"
-  if (/^[A-Z]/u.test(trimmed) && !imperativeVerbs.has(firstWordOf(trimmed))) {
-    return "starts with a capitalised product name"
+  if (/^[A-Za-z_$][\w$]*$/u.test(trimmed)) return Result.fail("is a bare identifier")
+  if (/^[A-Z]/u.test(trimmed) && !isImperativeClause(trimmed)) {
+    return Result.fail("starts with a capitalised product name")
   }
-  return undefined
+  return Result.succeed(trimmed)
 }
 
 /**
@@ -454,20 +454,26 @@ export const composeRemedy = ({
   readonly family: string
   readonly clause: string
 }): string => {
-  const clauseProblem = repairLabelProblem(clause)
-  if (clauseProblem !== undefined) {
+  const clauseLabel = repairLabel(clause)
+  if (Result.isFailure(clauseLabel)) {
     throw new Error(
-      "remedies: refusing to use " + JSON.stringify(clause) + " as a repair; it " + clauseProblem,
+      "remedies: refusing to use " +
+        JSON.stringify(clause) +
+        " as a repair; it " +
+        clauseLabel.failure,
     )
   }
-  const composed = family === "" ? clause : family + ": " + clause
-  const problem = repairLabelProblem(composed)
-  if (problem !== undefined) {
+  const composed = family === "" ? clauseLabel.success : family + ": " + clauseLabel.success
+  const label = repairLabel(composed)
+  if (Result.isFailure(label)) {
     throw new Error(
-      "remedies: refusing to label a cluster " + JSON.stringify(composed) + "; it " + problem,
+      "remedies: refusing to label a cluster " +
+        JSON.stringify(composed) +
+        "; it " +
+        label.failure,
     )
   }
-  return composed
+  return label.success
 }
 
 /** How a message's clause list is resolved: asked, implied, or a bug. */
@@ -619,7 +625,7 @@ export const judgeRemedies = (
     // candidate repair, and offering it made 83 findings label themselves `none`.
     // A subject is not a candidate either: the clause must be an imperative.
     const repairClause = (clause: string): boolean =>
-      isImperativeClause(clause) && repairLabelProblem(clause) === undefined
+      isImperativeClause(clause) && Result.isSuccess(repairLabel(clause))
     const clauses = [
       ...new Set([
         ...groups.map((group) => group.clause).filter(repairClause),
