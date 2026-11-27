@@ -638,6 +638,10 @@ const remedyLines = ({ report, ledger, cache, trace }: RemedyLinesInput): Readon
       String(report.pairsAsked) + " pair(s); cache " +
       String(cache.replayed) + "/" + String(total) + " replayed (" +
       (hit * 100).toFixed(1) + "%)",
+    "judgments: j_remedy " + String(report.counts.remedy) +
+      " pair(s) · j_material " + String(report.counts.material) +
+      " pair(s) · j_subcase " + String(report.counts.subcase) +
+      " pair(s) · decided by code " + String(report.counts.decidedByCode) + " pair(s)",
     ...(report.rejectedClauses.length === 0
       ? []
       : [

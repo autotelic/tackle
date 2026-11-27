@@ -1,12 +1,24 @@
 7a00517f2a69f04b	{"confidence":0.75,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.88,"member_1":0.12}}
+7a0da29aaffaab74	{"consistency":1,"kind":"Probability","probability":0.04}
+7a0e7cfc60c632fd	{"consistency":1,"kind":"Probability","probability":0.02}
 7a1686bbeea057b2	{"confidence":1,"kind":"Classify","label":"unbounded","probabilities":{"bounded":0,"not_applicable":0,"unbounded":1}}
 7a2f172202fa3cbb	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0.01}}
 7a3251b4fea75cb9	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0}}
 7a3f0f219057350d	{"consistency":1,"kind":"Probability","probability":0.04666666666666667}
+7a46518c8c1842d5	{"consistency":1,"kind":"Probability","probability":0.036666666666666674}
 7a4b31a85241f09e	{"confidence":0.98,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
+7a4f80ca6e8d8125	{"consistency":1,"kind":"Probability","probability":0.04}
 7a5292b682c44498	{"consistency":1,"kind":"Probability","probability":0.07333333333333335}
+7a571685a60d3e11	{"consistency":1,"kind":"Probability","probability":0.84}
+7a579d09e185ba11	{"consistency":1,"kind":"Probability","probability":0.03333333333333333}
 7a5f27f2e6df70e7	{"confidence":0.67,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.84,"member_1":0.16}}
 7a6e0aa0330fa533	{"consistency":1,"kind":"Probability","probability":0.04}
+7a8ad6bbbb422102	{"consistency":1,"kind":"Probability","probability":0.9366666666666666}
 7a959661de11732b	{"confidence":0.56,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.71,"not_a_derivation":0.25,"reimplements":0.04}}
+7aaebe53193ebbf4	{"consistency":1,"kind":"Probability","probability":0.056666666666666664}
+7ab55685afddca73	{"consistency":1,"kind":"Probability","probability":0.94}
 7abf6666092403f3	{"confidence":1,"kind":"Classify","label":"type UserId = string & Brand.Brand<\"UserId\">) so the compiler rejects transposed arguments","probabilities":{"Data.TaggedError) whose fields carry the operation, offending value, and domain, and render this context as its message":0,"Keep inference, validate with satisfies, or use a named owner contract":0,"type UserId = string & Brand.Brand<\"UserId\">) so the compiler rejects transposed arguments":1,"Use an owner/schema-derived value type; parse external payloads before insertion":0}}
+7ad49fd2ce6704e5	{"consistency":1,"kind":"Probability","probability":0.05000000000000001}
+7ad5c1272855fd74	{"consistency":1,"kind":"Probability","probability":0.96}
 7af8819c69cca416	{"confidence":0.96,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.97,"not_a_derivation":0.03,"reimplements":0}}
+7afef9958009d106	{"consistency":1,"kind":"Probability","probability":0.94}

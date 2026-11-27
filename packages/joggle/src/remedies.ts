@@ -385,6 +385,8 @@ export interface RepairOpinion {
   readonly failures: ReadonlyArray<string>
   readonly questions: number
   readonly pairs: number
+  /** How many pairs each gated judgment was asked of, and how many needed none. */
+  readonly counts?: RemedyQuestionCounts | undefined
   /**
    * Messages whose witness clause is a subject, not an imperative.
    *
@@ -396,6 +398,20 @@ export interface RepairOpinion {
     readonly message: string
     readonly clause: string
   }> | undefined
+}
+
+/**
+ * The gated question counts, so a run can say what it did not ask.
+ *
+ * `decidedByCode` is the interesting number: pairs where the sites overlap and
+ * the families agree, so no materiality or subcase judgment could change the
+ * merge. Rung 3's preview is how much of the corpus code can settle alone.
+ */
+export interface RemedyQuestionCounts {
+  readonly remedy: number
+  readonly material: number
+  readonly subcase: number
+  readonly decidedByCode: number
 }
 
 /** The three probabilities one pair question answers, and no sentence. */
@@ -476,6 +492,28 @@ export const remedyDecisionOf = (judgments: RemedyJudgments): RemedyDecision => 
         thresholds,
       }
     }
+    // Only a pair whose repairs already match can be a subcase: the subcase
+    // question is asked after `j_remedy`, and it refines a material trigger
+    // difference rather than competing with the merge question.
+    if (judgments.subcase !== undefined && judgments.subcase > thresholds.subcase) {
+      return {
+        branch: "subcase",
+        reason:
+          "j_remedy " +
+          percent(judgments.remedy) +
+          " > " +
+          String(thresholds.sameRemedy) +
+          " but j_material " +
+          percent(judgments.material) +
+          " >= " +
+          String(thresholds.material) +
+          ", and j_subcase " +
+          percent(judgments.subcase) +
+          " > " +
+          String(thresholds.subcase),
+        thresholds,
+      }
+    }
     return {
       branch: "independent",
       reason:
@@ -491,13 +529,6 @@ export const remedyDecisionOf = (judgments: RemedyJudgments): RemedyDecision => 
       thresholds,
     }
   }
-  if (judgments.subcase !== undefined && judgments.subcase > thresholds.subcase) {
-    return {
-      branch: "subcase",
-      reason: "j_subcase " + percent(judgments.subcase) + " > " + String(thresholds.subcase),
-      thresholds,
-    }
-  }
   return {
     branch: "independent",
     reason:
@@ -505,10 +536,7 @@ export const remedyDecisionOf = (judgments: RemedyJudgments): RemedyDecision => 
       percent(judgments.remedy) +
       " <= " +
       String(thresholds.sameRemedy) +
-      " and j_subcase " +
-      percent(judgments.subcase) +
-      " <= " +
-      String(thresholds.subcase),
+      "; the messages do not prescribe one repair",
     thresholds,
   }
 }
@@ -530,13 +558,12 @@ export const recomputeTraceDecision = (trace: {
   const judgments = trace.judgments
   const thresholds = trace.decision.thresholds
   if (judgments.remedy !== undefined && judgments.remedy > thresholds.sameRemedy) {
-    return judgments.material !== undefined && judgments.material < thresholds.material
-      ? "same"
+    if (judgments.material !== undefined && judgments.material < thresholds.material) return "same"
+    return judgments.subcase !== undefined && judgments.subcase > thresholds.subcase
+      ? "subcase"
       : "independent"
   }
-  return judgments.subcase !== undefined && judgments.subcase > thresholds.subcase
-    ? "subcase"
-    : "independent"
+  return "independent"
 }
 
 /**
@@ -1042,8 +1069,6 @@ export const judgeRemedies = (
       depth += 1
     }
 
-    const pairs: Array<{ readonly key: string }> = []
-    const pairPlans: Array<Plan<RemedyJudgments>> = []
     const probabilityOf = (
       answers: Readonly<Record<string, Decision.Answer<Decision.Any>>>,
       name: string,
@@ -1052,6 +1077,23 @@ export const judgeRemedies = (
       return answer !== undefined && "probability" in answer ? answer.probability : undefined
     }
 
+    interface PairQuestion {
+      readonly key: string
+      readonly atom: string
+      readonly aRef: string
+      readonly bRef: string
+      /**
+       * Whether the trigger difference could change the repair: the two groups
+       * reach disjoint sites, or their rules answered different families.
+       *
+       * Both facts are computed. A pair with overlapping sites and one family
+       * needs no materiality judgment, because the counterexample pack already
+       * shows the triggers coincide.
+       */
+      readonly suspect: boolean
+    }
+
+    const pairs: Array<PairQuestion> = []
     for (let left = 0; left < groups.length; left += 1) {
       for (let right = left + 1; right < groups.length; right += 1) {
         const a = groups[left]?.messages[0]
@@ -1073,94 +1115,159 @@ export const judgeRemedies = (
           },
         }
         const atom = yield* atoms.add(state)
-        const aRef = "atoms[" + atom + "].a"
-        const bRef = "atoms[" + atom + "].b"
-        // Three atomic questions, never one stuffed decision: a repair judgment,
-        // whether the trigger difference is material to it, and whether one
-        // trigger is a subset of the other. The decision is code's, below.
-        pairPlans.push({
-          ruleId: "joggle/remedies",
-          subject: key,
-          concerns: [],
-          atoms: [atom],
-          decisions: {
-            j_remedy: Decision.probability({
-              instructions: [
-                "Do `" +
-                  aRef +
-                  ".message` and `" +
-                  bRef +
-                  ".message` prescribe the same" +
-                  " repair, given `" +
-                  aRef +
-                  ".rule` and `" +
-                  bRef +
-                  ".rule`?",
-                "Answer about the action the reader must take, not the words the two rules use.",
-                "Answer true when fixing either finding would be the same edit, or the same" +
-                  " kind of edit at the same boundary.",
-              ].join("\n"),
-              criteria: {
-                false: "They prescribe different repairs.",
-                true: "They prescribe the same repair.",
-              },
-            }),
-            j_material: Decision.probability({
-              instructions: [
-                "Does the difference between `" +
-                  aRef +
-                  ".trigger` and `" +
-                  bRef +
-                  ".trigger` change the repair a reader" +
-                  " must make?",
-                "The triggers are the diagnoses each rule saw, not the repairs.",
-                "Answer true when a fix that satisfies one trigger does not satisfy the other",
-                "because the conditions they detect are genuinely different.",
-              ].join("\n"),
-              criteria: {
-                false: "The trigger difference does not change the repair.",
-                true: "The trigger difference changes the repair.",
-              },
-            }),
-            j_subcase: Decision.probability({
-              instructions: [
-                "Is `" + bRef + ".trigger` a strict subset of `" + aRef + ".trigger`?",
-                "Strict means every case `" +
-                  bRef +
-                  ".trigger` describes is also described by `" +
-                  aRef +
-                  ".trigger`, and `" +
-                  aRef +
-                  ".trigger` describes at least one more.",
-              ].join("\n"),
-              criteria: {
-                false: "It is not a strict subset.",
-                true: "It is a strict subset.",
-              },
-            }),
-          },
-          read: (answers) => ({
-            remedy: probabilityOf(answers, "j_remedy"),
-            material: probabilityOf(answers, "j_material"),
-            subcase: probabilityOf(answers, "j_subcase"),
-          }),
+        const aSites = new Set(a.findings.map((finding) => finding.site))
+        const intersect = b.findings.some((finding) => aSites.has(finding.site))
+        const familyA = familyByMessage.get(a.key)
+        const familyB = familyByMessage.get(b.key)
+        pairs.push({
+          key,
+          atom,
+          aRef: "atoms[" + atom + "].a",
+          bRef: "atoms[" + atom + "].b",
+          suspect:
+            !intersect ||
+            familyA === undefined ||
+            familyB === undefined ||
+            familyA !== familyB,
         })
-        pairs.push({ key })
       }
     }
 
-    const pairAnswers = yield* askPlans(pairPlans)
-    failures.push(...pairAnswers.failures)
-    const repairMap = new Map(clauseByMessage)
-    const sameMap = new Map<string, number>()
-    const materialMap = new Map<string, number>()
-    const subcaseMap = new Map<string, number>()
+    // RUNG 3'S GATE: ask the merge question of every pair, but ask the two
+    // questions that refine it only where they can change the answer. The
+    // measured regression was 17,364 questions because every pair got all three;
+    // a pair with one family and overlapping sites is already settled by code.
+    const remedyPlans: Array<Plan<number | undefined>> = pairs.map((pair) => ({
+      ruleId: "joggle/remedies",
+      subject: pair.key,
+      concerns: [],
+      atoms: [pair.atom],
+      decisions: {
+        j_remedy: Decision.probability({
+          instructions: [
+            "Do `" +
+              pair.aRef +
+              ".message` and `" +
+              pair.bRef +
+              ".message` prescribe the same" +
+              " repair, given `" +
+              pair.aRef +
+              ".rule` and `" +
+              pair.bRef +
+              ".rule`?",
+            "Answer about the action the reader must take, not the words the two rules use.",
+            "Answer true when fixing either finding would be the same edit, or the same" +
+              " kind of edit at the same boundary.",
+          ].join("\n"),
+          criteria: {
+            false: "They prescribe different repairs.",
+            true: "They prescribe the same repair.",
+          },
+        }),
+      },
+      read: (answers) => probabilityOf(answers, "j_remedy"),
+    }))
+    const remedyAnswers = yield* askPlans(remedyPlans)
+    failures.push(...remedyAnswers.failures)
+    const remedyByKey = new Map<string, number>()
     pairs.forEach((pair, index) => {
-      const answer = pairAnswers.values[index]
-      if (answer?.remedy !== undefined) sameMap.set(pair.key, answer.remedy)
-      if (answer?.material !== undefined) materialMap.set(pair.key, answer.material)
-      if (answer?.subcase !== undefined) subcaseMap.set(pair.key, answer.subcase)
+      const remedy = remedyAnswers.values[index]
+      if (remedy !== undefined) remedyByKey.set(pair.key, remedy)
     })
+    const saysSame = (key: string): boolean => {
+      const remedy = remedyByKey.get(key)
+      return remedy !== undefined && remedy > policy.decision.remedy.sameRemedy
+    }
+
+    const materialPairs = pairs.filter((pair) => pair.suspect)
+    const materialPlans: Array<Plan<number | undefined>> = materialPairs.map((pair) => ({
+      ruleId: "joggle/remedies",
+      subject: pair.key,
+      concerns: [],
+      atoms: [pair.atom],
+      decisions: {
+        j_material: Decision.probability({
+          instructions: [
+            "Does the difference between `" +
+              pair.aRef +
+              ".trigger` and `" +
+              pair.bRef +
+              ".trigger` change the repair a reader" +
+              " must make?",
+            "The triggers are the diagnoses each rule saw, not the repairs.",
+            "Answer true when a fix that satisfies one trigger does not satisfy the other",
+            "because the conditions they detect are genuinely different.",
+          ].join("\n"),
+          criteria: {
+            false: "The trigger difference does not change the repair.",
+            true: "The trigger difference changes the repair.",
+          },
+        }),
+      },
+      read: (answers) => probabilityOf(answers, "j_material"),
+    }))
+    const materialAnswers = yield* askPlans(materialPlans)
+    failures.push(...materialAnswers.failures)
+    const materialByKey = new Map<string, number>()
+    materialPairs.forEach((pair, index) => {
+      const material = materialAnswers.values[index]
+      if (material !== undefined) materialByKey.set(pair.key, material)
+    })
+
+    // A subcase can only refine a pair whose repairs already match. Asking it
+    // before `j_remedy` was the other half of the measured over-asking.
+    const subcasePairs = pairs.filter((pair) => pair.suspect && saysSame(pair.key))
+    const subcasePlans: Array<Plan<number | undefined>> = subcasePairs.map((pair) => ({
+      ruleId: "joggle/remedies",
+      subject: pair.key,
+      concerns: [],
+      atoms: [pair.atom],
+      decisions: {
+        j_subcase: Decision.probability({
+          instructions: [
+            "Is `" + pair.bRef + ".trigger` a strict subset of `" + pair.aRef + ".trigger`?",
+            "Strict means every case `" +
+              pair.bRef +
+              ".trigger` describes is also described by `" +
+              pair.aRef +
+              ".trigger`, and `" +
+              pair.aRef +
+              ".trigger` describes at least one more.",
+          ].join("\n"),
+          criteria: {
+            false: "It is not a strict subset.",
+            true: "It is a strict subset.",
+          },
+        }),
+      },
+      read: (answers) => probabilityOf(answers, "j_subcase"),
+    }))
+    const subcaseAnswers = yield* askPlans(subcasePlans)
+    failures.push(...subcaseAnswers.failures)
+    const subcaseByKey = new Map<string, number>()
+    subcasePairs.forEach((pair, index) => {
+      const subcase = subcaseAnswers.values[index]
+      if (subcase !== undefined) subcaseByKey.set(pair.key, subcase)
+    })
+
+    const repairMap = new Map(clauseByMessage)
+    const sameMap = new Map(remedyByKey)
+    const materialMap = new Map(materialByKey)
+    const subcaseMap = new Map(subcaseByKey)
+    let decidedByCode = 0
+    for (const pair of pairs) {
+      if (pair.suspect) continue
+      // The sites overlap and the families agree, so code knows the trigger
+      // difference cannot change the repair. That is a decision, not a judgment.
+      decidedByCode += 1
+      if (saysSame(pair.key)) materialMap.set(pair.key, 0)
+    }
+    const counts = {
+      remedy: remedyByKey.size,
+      material: materialByKey.size,
+      subcase: subcaseByKey.size,
+      decidedByCode,
+    }
     const failureText = failures.map(String)
     // Witness-only means the model was never reached. A size rejection is a
     // judgement that ran and failed, so it stays PARTIAL with a named reason.
@@ -1177,6 +1284,7 @@ export const judgeRemedies = (
       failures: failureText,
       questions: messages.length,
       pairs: pairs.length,
+      counts,
       rejectedClauses,
     }
   })
@@ -1260,6 +1368,8 @@ export interface RemedyReport {
   readonly findings: number
   readonly distinctMessages: number
   readonly pairsAsked: number
+  /** The gated question counts: what was asked, and what code settled. */
+  readonly counts: RemedyQuestionCounts
   /** Pairs the judgement answered, out of `pairsAsked`. */
   readonly answeredPairs: number
   /** Distinct messages the judgement answered, out of `distinctMessages`. */
@@ -1694,6 +1804,12 @@ export const clusterRemedies = (
     findings: findings.length,
     distinctMessages: messages.length,
     pairsAsked: opinion.pairs,
+    counts: opinion.counts ?? {
+      remedy: opinion.same.size,
+      material: opinion.material?.size ?? 0,
+      subcase: opinion.subcase?.size ?? 0,
+      decidedByCode: 0,
+    },
     answeredPairs,
     answeredRepairs,
     impliedRepairs: opinion.implied?.size ?? 0,

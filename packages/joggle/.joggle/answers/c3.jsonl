@@ -1,15 +1,34 @@
+c3096500e8a3250c	{"consistency":1,"kind":"Probability","probability":0.03333333333333333}
+c30c7aeafa2e0ba5	{"consistency":1,"kind":"Probability","probability":0.043333333333333335}
 c30e3842b18cc00f	{"consistency":1,"kind":"Probability","probability":0.68}
 c30fea2604773d62	{"confidence":0.87,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.91,"stale_reference":0,"wrong_behavior":0.07,"wrong_contract":0.02}}
 c313b014a5a32718	{"confidence":0.83,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.11,"independent":0.89,"meaning_switched":0}}
 c318b0ffffe1f0e5	{"confidence":0.85,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.89,"component_or_feature":0,"not_applicable":0.1,"route_or_handler":0.01}}
 c3395a7f7bc9fad3	{"confidence":1,"kind":"Classify","label":"@effect/ui/Command#make is an experimental API","probabilities":{"@effect/ui/Command#make is an experimental API":1,"@effect/ui/Head#title is an experimental API":0,"@effect/ui/html/BrowserHost#mount is an experimental API":0,"@effect/ui/html/Html#component is an experimental API":0,"@effect/ui/html/Html#H is an experimental API":0}}
+c3403d92f6305590	{"consistency":1,"kind":"Probability","probability":0.04}
+c3430702c097b46f	{"consistency":1,"kind":"Probability","probability":0.9433333333333334}
+c346b6a0485d98de	{"consistency":1,"kind":"Probability","probability":0.94}
+c34b392508ffb60c	{"consistency":1,"kind":"Probability","probability":0.03333333333333333}
+c3551a37745da0b2	{"consistency":1,"kind":"Probability","probability":0.03}
+c355c2c736b29fb9	{"consistency":1,"kind":"Probability","probability":0.03333333333333333}
 c35f50c516accaf9	{"confidence":0.71,"kind":"Classify","label":"orchestration","probabilities":{"domain_logic":0.08,"infrastructure":0.17,"input_adaptation":0,"mechanical":0,"not_applicable":0,"orchestration":0.75,"rendering":0,"request_validation":0,"transport_concern":0}}
 c365557ea010687b	{"confidence":1,"kind":"Classify","label":"Inject fleetInFlight at the call site or thread it through the signature so the dependency is explicit","probabilities":{"Capture it at the boundary and pass it in as a parameter":0,"Inject fleetCache at the call site or thread it through the signature so the dependency is explicit":0,"Inject fleetInFlight at the call site or thread it through the signature so the dependency is explicit":1,"Make it local, or hold it in explicit state/service passed by parameter":0,"Route the request through a client dependency so calls are injectable, cancellable, and testable":0,"Take the instant as a parameter (or use a fixed epoch for pure conversions)":0}}
 c3786c35fe6093aa	{"confidence":0.85,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.11,"framework_glue":0,"implementation_detail":0.89,"wire_contract":0}}
 c382d2e8ed4a519b	{"confidence":0.83,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.88,"stale_reference":0,"wrong_behavior":0.11,"wrong_contract":0.01}}
 c385b0a058cf22ab	{"confidence":0.98,"kind":"Classify","label":"other","probabilities":{"inject the dependency":0,"justify the assertion":0.02,"narrow with a predicate":0,"other":0.98,"own the value type":0,"parse at the boundary":0}}
+c386d8654a3e9c51	{"consistency":1,"kind":"Probability","probability":0.04}
 c396f98069ae30a0	{"consistency":1,"kind":"Probability","probability":0.03}
+c3970ae87630fbff	{"consistency":1,"kind":"Probability","probability":0.04}
 c39c23920d67051c	{"consistency":1,"kind":"Probability","probability":0.05000000000000001}
+c3b4d169b7d308aa	{"consistency":1,"kind":"Probability","probability":0.05333333333333334}
+c3b7ca3286d3cbab	{"consistency":1,"kind":"Probability","probability":0.9499999999999998}
+c3bbf9e2568f766b	{"consistency":1,"kind":"Probability","probability":0.04}
+c3c1348f818665b2	{"consistency":1,"kind":"Probability","probability":0.03}
 c3c58ff20642e2d1	{"consistency":1,"kind":"Probability","probability":0.02}
+c3d4ada106d08529	{"consistency":1,"kind":"Probability","probability":0.57}
 c3d9f49d31b0cf99	{"confidence":0.77,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.88,"member_1":0.12}}
+c3e2ab04fa915db7	{"consistency":1,"kind":"Probability","probability":0.03333333333333333}
+c3f0aea49d7fbc1f	{"consistency":1,"kind":"Probability","probability":0.9633333333333333}
 c3f1740c3e7f3f9e	{"confidence":0.96,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.97,"not_a_derivation":0.01,"reimplements":0.02}}
+c3f62a2c8f1e583d	{"consistency":1,"kind":"Probability","probability":0.9666666666666667}
+c3fa4727193c516a	{"consistency":1,"kind":"Probability","probability":0.04}

@@ -1,10 +1,17 @@
+a8061c6acaf10471	{"consistency":1,"kind":"Probability","probability":0.03333333333333333}
 a809ee31cafc930e	{"confidence":0.66,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.24,"framework_glue":0,"implementation_detail":0.75,"wire_contract":0.01}}
 a8116944f963f939	{"confidence":0.93,"kind":"Classify","label":"domain_concept","probabilities":{"domain_concept":0.95,"framework_glue":0,"implementation_detail":0.05,"wire_contract":0}}
+a8133b70ea684a7f	{"consistency":1,"kind":"Probability","probability":0.9433333333333334}
 a815ef7282fd8bf9	{"confidence":0.94,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.03,"internal_only":0.96,"unaccounted":0.01}}
+a8163cd38e7da80a	{"consistency":1,"kind":"Probability","probability":0.02666666666666667}
 a81a2d558efc28b5	{"confidence":0.63,"kind":"Classify","label":"one_concept","probabilities":{"already_named":0.13,"coincidental":0.12,"one_concept":0.75}}
 a81dd64be646ee91	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0}}
+a8231519656d6a9a	{"consistency":1,"kind":"Probability","probability":0.03333333333333333}
+a8294112828da1e5	{"consistency":1,"kind":"Probability","probability":0.04}
 a82aaebb3711f465	{"confidence":0.48,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.61,"component_or_feature":0.03,"not_applicable":0.06,"route_or_handler":0.3}}
+a8330059a9a6eaa4	{"consistency":1,"kind":"Probability","probability":0.8233333333333333}
 a836fd802564a82f	{"consistency":1,"kind":"Probability","probability":0.043333333333333335}
+a837f2a4a60db14c	{"consistency":1,"kind":"Probability","probability":0.6366666666666667}
 a841bc672c0ac07b	{"confidence":0.61,"kind":"Classify","label":"same_module","probabilities":{"different_deployables":0,"same_module":0.71,"same_package":0.29,"sibling_packages":0}}
 a843259558310550	{"confidence":0.86,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.87,"infrastructure":0,"input_adaptation":0.07,"mechanical":0.01,"not_applicable":0.04,"orchestration":0.01,"rendering":0,"request_validation":0,"transport_concern":0}}
 a84a9628b8b6044f	{"confidence":0.74,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.81,"component_or_feature":0.04,"not_applicable":0.12,"route_or_handler":0.03}}
@@ -12,9 +19,15 @@ a852df7cf11c2bb2	{"confidence":0.85,"kind":"Classify","label":"rendering","proba
 a86c0e62677eef94	{"confidence":0.04,"kind":"Classify","label":"Build the object in separate statements and add the property only when present","probabilities":{"Add property-based coverage (generate inputs, assert invariants), or disable this rule inline with a reason if the behavior is truly non-property-testable":0.48,"Build the object in separate statements and add the property only when present":0.52}}
 a8787922cf0c1a82	{"confidence":1,"kind":"Classify","label":"Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function","probabilities":{"Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function":1,"Keep the original precise type, or parse untrusted input at its boundary before narrowing it":0,"Parse input at its I/O boundary, then branch on the domain value":0}}
 a88c28c7eaaea1e2	{"consistency":1,"kind":"Probability","probability":0.03}
+a89430ca4d2a005e	{"consistency":1,"kind":"Probability","probability":0.04}
+a89895ee6b3bd909	{"consistency":1,"kind":"Probability","probability":0.04}
 a89b8243f70738aa	{"confidence":0.25,"kind":"Classify","label":"two_concepts","probabilities":{"compatible":0.07,"drift":0.44,"two_concepts":0.49}}
+a89f53d66aa39acd	{"consistency":1,"kind":"Probability","probability":0.03333333333333333}
+a8a26c62fe3d07e3	{"consistency":1,"kind":"Probability","probability":0.92}
 a8a54f38d6270721	{"confidence":1,"kind":"Classify","label":"State the checked invariant immediately before the assertion or its containing statement","probabilities":{"An integration boundary that must consume throwing APIs justifies itself with a SAFETY: comment":0,"State the checked invariant immediately before the assertion or its containing statement":1}}
+a8a6197cd942bdcd	{"consistency":1,"kind":"Probability","probability":0.9499999999999998}
 a8c049be41bd4904	{"confidence":0.74,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.81,"component_or_feature":0,"not_applicable":0.18,"route_or_handler":0.01}}
+a8c3583f17c487cc	{"consistency":1,"kind":"Probability","probability":0.91}
 a8e7b53577d508c3	{"consistency":1,"kind":"Probability","probability":0.04}
 a8ea080c4f5adaba	{"confidence":1,"kind":"Classify","label":"Keep inference, validate with satisfies, or use a named owner contract","probabilities":{"Accept a single named payload object instead; two parameters of the same type transpose silently":0,"Keep inference, validate with satisfies, or use a named owner contract":1,"type UserId = string & Brand.Brand<\"UserId\">) so the compiler rejects transposed arguments":0,"Use an owner/schema-derived value type; parse external payloads before insertion":0}}
 a8ee33262c4ca9d8	{"consistency":1,"kind":"Probability","probability":0.6633333333333334}

@@ -1,4 +1,5 @@
 d401c36a18c27849	{"confidence":0.59,"kind":"Classify","label":"same_module","probabilities":{"different_deployables":0,"same_module":0.69,"same_package":0.31,"sibling_packages":0}}
+d40695f9d3c854a9	{"consistency":1,"kind":"Probability","probability":0.04}
 d40b345fd817e57c	{"consistency":1,"kind":"Probability","probability":0.056666666666666664}
 d40ebce0617aded3	{"consistency":1,"kind":"Probability","probability":0.03}
 d41141547231deae	{"confidence":0.69,"kind":"Classify","label":"move","probabilities":{"merge":0.05,"move":0.79,"no_issue":0.16}}
@@ -6,20 +7,31 @@ d41559f04560aa1d	{"confidence":0.86,"kind":"Classify","label":"no_issue","probab
 d4198086cb00743e	{"confidence":0.69,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.8,"member_1":0.08,"member_2":0.12}}
 d41a62a5ce319a41	{"confidence":0.67,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.84,"member_1":0.16}}
 d41d4863e8d2504e	{"confidence":0.89,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.04,"inferred":0.03,"not_applicable":0.93}}
+d4232e1c40bc74b9	{"consistency":1,"kind":"Probability","probability":0.9433333333333334}
+d42b242919173bb2	{"consistency":1,"kind":"Probability","probability":0.7333333333333334}
+d43557d7bd04b1f5	{"consistency":1,"kind":"Probability","probability":0.03}
 d43c21eab9031975	{"consistency":1,"kind":"Probability","probability":0.04}
+d44e5e7b3abd3d6e	{"consistency":1,"kind":"Probability","probability":0.04}
+d452da079aee838b	{"consistency":1,"kind":"Probability","probability":0.04}
 d45d23027185cd43	{"confidence":0.31,"kind":"Classify","label":"drift","probabilities":{"compatible":0.23,"drift":0.54,"two_concepts":0.23}}
 d46500ce75ddf8fa	{"consistency":1,"kind":"Probability","probability":0.03}
 d46893b1545ef890	{"consistency":1,"kind":"Probability","probability":0.03}
 d468f44abcbe2bef	{"confidence":0.67,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.75,"stale_reference":0.01,"wrong_behavior":0.23,"wrong_contract":0.01}}
 d4696d7388575922	{"confidence":0.95,"kind":"Classify","label":"library_core","probabilities":{"domain_core":0,"infrastructure":0,"library_core":0.97,"not_applicable":0,"rendering_edge":0,"transport_edge":0,"utilities":0.03}}
+d46aed8c0a9c88c6	{"consistency":1,"kind":"Probability","probability":0.9533333333333333}
 d471411b2e19ca89	{"confidence":0.51,"kind":"Classify","label":"narrow with a predicate","probabilities":{"inject the dependency":0,"justify the assertion":0.01,"narrow with a predicate":0.58,"other":0.23,"own the value type":0.01,"parse at the boundary":0.05,"use the stable API":0.12}}
+d47185d063c3f64a	{"consistency":1,"kind":"Probability","probability":0.03333333333333333}
 d4795bb5ac172b54	{"consistency":1,"kind":"Probability","probability":0.025555555555555557}
 d482c1a8a32c4ad6	{"consistency":1,"kind":"Probability","probability":0.03}
 d487ee597cab4fc0	{"consistency":1,"kind":"Probability","probability":0.03}
 d48ae9259dbaec26	{"confidence":0.7,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.78,"component_or_feature":0.03,"not_applicable":0.16,"route_or_handler":0.03}}
+d494b067ef458842	{"consistency":0.6666666666666667,"kind":"Probability","probability":0.43333333333333335}
 d4afd471174d0d82	{"confidence":0.93,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.96,"stale_reference":0,"wrong_behavior":0.04,"wrong_contract":0}}
 d4bc8eaa9d1dc181	{"confidence":0.98,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
+d4c71df656f16d9b	{"consistency":1,"kind":"Probability","probability":0.03}
+d4ca992186b0c91a	{"consistency":1,"kind":"Probability","probability":0.03}
 d4d89a71b4f902b5	{"confidence":1,"kind":"Classify","label":"Make it local, or hold it in explicit state/service passed by parameter","probabilities":{"Capture it at the boundary and pass it in as a parameter":0,"Inject fleetCache at the call site or thread it through the signature so the dependency is explicit":0,"Inject fleetInFlight at the call site or thread it through the signature so the dependency is explicit":0,"Make it local, or hold it in explicit state/service passed by parameter":1,"Route the request through a client dependency so calls are injectable, cancellable, and testable":0,"Take the instant as a parameter (or use a fixed epoch for pure conversions)":0}}
+d4db0108006284b7	{"consistency":1,"kind":"Probability","probability":0.03}
 d4e590363698bc29	{"confidence":0.3,"kind":"Classify","label":"orchestration","probabilities":{"domain_logic":0.35,"infrastructure":0.01,"input_adaptation":0.01,"mechanical":0.09,"not_applicable":0.16,"orchestration":0.38,"rendering":0,"request_validation":0,"transport_concern":0}}
 d4f5e298a17e4388	{"confidence":0.84,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.07,"internal_only":0.89,"unaccounted":0.04}}
 d4fe30669a0e9bfd	{"confidence":0.38,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.46,"no_difference":0.06,"removes_a_hazard":0.3,"slightly_clearer":0.18},"rating":1.99}

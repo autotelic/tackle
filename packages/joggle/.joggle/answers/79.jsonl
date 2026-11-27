@@ -1,16 +1,35 @@
 790561faa5641462	{"confidence":0.95,"kind":"Classify","label":"other","probabilities":{"inject the dependency":0,"justify the assertion":0,"narrow with a predicate":0,"other":0.96,"own the value type":0,"parse at the boundary":0,"use the stable API":0.04}}
 791a62ec1ff06308	{"confidence":0.93,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0.01,"wrong_behavior":0.03,"wrong_contract":0.01}}
+791f9c5cb9799178	{"consistency":1,"kind":"Probability","probability":0.9533333333333333}
+7922b830303b5107	{"consistency":1,"kind":"Probability","probability":0.03}
 792a95c9a04cb007	{"confidence":0.16,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.28,"independent":0.44,"meaning_switched":0.28}}
 79355d25e0eb193a	{"consistency":1,"kind":"Probability","probability":0.6066666666666668}
 795950cd2c9fea1f	{"confidence":1,"kind":"Classify","label":"Layer is already lazy, so wrapping it in a zero-argument function adds unnecessary indirection","probabilities":{"Build the object in separate statements and add the property only when present":0,"Document the contract with @param/@returns so the jsdoc rules can enforce it":0,"Explicit undefined is unnecessary on an optional parameter":0,"Layer is already lazy, so wrapping it in a zero-argument function adds unnecessary indirection":1,"Move the entry point to the file that owns the runtime, or name this file in the rule's seams option with the reason it is a second one":0}}
 7962b98226f94524	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
+7966ec43d92eafc6	{"consistency":1,"kind":"Probability","probability":0.9333333333333332}
+7969653bead8b2cd	{"consistency":1,"kind":"Probability","probability":0.94}
+7976eb401964ee72	{"consistency":1,"kind":"Probability","probability":0.06}
+798087582f73cca4	{"consistency":1,"kind":"Probability","probability":0.09000000000000001}
 798cc45a525a72f0	{"confidence":0.7,"kind":"Classify","label":"same_module","probabilities":{"different_deployables":0,"same_module":0.78,"same_package":0.22,"sibling_packages":0}}
 798e5766e57eb80d	{"confidence":0.66,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.01,"name_meaning":0,"no_issue":0.24,"semantic_verdict":0.75}}
+7992abcd57f4f632	{"consistency":1,"kind":"Probability","probability":0.02}
+79961c7b6797c8ee	{"consistency":1,"kind":"Probability","probability":0.04666666666666667}
 7999112f6abfddfc	{"confidence":0.96,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.97,"component_or_feature":0,"not_applicable":0.03,"route_or_handler":0}}
+799c9e051c26cea6	{"consistency":1,"kind":"Probability","probability":0.9366666666666666}
 79a56f9555c8e1d9	{"confidence":0.93,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.96,"not_a_derivation":0.04,"reimplements":0}}
 79aafa541c8b450e	{"consistency":1,"kind":"Probability","probability":0.05333333333333334}
 79abea8943d359b0	{"confidence":0.92,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.94,"stale_reference":0,"wrong_behavior":0.05,"wrong_contract":0.01}}
+79b818d8990fe082	{"consistency":1,"kind":"Probability","probability":0.9166666666666666}
+79cc148e19e82f98	{"consistency":1,"kind":"Probability","probability":0.9633333333333333}
 79cc894032524fef	{"consistency":1,"kind":"Probability","probability":0.04}
+79cc89936d828fbb	{"consistency":1,"kind":"Probability","probability":0.7966666666666667}
 79ce0717e80c98fb	{"confidence":0.95,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0.01}}
+79ceb44e02c987b2	{"consistency":1,"kind":"Probability","probability":0.96}
+79d1c3f4ff3609a4	{"consistency":1,"kind":"Probability","probability":0.036666666666666674}
+79d3142473a0bb01	{"consistency":1,"kind":"Probability","probability":0.96}
 79da2588f91c29d7	{"confidence":0.26,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.37,"internal_only":0.51,"unaccounted":0.12}}
 79dce49f0d274ea9	{"confidence":1,"kind":"Classify","label":"Parse input at its I/O boundary, then branch on the domain value","probabilities":{"Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function":0,"Keep the original precise type, or parse untrusted input at its boundary before narrowing it":0,"Parse input at its I/O boundary, then branch on the domain value":1}}
+79e48d2f3d0aa7a1	{"consistency":1,"kind":"Probability","probability":0.02666666666666667}
+79ec2eaaebdcfde0	{"consistency":1,"kind":"Probability","probability":0.03}
+79f233942fb5efee	{"consistency":1,"kind":"Probability","probability":0.96}
+79f7bd1157555b45	{"consistency":1,"kind":"Probability","probability":0.036666666666666674}

@@ -1,15 +1,30 @@
 c6102c9687bcbbb7	{"confidence":0.24,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.14,"keep_variants":0.49,"no_issue":0.37}}
+c6124e05da563648	{"consistency":1,"kind":"Probability","probability":0.03333333333333333}
 c62001744272b278	{"confidence":0.98,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0.01}}
 c6256482563e4732	{"confidence":0.57,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.19,"internal_only":0.71,"unaccounted":0.1}}
 c62a4c4109090158	{"consistency":1,"kind":"Probability","probability":0.4222222222222223}
 c62d5cb95ee7b25c	{"confidence":0.98,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0.01}}
 c62df736ea6c76f5	{"confidence":0.91,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.93,"component_or_feature":0.01,"not_applicable":0.06,"route_or_handler":0}}
+c63a4589409a2af7	{"consistency":1,"kind":"Probability","probability":0.69}
+c63c9e2359092259	{"consistency":1,"kind":"Probability","probability":0.91}
 c64ae0e9fec401c4	{"consistency":1,"kind":"Probability","probability":0.023333333333333334}
+c65254fc095d3eb5	{"consistency":1,"kind":"Probability","probability":0.9566666666666667}
 c65cae9453f96f20	{"consistency":1,"kind":"Probability","probability":0.036666666666666674}
+c65ecdc42442de8d	{"consistency":1,"kind":"Probability","probability":0.04}
 c6646c797b611992	{"confidence":0.81,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.88,"not_a_derivation":0.12,"reimplements":0}}
 c668a0152a812e05	{"confidence":0.93,"kind":"Classify","label":"domain_concept","probabilities":{"domain_concept":0.95,"framework_glue":0,"implementation_detail":0.05,"wire_contract":0}}
 c66929f15eebb2e9	{"confidence":0.85,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.87,"infrastructure":0,"input_adaptation":0,"mechanical":0.02,"not_applicable":0.08,"orchestration":0.03,"rendering":0,"request_validation":0,"transport_concern":0}}
+c676d8acfc2423ba	{"consistency":1,"kind":"Probability","probability":0.043333333333333335}
 c67d00c1be4db9c9	{"confidence":0.37,"kind":"Classify","label":"group 4","probabilities":{"group 1":0.01,"group 2":0,"group 3":0.11,"group 4":0.45,"group 5":0.09,"group 6":0.2,"group 7":0.13,"group 8":0.01}}
 c6a3e6a4e9ba3b56	{"consistency":1,"kind":"Probability","probability":0.05000000000000001}
+c6a512dfc5c479e0	{"consistency":1,"kind":"Probability","probability":0.03}
+c6a8433d5c0a0e8f	{"consistency":1,"kind":"Probability","probability":0.03333333333333333}
+c6c09ba6ce5bc3d8	{"consistency":1,"kind":"Probability","probability":0.9233333333333333}
 c6c4269fe0b7d5c2	{"confidence":1,"kind":"Classify","label":"Rename symbol \"VmSnapshotShape\" for its domain role; \"shape\" describes structure rather than ownership","probabilities":{"Only service identifiers should appear in the requirements channel":0,"ordering) in the collection itself instead of a parallel array":0,"Rename symbol \"VmSnapshotShape\" for its domain role; \"shape\" describes structure rather than ownership":1,"Return Option<EffectCounts> and express absence as Option.none()":0,"Return Option<number> and express absence as Option.none()":0}}
+c6c91369b7909373	{"consistency":1,"kind":"Probability","probability":0.02}
+c6d49255e3dd0067	{"consistency":1,"kind":"Probability","probability":0.96}
+c6d4deb519bae7eb	{"consistency":1,"kind":"Probability","probability":0.04}
 c6d7356522d75840	{"confidence":0.49,"kind":"Classify","label":"name_meaning","probabilities":{"magic_threshold":0,"name_meaning":0.62,"no_issue":0.08,"semantic_verdict":0.3}}
+c6f40e8dd88178fb	{"consistency":1,"kind":"Probability","probability":0.04}
+c6f48c6c58d1fa00	{"consistency":1,"kind":"Probability","probability":0.8833333333333333}
+c6fb6cc84c79d2ed	{"consistency":1,"kind":"Probability","probability":0.96}

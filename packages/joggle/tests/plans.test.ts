@@ -5,6 +5,7 @@ import { Atoms, layer as atomsLayer } from "../src/atoms.ts"
 import {
   answerOf,
   answerPlans,
+  answerPlansRaw,
   answerPlansResilient,
   chunkPlans,
   isRequestTooLarge,

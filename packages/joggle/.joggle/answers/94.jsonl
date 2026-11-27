@@ -1,11 +1,20 @@
+9401569f84996724	{"consistency":1,"kind":"Probability","probability":0.036666666666666674}
 9409af025a68de9f	{"confidence":0.85,"kind":"Classify","label":"parse at the boundary","probabilities":{"inject the dependency":0,"justify the assertion":0,"narrow with a predicate":0.1,"other":0.02,"own the value type":0.01,"parse at the boundary":0.87,"use the stable API":0}}
 941a1fd330a1238a	{"consistency":1,"kind":"Probability","probability":0.04666666666666667}
+941d11376d3c29a3	{"consistency":1,"kind":"Probability","probability":0.9533333333333333}
+942c794875df59e2	{"consistency":1,"kind":"Probability","probability":0.04}
 9440f1947e15594e	{"confidence":0.94,"kind":"Classify","label":"Build the object in separate statements and add the property only when present","probabilities":{"Build the object in separate statements and add the property only when present":0.95,"Document the contract with @param/@returns so the jsdoc rules can enforce it":0.03,"Explicit undefined is unnecessary on an optional parameter":0.02,"Layer is already lazy, so wrapping it in a zero-argument function adds unnecessary indirection":0,"Move the entry point to the file that owns the runtime, or name this file in the rule's seams option with the reason it is a second one":0}}
 94423078a9fb07ba	{"confidence":0.92,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.94,"stale_reference":0,"wrong_behavior":0.05,"wrong_contract":0.01}}
+945802e869b5e024	{"consistency":1,"kind":"Probability","probability":0.9633333333333333}
+945c1e5833761c7b	{"consistency":1,"kind":"Probability","probability":0.96}
 945cede1292d1879	{"consistency":1,"kind":"Probability","probability":0.056666666666666664}
+948102afaf5dae21	{"consistency":1,"kind":"Probability","probability":0.9466666666666667}
 948179611a0d9305	{"confidence":0.95,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0}}
+9483a75666a40731	{"consistency":1,"kind":"Probability","probability":0.03666666666666667}
+94853ee35c18efdb	{"consistency":1,"kind":"Probability","probability":0.9533333333333333}
 9491ff8643a7ca2e	{"consistency":1,"kind":"Probability","probability":0.06333333333333334}
 94946c2ba3bcb617	{"confidence":0.94,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.04,"framework_glue":0,"implementation_detail":0.96,"wire_contract":0}}
+94a15db266c134fb	{"consistency":1,"kind":"Probability","probability":0.03}
 94a5b101afc70b79	{"confidence":0.49,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.67,"not_a_derivation":0.26,"reimplements":0.07}}
 94ab3ade99d76fec	{"confidence":0.91,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.9299999999999999,"not_a_derivation":0.06,"reimplements":0.01}}
 94b3400649d13aae	{"confidence":0.8,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.87,"not_a_derivation":0.01,"reimplements":0.12}}
@@ -14,5 +23,7 @@
 94bd2b4491d3e93e	{"confidence":0.93,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0,"wrong_behavior":0.04,"wrong_contract":0.01}}
 94cd49c3ab229cf9	{"confidence":0.94,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.96,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0.02}}
 94dc0c4d465e48d8	{"consistency":1,"kind":"Probability","probability":0.06333333333333334}
+94dd6fec1a09cfa8	{"consistency":1,"kind":"Probability","probability":0.056666666666666664}
 94e16bca611c1aa9	{"consistency":1,"kind":"Probability","probability":0.04666666666666667}
 94eb8e8071277141	{"confidence":0.88,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.9,"infrastructure":0,"input_adaptation":0,"mechanical":0.03,"not_applicable":0.06,"orchestration":0.01,"rendering":0,"request_validation":0,"transport_concern":0}}
+94fdc2bfda6093fa	{"consistency":1,"kind":"Probability","probability":0.03333333333333333}
