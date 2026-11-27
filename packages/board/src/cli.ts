@@ -710,6 +710,8 @@ const openRoomInHerdr = async (input: {
       "room=" + input.id,
       "--cwd",
       worktree,
+      // The board is not the terminal's parent: the room's shell outlives a board restart.
+      "--no-parent",
     ],
     { cwd: worktree, timeout: 15_000 },
   ).catch((cause: unknown) => {

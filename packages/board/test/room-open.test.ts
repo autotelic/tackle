@@ -162,7 +162,9 @@ test("starts the shell in the room worktree with the label at spawn, then focuse
     expect(await answer.json()).toEqual({ ok: true, id: "r1", rung: "herdr-app", address: "t99" })
     const calls = readFileSync(log, "utf8")
     // No argv after the flags: `hc run` starts the user's own shell.
-    expect(calls).toContain("hc run --bg --json --name room-r1 --label room=r1 --cwd " + worktree)
+    expect(calls).toContain(
+      "hc run --bg --json --name room-r1 --label room=r1 --cwd " + worktree + " --no-parent",
+    )
     expect(calls).toContain("herdr-app do agent.focus --terminal t99")
   } finally {
     down(root)
