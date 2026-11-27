@@ -194,7 +194,9 @@ test("a live guest service that answers outside 2xx is unhealthy, not stopped", 
       id: room.id,
       port: 4833,
       pid,
-      want: (candidate) => candidate.status === "unhealthy",
+      // Wait for the listener to bind and answer 503; a first look can arrive before Node has
+      // opened the port, which is an honest "nothing answered" but not this test's fact.
+      want: (candidate) => candidate.status === "unhealthy" && candidate.detail === "answered 503",
     })
     expect(observed.detail).toBe("answered 503")
   } finally {
