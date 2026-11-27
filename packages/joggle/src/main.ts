@@ -28,6 +28,7 @@ import { layer as gitLayer, Service as Git } from "./git.ts"
 import { loadPlugins, withDefaults } from "./plugins.ts"
 import { policy } from "./policy.ts"
 import { VERSION } from "./version.ts"
+import { WorkspaceError } from "./schema.ts"
 import { exitCodeFor, render } from "./report.ts"
 import { applyDeclarationTypes, isRecord, loadWorkspace } from "./workspace.ts"
 import { answerPlansRaw, answerKeyFor, chunkPlans, type Plan, type PlanAnswers } from "./plans.ts"
@@ -585,17 +586,30 @@ const askCommand = Command.make(
   ]),
 )
 
-const remedyLines = (
-  report: RemedyReport,
-  ledger: { readonly run: string; readonly written: number },
-  cache: { readonly replayed: number; readonly judged: number },
-): ReadonlyArray<string> => {
+interface RemedyLinesInput {
+  readonly report: RemedyReport
+  readonly ledger: { readonly run: string; readonly written: number }
+  readonly cache: { readonly replayed: number; readonly judged: number }
+}
+
+const remedyLines = ({ report, ledger, cache }: RemedyLinesInput): ReadonlyArray<string> => {
   const total = cache.replayed + cache.judged
   const hit = total === 0 ? 0 : cache.replayed / total
-  const lines: Array<string> = [
-    describeInput(report.clusters.flatMap((cluster) => cluster.members)) +
-      " -> " + String(report.clusters.length) + " remedy cluster(s) from " +
-      String(report.distinctMessages) + " distinct message(s)",
+  const input = describeInput(report.clusters.flatMap((cluster) => cluster.members))
+  const witnessOnly = report.judgementUnavailable !== undefined
+  const counts = witnessOnly
+    ? input + " -> " + String(report.witness.clusters) + " witness cluster(s) from " +
+      String(report.distinctMessages) + " distinct message(s); NOT judgement clusters"
+    : input + " -> " + String(report.clusters.length) + " remedy cluster(s) from " +
+      String(report.distinctMessages) + " distinct message(s)"
+  const lines = [
+    ...(witnessOnly
+      ? [
+          "WITNESS-ONLY — the judgement path did not run",
+          "reason: " + String(report.judgementUnavailable),
+        ]
+      : []),
+    counts,
     "witness alone: " + String(report.witness.clusters) + " cluster(s), largest " +
       String(report.witness.largestSites) + " site(s) / " + String(report.witness.largestRules) +
       " rule(s); judgement: " + String(report.judgement.clusters) + " cluster(s), largest " +
@@ -607,9 +621,6 @@ const remedyLines = (
       (hit * 100).toFixed(1) + "%)",
     "fact store: run " + ledger.run + ", " + String(ledger.written) + " finding row(s)",
   ]
-  if (report.judgementUnavailable !== undefined) {
-    lines.push("judgement unavailable, witness-only clustering: " + report.judgementUnavailable)
-  }
   for (const cluster of report.clusters) {
     lines.push("")
     lines.push(
@@ -699,7 +710,12 @@ const remediesCommand = Command.make(
       const text = yield* fs.readFileString(input)
       const payload = yield* Effect.try({
         try: () => JSON.parse(text) as unknown,
-        catch: (cause) => new Error("could not read " + input + ": " + String(cause)),
+        catch: (cause) =>
+          WorkspaceError.make({
+            path: input,
+            operation: "read remedies input",
+            cause: String(cause),
+          }),
       })
       const findings = findingsOf(payload).map((finding) => {
         const file = path.isAbsolute(finding.file) ? path.relative(cwd, finding.file) : finding.file
@@ -746,7 +762,7 @@ const remediesCommand = Command.make(
         )
         return
       }
-      yield* write(remedyLines(report, ledger, stats).join("\n"))
+      yield* write(remedyLines({ report, ledger, cache: stats }).join("\n"))
     }),
 ).pipe(
   Command.withDescription(

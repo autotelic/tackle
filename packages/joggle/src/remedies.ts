@@ -1,4 +1,4 @@
-import { Effect, Result } from "effect"
+import { Effect, Option, Predicate, Result } from "effect"
 import { Decision } from "effect/ai"
 import type { DecisionModel } from "effect/ai"
 import { Atoms } from "./atoms.ts"
@@ -34,27 +34,28 @@ export interface RemedyFinding {
 }
 
 const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
-  typeof value === "object" && value !== null && !Array.isArray(value)
+  Predicate.isReadonlyObject(value)
 
-const textOf = (value: unknown): string | undefined =>
-  typeof value === "string" ? value : undefined
+const textOf = (value: unknown): Option.Option<string> =>
+  Predicate.isString(value) ? Option.some(value) : Option.none()
 
-const numberOf = (value: unknown): number | undefined =>
-  typeof value === "number" && Number.isFinite(value) ? value : undefined
+const numberOf = (value: unknown): Option.Option<number> =>
+  Predicate.isNumber(value) && Number.isFinite(value) ? Option.some(value) : Option.none()
 
-const firstLabel = (value: unknown): Readonly<Record<string, unknown>> | undefined => {
-  if (!Array.isArray(value)) return undefined
+const firstLabel = (value: unknown): Option.Option<Readonly<Record<string, unknown>>> => {
+  if (!Array.isArray(value)) return Option.none()
   const first: unknown = value[0]
-  return isRecord(first) ? first : undefined
+  return isRecord(first) ? Option.some(first) : Option.none()
 }
 
-const nestedLine = (diagnostic: Readonly<Record<string, unknown>>): number | undefined => {
+const nestedLine = (diagnostic: Readonly<Record<string, unknown>>): Option.Option<number> => {
   const location = diagnostic["location"]
-  const located = isRecord(location) ? numberOf(location["line"]) : undefined
-  if (located !== undefined) return located
+  const located = isRecord(location) ? numberOf(location["line"]) : Option.none<number>()
+  if (Option.isSome(located)) return located
   const label = firstLabel(diagnostic["labels"])
-  const span = label === undefined ? undefined : label["span"]
-  return isRecord(span) ? numberOf(span["line"]) : undefined
+  if (Option.isNone(label)) return Option.none()
+  const span = label.value["span"]
+  return isRecord(span) ? numberOf(span["line"]) : Option.none()
 }
 
 /**
@@ -76,26 +77,27 @@ export const findingsOf = (payload: unknown): ReadonlyArray<RemedyFinding> => {
     if (!isRecord(raw)) continue
     const location = raw["location"]
     const located = isRecord(location) ? location : undefined
-    const file =
-      textOf(raw["filename"]) ??
-      textOf(raw["file"]) ??
-      (located === undefined ? undefined : textOf(located["file"])) ??
-      "<unknown>"
-    const line =
-      numberOf(raw["line"]) ??
-      (located === undefined ? undefined : numberOf(located["line"])) ??
-      nestedLine(raw) ??
-      1
-    const rule = textOf(raw["code"]) ?? textOf(raw["ruleId"]) ?? "unknown"
-    const message = textOf(raw["message"]) ?? ""
-    const help = textOf(raw["help"])
+    const file = Option.firstSomeOf([
+      textOf(raw["filename"]),
+      textOf(raw["file"]),
+      located === undefined ? Option.none<string>() : textOf(located["file"]),
+    ]).pipe(Option.getOrElse(() => "<unknown>"))
+    const line = Option.firstSomeOf([
+      numberOf(raw["line"]),
+      located === undefined ? Option.none<number>() : numberOf(located["line"]),
+      nestedLine(raw),
+    ]).pipe(Option.getOrElse(() => 1))
+    const rule = Option.firstSomeOf([textOf(raw["code"]), textOf(raw["ruleId"])]).pipe(
+      Option.getOrElse(() => "unknown"),
+    )
+    const message = textOf(raw["message"]).pipe(Option.getOrElse(() => ""))
     out.push({
       site: file + ":" + String(line),
       file,
       line,
       rule,
       message,
-      ...(help === undefined ? {} : { help }),
+      help: Option.getOrUndefined(textOf(raw["help"])),
     })
   }
   return out
@@ -186,8 +188,13 @@ export interface RepairOpinion {
   readonly pairs: number
 }
 
-export const pairKeyOf = (left: string, right: string): string =>
-  left.localeCompare(right) <= 0 ? left + "\u0000" + right : right + "\u0000" + left
+export const pairKeyOf = ({
+  left,
+  right,
+}: {
+  readonly left: string
+  readonly right: string
+}): string => (left.localeCompare(right) <= 0 ? left + "\u0000" + right : right + "\u0000" + left)
 
 interface ClauseGroup {
   readonly clause: string
@@ -277,7 +284,7 @@ export const judgeRemedies = (
         const a = groups[left]?.messages[0]
         const b = groups[right]?.messages[0]
         if (a === undefined || b === undefined) continue
-        const key = pairKeyOf(a.key, b.key)
+        const key = pairKeyOf({ left: a.key, right: b.key })
         const state = {
           a: { message: a.message, rule: a.findings[0]?.rule ?? "unknown" },
           b: { message: b.message, rule: b.findings[0]?.rule ?? "unknown" },
@@ -342,18 +349,18 @@ export const judgeRemedies = (
     const repairMap = new Map<string, string>()
     repairs.forEach((key, index) => {
       const answer = read.get(index)
-      if (typeof answer === "string" && answer !== "") repairMap.set(key, answer)
+      if (Predicate.isString(answer) && answer !== "") repairMap.set(key, answer)
     })
     const sameMap = new Map<string, number>()
     const pairStart = repairs.length
     pairs.forEach((pair, index) => {
       const answer = read.get(pairStart + index)
-      if (typeof answer === "number") sameMap.set(pair.key, answer)
+      if (Predicate.isNumber(answer)) sameMap.set(pair.key, answer)
     })
     return {
       repairs: repairMap,
       same: sameMap,
-      ...(unavailable === undefined ? {} : { unavailable }),
+      unavailable,
       questions: messages.length,
       pairs: pairs.length,
     }
@@ -411,7 +418,15 @@ export interface RemedyReport {
 
 type Mode = "witness" | "judgement" | "union"
 
-const sameRepair = (opinion: RepairOpinion, left: string, right: string): boolean => {
+const sameRepair = ({
+  opinion,
+  left,
+  right,
+}: {
+  readonly opinion: RepairOpinion
+  readonly left: string
+  readonly right: string
+}): boolean => {
   // The Choice is the normaliser: two messages the model put on one candidate
   // clause prescribe one repair, whatever their wording. The pairwise Noul is
   // the second opinion, for two messages that each kept their own clause.
@@ -420,7 +435,7 @@ const sameRepair = (opinion: RepairOpinion, left: string, right: string): boolea
   if (leftRepair !== undefined && leftRepair === rightRepair && leftRepair !== "none") {
     return true
   }
-  const probability = opinion.same.get(pairKeyOf(left, right))
+  const probability = opinion.same.get(pairKeyOf({ left, right }))
   return probability !== undefined && probability >= policy.decision.gates.probabilityFloor
 }
 
@@ -537,7 +552,7 @@ const clustersOf = (
         const a = groups[left]?.messages[0]
         const b = groups[right]?.messages[0]
         if (a === undefined || b === undefined) continue
-        if (sameRepair(opinion, a.key, b.key)) sets.union(left, right)
+        if (sameRepair({ opinion, left: a.key, right: b.key })) sets.union(left, right)
       }
     }
   }
@@ -674,7 +689,13 @@ export const rememberRemedyFindings = (
 }
 
 /** Read the rows a previous run wrote, so the store is not write-only. */
-export const storedRemedies = (root: string, run: string): ReadonlyArray<StoredFinding> => {
+export const storedRemedies = ({
+  root,
+  run,
+}: {
+  readonly root: string
+  readonly run: string
+}): ReadonlyArray<StoredFinding> => {
   const store = createFactStore(root)
   const rows = store.findingsOf(run)
   store.close()

@@ -60,6 +60,36 @@ question was.
 Every cluster carries a **counterexample pack**: for each pair of rules in it, the
 sites one reaches that the other cannot, and why (a fact, computed, never asked).
 
+### What the witness measured
+
+On this repository at the first full measurement, `pnpm lint:json` produced **304
+findings over 34 rules and 75 distinct messages**, and the witness alone grouped
+them into **54 clusters; the largest held 39 sites over one rule**. What matters
+is what it did _not_ do: the five boundary rules arrived as five single-rule
+clusters — `no-reinterpret-cast` 29 sites, `require-safety-comment-for-type-assertion`
+26, `no-runtime-typeof` 23, and the other two below them — because the witness
+groups by exact imperative clause, and "Narrow with discriminants/`in` checks" is
+not "Parse input at its I/O boundary". The witness reports site concentration; it
+never reports rule redundancy. That is the work the judgement is load-bearing
+for, and it is why rung 1 is not met yet: one cluster holding all five rules has
+not been observed.
+
+The judgement path is **unmeasured**, not merely unproven: this host has no
+`TYPESAFE_API_KEY`. That is the contract in [SECRETS.md](../SECRETS.md), not a gap
+to patch. A tool-side loader would work in one host and silently diverge in the
+other; the four rules under "Why the environment, and not a tool-side loader" are
+why we do not add one. A host that has the key finishes the measurement with:
+
+```sh
+pnpm lint:json > findings.json
+pnpm --filter @autotelic/joggle joggle remedies findings.json
+```
+
+The first command produces the input; the second prints the judgement's clusters
+beside the witness's. A run that cannot reach the model now says `WITNESS-ONLY`
+and prints the reason, so a pasted witness count cannot be mistaken for the
+judgement having agreed.
+
 Acceptance: one cluster contains all five boundary rules, 99 sites, naming
 `kernel.ts` (28) and `telemetry.ts` (28). Paste it, with the pair counterexample.
 If the five do not appear as one cluster, normalisation is wrong — fix it, do not
