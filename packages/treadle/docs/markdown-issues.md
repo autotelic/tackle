@@ -76,11 +76,51 @@ the state it has — the local clone is the truth until the machines meet again.
 
 - **Reprioritize or reparent**: edit `state:`, `base:` or `blocked_by:` and
   push. The next queue read sees it.
-- **Answer a question**: `/treadle` as usual — the answer lands as a log note
-  and the issue goes back to ready if it was parked.
+- **Answer a question**: `/treadle` if the agent that asked is the one you are
+  talking to, or from a shell when it is not (an unattended Loop on another
+  machine, a question that arrived overnight — see below).
 - **Hand a hint to a parked issue without Telegram**: write a log note
   containing `<!-- treadle:budget-reset -->` (restarts its budget) and set
   `state: ready`.
+
+## Answering a parked question from a shell
+
+A parked issue waits on a *question*, and the answer has two halves. Writing it
+into the issue's log as a note is **not enough**: the note is a briefing for the
+next Session, and nothing wakes a `parked` issue except its state.
+
+The answer lives in the loop clone, not the tracker:
+
+```
+<loop clone>/.treadle/qa/issue-<n>.jsonl    one JSON object per line
+{"question":"<the question text, as asked>"}
+{"question":"<the question text, as asked>","answer":"<your answer>"}
+```
+
+For an issue whose question is still unanswered, that means: set `answer` on
+every entry that has none (a Session that asked twice has two), then set the
+issue's `state: ready` in the tracker. Use a script rather than hand-editing the
+JSONL: one object per line, and a broken line loses every answer after it.
+
+```python
+import json
+path = '/Users/me/Projects/demo-loop/.treadle/qa/issue-30.jsonl'
+entries = [json.loads(line) for line in open(path) if line.strip()]
+for entry in entries:
+    entry['answer'] = 'Both ok — implement the issue text; fix the fixtures, not the assertions.'
+open(path, 'w').write('\n'.join(json.dumps(entry) for entry in entries) + '\n')
+```
+
+Then, in the tracker, edit `issues/<n>-*.md` to `state: ready`. Add the
+`<!-- treadle:budget-reset -->` log note as well if the issue already spent its
+passes on the unanswered question. The Loop re-reads the queue every 60 s.
+
+Two things people get wrong here:
+
+- **The state is the wake-up.** A note alone leaves the issue parked and the
+  Loop picks something else.
+- **A no-change Pass still costs a pass.** If the Session re-enters without an
+  answer it can act on, it burns one of the issue's budget.
 
 ## Stacked PRs
 
