@@ -2,6 +2,7 @@
 2610b55d68b09b11	{"confidence":0.12,"kind":"Rate","label":"removes_a_hazard","probabilities":{"meaningfully_better":0.32,"no_difference":0.06,"removes_a_hazard":0.43,"slightly_clearer":0.19},"rating":2.11}
 26114badba4bcedd	{"consistency":1,"kind":"Probability","probability":0.6577777777777777}
 26130fbc24c1699e	{"confidence":0.89,"kind":"Classify","label":"neither","probabilities":{"fact":0.06,"neither":0.93,"recomputation":0.01}}
+261858b8e09fb9db	{"confidence":0.25,"kind":"Classify","label":"coincidence","probabilities":{"coincidence":0.5,"extend_the_primitive":0.16,"extract_shared":0.34}}
 261a3a2331d794c2	{"confidence":0.35,"kind":"Classify","label":"move","probabilities":{"leave_it":0.17,"merge":0.06,"move":0.48,"share_a_contract":0.27,"split":0.02}}
 261d002eb29d4217	{"consistency":1,"kind":"Probability","probability":0.6166666666666667}
 26220b626d89b61e	{"confidence":0.97,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.01,"not_an_invariant":0.98,"repair_path":0.01}}
@@ -42,6 +43,7 @@
 26d20db21ee0d712	{"confidence":0.74,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.01,"keep_variants":0.83,"no_issue":0.16}}
 26d4d100ae83701b	{"confidence":0.23,"kind":"Classify","label":"collapse","probabilities":{"collapse":0.49,"keep_variants":0.46,"no_issue":0.05}}
 26e088acf5d9120c	{"confidence":0.6,"kind":"Classify","label":"same_module","probabilities":{"different_deployables":0,"same_module":0.7,"same_package":0.3,"sibling_packages":0}}
+26e6c7f548044526	{"confidence":0.34,"kind":"Classify","label":"extract_shared","probabilities":{"coincidence":0.38,"extend_the_primitive":0.06,"extract_shared":0.56}}
 26e75b09f23919fb	{"confidence":0.83,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.01,"keep_variants":0.89,"no_issue":0.1}}
 26e8a56e2f986b63	{"confidence":1,"kind":"Classify","label":"not_a_record","probabilities":{"mutable":0,"not_a_record":1,"supersede_only":0}}
 26e9ceaec627a21f	{"confidence":0.74,"kind":"Classify","label":"move","probabilities":{"move":0.87,"no_issue":0.13}}

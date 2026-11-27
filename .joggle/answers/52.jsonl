@@ -19,6 +19,7 @@
 5248a5bd5142c209	{"confidence":0.73,"kind":"Classify","label":"infrastructure","probabilities":{"domain_logic":0,"infrastructure":0.76,"input_adaptation":0.03,"mechanical":0.01,"not_applicable":0,"orchestration":0.15,"rendering":0,"request_validation":0,"transport_concern":0.05}}
 524912ec372d89bd	{"confidence":0.67,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.18,"inferred":0.04,"not_applicable":0.78}}
 524acb2aca2d4b73	{"confidence":0.38,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.44,"no_difference":0.06,"removes_a_hazard":0.23,"slightly_clearer":0.27},"rating":1.85}
+524e1d26c983dece	{"confidence":0.2,"kind":"Classify","label":"extract_shared","probabilities":{"coincidence":0.46,"extend_the_primitive":0.07,"extract_shared":0.47}}
 5253c0c2f3677847	{"confidence":0.68,"kind":"Classify","label":"general","probabilities":{"general":0.79,"names_a_caller":0.01,"shared_vocabulary":0.2}}
 525a4292f0511855	{"confidence":0.83,"kind":"Classify","label":"not_a_record","probabilities":{"mutable":0.09,"not_a_record":0.89,"supersede_only":0.02}}
 525ae015f234af79	{"consistency":1,"kind":"Probability","probability":0.43222222222222223}
@@ -50,6 +51,7 @@
 52c8c046e6fd2b0b	{"confidence":0.72,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.03,"name_meaning":0,"no_issue":0.18,"semantic_verdict":0.79}}
 52cb831b5125b9f4	{"confidence":0.52,"kind":"Classify","label":"compatible","probabilities":{"compatible":0.68,"drift":0.31,"two_concepts":0.01}}
 52cbed070b4ff37d	{"confidence":0.55,"kind":"Classify","label":"value","probabilities":{"meaning":0.29,"unclear":0.01,"value":0.7}}
+52ce151fbcdbd2cf	{"confidence":0.28,"kind":"Classify","label":"extract_shared","probabilities":{"coincidence":0.4,"extend_the_primitive":0.08,"extract_shared":0.52}}
 52cffb572d7345c9	{"confidence":0.69,"kind":"Classify","label":"move","probabilities":{"merge":0.1,"move":0.79,"no_issue":0.11}}
 52d0e9b895199dae	{"consistency":1,"kind":"Probability","probability":0.7933333333333333}
 52d20ddadf24de98	{"confidence":0.35,"kind":"Classify","label":"value","probabilities":{"meaning":0.42,"unclear":0.01,"value":0.57}}

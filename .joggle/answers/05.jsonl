@@ -13,6 +13,7 @@
 0527181b1595cc0d	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0.01}}
 05282d45cfeccaaa	{"confidence":0.95,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.04,"framework_glue":0,"implementation_detail":0.96,"wire_contract":0}}
 0529ef63ddf50b5e	{"confidence":0.79,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.84,"component_or_feature":0.08,"not_applicable":0.07,"route_or_handler":0.01}}
+052fe2a9b745efbb	{"confidence":0.62,"kind":"Classify","label":"coincidence","probabilities":{"coincidence":0.75,"extend_the_primitive":0.04,"extract_shared":0.21}}
 053cf8871c49d7d0	{"confidence":0.45,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.5,"member_1":0.02,"member_10":0.24,"member_11":0.02,"member_2":0.02,"member_3":0.12,"member_4":0.01,"member_5":0.03,"member_6":0.01,"member_7":0.01,"member_8":0.01,"member_9":0.01}}
 053df1c6a243dacd	{"confidence":0.98,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.99,"not_a_derivation":0.01,"reimplements":0}}
 053fd05e96c698c2	{"consistency":1,"kind":"Probability","probability":0.17333333333333334}
@@ -22,6 +23,7 @@
 054e8421e7e72d23	{"confidence":0.91,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.93,"stale_reference":0.04,"wrong_behavior":0.01,"wrong_contract":0.02}}
 055347ffbfc0d001	{"consistency":1,"kind":"Probability","probability":0.6522222222222221}
 0553834415223250	{"confidence":0.58,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.72,"not_a_derivation":0.26,"reimplements":0.02}}
+055684c597d2dfd8	{"confidence":0.34,"kind":"Classify","label":"coincidence","probabilities":{"coincidence":0.56,"extend_the_primitive":0.12,"extract_shared":0.32}}
 0562ad51e6b32e3f	{"confidence":0.72,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.79,"stale_reference":0,"wrong_behavior":0.15,"wrong_contract":0.06}}
 0565b9de8f9f724e	{"confidence":0.61,"kind":"Classify","label":"neither","probabilities":{"deviation":0.01,"neither":0.74,"state":0.25}}
 0567b86d7dc2b376	{"confidence":0.22,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.48,"not_a_derivation":0.47,"reimplements":0.05}}

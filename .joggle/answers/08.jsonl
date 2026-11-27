@@ -45,6 +45,7 @@
 089454a943a65c44	{"confidence":0.56,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.71,"not_a_derivation":0.23,"reimplements":0.06}}
 0894ba92770d6f86	{"confidence":0.91,"kind":"Classify","label":"neither","probabilities":{"fact":0.03,"neither":0.94,"recomputation":0.03}}
 0895dff8d0c2dfd3	{"confidence":0.88,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.92,"not_a_derivation":0.07,"reimplements":0.01}}
+0898805e273f3e1e	{"confidence":0.79,"kind":"Classify","label":"coincidence","probabilities":{"coincidence":0.86,"extend_the_primitive":0.04,"extract_shared":0.1}}
 089b677e89de55b8	{"confidence":0.7,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.8,"not_a_derivation":0.05,"reimplements":0.15}}
 089c131f70197e47	{"confidence":0.92,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0,"must_be_current":0.05,"not_a_projection":0.95}}
 089d043848430cd6	{"confidence":0.61,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.06,"common_idiom":0.74,"shared_helper":0.2}}

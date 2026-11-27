@@ -71,3 +71,4 @@ e8f193b1946556a6	{"confidence":0.35,"kind":"Classify","label":"neither","probabi
 e8f1f0438040a5bc	{"confidence":0.6,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.7,"different_order":0,"different_work":0.3,"same_operation":0}}
 e8f207049367a936	{"consistency":1,"kind":"Probability","probability":0.4766666666666666}
 e8f4635426fe61c1	{"consistency":1,"kind":"Probability","probability":0.6188888888888889}
+e8f6260dd5ed2fb5	{"confidence":0.58,"kind":"Classify","label":"extract_shared","probabilities":{"coincidence":0.02,"extend_the_primitive":0.26,"extract_shared":0.72}}

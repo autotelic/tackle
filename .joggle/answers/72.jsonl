@@ -36,6 +36,7 @@
 729aa49cf0c1f5a5	{"confidence":0.52,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.22,"no_issue":0.14,"semantic_verdict":0.64}}
 729e2738b3dfe4ac	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
 72a90d29230bb8ef	{"confidence":0.61,"kind":"Classify","label":"rendering_edge","probabilities":{"domain_core":0,"infrastructure":0,"library_core":0,"not_applicable":0,"rendering_edge":0.67,"transport_edge":0.33,"utilities":0}}
+72b4c13e2c5973b0	{"confidence":0.31,"kind":"Classify","label":"coincidence","probabilities":{"coincidence":0.54,"extend_the_primitive":0.13,"extract_shared":0.33}}
 72b8f202524430ba	{"confidence":0.75,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.19,"framework_glue":0,"implementation_detail":0.81,"wire_contract":0}}
 72bb361052922147	{"confidence":0.92,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.02,"must_be_current":0.03,"not_a_projection":0.95}}
 72bdbd43ae3a0883	{"confidence":0.83,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.04,"must_be_current":0.07,"not_a_projection":0.89}}
@@ -44,6 +45,7 @@
 72c6988b64f4552f	{"confidence":0.69,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.77,"different_order":0,"different_work":0.16,"same_operation":0.07}}
 72c6d01b8ffce500	{"consistency":1,"kind":"Probability","probability":0.7033333333333335}
 72c7ff92991705fe	{"confidence":0.48,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.09,"not_an_invariant":0.65,"repair_path":0.26}}
+72ce19431cec2033	{"confidence":0.61,"kind":"Classify","label":"coincidence","probabilities":{"coincidence":0.74,"extend_the_primitive":0.07,"extract_shared":0.19}}
 72d0b03c35c048ee	{"confidence":0.7,"kind":"Classify","label":"coincidental","probabilities":{"already_named":0.05,"coincidental":0.8,"one_concept":0.15}}
 72dd6e42c2bf1cac	{"confidence":0.85,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.01,"no_issue":0.1,"semantic_verdict":0.89}}
 72e1e3a3f66074f1	{"confidence":0.26,"kind":"Classify","label":"one_concept","probabilities":{"already_named":0.19,"coincidental":0.3,"one_concept":0.51}}

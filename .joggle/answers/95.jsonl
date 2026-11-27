@@ -13,6 +13,7 @@
 95184a842bed7bf4	{"consistency":1,"kind":"Probability","probability":0.0988888888888889}
 9522bef68822ca3e	{"confidence":0.87,"kind":"Classify","label":"component_or_feature","probabilities":{"already_there":0.03,"component_or_feature":0.9,"not_applicable":0.01,"route_or_handler":0.06}}
 95296ffcfcacce81	{"confidence":0.35,"kind":"Classify","label":"neither","probabilities":{"deviation":0.01,"neither":0.57,"state":0.42}}
+952f8572b9b08f15	{"confidence":0.24,"kind":"Classify","label":"extract_shared","probabilities":{"coincidence":0.42,"extend_the_primitive":0.09,"extract_shared":0.49}}
 953474f604f6ecc9	{"confidence":0.19,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.08,"common_idiom":0.46,"shared_helper":0.46}}
 9535641a62196af0	{"confidence":0.98,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.01,"must_be_current":0,"not_a_projection":0.99}}
 95365f4b3064f417	{"consistency":1,"kind":"Probability","probability":0.61}

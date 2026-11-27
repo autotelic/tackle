@@ -28,6 +28,7 @@
 5580c9423c9afe42	{"confidence":0.09,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.39,"member_1":0.36,"member_2":0.25}}
 5585d67c9ebae092	{"confidence":1,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":1,"infrastructure":0,"input_adaptation":0,"mechanical":0,"not_applicable":0,"orchestration":0,"rendering":0,"request_validation":0,"transport_concern":0}}
 55878ff9e092a00d	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
+5588029bba75a104	{"confidence":0.28,"kind":"Classify","label":"extract_shared","probabilities":{"coincidence":0.35,"extend_the_primitive":0.13,"extract_shared":0.52}}
 558c09ed2aff1db1	{"consistency":1,"kind":"Probability","probability":0.84}
 558c434f549c9c3b	{"confidence":0.72,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.81,"not_a_derivation":0.04,"reimplements":0.15}}
 558d3b783b6a801b	{"consistency":1,"kind":"Probability","probability":0.8077777777777778}
@@ -43,6 +44,7 @@
 55abcd452da18a3a	{"confidence":0.45,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.49,"no_difference":0.04,"removes_a_hazard":0.28,"slightly_clearer":0.19},"rating":2}
 55ae906c4f7fa8c5	{"confidence":0.98,"kind":"Classify","label":"not_a_record","probabilities":{"mutable":0.01,"not_a_record":0.99,"supersede_only":0}}
 55b04ffa803ddb41	{"confidence":0.95,"kind":"Classify","label":"general","probabilities":{"general":0.97,"names_a_caller":0.01,"shared_vocabulary":0.02}}
+55b55429dc18e224	{"confidence":0.3,"kind":"Classify","label":"coincidence","probabilities":{"coincidence":0.53,"extend_the_primitive":0.07,"extract_shared":0.4}}
 55b5b1a97e7b7250	{"confidence":0.69,"kind":"Classify","label":"library_core","probabilities":{"domain_core":0.12,"infrastructure":0.03,"library_core":0.73,"not_applicable":0.02,"rendering_edge":0.02,"transport_edge":0.01,"utilities":0.07}}
 55b7b2a4b814b376	{"confidence":0.78,"kind":"Classify","label":"rendering","probabilities":{"derivation":0.02,"domain_logic":0.17,"infrastructure":0,"input_adaptation":0,"mechanical":0,"not_applicable":0,"orchestration":0.01,"reconciliation":0,"recording":0,"rendering":0.8,"request_validation":0,"transport_concern":0}}
 55ba50c39e65235f	{"confidence":0.95,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.96,"stale_reference":0.02,"wrong_behavior":0.01,"wrong_contract":0.01}}

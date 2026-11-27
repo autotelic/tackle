@@ -15,6 +15,7 @@
 45388277847f2450	{"confidence":0.88,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.92,"unclear":0,"value":0.08}}
 4539fb1451734003	{"confidence":0.62,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.21,"member_1":0.75,"member_2":0.04}}
 453b8da1199f59ae	{"confidence":0.1,"kind":"Classify","label":"member_2","probabilities":{"member_0":0.25,"member_1":0.35,"member_2":0.4}}
+453d196340a52e1b	{"confidence":0.58,"kind":"Classify","label":"extend_the_primitive","probabilities":{"coincidence":0,"extend_the_primitive":0.72,"extract_shared":0.28}}
 453ecdf04cb417e6	{"consistency":1,"kind":"Probability","probability":0.85}
 454232c6af49452d	{"confidence":0.85,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.05,"keep_variants":0.9,"no_issue":0.05}}
 45458a234af4dbcb	{"consistency":0.6666666666666667,"kind":"Probability","probability":0.48666666666666664}
@@ -42,6 +43,8 @@
 458ae1feb93da69c	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
 458ee2d280378972	{"confidence":0.56,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.67,"stale_reference":0.18,"wrong_behavior":0.14,"wrong_contract":0.01}}
 459605b185fb4f09	{"confidence":0.95,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.96,"stale_reference":0.01,"wrong_behavior":0.02,"wrong_contract":0.01}}
+4596e549a339c21e	{"confidence":0.61,"kind":"Classify","label":"coincidence","probabilities":{"coincidence":0.74,"extend_the_primitive":0.07,"extract_shared":0.19}}
+459852997929a044	{"confidence":0.42,"kind":"Classify","label":"coincidence","probabilities":{"coincidence":0.61,"extend_the_primitive":0.11,"extract_shared":0.28}}
 459915eff22e63f5	{"confidence":0.48,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.65,"unclear":0,"value":0.35}}
 459c6ebf81de7dde	{"confidence":1,"kind":"Classify","label":"rendering","probabilities":{"derivation":0,"domain_logic":0,"infrastructure":0,"input_adaptation":0,"mechanical":0,"not_applicable":0,"orchestration":0,"reconciliation":0,"recording":0,"rendering":1,"request_validation":0,"transport_concern":0}}
 459ceec6fdc0892b	{"confidence":0.34,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.01,"common_idiom":0.56,"shared_helper":0.43}}

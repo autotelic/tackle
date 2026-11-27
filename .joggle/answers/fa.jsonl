@@ -69,6 +69,7 @@ facf00f5f6ae90d6	{"confidence":0.46,"kind":"Classify","label":"compatible","prob
 fad527a99c1cd201	{"confidence":0.6,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.11,"not_an_invariant":0.73,"repair_path":0.16}}
 fad58779fdd0a23a	{"confidence":0.44,"kind":"Classify","label":"member_4","probabilities":{"member_0":0.06,"member_1":0.08,"member_2":0.01,"member_3":0.01,"member_4":0.53,"member_5":0.31}}
 fadbdd4c6bfbada1	{"consistency":1,"kind":"Probability","probability":0.5133333333333333}
+fae1e1626f355413	{"confidence":0.43,"kind":"Classify","label":"coincidence","probabilities":{"coincidence":0.62,"extend_the_primitive":0.11,"extract_shared":0.27}}
 fae92e89cc293037	{"confidence":0.51,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.11,"merge":0.02,"move":0.25,"share_a_contract":0.61,"split":0.01}}
 faebcef03575a53c	{"confidence":0.67,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.09,"keep_variants":0.78,"no_issue":0.13}}
 faeec627e3a7ce78	{"confidence":0.4,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.11,"must_be_current":0.29,"not_a_projection":0.6}}

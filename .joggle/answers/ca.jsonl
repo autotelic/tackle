@@ -44,12 +44,14 @@ ca8f348f96736107	{"confidence":0.14,"kind":"Classify","label":"member_0","probab
 ca96035014bd9079	{"confidence":0.66,"kind":"Classify","label":"no_concept","probabilities":{"choice":0.08,"no_concept":0.77,"noul":0.15}}
 ca9f39d5f5cc9b36	{"confidence":0.56,"kind":"Classify","label":"general","probabilities":{"general":0.71,"names_a_caller":0.02,"shared_vocabulary":0.27}}
 caadaf227d8383c2	{"confidence":0.13,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.25,"must_be_current":0.33,"not_a_projection":0.42}}
+cab96c2497407d65	{"confidence":0.37,"kind":"Classify","label":"coincidence","probabilities":{"coincidence":0.58,"extend_the_primitive":0.13,"extract_shared":0.29}}
 caba7115b1d6d5b3	{"confidence":0.62,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.75,"not_a_derivation":0.21,"reimplements":0.04}}
 cabb8a5f25703865	{"confidence":0.3,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.11,"merge":0.13,"move":0.32,"share_a_contract":0.44,"split":0}}
 cabf140c8421a1e2	{"confidence":0.42,"kind":"Classify","label":"reimplements","probabilities":{"legitimate_local":0.34,"not_a_derivation":0.05,"reimplements":0.61}}
 cabffe11bc4f1cae	{"confidence":0.79,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.86,"not_a_derivation":0.13,"reimplements":0.01}}
 cac016fd543be9ca	{"confidence":0.87,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.9,"stale_reference":0.03,"wrong_behavior":0.02,"wrong_contract":0.05}}
 cac12142f0fcab81	{"confidence":0.69,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.77,"stale_reference":0.01,"wrong_behavior":0.19,"wrong_contract":0.03}}
+cac12315388de9b7	{"confidence":0.76,"kind":"Classify","label":"coincidence","probabilities":{"coincidence":0.84,"extend_the_primitive":0.03,"extract_shared":0.13}}
 cac1aee8840ae3e1	{"confidence":0.69,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.21,"names_a_caller":0,"shared_vocabulary":0.79}}
 cac3d5ea305e1cd6	{"consistency":1,"kind":"Probability","probability":0.10222222222222223}
 cad1ab19de88e78c	{"confidence":0.81,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.86,"stale_reference":0.02,"wrong_behavior":0.1,"wrong_contract":0.02}}

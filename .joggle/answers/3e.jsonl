@@ -37,6 +37,7 @@
 3ea3913854bac973	{"consistency":1,"kind":"Probability","probability":0.8733333333333334}
 3ea5e2e9e7f45456	{"confidence":0.53,"kind":"Classify","label":"framework_glue","probabilities":{"domain_concept":0.04,"framework_glue":0.65,"implementation_detail":0.26,"wire_contract":0.05}}
 3ea60eb8bf038310	{"confidence":0.86,"kind":"Classify","label":"general","probabilities":{"general":0.91,"names_a_caller":0.01,"shared_vocabulary":0.08}}
+3eaf548b9fb823d8	{"confidence":0.28,"kind":"Classify","label":"coincidence","probabilities":{"coincidence":0.52,"extend_the_primitive":0.05,"extract_shared":0.43}}
 3eb49ea04e40f00a	{"confidence":0.91,"kind":"Classify","label":"input_adaptation","probabilities":{"domain_logic":0.01,"infrastructure":0,"input_adaptation":0.92,"mechanical":0,"not_applicable":0,"orchestration":0,"rendering":0,"request_validation":0.04,"transport_concern":0.03}}
 3eb6a360633145d2	{"confidence":0.83,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.87,"stale_reference":0.01,"wrong_behavior":0.07,"wrong_contract":0.05}}
 3ebd6b24f51b7174	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0.02,"wrong_behavior":0.01,"wrong_contract":0}}
@@ -50,5 +51,6 @@
 3ed0e344734da36d	{"confidence":0.23,"kind":"Classify","label":"domain_concept","probabilities":{"domain_concept":0.42,"framework_glue":0.1,"implementation_detail":0.17,"wire_contract":0.31}}
 3ed19073d9f2cf44	{"confidence":0.44,"kind":"Rate","label":"slightly_clearer","probabilities":{"meaningfully_better":0.2,"no_difference":0.22,"removes_a_hazard":0.07,"slightly_clearer":0.51},"rating":1.11}
 3ed3b5ee8b025466	{"confidence":0.7,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.8,"not_a_derivation":0.16,"reimplements":0.04}}
+3ee4931c0d73c66e	{"confidence":0.37,"kind":"Classify","label":"coincidence","probabilities":{"coincidence":0.58,"extend_the_primitive":0.13,"extract_shared":0.29}}
 3ee5f5abe84d2d3e	{"confidence":0.18,"kind":"Classify","label":"coincidental","probabilities":{"already_named":0.14,"coincidental":0.45,"one_concept":0.41}}
 3efdec154a0a360c	{"consistency":1,"kind":"Probability","probability":0.42333333333333334}

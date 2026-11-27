@@ -66,4 +66,5 @@ a1edd1add0086e01	{"confidence":0.56,"kind":"Classify","label":"no_issue","probab
 a1ef805c21246fac	{"confidence":0.58,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.21,"member_1":0.79}}
 a1f525a12ba24431	{"confidence":0.46,"kind":"Classify","label":"move","probabilities":{"move":0.73,"no_issue":0.27}}
 a1f90d8e52151125	{"confidence":0.84,"kind":"Classify","label":"move","probabilities":{"move":0.92,"no_issue":0.08}}
+a1fcb31e97d0e15e	{"confidence":0.16,"kind":"Classify","label":"coincidence","probabilities":{"coincidence":0.44,"extend_the_primitive":0.18,"extract_shared":0.38}}
 a1fe083a82e1e940	{"confidence":0.91,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.93,"different_order":0.04,"different_work":0.02,"same_operation":0.01}}

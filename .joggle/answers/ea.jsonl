@@ -16,6 +16,7 @@ ea290f4a265f280d	{"confidence":0.4,"kind":"Classify","label":"same_module","prob
 ea323e41505ed151	{"confidence":0.41,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.4,"framework_glue":0.02,"implementation_detail":0.56,"wire_contract":0.02}}
 ea3630d46c933517	{"consistency":1,"kind":"Probability","probability":0.89}
 ea40fa938eb693ef	{"confidence":0.92,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.03,"keep_variants":0.95,"no_issue":0.02}}
+ea41fd77b43df015	{"confidence":0.37,"kind":"Classify","label":"extract_shared","probabilities":{"coincidence":0.26,"extend_the_primitive":0.16,"extract_shared":0.58}}
 ea4411668c4f44b0	{"confidence":0.8,"kind":"Classify","label":"move","probabilities":{"move":0.9,"no_issue":0.1}}
 ea470c8f50c5d1a6	{"confidence":0.97,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.01,"framework_glue":0.01,"implementation_detail":0.98,"wire_contract":0}}
 ea478efb7e05df7d	{"confidence":0.96,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.01,"must_be_current":0.02,"not_a_projection":0.97}}
@@ -31,6 +32,7 @@ ea6a65544748c891	{"confidence":0.43,"kind":"Classify","label":"value","probabili
 ea712cdfd8d144c7	{"confidence":0.88,"kind":"Classify","label":"composes","probabilities":{"already_composed":0,"composes":0.91,"independent":0.09,"same_name_drift":0}}
 ea73df2aa74d081b	{"confidence":0.92,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.95,"not_a_derivation":0.04,"reimplements":0.01}}
 ea7e95ee92653f77	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
+ea7fe2d4f0424cc5	{"confidence":0.58,"kind":"Classify","label":"extend_the_primitive","probabilities":{"coincidence":0,"extend_the_primitive":0.72,"extract_shared":0.28}}
 ea7ffe2ec120cdc3	{"confidence":0.46,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.64,"not_a_derivation":0.33,"reimplements":0.03}}
 ea8068be4073eaee	{"consistency":1,"kind":"Probability","probability":0.11666666666666665}
 ea83d915ef69d80d	{"confidence":0.67,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.78,"not_a_derivation":0.19,"reimplements":0.03}}

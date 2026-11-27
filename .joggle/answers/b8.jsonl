@@ -8,6 +8,7 @@ b81ed5628008d269	{"confidence":0.94,"kind":"Classify","label":"keep_variants","p
 b821f40be0b90d53	{"confidence":0.88,"kind":"Classify","label":"neither","probabilities":{"fact":0.02,"neither":0.92,"recomputation":0.06}}
 b8258e1ff90e103d	{"confidence":0.28,"kind":"Classify","label":"drift","probabilities":{"compatible":0.41,"drift":0.52,"two_concepts":0.07}}
 b8298ef5bc69efa0	{"confidence":0.62,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.75,"not_a_derivation":0.04,"reimplements":0.21}}
+b82a74fb800dc393	{"confidence":0.34,"kind":"Classify","label":"coincidence","probabilities":{"coincidence":0.56,"extend_the_primitive":0.12,"extract_shared":0.32}}
 b82a84304b32f6e6	{"confidence":0.79,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.86,"not_a_derivation":0.13,"reimplements":0.01}}
 b82c2a93b13e7fb6	{"confidence":0.64,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.73,"stale_reference":0.01,"wrong_behavior":0.15,"wrong_contract":0.11}}
 b8332ef63ec3a542	{"confidence":0.52,"kind":"Classify","label":"no_issue","probabilities":{"merge":0.01,"move":0.31,"no_issue":0.68}}
@@ -17,6 +18,7 @@ b8356ccd96e63c71	{"confidence":0.99,"kind":"Classify","label":"no_issue","probab
 b8377b9417e52fd6	{"confidence":0.65,"kind":"Classify","label":"domain_concept","probabilities":{"domain_concept":0.74,"framework_glue":0,"implementation_detail":0.26,"wire_contract":0}}
 b839475f50febcf3	{"confidence":0.3,"kind":"Classify","label":"no_issue","probabilities":{"collapse":0.03,"keep_variants":0.44,"no_issue":0.53}}
 b8486d1b9600862f	{"confidence":0.94,"kind":"Classify","label":"not_a_record","probabilities":{"mutable":0.03,"not_a_record":0.96,"supersede_only":0.01}}
+b84b095138a1abbb	{"confidence":0.6,"kind":"Classify","label":"extract_shared","probabilities":{"coincidence":0.07,"extend_the_primitive":0.2,"extract_shared":0.73}}
 b84cd69dfed323c6	{"consistency":1,"kind":"Probability","probability":0.5544444444444445}
 b854397bb85d194e	{"confidence":0.25,"kind":"Classify","label":"merge","probabilities":{"merge":0.5,"move":0.37,"no_issue":0.13}}
 b8579da198edca6f	{"confidence":0.93,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.03,"framework_glue":0,"implementation_detail":0.95,"wire_contract":0.02}}

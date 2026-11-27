@@ -25,6 +25,7 @@
 3766c96223347535	{"confidence":0.83,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.89,"not_a_derivation":0.11,"reimplements":0}}
 376bdd41a3227f2e	{"confidence":0.26,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.18,"merge":0.08,"move":0.32,"share_a_contract":0.41,"split":0.01}}
 376c3376df009b01	{"consistency":1,"kind":"Probability","probability":0.7966666666666667}
+3772569074fa4670	{"confidence":0.61,"kind":"Classify","label":"coincidence","probabilities":{"coincidence":0.74,"extend_the_primitive":0.07,"extract_shared":0.19}}
 377757d73d5f0330	{"confidence":0.89,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.93,"not_a_derivation":0.06,"reimplements":0.01}}
 3777fc15a29920a5	{"confidence":0.64,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.76,"not_a_derivation":0.23,"reimplements":0.01}}
 37796586030dfec5	{"confidence":0.88,"kind":"Classify","label":"neither","probabilities":{"fact":0.05,"neither":0.92,"recomputation":0.03}}

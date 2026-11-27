@@ -30,6 +30,7 @@
 636d43474af8df54	{"confidence":0.55,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.7,"not_a_derivation":0.29,"reimplements":0.01}}
 637821cf7357df7e	{"confidence":0.64,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.15,"keep_variants":0.76,"no_issue":0.09}}
 6379da6ed4fda058	{"confidence":0.67,"kind":"Classify","label":"value","probabilities":{"meaning":0.22,"unclear":0,"value":0.78}}
+637a26f0effe064b	{"confidence":0.2,"kind":"Classify","label":"extract_shared","probabilities":{"coincidence":0.46,"extend_the_primitive":0.07,"extract_shared":0.47}}
 637c13b598dd7dca	{"confidence":0.46,"kind":"Classify","label":"one_concept","probabilities":{"already_named":0.32,"coincidental":0.04,"one_concept":0.64}}
 63849abf5c8ba36c	{"confidence":0.36,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.52,"different_order":0.1,"different_work":0.38,"same_operation":0}}
 638fb11878a0a027	{"confidence":0.95,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.96,"different_order":0.02,"different_work":0.02,"same_operation":0}}
@@ -58,6 +59,7 @@
 63d7a218224a9ae7	{"confidence":0.87,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.9,"stale_reference":0,"wrong_behavior":0.08,"wrong_contract":0.02}}
 63db44605cc1a198	{"confidence":0.89,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.02,"must_be_current":0.05,"not_a_projection":0.93}}
 63dc3f69a84cc2d4	{"confidence":0.48,"kind":"Classify","label":"library_core","probabilities":{"domain_core":0.01,"infrastructure":0.1,"library_core":0.55,"not_applicable":0.26,"rendering_edge":0,"transport_edge":0.01,"utilities":0.07}}
+63dc42c01a28c9ef	{"confidence":0.4,"kind":"Classify","label":"coincidence","probabilities":{"coincidence":0.6,"extend_the_primitive":0.07,"extract_shared":0.33}}
 63dcf212496e4759	{"confidence":0.94,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0,"must_be_current":0.04,"not_a_projection":0.96}}
 63de9c6c9d53e01e	{"confidence":0.24,"kind":"Rate","label":"slightly_clearer","probabilities":{"meaningfully_better":0.27,"no_difference":0.27,"removes_a_hazard":0.11,"slightly_clearer":0.35},"rating":1.21}
 63dfa0548a38ba06	{"confidence":0.3,"kind":"Classify","label":"not_a_derivation","probabilities":{"legitimate_local":0.45,"not_a_derivation":0.53,"reimplements":0.02}}

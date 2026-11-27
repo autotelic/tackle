@@ -38,6 +38,7 @@ d2a25e221de92836	{"confidence":0.74,"kind":"Classify","label":"legitimate_local"
 d2a71df9ff286045	{"confidence":0.91,"kind":"Classify","label":"no_issue","probabilities":{"merge":0.01,"move":0.05,"no_issue":0.94}}
 d2a79aaabce4b318	{"confidence":0.89,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.93,"not_a_derivation":0.06,"reimplements":0.01}}
 d2ad407b729200ab	{"consistency":1,"kind":"Probability","probability":0.8433333333333333}
+d2ad4d578b7d5e52	{"confidence":0.19,"kind":"Classify","label":"extract_shared","probabilities":{"coincidence":0.44,"extend_the_primitive":0.1,"extract_shared":0.46}}
 d2ae116095f976bc	{"confidence":0.32,"kind":"Classify","label":"move","probabilities":{"leave_it":0.03,"merge":0.26,"move":0.46,"share_a_contract":0.25,"split":0}}
 d2aecb5cc180eed7	{"confidence":0.76,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.03,"no_issue":0.15,"semantic_verdict":0.82}}
 d2ba6c1af07832aa	{"confidence":0.79,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.86,"not_a_derivation":0.14,"reimplements":0}}
@@ -53,6 +54,7 @@ d2d197e0ddcee8e6	{"confidence":0.64,"kind":"Classify","label":"already_there","p
 d2d24bf81f1fa439	{"confidence":0.98,"kind":"Classify","label":"orchestration","probabilities":{"domain_logic":0.02,"infrastructure":0,"input_adaptation":0,"mechanical":0,"not_applicable":0,"orchestration":0.98,"rendering":0,"request_validation":0,"transport_concern":0}}
 d2d47291dcbb1387	{"confidence":0.78,"kind":"Classify","label":"move","probabilities":{"move":0.89,"no_issue":0.11}}
 d2d4f0d4bc896050	{"confidence":0.72,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.79,"component_or_feature":0.1,"not_applicable":0.1,"route_or_handler":0.01}}
+d2d6b4670830fc77	{"confidence":0.66,"kind":"Classify","label":"extract_shared","probabilities":{"coincidence":0.13,"extend_the_primitive":0.1,"extract_shared":0.77}}
 d2dcaf809dd3fd07	{"consistency":1,"kind":"Probability","probability":0.35333333333333333}
 d2dccc97c98829ff	{"confidence":0.92,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.94,"stale_reference":0.01,"wrong_behavior":0.03,"wrong_contract":0.02}}
 d2dd0fb21d5a5312	{"confidence":0.56,"kind":"Classify","label":"general","probabilities":{"general":0.71,"names_a_caller":0,"shared_vocabulary":0.29}}

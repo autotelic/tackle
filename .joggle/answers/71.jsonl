@@ -57,6 +57,7 @@
 71db695281b440a4	{"confidence":0.97,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.02,"framework_glue":0,"implementation_detail":0.98,"wire_contract":0}}
 71dc0b0587223ad8	{"confidence":0.88,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0,"name_meaning":0.01,"no_issue":0.08,"semantic_verdict":0.91}}
 71dd46d5b4f0b2c1	{"confidence":0.86,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.07,"keep_variants":0.91,"no_issue":0.02}}
+71df9ecf21a192cb	{"confidence":0.58,"kind":"Classify","label":"extract_shared","probabilities":{"coincidence":0.02,"extend_the_primitive":0.26,"extract_shared":0.72}}
 71e61ee916bf58ac	{"consistency":1,"kind":"Probability","probability":0.918888888888889}
 71e90ab696103041	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"same_use_left":0,"same_use_right":0}}
 71eaabad504c7d79	{"confidence":0.28,"kind":"Classify","label":"must_be_current","probabilities":{"allowed":0.07,"must_be_current":0.52,"not_a_projection":0.41}}

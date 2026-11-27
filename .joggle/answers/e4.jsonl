@@ -22,6 +22,7 @@ e456d746e239299d	{"consistency":1,"kind":"Probability","probability":0.743333333
 e457443c355858b7	{"confidence":0.85,"kind":"Classify","label":"different_work","probabilities":{"different_inputs":0.11,"different_order":0,"different_work":0.89,"same_operation":0}}
 e459bc563b4251ef	{"confidence":0.64,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.23,"independent":0.76,"meaning_switched":0.01}}
 e45a1fadf41f9add	{"confidence":0.6,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.05,"must_be_current":0.22,"not_a_projection":0.73}}
+e4602417a4ef142e	{"confidence":0.66,"kind":"Classify","label":"extract_shared","probabilities":{"coincidence":0.02,"extend_the_primitive":0.21,"extract_shared":0.77}}
 e46292b3335e4353	{"consistency":0.6666666666666667,"kind":"Probability","probability":0.4811111111111111}
 e465250494cd0b2b	{"confidence":0.49,"kind":"Classify","label":"not_an_invariant","probabilities":{"detect_only":0.09,"not_an_invariant":0.66,"repair_path":0.25}}
 e469a31f2147088e	{"confidence":0.31,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.08,"merge":0.16,"move":0.31,"share_a_contract":0.45,"split":0}}
@@ -63,5 +64,6 @@ e4e11bbaaf750b8b	{"confidence":0.8,"kind":"Classify","label":"composes","probabi
 e4ee003c16ec9b4a	{"confidence":0.49,"kind":"Classify","label":"move","probabilities":{"leave_it":0.02,"merge":0.38,"move":0.59,"share_a_contract":0.01,"split":0}}
 e4f2b41bf3b7aa83	{"confidence":0.09,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.32,"component_or_feature":0.29,"not_applicable":0.25,"route_or_handler":0.14}}
 e4f75749bccee2bc	{"confidence":0.98,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0,"must_be_current":0.01,"not_a_projection":0.99}}
+e4f782c00ceac3c0	{"confidence":0.31,"kind":"Classify","label":"coincidence","probabilities":{"coincidence":0.54,"extend_the_primitive":0.02,"extract_shared":0.44}}
 e4f9b24365ca4427	{"confidence":0.88,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.92,"not_a_derivation":0.07,"reimplements":0.01}}
 e4fac17ead4581c3	{"consistency":1,"kind":"Probability","probability":0.32666666666666666}

@@ -8,9 +8,11 @@
 92140589b64f4f34	{"confidence":0.68,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.84,"member_1":0.16}}
 921cd2fae4f1a8f5	{"confidence":0.48,"kind":"Classify","label":"not_a_record","probabilities":{"mutable":0.29,"not_a_record":0.65,"supersede_only":0.06}}
 92266bb5398cb05a	{"confidence":0.53,"kind":"Classify","label":"value","probabilities":{"meaning":0.31,"unclear":0,"value":0.69}}
+92269a099d4696c4	{"confidence":0.68,"kind":"Classify","label":"coincidence","probabilities":{"coincidence":0.79,"extend_the_primitive":0.06,"extract_shared":0.15}}
 922ee2497572b9b2	{"confidence":0.85,"kind":"Classify","label":"infrastructure","probabilities":{"derivation":0,"domain_logic":0,"infrastructure":0.86,"input_adaptation":0.02,"mechanical":0,"not_applicable":0,"orchestration":0.1,"reconciliation":0,"recording":0,"rendering":0,"request_validation":0,"transport_concern":0.02}}
 922f1cf369d17795	{"confidence":0.73,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.18,"names_a_caller":0,"shared_vocabulary":0.82}}
 92305bfad7941f94	{"confidence":0.94,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.96,"not_a_derivation":0.03,"reimplements":0.01}}
+9231317a94236f72	{"confidence":0.33,"kind":"Classify","label":"extract_shared","probabilities":{"coincidence":0.38,"extend_the_primitive":0.07,"extract_shared":0.55}}
 923182559a6f15ea	{"consistency":1,"kind":"Probability","probability":0.8666666666666667}
 923862d43c66e50a	{"confidence":0.98,"kind":"Classify","label":"value","probabilities":{"meaning":0.01,"unclear":0,"value":0.99}}
 923ac35d9eda6f10	{"consistency":1,"kind":"Probability","probability":0.8655555555555555}

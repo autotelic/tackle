@@ -1,3 +1,4 @@
+c202eda6a20438dd	{"confidence":0.25,"kind":"Classify","label":"coincidence","probabilities":{"coincidence":0.5,"extend_the_primitive":0.16,"extract_shared":0.34}}
 c204b69c7c763cb2	{"confidence":0.58,"kind":"Classify","label":"reimplements","probabilities":{"legitimate_local":0.24,"not_a_derivation":0.04,"reimplements":0.72}}
 c2062262f812d1d8	{"confidence":0.67,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.23,"framework_glue":0.01,"implementation_detail":0.75,"wire_contract":0.01}}
 c206dca00709581d	{"confidence":0.8,"kind":"Classify","label":"split","probabilities":{"leave_it":0.03,"merge":0.03,"move":0.05,"share_a_contract":0.05,"split":0.84}}

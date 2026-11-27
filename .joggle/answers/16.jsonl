@@ -25,6 +25,7 @@
 1649454d17b8214c	{"confidence":0.53,"kind":"Classify","label":"two_concepts","probabilities":{"intentional":0.25,"one_concept":0.06,"two_concepts":0.69}}
 164b7aa5fcd6f17c	{"confidence":0.61,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.71,"stale_reference":0,"wrong_behavior":0.25,"wrong_contract":0.04}}
 164d91cf3476a736	{"consistency":1,"kind":"Probability","probability":0.91}
+165050cfcb94ef4e	{"confidence":0.35,"kind":"Classify","label":"coincidence","probabilities":{"coincidence":0.57,"extend_the_primitive":0.07,"extract_shared":0.36}}
 1654194770bf0fc3	{"confidence":0.28,"kind":"Classify","label":"value","probabilities":{"meaning":0.48,"unclear":0,"value":0.52}}
 1655ef85bcbbe849	{"confidence":0.96,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.01,"must_be_current":0.02,"not_a_projection":0.97}}
 165e41b4a962b55b	{"confidence":0.65,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.03,"name_meaning":0.05,"no_issue":0.18,"semantic_verdict":0.74}}
@@ -67,6 +68,7 @@
 16c81690ce41c07d	{"confidence":0.88,"kind":"Classify","label":"component_or_feature","probabilities":{"already_there":0.02,"component_or_feature":0.91,"not_applicable":0.01,"route_or_handler":0.06}}
 16cb2d6e80a0650a	{"confidence":0.69,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.77,"stale_reference":0.02,"wrong_behavior":0.19,"wrong_contract":0.02}}
 16d24321f053fbed	{"confidence":0.85,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.89,"stale_reference":0.01,"wrong_behavior":0.09,"wrong_contract":0.01}}
+16d317e0b78d08e0	{"confidence":0.77,"kind":"Classify","label":"coincidence","probabilities":{"coincidence":0.85,"extend_the_primitive":0.02,"extract_shared":0.13}}
 16d751d1e207859f	{"confidence":0.04,"kind":"Classify","label":"none","probabilities":{"lab":0.48,"none":0.52}}
 16dbd5f29e956eb7	{"confidence":0.91,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.05,"inferred":0.01,"not_applicable":0.94}}
 16dd90d5cd4caf91	{"confidence":0.31,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.45,"names_a_caller":0.01,"shared_vocabulary":0.54}}

@@ -56,6 +56,7 @@ e9cc7577173284e8	{"confidence":0.18,"kind":"Classify","label":"reimplements","pr
 e9cd99b6e494a983	{"confidence":0.44,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.06,"merge":0.55,"move":0.37,"share_a_contract":0.01,"split":0.01}}
 e9ce945ae7ed4f4e	{"confidence":0.93,"kind":"Classify","label":"sibling_packages","probabilities":{"different_deployables":0.05,"same_module":0,"same_package":0,"sibling_packages":0.95}}
 e9d1406c194d23b1	{"confidence":0.3,"kind":"Classify","label":"share_a_contract","probabilities":{"leave_it":0.06,"merge":0.21,"move":0.25,"share_a_contract":0.44,"split":0.04}}
+e9d2bd0438ed1ef6	{"confidence":0.58,"kind":"Classify","label":"coincidence","probabilities":{"coincidence":0.72,"extend_the_primitive":0.03,"extract_shared":0.25}}
 e9d388bc4d6916e1	{"confidence":0.77,"kind":"Classify","label":"domain_concept","probabilities":{"domain_concept":0.83,"framework_glue":0.04,"implementation_detail":0.03,"wire_contract":0.1}}
 e9d5e3451cbc28d0	{"confidence":0.3,"kind":"Classify","label":"common_idiom","probabilities":{"coincidental":0.08,"common_idiom":0.53,"shared_helper":0.39}}
 e9d9f2d4b327d6a2	{"confidence":0.93,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0.01,"wrong_behavior":0.04,"wrong_contract":0}}
