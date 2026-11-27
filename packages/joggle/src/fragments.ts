@@ -1,7 +1,6 @@
-import { Predicate } from "effect"
 import { policy } from "./policy.ts"
-import { canonicalRegion, prepareUnit, stableId, type PreparedUnit } from "./identity.ts"
-import { isRecord, type Unit } from "./workspace.ts"
+import { canonicalRegion, nodeSpansOf, prepareUnit, stableId, type PreparedUnit } from "./identity.ts"
+import type { Unit } from "./workspace.ts"
 
 /*
  * The pieces a declaration is made of, each with its own id.
@@ -53,38 +52,17 @@ const FRAGMENT_KINDS = new Set([
 
 /** The node spans in this unit that are fragments, outermost first. */
 const regionsOf = (prepared: PreparedUnit): ReadonlyArray<{ start: number; end: number }> => {
-  const program = prepared.program
-  if (program === undefined) return []
-  const found: Array<{ start: number; end: number }> = []
-  const stack: Array<unknown> = [program]
-  while (stack.length > 0) {
-    const current = stack.pop()
-    if (Array.isArray(current)) {
-      for (const item of current) stack.push(item)
-      continue
-    }
-    if (!isRecord(current)) continue
-    const kind = current["type"]
-    const start = current["start"]
-    const end = current["end"]
-    if (
-      Predicate.isString(kind) &&
-      FRAGMENT_KINDS.has(kind) &&
-      Predicate.isNumber(start) &&
-      Predicate.isNumber(end) &&
-      start - prepared.shift >= 0 &&
-      end - prepared.shift <= prepared.text.length &&
-      // The declaration itself is not a piece of itself.
-      !(start - prepared.shift === 0 && end - prepared.shift === prepared.text.length) &&
-      end - start > 1
-    ) {
-      found.push({ start: start - prepared.shift, end: end - prepared.shift })
-    }
-    for (const value of Object.values(current)) {
-      if (Predicate.isObjectOrArray(value)) stack.push(value)
-    }
-  }
-  return found
+  if (prepared.program === undefined) return []
+  return nodeSpansOf(prepared.program, FRAGMENT_KINDS)
+    .map(({ start, end }) => ({ start: start - prepared.shift, end: end - prepared.shift }))
+    .filter(
+      ({ start, end }) =>
+        start >= 0 &&
+        end <= prepared.text.length &&
+        // The declaration itself is not a piece of itself.
+        !(start === 0 && end === prepared.text.length) &&
+        end - start > 1,
+    )
 }
 
 export interface Fragments {

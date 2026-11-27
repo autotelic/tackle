@@ -66,15 +66,6 @@ const withVisit = async <A>(payload: {
   return payload.body().finally(() => payload.state.visiting.delete(payload.marker))
 }
 
-/** The parameters a type brings into scope, in declaration order. */
-const parametersOf = async (type: Type): Promise<ReadonlyArray<TypeParameter>> => {
-  if (type.isClassOrInterface()) return await type.getTypeParameters()
-  return []
-}
-
-const aliasArgumentsOf = async (type: Type): Promise<ReadonlyArray<Type>> =>
-  type.isObjectType() ? await type.getAliasTypeArguments() : []
-
 /** A parameter's position, by object identity first and symbol name as a fallback. */
 const positionOf = async (
   type: TypeParameter,
@@ -244,8 +235,8 @@ const encodeType = async (
       currentDeclaration ?? (symbol === undefined ? undefined : await state.declarationIdOf(symbol))
     if (current !== undefined && state.visiting.has(current)) return "cycle(" + current + ")"
     const body = async (): Promise<string> => {
-      const own = await parametersOf(type)
-      const aliases = await aliasArgumentsOf(type)
+      const own = type.isClassOrInterface() ? await type.getTypeParameters() : []
+      const aliases = await type.getAliasTypeArguments()
       const innerScope: Array<TypeParameter> = [...scope]
       for (const parameter of [...own, ...aliases]) {
         if (parameter.isTypeParameter() && !innerScope.includes(parameter))
@@ -311,7 +302,7 @@ export const typeIdOf = async (
         argument.isTypeParameter(),
       )
   const encoding = input.type.isTypeReference()
-    ? await encode(input.type, scope, state)
+    ? await encodeType(input.type, scope, state, undefined)
     : await encodeType(input.type, scope, state, input.declarationId)
   return stableId(encoding)
 }
