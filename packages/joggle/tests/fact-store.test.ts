@@ -64,7 +64,7 @@ test("a cold store fills, a warm store reuses, and the ids do not move", async (
     }>
   ).map((row) => row.name)
   db.close()
-  for (const table of ["object", "fragment"]) {
+  for (const table of ["object", "fragment", "finding"]) {
     expect(tables).toContain(table)
   }
 })
@@ -186,4 +186,26 @@ test("a row the decoder refuses is a miss, not a wrong answer", async () => {
   expect(reread.reused).toBe(0)
   expect(reread.walked).toBe(first.units.length)
   expect(after).toEqual(expected)
+})
+
+test("a remedies run owns one finding row per site, rule and run", () => {
+  const root = mkdtempSync(join(tmpdir(), "joggle-store-"))
+  const store = createFactStore(root)
+  const written = store.rememberFindings("run-a", [
+    { site: "src/a.ts:1", rule: "plumb/a", remedyHash: "remedy-1" },
+    { site: "src/a.ts:2", rule: "plumb/b", remedyHash: "remedy-1" },
+  ])
+  expect(written).toBe(2)
+  expect(store.findingsOf("run-a")).toEqual([
+    { site: "src/a.ts:1", rule: "plumb/a", remedyHash: "remedy-1", run: "run-a" },
+    { site: "src/a.ts:2", rule: "plumb/b", remedyHash: "remedy-1", run: "run-a" },
+  ])
+  // A second pass replaces the run rather than appending a second copy.
+  store.rememberFindings("run-a", [
+    { site: "src/a.ts:1", rule: "plumb/a", remedyHash: "remedy-2" },
+  ])
+  expect(store.findingsOf("run-a")).toEqual([
+    { site: "src/a.ts:1", rule: "plumb/a", remedyHash: "remedy-2", run: "run-a" },
+  ])
+  store.close()
 })

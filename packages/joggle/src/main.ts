@@ -4,7 +4,7 @@ import { Decision, DecisionModel } from "effect/ai"
 import * as FetchHttpClient from "effect/http/FetchHttpClient"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { checkRepository } from "./check.ts"
-import { layer as decisionLayer } from "./decision.ts"
+import { DecisionStats, layer as decisionLayer } from "./decision.ts"
 import {
   census as censusAnswers,
   compact as compactAnswers,
@@ -13,6 +13,14 @@ import {
   prune as pruneAnswers,
 } from "./answer-store.ts"
 import { ask } from "./ask.ts"
+import {
+  clusterRemedies,
+  describeInput,
+  findingsOf,
+  judgeRemedies,
+  rememberRemedyFindings,
+  type RemedyReport,
+} from "./remedies.ts"
 import { cacheDirFor, runCacheDirFor, scopedAnswerCacheDir, shortHash } from "./state.ts"
 import { canonical } from "./canonical.ts"
 import { loadConfig, isEnabled, severityFor } from "./config.ts"
@@ -573,6 +581,181 @@ const askCommand = Command.make(
     {
       command: 'joggle ask "where is the retry policy defined?"',
       description: "Rank the declarations that answer a question.",
+    },
+  ]),
+)
+
+const remedyLines = (
+  report: RemedyReport,
+  ledger: { readonly run: string; readonly written: number },
+  cache: { readonly replayed: number; readonly judged: number },
+): ReadonlyArray<string> => {
+  const total = cache.replayed + cache.judged
+  const hit = total === 0 ? 0 : cache.replayed / total
+  const lines: Array<string> = [
+    describeInput(report.clusters.flatMap((cluster) => cluster.members)) +
+      " -> " + String(report.clusters.length) + " remedy cluster(s) from " +
+      String(report.distinctMessages) + " distinct message(s)",
+    "witness alone: " + String(report.witness.clusters) + " cluster(s), largest " +
+      String(report.witness.largestSites) + " site(s) / " + String(report.witness.largestRules) +
+      " rule(s); judgement: " + String(report.judgement.clusters) + " cluster(s), largest " +
+      String(report.judgement.largestSites) + " site(s) / " +
+      String(report.judgement.largestRules) + " rule(s)",
+    "questions: " + String(report.distinctMessages) + " message(s), " +
+      String(report.pairsAsked) + " pair(s); cache " +
+      String(cache.replayed) + "/" + String(total) + " replayed (" +
+      (hit * 100).toFixed(1) + "%)",
+    "fact store: run " + ledger.run + ", " + String(ledger.written) + " finding row(s)",
+  ]
+  if (report.judgementUnavailable !== undefined) {
+    lines.push("judgement unavailable, witness-only clustering: " + report.judgementUnavailable)
+  }
+  for (const cluster of report.clusters) {
+    lines.push("")
+    lines.push(
+      String(cluster.sites) + " site(s) · " + String(cluster.findings) + " finding(s) · " +
+        String(cluster.rules.length) + " rule(s) · " + String(cluster.files.length) + " file(s)",
+    )
+    lines.push("  remedy  " + cluster.remedy + "  [" + cluster.remedyHash + "]")
+    lines.push(
+      "  rules   " +
+        cluster.rules.map((rule) => rule.rule + " " + String(rule.findings)).join(", "),
+    )
+    lines.push(
+      "  files   " + cluster.files.map((file) => file.file + " " + String(file.sites)).join(", "),
+    )
+    if (cluster.counterexamples.length > 0) lines.push("  counterexamples")
+    for (const counterexample of cluster.counterexamples) {
+      const onlyA = counterexample.onlyA.length <= 5
+        ? counterexample.onlyA.join(", ")
+        : counterexample.onlyA.slice(0, 5).join(", ") +
+          ", +" +
+          String(counterexample.onlyA.length - 5)
+      const onlyB = counterexample.onlyB.length <= 5
+        ? counterexample.onlyB.join(", ")
+        : counterexample.onlyB.slice(0, 5).join(", ") +
+          ", +" +
+          String(counterexample.onlyB.length - 5)
+      lines.push(
+        "    " + counterexample.a + " × " + counterexample.b + ": only " + counterexample.a +
+          " " + String(counterexample.onlyA.length) + " [" + onlyA + "] · only " +
+          counterexample.b + " " + String(counterexample.onlyB.length) + " [" + onlyB + "]",
+      )
+      lines.push("      " + counterexample.reason)
+    }
+  }
+  for (const disagreement of report.disagreements) {
+    lines.push(
+      "disagreement: witness kept these apart, judgement joined them at " +
+        disagreement.probability.toFixed(2) + ": " + disagreement.a + " / " + disagreement.b,
+    )
+  }
+  return lines
+}
+
+const remediesCommand = Command.make(
+  "remedies",
+  {
+    file: Argument.String("file").pipe(
+      Argument.withDescription(
+        "A findings JSON file: joggle's `check --format json` or oxlint's `--format json`.",
+      ),
+    ),
+    cwd: Flag.String("cwd").pipe(
+      Flag.withDescription(
+        "Project root whose fact store receives the finding rows (default: the current directory).",
+      ),
+      Flag.optional,
+    ),
+    cacheDir: Flag.String("cache-dir").pipe(
+      Flag.withDescription(
+        "Where the judgement cache lives: <cwd>/.joggle when it exists, otherwise the machine" +
+          " cache.",
+      ),
+      Flag.optional,
+    ),
+    format: Flag.Literals("format", ["text", "json"]).pipe(
+      Flag.withDescription("How to render the clusters."),
+      Flag.withDefault("text"),
+    ),
+    offline: Flag.Boolean("offline").pipe(
+      Flag.withDescription("Answer only from the committed judgement cache; never call the model."),
+      Flag.withDefault(false),
+    ),
+  },
+  (config) =>
+    Effect.gen(function* () {
+      const path = yield* Path.Path
+      const fs = yield* FileSystem.FileSystem
+      const cwd = path.resolve(Option.getOrUndefined(config.cwd) ?? process.cwd())
+      const input = path.resolve(cwd, config.file)
+      const text = yield* fs.readFileString(input)
+      const payload = yield* Effect.try({
+        try: () => JSON.parse(text) as unknown,
+        catch: (cause) => new Error("could not read " + input + ": " + String(cause)),
+      })
+      const findings = findingsOf(payload).map((finding) => {
+        const file = path.isAbsolute(finding.file) ? path.relative(cwd, finding.file) : finding.file
+        return { ...finding, file, site: file + ":" + String(finding.line) }
+      })
+      const cacheDir = yield* cacheDirFor(cwd, Option.getOrUndefined(config.cacheDir))
+      const machineCache = yield* runCacheDirFor(cwd)
+      const apiKey = yield* Config.option(Config.String("TYPESAFE_API_KEY"))
+      const judged = yield* Effect.gen(function* () {
+        const opinion = yield* judgeRemedies(findings)
+        // Read the run's own accounting before the layer is torn down. A fresh
+        // layer would answer zero, which is the one number a cache report must
+        // never invent.
+        const stats = yield* (yield* DecisionStats).read
+        return { opinion, stats }
+      }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            atomsLayer,
+            decisionLayer({
+              cacheDir,
+              wireCacheDir: machineCache,
+              offline: config.offline,
+              apiKey,
+            }),
+          ),
+        ),
+      )
+      const opinion = judged.opinion
+      const stats = judged.stats
+      const report = clusterRemedies(findings, opinion)
+      const ledger = rememberRemedyFindings(cwd, report)
+      if (config.format === "json") {
+        yield* write(
+          JSON.stringify(
+            {
+              ...report,
+              persistence: ledger,
+              cache: { replayed: stats.replayed, judged: stats.judged },
+            },
+            null,
+            2,
+          ),
+        )
+        return
+      }
+      yield* write(remedyLines(report, ledger, stats).join("\n"))
+    }),
+).pipe(
+  Command.withDescription(
+    "Cluster findings by the repair their messages prescribe. Reads joggle's or oxlint's JSON" +
+      " unchanged, judges each distinct message against the candidate clauses code derived, and" +
+      " writes finding(site, rule, remedy_hash, run) to the fact store.",
+  ),
+  Command.withShortDescription("Cluster findings by the repair they prescribe."),
+  Command.withExamples([
+    {
+      command: "joggle remedies findings.json",
+      description: "Cluster one findings stream by prescribed repair.",
+    },
+    {
+      command: "oxlint --format json packages/board > findings.json && joggle remedies findings.json",
+      description: "Cluster oxlint's output without requiring it to change shape.",
     },
   ]),
 )
@@ -1459,6 +1642,7 @@ const cli = Command.make("joggle").pipe(
     checkCommand,
     proseCommand,
     askCommand,
+    remediesCommand,
     rules,
     identityCommand,
     calibrateCommand,
