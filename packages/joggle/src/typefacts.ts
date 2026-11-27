@@ -10,7 +10,7 @@ import {
 import type { IdentityKeys } from "./identity.ts"
 import { policy } from "./policy.ts"
 import { shortHash } from "./state.ts"
-import { typeIdOf } from "./typeid.ts"
+import { createTypeIdMemo, typeIdOf, type TypeIdMemo } from "./typeid.ts"
 
 /**
  * The checker's answer about a declaration, by file and byte offset.
@@ -226,11 +226,32 @@ export interface DeclarationFact {
   readonly facts: ResolvedType
 }
 
+/** What the canonical walk paid for and what the memo removed. */
+export interface TypeIdWalkStats {
+  readonly walks: number
+  readonly printedHits: number
+  readonly typeHits: number
+  readonly encodingHits: number
+}
+
 export interface DeclarationResult {
   readonly found: ReadonlyArray<DeclarationFact>
   readonly unresolved: number
   /** Member lists and type strings the budget cut. Reported, never silent. */
   readonly truncated: number
+  /** Zero when `policy.canonical` is off, because no walk ran. */
+  readonly typeIdWalks: TypeIdWalkStats
+}
+
+const statsOf = (memos: ReadonlyArray<TypeIdMemo>): TypeIdWalkStats => {
+  const sum = { walks: 0, printedHits: 0, typeHits: 0, encodingHits: 0 }
+  for (const memo of memos) {
+    sum.walks += memo.walks
+    sum.printedHits += memo.printedHits
+    sum.typeHits += memo.typeHits
+    sum.encodingHits += memo.encodingHits
+  }
+  return sum
 }
 
 export interface DeclarationQuery extends ProjectSource {
@@ -460,8 +481,17 @@ const describe = async (
  * @returns the facts, how many positions had no type, and how many were cut.
  */
 export const resolveDeclarations = async (input: DeclarationQuery): Promise<DeclarationResult> => {
-  if (input.requests.length === 0) return { found: [], unresolved: 0, truncated: 0 }
+  if (input.requests.length === 0)
+    return {
+      found: [],
+      unresolved: 0,
+      truncated: 0,
+      typeIdWalks: { walks: 0, printedHits: 0, typeHits: 0, encodingHits: 0 },
+    }
   const budget = { strings: 0, maxStrings: input.maxStrings }
+  // One memo per project: `Type.id` is the checker's identity inside one program,
+  // and a project is what owns that program.
+  const memos = new Map<Project, TypeIdMemo>()
   return await withSnapshot(input, async (snapshot) => {
     // Grouped by file, so the batch overload answers a whole file in one round
     // trip instead of one per declaration.
@@ -488,28 +518,42 @@ export const resolveDeclarations = async (input: DeclarationQuery): Promise<Decl
       }
       const positions = requests.map((request) => request.position)
       const types = await project.checker.getTypeAtPosition(resolve(input.cwd, file), positions)
+      let memo = memos.get(project)
+      if (memo === undefined) {
+        memo = createTypeIdMemo()
+        memos.set(project, memo)
+      }
       for (const [index, request] of requests.entries()) {
         const type = types[index]
         if (type === undefined) {
           unresolved += 1
           continue
         }
+        const describedType = await describe(
+          project.checker,
+          type,
+          budget,
+          input.maxMembers,
+          "",
+        )
         const canonical = !policy.canonical
           ? ""
           : await typeIdOf({
-          checker: project.checker,
-          type,
-          declarationId: input.identity?.byPosition.get(
-            resolve(input.cwd, request.file) + "\u0000" + String(request.position),
-          ),
-          declarationIdOf: (symbol) =>
-            identityOfSymbol({ symbol, identity: input.identity, cwd: input.cwd }),
-        })
+              checker: project.checker,
+              type,
+              printed: describedType.display,
+              declarationId: input.identity?.byPosition.get(
+                resolve(input.cwd, request.file) + "\u0000" + String(request.position),
+              ),
+              declarationIdOf: (symbol) =>
+                identityOfSymbol({ symbol, identity: input.identity, cwd: input.cwd }),
+              memo,
+            })
         described.push({
           request,
           checker: project.checker,
           type,
-          facts: await describe(project.checker, type, budget, input.maxMembers, canonical),
+          facts: { ...describedType, canonical },
         })
       }
     }
@@ -553,6 +597,7 @@ export const resolveDeclarations = async (input: DeclarationQuery): Promise<Decl
       })),
       unresolved,
       truncated,
+      typeIdWalks: statsOf([...memos.values()]),
     }
   })
 }

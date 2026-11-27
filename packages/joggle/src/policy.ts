@@ -723,17 +723,18 @@ export const policy = {
    * decision still stands on the whole cluster even when the detail is bounded.
    */
   /**
-   * Canonical type ids: off, because they cost an RPC per declaration.
+   * Canonical type ids: on, with the walk memoised.
    *
    * The id walks the checker's type graph (`getPropertiesOfType`,
    * `getTypeArguments`, `getTypeOfSymbol`), and those are round-trips to the sidecar.
-   * Asked once per declaration over a whole repository that is tens of thousands of
-   * round-trips: `joggle check packages` went from 238s to a 4GB heap and OOM, and
-   * even a one-package scope stopped finishing. The ids are right; the cost is in the
-   * batching, and until the walk is batched the way `getTypeAtPosition` is, they stay
-   * opt-in. An empty string means "not computed", never "computed and empty".
+   * Asked once per declaration over a whole repository that was tens of thousands
+   * of round-trips and a 4GB heap. The API cannot batch the walk the way it batches
+   * `getTypeAtPosition`, so `typeIdOf` reuses what the checker already returned:
+   * by `Type.id`, by a closed printed form, and by the sub-encoding with its scope
+   * and cycle path. An empty string still means "not computed", never "computed
+   * and empty"; the walk statistics in `typeIdWalks` say what was reused.
    */
-  canonical: false,
+  canonical: true,
 
   evidence: {
     maxMembers: 12,

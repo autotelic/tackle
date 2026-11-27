@@ -39,9 +39,93 @@ export interface TypeIdContext {
   readonly declarationIdOf: (symbol: Symbol) => Promise<string | undefined>
 }
 
+/**
+ * Work reused across the declarations of one project.
+ *
+ * A canonical id is a pure function of the type graph, but computing it is a
+ * sequence of sidecar round-trips. The walk is asked once per declaration, and
+ * many declarations share the same type object or the same closed printed type.
+ * Reuse is keyed by the checker's `Type.id` (the object's own identity) and by
+ * the printed form, with the encoding cache also carrying the parameter scope
+ * and the cycle path so a result is only reused in the context that produced it.
+ *
+ * The printed cache is restricted to CLOSED forms -- primitives, literals and
+ * object shapes built only from those. A bare declaration name is not an
+ * identity: two modules can both print `User` for different interfaces, and
+ * caching by that name would make them equal.
+ */
+export interface TypeIdMemo {
+  readonly printed: Map<string, string>
+  readonly types: Map<number, string>
+  readonly encodings: Map<string, string>
+  readonly symbols: Map<number, string | undefined>
+  walks: number
+  printedHits: number
+  typeHits: number
+  encodingHits: number
+}
+
+/** A fresh memo, for one project in one run. */
+export const createTypeIdMemo = (): TypeIdMemo => ({
+  printed: new Map(),
+  types: new Map(),
+  encodings: new Map(),
+  symbols: new Map(),
+  walks: 0,
+  printedHits: 0,
+  typeHits: 0,
+  encodingHits: 0,
+})
+
+const CLOSED_WORDS = new Set([
+  "any",
+  "unknown",
+  "never",
+  "void",
+  "undefined",
+  "null",
+  "string",
+  "number",
+  "boolean",
+  "bigint",
+  "symbol",
+  "object",
+  "true",
+  "false",
+  "readonly",
+  "keyof",
+  "typeof",
+  "infer",
+  "extends",
+  "in",
+  "out",
+  "const",
+  "this",
+])
+
+/**
+ * Whether a printed type is its own identity.
+ *
+ * Property keys (`id:` / `id?:`) are text, not references, so they are allowed.
+ * Any other non-keyword identifier is a name whose meaning depends on where it
+ * was resolved, and is left to the `Type.id` cache instead.
+ */
+const isClosedPrint = (printed: string): boolean => {
+  if (printed.length === 0) return false
+  const identifier = /[A-Za-z_$][\w$]*/g
+  for (let match = identifier.exec(printed); match !== null; match = identifier.exec(printed)) {
+    if (CLOSED_WORDS.has(match[0])) continue
+    const rest = printed.slice(identifier.lastIndex)
+    if (/^\s*\??\s*:/.test(rest)) continue
+    return false
+  }
+  return true
+}
+
 interface EncodingState extends TypeIdContext {
   /** Declaration ids currently being encoded, so a cycle terminates by name. */
   readonly visiting: Set<string>
+  readonly memo: TypeIdMemo | undefined
 }
 
 const byHash: Order.Order<string> = Order.mapInput(Order.String, (value: string) => stableId(value))
@@ -112,7 +196,7 @@ const markerOf = async (type: Type, state: EncodingState): Promise<string> => {
 }
 
 /** The canonical encoding of one type, relative to the parameters in scope. */
-const encodeType = async (
+const encodeUncached = async (
   type: Type,
   scope: ReadonlyArray<TypeParameter>,
   state: EncodingState,
@@ -270,6 +354,37 @@ const encodeType = async (
   return "flags:" + String(type.flags)
 }
 
+/**
+ * Memoise one sub-walk by the type, the parameter scope and the cycle path.
+ *
+ * The path is part of the key because a cycle is reported relative to the
+ * declarations currently being encoded; the same type under a different set of
+ * ancestors is a different encoding, not a cache hit.
+ */
+const encodeType = async (
+  type: Type,
+  scope: ReadonlyArray<TypeParameter>,
+  state: EncodingState,
+  currentDeclaration: string | undefined,
+): Promise<string> => {
+  const memo = state.memo
+  if (memo === undefined) return encodeUncached(type, scope, state, currentDeclaration)
+  const key = [
+    String(type.id),
+    scope.map((parameter) => String(parameter.id)).join(","),
+    [...state.visiting].sort().join(","),
+    currentDeclaration ?? "",
+  ].join("\u0000")
+  const hit = memo.encodings.get(key)
+  if (hit !== undefined) {
+    memo.encodingHits += 1
+    return hit
+  }
+  const encoding = await encodeUncached(type, scope, state, currentDeclaration)
+  memo.encodings.set(key, encoding)
+  return encoding
+}
+
 /** Encode one type in a fresh scope, with no declaration id forced. */
 const encode = async (
   type: Type,
@@ -289,12 +404,45 @@ export const typeIdOf = async (
     readonly type: Type
     /** The declaration's own content id, when the identity pass knows it. */
     readonly declarationId?: string | undefined
+    /** The printed form `describe` already paid for, when the caller has it. */
+    readonly printed?: string | undefined
+    /** Reuse from earlier declarations in this project. */
+    readonly memo?: TypeIdMemo | undefined
   },
 ): Promise<string> => {
+  const memo = input.memo
+  if (memo !== undefined) {
+    if (input.printed !== undefined && isClosedPrint(input.printed)) {
+      const hit = memo.printed.get(input.printed)
+      if (hit !== undefined) {
+        memo.printedHits += 1
+        return hit
+      }
+    }
+    const hit = memo.types.get(input.type.id)
+    if (hit !== undefined) {
+      memo.typeHits += 1
+      return hit
+    }
+    memo.walks += 1
+  }
+  // A declaration id is a property of the symbol, not of the request: cache the
+  // identity pass's answer so a target referenced by many declarations is
+  // mapped once, including an out-of-workspace "undefined".
+  const declarationIdOf =
+    memo === undefined
+      ? input.declarationIdOf
+      : async (symbol: Symbol): Promise<string | undefined> => {
+          if (memo.symbols.has(symbol.id)) return memo.symbols.get(symbol.id)
+          const id = await input.declarationIdOf(symbol)
+          memo.symbols.set(symbol.id, id)
+          return id
+        }
   const state: EncodingState = {
     checker: input.checker,
-    declarationIdOf: input.declarationIdOf,
+    declarationIdOf,
     visiting: new Set<string>(),
+    memo,
   }
   const scope = input.type.isClassOrInterface()
     ? await input.type.getTypeParameters()
@@ -304,5 +452,11 @@ export const typeIdOf = async (
   const encoding = input.type.isTypeReference()
     ? await encodeType(input.type, scope, state, undefined)
     : await encodeType(input.type, scope, state, input.declarationId)
-  return stableId(encoding)
+  const id = stableId(encoding)
+  if (memo !== undefined) {
+    memo.types.set(input.type.id, id)
+    if (input.printed !== undefined && isClosedPrint(input.printed))
+      memo.printed.set(input.printed, id)
+  }
+  return id
 }

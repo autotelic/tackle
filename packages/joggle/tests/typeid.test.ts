@@ -131,4 +131,32 @@ describe("canonical type identity", () => {
       }),
     120000,
   )
+
+  it.effect(
+    "reuses the canonical walk when a declaration is asked about twice",
+    () =>
+      Effect.gen(function* () {
+        const requests = [...REQUESTS, REQUESTS[0], REQUESTS[1], REQUESTS[2]]
+        const workspace = yield* loadWorkspace(root, ["."])
+        const identity = identityKeysOf({ workspace, root })
+        const result = yield* Effect.tryPromise(() =>
+          resolveDeclarations({
+            cwd: root,
+            tsconfig,
+            requests,
+            identity,
+            maxMembers: 64,
+            maxStrings: 12000,
+          }),
+        )
+        const reused =
+          result.typeIdWalks.printedHits +
+          result.typeIdWalks.typeHits +
+          result.typeIdWalks.encodingHits
+        expect(result.found.length).toBe(requests.length)
+        expect(reused).toBeGreaterThan(0)
+        expect(result.typeIdWalks.walks).toBeLessThan(requests.length)
+      }),
+    120000,
+  )
 })
