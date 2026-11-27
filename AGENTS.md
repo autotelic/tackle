@@ -63,6 +63,17 @@ now in this workspace:
   when malformed; output is written in one exact shape. A stale artifact must degrade
   to silence, never to false findings.
 
+## Judgments are primitives
+
+A judgment is a `Choice`, `Score`, `Noul` or `Box` question over atoms, and code
+decides what the answer means. There is no primitive that returns a sentence: when a
+question seems to need one, derive the candidates in code and ask which applies.
+Batch every question that shares a state — parallel, and nearly free — and record the
+answers in the ledger so a re-run answers none of them. [docs/jev.md](./docs/jev.md)
+is the contract (eight rules, two shapes, and the anti-patterns we have already
+written); [docs/remedy-hill.md](./docs/remedy-hill.md) is the work it is currently
+pointed at.
+
 ## Package anatomy
 
 ```
