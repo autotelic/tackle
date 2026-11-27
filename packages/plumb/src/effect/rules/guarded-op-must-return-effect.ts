@@ -97,7 +97,9 @@ function optionTypeReference(type: ESTree.TSType): string | null {
 /**
  * Guarded operations must surface failure reasons as tagged MoneyError values
  * through the Effect error channel, not as bare Option.None which conflates
- * every possible why into one silent absence.
+ * every possible why into one silent absence. The recommendation is deliberately
+ * the same shape `guarded-op-must-return-option` names for `T | undefined`, so
+ * the pair points at one spelling instead of banning Option by accident.
  */
 export const guardedOpMustReturnEffectRule = defineRule({
 	meta: {
@@ -108,7 +110,7 @@ export const guardedOpMustReturnEffectRule = defineRule({
 		},
 		messages: {
 			optionReturn:
-				"`{{found}}` hides why the operation failed. Return `Effect.Effect<T, MoneyError>` (or `Either<T, MoneyError>` in sync cores) with Schema.TaggedError reasons so callers can match Overflow vs InvalidInput vs ZeroDivisor. Options buried in tuples, records or arrays hide it just as well.",
+				"`{{found}}` hides why the operation failed. Return `Effect.Effect<T, MoneyError>` (or `Either<T, TaggedReason>` in sync cores) with Schema.TaggedError reasons so callers can match Overflow vs InvalidInput vs ZeroDivisor. Options buried in tuples, records or arrays hide it just as well.",
 			bareNone:
 				"`Option.none()` here discards the reason for failure. Fail with a tagged MoneyError reason instead, or keep the Option strictly internal while a converted public API owns the error channel.",
 		},

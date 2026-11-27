@@ -36,19 +36,25 @@ function asUnion(type: ESTree.TSType): ESTree.TSUnionType | null {
 	return type.type === "TSUnionType" ? type : null;
 }
 
-/** Guarded operations must surface absence as Option, not null/undefined unions or crashes. */
+/**
+ * Guarded operations must surface absence as Either<T, TaggedReason>, not a
+ * null/undefined union or a crash. This rule once recommended Option; that made
+ * it contradict `guarded-op-must-return-effect`, which rejects Option because it
+ * discards the reason. Recommending Either here is what makes the pair agree.
+ * The rule id keeps its historical name so consumer configs do not break.
+ */
 export const guardedOpMustReturnOptionRule = defineRule({
 	meta: {
 		type: "problem",
 		docs: {
 			description:
-				"Disallow returning T | null/undefined from guarded operations and getOrThrow escapes; express absence as Option<T> so callers compose with Option.zip/flatMap/filter.",
+				"Disallow returning T | null/undefined from guarded operations and getOrThrow escapes; express absence as Either<T, TaggedReason> so the reason survives. Option<T> is not the answer: guarded-op-must-return-effect rejects it for hiding the why.",
 		},
 		messages: {
 			nullableReturn:
-				"This function returns `{{type}}`, conflating absence with a value. Return Option<{{value}}> and express absence as Option.none().",
+				"This function returns `{{type}}`, conflating absence with a value. Return `Either<{{value}}, TaggedReason>` (Effect's `Either`) with a Schema.TaggedError reason for why the value is absent; absence here is a failure that has a why, and `Option<{{value}}>` would hide it.",
 			optionEscape:
-				"`getOrThrow` turns absence into a runtime crash. Keep the Option in the type and handle None, or parse to a refined value so the empty branch can't exist.",
+				"`getOrThrow` turns absence into a runtime crash. Match the `Either<T, TaggedReason>` and handle the Left, or parse to a refined value so the empty branch can't exist.",
 		},
 	},
 	createOnce(context) {

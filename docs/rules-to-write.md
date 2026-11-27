@@ -233,15 +233,58 @@ accident, in a message, while the first rule recommends the thing the second for
 pass, and the fifth was fixed in a module named `absence.ts` whose entire purpose was to
 answer this question once.
 
-**The fix:** `guarded-op-must-return-option` should recommend `Either<T, TaggedReason>` and say
-Option is banned, or `guarded-op-must-return-effect` should exempt a lookup where absence is
-not a failure. Either way the pair must not recommend contradictory shapes.
+**The fix:** `guarded-op-must-return-option` now recommends `Either<T, TaggedReason>` instead of
+`Option`, so both rules name the same shape. The rule keeps its historical id so consumer configs
+(e.g. joggle's disable of `guarded-op-must-return-option` at `08dfea82`) do not silently start
+matching a different rule; after this fix that disable can be revisited. The alternative — exempting
+the lookup case in `guarded-op-must-return-effect` — was not taken: it would leave the ruleset
+permitting two shapes, and the repository has standardised on Either with a tagged reason.
 
-**Negative fixture:** a function returning `Option<A>` that passes the first rule and fails the
-second, so a test can prove the pair no longer contradicts.
+The messages as they now read:
+
+```
+guarded-op-must-return-option
+  nullableReturn  "This function returns `{{type}}`, conflating absence with a value. Return
+                   `Either<{{value}}, TaggedReason>` (Effect's `Either`) with a Schema.TaggedError
+                   reason for why the value is absent; absence here is a failure that has a why,
+                   and `Option<{{value}}>` would hide it."
+  optionEscape    "`getOrThrow` turns absence into a runtime crash. Match the `Either<T,
+                   TaggedReason>` and handle the Left, or parse to a refined value so the empty
+                   branch can't exist."
+
+guarded-op-must-return-effect
+  optionReturn    "`{{found}}` hides why the operation failed. Return `Effect.Effect<T,
+                   MoneyError>` (or `Either<T, TaggedReason>` in sync cores) with
+                   Schema.TaggedError reasons so callers can match Overflow vs InvalidInput vs
+                   ZeroDivisor. Options buried in tuples, records or arrays hide it just as
+                   well."
+  bareNone        "`Option.none()` here discards the reason for failure. Fail with a tagged
+                   MoneyError reason instead, or keep the Option strictly internal while a
+                   converted public API owns the error channel."
+```
+
+**Negative fixture:** `packages/plumb/src/effect/rules/absence-shape-matrix.test.ts` runs the three
+return shapes through both rules. The matrix it encodes:
+
+| return shape             | guarded-op-must-return-option | guarded-op-must-return-effect | both pass |
+| ------------------------ | ----------------------------- | ----------------------------- | --------- |
+| `string \| undefined`    | fails (`nullableReturn`)      | passes                        | no        |
+| `Option<string>`         | passes                        | fails (`optionReturn`)        | no        |
+| `Either<string, Reason>` | passes                        | passes                        | **yes**   |
+
+Only `Either<T, TaggedReason>` satisfies the pair, and that is the shape both messages name.
 
 **Related contradiction, same family:** `no-optional-function-parameters` ("annotate as
 `T | undefined`") against `no-duplicate-type-constituents` ("explicit `undefined` is
 unnecessary on an optional parameter"). The resolution is a _required_ parameter spelled
 `T | undefined`; the rules should say so rather than leaving the reader to discover it. It was
 found in `packages/joggle/src/rule.ts`, not only in the file being worked on.
+
+The `no-optional-function-parameters` message now names that spelling:
+
+```
+  optionalParameter  "Optional parameters hide `undefined` from callers. Spell the parameter as a
+                      REQUIRED `T | undefined` (no `?`): `a?: T | undefined` is the duplicate
+                      constituent no-duplicate-type-constituents rejects, and `a?: T` hides the
+                      union."
+```

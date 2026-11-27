@@ -15,11 +15,11 @@ export const noOptionalFunctionParametersRule = defineRule({
 		type: "problem",
 		docs: {
 			description:
-				"Disallow optional function parameters (`param?:`); require an explicit union with undefined so callers see the possibility in the type.",
+				"Disallow optional function parameters (`param?:`); require a required parameter spelled `T | undefined` so callers see the possibility in the type without tripping no-duplicate-type-constituents.",
 		},
 		messages: {
 			optionalParameter:
-				"Optional parameters hide `undefined` from callers. Annotate the parameter as `T | undefined` so the possibility is spelled out in the type.",
+				"Optional parameters hide `undefined` from callers. Spell the parameter as a REQUIRED `T | undefined` (no `?`): `a?: T | undefined` is the duplicate constituent no-duplicate-type-constituents rejects, and `a?: T` hides the union.",
 		},
 	},
 	createOnce(context) {

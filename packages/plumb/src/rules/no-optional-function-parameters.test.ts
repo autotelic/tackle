@@ -16,11 +16,17 @@ tester.run(
 	testableRule(noOptionalFunctionParametersRule) as never,
 	{
 		valid: [
+			// The satisfiable spelling: required, union spelled out. An optional
+			// parameter cannot carry this union without tripping
+			// no-duplicate-type-constituents on the explicit `undefined`.
 			{ code: `function f(a: number | undefined) {}`, filename: "a.ts" },
 			{ code: `function f(a?: number) {}`, filename: "a.test.ts" },
 		],
 		invalid: [
 			{ code: `function f(a?: number) {}`, filename: "a.ts", errors: [{ messageId: "optionalParameter" }] },
+			// Optional plus an explicit undefined is the spelling both rules reject;
+			// the message must name the required parameter instead.
+			{ code: `function f(a?: number | undefined) {}`, filename: "a.ts", errors: [{ messageId: "optionalParameter" }] },
 		],
 	},
 );
