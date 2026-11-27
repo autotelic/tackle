@@ -621,6 +621,13 @@ const remedyLines = (
       "  rules   " +
         cluster.rules.map((rule) => rule.rule + " " + String(rule.findings)).join(", "),
     )
+    const sites = [...new Set(cluster.members.map((member) => member.site))].sort((left, right) =>
+      left.localeCompare(right),
+    )
+    const shown = sites.length <= 6
+      ? sites.join(", ")
+      : sites.slice(0, 6).join(", ") + ", +" + String(sites.length - 6)
+    lines.push("  sites   " + shown)
     lines.push(
       "  files   " + cluster.files.map((file) => file.file + " " + String(file.sites)).join(", "),
     )
