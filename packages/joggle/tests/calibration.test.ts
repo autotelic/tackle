@@ -109,6 +109,6 @@ describe("the split", () => {
       observation("b", "key-2", "other", "no"),
     ]
     const test = [observation("c", "key-3", "same", "yes")]
-    expect(agreement(train, test)).toEqual({ train: 2, test: 1, agreed: 1, rate: 1 })
+    expect(agreement({ train, test })).toEqual({ train: 2, test: 1, agreed: 1, rate: 1 })
   })
 })

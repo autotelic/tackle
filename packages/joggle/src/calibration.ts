@@ -1,3 +1,4 @@
+import { Result } from "effect"
 import { canonical } from "./canonical.ts"
 import { shortHash } from "./state.ts"
 
@@ -107,7 +108,7 @@ export interface Observation {
 
 /** The hash of a fragment set: order is not identity, so it is sorted first. */
 export const fragmentSetHash = (ids: ReadonlyArray<string>): string =>
-  shortHash(canonical([...new Set(ids)].sort()))
+  shortHash(canonical([...new Set(ids)].sort((left, right) => left.localeCompare(right))))
 
 /** One side's count, and how often the training side agreed with it. */
 export interface SplitAgreement {
@@ -131,25 +132,40 @@ export interface SplitReport {
   readonly byKey: SplitAgreement
 }
 
+/** The two sides a split produced. */
+export interface Partition {
+  readonly train: ReadonlyArray<Observation>
+  readonly test: ReadonlyArray<Observation>
+}
+
 /** The side a value lands on: its own hash, so the assignment is stable. */
-const sideOf = (value: string): 0 | 1 => ((parseInt(shortHash(value).slice(0, 2), 16) & 1) as 0 | 1)
+const isTrain = (value: string): boolean => (parseInt(shortHash(value).slice(0, 2), 16) & 1) === 0
 
 /** Cut observations into a train and a test side by one field. */
 export const partition = (
   observations: ReadonlyArray<Observation>,
   by: (observation: Observation) => string,
-): { readonly train: ReadonlyArray<Observation>; readonly test: ReadonlyArray<Observation> } => {
+): Partition => {
   const train: Array<Observation> = []
   const test: Array<Observation> = []
   for (const observation of observations) {
-    if (sideOf(by(observation)) === 0) train.push(observation)
+    if (isTrain(by(observation))) train.push(observation)
     else test.push(observation)
   }
   return { train, test }
 }
 
-/** The most common label, ties broken by name so the answer is one value. */
-const majority = (labels: ReadonlyArray<string>): string | undefined => {
+/**
+ * The most common label, or a typed reason there is none.
+ *
+ * Absence is real here -- an empty training side has no majority -- and the
+ * caller must branch before it can call the prediction a match. A Result says
+ * that once, instead of spelling `string | undefined` and leaving the caller to
+ * remember which branch is which.
+ */
+export type Majority = Result.Result<string, "NoLabels">
+
+const majority = (labels: ReadonlyArray<string>): Majority => {
   const counts = new Map<string, number>()
   for (const label of labels) counts.set(label, (counts.get(label) ?? 0) + 1)
   let best: string | undefined
@@ -160,7 +176,13 @@ const majority = (labels: ReadonlyArray<string>): string | undefined => {
       bestCount = count
     }
   }
-  return best
+  return best === undefined ? Result.fail("NoLabels") : Result.succeed(best)
+}
+
+/** One agreement measurement: the training and held-out observations. */
+export interface AgreementInput {
+  readonly train: ReadonlyArray<Observation>
+  readonly test: ReadonlyArray<Observation>
 }
 
 /**
@@ -174,10 +196,7 @@ const majority = (labels: ReadonlyArray<string>): string | undefined => {
  * answer away, so what survives is the agreement between genuinely distinct
  * observations.
  */
-export const agreement = (
-  train: ReadonlyArray<Observation>,
-  test: ReadonlyArray<Observation>,
-): SplitAgreement => {
+export const agreement = ({ train, test }: AgreementInput): SplitAgreement => {
   const byFragments = new Map<string, Array<string>>()
   for (const observation of train) {
     const labels = byFragments.get(observation.fragments) ?? []
@@ -189,7 +208,7 @@ export const agreement = (
   for (const observation of test) {
     const memorised = byFragments.get(observation.fragments)
     const prediction = memorised === undefined ? fallback : majority(memorised)
-    if (prediction === observation.label) agreed += 1
+    if (Result.isSuccess(prediction) && prediction.success === observation.label) agreed += 1
   }
   return {
     train: train.length,
@@ -197,6 +216,13 @@ export const agreement = (
     agreed,
     rate: test.length === 0 ? 0 : agreed / test.length,
   }
+}
+
+/** What deduplication did: what survived, what collapsed, what was withheld. */
+export interface DeduplicatedObservations {
+  readonly observations: ReadonlyArray<Observation>
+  readonly collapsed: number
+  readonly withheld: number
 }
 
 /**
@@ -209,11 +235,7 @@ export const agreement = (
  */
 export const withholdDuplicates = (
   observations: ReadonlyArray<Observation>,
-): {
-  readonly observations: ReadonlyArray<Observation>
-  readonly collapsed: number
-  readonly withheld: number
-} => {
+): DeduplicatedObservations => {
   const byKey = new Map<string, Observation>()
   let collapsed = 0
   for (const observation of observations) {
@@ -253,7 +275,7 @@ export const splitReport = (observations: ReadonlyArray<Observation>): SplitRepo
     observations: observations.length,
     collapsed: deduped.collapsed,
     withheld: deduped.withheld,
-    byAtom: agreement(atoms.train, atoms.test),
-    byKey: agreement(keys.train, keys.test),
+    byAtom: agreement({ train: atoms.train, test: atoms.test }),
+    byKey: agreement({ train: keys.train, test: keys.test }),
   }
 }
