@@ -756,6 +756,22 @@ export const clauseRouteOf = ({
   return { kind: "asked", family, candidates }
 }
 
+/** The one refusal an inconsistent family assignment produces, named the same way every round. */
+const orphanFailureOf = (route: {
+  readonly family: string
+  readonly message: string
+}): BuildFailure =>
+  new BuildFailure({
+    family: route.family,
+    subject: route.message,
+    message:
+      "remedies: repair family `" +
+      route.family +
+      "` has no clause assigned for " +
+      JSON.stringify(route.message) +
+      "; refusing to send an empty Choice",
+  })
+
 /**
  * Split items into at most `limit` contiguous groups, each smaller than the
  * input, so a bounded Choice can select a range before the next question names
@@ -978,20 +994,7 @@ export const judgeRemedies = (
         (clause) => (familyByClause.get(clause) ?? "other") === family,
       )
       const route = clauseRouteOf({ family, message: message.message, candidates })
-      if (route.kind === "orphan") {
-        return yield* Effect.die(
-          new BuildFailure({
-            family: route.family,
-            subject: route.message,
-            message:
-              "remedies: repair family `" +
-              route.family +
-              "` has no clause assigned for " +
-              JSON.stringify(route.message) +
-              "; refusing to send an empty Choice",
-          }),
-        )
-      }
+      if (route.kind === "orphan") return yield* Effect.die(orphanFailureOf(route))
       if (route.kind === "implied") {
         clauseByMessage.set(
           message.key,
@@ -1014,20 +1017,7 @@ export const judgeRemedies = (
           message: item.message.message,
           candidates: item.candidates,
         })
-        if (route.kind === "orphan") {
-          return yield* Effect.die(
-            new BuildFailure({
-              family: route.family,
-              subject: route.message,
-              message:
-                "remedies: repair family `" +
-                route.family +
-                "` has no clause assigned for " +
-                JSON.stringify(route.message) +
-                "; refusing to send an empty Choice",
-            }),
-          )
-        }
+        if (route.kind === "orphan") return yield* Effect.die(orphanFailureOf(route))
         if (route.kind === "implied") {
           clauseByMessage.set(
             item.message.key,
@@ -1917,38 +1907,8 @@ export const rememberRemedyFindings = (root: string, report: RemedyReport): Reme
   return { run, written }
 }
 
-/** Read the rows a previous run wrote, so the store is not write-only. */
-export const storedRemedies = ({
-  root,
-  run,
-}: {
-  readonly root: string
-  readonly run: string
-}): ReadonlyArray<StoredFinding> => {
-  const store = createFactStore(root)
-  const rows = store.findingsOf(run)
-  store.close()
-  return rows
-}
-
 /** A short, stable name for an input file, for the report header. */
 export const describeInput = (findings: ReadonlyArray<RemedyFinding>): string => {
   const rules = new Set(findings.map((finding) => finding.rule))
   return String(findings.length) + " finding(s), " + String(rules.size) + " rule(s)"
 }
-
-/** The judgement result when no model can be reached: witness-only, and said so. */
-export const witnessOnlyOpinion = (
-  findings: ReadonlyArray<RemedyFinding>,
-  reason: string,
-): RepairOpinion => ({
-  repairs: new Map(),
-  same: new Map(),
-  unavailable: reason,
-  failures: [],
-  questions: messageNodesOf(findings).length,
-  pairs: 0,
-  rejectedClauses: messageNodesOf(findings)
-    .filter((message) => !isImperativeClause(message.clause))
-    .map((message) => ({ message: message.message, clause: message.clause })),
-})
