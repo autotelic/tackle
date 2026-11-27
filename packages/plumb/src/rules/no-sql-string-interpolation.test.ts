@@ -19,6 +19,11 @@ tester.run(
 			{ code: "const query = 'SELECT * FROM users';", filename: "a.ts" },
 			{ code: "knex('users').where('id', id)", filename: "a.ts" },
 			{ code: "const msg = `Hello ${name}`;", filename: "a.ts" },
+			// FROM is an English preposition; a prose message naming it is not a query.
+			{
+				code: "const instruction = `two declarations from different files: ${id}`;",
+				filename: "a.ts",
+			},
 			{ code: "const query = `SELECT * FROM users WHERE id = ${userId}`;", filename: "src/users.test.ts" },
 		],
 		invalid: [
@@ -38,7 +43,7 @@ describe("no-sql-string-interpolation property", () => {
 	it("flags iff the template contains a SQL keyword and has expressions", () => {
 		fc.assert(
 			fc.property(
-				fc.constantFrom("SELECT", "INSERT", "UPDATE", "DELETE", "FROM", "WHERE"),
+				fc.constantFrom("SELECT", "INSERT", "UPDATE", "DELETE", "WHERE"),
 				fc.string(),
 				fc.integer({ min: 1, max: 4 }),
 				(keyword, padding, exprCount) => {
@@ -46,7 +51,7 @@ describe("no-sql-string-interpolation property", () => {
 					const exprs = exprNames.map(n => "$" + "{" + n + "}").join(", ");
 					const code = "const query = `" + keyword + " " + padding + " " + exprs + "`;";
 					// Synthetic check: the rule should fire when both conditions hold.
-					const hasKeyword = /\b(?:SELECT|INSERT|UPDATE|DELETE|FROM|WHERE)\b/iu.test(code);
+					const hasKeyword = /\b(?:SELECT|INSERT|UPDATE|DELETE|WHERE)\b/iu.test(code);
 					const hasExpr = /\$\{/u.test(code);
 					expect(hasKeyword && hasExpr).toBe(true);
 				},

@@ -24,17 +24,6 @@ const RULE_ID = "joggle/containment"
 /** Which labels mean this rule is violated -- the read and calibration share it. */
 const VIOLATIONS = { relation: ["extend_the_primitive", "extract_shared"] } as const
 
-/**
- * A declaration that is a smaller version of another.
- *
- * The near-duplicate rules are blind here by construction. Jaccard divides by the
- * union, so when one declaration is a specialization of another the union grows
- * with every member the larger one adds and the score falls below the duplicate
- * threshold. Containment divides by the smaller side, so the relation survives.
- * The question is therefore not "are these the same?" but "is the smaller one a
- * special case of the larger, or two unrelated things that share tokens?".
- */
-
 /** A pair the containment join found, with both scores. */
 interface Candidate {
   readonly smaller: Unit
@@ -44,12 +33,12 @@ interface Candidate {
 }
 
 /** The two declarations could be a specialization pair at all. */
-const related = (part: Unit, whole: Unit): boolean =>
-  part !== whole &&
-  part.file !== whole.file &&
-  part.name !== whole.name &&
-  part.kind === whole.kind &&
-  !(part.test && whole.test)
+const related = (payload: { readonly part: Unit; readonly whole: Unit }): boolean =>
+  payload.part !== payload.whole &&
+  payload.part.file !== payload.whole.file &&
+  payload.part.name !== payload.whole.name &&
+  payload.part.kind === payload.whole.kind &&
+  !(payload.part.test && payload.whole.test)
 
 const percent = (value: number): string => (value * 100).toFixed(1)
 
@@ -95,6 +84,16 @@ const relationReview = (input: {
   }),
 })
 
+/**
+ * A declaration that is a smaller version of another.
+ *
+ * The near-duplicate rules are blind here by construction. Jaccard divides by the
+ * union, so when one declaration is a specialization of another the union grows
+ * with every member the larger one adds and the score falls below the duplicate
+ * threshold. Containment divides by the smaller side, so the relation survives.
+ * The question is therefore not "are these the same?" but "is the smaller one a
+ * special case of the larger, or two unrelated things that share tokens?".
+ */
 export const containment: PlannedRule = {
   id: RULE_ID,
   severity: "warn",
@@ -127,7 +126,7 @@ export const containment: PlannedRule = {
           : { part, whole, score: pair.score }
       })
       .filter((entry): entry is { part: Unit; whole: Unit; score: number } => entry !== undefined)
-      .filter((entry) => related(entry.part, entry.whole))
+      .filter((entry) => related({ part: entry.part, whole: entry.whole }))
 
     const population = relatedPairs.map((entry) => entry.score)
     const cutoff =

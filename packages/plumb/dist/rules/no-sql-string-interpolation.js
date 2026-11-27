@@ -16,14 +16,25 @@ const SQL_KEYWORDS = [
     "DROP\\s+TABLE",
     "ALTER\\s+TABLE",
 ];
-const SQL_PATTERN = new RegExp("\\b(?:" + SQL_KEYWORDS.join("|") + ")\\b", "iu");
 /**
- * Whether a template literal's raw text contains a SQL keyword.
+ * Keywords that can only mean SQL.
+ *
+ * `FROM` is left out on purpose. It is an ordinary English preposition, so a
+ * message like "two declarations from different files" matched the keyword list
+ * and the rule read a prose sentence as a query. A query that uses FROM names a
+ * verb beside it (SELECT, DELETE, INSERT, UPDATE), so the bare preposition loses
+ * no query and the false positive is narrowed here rather than exempted for the
+ * whole file.
+ */
+const CLAUSE_KEYWORDS = SQL_KEYWORDS.filter((keyword) => keyword !== "FROM");
+const CLAUSE_PATTERN = new RegExp("\\b(?:" + CLAUSE_KEYWORDS.join("|") + ")\\b", "iu");
+/**
+ * Whether a template literal's raw text names a SQL clause.
  * @param {ESTree.TemplateElement} quasi - The template element to test.
- * @returns {boolean} True when the raw text contains a SQL keyword.
+ * @returns {boolean} True when the raw text names a SQL clause.
  */
 function hasSqlKeyword(quasi) {
-    return SQL_PATTERN.test(quasi.value.raw);
+    return CLAUSE_PATTERN.test(quasi.value.raw);
 }
 /**
  * Disallow SQL queries built from template literal interpolation. String

@@ -1,14 +1,10 @@
 /**
- * Small distribution helpers for thresholds that come from the data.
+ * The p-th percentile of a sample, by linear interpolation.
  *
  * A policy constant is a person's guess wearing a number. Where the repository
  * itself has a distribution, the cutoff should be read from it and reported with
  * the population it came from, so a reader can disagree with the number by
  * looking at the same evidence.
- */
-
-/**
- * The p-th percentile of a sample, by linear interpolation.
  *
  * `p` is on [0, 100]. The sample is sorted; the result lies between the two
  * nearest order statistics, which is the usual definition and the one a reader

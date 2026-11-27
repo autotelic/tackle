@@ -386,7 +386,9 @@ const canonicalOf = async (
     const children = await Promise.all(parts.map((part) => canonicalOf(part, context, depth + 1)))
     context.visiting.delete(type.id)
     const truncated = children.some((child) => child.truncated)
-    const sorted = children.map((child) => child.id).sort()
+    const sorted = children
+      .map((child) => child.id)
+      .sort((left, right) => left.localeCompare(right))
     const kind = type.isUnionType() ? "union" : "intersection"
     return {
       id: canonicalHash(kind + "{" + sorted.join("|") + "}" + (truncated ? "|truncated" : "")),
