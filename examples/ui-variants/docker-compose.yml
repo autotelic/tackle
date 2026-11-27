@@ -1,0 +1,13 @@
+services:
+  variant-a:
+    build: .
+    environment:
+      VARIANT: a
+    ports:
+      - "4891:4400"
+  variant-b:
+    build: .
+    environment:
+      VARIANT: b
+    ports:
+      - "4892:4400"

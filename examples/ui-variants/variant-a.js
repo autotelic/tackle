@@ -1,5 +1,9 @@
 import { seed } from "./data.js"
 
+const STORAGE_KEY = "room-inventory"
+const external = document.querySelector("#external-port")
+if (external !== null) external.textContent = location.port || "80"
+
 const style = `
   :host { display: block; }
   .head { display: flex; justify-content: space-between; gap: 16px; align-items: baseline; margin-bottom: 14px; }
@@ -17,8 +21,21 @@ const style = `
 `
 
 class RoomInventory extends HTMLElement {
-  #rooms = structuredClone(seed)
+  #rooms = this.load()
   #root
+
+  load() {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY)
+      return stored === null ? structuredClone(seed) : JSON.parse(stored)
+    } catch {
+      return structuredClone(seed)
+    }
+  }
+
+  save() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.#rooms))
+  }
 
   connectedCallback() {
     this.#root = this.attachShadow({ mode: "open" })
@@ -29,6 +46,7 @@ class RoomInventory extends HTMLElement {
       if (room !== undefined && room.vm !== undefined) {
         room.vm =
           room.vm.state === "running" ? { state: "absent" } : { state: "running", pid: 9001 }
+        this.save()
         this.render()
       }
     })
@@ -47,7 +65,7 @@ class RoomInventory extends HTMLElement {
         <span class="summary">${this.#rooms.length} rooms · ${running} supervisors running</span>
       </div>
       ${this.#rooms.map((room) => this.room(room)).join("")}
-      <p class="note">Variant A keeps state inside the component and renders its own shadow root.</p>
+      <p class="note">Variant A keeps state inside the component, persists it under the same <code>${STORAGE_KEY}</code> key, and renders its own shadow root.</p>
     `
   }
 
