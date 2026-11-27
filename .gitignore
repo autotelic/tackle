@@ -19,6 +19,8 @@ coverage/
 .joggle/parsecache/
 .joggle/types.json
 .joggle/declaration-types.json
+# Machine-local dependency surface: `joggle surface build` regenerates it per checkout.
+.joggle/surface.json
 
 # The foreman's SQLite store is a cache of the same chain the journal records by hand.
 # The journal is the committed checkpoint; the .sqlite is disposable.

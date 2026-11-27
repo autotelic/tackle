@@ -40,6 +40,7 @@ import { tableInvariants } from "./table-invariants.ts"
 import { factOrDerivation } from "./fact-or-derivation.ts"
 import { invariantHasAReconciler } from "./invariant-has-a-reconciler.ts"
 import { intentDrift } from "./intent-drift.ts"
+import { underusedPrimitive } from "./underused-primitive.ts"
 import { Context, Layer } from "effect"
 import type { PlannedRule, Rule } from "../rule.ts"
 
@@ -99,6 +100,7 @@ export const allRules: ReadonlyArray<Rule | PlannedRule> = [
   tableInvariants,
   invariantHasAReconciler,
   intentDrift,
+  underusedPrimitive,
 ]
 
 /**
