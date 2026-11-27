@@ -1,5 +1,25 @@
 # @autotelic/joggle
 
+## 0.14.1
+
+### Patch Changes
+
+- Canonical type ids are opt-in until the checker walk is batched.
+
+  `typeIdOf` asks the sidecar for `getPropertiesOfType`, `getTypeArguments` and
+  `getTypeOfSymbol` per declaration, and `resolveDeclarations` asked it for every
+  one. Over this repository that was a 4GB heap and an out-of-memory crash for
+  `joggle check packages`, and a single-package scope stopped finishing at all
+  (>120s where it had taken 1s).
+
+  `policy.canonical` now defaults to false and the field is `""`, meaning "not
+  computed", never "computed and empty". Measured after: the same repository-wide
+  run is **3.5s for 877 files and 4,849 declarations**, and the scoped run 2.2s.
+
+  The ids are correct; the cost is the batching. `getTypeAtPosition` is already
+  batched per file; the type-graph walk is not, and turning this on before that is
+  a memory hazard rather than a slow function.
+
 ## 0.14.0
 
 ### Minor Changes
