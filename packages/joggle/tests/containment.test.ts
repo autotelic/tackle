@@ -7,7 +7,7 @@ import { loadWorkspace } from "../src/workspace.ts"
 import { plannedDiagnosticsOf } from "../src/testing.ts"
 import { choice, modelFailing, modelStub } from "./support.ts"
 
-const workspace = () => loadWorkspace("tests/fixtures/containment", ["src"])
+const workspace = () => loadWorkspace("testdata/containment", ["src"])
 
 // The pair has to be skewed, not merely similar: the rule leaves anything at or
 // above the duplicate threshold to duplicate-meaning, so a fixture that straddles
@@ -63,5 +63,30 @@ it.effect("an unavailable judge still reports the containment fact", () =>
     )
     expect(result.diagnostics.length).toBe(1)
     expect(result.diagnostics[0]?.judged).toBe(false)
+  }).pipe(Effect.provide(NodeServices.layer)),
+)
+
+it.effect("test and fixture declarations are not candidates", () =>
+  Effect.gen(function* () {
+    const loaded = yield* loadWorkspace("testdata/containment-test-only", ["."])
+    const result = yield* plannedDiagnosticsOf(containment, loaded).pipe(
+      Effect.provide(modelStub({ relation: choice("extend_the_primitive", 0.95) })),
+    )
+    expect(result.diagnostics.length).toBe(0)
+    const notes = result.notes.join(" ")
+    expect(notes).toContain("removed as test/fixture")
+    expect(notes).toContain("pair(s) were removed because a declaration is a test or fixture")
+  }).pipe(Effect.provide(NodeServices.layer)),
+)
+
+it.effect("a pair below the min-token floor is not a candidate", () =>
+  Effect.gen(function* () {
+    const loaded = yield* loadWorkspace("testdata/containment-short", ["src"])
+    expect(loaded.units.every((unit) => unit.tokens.length < 40)).toBe(true)
+    const result = yield* plannedDiagnosticsOf(containment, loaded).pipe(
+      Effect.provide(modelStub({ relation: choice("extend_the_primitive", 0.95) })),
+    )
+    expect(result.diagnostics.length).toBe(0)
+    expect(result.notes.join(" ")).toContain("min-token floor 40")
   }).pipe(Effect.provide(NodeServices.layer)),
 )

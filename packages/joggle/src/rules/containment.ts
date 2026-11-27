@@ -4,7 +4,13 @@ import { Atoms } from "../atoms.ts"
 import { policy } from "../policy.ts"
 import { verdictsOf, type Plan } from "../plans.ts"
 import { locator, messages, reporter } from "../reporting.ts"
-import { allContainmentPairs, similarityOf } from "../similarity.ts"
+import {
+  allContainmentPairs,
+  inverseFrequencyOf,
+  sharedShingles,
+  shingleFrequencyOf,
+  similarityOf,
+} from "../similarity.ts"
 import { percentile } from "../stats.ts"
 import { verdictOf } from "../verdict.ts"
 import {
@@ -24,13 +30,29 @@ const RULE_ID = "joggle/containment"
 /** Which labels mean this rule is violated -- the read and calibration share it. */
 const VIOLATIONS = { relation: ["extend_the_primitive", "extract_shared"] } as const
 
-/** A pair the containment join found, with both scores. */
+/** A pair the containment join found, with both scores and its ranking term. */
 interface Candidate {
   readonly smaller: Unit
   readonly larger: Unit
   readonly containment: number
   readonly similarity: number
+  /** How rare the shared shingles are across the whole repository, 0..1. */
+  readonly rarity: number
+  /** `containment * rarity`: the order the budget sees. */
+  readonly rank: number
 }
+
+/**
+ * A test or a fixture path.
+ *
+ * The same predicate prose-voice uses: a rule's test file is part of the
+ * suite's shape, not a design signal, and a fixture holds the defect on purpose.
+ * `Unit.test` catches the declarations inside a test file; this catches a
+ * fixture that is not named `.test` and lives under `fixtures/`.
+ */
+const TEST_PATH = /\/(?:tests?|__tests__|fixtures?)\//u
+
+const isTestOrFixture = (unit: Unit): boolean => unit.test || TEST_PATH.test("/" + unit.file)
 
 /** The two declarations could be a specialization pair at all. */
 const related = (payload: { readonly part: Unit; readonly whole: Unit }): boolean =>
@@ -93,6 +115,13 @@ const relationReview = (input: {
  * threshold. Containment divides by the smaller side, so the relation survives.
  * The question is therefore not "are these the same?" but "is the smaller one a
  * special case of the larger, or two unrelated things that share tokens?".
+ *
+ * Containment alone is too generous: a templated suite contains every rule's
+ * test file in another's, and common scaffolding is contained everywhere. So the
+ * candidate pool excludes tests and fixtures, the floor is a size a declaration
+ * can actually specialize, and the budget is spent by containment weighted by
+ * how RARE the shared shingles are. None of that changes the relation: the
+ * containment score and its cutoff are still the ones the join measured.
  */
 export const containment: PlannedRule = {
   id: RULE_ID,
@@ -117,7 +146,7 @@ export const containment: PlannedRule = {
       eligible.map((unit, position) => ({ position, shingles: unit.shingles })),
       floor,
     )
-    const relatedPairs = joined
+    const relatedAll = joined
       .map((pair) => {
         const part = eligible[pair.part]
         const whole = eligible[pair.whole]
@@ -128,20 +157,44 @@ export const containment: PlannedRule = {
       .filter((entry): entry is { part: Unit; whole: Unit; score: number } => entry !== undefined)
       .filter((entry) => related({ part: entry.part, whole: entry.whole }))
 
+    // Test and fixture declarations are not candidates. The pair count is kept
+    // beside the survivors so the funnel still says how much the filter removed;
+    // a filter nobody can see is indistinguishable from a rule with nothing to do.
+    const excludedTestPairs = relatedAll.filter(
+      (entry) => isTestOrFixture(entry.part) || isTestOrFixture(entry.whole),
+    )
+    const relatedPairs = relatedAll.filter(
+      (entry) => !isTestOrFixture(entry.part) && !isTestOrFixture(entry.whole),
+    )
+    const sourceDeclarations = eligible.filter((unit) => !isTestOrFixture(unit)).length
+
     const population = relatedPairs.map((entry) => entry.score)
     const cutoff =
       population.length === 0 ? floor : Math.max(floor, percentile(population, cutoffPercentile))
     const thresholdNote =
       population.length === 0
-        ? `no distinct-file pair reached containment ${floor.toFixed(2)}, so no cutoff was derived`
-        : `containment cutoff ${cutoff.toFixed(3)} (${cutoffPercentile}th percentile of ${population.length} distinct-file pair(s) at or above ${floor.toFixed(2)})`
+        ? `no non-test distinct-file pair reached containment ${floor.toFixed(2)}, so no cutoff was derived`
+        : `containment cutoff ${cutoff.toFixed(3)} (${cutoffPercentile}th percentile of ${population.length} non-test distinct-file pair(s) at or above ${floor.toFixed(2)})`
+
+    const tokenSizes = relatedPairs
+      .map((entry) => Math.min(entry.part.tokens.length, entry.whole.tokens.length))
+      .sort((left, right) => left - right)
+    const tokenNote =
+      tokenSizes.length === 0
+        ? `min-token floor ${minTokens}: no non-test pair survived it`
+        : `min-token floor ${minTokens}: ${sourceDeclarations} source declaration(s) at or above it; across ${tokenSizes.length} surviving pair(s), the smaller side has p50 ${percentile(tokenSizes, 50)}, p90 ${percentile(tokenSizes, 90)}, and p95 ${percentile(tokenSizes, 95)} tokens`
 
     const similarityThreshold = policy.duplicateMeaning.minSimilarity
+    const aboveCutoff = relatedPairs.filter((entry) => entry.score >= cutoff)
+    const frequency = shingleFrequencyOf(workspace.units.map((unit) => unit.shingles))
+    let outOfScope = 0
     let skippedSimilar = 0
     const candidates: Array<Candidate> = []
-    for (const entry of relatedPairs) {
-      if (entry.score < cutoff) continue
-      if (!inScope(scope, entry.part.file) && !inScope(scope, entry.whole.file)) continue
+    for (const entry of aboveCutoff) {
+      if (!inScope(scope, entry.part.file) && !inScope(scope, entry.whole.file)) {
+        outOfScope += 1
+        continue
+      }
       const similarity = similarityOf({ left: entry.part.shingles, right: entry.whole.shingles })
       // The subset relation only. A pair Jaccard can also see belongs to the
       // duplicate rules, where the question is already being asked.
@@ -149,23 +202,40 @@ export const containment: PlannedRule = {
         skippedSimilar += 1
         continue
       }
+      const rarity = inverseFrequencyOf({
+        shared: sharedShingles({ left: entry.part.shingles, right: entry.whole.shingles }),
+        frequency,
+        documents: workspace.units.length,
+      })
       candidates.push({
         smaller: entry.part,
         larger: entry.whole,
         containment: entry.score,
         similarity,
+        rarity,
+        rank: entry.score * rarity,
       })
     }
 
     candidates.sort(
       (left, right) =>
+        right.rank - left.rank ||
         right.containment - left.containment ||
         left.smaller.name.localeCompare(right.smaller.name) ||
         left.larger.name.localeCompare(right.larger.name),
     )
 
+    const funnelNote = `containment funnel: ${sourceDeclarations} source declaration(s) at or above ${minTokens} tokens; ${joined.length} joined pair(s); ${relatedAll.length} distinct-file pair(s); ${excludedTestPairs.length} removed as test/fixture; ${relatedPairs.length - aboveCutoff.length} below the cutoff; ${outOfScope} out of scope; ${skippedSimilar} left to the duplicate rules; ${candidates.length} candidate(s)`
+
     const extraNotes = [
       thresholdNote,
+      tokenNote,
+      funnelNote,
+      ...(excludedTestPairs.length === 0
+        ? []
+        : [
+            `${excludedTestPairs.length} pair(s) were removed because a declaration is a test or fixture`,
+          ]),
       ...(skippedSimilar === 0
         ? []
         : [

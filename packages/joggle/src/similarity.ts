@@ -80,6 +80,78 @@ export const similarity = ({
   readonly right: ReadonlyArray<string>
 }): number => similarityOf({ left: shinglesOf(left), right: shinglesOf(right) })
 
+/**
+ * How often each shingle appears across the documents being ranked.
+ *
+ * The containment join builds the same map internally for its prefix order. This
+ * copy is for the rule's RANKING, where the question is different: a pair whose
+ * shared shingles appear in every declaration is scaffolding, and a pair whose
+ * shared shingles are rare is the finding.
+ */
+export const shingleFrequencyOf = (
+  documents: Iterable<ReadonlySet<string>>,
+): ReadonlyMap<string, number> => {
+  const frequency = new Map<string, number>()
+  for (const document of documents) {
+    for (const shingle of document) {
+      frequency.set(shingle, (frequency.get(shingle) ?? 0) + 1)
+    }
+  }
+  return frequency
+}
+
+/**
+ * A pair's shared shingles, as the intersection the containment score uses.
+ *
+ * Iterating the smaller side is the same reason `containmentOf` does: the
+ * intersection cannot be larger than it.
+ */
+export const sharedShingles = ({
+  left,
+  right,
+}: {
+  readonly left: ReadonlySet<string>
+  readonly right: ReadonlySet<string>
+}): ReadonlyArray<string> => {
+  const [small, large] = left.size <= right.size ? [left, right] : [right, left]
+  const shared: Array<string> = []
+  for (const shingle of small) if (large.has(shingle)) shared.push(shingle)
+  return shared
+}
+
+/**
+ * Inverse document frequency of a shared set, normalised to 0..1.
+ *
+ * A shingle unique to one declaration contributes 1; one present in every
+ * declaration contributes 0. Averaging over the shared set means a pair is
+ * down-ranked in proportion to how much of its overlap is scaffolding, not by
+ * whether any single common shingle happens to appear. The log is the usual IDF
+ * smoothing, and the normaliser is the IDF of the rarest possible shingle, so the
+ * term stays bounded and multiply-safe.
+ */
+export const inverseFrequencyOf = ({
+  shared,
+  frequency,
+  documents,
+}: {
+  readonly shared: Iterable<string>
+  readonly frequency: ReadonlyMap<string, number>
+  readonly documents: number
+}): number => {
+  if (documents <= 1) return 0
+  const ceiling = Math.log((documents + 1) / 2)
+  if (ceiling <= 0) return 0
+  let total = 0
+  let count = 0
+  for (const shingle of shared) {
+    const documentFrequency = frequency.get(shingle) ?? 0
+    total += Math.log((documents + 1) / (documentFrequency + 1))
+    count += 1
+  }
+  if (count === 0) return 0
+  return Math.min(1, total / count / ceiling)
+}
+
 export interface SizedShingles {
   /** Position in the caller's array, so results refer to the caller's data. */
   readonly position: number

@@ -3,6 +3,9 @@ import {
   allContainmentPairs,
   allPairs,
   containmentOf,
+  inverseFrequencyOf,
+  sharedShingles,
+  shingleFrequencyOf,
   shinglesOf,
   similarityOf,
 } from "../src/similarity.ts"
@@ -213,4 +216,31 @@ it("containment survives a size difference that collapses Jaccard", () => {
   for (let index = 0; index < 80; index += 1) large.add(`extra${index}`)
   expect(containmentOf({ left: small, right: large })).toBe(1)
   expect(similarityOf({ left: small, right: large })).toBeLessThan(0.4)
+})
+
+it("shared shingles are the containment intersection", () => {
+  const left = new Set(["a", "b", "c"])
+  const right = new Set(["b", "c", "d", "e"])
+  expect(sharedShingles({ left, right }).sort()).toEqual(["b", "c"])
+})
+
+it("rarity falls when the shared shingles are common", () => {
+  const frequency = shingleFrequencyOf([
+    new Set(["rare", "common"]),
+    ...Array.from({ length: 99 }, () => new Set(["common"])),
+  ])
+  const documents = 100
+  const rare = inverseFrequencyOf({
+    shared: ["rare"],
+    frequency,
+    documents,
+  })
+  const common = inverseFrequencyOf({
+    shared: ["common"],
+    frequency,
+    documents,
+  })
+  expect(rare).toBe(1)
+  expect(common).toBe(0)
+  expect(rare).toBeGreaterThan(common)
 })

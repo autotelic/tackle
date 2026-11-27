@@ -672,13 +672,16 @@ export const policy = {
    * population. The rule reports both the cutoff and the population, because a
    * number without its denominator is an opinion.
    *
-   * `minTokens` is the same search bound the near-duplicate rule uses: a very
-   * short declaration is contained in everything by accident. `maxCandidates`
-   * bounds the judgements, not the detection; the overflow is counted in the
-   * report.
+   * `minTokens` is a search bound, and 40 is the knee measured on this
+   * repository when the rule first became precise enough to matter. With test
+   * and fixture declarations removed, the 238 candidate pairs still visible at
+   * the old floor of 12 had min-side token counts p50 15, p90 32, p95 42; the
+   * bands below 40 held 225 of them and only 13 sat at 40 or above. A 12-token
+   * declaration is a line, not a specialization. `maxCandidates` bounds the
+   * judgements, not the detection; the overflow is counted in the report.
    */
   containment: {
-    minTokens: 12,
+    minTokens: 40,
     floor: 0.8,
     percentile: 75,
     maxCandidates: 400,
