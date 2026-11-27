@@ -372,6 +372,13 @@ export interface RepairOpinion {
   readonly implied?: ReadonlySet<string> | undefined
   /** Message key pair to the probability the two prescribe the same repair. */
   readonly same: ReadonlyMap<string, number>
+  /**
+   * Message key pair to the probability the trigger difference changes that
+   * repair. `same` without this is only half the rung 2 decision.
+   */
+  readonly material?: ReadonlyMap<string, number> | undefined
+  /** Message key pair to the probability one trigger is a strict subset. */
+  readonly subcase?: ReadonlyMap<string, number> | undefined
   /** Set when the model was never reached; witness-only clustering follows. */
   readonly unavailable?: string | undefined
   /** Requests that still failed after halving, named rather than hidden. */
@@ -389,6 +396,147 @@ export interface RepairOpinion {
     readonly message: string
     readonly clause: string
   }> | undefined
+}
+
+/** The three probabilities one pair question answers, and no sentence. */
+export interface RemedyJudgments {
+  /** `j_remedy`: do the messages prescribe one repair? */
+  readonly remedy: number | undefined
+  /** `j_material`: does the trigger difference change that repair? */
+  readonly material: number | undefined
+  /** `j_subcase`: is `b.trigger` a strict subset of `a.trigger`? */
+  readonly subcase: number | undefined
+}
+
+/** The only branch code may take, and the thresholds it was taken with. */
+export interface RemedyDecision {
+  readonly branch: "same" | "subcase" | "independent"
+  readonly reason: string
+  readonly thresholds: {
+    readonly sameRemedy: number
+    readonly material: number
+    readonly subcase: number
+  }
+}
+
+/** One side of a trace: what code already knows about a rule. */
+export interface TraceSide {
+  readonly rule: string
+  readonly sites: number
+  readonly family: string | undefined
+  readonly clause: string | undefined
+}
+
+/** The facts behind one cross-rule merge. */
+export interface ClusterTraceFacts {
+  readonly a: TraceSide
+  readonly b: TraceSide
+  readonly intersect: boolean
+}
+
+/**
+ * One multi-rule cluster's audit, split into facts, judgments and decision.
+ *
+ * The trace is the acceptance of rung 2: it carries the three probabilities and
+ * the published thresholds, so `recomputeTraceDecision` reaches the same branch
+ * from the JSON alone. A decision a later reader cannot recompute is a memory,
+ * not a judgment.
+ */
+export interface ClusterTrace {
+  readonly cluster: string
+  readonly a: string
+  readonly b: string
+  readonly facts: ClusterTraceFacts
+  readonly judgments: RemedyJudgments
+  readonly decision: RemedyDecision
+}
+
+/** Apply the published thresholds to the three answers. Code decides. */
+export const remedyDecisionOf = (judgments: RemedyJudgments): RemedyDecision => {
+  const thresholds = {
+    sameRemedy: policy.decision.remedy.sameRemedy,
+    material: policy.decision.remedy.material,
+    subcase: policy.decision.remedy.subcase,
+  }
+  const percent = (value: number | undefined): string =>
+    value === undefined ? "unanswered" : value.toFixed(2)
+  if (judgments.remedy !== undefined && judgments.remedy > thresholds.sameRemedy) {
+    if (judgments.material !== undefined && judgments.material < thresholds.material) {
+      return {
+        branch: "same",
+        reason:
+          "j_remedy " +
+          percent(judgments.remedy) +
+          " > " +
+          String(thresholds.sameRemedy) +
+          " and j_material " +
+          percent(judgments.material) +
+          " < " +
+          String(thresholds.material),
+        thresholds,
+      }
+    }
+    return {
+      branch: "independent",
+      reason:
+        "j_remedy " +
+        percent(judgments.remedy) +
+        " > " +
+        String(thresholds.sameRemedy) +
+        " but j_material " +
+        percent(judgments.material) +
+        " >= " +
+        String(thresholds.material) +
+        "; the trigger difference changes the repair",
+      thresholds,
+    }
+  }
+  if (judgments.subcase !== undefined && judgments.subcase > thresholds.subcase) {
+    return {
+      branch: "subcase",
+      reason: "j_subcase " + percent(judgments.subcase) + " > " + String(thresholds.subcase),
+      thresholds,
+    }
+  }
+  return {
+    branch: "independent",
+    reason:
+      "j_remedy " +
+      percent(judgments.remedy) +
+      " <= " +
+      String(thresholds.sameRemedy) +
+      " and j_subcase " +
+      percent(judgments.subcase) +
+      " <= " +
+      String(thresholds.subcase),
+    thresholds,
+  }
+}
+
+/**
+ * Recompute a trace's branch with no model call.
+ *
+ * This is deliberately a function over the emitted JSON, not a closure over the
+ * run: the acceptance is that a reader with the file and the published
+ * thresholds gets the same branch the run printed.
+ *
+ * @param trace - the emitted trace, decoded from JSON.
+ * @returns the branch the thresholds choose.
+ */
+export const recomputeTraceDecision = (trace: {
+  readonly judgments: RemedyJudgments
+  readonly decision: RemedyDecision
+}): RemedyDecision["branch"] => {
+  const judgments = trace.judgments
+  const thresholds = trace.decision.thresholds
+  if (judgments.remedy !== undefined && judgments.remedy > thresholds.sameRemedy) {
+    return judgments.material !== undefined && judgments.material < thresholds.material
+      ? "same"
+      : "independent"
+  }
+  return judgments.subcase !== undefined && judgments.subcase > thresholds.subcase
+    ? "subcase"
+    : "independent"
 }
 
 /**
@@ -895,7 +1043,14 @@ export const judgeRemedies = (
     }
 
     const pairs: Array<{ readonly key: string }> = []
-    const pairPlans: Array<Plan<number>> = []
+    const pairPlans: Array<Plan<RemedyJudgments>> = []
+    const probabilityOf = (
+      answers: Readonly<Record<string, Decision.Answer<Decision.Any>>>,
+      name: string,
+    ): number | undefined => {
+      const answer = answers[name]
+      return answer !== undefined && "probability" in answer ? answer.probability : undefined
+    }
 
     for (let left = 0; left < groups.length; left += 1) {
       for (let right = left + 1; right < groups.length; right += 1) {
@@ -903,20 +1058,33 @@ export const judgeRemedies = (
         const b = groups[right]?.messages[0]
         if (a === undefined || b === undefined) continue
         const key = pairKeyOf({ left: a.key, right: b.key })
+        const aRule = a.findings[0]?.rule ?? "unknown"
+        const bRule = b.findings[0]?.rule ?? "unknown"
         const state = {
-          a: { message: a.message, rule: a.findings[0]?.rule ?? "unknown" },
-          b: { message: b.message, rule: b.findings[0]?.rule ?? "unknown" },
+          a: {
+            message: a.message,
+            rule: aRule,
+            trigger: diagnosisOf(a.message),
+          },
+          b: {
+            message: b.message,
+            rule: bRule,
+            trigger: diagnosisOf(b.message),
+          },
         }
         const atom = yield* atoms.add(state)
         const aRef = "atoms[" + atom + "].a"
         const bRef = "atoms[" + atom + "].b"
+        // Three atomic questions, never one stuffed decision: a repair judgment,
+        // whether the trigger difference is material to it, and whether one
+        // trigger is a subset of the other. The decision is code's, below.
         pairPlans.push({
           ruleId: "joggle/remedies",
           subject: key,
           concerns: [],
           atoms: [atom],
           decisions: {
-            same: Decision.probability({
+            j_remedy: Decision.probability({
               instructions: [
                 "Do `" +
                   aRef +
@@ -937,11 +1105,45 @@ export const judgeRemedies = (
                 true: "They prescribe the same repair.",
               },
             }),
+            j_material: Decision.probability({
+              instructions: [
+                "Does the difference between `" +
+                  aRef +
+                  ".trigger` and `" +
+                  bRef +
+                  ".trigger` change the repair a reader" +
+                  " must make?",
+                "The triggers are the diagnoses each rule saw, not the repairs.",
+                "Answer true when a fix that satisfies one trigger does not satisfy the other",
+                "because the conditions they detect are genuinely different.",
+              ].join("\n"),
+              criteria: {
+                false: "The trigger difference does not change the repair.",
+                true: "The trigger difference changes the repair.",
+              },
+            }),
+            j_subcase: Decision.probability({
+              instructions: [
+                "Is `" + bRef + ".trigger` a strict subset of `" + aRef + ".trigger`?",
+                "Strict means every case `" +
+                  bRef +
+                  ".trigger` describes is also described by `" +
+                  aRef +
+                  ".trigger`, and `" +
+                  aRef +
+                  ".trigger` describes at least one more.",
+              ].join("\n"),
+              criteria: {
+                false: "It is not a strict subset.",
+                true: "It is a strict subset.",
+              },
+            }),
           },
-          read: (answers) => {
-            const answer = answers["same"]
-            return answer !== undefined && "probability" in answer ? answer.probability : undefined
-          },
+          read: (answers) => ({
+            remedy: probabilityOf(answers, "j_remedy"),
+            material: probabilityOf(answers, "j_material"),
+            subcase: probabilityOf(answers, "j_subcase"),
+          }),
         })
         pairs.push({ key })
       }
@@ -951,9 +1153,13 @@ export const judgeRemedies = (
     failures.push(...pairAnswers.failures)
     const repairMap = new Map(clauseByMessage)
     const sameMap = new Map<string, number>()
+    const materialMap = new Map<string, number>()
+    const subcaseMap = new Map<string, number>()
     pairs.forEach((pair, index) => {
       const answer = pairAnswers.values[index]
-      if (Predicate.isNumber(answer)) sameMap.set(pair.key, answer)
+      if (answer?.remedy !== undefined) sameMap.set(pair.key, answer.remedy)
+      if (answer?.material !== undefined) materialMap.set(pair.key, answer.material)
+      if (answer?.subcase !== undefined) subcaseMap.set(pair.key, answer.subcase)
     })
     const failureText = failures.map(String)
     // Witness-only means the model was never reached. A size rejection is a
@@ -965,6 +1171,8 @@ export const judgeRemedies = (
       families: familyByMessage,
       implied: impliedByMessage,
       same: sameMap,
+      material: materialMap,
+      subcase: subcaseMap,
       unavailable,
       failures: failureText,
       questions: messages.length,
@@ -1018,8 +1226,14 @@ export interface ClusterRuleMerge {
   readonly b: { readonly rule: string; readonly sites: number }
   /** Whether any site carries both rules, computed from the site sets. */
   readonly intersect: boolean
-  /** The highest `j_same` over a message pair from the two rules, if asked. */
+  /** The highest `j_remedy` over a message pair from the two rules, if asked. */
   readonly probability: number | undefined
+  /** `j_material` for that same best pair, if asked. */
+  readonly material: number | undefined
+  /** `j_subcase` for that same best pair, if asked. */
+  readonly subcase: number | undefined
+  /** The code decision those probabilities produced. */
+  readonly decision: RemedyDecision["branch"]
   /** Whether both rules have a message composed onto one repair label. */
   readonly sharedRepair: boolean
   /** The family each side's messages answered, when they all agree. */
@@ -1068,6 +1282,8 @@ export interface RemedyReport {
     readonly b: string
     readonly probability: number
   }>
+  /** One facts/judgments/decision trace per cross-rule cluster pair. */
+  readonly traces: ReadonlyArray<ClusterTrace>
   readonly clusters: ReadonlyArray<RemedyCluster>
 }
 
@@ -1090,21 +1306,13 @@ const sameRepair = ({
   if (leftRepair !== undefined && leftRepair === rightRepair && leftRepair !== "none") {
     return true
   }
-  const probability = opinion.same.get(pairKeyOf({ left, right }))
-  if (probability === undefined || probability < policy.decision.gates.probabilityFloor) {
-    return false
-  }
-  // A cluster forms on family AND clause. The composed repair is the clause, so
-  // an equal repair above already passed; the pairwise question is the only path
-  // that can ignore the clause, and it may not cross a family boundary. A clause
-  // that differs by more than a synonym keeps the rules apart, and deciding
-  // synonymy is the clause question's job, not the pairwise one's.
-  const leftFamily = opinion.families?.get(left)
-  const rightFamily = opinion.families?.get(right)
-  if (leftFamily !== undefined && rightFamily !== undefined && leftFamily !== rightFamily) {
-    return false
-  }
-  return true
+  const key = pairKeyOf({ left, right })
+  const decision = remedyDecisionOf({
+    remedy: opinion.same.get(key),
+    material: opinion.material?.get(key),
+    subcase: opinion.subcase?.get(key),
+  })
+  return decision.branch === "same"
 }
 
 interface DisjointSet {
@@ -1305,6 +1513,43 @@ const familyOfRule = (
 }
 
 /**
+ * The best-answered pair between two rules: the highest `j_remedy`, with that
+ * same pair's two companion answers.
+ *
+ * A cluster holding several messages per rule has several possible pairs. The
+ * one that argues most strongly for a merge is the one to audit: if even that
+ * pair is split by `j_material`, the merge has no evidence. Taking each
+ * probability's own maximum would mix three different pairs and recompute a
+ * decision no one answered.
+ */
+const judgmentsBetween = (
+  aMembers: ReadonlyArray<RemedyFinding>,
+  bMembers: ReadonlyArray<RemedyFinding>,
+  opinion: RepairOpinion,
+): RemedyJudgments => {
+  let best: RemedyJudgments = { remedy: undefined, material: undefined, subcase: undefined }
+  for (const leftMember of aMembers) {
+    const leftKey = messageKeyOf(leftMember)
+    for (const rightMember of bMembers) {
+      const key = pairKeyOf({ left: leftKey, right: messageKeyOf(rightMember) })
+      const remedy = opinion.same.get(key)
+      if (remedy === undefined) continue
+      if (best.remedy !== undefined && remedy <= best.remedy) continue
+      best = {
+        remedy,
+        material: opinion.material?.get(key),
+        subcase: opinion.subcase?.get(key),
+      }
+    }
+  }
+  return best
+}
+
+/** The first message's witness clause for one rule, for a trace's facts. */
+const clauseOfRule = (members: ReadonlyArray<RemedyFinding>, rule: string): string | undefined =>
+  members.find((member) => member.rule === rule)?.message
+
+/**
  * Audit the merges a cluster made between rules, from facts only.
  *
  * The measured defect was a cross-rule cluster whose two rules reached disjoint
@@ -1328,18 +1573,7 @@ const crossRulesOf = (
       const intersect = b.sites.some((site) => aSites.has(site))
       const aMembers = members.filter((member) => member.rule === a.rule)
       const bMembers = members.filter((member) => member.rule === b.rule)
-      let probability: number | undefined
-      for (const leftMember of aMembers) {
-        const leftKey = messageKeyOf(leftMember)
-        for (const rightMember of bMembers) {
-          const value = opinion.same.get(
-            pairKeyOf({ left: leftKey, right: messageKeyOf(rightMember) }),
-          )
-          if (value !== undefined && (probability === undefined || value > probability)) {
-            probability = value
-          }
-        }
-      }
+      const judgments = judgmentsBetween(aMembers, bMembers, opinion)
       const aRepairs = new Set(
         aMembers.map((member) => opinion.repairs.get(messageKeyOf(member))).filter(Predicate.isString),
       )
@@ -1351,7 +1585,10 @@ const crossRulesOf = (
         a: { rule: a.rule, sites: a.sites.length },
         b: { rule: b.rule, sites: b.sites.length },
         intersect,
-        probability,
+        probability: judgments.remedy,
+        material: judgments.material,
+        subcase: judgments.subcase,
+        decision: remedyDecisionOf(judgments).branch,
         sharedRepair,
         families: {
           a: Result.getOrUndefined(familyOfRule(members, a.rule, opinion)),
@@ -1362,6 +1599,47 @@ const crossRulesOf = (
   }
   return out
 }
+
+/**
+ * Turn each cross-rule merge into a facts / judgments / decision trace.
+ *
+ * The facts are computed from the site sets and the family answers, the
+ * judgments are the three probabilities the run recorded, and the decision is
+ * code applying the published thresholds. Nothing here asks the model, and the
+ * emitted JSON carries enough to recompute the branch offline.
+ */
+const tracesOf = (clusters: ReadonlyArray<RemedyCluster>): ReadonlyArray<ClusterTrace> =>
+  clusters.flatMap((cluster) =>
+    cluster.crossRules.map((merge) => {
+      const judgments: RemedyJudgments = {
+        remedy: merge.probability,
+        material: merge.material,
+        subcase: merge.subcase,
+      }
+      return {
+        cluster: cluster.remedy,
+        a: merge.a.rule,
+        b: merge.b.rule,
+        facts: {
+          a: {
+            rule: merge.a.rule,
+            sites: merge.a.sites,
+            family: merge.families.a,
+            clause: clauseOfRule(cluster.members, merge.a.rule),
+          },
+          b: {
+            rule: merge.b.rule,
+            sites: merge.b.sites,
+            family: merge.families.b,
+            clause: clauseOfRule(cluster.members, merge.b.rule),
+          },
+          intersect: merge.intersect,
+        },
+        judgments,
+        decision: remedyDecisionOf(judgments),
+      }
+    }),
+  )
 
 const summaryOf = (clusters: ReadonlyArray<RemedyCluster>): ClusterSummary => {
   const largest = clusters[0]
@@ -1426,6 +1704,7 @@ export const clusterRemedies = (
     witness: summaryOf(witnesses),
     judgement: summaryOf(judges),
     disagreements,
+    traces: tracesOf(clusters),
     clusters,
   }
 }

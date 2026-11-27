@@ -591,9 +591,11 @@ interface RemedyLinesInput {
   readonly report: RemedyReport
   readonly ledger: { readonly run: string; readonly written: number }
   readonly cache: { readonly replayed: number; readonly judged: number }
+  /** Print the facts / judgments / decision trace for every cross-rule merge. */
+  readonly trace: boolean
 }
 
-const remedyLines = ({ report, ledger, cache }: RemedyLinesInput): ReadonlyArray<string> => {
+const remedyLines = ({ report, ledger, cache, trace }: RemedyLinesInput): ReadonlyArray<string> => {
   const total = cache.replayed + cache.judged
   const hit = total === 0 ? 0 : cache.replayed / total
   const input = describeInput(report.clusters.flatMap((cluster) => cluster.members))
@@ -700,6 +702,35 @@ const remedyLines = ({ report, ledger, cache }: RemedyLinesInput): ReadonlyArray
       )
     }
   }
+  if (trace) {
+    for (const entry of report.traces) {
+      const value = (probability: number | undefined): string =>
+        probability === undefined ? "unanswered" : probability.toFixed(2)
+      lines.push("")
+      lines.push("trace " + entry.cluster)
+      lines.push(
+        "  facts · joggle    " + entry.facts.a.rule + " (" + String(entry.facts.a.sites) +
+          " sites) × " + entry.facts.b.rule + " (" + String(entry.facts.b.sites) +
+          " sites) · intersect " + (entry.facts.intersect ? "yes" : "no") + " · clause " +
+          JSON.stringify(entry.facts.a.clause ?? "") + " / " + JSON.stringify(entry.facts.b.clause ?? ""),
+      )
+      lines.push(
+        "  facts · joggle    family " + (entry.facts.a.family ?? "?") + " / " +
+          (entry.facts.b.family ?? "?"),
+      )
+      lines.push(
+        "  judgments · joggle  j_remedy " + value(entry.judgments.remedy) +
+          " · j_material " + value(entry.judgments.material) +
+          " · j_subcase " + value(entry.judgments.subcase),
+      )
+      lines.push(
+        "  decision · code   " + entry.decision.branch + " — " + entry.decision.reason +
+          " (thresholds same>" + String(entry.decision.thresholds.sameRemedy) +
+          ", material<" + String(entry.decision.thresholds.material) +
+          ", subcase>" + String(entry.decision.thresholds.subcase) + ")",
+      )
+    }
+  }
   for (const disagreement of report.disagreements) {
     lines.push(
       "disagreement: witness kept these apart, judgement joined them at " +
@@ -736,6 +767,12 @@ const remediesCommand = Command.make(
     ),
     offline: Flag.Boolean("offline").pipe(
       Flag.withDescription("Answer only from the committed judgement cache; never call the model."),
+      Flag.withDefault(false),
+    ),
+    trace: Flag.Boolean("trace").pipe(
+      Flag.withDescription(
+        "Print facts, judgments and the code decision for every cross-rule cluster.",
+      ),
       Flag.withDefault(false),
     ),
   },
@@ -799,7 +836,7 @@ const remediesCommand = Command.make(
         )
         return
       }
-      yield* write(remedyLines({ report, ledger, cache: stats }).join("\n"))
+      yield* write(remedyLines({ report, ledger, cache: stats, trace: config.trace }).join("\n"))
     }),
 ).pipe(
   Command.withDescription(
