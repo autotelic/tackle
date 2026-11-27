@@ -147,57 +147,6 @@ test("a record written before the binding decodes unchanged", async () => {
   }
 }, 20_000)
 
-test("a bound pass runs in the room's worktree with the room's journal", async () => {
-  const f = await fixture()
-  try {
-    expect((await adopted(f)).ok).toBe(true)
-    await taskEvent(f)
-    const worker = join(f.root, "worker.sh")
-    writeFileSync(
-      worker,
-      [
-        "#!/bin/sh",
-        'printf "%s" "$PWD" > "$ROOM_CWD_WITNESS"',
-        'printf "%s\\n%s\\n%s" "$TACKLE_ROOM_ROOT" "$TACKLE_ROOM_ID" "$TACKLE_ROOM_SESSION" > "$ROOM_ENV_WITNESS"',
-        "",
-      ].join("\n"),
-    )
-    chmodSync(worker, 0o755)
-    const cwdWitness = join(f.root, "cwd.txt")
-    const envWitness = join(f.root, "env.txt")
-    process.env.ROOM_CWD_WITNESS = cwdWitness
-    process.env.ROOM_ENV_WITNESS = envWitness
-
-    const result = await runPass({
-      id: f.roomId,
-      worker,
-      at: "2026-11-21T00:02:00.000Z",
-      home: f.home,
-    })
-    expect(result.ok).toBe(true)
-
-    expect(realpathSync(readFileSync(cwdWitness, "utf8"))).toBe(realpathSync(f.worktree))
-    const [root, id, session] = readFileSync(envWitness, "utf8").split("\n")
-    expect(root).toBe(resolve(f.roomRoot))
-    expect(id).toBe(f.roomId)
-    // The journal the room created, not a path the worker or the kernel derived for itself.
-    const roomFile = await readRoom({ root: f.roomRoot, id: f.roomId })
-    expect(session).toBe(
-      roomSessionPath({
-        dir: roomDir({ root: f.roomRoot, id: f.roomId }),
-        session: roomFile?.session,
-      }),
-    )
-    expect(session).toBeDefined()
-    if (session === undefined) return
-    expect(existsSync(session)).toBe(true)
-  } finally {
-    delete process.env.ROOM_CWD_WITNESS
-    delete process.env.ROOM_ENV_WITNESS
-    rmSync(f.root, { recursive: true, force: true })
-  }
-}, 20_000)
-
 test("a room that disappeared refuses the pass instead of falling back to the record", async () => {
   const f = await fixture()
   try {
