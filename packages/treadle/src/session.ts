@@ -134,6 +134,17 @@ const defaultCreateSession: CreateSessionLike = async (options) => {
 
 export type RunSessionDeps = {
   createSession?: CreateSessionLike
+  /**
+   * The clock the budget is measured against, injectable so a test can drive
+   * elapsed time instead of sleeping through it.
+   *
+   * The half and four-fifths nudges are the behaviour worth testing, and they
+   * only exist relative to a deadline. A test that reaches them with real sleeps
+   * is measuring the runner's scheduler under whatever load the suite happens to
+   * have: it passes alone and fails in the monorepo, which is a claim about the
+   * machine rather than about the nudge.
+   */
+  now?: () => number
 }
 
 function jsonl(value: unknown): string {
@@ -391,7 +402,8 @@ export async function runSession(
   options: RunSessionOptions,
   deps: RunSessionDeps = {},
 ): Promise<SessionOutcome> {
-  const startedAt = Date.now()
+  const now = deps.now ?? (() => Date.now())
+  const startedAt = now()
   await mkdir(dirname(options.logPath), { recursive: true })
   const log: WriteStream = createWriteStream(options.logPath)
   const emit = (event: SessionDriverEvent) => {
@@ -410,7 +422,7 @@ export async function runSession(
   // message, marked so the agent knows it is the harness, not the person.
   const nudgedAt = new Set<string>()
   const maybeNudge = () => {
-    const elapsed = Date.now() - startedAt
+    const elapsed = now() - startedAt
     const fraction =
       elapsed >= options.timeoutMs * 0.8
         ? 'four-fifths'
@@ -482,7 +494,7 @@ export async function runSession(
         terminal: 'failed',
         reason: missingModel,
         turns: 0,
-        durationMs: Date.now() - startedAt,
+        durationMs: now() - startedAt,
         logPath: options.logPath,
         lastAssistantText: null,
         costUsd: 0,
@@ -548,7 +560,7 @@ export async function runSession(
   let outcome: SessionOutcome
   const base = {
     turns,
-    durationMs: Date.now() - startedAt,
+    durationMs: now() - startedAt,
     logPath: options.logPath,
     lastAssistantText: session.getLastAssistantText() ?? null,
     costUsd: stats.cost,

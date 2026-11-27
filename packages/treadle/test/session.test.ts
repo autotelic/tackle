@@ -104,7 +104,11 @@ afterEach(async () => {
   tmp = null
 })
 
-async function run(script: Script, overrides: Partial<RunSessionOptions> = {}) {
+async function run(
+  script: Script,
+  overrides: Partial<RunSessionOptions> = {},
+  now?: () => number,
+) {
   tmp = await mkdtemp(join(tmpdir(), 'treadle-session-'))
   const fake = new FakeSession(script)
   let captured: CapturedCreate | null = null
@@ -127,6 +131,7 @@ async function run(script: Script, overrides: Partial<RunSessionOptions> = {}) {
         captured = options
         return { session: fake }
       },
+      ...(now === undefined ? {} : { now }),
     },
   )
   const log = await readFile(join(tmp, 'session.jsonl'), 'utf8')
@@ -162,18 +167,23 @@ describe('runSession', () => {
   })
 
   it('nudges at half and four-fifths of the wall-clock budget', async () => {
+    // Elapsed time is driven, not slept through: a test that reaches these
+    // thresholds with real sleeps measures the machine's scheduler under whatever
+    // load the suite happens to have, and passes alone while failing in the
+    // monorepo. The nudge is what is under test, not the runner's timing.
+    let clock = 1_000_000
     const { fake, events } = await run(
       async (f, emit) => {
         if (f.prompts.length === 1) {
-          // Cross half the wall-clock budget (250ms of 500ms), then four-fifths (400ms).
-          await sleep(270)
+          clock += 270 // past half of 500
           for (let i = 0; i < 4; i++) emit(turnEnd)
-          await sleep(150)
+          clock += 150 // past four-fifths of 500
           for (let i = 0; i < 4; i++) emit(turnEnd)
           settle(emit)
         }
       },
       { timeoutMs: 500, maxTurns: 100 },
+      () => clock,
     )
     expect(fake.prompts).toHaveLength(3)
     expect(fake.prompts[1]).toContain('minutes in')
