@@ -1,19 +1,39 @@
+201666fb7f0fae19	{"consistency":1,"kind":"Probability","probability":0.03}
+20168e70ae406db9	{"consistency":1,"kind":"Probability","probability":0.043333333333333335}
+201d212c8f777d2d	{"consistency":1,"kind":"Probability","probability":0.9633333333333333}
 201d27bb4affb49d	{"confidence":0.85,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.9,"not_a_derivation":0.07,"reimplements":0.03}}
 20217e0896f5ca99	{"confidence":0.72,"kind":"Classify","label":"same_module","probabilities":{"different_deployables":0,"same_module":0.79,"same_package":0.21,"sibling_packages":0}}
+2021f853ae8b8179	{"consistency":1,"kind":"Probability","probability":0.03}
+202586e89ba03785	{"consistency":1,"kind":"Probability","probability":0.96}
 20268ae66b00caf9	{"consistency":1,"kind":"Probability","probability":0.05000000000000001}
 202838b5645ba92c	{"confidence":0.91,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.05,"inferred":0.01,"not_applicable":0.94}}
+20290802d11aadaf	{"consistency":1,"kind":"Probability","probability":0.05000000000000001}
+2029501a853ca853	{"consistency":1,"kind":"Probability","probability":0.9499999999999998}
 20495329112b0fa0	{"consistency":1,"kind":"Probability","probability":0.61}
+20497a6b9945c88e	{"consistency":1,"kind":"Probability","probability":0.03}
 204a92881f822a83	{"kind":"Probability","probability":0.34}
 204b9038f715c777	{"confidence":0.98,"kind":"Classify","label":"group 7","probabilities":{"group 1":0,"group 2":0,"group 3":0,"group 4":0,"group 5":0,"group 6":0,"group 7":0.98,"group 8":0.02}}
+205bb32cb9ae3f8e	{"consistency":1,"kind":"Probability","probability":0.043333333333333335}
 2063ee769d9775b5	{"confidence":0.91,"kind":"Classify","label":"@effect/ui/UiSchema#TaggedEnum is an experimental API","probabilities":{"@effect/ui/testing/Scene#make is an experimental API":0.01,"@effect/ui/UiSchema#TaggedEnum is an experimental API":0.93,"@effect/ui/View#Input is an experimental API":0.01,"Accept a single named payload object instead; two parameters of the same type transpose silently":0.01,"Add property-based coverage (generate inputs, assert invariants), or disable this rule inline with a reason if the behavior is truly non-property-testable":0.04}}
+206b25747226d967	{"consistency":1,"kind":"Probability","probability":0.9566666666666667}
 206b6fc94c62218e	{"confidence":0.95,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0.01}}
+207ebcf5df37080e	{"consistency":1,"kind":"Probability","probability":0.05000000000000001}
 20804f57afd909be	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0.02}}
 20813040a9e9f970	{"confidence":0.89,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.92,"stale_reference":0.02,"wrong_behavior":0.06,"wrong_contract":0}}
+20839ac626d7ef61	{"consistency":1,"kind":"Probability","probability":0.06}
 208d21e082fab458	{"confidence":0.46,"kind":"Classify","label":"narrow with a predicate","probabilities":{"inject the dependency":0,"justify the assertion":0,"narrow with a predicate":0.55,"other":0.22,"own the value type":0.02,"parse at the boundary":0.21}}
 209cbc5f92082ff8	{"confidence":0.32,"kind":"Classify","label":"rendering","probabilities":{"domain_logic":0.01,"infrastructure":0,"input_adaptation":0.39,"mechanical":0.12,"not_applicable":0.05,"orchestration":0,"rendering":0.41000000000000003,"request_validation":0,"transport_concern":0.02}}
+209dd8dd24ab34e5	{"consistency":1,"kind":"Probability","probability":0.9499999999999998}
+20aa0ab2b799d686	{"consistency":1,"kind":"Probability","probability":0.036666666666666674}
+20ad8829aef4e3cd	{"consistency":1,"kind":"Probability","probability":0.04}
 20b27f5d51abe42a	{"confidence":0.62,"kind":"Classify","label":"no_issue","probabilities":{"merge":0.02,"move":0.24,"no_issue":0.74}}
 20ba2e7a0ef36dc9	{"confidence":1,"kind":"Classify","label":"inject the dependency","probabilities":{"inject the dependency":1,"justify the assertion":0,"narrow with a predicate":0,"other":0,"own the value type":0,"parse at the boundary":0,"use the stable API":0}}
 20bd0aed9e639881	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
+20c04663d0291d5f	{"consistency":1,"kind":"Probability","probability":0.02}
 20c3102487ff08de	{"consistency":1,"kind":"Probability","probability":0.04}
 20d9e7288f34e256	{"confidence":0.37,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.39,"independent":0.58,"meaning_switched":0.03}}
+20dab729bda03e49	{"consistency":1,"kind":"Probability","probability":0.023333333333333334}
 20e07aa407f2a7cb	{"consistency":1,"kind":"Probability","probability":0.023333333333333334}
+20eb797cc0f17593	{"consistency":1,"kind":"Probability","probability":0.03}
+20f6867f0eb8bb6d	{"consistency":1,"kind":"Probability","probability":0.043333333333333335}
+20f79a83c7b96ab6	{"consistency":1,"kind":"Probability","probability":0.05000000000000001}

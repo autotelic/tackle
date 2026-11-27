@@ -1,8 +1,16 @@
 980bef74289a4150	{"confidence":0.87,"kind":"Classify","label":"other","probabilities":{"inject the dependency":0,"justify the assertion":0.08,"narrow with a predicate":0,"other":0.89,"own the value type":0.01,"parse at the boundary":0.01,"use the stable API":0.01}}
 98143df76b5de784	{"confidence":0.8,"kind":"Classify","label":"orchestration","probabilities":{"domain_logic":0.11,"infrastructure":0,"input_adaptation":0.02,"mechanical":0.01,"not_applicable":0.03,"orchestration":0.83,"rendering":0,"request_validation":0,"transport_concern":0}}
+9814642a39c3ba44	{"consistency":1,"kind":"Probability","probability":0.03333333333333333}
 981f9d3d644aa7ec	{"confidence":0.55,"kind":"Classify","label":"infrastructure","probabilities":{"domain_logic":0.03,"infrastructure":0.6,"input_adaptation":0,"mechanical":0,"not_applicable":0,"orchestration":0.37,"rendering":0,"request_validation":0,"transport_concern":0}}
+982419afdafe7ea7	{"consistency":1,"kind":"Probability","probability":0.82}
+982d27d799bf734e	{"consistency":1,"kind":"Probability","probability":0.7666666666666666}
 984311ddd6f9c823	{"consistency":1,"kind":"Probability","probability":0.07}
+9848fb5a7fac21d3	{"consistency":1,"kind":"Probability","probability":0.03}
+98511b1827e5cb83	{"consistency":1,"kind":"Probability","probability":0.03333333333333333}
+986200d72e61b3a8	{"consistency":1,"kind":"Probability","probability":0.056666666666666664}
 986405bfd5568e2a	{"consistency":1,"kind":"Probability","probability":0.02}
+986452a6c68759a1	{"consistency":1,"kind":"Probability","probability":0.03}
+986ee97c4e3e484b	{"consistency":1,"kind":"Probability","probability":0.03}
 987a09b81ead6791	{"confidence":0.59,"kind":"Classify","label":"other","probabilities":{"inject the dependency":0,"justify the assertion":0,"narrow with a predicate":0,"other":0.65,"own the value type":0.35,"parse at the boundary":0,"use the stable API":0}}
 9887a7bd1840616a	{"confidence":0.42,"kind":"Classify","label":"no_issue","probabilities":{"collapse":0.11,"keep_variants":0.27,"no_issue":0.62}}
 988a02e3597d8dcf	{"kind":"Probability","probability":0.2}
@@ -10,9 +18,17 @@
 98a29b6ec9eab32b	{"consistency":1,"kind":"Probability","probability":0.08333333333333333}
 98ac317f03074e1c	{"consistency":1,"kind":"Probability","probability":0.04666666666666667}
 98b13567239fc85b	{"kind":"Probability","probability":0.69}
+98b1953c55502b97	{"consistency":1,"kind":"Probability","probability":0.043333333333333335}
+98b3f47dc8d2cabb	{"consistency":1,"kind":"Probability","probability":0.9633333333333333}
 98bcc3db8986c960	{"confidence":0.74,"kind":"Classify","label":"general","probabilities":{"general":0.83,"names_a_caller":0.01,"shared_vocabulary":0.16}}
+98c56c03f9feb632	{"consistency":1,"kind":"Probability","probability":0.04}
 98d35ab4e6ecadb8	{"consistency":1,"kind":"Probability","probability":0.03}
+98d8f45a2e9fb22f	{"consistency":1,"kind":"Probability","probability":0.6166666666666667}
+98d97a859ddcb983	{"consistency":1,"kind":"Probability","probability":0.04666666666666667}
 98de69e3a7efce26	{"confidence":0.9,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.93,"stale_reference":0,"wrong_behavior":0.06,"wrong_contract":0.01}}
+98df264fef91e601	{"consistency":1,"kind":"Probability","probability":0.96}
+98eb351909bc8c71	{"consistency":1,"kind":"Probability","probability":0.9499999999999998}
+98ec997f3756e74d	{"consistency":1,"kind":"Probability","probability":0.04}
 98ecc3d0cc8222a4	{"consistency":1,"kind":"Probability","probability":0.03333333333333333}
 98f3025ef0e3307c	{"confidence":1,"kind":"Classify","label":"Return Option<SessionTelemetry> and express absence as Option.none()","probabilities":{"Return Option<ReadonlyArray<string>> and express absence as Option.none()":0,"Return Option<Record<string, unknown>> and express absence as Option.none()":0,"Return Option<SessionTelemetry> and express absence as Option.none()":1,"Return Option<SurfaceExport> and express absence as Option.none()":0,"Return Option<SurfacePackage> and express absence as Option.none()":0}}
 98fbf32e4e8734f3	{"confidence":0.75,"kind":"Classify","label":"same_package","probabilities":{"different_deployables":0,"same_module":0.19,"same_package":0.81,"sibling_packages":0}}

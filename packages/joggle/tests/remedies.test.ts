@@ -13,6 +13,7 @@ import {
   pairKeyOf,
   partitionsOf,
   recomputeTraceDecision,
+  remedyDecisionOf,
   repairLabel,
   remedyFamilies,
   witnessClause,
@@ -693,4 +694,41 @@ test("a material trigger difference splits a high j_remedy pair", () => {
   expect(report.clusters).toHaveLength(2)
   expect(report.traces[0]?.decision.branch).toBe("independent")
   expect(report.traces[0]?.decision.reason).toContain("changes the repair")
+})
+
+test("a subcase is only reachable after the repairs already match", () => {
+  // Rung 3's gate asks j_subcase after j_remedy says same, so a subcase refines
+  // a material trigger difference rather than competing with the merge question.
+  expect(remedyDecisionOf({ remedy: 0.91, material: 0.82, subcase: 0.9 }).branch).toBe(
+    "subcase",
+  )
+  expect(remedyDecisionOf({ remedy: 0.1, material: 0.9, subcase: 0.9 }).branch).toBe(
+    "independent",
+  )
+})
+
+test("the report carries how many pairs code settled without a second judgment", () => {
+  const parse = finding("a", "A typeof check. Parse input at its I/O boundary.", 1, "src/k.ts")
+  const accept = finding(
+    "b",
+    "Parameter `value` is unparsed. Accept a named domain type.",
+    2,
+    "src/k.ts",
+  )
+  const opinion = {
+    ...opinionOf(
+      [
+        [parse, "parse at the boundary: Parse input at its I/O boundary"],
+        [accept, "parse at the boundary: Accept a named domain type"],
+      ],
+      [[parse, accept, 0.91]],
+      [
+        [parse, "parse at the boundary"],
+        [accept, "parse at the boundary"],
+      ],
+    ),
+    counts: { remedy: 1, material: 0, subcase: 0, decidedByCode: 1 },
+  }
+  const report = clusterRemedies([parse, accept], opinion)
+  expect(report.counts).toEqual({ remedy: 1, material: 0, subcase: 0, decidedByCode: 1 })
 })

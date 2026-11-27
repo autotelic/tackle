@@ -1,13 +1,33 @@
 6e05098e0dd686ee	{"consistency":1,"kind":"Probability","probability":0.036666666666666674}
+6e0b5b4f3cc01d96	{"consistency":1,"kind":"Probability","probability":0.6866666666666666}
+6e0e10737ea8de91	{"consistency":1,"kind":"Probability","probability":0.02}
+6e1191e3b24d5add	{"consistency":1,"kind":"Probability","probability":0.04}
+6e12d500c05ec5d5	{"consistency":1,"kind":"Probability","probability":0.04}
 6e16e3a38c5fa3fe	{"consistency":1,"kind":"Probability","probability":0.04}
+6e198d70dbff785b	{"consistency":1,"kind":"Probability","probability":0.9466666666666667}
+6e1b296f2efca1c4	{"consistency":1,"kind":"Probability","probability":0.9433333333333334}
 6e1f69fd82d5608e	{"confidence":0.71,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.78,"component_or_feature":0.01,"not_applicable":0.2,"route_or_handler":0.01}}
 6e1fb307d10c1db8	{"confidence":0.91,"kind":"Classify","label":"rendering","probabilities":{"domain_logic":0,"infrastructure":0,"input_adaptation":0,"mechanical":0,"not_applicable":0,"orchestration":0.05,"rendering":0.92,"request_validation":0,"transport_concern":0.03}}
+6e265e7a22f08b45	{"consistency":1,"kind":"Probability","probability":0.04}
 6e350e980cd94e0a	{"confidence":0.99,"kind":"Classify","label":"own the value type","probabilities":{"inject the dependency":0,"justify the assertion":0,"narrow with a predicate":0,"other":0.01,"own the value type":0.99,"parse at the boundary":0}}
 6e4b0da5b4914274	{"confidence":0.38,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.44,"no_difference":0.06,"removes_a_hazard":0.32,"slightly_clearer":0.18},"rating":2.01}
 6e55b3b4eef23e57	{"confidence":0.98,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0.01}}
+6e6c44ecd9cf799e	{"consistency":1,"kind":"Probability","probability":0.04}
 6e6e61bba81e589d	{"consistency":1,"kind":"Probability","probability":0.04666666666666667}
 6e78a20712308912	{"confidence":0.27,"kind":"Classify","label":"general","probabilities":{"general":0.51,"names_a_caller":0.01,"shared_vocabulary":0.48}}
+6e88800df60671ab	{"consistency":1,"kind":"Probability","probability":0.96}
+6e88d3d344e47fbd	{"consistency":1,"kind":"Probability","probability":0.03}
+6e9404584e4d80ee	{"consistency":1,"kind":"Probability","probability":0.03}
+6ea816934af90429	{"consistency":1,"kind":"Probability","probability":0.96}
+6eb25acf64f134ed	{"consistency":1,"kind":"Probability","probability":0.023333333333333334}
+6eb42d2d26f94572	{"consistency":1,"kind":"Probability","probability":0.02}
+6eb6b23d76804cc6	{"consistency":1,"kind":"Probability","probability":0.04}
 6eba707729799bcc	{"confidence":0.11,"kind":"Classify","label":"not_applicable","probabilities":{"agrees":0.25,"excludes":0.34,"not_applicable":0.41}}
 6ebd8891544cb915	{"confidence":0.11,"kind":"Classify","label":"not_applicable","probabilities":{"agrees":0.25,"excludes":0.34,"not_applicable":0.41}}
+6ec3f18eb817491c	{"consistency":1,"kind":"Probability","probability":0.9166666666666666}
+6ecb7673d72ad45f	{"consistency":1,"kind":"Probability","probability":0.043333333333333335}
+6ede3bd9e144a1d3	{"consistency":1,"kind":"Probability","probability":0.8933333333333334}
+6ee4742297c29c2b	{"consistency":1,"kind":"Probability","probability":0.036666666666666674}
+6ee4b35ec6e90215	{"consistency":1,"kind":"Probability","probability":0.04}
 6eeaf61914cbfad0	{"confidence":1,"kind":"Classify","label":"@effect/ui/html/Html#H is an experimental API","probabilities":{"@effect/ui/Command#make is an experimental API":0,"@effect/ui/Head#title is an experimental API":0,"@effect/ui/html/BrowserHost#mount is an experimental API":0,"@effect/ui/html/Html#component is an experimental API":0,"@effect/ui/html/Html#H is an experimental API":1}}
 6ef6d02122a80013	{"confidence":0.95,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.96,"infrastructure":0,"input_adaptation":0,"mechanical":0,"not_applicable":0.03,"orchestration":0,"rendering":0,"request_validation":0.01,"transport_concern":0}}

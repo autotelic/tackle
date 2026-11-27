@@ -1,15 +1,22 @@
 c50525347e04b996	{"consistency":1,"kind":"Probability","probability":0.06333333333333334}
 c5074d3c1c081319	{"confidence":0.74,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.8,"component_or_feature":0,"not_applicable":0.19,"route_or_handler":0.01}}
+c517cd79996a94d6	{"consistency":1,"kind":"Probability","probability":0.04666666666666667}
 c51d8303bea168ce	{"confidence":0.74,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.08,"internal_only":0.83,"unaccounted":0.09}}
+c533295713283f50	{"consistency":1,"kind":"Probability","probability":0.9166666666666666}
 c534143dabce3aa7	{"consistency":1,"kind":"Probability","probability":0.049999999999999996}
 c535ad6c64581849	{"consistency":1,"kind":"Probability","probability":0.7066666666666667}
 c54993f667846d28	{"consistency":1,"kind":"Probability","probability":0.12333333333333334}
+c54ed083defde6f5	{"consistency":1,"kind":"Probability","probability":0.9333333333333335}
+c55783b4d98bea9d	{"consistency":1,"kind":"Probability","probability":0.7333333333333334}
 c56962a567f389be	{"confidence":1,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":1,"infrastructure":0,"input_adaptation":0,"mechanical":0,"not_applicable":0,"orchestration":0,"rendering":0,"request_validation":0,"transport_concern":0}}
 c5950f78c561a84e	{"consistency":1,"kind":"Probability","probability":0.06777777777777777}
 c5a1eecf2c91e95f	{"consistency":1,"kind":"Probability","probability":0.04}
+c5a8826a613b91b4	{"consistency":1,"kind":"Probability","probability":0.04666666666666667}
+c5ac62a34df83e42	{"consistency":1,"kind":"Probability","probability":0.96}
 c5bb0c4139d69a8d	{"confidence":0.62,"kind":"Classify","label":"no_issue","probabilities":{"merge":0.02,"move":0.24,"no_issue":0.74}}
 c5c23b1cc0e7a600	{"confidence":0.94,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.96,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0.01}}
 c5cf06c66a0f6af1	{"confidence":0.94,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0,"wrong_behavior":0.04,"wrong_contract":0.01}}
+c5d47e3826a245ee	{"consistency":1,"kind":"Probability","probability":0.03}
 c5e4fb6b7165ff3c	{"kind":"Probability","probability":0.47}
 c5f14333dfa8a13e	{"consistency":1,"kind":"Probability","probability":0.04}
 c5f1d59ced2ce0a8	{"confidence":1,"kind":"Classify","label":"Narrow with discriminants/in checks or a type predicate instead","probabilities":{"Move this predicate into a Schema refinement (.check(Schema.makeFilter(...))) so failures surface as schema issue evidence":0,"Narrow with discriminants/in checks or a type predicate instead":1,"Use Match.value (or Match.discriminate) from effect/Match so exhaustiveness is checked by the compiler":0,"Use Schema.optional / Schema.nullable to distinguish absent from falsy with full type safety":0}}
