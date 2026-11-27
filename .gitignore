@@ -23,6 +23,11 @@ coverage/
 .joggle/cache/store.sqlite-shm
 # Evidence that this machine had a store, so a deleted database reads as rebuilt.
 .joggle/cache/store.seen
+# Write-through answers live beside the fact store. Only .joggle/answers is the
+# reviewed, committed ledger that a check reads.
+.joggle/cache/answers.jsonl
+.joggle/cache/answers/
+.joggle/cache/.gitattributes
 .joggle/types.json
 .joggle/declaration-types.json
 # Machine-local dependency surface: `joggle surface build` regenerates it per checkout.

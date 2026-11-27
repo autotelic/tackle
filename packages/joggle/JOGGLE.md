@@ -226,9 +226,11 @@ question version + model + evidence + questions
 It is serialised with sorted keys, so the same candidate produces the same key
 on every machine — which means **run from the repository root**. Evidence
 carries root-relative paths; running from a subdirectory changes the key and
-misses every cached verdict. Successful judgements are written to
-`.joggle/answers.jsonl`, one sorted, line-oriented answer per line; commit that
-file and CI replays them with `--offline` and **no API key at all**. A line is the
+misses every cached verdict. Successful judgements are written to a
+write-through cache under `.joggle/cache/`, one sorted, line-oriented answer per
+line. The reviewed `.joggle/answers.jsonl` (or sharded `answers/`) is the ledger
+a person commits; a judged run reads it and never rewrites it, so CI replays it
+with `--offline` and **no API key at all**. A line is the
 key and the answer and nothing else, so two branches that judge different
 candidates merge with git's built-in `merge=union` and the same answer merges to
 one line rather than a copy; `joggle cache compact` and `cache prune --max-bytes`
@@ -477,7 +479,7 @@ and two belong to the machine.
 
 | artifact | lives in | committed | what it is |
 | --- | --- | --- | --- |
-| `answers.jsonl` (or `answers/` when sharded) | `<root>/.joggle/` | **yes** | one line per answer, sorted by key, keyed by the decision and the state it read. **This is the replay path**: CI replays it with no API key and no tokens. |
+| `answers.jsonl` (or `answers/` when sharded) | `<root>/.joggle/answers*` reviewed · `<root>/.joggle/cache/answers*` write-through | **reviewed ledger yes** | one line per answer, sorted by key, keyed by the decision and the state it read. **The reviewed ledger is the replay path**: CI replays it with no API key and no tokens; a judged run writes only its cache. |
 | `baseline/` | `<root>/.joggle/` | **yes** | the findings already accepted, one fragment per finding: the ratchet. |
 | `wire.json` | `<machine cache>/joggle/<root>/` | no | every wire request's response, keyed by the request. A performance artifact, and far too large to commit: 11.5 megabytes on a 2,493-file repository. |
 | `last-run.json` | `<machine cache>/joggle/<root>/` | no | a manifest and the last report. A performance artifact. |

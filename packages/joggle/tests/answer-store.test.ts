@@ -104,6 +104,26 @@ test("a read-only store answers from the ledger and never writes it", () =>
     }).pipe(Effect.provide(nodeLayer)),
   ))
 
+it.effect("reads the reviewed ledger and writes only the cache beside it", () =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const path = yield* Path.Path
+    const ledger = fresh("joggle-reviewed-")
+    const cache = fresh("joggle-write-through-")
+    const reviewed = renderShard([{ key: "ab0123456789abcd", answer: probability(0.1) }])
+    yield* fs.writeFileString(join(ledger, "answers.jsonl"), reviewed)
+
+    const store = yield* make(fs, path, cache, { readDirs: [ledger], timestamps: true })
+    expect(Option.getOrUndefined(yield* store.get("ab0123456789abcd"))).toEqual(probability(0.1))
+    yield* store.put("cd0123456789abcd", probability(0.9))
+
+    // The reviewed ledger is the replay path: a judged run adds to its own cache
+    // and leaves the committed set byte-identical.
+    expect(yield* fs.readFileString(join(ledger, "answers.jsonl"))).toBe(reviewed)
+    expect(parseLines(yield* fs.readFileString(join(cache, "answers.jsonl"))).entries).toHaveLength(2)
+  }).pipe(Effect.provide(nodeLayer)),
+)
+
 test("a shard is sorted by key and newline-terminated", () => {
   const text = renderShard([entry("cd", 2, 0.2), entry("ab", 1, 0.1)])
   expect(text).toBe(renderEntry(entry("ab", 1, 0.1)) + "\n" + renderEntry(entry("cd", 2, 0.2)) + "\n")

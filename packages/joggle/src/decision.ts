@@ -64,8 +64,15 @@ export class DecisionStats extends Context.Service<
 >()("@joggle/DecisionStats") {}
 
 export interface Options {
-  /** Directory the committed per-decision answer cache lives in. */
+  /** Directory the per-decision answer cache is written to. */
   readonly cacheDir: string
+  /**
+   * Additional answer ledgers to read before `cacheDir`, never to write.
+   *
+   * The reviewed `.joggle/answers` ledger is the replay path; a judged run's new
+   * answers go to a machine-local cache, and both are one answer set.
+   */
+  readonly answerReadDirs?: ReadonlyArray<string> | undefined
   /**
    * Directory the wire cache lives in: the whole-response cache.
    *
@@ -446,6 +453,7 @@ export const layer = (
         layout: options.layout,
         timestamps: options.timestamps,
         readOnly: options.readOnly,
+        readDirs: options.answerReadDirs,
       })
       const planAnswers: PlanAnswerStore = {
         // An answer served from the ledger is a replay, and the stats said otherwise: a run

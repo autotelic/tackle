@@ -46,9 +46,10 @@ among named options, a spectrum) with calibrated probabilities, and code keeps t
 thresholds: a decisive answer prints, an unsure one is recorded as a notice, a no is
 silent. Arithmetic, counts, spans and orderings all stay in code.
 
-Verdicts are cached per question in `.joggle/answers.jsonl`, one sorted line per
-answer, so commit that file and CI replays every judgement with no key and no
-tokens. The lines are keyed and `merge=union` is enough for a branch merge, and
+Verdicts are cached per question, one sorted line per answer. The reviewed
+`.joggle/answers*` ledger is committed and CI replays every judgement from it
+with no key and no tokens; a judged run writes its new answers to
+`.joggle/cache/`, so it never edits the reviewed set. The lines are keyed and `merge=union` is enough for a branch merge, and
 `joggle cache prune` keeps the store from growing without a ceiling. A large
 store can be sharded instead (`cache.layout: "sharded"`); both are read. A yes/no is asked three times
 and the **agreement** across the asks becomes its confidence, because one number on
