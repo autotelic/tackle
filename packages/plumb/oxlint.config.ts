@@ -100,6 +100,17 @@ export default defineConfig({
   },
   overrides: [
     {
+      // The absence matrix is exhaustive, not sampled: exactly three return shapes
+      // (T | undefined, Option<T>, Either<T, Reason>) exist for the question these
+      // two rules disagree about, and the fixture asserts each one against both
+      // rules. Generating random type annotations would test the generator, not the
+      // contradiction, and the contradiction is the whole subject.
+      files: ["src/effect/rules/absence-shape-matrix.test.ts"],
+      rules: {
+        "plumb/prefer-property-tests": "off", // plumb:allow-off exhaustive three-shape matrix
+      },
+    },
+    {
       // The three prose rules define the phrases they report, and a definition has
       // to quote the phrase: the verdict closer is the subject of no-prose-verdict,
       // not a slip in it. Every other file is held to the rules.
