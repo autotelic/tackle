@@ -221,7 +221,7 @@ it("containment survives a size difference that collapses Jaccard", () => {
 it("shared shingles are the containment intersection", () => {
   const left = new Set(["a", "b", "c"])
   const right = new Set(["b", "c", "d", "e"])
-  expect(sharedShingles({ left, right }).sort()).toEqual(["b", "c"])
+  expect([...sharedShingles({ left, right })].sort()).toEqual(["b", "c"])
 })
 
 it("rarity falls when the shared shingles are common", () => {
