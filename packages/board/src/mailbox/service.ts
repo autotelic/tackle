@@ -273,8 +273,13 @@ export const startMailboxService = async ({
     server.once("error", reject)
     server.listen(port, host, resolve)
   })
+  // Port 0 asks the kernel for a free port; the caller cannot know which one from its input, so
+  // the URL must come from the bound address rather than the requested port. A fixed port is
+  // still reported exactly as given.
+  const address = server.address()
+  const boundPort = typeof address === "object" && address !== null ? address.port : port
   return {
-    url: "http://" + host + ":" + port,
+    url: "http://" + host + ":" + boundPort,
     close: () => new Promise((resolve) => server.close(() => resolve())),
   }
 }

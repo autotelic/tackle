@@ -28,10 +28,10 @@ const LeaseReply = Schema.Struct({
 })
 const StateReply = Schema.Struct({ value: Schema.Struct({ state: Schema.String }) })
 
-const start = (statePath?: string) => {
-  const port = 30_000 + Math.floor(Math.random() * 20_000)
-  return startMailboxService({ host: "127.0.0.1", port, statePath })
-}
+const start = (statePath?: string) =>
+  // Port 0: the kernel owns the collision check. A random port can land on another process's
+  // listener (or another test's) and turn an unrelated test into EADDRINUSE.
+  startMailboxService({ host: "127.0.0.1", port: 0, statePath })
 
 const post = async (
   url: string,
