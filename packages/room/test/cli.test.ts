@@ -65,7 +65,8 @@ describe("a verb that prints a completion is a claim", () => {
       expect(created.status).toBe(0)
       const paused = room(root, "pause", "--id", "dev-repo")
       expect(paused.status).toBe(0)
-      expect(paused.stdout).toBe("room dev-repo recorded paused; no process was signalled\n")
+      expect(paused.stdout).toContain("journal ")
+      expect(paused.stdout).toContain("checkpointed; no process was signalled")
     } finally {
       close()
     }
@@ -78,7 +79,8 @@ describe("a verb that prints a completion is a claim", () => {
       expect(room(root, "pause", "--id", "dev-repo").status).toBe(0)
       const resumed = room(root, "resume", "--id", "dev-repo")
       expect(resumed.status).toBe(0)
-      expect(resumed.stdout).toBe("room dev-repo recorded ready; no process was continued\n")
+      expect(resumed.stdout).toContain("journal ")
+      expect(resumed.stdout).toContain("reopened; no process was continued")
     } finally {
       close()
     }
@@ -148,7 +150,7 @@ describe("a verb that prints a completion is a claim", () => {
       const beforePause = count()
       expect(beforePause).toBeGreaterThan(0)
       expect(room(root, "pause", "--id", "dev-repo").stdout).toContain(
-        "recorded paused; process group was signalled",
+        "checkpointed; process group was signalled",
       )
       // The state write happens before the signal; let those last ticks land, then freeze is proven.
       await new Promise((resolve) => setTimeout(resolve, 250))
@@ -156,7 +158,7 @@ describe("a verb that prints a completion is a claim", () => {
       await new Promise((resolve) => setTimeout(resolve, 400))
       expect(count()).toBe(pausedCount)
       expect(room(root, "resume", "--id", "dev-repo").stdout).toContain(
-        "recorded ready; process group was continued",
+        "reopened; process group was continued",
       )
       await new Promise((resolve) => setTimeout(resolve, 400))
       expect(count()).toBeGreaterThan(pausedCount)

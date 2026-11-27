@@ -444,11 +444,17 @@ const runRoom = async (input: {
   readonly args: ReadonlyArray<string>
 }): Promise<{ readonly stdout: string; readonly stderr: string }> => {
   const root = resolve(input.root)
+  // Resolve the room CLI through the package export, not the installed bin: the bin runs dist,
+  // and a workspace checkout can have source without a build. This runs the same condition the
+  // board process is running under (source in development, dist in a package).
+  const roomCli = fileURLToPath(import.meta.resolve("@autotelic/room/cli"))
+  const conditions = roomCli.endsWith(".ts") ? ["--conditions=development"] : []
   // An absolute root is what keeps the room command from resolving `--root` against its own cwd.
-  const result = await execFileAsync("room", [...input.args, "--root", root], {
-    cwd: dirname(root),
-    timeout: 120_000,
-  })
+  const result = await execFileAsync(
+    process.execPath,
+    [...conditions, roomCli, ...input.args, "--root", root],
+    { cwd: dirname(root), timeout: 120_000 },
+  )
   return { stdout: result.stdout, stderr: result.stderr }
 }
 

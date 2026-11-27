@@ -1,3 +1,4 @@
+import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context"
 import { defineTask } from "@earendil-works/pi-durable"
 import { existsSync } from "node:fs"
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
@@ -64,15 +65,18 @@ test("a conversation, a task and a request id survive close and reopen", async (
   const { root, id } = await scratch("dev")
   try {
     const first = await openRoomJournal({ root, id })
-    const conversation = await first.session.commit((tx) =>
-      tx.createConversation({ ownership: { kind: "ownerless" } }),
+    const conversation = await first.session.commit(
+      (tx) => tx.createConversation({ ownership: { kind: "ownerless" } }),
+      BACKGROUND_CONTEXT,
     )
-    const taskId = await first.session.commit((tx) =>
-      tx.createTask(
-        noteTask,
-        { label: "keep me" },
-        { ownership: { kind: "conversation" }, conversationId: conversation.id },
-      ),
+    const taskId = await first.session.commit(
+      (tx) =>
+        tx.createTask(
+          noteTask,
+          { label: "keep me" },
+          { ownership: { kind: "conversation" }, conversationId: conversation.id },
+        ),
+      BACKGROUND_CONTEXT,
     )
     const admitted = await first.write({
       conversationId: conversation.id,
@@ -92,9 +96,12 @@ test("a conversation, a task and a request id survive close and reopen", async (
     await first.close()
 
     const reopened = await openRoomJournal({ root, id })
-    const stored = await reopened.session.commit((tx) => tx.conversation(conversation.id))
+    const stored = await reopened.session.commit(
+      (tx) => tx.conversation(conversation.id),
+      BACKGROUND_CONTEXT,
+    )
     expect(stored?.id).toBe(conversation.id)
-    const task = await reopened.session.commit((tx) => tx.task(taskId))
+    const task = await reopened.session.commit((tx) => tx.task(taskId), BACKGROUND_CONTEXT)
     expect(task?.input).toEqual({ label: "keep me" })
     expect(task?.kind).toBe("room.session.note")
     // Idempotency is a fact about the storage, not about the handle that wrote it: a fresh
@@ -117,8 +124,9 @@ test("pause and resume leave the journal and its requests intact", async () => {
   const { root, id } = await scratch("dev")
   try {
     const first = await openRoomJournal({ root, id })
-    const conversation = await first.session.commit((tx) =>
-      tx.createConversation({ ownership: { kind: "ownerless" } }),
+    const conversation = await first.session.commit(
+      (tx) => tx.createConversation({ ownership: { kind: "ownerless" } }),
+      BACKGROUND_CONTEXT,
     )
     const admitted = await first.write({
       conversationId: conversation.id,
