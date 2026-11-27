@@ -1,6 +1,6 @@
 /* oxlint-disable plumb/prefer-property-tests -- real supervisor processes over fixed scratch rooms; the assertions are what a resume restores. */
 import { execFileSync, spawnSync } from "node:child_process"
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { mkdir, readFile, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { basename, join } from "node:path"
@@ -46,7 +46,9 @@ const repository = (root: string): string => {
 }
 
 const scratchRoom = (label: string): Scratch => {
-  const cwd = mkdtempSync(join(tmpdir(), "room-snapshot-" + label + "-"))
+  // Short on purpose: a Unix socket path is capped near 104 bytes on macOS, and this
+  // scratch directory holds `.room/<id>/vm.sock` below it.
+  const cwd = mkdtempSync(join(tmpdir(), "rs-" + label + "-"))
   const created = roomCli(cwd, "new", "--repo", repository(cwd), "--scope", label, "--id", label)
   if (created.status !== 0) throw new Error("room new failed: " + created.stderr)
   return {
@@ -60,8 +62,15 @@ const scratchRoom = (label: string): Scratch => {
 }
 
 /** Run one command in the room's VM, booting its supervisor when none is running. */
-const guest = (room: Scratch, command: ReadonlyArray<string>) =>
-  roomCli(room.cwd, "vm", "--id", room.id, "--", ...command)
+const guest = (room: Scratch, command: ReadonlyArray<string>) => {
+  const ran = roomCli(room.cwd, "vm", "--id", room.id, "--", ...command)
+  if (ran.status === 0) return ran
+  const log = join(room.stateDir, "vm.log")
+  return {
+    ...ran,
+    stderr: ran.stderr + (existsSync(log) ? "\n--- vm.log ---\n" + readFileSync(log, "utf8") : ""),
+  }
+}
 
 test("a paused room's guest root is restored by resume", async () => {
   const room = scratchRoom("restore")
@@ -69,7 +78,7 @@ test("a paused room's guest root is restored by resume", async () => {
     // A file in the guest's own root, outside the host mount: nothing on the host holds it, so a
     // resumed VM can only read it back from the snapshot the pause wrote.
     const wrote = guest(room, ["sh", "-c", "echo durable > /tmp/durable.txt"])
-    expect(wrote.status).toBe(0)
+    expect(wrote.status, wrote.stderr).toBe(0)
     expect(existsSync(join(room.checkout, "durable.txt"))).toBe(false)
 
     const paused = roomCli(room.cwd, "pause", "--id", room.id)
@@ -146,7 +155,8 @@ test("a snapshot failure leaves the room paused with the reason", async () => {
     // A directory where the first snapshot belongs makes the one write that matters fail. The
     // pause must survive it: the room is paused, and it says no snapshot was written.
     await mkdir(join(room.stateDir, "vm-snapshot-1.json"), { recursive: true })
-    expect(guest(room, ["sh", "-c", "echo kept > /tmp/kept.txt"]).status).toBe(0)
+    const kept = guest(room, ["sh", "-c", "echo kept > /tmp/kept.txt"])
+    expect(kept.status, kept.stderr).toBe(0)
 
     const paused = roomCli(room.cwd, "pause", "--id", room.id)
     expect(paused.status).toBe(0)
