@@ -61,17 +61,17 @@ interface Candidate {
 }
 
 /**
- * The sites a judgement is shown: one per normalized shape, up to the sample bound.
+ * The sites a judgement is shown: one per normalized declaration, up to the sample bound.
  *
  * A pool that repeats the same `now - started` twenty times is one example with a
  * count beside it, not twenty examples. The count stays the true total.
  */
 export const representativeUnits = (units: ReadonlyArray<Unit>): ReadonlyArray<Unit> => {
-  const byShape = new Map<string, Unit>()
+  const byConstruction = new Map<string, Unit>()
   for (const unit of units) {
-    if (!byShape.has(unit.shape)) byShape.set(unit.shape, unit)
+    if (!byConstruction.has(unit.normalizedHash)) byConstruction.set(unit.normalizedHash, unit)
   }
-  return [...byShape.values()].slice(0, MAX_SAMPLE_UNITS)
+  return [...byConstruction.values()].slice(0, MAX_SAMPLE_UNITS)
 }
 
 const wordsOf = (name: string): ReadonlyArray<string> =>
@@ -282,7 +282,21 @@ export const underusedPrimitive: PlannedRule = {
       }
     }
 
-    const importedNames = new Set(workspace.imports.edges.flatMap((edge) => [...edge.names]))
+    // Adoption is counted from PRODUCT code, using the workspace's own test flag.
+    //
+    // The absence this rule reports is "nobody uses the export". The fixture that
+    // proves the silent case imports Duration -- so counting every import edge read
+    // the fixture as the repository adopting Duration, and the rule fell silent on
+    // the whole repository, including the acceptance run meant to find the real
+    // sites. A file whose declarations are all test declarations has no say here.
+    const productFiles = new Set(
+      workspace.units.filter((unit) => !unit.test).map((unit) => unit.file),
+    )
+    const importedNames = new Set(
+      workspace.imports.edges
+        .filter((edge) => productFiles.has(edge.importer))
+        .flatMap((edge) => [...edge.names]),
+    )
     const candidates: Array<Candidate> = []
     const tooSmall: Array<Drop> = []
     for (const kind of evidenceKinds) {
@@ -306,15 +320,23 @@ export const underusedPrimitive: PlannedRule = {
             .map((surfaceExport) => ({ surfacePackage, exported: surfaceExport })),
         )
         if (inFamily.length === 0) continue
-        // The absence: no name in this family is imported anywhere in the workspace.
-        if (inFamily.some((offer) => importedNames.has(offer.exported.name))) continue
+        // The absence is per EXPORT, not per family.
+        //
+        // This repository imports Clock for Clock.currentTimeMillis and has never
+        // imported Duration. Requiring the whole family to be absent found that the
+        // family was present and dropped the one export that was the point, so the
+        // rule reported nothing on the repository it was written for. The export a
+        // finding recommends must be one nobody imports; its siblings are free to be
+        // in use for other jobs.
+        const offered = inFamily.filter((offer) => !importedNames.has(offer.exported.name))
+        if (offered.length === 0) continue
         const ordered = orderedExports(
-          inFamily.map((offer) => offer.exported),
+          offered.map((offer) => offer.exported),
           family,
           units,
         )
         for (const surfaceExport of ordered) {
-          const offer = inFamily.find((entry) => entry.exported === surfaceExport)
+          const offer = offered.find((entry) => entry.exported === surfaceExport)
           if (offer !== undefined) offers.push(offer)
         }
       }
