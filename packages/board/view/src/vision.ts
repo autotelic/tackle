@@ -520,7 +520,8 @@ export const visionView = (h: Html.H<Message>, model: Model) => {
     h.section.class("vision-scene shakti-scene").children(
       sceneHeader(h, {
         title: "Two Shakti apps on the tailnet",
-        caption: "the tabs are real; the rooms isolate the checkout, not the host",
+        caption:
+          "the tabs are real local rooms; they isolate the checkout, not the host. The agentOS room machine is the built path to the stronger wall.",
       }),
       h.div
         .class("browser")
@@ -556,19 +557,19 @@ export const visionView = (h: Html.H<Message>, model: Model) => {
         h.div.class("room-row").children(
           room(h, {
             title: "room A",
-            detail: "worktree · :4400 · web",
+            detail: "local worktree · :4400 · web",
             active: focus === "permissions",
           }),
           room(h, {
             title: "room B",
-            detail: "worktree · :4401 · web",
+            detail: "local worktree · :4401 · web",
             active: focus === "enterprise",
           }),
         ),
         h.div
           .class("isolation-warning")
           .children(
-            "Local rooms isolate worktrees, branches, ports, services, and previews. They do not isolate the OS: both still share the host filesystem, network namespace, and processes. The agentOS provider is the prototype for that wall.",
+            "These two are local rooms: they isolate worktrees, branches, ports, services, and previews, but not the OS. Both still share the host filesystem, network namespace, and processes. Tackle.RoomMachine is now built: an agentOS VM room gets its own filesystem and process table. The warning still applies to these two previews because they are the local path, not the VM path.",
           ),
       ),
     ),
