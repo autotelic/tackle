@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "packages": [
+    {
+      "name": "effect",
+      "version": "4.1.5",
+      "exports": [
+        {
+          "name": "TaggedError",
+          "module": "Data",
+          "kind": "const",
+          "signature": "declare const TaggedError: <Tag extends string>(tag: Tag) => new <A extends Record<string, any> = {}>(args: ...) => ...",
+          "doc": "Create a tagged error class."
+        }
+      ]
+    }
+  ]
+}

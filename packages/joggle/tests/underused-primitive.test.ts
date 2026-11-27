@@ -1,12 +1,12 @@
 import { expect, it } from "@effect/vitest"
 import { Effect } from "effect"
 import { NodeServices } from "@effect/platform-node"
-import { mkdirSync, mkdtempSync } from "node:fs"
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { evidenceKinds } from "../src/evidence.ts"
 import { representativeUnits, underusedPrimitive } from "../src/rules/underused-primitive.ts"
-import { projectRootOf, surfaceFileOf, surfaceOutputOf } from "../src/surface.ts"
+import { projectRootOf, surfaceFileOf, surfaceOutputOf, buildSurface } from "../src/surface.ts"
 import { plannedDiagnosticsOf } from "../src/testing.ts"
 import { loadWorkspace } from "../src/workspace.ts"
 import { choice, modelStub, noul } from "./support.ts"
@@ -135,6 +135,57 @@ it.effect("the judgement is shown one site per normalized shape, not the pool", 
     const units = workspace.units.filter((unit) => evidenceKinds[0]!.matches(unit))
     expect(units.length).toBe(4)
     expect(representativeUnits(units).length).toBe(1)
+  }).pipe(Effect.provide(NodeServices.layer)),
+)
+
+it.effect("hand-rolled tagged errors name TaggedError from effect/Data", () =>
+  Effect.gen(function* () {
+    const workspace = yield* fixture(["src/errors.ts"])
+    const result = yield* plannedDiagnosticsOf(underusedPrimitive, workspace, {
+      config: { surfacePath: surface("surface-tagged.json") },
+    })
+    expect(result.diagnostics.length).toBe(1)
+    const found = result.diagnostics[0]!
+    expect(found.message).toContain("TaggedError")
+    expect(found.message).toContain("3 declaration")
+    expect(found.message).toContain('import { TaggedError } from "effect/Data"')
+    expect(found.identity).toContain("tagged-error")
+    expect(found.judged).toBe(true)
+  }).pipe(Effect.provide(modelStub(judged)), Effect.provide(NodeServices.layer)),
+)
+
+it.effect("a star export contributes its sibling's names at depth one", () =>
+  Effect.gen(function* () {
+    const root = mkdtempSync(join(tmpdir(), "joggle-surface-star-"))
+    const packageDirectory = join(root, "node_modules", "starred")
+    mkdirSync(join(packageDirectory, "dist"), { recursive: true })
+    writeFileSync(
+      join(root, "package.json"),
+      JSON.stringify({ dependencies: { starred: "1.0.0" } }),
+    )
+    writeFileSync(
+      join(packageDirectory, "package.json"),
+      JSON.stringify({ name: "starred", version: "1.0.0", types: "dist/index.d.ts" }),
+    )
+    writeFileSync(join(packageDirectory, "dist", "index.d.ts"), 'export * from "./Data.js"\n')
+    writeFileSync(
+      join(packageDirectory, "dist", "Data.d.ts"),
+      [
+        'export * from "./index.js"',
+        "export declare const TaggedError: string",
+        "export interface TaggedValue { readonly _tag: string }",
+        'export * from "./Deeper.js"',
+      ].join("\n"),
+    )
+    writeFileSync(join(packageDirectory, "dist", "Deeper.d.ts"), "export declare const TooDeep: string\n")
+
+    const built = yield* buildSurface({ root })
+    const builtPackage = built.surface.packages.find((entry) => entry.name === "starred")
+    const names = (builtPackage?.exports ?? []).map((entry) => entry.name).sort()
+    expect(names).toEqual(["TaggedError", "TaggedValue"])
+    expect(builtPackage?.exports.find((entry) => entry.name === "TaggedError")?.module).toBe(
+      "Data",
+    )
   }).pipe(Effect.provide(NodeServices.layer)),
 )
 
