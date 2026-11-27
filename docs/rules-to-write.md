@@ -206,3 +206,42 @@ Every new rule ships with four things:
 
 A rule without a negative fixture is a rule nobody has seen work — the same category of unknowledge as a
 test that cannot fail, and that has surprised us twice today.
+
+---
+
+## Tier 1 — a rule pair that cannot both be satisfied
+
+### `plumb-effect/guarded-op-must-return-option` + `guarded-op-must-return-effect` (plumb-effect)
+
+Not a rule to write — a rule pair to fix. They contradict each other, and together they ban
+`Option` from the codebase entirely:
+
+```
+guarded-op-must-return-option   "returns `string | undefined`, conflating absence with a
+                                 value. Return Option<string> and express absence as
+                                 Option.none()."
+guarded-op-must-return-effect   "Option hides why the operation failed. Return either
+                                 Effect<T, TaggedError> or Either<T, TaggedError>."
+```
+
+Follow the first and the second fires. There is no third spelling that satisfies both, so the
+only stable answer is "never use Option" — which is a design decision the rules assert by
+accident, in a message, while the first rule recommends the thing the second forbids.
+
+**How often this was paid:** five times in one evening, in `store.ts`, `calibration.ts`,
+`plans.ts`, `src/rules/hoist-to-domain.ts` and `remedies.ts`; each instance cost a factory
+pass, and the fifth was fixed in a module named `absence.ts` whose entire purpose was to
+answer this question once.
+
+**The fix:** `guarded-op-must-return-option` should recommend `Either<T, TaggedReason>` and say
+Option is banned, or `guarded-op-must-return-effect` should exempt a lookup where absence is
+not a failure. Either way the pair must not recommend contradictory shapes.
+
+**Negative fixture:** a function returning `Option<A>` that passes the first rule and fails the
+second, so a test can prove the pair no longer contradicts.
+
+**Related contradiction, same family:** `no-optional-function-parameters` ("annotate as
+`T | undefined`") against `no-duplicate-type-constituents` ("explicit `undefined` is
+unnecessary on an optional parameter"). The resolution is a _required_ parameter spelled
+`T | undefined`; the rules should say so rather than leaving the reader to discover it. It was
+found in `packages/joggle/src/rule.ts`, not only in the file being worked on.
