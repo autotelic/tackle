@@ -206,3 +206,9 @@ Every new rule ships with four things:
 
 A rule without a negative fixture is a rule nobody has seen work — the same category of unknowledge as a
 test that cannot fail, and that has surprised us twice today.
+
+**Follow-up, measured:** re-enabling `guarded-op-must-return-option` now costs **17 findings** in
+joggle alone — every `T | undefined` return it now flags in favour of `Either`. The rule pair is
+coherent again (plumb `e402fd3f`), so the disable can be retired the moment those 17 sites move.
+Until then the config says so in one sentence, which is the honest state: a hole with a named
+price, not a shrug.
