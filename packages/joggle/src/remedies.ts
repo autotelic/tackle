@@ -1863,7 +1863,7 @@ export const clusterRemedies = (
     // Report only a join the clustering actually made: a high pair score that a
     // family boundary overruled is not a disagreement between witness and
     // judgement, it is the boundary doing its job.
-    if (!sameRepair({ opinion, left, right })) continue
+    if (!sameRepair({ opinion, left: pair.left, right: pair.right })) continue
     disagreements.push({ a: leftMessage.clause, b: rightMessage.clause, probability })
   }
   const answeredPairs = opinion.same.size
