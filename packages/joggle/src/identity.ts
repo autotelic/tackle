@@ -105,7 +105,7 @@ export interface PreparedUnit {
 }
 
 /** The parsed node fields this module reads before narrowing the rest of the tree. */
-interface AstNode {
+export interface AstNode {
   readonly type?: string
   readonly start?: number
   readonly end?: number
@@ -223,7 +223,8 @@ const LITERAL_KINDS = new Set([
   "JSXText",
 ])
 
-const literalSpans = (root: AstNode): ReadonlyArray<Region> => {
+/** The spans of every AST node whose `type` is in `kinds`, in walk order. */
+export const nodeSpansOf = (root: AstNode, kinds: ReadonlySet<string>): ReadonlyArray<Region> => {
   const spans: Array<Region> = []
   const stack: Array<unknown> = [root]
   while (stack.length > 0) {
@@ -233,13 +234,16 @@ const literalSpans = (root: AstNode): ReadonlyArray<Region> => {
       continue
     }
     if (!isRecord(current)) continue
+    const kind = current["type"]
+    const start = current["start"]
+    const end = current["end"]
     if (
-      Predicate.isString(current["type"]) &&
-      LITERAL_KINDS.has(current["type"]) &&
-      Predicate.isNumber(current["start"]) &&
-      Predicate.isNumber(current["end"])
+      Predicate.isString(kind) &&
+      kinds.has(kind) &&
+      Predicate.isNumber(start) &&
+      Predicate.isNumber(end)
     ) {
-      spans.push({ start: current["start"], end: current["end"] })
+      spans.push({ start, end })
     }
     for (const value of Object.values(current)) {
       if (Predicate.isObjectOrArray(value)) stack.push(value)
@@ -302,7 +306,7 @@ export const prepareUnit = (unit: Unit): PreparedUnit => {
     comments: parsed.comments
       .filter((comment) => inside(comment.start, comment.end))
       .map((comment) => ({ start: comment.start - shift, end: comment.end - shift })),
-    literals: literalSpans(program)
+    literals: nodeSpansOf(program, LITERAL_KINDS)
       .filter((span) => inside(span.start, span.end))
       .map((span) => ({ start: span.start - shift, end: span.end - shift })),
     declared,
@@ -462,21 +466,6 @@ const encodeWith = ({
   })
   return { encoding, references, unresolved }
 }
-
-/**
- * The id of one declaration, given a context that can already name its targets.
- *
- * The workspace-wide entry point is {@link identityOf}: a declaration that is
- * mutually recursive with another has no single id until the cycle is keyed, and
- * this function cannot invent that from one declaration alone.
- */
-export const declarationId = ({
-  unit,
-  context,
-}: {
-  readonly unit: Unit
-  readonly context: IdentityContext
-}): string => stableId(encodeWith({ prepared: prepareUnit(unit), context }).encoding)
 
 /** The declarations a name in this file can resolve to. */
 const resolverOf = (workspace: Workspace): IdentityContext["targetOf"] => {
