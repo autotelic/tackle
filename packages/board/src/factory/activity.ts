@@ -21,6 +21,9 @@ const StoredPass = Schema.Struct({
   status: Schema.Literals(["running", "done", "failed"]),
   phase: Phase,
   events: Schema.Array(Schema.String),
+  // The receipt's writer. `factory status` names the pid a running pass claims, and asks the
+  // process itself before calling the pass live, so this is decoded rather than dropped.
+  pid: Schema.optional(Schema.Finite),
   checkpoint: Schema.optional(Schema.String),
   exit: Schema.optional(Schema.Finite),
   quality: Schema.optional(
@@ -142,6 +145,7 @@ export const activityOf = async (input: {
       status: decoded.success.status,
       phase: decoded.success.phase,
       events: decoded.success.events,
+      pid: decoded.success.pid,
       checkpoint: decoded.success.checkpoint,
       exit: decoded.success.exit,
     }

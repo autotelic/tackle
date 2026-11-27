@@ -20,9 +20,18 @@ import {
   writeLease,
 } from "./executor.ts"
 import { branchGuard } from "./branch.ts"
+import { activityOf } from "./activity.ts"
 import { appendEvent, consumeEvents } from "./events.ts"
+import { heldBy, truthOf, type WorkstreamTruth } from "./truth.ts"
 import { runPass } from "./kernel.ts"
-import { Gates, listWorkstreams, Phase, readWorkstream, writeWorkstream } from "./store.ts"
+import {
+  Gates,
+  listWorkstreams,
+  Phase,
+  readWorkstream,
+  writeWorkstream,
+  type Workstream,
+} from "./store.ts"
 import { deliverReport, fingerprintOf, ReportKind, writeReport, type Report } from "./report.ts"
 import { answerDesk, listDesk, raiseDesk, readAnswer, withdrawDesk, type DeskItem } from "./desk.ts"
 import {
@@ -135,6 +144,56 @@ const slug = (value: string): string =>
     .replace(/[^a-z0-9]+/gu, "-")
     .replace(/^-|-$/gu, "") || "workstream"
 
+/**
+ * One line per workstream; a busy or held record must not read as idle.
+ *
+ * The first six fields are the record's own. The rest are the derived truth. The pass and the
+ * queue are printed even when they say zero, because "nothing queued" and "nobody looked" are
+ * different facts; the desk id and the hold appear only when there is one.
+ */
+const statusLine = (record: Workstream, truth: WorkstreamTruth): string =>
+  [
+    record.id,
+    record.project,
+    record.delivery === "trunk" || record.pr === undefined ? "delivery trunk" : "PR " + record.pr,
+    record.phase,
+    record.path,
+    "checkpoint " + record.checkpoint.sha.slice(0, 8),
+    ...(truth.running === null
+      ? truth.lastReceipt === null
+        ? []
+        : [
+            "pass " +
+              truth.lastReceipt.pass +
+              " " +
+              // A receipt that says `running` with no live process is a writer that died
+              // before it finished. Printing the word again is how a finished pass read as busy.
+              (truth.lastReceipt.status === "running" ? "interrupted" : truth.lastReceipt.status) +
+              " " +
+              truth.lastReceipt.at.slice(11, 19),
+          ]
+      : [
+          "running pass " +
+            truth.running.pass +
+            " pid " +
+            (truth.running.pid ?? "unknown") +
+            " since " +
+            truth.running.startedAt.slice(11, 19),
+        ]),
+    "pending " + truth.pendingEvents,
+    ...(truth.nextEvent === null
+      ? []
+      : ["next " + truth.nextEvent.kind + " " + truth.nextEvent.id]),
+    ...(truth.openDesk === null ? [] : ["desk " + truth.openDesk.id]),
+    ...(truth.held === null
+      ? []
+      : [
+          "held: " +
+            truth.held.reason +
+            (truth.held.deskId === null ? "" : " " + truth.held.deskId),
+        ]),
+  ].join("  ")
+
 const main = async (argv: ReadonlyArray<string>): Promise<void> => {
   const command = argv[0]
   if (command === undefined || command === "--help" || command === "-h") {
@@ -198,24 +257,31 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
       allowPositionals: false,
     })
     const records = await listWorkstreams()
+    const desk = await listDesk()
+    const now = Date.now()
+    const served = await Promise.all(
+      records.map(async (record) => ({
+        record,
+        truth: truthOf({
+          activity: await activityOf({ record, now }),
+          desk: desk.filter((item) => item.workstream === record.id),
+        }),
+      })),
+    )
+    // The array is the contract: a consumer that reads records keeps reading records, and the
+    // truth arrives as fields rather than as a wrapper it would have to learn.
     if (parsed.values.json) {
-      console.log(JSON.stringify(records, null, 2))
+      console.log(
+        JSON.stringify(
+          served.map(({ record, truth }) => ({ ...record, ...truth })),
+          null,
+          2,
+        ),
+      )
       return
     }
-    for (const record of records)
-      console.log(
-        [
-          record.id,
-          record.project,
-          record.delivery === "trunk" || record.pr === undefined
-            ? "delivery trunk"
-            : "PR " + record.pr,
-          record.phase,
-          record.path,
-          "checkpoint " + record.checkpoint.sha.slice(0, 8),
-        ].join("  "),
-      )
-    for (const item of await listDesk())
+    for (const { record, truth } of served) console.log(statusLine(record, truth))
+    for (const item of desk)
       console.log("desk " + item.id + "  " + item.workstream + "  " + item.title)
     return
   }
@@ -455,9 +521,20 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
         allowPositionals: false,
       })
       const items = await listDesk()
-      if (parsed.values.json) console.log(JSON.stringify(items, null, 2))
+      // A listed item is open by definition; it *holds* its workstream only when the phase says
+      // the workstream stopped for it. The mark is derived here, never stored on the item, and
+      // a workstream with no record makes no hold claim.
+      const phases = new Map((await listWorkstreams()).map((record) => [record.id, record.phase]))
+      const marked = items.map((item) => ({
+        ...item,
+        held: heldBy({ phase: phases.get(item.workstream), item }) !== null,
+      }))
+      if (parsed.values.json) console.log(JSON.stringify(marked, null, 2))
       else
-        for (const item of items) console.log(item.id + "  " + item.workstream + "  " + item.title)
+        for (const item of marked)
+          console.log(
+            item.id + "  " + item.workstream + "  " + item.title + (item.held ? "  held" : ""),
+          )
       return
     }
     if (sub === "answer") {
