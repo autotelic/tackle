@@ -1,13 +1,12 @@
 {
   "note": "Known plumb findings, by identity and count. `pnpm lint:update` accepts the current state; `pnpm lint` fails when a count rises or a new identity appears.",
-  "total": 18,
+  "total": 14,
   "census": {
-    "plumb-effect(guarded-op-must-return-option)\u0000src/rules/underused-primitive.ts\u0000This function returns `ReturnType<typeof decodeSurface> | undefined`, conflating absence with a value. Return Option<ReturnType<typeof decodeSurface>> and express absence as Option.none().": 1,
-    "plumb-effect(guarded-op-must-return-option)\u0000src/surface.ts\u0000This function returns `string | undefined`, conflating absence with a value. Return Option<string> and express absence as Option.none().": 6,
+    "plumb-effect(guarded-op-must-return-option)\u0000src/surface.ts\u0000This function returns `string | undefined`, conflating absence with a value. Return Option<string> and express absence as Option.none().": 5,
     "plumb-effect(guarded-op-must-return-option)\u0000src/surface.ts\u0000This function returns `SurfaceKind | undefined`, conflating absence with a value. Return Option<SurfaceKind> and express absence as Option.none().": 1,
-    "plumb(no-runtime-typeof)\u0000src/surface.ts\u0000A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.": 5,
+    "plumb(no-runtime-typeof)\u0000src/surface.ts\u0000A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.": 4,
     "plumb(no-unknown-parameters)\u0000src/surface.ts\u0000Parameter `declaration` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.": 1,
-    "plumb(no-unknown-parameters)\u0000src/surface.ts\u0000Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.": 2,
+    "plumb(no-unknown-parameters)\u0000src/surface.ts\u0000Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.": 1,
     "plumb(no-unsafe-dictionary-type)\u0000src/surface.ts\u0000This dictionary's unknown value type gives callers no concrete value contract. Use an owner/schema-derived value type; parse external payloads before insertion.": 2
   }
 }

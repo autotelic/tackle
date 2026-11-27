@@ -1,6 +1,6 @@
 import { Effect, FileSystem, Path, Result, Schema, SchemaParser } from "effect"
 import type { ChildProcessSpawner } from "effect/process/ChildProcessSpawner"
-import { isRecord } from "@autotelic/protocol"
+import { isRecord, parseJson } from "@autotelic/protocol"
 import { Service as Tsgo } from "./tsgo.ts"
 
 /* -------------------------------------------------------------------------- */
@@ -270,14 +270,6 @@ const CachedIndex = Schema.Struct({
 
 const decodeCache = SchemaParser.decodeUnknownResult(Schema.fromJsonString(CachedIndex))
 
-/**
- * Parse JSON at the boundary, recording the failure instead of throwing it past
- * the typed channel. A trace file that will not parse is an issue, and an issue
- * is a fact the run reports rather than a defect that escapes it.
- */
-const parseJson = (text: string): Effect.Effect<unknown, never> =>
-  Effect.try(() => JSON.parse(text)).pipe(Effect.orElseSucceed(() => undefined))
-
 /** The paths the legend names, one per checker. */
 const legendPaths = (parsed: unknown): ReadonlyArray<string> => {
   if (!Array.isArray(parsed)) return []
@@ -353,11 +345,11 @@ export const loadTypeFacts = (input: TypeFactRequest): Effect.Effect<
         const tsgo = yield* Tsgo
         yield* tsgo.generateTrace(input.root, dir)
         const legend = yield* fs.readFileString(path.join(dir, "legend.json"))
-        const paths = legendPaths(yield* parseJson(legend))
+        const paths = legendPaths(parseJson(legend))
         if (paths.length === 0) issues.push("the trace legend named no type files")
         for (const typesPath of paths) {
           const body = yield* fs.readFileString(typesPath)
-          const parsed = yield* parseJson(body)
+          const parsed = parseJson(body)
           if (Array.isArray(parsed)) documents.push(parsed)
           else issues.push("a trace type file was not an array: " + typesPath)
         }
