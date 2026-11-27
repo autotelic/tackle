@@ -537,6 +537,11 @@ not started.
   allowlist fails; `describe()` is echoed in the room's JSON and in `/presence`, and a missing
   description renders no line (the environment-plan rule).
 - **Size:** M.
+- **Status:** blocked at `agentos-core@0.4.9`; ADR 0007 records the probe. A default-deny
+  `network` policy with `net.listen` or `net.http_listen` allowed still stops the guest
+  listener; only `default: "allow"` keeps a room service alive. `CreateVmConfig.listen` is not
+  on `AgentOsOptions`, and `describe()` has no policy member. No permission field is written
+  rather than record a policy the VM did not apply.
 
 ### 5. Use the VM's preview and terminal surface only where the host has none
 

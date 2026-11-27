@@ -9,7 +9,6 @@ import { fileURLToPath } from "node:url"
 import { alive } from "./run.ts"
 import type { ServiceDeclaration, ServiceObservation } from "./Service.ts"
 import { roomDir } from "./store.ts"
-import { VmPermissionsReport } from "./VmPermissions.ts"
 import { VmSoftwareReport } from "./VmSoftware.ts"
 import { snapshotFile, snapshotMaxBytes, type VmSnapshotOutcome } from "./VmSnapshot.ts"
 
@@ -54,13 +53,6 @@ export const VmRun = Schema.Struct({
    * rather than an assumed one.
    */
   software: Schema.optional(VmSoftwareReport),
-  /**
-   * What the guest may reach, as the boot recorded it.
-   *
-   * Beside `software` for the same reason: written by the process that owns the VM, so a run
-   * file that carries no policy is one whose boot said nothing, never one this file inferred.
-   */
-  permissions: Schema.optional(VmPermissionsReport),
 })
 export type VmRun = typeof VmRun.Type
 

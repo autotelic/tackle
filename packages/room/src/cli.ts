@@ -41,7 +41,6 @@ import {
   type VmExecRequest,
   type VmRun,
 } from "./VmSupervisor.ts"
-import { permissionsLine } from "./VmPermissions.ts"
 import { verifySnapshot } from "./VmSnapshot.ts"
 import { observeService } from "./Service.ts"
 
@@ -157,7 +156,6 @@ const ensureWorktree = (input: {
 const vmRuntime = (run: VmRun): RoomRuntime => ({
   kind: "agentos",
   ...(run.software === undefined ? {} : { software: run.software }),
-  ...(run.permissions === undefined ? {} : { permissions: run.permissions }),
 })
 
 const main = async (): Promise<void> => {
@@ -291,9 +289,6 @@ const main = async (): Promise<void> => {
                 (room.runtime.software.missing.length === 0
                   ? ""
                   : " missing software " + room.runtime.software.missing.join(","))) +
-            // Absent is silent: a room whose boot recorded no policy has no line to print, and
-            // a guessed one would report access no VM was created with.
-            permissionsLine(room.runtime?.permissions) +
             (room.port === undefined ? "" : " port " + room.port.number) +
             (service === null
               ? ""
