@@ -76,8 +76,11 @@ so a stack decides what a checkout is rather than the provider hard-coding git.
 ## Consequences
 
 - `packages/board/test/alchemy-room-plan.test.ts` builds a two-resource stack and asserts the plan
-  names both types and plans the machine after the room. It plans only: no apply, no git worktree,
-  no VM boot.
+  names both types and plans the machine after the room.
+- `packages/board/test/alchemy-room-apply.test.ts` applies the same providers against a scratch
+  git repository: `Room` creates `room.json` and `alpha/worktree`, and `RoomMachine` starts the
+  supervisor and reports `running`. The test stops the supervisor and removes the scratch root.
+  The worktree is created before the room record, which is the order git requires.
 - A stack destroy leaves every room and every worktree where it was, and says so once per room.
 - `Tackle.RoomMachine` reads a file on every plan. That is intentional — a cached "running" is the
   one answer a supervisor can silently falsify.

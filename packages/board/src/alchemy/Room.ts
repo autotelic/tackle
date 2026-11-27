@@ -3,7 +3,7 @@ import * as Provider from "alchemy/Provider"
 import * as Data from "effect/Data"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
-import { resolve } from "node:path"
+import { join, resolve } from "node:path"
 import { createRoom, readRoom, roomDir, roomFile } from "@autotelic/room/store"
 import type { RoomSoftware } from "@autotelic/room/VmSoftware"
 import {
@@ -42,12 +42,19 @@ const attempt = <A>(thunk: () => Promise<A>) =>
   })
 
 /** Where a room's declaration and worktree live: its own directory under the host root. */
-const roomPaths = (input: { readonly root: string; readonly id: string }) => ({
-  root: input.root,
-  id: input.id,
-  dir: resolve(roomDir({ root: input.root, id: input.id })),
-  file: roomFile({ root: input.root, id: input.id }),
-})
+const roomPaths = (input: { readonly root: string; readonly id: string }) => {
+  const dir = resolve(roomDir({ root: input.root, id: input.id }))
+  return {
+    root: input.root,
+    id: input.id,
+    dir,
+    // The checkout is the room directory's child, not the room directory itself: the record
+    // (room.json, agentos.sqlite) and the worktree share a parent and must not overwrite each
+    // other. `room new` places it here; the provider follows the same convention.
+    worktree: join(dir, "worktree"),
+    file: roomFile({ root: input.root, id: input.id }),
+  }
+}
 
 export interface RoomProps {
   readonly id: string
@@ -115,7 +122,7 @@ export const RoomMachine = Alchemy.Resource<RoomMachineResource>("Tackle.RoomMac
 /** A room's attributes, derived from its props: the record is the room package's to write. */
 const roomAttributes = (props: RoomProps): RoomAttributes => {
   const paths = roomPaths({ root: props.root, id: props.id })
-  return { id: props.id, root: props.root, roomFile: paths.file, worktree: paths.dir }
+  return { id: props.id, root: props.root, roomFile: paths.file, worktree: paths.worktree }
 }
 
 /**
@@ -140,7 +147,16 @@ export const RoomProvider = () =>
           return observed === undefined ? undefined : roomAttributes(olds)
         }),
         reconcile: Effect.fn(function* ({ news }: { readonly news: RoomProps }) {
+          const paths = roomPaths({ root: news.root, id: news.id })
           const observed = yield* attempt(() => readRoom({ root: news.root, id: news.id }))
+          // The worktree comes first, exactly as the CLI does: git refuses a worktree whose
+          // target exists, and `createRoom` writes the room directory. Reversing these two
+          // makes every new room fail with "already exists".
+          const checkout = yield* worktree.ensure({
+            root: paths.worktree,
+            repo: news.repo,
+            base: news.base,
+          })
           if (observed === undefined) {
             const created = yield* attempt(() =>
               createRoom({
@@ -171,12 +187,6 @@ export const RoomProvider = () =>
               }),
             )
           }
-          const paths = roomPaths({ root: news.root, id: news.id })
-          const checkout = yield* worktree.ensure({
-            root: paths.dir,
-            repo: news.repo,
-            base: news.base,
-          })
           return { id: news.id, root: news.root, roomFile: paths.file, worktree: checkout }
         }),
         delete: Effect.fn(function* ({
@@ -217,7 +227,7 @@ export const RoomMachineProvider = () =>
           ensureVmSupervisor({
             root: news.root,
             id: news.room,
-            worktree: paths.dir,
+            worktree: paths.worktree,
             stateDir: news.stateDir,
           }),
         )
