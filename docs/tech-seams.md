@@ -517,9 +517,15 @@ not started.
   `software.installed()` (`:637`). A Core upgrade that drops a tool becomes a boot failure, not a
   pass that fails in the guest with `command not found`.
 - **Proof:** new `packages/room/test/vm-software.test.ts`: a VM created with the declaration lists
-  the three commands; a VM created with `defaultSoftware: false` and the declaration still runs
-  `git --version`.
+  the declared commands; a VM created with `defaultSoftware: false` and the declaration still runs
+  them.
 - **Size:** S.
+- **Status:** partly landed at `18d7e038`. The room declares software, passes registry entries,
+  and records `software.installed()` plus `missing`; a bare VM honors the declaration. The
+  default is deliberately empty, not `["git"]`: a registry package is downloaded before boot, so
+  defaulting to `git` makes every room depend on `releases.rivet.dev`. `node` and `pnpm` are not
+  published by the 0.4.9 registry; ADR 0006 records both gaps. `installed()` also does not list
+  Core's vendored bundle, so a default room records `installed: []` rather than inventing one.
 
 ### 4. Declare and report the VM's permissions
 
