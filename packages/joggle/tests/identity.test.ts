@@ -34,7 +34,7 @@ const unitNamed = (workspace: Workspace, name: string): Unit => {
 
 it.effect("the two version files — containment 1.00 by token bag — share every id", () =>
   Effect.gen(function* () {
-    const root = resolve(import.meta.dirname, "../..")
+    const root = resolve(import.meta.dirname, "../../..")
     const workspace = yield* loadWorkspace(root, [
       "packages/jig-cli/src/version.ts",
       "packages/cutlist/src/version.ts",

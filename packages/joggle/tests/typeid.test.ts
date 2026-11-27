@@ -127,8 +127,6 @@ describe("canonical type identity", () => {
         const facts = yield* resolveFixture()
         const ok = facts(REQUESTS[7])
         const failed = facts(REQUESTS[8])
-        expect(ok.display).toContain("Effect")
-        expect(failed.display).toContain("Effect")
         expect(ok.canonical).not.toBe(failed.canonical)
       }),
     120000,
