@@ -74,7 +74,8 @@ export const duplicateVocabulary = {
    * is a value or a meaning.
    */
   difference: {
-    value: "The same thing with a different constant, option or parameter, so one could take the other's.",
+    value:
+      "The same thing with a different constant, option or parameter, so one could take the other's.",
     meaning: "A different concept that happens to read alike.",
     unclear: "The evidence does not say.",
   },
@@ -90,13 +91,11 @@ export const duplicateVocabulary = {
   prescription: {
     merge:
       "Delete the copies and import one. These files can reach each other, so the survivor is available to all of them.",
-    move:
-      "The shared part belongs somewhere every copy can depend on. Move it there and import it from each site.",
+    move: "The shared part belongs somewhere every copy can depend on. Move it there and import it from each site.",
     split: "One name with two meanings. Give each meaning its own name and declaration.",
     share_a_contract:
       "Keep both declarations and give them one shared contract to agree on. For when no permitted operation can replace one with the other.",
-    leave_it:
-      "Framework shapes and stable copies that nobody will change. Leave them as they are.",
+    leave_it: "Framework shapes and stable copies that nobody will change. Leave them as they are.",
   },
   verdict: {
     collapse: "They are one thing. Keep one of them and delete the rest.",
@@ -135,25 +134,23 @@ export const pageVerdictByRole: Record<string, Record<string, string>> = {
   route_page: {
     extract_to_bundle:
       "Its state and its screen-wide pieces belong in a bundle with `{ state, actions, meta }`, exported by dot notation.",
-    extract_some:
-      "Part of it does, such as the panel that always travels with the data it reads.",
+    extract_some: "Part of it does, such as the panel that always travels with the data it reads.",
     no_issue:
       "No. This page's state is genuinely its own and a provider would be ceremony between it and its children.",
   },
   modal: {
     extract_to_bundle:
       "Its draft state and its steps belong in a bundle, so the form and its actions are not threaded through each step.",
-    extract_some:
-      "Part of it does, such as the step controls that repeat per field.",
+    extract_some: "Part of it does, such as the step controls that repeat per field.",
     no_issue:
       "No. A modal with one piece of state and one submit needs no provider to share anything.",
   },
   layout: {
     extract_to_bundle:
       "It owns state that its children read, which is a bundle's job rather than a layout's.",
-    extract_some:
-      "Part of it does, such as the chrome that several children configure.",
-    no_issue: "No. A layout that renders children and owns nothing is exactly what a layout should be.",
+    extract_some: "Part of it does, such as the chrome that several children configure.",
+    no_issue:
+      "No. A layout that renders children and owns nothing is exactly what a layout should be.",
   },
 }
 
@@ -170,11 +167,9 @@ export const pageVerdictByRole: Record<string, Record<string, string>> = {
 export const moduleRoles = {
   domain_core:
     "The rules and shapes the business is about. Other modules depend on it and it depends on nothing internal.",
-  transport_edge:
-    "HTTP: handlers, routes, request parsing, response shaping, status codes.",
+  transport_edge: "HTTP: handlers, routes, request parsing, response shaping, status codes.",
   rendering_edge: "A user interface: components, routes, forms, view state.",
-  infrastructure:
-    "A database, a queue, a mail sender, or a client for a third party.",
+  infrastructure: "A database, a queue, a mail sender, or a client for a third party.",
   /**
    * The machinery of the tool or library itself.
    *
@@ -315,6 +310,64 @@ export const dutyVocabulary = {
 } as const
 
 /**
+ * The families of duty, so no one Choice carries the whole twelve-label
+ * vocabulary.
+ *
+ * The duty question measured at nine options in the committed ledger and asks
+ * twelve today -- both over the contract's limit, and the same defect the remedy
+ * normaliser had at fifty-five. Code asks the family once, asks the duties inside
+ * that family in the same request, and composes `family: duty`. Each question is
+ * bounded; nothing about the vocabulary is dropped to make the count fit.
+ */
+export const dutyFamilies: Readonly<
+  Record<
+    string,
+    {
+      readonly description: string
+      readonly duties: ReadonlyArray<keyof typeof dutyVocabulary>
+    }
+  >
+> = {
+  business_rule: {
+    description:
+      "A rule, invariant or decision about the business, including one the business keeps in stored records.",
+    duties: ["domain_logic", "recording", "derivation", "reconciliation"],
+  },
+  transport_contract: {
+    description:
+      "A rule about what the endpoint ACCEPTS, or the mechanics of parsing a request and shaping a response.",
+    duties: ["request_validation", "transport_concern"],
+  },
+  data_movement: {
+    description:
+      "Reshaping input into what another layer expects, calling other things in order, or preparing data for display.",
+    duties: ["input_adaptation", "orchestration", "rendering"],
+  },
+  storage: {
+    description:
+      "Talking to a database, queue, file system or third-party service, or holding a value that makes other code fast or addressable.",
+    duties: ["infrastructure", "mechanical"],
+  },
+  none: {
+    description: "A helper with no meaning outside its immediate caller.",
+    duties: ["not_applicable"],
+  },
+}
+
+/** The family question's options, and the `duty` criteria within one family. */
+export const dutyFamilyVocabulary: Readonly<Record<string, string>> = Object.fromEntries(
+  Object.entries(dutyFamilies).map(([family, value]) => [family, value.description]),
+)
+
+export const dutyClausesOf = (family: string): Readonly<Record<string, string>> =>
+  Object.fromEntries(
+    (dutyFamilies[family]?.duties ?? ["not_applicable"]).map((duty) => [
+      duty,
+      dutyVocabulary[duty],
+    ]),
+  )
+
+/**
  * Whether a 5xx is the right answer to a row that is not there.
  *
  * The amplifier the nullability work cannot see: the data is legitimately
@@ -369,7 +422,7 @@ export const pageDecisions = {
     instructions: [
       "What kind of file is `page.path`?",
       "Classify the file by what it is, not by whether it conforms. This answer decides which question is asked next, so a wrong classification wastes the rest of the request.",
-      "Choose \"not_applicable\" when it is none of these.",
+      'Choose "not_applicable" when it is none of these.',
     ].join("\n"),
     criteria: {
       route_page: "A route's own page: it owns layout and state for one screen.",
@@ -403,7 +456,8 @@ export const pageDecisions = {
       "Choose `no_issue` when there is nothing to fix.",
     ].join("\n"),
     criteria: {
-      state_belongs_in_provider: "State threaded here belongs in a provider the pieces read directly.",
+      state_belongs_in_provider:
+        "State threaded here belongs in a provider the pieces read directly.",
       markup_belongs_in_blocks: "Markup inlined here belongs in named blocks, one per file.",
       no_provider_root: "It needs the bundle's provider at its composition root.",
       no_issue: "Nothing; leave this page as it is.",

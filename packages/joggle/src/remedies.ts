@@ -5,7 +5,13 @@ import { Atoms } from "./atoms.ts"
 import { canonical } from "./canonical.ts"
 import { isUnreachable } from "./decision.ts"
 import { policy } from "./policy.ts"
-import { answerPlansRaw, answerPlansResilient, PlanAnswers, chunkPlans, type Plan } from "./plans.ts"
+import {
+  answerPlansRaw,
+  answerPlansResilient,
+  PlanAnswers,
+  chunkPlans,
+  type Plan,
+} from "./plans.ts"
 import { shortHash } from "./state.ts"
 import { createFactStore, type StoredFinding } from "./store.ts"
 
@@ -238,6 +244,62 @@ export const pairKeyOf = ({
   readonly right: string
 }): string => (left.localeCompare(right) <= 0 ? left + "\u0000" + right : right + "\u0000" + left)
 
+/**
+ * The families a prescribed repair can belong to, one question over six.
+ *
+ * This exists because the option list it replaces held every witness clause in
+ * the corpus: 55 candidates in one Choice, asked 150 times in one run. A Choice
+ * over more than eight options is a decision wearing a question's clothes
+ * (`docs/jev.md` rule 4), and the measured consequence was 83 findings labelled
+ * with a non-answer. The family is the first snap judgement; the clause, asked
+ * only among the clauses of the family that answer named, is the second.
+ */
+export const remedyFamilies: Readonly<Record<string, string>> = {
+  "parse at the boundary":
+    "Turn untyped input into a domain value where it enters: parse, decode or validate at the I/O edge, then branch on the parsed value.",
+  "narrow with a predicate":
+    "Prove the runtime shape before using it: a discriminant, an `in` check, a Schema refinement or a type predicate, instead of a cast.",
+  "own the value type":
+    "Give the value a named owner type derived from its schema or domain, so a caller cannot pass or receive an anonymous shape.",
+  "justify the assertion":
+    "Keep the assertion but state the invariant it relies on, immediately before it, so the next reader can check the claim.",
+  "inject the dependency":
+    "Take the collaborator as a parameter or thread it through the signature, so it is explicit and replaceable instead of captured.",
+  other: "None of these: the repair is something else. The next question names it.",
+}
+
+/**
+ * The remedy identity: the family the first answer named, then the clause.
+ *
+ * Composed in code rather than picked as one long label, so the pair reads as a
+ * sentence ("narrow with a predicate: Narrow with discriminants/in checks…")
+ * and neither question carries more than `maxChoiceOptions` candidates.
+ */
+export const composeRemedy = (family: string, clause: string): string =>
+  family === "" ? clause : family + ": " + clause
+
+/**
+ * Split items into at most `limit` contiguous groups, each smaller than the
+ * input, so a bounded Choice can select a range before the next question names
+ * the item inside it.
+ *
+ * The number of groups is capped at `limit`; each group is `ceil(n / limit)`
+ * long, which may itself exceed the limit for a very long list -- the caller
+ * applies this again to the chosen group, so every question stays bounded.
+ */
+export const partitionsOf = <A>(
+  items: ReadonlyArray<A>,
+  limit: number,
+): ReadonlyArray<ReadonlyArray<A>> => {
+  if (items.length <= limit) return [items]
+  const width = Math.ceil(items.length / limit)
+  const groups: Array<ReadonlyArray<A>> = []
+  for (let start = 0; start < items.length; start += width) {
+    groups.push(items.slice(start, start + width))
+  }
+  return groups
+}
+
 interface ClauseGroup {
   readonly clause: string
   readonly messages: ReadonlyArray<MessageNode>
@@ -256,13 +318,54 @@ const groupsOf = (messages: ReadonlyArray<MessageNode>): ReadonlyArray<ClauseGro
 }
 
 /**
- * Ask the two questions rung 1 needs, batched and cached.
+ * Answer plans in chunks, resiliently, and return one read value per plan.
  *
- * `j_repair` labels each distinct message against the candidate clauses code
- * derived from the corpus. `j_same` compares one representative of each pair of
- * witness groups, which is the only pair that can change the clustering: two
- * messages with the same witness are already one node, and two with different
- * witnesses are where a judgement can find a repair the regex cannot.
+ * The remedies run asks three kinds of question -- repair family, repair clause,
+ * pairwise sameness -- and the clause options depend on the family answer, so
+ * they cannot share a request with it. Rounding here rather than in the rule
+ * keeps every round batched and every question cached on its own state.
+ */
+const askPlans = (
+  plans: ReadonlyArray<Plan<unknown>>,
+): Effect.Effect<
+  { readonly values: ReadonlyArray<unknown>; readonly failures: ReadonlyArray<AiError.AiError> },
+  never,
+  Atoms | PlanAnswers | DecisionModel.DecisionModel
+> =>
+  Effect.gen(function* () {
+    const values: Array<unknown> = plans.map(() => undefined)
+    const failures: Array<AiError.AiError> = []
+    let offset = 0
+    for (const chunk of yield* chunkPlans(plans, policy.decision.maxRequestChars)) {
+      // A batch the provider rejects for size is halved and retried; a lone
+      // oversized question comes back as a failure rather than a witness
+      // fallback. The per-question cache means a split re-asks only what was
+      // not already answered.
+      const settled = yield* answerPlansResilient({
+        plans: chunk.plans,
+        answer: answerPlansRaw,
+      })
+      settled.answers.forEach((record, index) => {
+        // `answerPlansResilient` preserves the chunk's plan order, and the chunk
+        // came from the run's list, so the running offset is the plan's index.
+        if (record !== undefined) values[offset + index] = chunk.plans[index]?.read(record)
+      })
+      for (const failure of settled.failures) failures.push(failure.error)
+      offset += chunk.plans.length
+    }
+    return { values, failures }
+  })
+
+/**
+ * Ask the questions rung 1 needs, batched and cached.
+ *
+ * A repair is named by two bounded questions composed in code: `j_family` names
+ * the kind of repair (one of six), and `j_clause` picks the wording among the
+ * clauses code assigned to that family -- never the whole 55-candidate corpus in
+ * one Choice. `j_same` compares one representative of each pair of witness
+ * groups, which is the only pair that can change the clustering: two messages
+ * with the same witness are already one node, and two with different witnesses
+ * are where a judgement can find a repair the regex cannot.
  */
 export const judgeRemedies = (
   findings: ReadonlyArray<RemedyFinding>,
@@ -272,55 +375,201 @@ export const judgeRemedies = (
     const messages = messageNodesOf(findings)
     const groups = groupsOf(messages)
     const derived = messages.flatMap((message) => impliedRepairsOf(message.clause))
-    const clauses = [...new Set([...groups.map((group) => group.clause), ...derived, "none"])].sort(
+    // No `none` option: a message that fits no family answers `other`, and the
+    // clause question then names the repair inside it. A non-answer is not a
+    // candidate repair, and offering it made 83 findings label themselves `none`.
+    const clauses = [...new Set([...groups.map((group) => group.clause), ...derived])].sort(
       (left, right) => left.localeCompare(right),
     )
-    const plans: Array<Plan<unknown>> = []
-    const repairs: Array<string> = []
-    const pairs: Array<{ readonly key: string }> = []
+    const limit = policy.decision.maxChoiceOptions
+    const failures: Array<AiError.AiError> = []
 
+    const familyOfAnswer = (value: unknown): string =>
+      Predicate.isString(value) && value in remedyFamilies ? value : "other"
+
+    // ROUND ONE: which family of repair? Asked of every message, and of every
+    // candidate clause, so the next round can restrict itself to the clauses
+    // belonging to the family the message named.
+    const familyPlans: Array<Plan<unknown>> = []
+    const familySubjects: Array<{ readonly kind: "message" | "clause"; readonly key: string }> = []
     for (const message of messages) {
-      const state = {
+      const atom = yield* atoms.add({
         finding: { message: message.message, help: message.help ?? "" },
-        candidates: clauses,
-      }
-      const atom = yield* atoms.add(state)
-      const findingRef = "atoms[" + atom + "].finding"
-      const decision = Decision.classify({
-        instructions: [
-          "Which repair does `" +
-            findingRef +
-            ".message` prescribe, given `" +
-            findingRef +
-            ".help`?",
-          "The candidate clauses code derived from this corpus are `atoms[" +
-            atom +
-            "].candidates`.",
-          "Choose `none` if no candidate applies.",
-          "Answer about what the message tells a reader to DO, not which rule produced it.",
-        ].join("\n"),
-        criteria: Object.fromEntries(
-          clauses.map((clause) => [
-            clause,
-            clause === "none"
-              ? "No candidate repair applies."
-              : "The message tells the reader to: " + clause,
-          ]),
-        ),
       })
-      plans.push({
+      familyPlans.push({
         ruleId: "joggle/remedies",
         subject: message.key,
         concerns: [],
         atoms: [atom],
-        decisions: { repair: decision },
+        decisions: {
+          family: Decision.classify({
+            instructions: [
+              "Which family of repair does `atoms[" +
+                atom +
+                "].finding.message` prescribe, given `atoms[" +
+                atom +
+                "].finding.help`?",
+              "Answer about what the message tells a reader to DO, not which rule produced it.",
+              "Choose `other` when no family fits; the next question then names the repair.",
+            ].join("\n"),
+            criteria: remedyFamilies,
+          }),
+        },
         read: (answers) => {
-          const answer = answers["repair"]
+          const answer = answers["family"]
           return answer !== undefined && "label" in answer ? answer.label : undefined
         },
       })
-      repairs.push(message.key)
+      familySubjects.push({ kind: "message", key: message.key })
     }
+    for (const clause of clauses) {
+      const atom = yield* atoms.add({ clause: { text: clause } })
+      familyPlans.push({
+        ruleId: "joggle/remedies",
+        subject: clause,
+        concerns: [],
+        atoms: [atom],
+        decisions: {
+          family: Decision.classify({
+            instructions: [
+              "Which family of repair is `atoms[" + atom + "].clause.text`?",
+              "The text is a candidate repair clause code derived from this corpus, not a finding.",
+              "Classify what it tells a reader to DO.",
+              "Choose `other` when no family fits.",
+            ].join("\n"),
+            criteria: remedyFamilies,
+          }),
+        },
+        read: (answers) => {
+          const answer = answers["family"]
+          return answer !== undefined && "label" in answer ? answer.label : undefined
+        },
+      })
+      familySubjects.push({ kind: "clause", key: clause })
+    }
+
+    const familyAnswers = yield* askPlans(familyPlans)
+    failures.push(...familyAnswers.failures)
+    const familyByMessage = new Map<string, string>()
+    const familyByClause = new Map<string, string>()
+    familySubjects.forEach((subject, index) => {
+      const family = familyOfAnswer(familyAnswers.values[index])
+      if (subject.kind === "message") familyByMessage.set(subject.key, family)
+      else familyByClause.set(subject.key, family)
+    })
+
+    // ROUND TWO..N: which clause? A family with more clauses than one Choice may
+    // hold is itself split into bounded groups, and the chosen group is asked
+    // again -- so no question in this run exceeds `maxChoiceOptions`, and no
+    // clause is dropped to make the count fit.
+    const clauseByMessage = new Map<string, string>()
+    interface PendingClause {
+      readonly message: MessageNode
+      readonly family: string
+      readonly candidates: ReadonlyArray<string>
+    }
+    let pending: ReadonlyArray<PendingClause> = messages.map((message) => {
+      const family = familyByMessage.get(message.key) ?? "other"
+      const inFamily = clauses.filter(
+        (clause) => (familyByClause.get(clause) ?? "other") === family,
+      )
+      // A family no clause was assigned to still needs an answer; the message's
+      // own witness clause is the one clause known to be about it.
+      return { message, family, candidates: inFamily.length === 0 ? [message.clause] : inFamily }
+    })
+    let depth = 0
+    while (pending.length > 0 && depth < 8) {
+      const plans: Array<Plan<unknown>> = []
+      const actions: Array<(value: unknown) => void> = []
+      const next: Array<PendingClause> = []
+      for (const item of pending) {
+        const finding = { message: item.message.message, help: item.message.help ?? "" }
+        if (item.candidates.length <= limit) {
+          const atom = yield* atoms.add({ finding, candidates: item.candidates })
+          plans.push({
+            ruleId: "joggle/remedies",
+            subject: item.message.key,
+            concerns: [],
+            atoms: [atom],
+            decisions: {
+              clause: Decision.classify({
+                instructions: [
+                  "Which candidate repair does `atoms[" +
+                    atom +
+                    "].finding.message` prescribe, given `atoms[" +
+                    atom +
+                    "].finding.help`?",
+                  "The candidates are `atoms[" +
+                    atom +
+                    "].candidates`, all in the repair family `" +
+                    item.family +
+                    "`.",
+                  "Answer about what the message tells a reader to DO, not which rule produced it.",
+                ].join("\n"),
+                criteria: Object.fromEntries(
+                  item.candidates.map((clause) => [
+                    clause,
+                    "The message tells the reader to: " + clause,
+                  ]),
+                ),
+              }),
+            },
+            read: (answers) => {
+              const answer = answers["clause"]
+              return answer !== undefined && "label" in answer ? answer.label : undefined
+            },
+          })
+          actions.push((value) => {
+            if (!Predicate.isString(value) || value === "") return
+            clauseByMessage.set(item.message.key, composeRemedy(item.family, value))
+          })
+          continue
+        }
+        const ranges = partitionsOf(item.candidates, limit)
+        const labels = ranges.map((_range, index) => "group " + String(index + 1))
+        const atom = yield* atoms.add({ finding, groups: ranges })
+        plans.push({
+          ruleId: "joggle/remedies",
+          subject: item.message.key,
+          concerns: [],
+          atoms: [atom],
+          decisions: {
+            group: Decision.classify({
+              instructions: [
+                "Which group of candidate repairs contains the repair `atoms[" +
+                  atom +
+                  "].finding.message` prescribes?",
+                "The groups are `atoms[" + atom + "].groups`; each lists the repairs it holds.",
+                "Answer about what the message tells a reader to DO.",
+              ].join("\n"),
+              criteria: Object.fromEntries(
+                ranges.map((range, index) => [
+                  labels[index] ?? "group",
+                  "One of these repairs: " + range.join(" | "),
+                ]),
+              ),
+            }),
+          },
+          read: (answers) => {
+            const answer = answers["group"]
+            return answer !== undefined && "label" in answer ? answer.label : undefined
+          },
+        })
+        actions.push((value) => {
+          if (!Predicate.isString(value)) return
+          const range = ranges[labels.indexOf(value)]
+          if (range !== undefined) next.push({ ...item, candidates: range })
+        })
+      }
+      const answered = yield* askPlans(plans)
+      failures.push(...answered.failures)
+      answered.values.forEach((value, index) => actions[index]?.(value))
+      pending = next
+      depth += 1
+    }
+
+    const pairs: Array<{ readonly key: string }> = []
+    const pairPlans: Array<Plan<unknown>> = []
 
     for (let left = 0; left < groups.length; left += 1) {
       for (let right = left + 1; right < groups.length; right += 1) {
@@ -335,7 +584,7 @@ export const judgeRemedies = (
         const atom = yield* atoms.add(state)
         const aRef = "atoms[" + atom + "].a"
         const bRef = "atoms[" + atom + "].b"
-        plans.push({
+        pairPlans.push({
           ruleId: "joggle/remedies",
           subject: key,
           concerns: [],
@@ -372,49 +621,24 @@ export const judgeRemedies = (
       }
     }
 
-    const read = new Map<number, unknown>()
-    const failureErrors: Array<AiError.AiError> = []
-    let offset = 0
-    for (const chunk of yield* chunkPlans(plans, policy.decision.maxRequestChars)) {
-      // A batch the provider rejects for size is halved and retried; a lone
-      // oversized question comes back as a failure rather than a witness
-      // fallback. The per-question cache means a split re-asks only what was
-      // not already answered.
-      const settled = yield* answerPlansResilient({
-        plans: chunk.plans,
-        answer: answerPlansRaw,
-      })
-      settled.answers.forEach((record, index) => {
-        // `answerPlansResilient` preserves the chunk's plan order, and the chunk
-        // came from the run's list, so the running offset is the plan's index.
-        if (record !== undefined) read.set(offset + index, chunk.plans[index]?.read(record))
-      })
-      for (const failure of settled.failures) failureErrors.push(failure.error)
-      offset += chunk.plans.length
-    }
-
-    const repairMap = new Map<string, string>()
-    repairs.forEach((key, index) => {
-      const answer = read.get(index)
-      if (Predicate.isString(answer) && answer !== "") repairMap.set(key, answer)
-    })
+    const pairAnswers = yield* askPlans(pairPlans)
+    failures.push(...pairAnswers.failures)
+    const repairMap = new Map(clauseByMessage)
     const sameMap = new Map<string, number>()
-    const pairStart = repairs.length
     pairs.forEach((pair, index) => {
-      const answer = read.get(pairStart + index)
+      const answer = pairAnswers.values[index]
       if (Predicate.isNumber(answer)) sameMap.set(pair.key, answer)
     })
-    const failures = failureErrors.map(String)
+    const failureText = failures.map(String)
     // Witness-only means the model was never reached. A size rejection is a
     // judgement that ran and failed, so it stays PARTIAL with a named reason.
     const answered = repairMap.size + sameMap.size
-    const unavailable =
-      answered === 0 && failureErrors.some(isUnreachable) ? failures[0] : undefined
+    const unavailable = answered === 0 && failures.some(isUnreachable) ? failureText[0] : undefined
     return {
       repairs: repairMap,
       same: sameMap,
       unavailable,
-      failures,
+      failures: failureText,
       questions: messages.length,
       pairs: pairs.length,
     }

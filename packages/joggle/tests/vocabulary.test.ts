@@ -2,13 +2,18 @@ import { readFileSync } from "node:fs"
 import { describe, expect, test } from "vitest"
 import { decline, declineNames, declined } from "../src/rule.ts"
 import {
+  dutyClausesOf,
+  dutyFamilies,
+  dutyFamilyVocabulary,
+  dutyVocabulary,
   duplicateVocabulary,
   nameVocabulary,
   pageDecisions,
   pageVerdictByRole,
 } from "../src/vocabulary.ts"
 
-const sourceOf = (file: string): string => readFileSync(new URL("../" + file, import.meta.url), "utf8")
+const sourceOf = (file: string): string =>
+  readFileSync(new URL("../" + file, import.meta.url), "utf8")
 
 /** The rule files that ask questions. They read their words from vocabulary.ts. */
 const RULES = ["src/rules/cluster-verdict.ts", "src/rules/naming-drift.ts"]
@@ -72,8 +77,23 @@ describe("the decline vocabulary", () => {
     }
   })
 
+  test("the duty vocabulary is split, and every duty is still reachable", () => {
+    // The measured bug: this question asked nine options in the committed ledger
+    // and twelve today. It is now a family question plus a clause question per
+    // family, every one of them under the contract's limit, with no duty dropped
+    // to make the count fit.
+    expect(Object.keys(dutyFamilyVocabulary).length).toBeLessThanOrEqual(8)
+    for (const family of Object.keys(dutyFamilies)) {
+      expect(Object.keys(dutyClausesOf(family)).length, family).toBeLessThanOrEqual(8)
+    }
+    const reachable = Object.values(dutyFamilies)
+      .flatMap((value) => value.duties)
+      .sort()
+    expect(reachable).toEqual(Object.keys(dutyVocabulary).sort())
+  })
+
   test("no rule invents a fifth name for the same idea", () => {
-    const legacy = ["not_duplication", "distinct\":", "keep_local"]
+    const legacy = ["not_duplication", 'distinct":', "keep_local"]
     for (const file of [...RULES, "src/vocabulary.ts"]) {
       const source = sourceOf(file)
       for (const name of legacy) {

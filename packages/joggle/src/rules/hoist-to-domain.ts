@@ -15,7 +15,14 @@ import {
   type Scope,
 } from "../rule.ts"
 import { classifyModules, moduleOf } from "../roles.ts"
-import { dutyVocabulary, EDGE_ROLES, edgeRolesOf, homeVocabulary } from "../vocabulary.ts"
+import {
+  dutyClausesOf,
+  dutyFamilies,
+  dutyFamilyVocabulary,
+  EDGE_ROLES,
+  edgeRolesOf,
+  homeVocabulary,
+} from "../vocabulary.ts"
 import type { Diagnostic, Drop } from "../schema.ts"
 import type { Unit, Workspace } from "../workspace.ts"
 
@@ -95,20 +102,25 @@ const candidatesIn = (workspace: Workspace, scope: Scope): ReadonlyArray<Unit> =
     //
     .sort((left, right) => left.file.localeCompare(right.file) || left.start - right.start)
 
-/** The two questions about one declaration, pointing at its atom by id. */
-const hoistReview = (id: string) => ({
-  duty: Decision.classify({
+/**
+ * The family question and the home question, once per declaration.
+ *
+ * The duty vocabulary holds twelve labels -- more than one Choice may offer --
+ * so code asks which family of work first. The duties inside that family are
+ * asked by {@link dutyClauseReview} in the SAME request: answers are
+ * independent, so the two questions need not be a round trip, and `read`
+ * composes `family: duty` the way the remedy normaliser composes its key.
+ */
+const dutyFamilyReview = (id: string) => ({
+  duty_family: Decision.classify({
     instructions: [
-      `What is \`atoms[${id}].declaration.name\` doing?`,
+      `Which family of work is \`atoms[${id}].declaration.name\` doing?`,
       `Inspect \`atoms[${id}].declaration\` and \`atoms[${id}].repository\`.`,
-      `\`atoms[${id}].repository\` describes what this codebase is trying to be. Judge what this declaration IS, not the directory it sits in: the same calculation is a domain rule in any file. A rule, an invariant or a decision about the business is \`domain_logic\` no matter which file holds it.`,
-      "Choose `request_validation` when the rule is about what the endpoint ACCEPTS -- a required field, a range, a mutual exclusion, a 400 -- rather than about the business.",
-      "Choose `input_adaptation` when its only job is to reshape input into what another layer (usually the domain's own parser) expects.",
-      "Choose `mechanical` for a cache key, an identifier or a lookup table.",
-      "Choose `infrastructure` when it takes a database handle (Knex, a transaction, a connection) or runs a query. The domain is pure by design, so moving SQL into it is the wrong repair, however much business logic the query's result carries.",
-      "Choose `orchestration` when it mostly calls other things and decides little itself.",
+      `\`atoms[${id}].repository\` describes what this codebase is trying to be. Judge what this declaration IS, not the directory it sits in: the same calculation is a domain rule in any file.`,
+      "Choose `business_rule` for a rule, an invariant or a task about the business -- including one that reads or records stored data, because the next question separates those.",
+      "Choose `none` when it is a helper with no meaning outside its immediate caller.",
     ].join("\n"),
-    criteria: dutyVocabulary,
+    criteria: dutyFamilyVocabulary,
   }),
   home: Decision.classify({
     instructions: [
@@ -120,6 +132,25 @@ const hoistReview = (id: string) => ({
   }),
 })
 
+/**
+ * The duty question, restricted to one family's clauses.
+ *
+ * Asked once per family in the same request as the family question; `read`
+ * keeps the answer for the family that was chosen and ignores the rest. Each
+ * question is under the contract's option limit, and no duty label is dropped.
+ */
+const dutyClauseReview = (id: string, family: string) => ({
+  duty: Decision.classify({
+    instructions: [
+      `What is \`atoms[${id}].declaration.name\` doing, within the family \`${family}\`?`,
+      `Inspect \`atoms[${id}].declaration\` and \`atoms[${id}].repository\`.`,
+      `Judge what this declaration IS, not the directory it sits in: the same calculation is a domain rule in any file, and a function that takes a database handle is infrastructure however much business logic its rows carry.`,
+      "Choose `request_validation` for what the endpoint ACCEPTS; `input_adaptation` when the only job is to reshape input; `mechanical` for a cache key, an identifier or a lookup table; `orchestration` when it mostly calls other things.",
+    ].join("\n"),
+    criteria: dutyClausesOf(family),
+  }),
+})
+
 export const hoistToDomain: PlannedRule = {
   id: RULE_ID,
   severity: "warn",
@@ -128,8 +159,7 @@ export const hoistToDomain: PlannedRule = {
   move: "expand",
   onUnavailable: "report",
   messages: messages({
-    rule_at_the_edge:
-      "{{name}} in {{file}} is a rule about the business, living in {{home}}.",
+    rule_at_the_edge: "{{name}} in {{file}} is a rule about the business, living in {{home}}.",
     rule_at_the_edge_help:
       "Move it into the domain package and import it from here. Business rules at the edge get re-implemented by the next caller, and the two copies then disagree. If this is deliberately local, pin the decision in the config so the question is not asked again.",
   }),
@@ -148,9 +178,12 @@ export const hoistToDomain: PlannedRule = {
       return {
         plans: [],
         read: () =>
-          outcome([], [
-            "no exported declaration was long enough to hold a business rule, so nothing was a hoist candidate",
-          ]),
+          outcome(
+            [],
+            [
+              "no exported declaration was long enough to hold a business rule, so nothing was a hoist candidate",
+            ],
+          ),
       }
     }
 
@@ -183,7 +216,9 @@ export const hoistToDomain: PlannedRule = {
         reason:
           role === undefined
             ? "the module this declaration lives in could not be classified"
-            : "this declaration is in a " + role.replace(/_/g, " ") + " module, so there is nothing to hoist it out of",
+            : "this declaration is in a " +
+              role.replace(/_/g, " ") +
+              " module, so there is nothing to hoist it out of",
       })
     }
 
@@ -200,7 +235,13 @@ export const hoistToDomain: PlannedRule = {
     }))
 
     const atoms = yield* Atoms
-    const planned: Array<{ readonly unit: Unit; readonly plan: Plan<DecisionAnswers> }> = []
+    type Question =
+      | { readonly unit: Unit; readonly kind: "family" }
+      | { readonly unit: Unit; readonly kind: "duty"; readonly family: string }
+    const planned: Array<{
+      readonly question: Question
+      readonly plan: Plan<DecisionAnswers>
+    }> = []
     for (const unit of judged) {
       const id = yield* atoms.add({
         repository: context.config.evidence?.repository ?? null,
@@ -218,94 +259,133 @@ export const hoistToDomain: PlannedRule = {
           types: unit.typeRefs,
         },
       })
+      const shared = {
+        ruleId: RULE_ID,
+        subject: label(unit),
+        concerns: [unit.file],
+        atoms: [id],
+      }
+      // The family question, once. The duty question is asked per family in the
+      // SAME request, because answers are independent and a second round trip is
+      // the only expensive thing a judgement can spend (jev rule 2).
       planned.push({
-        unit,
+        question: { unit, kind: "family" },
         plan: {
-          ruleId: RULE_ID,
-          subject: label(unit),
-          concerns: [unit.file],
-          atoms: [id],
-          violations: { duty: ["domain_logic"] },
-          decisions: hoistReview(id),
+          ...shared,
+          violations: { duty_family: ["business_rule"] },
+          decisions: dutyFamilyReview(id),
           read: (answers) => answers,
         },
       })
+      for (const family of Object.keys(dutyFamilies)) {
+        planned.push({
+          question: { unit, kind: "duty", family },
+          plan: {
+            ...shared,
+            // Only the business-rule clause can carry the finding this rule
+            // reports, so calibration sees that decision and not the four others.
+            ...(family === "business_rule" ? { violations: { duty: ["domain_logic"] } } : {}),
+            decisions: dutyClauseReview(id, family),
+            read: (answers) => answers,
+          },
+        })
+      }
     }
 
     return {
       plans: planned.map((entry) => entry.plan),
       read: (answers) => {
         const verdicts = verdictsOf<DecisionAnswers>(answers)
+        const families = new Map<Unit, string>()
+        const homes = new Map<Unit, string>()
+        const duties = new Map<
+          Unit,
+          Map<string, Decision.ClassifyAnswer<string> | Decision.RateAnswer<string>>
+        >()
+        planned.forEach((entry, index) => {
+          const answer = verdicts[index]
+          if (answer === undefined) return
+          if (entry.question.kind === "family") {
+            const family = answer["duty_family"]
+            const home = answer["home"]
+            if (family !== undefined && "label" in family) {
+              families.set(entry.question.unit, family.label)
+            }
+            if (home !== undefined && "label" in home) homes.set(entry.question.unit, home.label)
+            return
+          }
+          const duty = answer["duty"]
+          if (duty === undefined || !("label" in duty)) return
+          const byFamily = duties.get(entry.question.unit) ?? new Map()
+          byFamily.set(entry.question.family, duty)
+          duties.set(entry.question.unit, byFamily)
+        })
+
         const diagnostics: Array<Diagnostic> = []
         const drops: Array<Drop> = [...notAnEdge, ...overBudget]
-        planned.forEach((entry, index) => {
-          const unit = entry.unit
-          const answer = verdicts[index]
-          if (answer === undefined) {
+        for (const unit of judged) {
+          const family = families.get(unit)
+          const home = homes.get(unit)
+          // The answer to the family question selects which duty answer to read;
+          // the other families were asked so the request stayed single, and their
+          // answers are ignored.
+          const duty = family === undefined ? undefined : duties.get(unit)?.get(family)
+          if (family === undefined || home === undefined || duty === undefined) {
             drops.push({
               ruleId: RULE_ID,
               subject: label(unit),
               stage: "unreadable",
               reason: "the response did not classify this declaration",
             })
-            return
+            continue
           }
-          const duty = answer["duty"]
-          const home = answer["home"]
-      if (duty === undefined || !("label" in duty) || home === undefined || !("label" in home)) {
-        drops.push({
-          ruleId: RULE_ID,
-          subject: label(unit),
-          stage: "unreadable",
-          reason: "the response did not classify this declaration",
-        })
-        return
-      }
-      // A Choice that barely won is not a decision. The duplicate rules have had
-      // this gate since it was shown to withhold 11 clusters of unrelated `db*`
-      // functions; these two rules were built without it, which is how one of them
-      // produced 199 findings on a single repository. The shared gate, so the
-      // reasoning sits in one place.
-      const quality = qualityOf({
-        score: duty.probabilities["domain_logic"] ?? duty.confidence ?? 1,
-        margin: marginOfAnswer(duty),
-        confidence: duty.confidence,
-      })
-      if (quality.quality === "drop") {
-        drops.push({
-          ruleId: RULE_ID,
-          subject: label(unit),
-          stage: "gated" as const,
-          reason: quality.reason,
-        })
-        return
-      }
-      const review = quality.quality === "review"
-      if (duty.label !== "domain_logic" || declined(home.label) || home.label === "already_there") {
-        drops.push({
-          ruleId: RULE_ID,
-          subject: label(unit),
-          stage: "declined" as const,
-          reason:
-            duty.label === "domain_logic"
-              ? "the model says this is already where it belongs"
-              : "the model says this is " + duty.label,
-        })
-        return
-      }
-      diagnostics.push(
-        report({
-                  about: unit,
-                  messageId: "rule_at_the_edge",
-                  data: { name: unit.name, file: unit.file, home: (home.label ?? "").replace(/_/g, " ") },
-                  helpId: "rule_at_the_edge_help",
-                  identity: [RULE_ID, unit.file, unit.name].join("\u0000"),
-                  confidence: duty.confidence ?? 1,
-                  judged: true,
-                  severity: review ? "info" : "warn",
-                }),
-      )
-        })
+          const isDomainRule = duty.label === "domain_logic"
+          // A Choice that barely won is not a decision. The duplicate rules have
+          // had this gate since it was shown to withhold 11 clusters of unrelated
+          // `db*` functions; these two rules were built without it, which is how
+          // one of them produced 199 findings on a single repository. Only the
+          // domain clause carries the distribution this gate reads.
+          const quality = isDomainRule
+            ? qualityOf({
+                score: duty.probabilities["domain_logic"] ?? duty.confidence ?? 1,
+                margin: marginOfAnswer(duty),
+                confidence: duty.confidence,
+              })
+            : undefined
+          if (quality?.quality === "drop") {
+            drops.push({
+              ruleId: RULE_ID,
+              subject: label(unit),
+              stage: "gated" as const,
+              reason: quality.reason,
+            })
+            continue
+          }
+          const review = quality?.quality === "review"
+          if (!isDomainRule || declined(home) || home === "already_there") {
+            drops.push({
+              ruleId: RULE_ID,
+              subject: label(unit),
+              stage: "declined" as const,
+              reason: isDomainRule
+                ? "the model says this is already where it belongs"
+                : "the model says this is " + family + ": " + duty.label,
+            })
+            continue
+          }
+          diagnostics.push(
+            report({
+              about: unit,
+              messageId: "rule_at_the_edge",
+              data: { name: unit.name, file: unit.file, home: home.replace(/_/g, " ") },
+              helpId: "rule_at_the_edge_help",
+              identity: [RULE_ID, unit.file, unit.name].join("\u0000"),
+              confidence: duty.confidence ?? 1,
+              judged: true,
+              severity: review ? "info" : "warn",
+            }),
+          )
+        }
 
         return outcome(
           diagnostics,
@@ -319,5 +399,5 @@ export const hoistToDomain: PlannedRule = {
         )
       },
     }
-  })
+  }),
 }

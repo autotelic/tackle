@@ -2,16 +2,20 @@ import { Result, Schema, SchemaParser } from "effect"
 import { expect, test } from "vitest"
 import {
   clusterRemedies,
+  composeRemedy,
   FindingsPayload,
   findingsOf,
   impliedRepairsOf,
   messageKeyOf,
   pairKeyOf,
+  partitionsOf,
+  remedyFamilies,
   witnessClause,
   witnessOnlyOpinion,
   type RemedyFinding,
   type RepairOpinion,
 } from "../src/remedies.ts"
+import { policy } from "../src/policy.ts"
 
 const finding = (
   rule: string,
@@ -268,10 +272,8 @@ test("the boundary rules are three repairs the judgement finds and the witness c
   const same = representatives.flatMap((left, leftIndex) =>
     representatives.slice(leftIndex + 1).map((right) => {
       const merged =
-        (left.rule === "plumb/no-runtime-typeof" &&
-          right.rule === "plumb/no-unknown-parameters") ||
-        (left.rule === "plumb/no-unknown-parameters" &&
-          right.rule === "plumb/no-runtime-typeof")
+        (left.rule === "plumb/no-runtime-typeof" && right.rule === "plumb/no-unknown-parameters") ||
+        (left.rule === "plumb/no-unknown-parameters" && right.rule === "plumb/no-runtime-typeof")
       return [left, right, merged ? 0.92 : 0.08] as const
     }),
   )
@@ -346,4 +348,41 @@ test("a diagnosis-only message offers the repair it implies", () => {
   ])
   expect(impliedRepairsOf("Narrow with a type predicate")).toEqual([])
   expect(impliedRepairsOf("none")).toEqual([])
+})
+
+test("the repair family is one bounded question, and the clause is another", () => {
+  // The measured bug: 55 candidates in one Choice, answered 150 times. The
+  // family question is six options, so no run can exceed the contract's limit.
+  expect(Object.keys(remedyFamilies)).toEqual([
+    "parse at the boundary",
+    "narrow with a predicate",
+    "own the value type",
+    "justify the assertion",
+    "inject the dependency",
+    "other",
+  ])
+  expect(Object.keys(remedyFamilies).length).toBeLessThanOrEqual(policy.decision.maxChoiceOptions)
+  // The identity is composed, and it reads as a sentence rather than a token.
+  expect(composeRemedy("narrow with a predicate", "Narrow with discriminants/in checks")).toBe(
+    "narrow with a predicate: Narrow with discriminants/in checks",
+  )
+})
+
+test("a clause list longer than one Choice is split, not truncated", () => {
+  // The 55-clause corpus is exactly the case: each group fits one question, and
+  // the groups cover every clause in order, so choosing a group then a clause
+  // names the same repair the 55-option question would have.
+  const clauses = Array.from({ length: 55 }, (_, index) => "clause " + String(index))
+  const groups = partitionsOf(clauses, policy.decision.maxChoiceOptions)
+  expect(groups.length).toBeLessThanOrEqual(policy.decision.maxChoiceOptions)
+  for (const group of groups) {
+    expect(group.length).toBeLessThanOrEqual(policy.decision.maxChoiceOptions)
+  }
+  expect(groups.flat()).toEqual(clauses)
+  // A list that already fits is one group: no extra round trip is spent.
+  expect(partitionsOf(clauses.slice(0, 8), policy.decision.maxChoiceOptions)).toHaveLength(1)
+  // A group that is still too wide is split again by the same function.
+  const wide = partitionsOf(clauses, 4)
+  expect(wide.length).toBeLessThanOrEqual(4)
+  for (const group of wide) expect(group.length).toBeLessThan(clauses.length)
 })
