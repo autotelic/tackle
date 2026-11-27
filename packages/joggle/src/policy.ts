@@ -168,6 +168,19 @@ export const policy = {
   },
 
   /**
+   * Content-addressed identity, and the pieces a declaration is made of.
+   *
+   * `maxFragments` bounds the subtree ids one declaration contributes. It is a
+   * search bound, not a claim about structure: a Metro-map-sized function has
+   * thousands of subtrees and containment does not need all of them. When the
+   * bound cuts, `fragmentsOf` says so rather than silently returning a shorter
+   * set that looks complete.
+   */
+  identity: {
+    maxFragments: 256,
+  },
+
+  /**
    * Near-duplicate search. These bound how many pairs are offered to the model,
    * never whether a pair is duplication.
    */

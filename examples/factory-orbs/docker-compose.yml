@@ -1,0 +1,20 @@
+services:
+  factory-a:
+    build: ./runner
+    environment:
+      FACTORY_ID: factory-a
+      PORT: 4400
+    ports:
+      - "4901:4400"
+    volumes:
+      - ./worktrees/factory-a:/app
+
+  factory-b:
+    build: ./runner
+    environment:
+      FACTORY_ID: factory-b
+      PORT: 4400
+    ports:
+      - "4902:4400"
+    volumes:
+      - ./worktrees/factory-b:/app

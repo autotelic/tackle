@@ -333,11 +333,11 @@ export const visionView = (h: Html.H<Message>, model: Model) => {
       }),
       h.div.class("horizon-stack").children(
         h.div.class("horizon-layer today").children(
-          h.span.class("horizon-title").children("24 Nov 2026"),
+          h.span.class("horizon-title").children("27 Nov 2026"),
           horizonItem(h, {
             tone: "built",
             title: "main",
-            detail: "main · pnpm check · jig check · CI green",
+            detail: "room + board green · Room/RoomMachine apply tests",
           }),
           horizonItem(h, {
             tone: "built",
@@ -348,6 +348,11 @@ export const visionView = (h: Html.H<Message>, model: Model) => {
             tone: "built",
             title: "agentOS",
             detail: "embedded VM · own filesystem/process · no Rivet credentials",
+          }),
+          horizonItem(h, {
+            tone: "built",
+            title: "Alchemy inventory",
+            detail: "Worker + Room DO · Tackle.Room / RoomMachine · plan + apply tests",
           }),
           horizonItem(h, {
             tone: "missing",
@@ -361,13 +366,13 @@ export const visionView = (h: Html.H<Message>, model: Model) => {
       sceneHeader(h, {
         title: "The factory is a place",
         caption:
-          "board is the control plane. room is the bench. protocol is the floor they stand on.",
+          "board is the control plane. Alchemy is the inventory. room is the bench. protocol is the floor they stand on.",
       }),
       h.div.class("shop-floor").children(
         machine(h, { title: "you + Pi", detail: "Herdr terminal", zone: "human-zone" }),
         machine(h, {
           title: "board",
-          detail: "factory kernel · daemon · queue · relay",
+          detail: "factory kernel · daemon · queue · Alchemy stack",
           zone: "board-zone",
         }),
         h.div
@@ -390,26 +395,26 @@ export const visionView = (h: Html.H<Message>, model: Model) => {
     ),
     h.section.class("vision-scene substrate-scene").children(
       sceneHeader(h, {
-        title: "Alchemy is the substrate seam",
+        title: "Alchemy declares the inventory",
         caption:
-          "Adopted and runnable: alchemy plan resolves the declaration locally. The same desired state can point at this tailnet, a Fly app, or another provider later.",
+          "Alchemy owns what must exist. Room owns the record and its runtime. agentOS owns the machine. The same desired state can point at this tailnet, a Fly app, or another provider later.",
       }),
       h.div.class("substrate-map").children(
         h.div.class("substrate-local").children(
           h.span.class("zone-label local-label").children("TODAY · TAILNET"),
           machine(h, {
             title: "Board",
-            detail: "factory kernel · daemon · presence",
+            detail: "Worker · Room Durable Objects",
             zone: "local-node",
           }),
           machine(h, {
             title: "Room",
-            detail: "worktree · process · port · service",
+            detail: "Tackle.Room · worktree · room.json",
             zone: "local-node",
           }),
           machine(h, {
-            title: "Mailbox",
-            detail: "local · E2EE · turn log",
+            title: "RoomMachine",
+            detail: "VM supervisor · start / read / stop",
             zone: "local-node",
           }),
         ),
@@ -419,8 +424,9 @@ export const visionView = (h: Html.H<Message>, model: Model) => {
             h.span.class("zone-label").children("ALCHEMY"),
             h.span.class("substrate-title").children("desired state"),
             h.span.class("substrate-detail").children("providers, not a place"),
-            h.span.class("provider-chip").children("tailnet"),
-            h.span.class("provider-chip").children("Fly"),
+            h.span.class("provider-chip").children("Stack"),
+            h.span.class("provider-chip").children("Room"),
+            h.span.class("provider-chip").children("RoomMachine"),
             h.span.class("provider-chip").children("Cloudflare"),
           ),
         h.div.class("substrate-later").children(
@@ -441,14 +447,44 @@ export const visionView = (h: Html.H<Message>, model: Model) => {
       h.div
         .class("substrate-note")
         .children(
-          "Alchemy is already a board dependency and a real stack declaration. No cloud migration yet: the local shop remains the running provider, and the mailbox/execution plane stay private.",
+          "The board stack plans the Worker and Room Durable Objects. Tackle.Room and Tackle.RoomMachine are a library: a stack composes them when it has a real room. A room's worktree is retained on delete; a machine's supervisor is stopped. No cloud migration yet.",
         ),
+    ),
+    h.section.class("vision-scene").children(
+      sceneHeader(h, {
+        title: "How to observe the inventory",
+        caption:
+          "Three different facts, three different readings. Do not use one as proof of another.",
+      }),
+      h.div.class("horizon-stack").children(
+        h.div.class("horizon-layer today").children(
+          h.span.class("horizon-title").children("live / planned / proven"),
+          horizonItem(h, {
+            tone: "built",
+            title: "/factory · Room inventory",
+            detail:
+              "room.json state + process, and the VM supervisor record; the Environment line names runtime, port and service",
+          }),
+          horizonItem(h, {
+            tone: "built",
+            title: "alchemy plan",
+            detail:
+              "the stack graph: BoardWorker + Room Durable Objects; compose Tackle.Room / RoomMachine for a real room",
+          }),
+          horizonItem(h, {
+            tone: "built",
+            title: "board tests",
+            detail:
+              "alchemy-room-plan proves the graph; alchemy-room-apply creates a scratch room/worktree and starts the supervisor",
+          }),
+        ),
+      ),
     ),
     h.section.class("vision-scene network-scene").children(
       sceneHeader(h, {
         title: "The tailnet is the intranet",
         caption:
-          "The rack the loop is designed around. Live sessions and services are on /factory; this map does not invent them.",
+          "A static sketch of the rack the loop is designed around. Live sessions and services are on /factory; the machine names here are examples, not a presence read.",
       }),
       tailnetMap(h, model.visionMachine ?? "mbp1"),
     ),
@@ -484,7 +520,8 @@ export const visionView = (h: Html.H<Message>, model: Model) => {
     h.section.class("vision-scene shakti-scene").children(
       sceneHeader(h, {
         title: "Two Shakti apps on the tailnet",
-        caption: "the tabs are real; the rooms isolate the checkout, not the host",
+        caption:
+          "the tabs are real local rooms; they isolate the checkout, not the host. The agentOS room machine is the built path to the stronger wall.",
       }),
       h.div
         .class("browser")
@@ -520,19 +557,19 @@ export const visionView = (h: Html.H<Message>, model: Model) => {
         h.div.class("room-row").children(
           room(h, {
             title: "room A",
-            detail: "worktree · :4400 · web",
+            detail: "local worktree · :4400 · web",
             active: focus === "permissions",
           }),
           room(h, {
             title: "room B",
-            detail: "worktree · :4401 · web",
+            detail: "local worktree · :4401 · web",
             active: focus === "enterprise",
           }),
         ),
         h.div
           .class("isolation-warning")
           .children(
-            "Local rooms isolate worktrees, branches, ports, services, and previews. They do not isolate the OS: both still share the host filesystem, network namespace, and processes. The agentOS provider is the prototype for that wall.",
+            "These two are local rooms: they isolate worktrees, branches, ports, services, and previews, but not the OS. Both still share the host filesystem, network namespace, and processes. Tackle.RoomMachine is now built: an agentOS VM room gets its own filesystem and process table. The warning still applies to these two previews because they are the local path, not the VM path.",
           ),
       ),
     ),
@@ -579,7 +616,7 @@ export const visionView = (h: Html.H<Message>, model: Model) => {
           horizonItem(h, {
             tone: "built",
             title: "Alchemy",
-            detail: "adopted · board dependency · alchemy plan resolves",
+            detail: "Worker + Room DO · Tackle.Room / RoomMachine · plan + apply tests",
           }),
           horizonItem(h, {
             tone: "built",
@@ -729,6 +766,17 @@ export const visionView = (h: Html.H<Message>, model: Model) => {
             title: "room",
             detail: "one service · one port · one preview · isolated checkout",
           }),
+          horizonItem(h, {
+            tone: "built",
+            title: "Alchemy inventory",
+            detail: "Room + RoomMachine declarations · plan and apply tested",
+          }),
+          horizonItem(h, {
+            tone: "built",
+            title: "agentOS preview bridge",
+            detail:
+              "board /preview → supervisor vmHttp → guest service; 0.4.9 has no network.preview",
+          }),
         ),
         h.div.class("horizon-layer next").children(
           h.span.class("horizon-title").children("next"),
@@ -736,11 +784,6 @@ export const visionView = (h: Html.H<Message>, model: Model) => {
             tone: "built",
             title: "agentOS provider",
             detail: "embedded VM per room · separate filesystem and process",
-          }),
-          horizonItem(h, {
-            tone: "missing",
-            title: "agentOS preview bridge",
-            detail: "next: board route → VM network.preview; host ports until then",
           }),
           horizonItem(h, {
             tone: "missing",

@@ -61,6 +61,7 @@ import {
 } from "./workspace.ts"
 import type { ChangedSet } from "./git.ts"
 import { contentMappersOf } from "./content-mappers.ts"
+import { identityKeysOf } from "./identity.ts"
 import { looksLikeSource } from "./source.ts"
 import type { ImportGraph } from "./imports.ts"
 
@@ -625,6 +626,9 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
       manifest,
       maxMembers: policy.typeFacts.maxMembers,
       maxStrings: policy.typeFacts.maxStrings,
+      // A type reference becomes the target declaration's content id, so the
+      // canonical id dies on a real change to the target, not on its rename.
+      identity: identityKeysOf({ workspace, root: options.cwd }),
       requests: workspace.units.map((unit) => ({ file: unit.file, position: unit.namePosition })),
     })
     for (const issue of declarations.issues) typeIssues.push(issue)

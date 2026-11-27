@@ -18,7 +18,7 @@ import { alive } from "@autotelic/room/run"
 import { listRooms } from "@autotelic/room/store"
 import { readRun, startRoomRun } from "@autotelic/room/run"
 import { observeService } from "@autotelic/room/Service"
-import { observeVmService, vmHttp, vmSocketFile } from "@autotelic/room/VmSupervisor"
+import { observeVmService, readVmStatus, vmHttp, vmSocketFile } from "@autotelic/room/VmSupervisor"
 import { activityOf } from "./factory/activity.ts"
 import { answerDesk, listDesk } from "./factory/desk.ts"
 import { listReports } from "./factory/report.ts"
@@ -196,6 +196,7 @@ const observe = async (root: string) => {
     rooms.map(async (room) => ({
       room,
       run: await readRun({ root, id: room.id }),
+      vm: await readVmStatus({ root, id: room.id }),
       worktree: await canonicalOf(join(root, room.id, "worktree")),
     })),
   )
@@ -299,10 +300,14 @@ const observe = async (root: string) => {
       desk: await listDesk(),
       reports: await listReports(),
     },
-    rooms: roomFacts.map(({ room, run }) => ({
+    rooms: roomFacts.map(({ room, run, vm }) => ({
       id: room.id,
       state: room.state._tag,
+      runtime: room.runtime?.kind,
+      // The room process and the VM supervisor are different processes with different jobs;
+      // serving both lets the view say which one is actually running.
       process: run === undefined ? null : { pid: run.pid, alive: alive(run.pid), exec: run.exec },
+      vm: { state: vm.state, ...(vm.run === undefined ? {} : { pid: vm.run.pid }) },
     })),
   }
 }

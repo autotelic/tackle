@@ -2,12 +2,14 @@ import { Effect, FileSystem, Path, Predicate, Result, Schema, SchemaParser } fro
 import { resolve } from "node:path"
 import {
   API,
-  SignatureKind,
   TypeFlags,
   type Project,
+  type Symbol as CheckerSymbol,
   type Type,
 } from "@typescript/native/unstable/async"
+import type { IdentityKeys } from "./identity.ts"
 import { shortHash } from "./state.ts"
+import { typeIdOf } from "./typeid.ts"
 
 /**
  * The checker's answer about a declaration, by file and byte offset.
@@ -124,10 +126,7 @@ export const typesAtPositions = async (input: NodeTypeQuery): Promise<NodeTypeRe
       const type =
         project === undefined
           ? undefined
-          : await project.checker.getTypeAtPosition(
-              resolve(input.cwd, request.file),
-              request.position,
-            )
+          : await project.checker.getTypeAtPosition(resolve(input.cwd, request.file), request.position)
       if (project === undefined || type === undefined) {
         unresolved += 1
         continue
@@ -183,18 +182,16 @@ export const ResolvedType = Schema.Struct({
   /** Member-sorted `name:type` fingerprint, complete only when not truncated. */
   structural: Schema.String,
   /**
-   * A recursive, parameter-position id: the cheap pre-filter for type identity.
+   * The checker's type graph, canonically encoded and hashed by the identity pass.
    *
-   * `structural` is the checker's printed member types, so two declarations that
-   * expand through different aliases can print differently while being one shape.
-   * The canonical id resolves each member to its own canonical id, sorts by name,
-   * replaces type parameters by their debruijn position, marks a cycle rather than
-   * following it, and folds truncation into the hash.
-   *
-   * It is a PRE-FILTER, not the oracle: `identicalGroup` remains the authoritative
-   * proof, because two types can hash alike where mutual assignability fails. The
-   * canonical id is what makes the cheap comparison possible; the checker is what
-   * makes it true. Neither replaces the other.
+   * `structural` is a fingerprint of printed member types; it is a useful
+   * summary but its parts are text. `canonical` walks the Type objects instead:
+   * union members are sorted by their own ids, bound type parameters become
+   * de Bruijn positions, and a referenced declaration becomes its content id.
+   * It is cheap, structural and total -- every type gets an id, including an
+   * error. It is not an assignability oracle: `identicalGroup` remains the
+   * authoritative answer from the checker, and the two are deliberately kept
+   * beside each other rather than made to replace one another.
    */
   canonical: Schema.String,
   /** The checker's own vocabulary: `Object`, `Union`, `Any`, `Conditional`, ... */
@@ -237,6 +234,12 @@ export interface DeclarationResult {
 
 export interface DeclarationQuery extends ProjectSource {
   readonly requests: ReadonlyArray<DeclarationRequest>
+  /**
+   * Content ids from the identity pass, used for the declarations this run asks
+   * about and for the declarations their types reference. Omitted means the
+   * canonical id falls back to structural/named markers, never to a file path.
+   */
+  readonly identity?: IdentityKeys | undefined
   /** Members printed per declaration. Past this the fingerprint is partial. */
   readonly maxMembers: number
   /** Total `typeToString` calls for the run, which is the expensive part. */
@@ -314,187 +317,6 @@ const contentful = (facts: ResolvedType): boolean =>
   !facts.flags.includes("Unknown") &&
   (facts.members.length > 0 || facts.variants.length >= 2)
 
-/*
- * Canonical type identity.
- *
- * The id is built recursively rather than printed: each member resolves to its
- * own id, members sort by name, and the result is hashed with the type's flags.
- * Type parameters become their position, so `Box<A>` and `Holder<T>` with the
- * same shape compare equal despite the parameter's name. A type already on the
- * stack is marked `cycle` instead of followed forever. Every partial list carries
- * a truncation marker into its hash, so a truncated type can never collide with a
- * complete one.
- *
- * This is deliberately cheap and deliberately not authoritative. `identicalGroup`
- * is still the checker's mutual-assignability proof; this id only narrows what
- * has to be asked of the checker.
- */
-
-interface CanonicalNode {
-  readonly id: string
-  readonly truncated: boolean
-}
-
-interface CanonicalContext {
-  readonly checker: Project["checker"]
-  readonly maxMembers: number
-  readonly parameters: ReadonlyMap<number, string>
-  readonly visiting: Set<number>
-  readonly nodes: { count: number }
-}
-
-/** A node budget for one declaration: enough for real types, not for a runaway. */
-const CANONICAL_NODES = 2000
-const CANONICAL_DEPTH = 64
-
-const canonicalHash = (payload: string): string => "c" + shortHash(payload)
-
-/** The debruijn positions of the root type's own parameters. */
-const parameterPositionsOf = async (type: Type): Promise<Map<number, string>> => {
-  const positions = new Map<number, string>()
-  const add = (parameters: ReadonlyArray<Type>): void => {
-    for (const parameter of parameters) {
-      if (!parameter.isTypeParameter() || positions.has(parameter.id)) continue
-      positions.set(parameter.id, String(positions.size))
-    }
-  }
-  if (type.isClassOrInterface()) add(await type.getTypeParameters())
-  // A generic type alias is an object or union rather than an interface, so its
-  // parameters arrive through the alias arguments instead.
-  add(await type.getAliasTypeArguments())
-  return positions
-}
-
-const canonicalOf = async (
-  type: Type,
-  context: CanonicalContext,
-  depth: number,
-): Promise<CanonicalNode> => {
-  context.nodes.count += 1
-  if (context.nodes.count > CANONICAL_NODES) return { id: "budget", truncated: true }
-  if (depth > CANONICAL_DEPTH) return { id: "depth", truncated: true }
-  if (context.visiting.has(type.id)) return { id: "cycle", truncated: false }
-
-  if (type.isTypeParameter()) {
-    const position = context.parameters.get(type.id)
-    return { id: position === undefined ? "param:free" : "param:" + position, truncated: false }
-  }
-
-  if (type.isUnionType() || type.isIntersectionType()) {
-    context.visiting.add(type.id)
-    const parts = await type.getTypes()
-    const children = await Promise.all(parts.map((part) => canonicalOf(part, context, depth + 1)))
-    context.visiting.delete(type.id)
-    const truncated = children.some((child) => child.truncated)
-    const sorted = children
-      .map((child) => child.id)
-      .sort((left, right) => left.localeCompare(right))
-    const kind = type.isUnionType() ? "union" : "intersection"
-    return {
-      id: canonicalHash(kind + "{" + sorted.join("|") + "}" + (truncated ? "|truncated" : "")),
-      truncated,
-    }
-  }
-
-  const tuple = await context.checker.isTupleType(type)
-  const array = !tuple && (await context.checker.isArrayType(type))
-  if (tuple || array) {
-    context.visiting.add(type.id)
-    const args = type.isTypeReference() ? await context.checker.getTypeArguments(type) : []
-    const children = await Promise.all(args.map((arg) => canonicalOf(arg, context, depth + 1)))
-    context.visiting.delete(type.id)
-    const truncated = children.some((child) => child.truncated)
-    return {
-      id: canonicalHash(
-        (tuple ? "tuple" : "array") +
-          "<" +
-          children.map((child) => child.id).join(",") +
-          ">" +
-          (truncated ? "|truncated" : ""),
-      ),
-      truncated,
-    }
-  }
-
-  if (type.isLiteralType()) return { id: "literal:" + String(type.value), truncated: false }
-  if (type.isIntrinsicType()) return { id: "intrinsic:" + type.intrinsicName, truncated: false }
-
-  if (type.isObjectType()) {
-    context.visiting.add(type.id)
-    const symbols = await context.checker.getPropertiesOfType(type)
-    const kept = symbols.slice(0, context.maxMembers)
-    let truncated = symbols.length > kept.length
-    const memberTypes = await context.checker.getTypeOfSymbol(kept)
-    const rows: Array<string> = []
-    for (const [index, symbol] of kept.entries()) {
-      const memberType = memberTypes[index]
-      if (memberType === undefined) {
-        truncated = true
-        continue
-      }
-      const child = await canonicalOf(memberType, context, depth + 1)
-      if (child.truncated) truncated = true
-      rows.push(symbol.name + ":" + child.id)
-    }
-    rows.sort((left, right) => left.localeCompare(right))
-
-    // A function type has call signatures rather than properties. Without them
-    // every function would share the empty-object id and the pre-filter would
-    // admit everything.
-    const signatures = await context.checker.getSignaturesOfType(type, SignatureKind.Call)
-    const calls: Array<string> = []
-    for (const signature of signatures.slice(0, context.maxMembers)) {
-      const signatureParameters = await signature.getTypeParameters()
-      const parameters = new Map(context.parameters)
-      signatureParameters.forEach((parameter, index) =>
-        parameters.set(parameter.id, "sig:" + index),
-      )
-      const signatureContext: CanonicalContext = {
-        checker: context.checker,
-        maxMembers: context.maxMembers,
-        parameters,
-        visiting: context.visiting,
-        nodes: context.nodes,
-      }
-      const symbols = await signature.getParameters()
-      const types = await context.checker.getTypeOfSymbol(symbols)
-      const argumentsIds: Array<string> = []
-      for (const parameterType of types) {
-        if (parameterType === undefined) {
-          truncated = true
-          argumentsIds.push("unknown")
-          continue
-        }
-        const child = await canonicalOf(parameterType, signatureContext, depth + 1)
-        if (child.truncated) truncated = true
-        argumentsIds.push(child.id)
-      }
-      const returned = await context.checker.getReturnTypeOfSignature(signature)
-      const returnId =
-        returned === undefined
-          ? "unknown"
-          : (await canonicalOf(returned, signatureContext, depth + 1)).id
-      calls.push("(" + argumentsIds.join(",") + ")->" + returnId)
-    }
-    calls.sort((left, right) => left.localeCompare(right))
-    context.visiting.delete(type.id)
-
-    const flags = labelsOf(type.flags)
-    const payload =
-      "object{" +
-      rows.join(";") +
-      "}|flags:" +
-      flags.join(",") +
-      "|calls:" +
-      calls.join("|") +
-      (truncated ? "|truncated" : "")
-    return { id: canonicalHash(payload), truncated }
-  }
-
-  const flags = labelsOf(type.flags)
-  return { id: canonicalHash("opaque:" + flags.join(",")), truncated: false }
-}
-
 /** The facts of one declaration, with the group it was later placed in. */
 const withGroup = (facts: ResolvedType, identicalGroup: string | undefined): ResolvedType => ({
   display: facts.display,
@@ -510,12 +332,32 @@ const withGroup = (facts: ResolvedType, identicalGroup: string | undefined): Res
   truncated: facts.truncated,
 })
 
+/** The content id of the declaration a checker symbol names, when the pass has one. */
+const identityOfSymbol = async ({
+  symbol,
+  identity,
+  cwd,
+}: {
+  readonly symbol: CheckerSymbol
+  readonly identity: IdentityKeys | undefined
+  readonly cwd: string
+}): Promise<string | undefined> => {
+  if (identity === undefined) return undefined
+  for (const declaration of symbol.declarations) {
+    const key = resolve(cwd, String(declaration.path)) + "\u0000" + symbol.name
+    const id = identity.byName.get(key) ?? identity.byNameLower.get(key.toLowerCase())
+    if (id !== undefined) return id
+  }
+  return undefined
+}
+
 /** One declaration, described. */
 const describe = async (
   checker: Project["checker"],
   type: Type,
   budget: { strings: number; maxStrings: number },
   maxMembers: number,
+  canonical: string,
 ): Promise<ResolvedType> => {
   const printed = async (value: Type): Promise<string | undefined> => {
     if (budget.strings >= budget.maxStrings) return undefined
@@ -591,22 +433,10 @@ const describe = async (
     }
   }
 
-  const canonical = await canonicalOf(
-    type,
-    {
-      checker,
-      maxMembers,
-      parameters: await parameterPositionsOf(type),
-      visiting: new Set<number>(),
-      nodes: { count: 0 },
-    },
-    0,
-  )
-
   return {
     display,
     structural: structuralOf({ flags, display, members, variants, value: literalValue }),
-    canonical: canonical.id,
+    canonical,
     flags,
     members,
     variants,
@@ -663,11 +493,20 @@ export const resolveDeclarations = async (input: DeclarationQuery): Promise<Decl
           unresolved += 1
           continue
         }
+        const canonical = await typeIdOf({
+          checker: project.checker,
+          type,
+          declarationId: input.identity?.byPosition.get(
+            resolve(input.cwd, request.file) + "\u0000" + String(request.position),
+          ),
+          declarationIdOf: (symbol) =>
+            identityOfSymbol({ symbol, identity: input.identity, cwd: input.cwd }),
+        })
         described.push({
           request,
           checker: project.checker,
           type,
-          facts: await describe(project.checker, type, budget, input.maxMembers),
+          facts: await describe(project.checker, type, budget, input.maxMembers, canonical),
         })
       }
     }
@@ -743,6 +582,7 @@ export const declarationKey = (file: string, position: number): string =>
 
 export interface DeclarationTypesRequest {
   readonly root: string
+  readonly identity?: IdentityKeys | undefined
   /** The project's tsconfig, relative to the root. */
   readonly tsconfig: string
   readonly cacheDir: string
@@ -819,6 +659,7 @@ export const loadDeclarationTypes = (
         cwd: input.root,
         tsconfig: input.tsconfig,
         requests: input.requests,
+        identity: input.identity,
         maxMembers: input.maxMembers,
         maxStrings: input.maxStrings,
       }),
@@ -848,10 +689,7 @@ export const loadDeclarationTypes = (
           facts: entry.facts,
         })),
       })
-      yield* Effect.orElseSucceed(
-        fs.makeDirectory(input.cacheDir, { recursive: true }),
-        () => undefined,
-      )
+      yield* Effect.orElseSucceed(fs.makeDirectory(input.cacheDir, { recursive: true }), () => undefined)
       yield* Effect.orElseSucceed(fs.writeFileString(store, body), () => undefined)
     }
     return {

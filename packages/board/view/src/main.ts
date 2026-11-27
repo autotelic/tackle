@@ -13,6 +13,7 @@ import {
   Fleet,
   Presence,
   Report,
+  type Room,
   Session,
   SessionSource,
   type Tailnet,
@@ -1069,6 +1070,62 @@ const peerSection = (h: Html.H<Message>, fleet: Fleet | null | undefined) => {
   )
 }
 
+/**
+ * The room inventory the board serves under /presence.rooms.
+ *
+ * It is the observation surface for the rooms Alchemy can declare: the aggregate state and the
+ * process the room owns, read from room.json and the run record. It does not invent a VM state;
+ * the Environment line on a card names the runtime the board actually observed.
+ */
+const roomInventory = (h: Html.H<Message>, rooms: ReadonlyArray<Room>) => {
+  const supervisors = rooms.filter((room) => room.vm?.state === "running").length
+  return card(h, {
+    title: "Room inventory",
+    id: "rooms",
+    children: [
+      h.p
+        .class("muted")
+        .children(
+          rooms.length +
+            (rooms.length === 1 ? " room" : " rooms") +
+            " · " +
+            supervisors +
+            (supervisors === 1 ? " supervisor running" : " supervisors running") +
+            " · read from room.json and each VM record",
+        ),
+      ...rooms.map((room) =>
+        h.div
+          .class("package-meta")
+          .children(
+            h.span.class("mono").children(room.id),
+            h.span.class("chip").children(room.state),
+            room.runtime === undefined ? undefined : h.span.class("mono").children(room.runtime),
+            room.vm === null || room.vm === undefined
+              ? undefined
+              : h.span
+                  .class("mono")
+                  .children(
+                    "vm " +
+                      room.vm.state +
+                      (room.vm.pid === undefined ? "" : " · pid " + room.vm.pid),
+                  ),
+            room.process === null
+              ? h.span.class("muted").children("no process")
+              : h.span
+                  .class("mono")
+                  .children(
+                    "process " +
+                      room.process.pid +
+                      " · " +
+                      (room.process.alive ? "alive" : "dead") +
+                      (room.process.exec === undefined ? "" : " · " + room.process.exec),
+                  ),
+          ),
+      ),
+    ],
+  })
+}
+
 const factoryPulse = (h: Html.H<Message>, presence: NonNullable<Model["presence"]>) => {
   const activities = presence.factory.activity
   const count = (state: typeof Activity.Type.state): number =>
@@ -1122,6 +1179,9 @@ const factoryView = (h: Html.H<Message>, model: Model) => {
       : h.p.class("error").children("Could not read /presence: " + model.error),
     model.notice === null ? undefined : h.p.class("notice").children(model.notice),
     presence === null ? undefined : factoryPulse(h, presence),
+    presence === null || presence.rooms === undefined || presence.rooms.length === 0
+      ? undefined
+      : roomInventory(h, presence.rooms),
     presence === null || (presence.factory.workstreamIssues ?? []).length === 0
       ? undefined
       : card(h, {

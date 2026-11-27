@@ -490,7 +490,8 @@ export const isRecord = (value: unknown): value is Record<string, unknown> =>
 export const testOrFixturePath: Predicate.Predicate<string> = (file) =>
   /\/(?:tests?|__tests__|fixtures?)\//u.test("/" + file)
 
-interface IdentifierSite {
+/** One identifier occurrence, classified by what its position means. */
+export interface IdentifierSite {
   readonly start: number
   readonly end: number
   readonly name: string
@@ -563,7 +564,7 @@ const identifierOffsets = (root: unknown): ReadonlyArray<number> => {
  * generic type-parameter *declarations* (which are local bindings, so `f<T>`
  * and `g<U>` still compare equal). Everything else is a local name.
  */
-const collectIdentifiers = (root: unknown): ReadonlyArray<IdentifierSite> => {
+export const collectIdentifiers = (root: unknown): ReadonlyArray<IdentifierSite> => {
   const found: Array<{ start: number; end: number; name: string }> = []
   const properties = new Set<number>()
   const types = new Set<number>()
@@ -706,7 +707,8 @@ const locate = (starts: ReadonlyArray<number>, offset: number): { line: number; 
 /* Extraction                                                                  */
 /* -------------------------------------------------------------------------- */
 
-type Lang = "js" | "jsx" | "ts" | "tsx"
+/** The parser dialect for a file extension. */
+export type Lang = "js" | "jsx" | "ts" | "tsx"
 
 /**
  * The language of a file, from its extension.
@@ -717,7 +719,7 @@ type Lang = "js" | "jsx" | "ts" | "tsx"
  * word -- see `parseSourceFile`, which gives a `.js` file a second reading as
  * JSX when the first one reports errors, rather than guessing from the contents.
  */
-const langOf = (file: string): Lang => {
+export const langOf = (file: string): Lang => {
   const dot = file.lastIndexOf(".")
   const extension = dot < 0 ? "" : file.slice(dot)
   switch (extension) {
