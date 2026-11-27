@@ -9,12 +9,7 @@ import { fileURLToPath } from "node:url"
 import { alive } from "./run.ts"
 import type { ServiceDeclaration, ServiceObservation } from "./Service.ts"
 import { roomDir } from "./store.ts"
-import {
-  snapshotFile,
-  snapshotMaxBytes,
-  type VmSnapshot,
-  type VmSnapshotOutcome,
-} from "./VmSnapshot.ts"
+import { snapshotFile, snapshotMaxBytes, type VmSnapshotOutcome } from "./VmSnapshot.ts"
 
 /*
  * One room's VM supervisor: a detached process that owns the room's agentOS instance and
