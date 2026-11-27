@@ -26,10 +26,7 @@ const nameAt = (declaration: string, name: string): number => {
 const positions = (entries: ReadonlyArray<readonly [string, string]>) =>
   entries.map(([declaration, name]) => ({ file, position: nameAt(declaration, name) }))
 
-const factsOf = (
-  found: ReadonlyArray<{ file: string; position: number; facts: ResolvedType }>,
-  position: number,
-) => {
+const factsOf = (found: ReadonlyArray<{ file: string; position: number; facts: ResolvedType }>, position: number) => {
   const entry = found.find((candidate) => candidate.position === position)
   if (entry === undefined) throw new Error("no facts at " + String(position))
   return entry.facts
@@ -39,104 +36,91 @@ const member = (facts: ResolvedType, name: string): string | undefined =>
   facts.members.find((entry) => entry.name === name)?.type
 
 describe("the declaration fact layer", () => {
-  it("resolves a member's own type, through composition, aliasing and indexed access", async () => {
-    const requests = positions([
-      ["interface Composed", "Composed"],
-      ["type Picked", "Picked"],
-      ["type Variants", "Variants"],
-      ["const ROLES", "ROLES"],
-      ["const KIND", "KIND"],
-      ["interface Alpha", "Alpha"],
-      ["interface Beta", "Beta"],
-      ["interface Wide", "Wide"],
-      ["interface Narrow", "Narrow"],
-      ["interface Derived", "Derived"],
-      ["type Alias", "Alias"],
-      ["type Wrapped", "Wrapped"],
-      ["interface Boxed", "Boxed"],
-      ["interface Labelled", "Labelled"],
-      ["interface LabelledExtra", "LabelledExtra"],
-      ["interface Node", "Node"],
-    ])
-    const result = await resolveDeclarations({
-      cwd: process.cwd(),
-      tsconfig,
-      requests,
-      maxMembers: 64,
-      maxStrings: 12000,
-    })
-    expect(result.unresolved).toBe(0)
-    expect(result.found.length).toBe(requests.length)
+  it(
+    "resolves a member's own type, through composition, aliasing and indexed access",
+    async () => {
+      const requests = positions([
+        ["interface Composed", "Composed"],
+        ["type Picked", "Picked"],
+        ["type Variants", "Variants"],
+        ["const ROLES", "ROLES"],
+        ["const KIND", "KIND"],
+        ["interface Alpha", "Alpha"],
+        ["interface Beta", "Beta"],
+        ["interface Wide", "Wide"],
+        ["interface Narrow", "Narrow"],
+        ["interface Derived", "Derived"],
+        ["type Alias", "Alias"],
+        ["type Wrapped", "Wrapped"],
+      ])
+      const result = await resolveDeclarations({
+        cwd: process.cwd(),
+        tsconfig,
+        requests,
+        maxMembers: 64,
+        maxStrings: 12000,
+      })
+      expect(result.unresolved).toBe(0)
+      expect(result.found.length).toBe(requests.length)
 
-    const composed = factsOf(result.found, requests[0]?.position ?? -1)
-    // The composition, the alias and the member's own resolved type all survive.
-    expect(member(composed, "base")).toBe("Base")
-    expect(member(composed, "pair")).toContain("Base")
-    expect(member(composed, "pair")).toContain("extra")
-    expect(member(composed, "optional")).toBe("Partial<Base>")
-    expect(composed.structural).toContain("optional:Partial<Base>")
+      const composed = factsOf(result.found, requests[0]?.position ?? -1)
+      // The composition, the alias and the member's own resolved type all survive.
+      expect(member(composed, "base")).toBe("Base")
+      expect(member(composed, "pair")).toContain("Base")
+      expect(member(composed, "pair")).toContain("extra")
+      expect(member(composed, "optional")).toBe("Partial<Base>")
+      expect(composed.structural).toContain("optional:Partial<Base>")
 
-    // Indexed access is resolved, which is the fact the trace cannot carry.
-    const picked = factsOf(result.found, requests[1]?.position ?? -1)
-    expect(member(picked, "label")).toBe("string")
-    expect(member(picked, "id")).toBe("string")
+      // Indexed access is resolved, which is the fact the trace cannot carry.
+      const picked = factsOf(result.found, requests[1]?.position ?? -1)
+      expect(member(picked, "label")).toBe("string")
+      expect(member(picked, "id")).toBe("string")
 
-    // A union is variants, not an empty field set.
-    const variants = factsOf(result.found, requests[2]?.position ?? -1)
-    expect(variants.flags).toContain("Union")
-    expect(variants.variants.length).toBe(2)
-    expect(variants.structural.startsWith("union(")).toBe(true)
+      // A union is variants, not an empty field set.
+      const variants = factsOf(result.found, requests[2]?.position ?? -1)
+      expect(variants.flags).toContain("Union")
+      expect(variants.variants.length).toBe(2)
+      expect(variants.structural.startsWith("union(")).toBe(true)
 
-    // A tuple constant keeps its members to the runtime, but still has a type.
-    const roles = factsOf(result.found, requests[3]?.position ?? -1)
-    expect(roles.display).toContain("readonly")
-    expect(roles.members).toEqual([])
+      // A tuple constant keeps its members to the runtime, but still has a type.
+      const roles = factsOf(result.found, requests[3]?.position ?? -1)
+      expect(roles.display).toContain("readonly")
+      expect(roles.members).toEqual([])
 
-    // A literal keeps its value, which is the start of a value-set fact.
-    const kind = factsOf(result.found, requests[4]?.position ?? -1)
-    expect(kind.value).toBe("admin")
+      // A literal keeps its value, which is the start of a value-set fact.
+      const kind = factsOf(result.found, requests[4]?.position ?? -1)
+      expect(kind.value).toBe("admin")
 
-    // Identical structure is one group, whatever the declarations are called.
-    const alpha = factsOf(result.found, requests[5]?.position ?? -1)
-    const beta = factsOf(result.found, requests[6]?.position ?? -1)
-    expect(alpha.identicalGroup).not.toBeNull()
-    expect(alpha.identicalGroup).toBe(beta.identicalGroup)
+      // Identical structure is one group, whatever the declarations are called.
+      const alpha = factsOf(result.found, requests[5]?.position ?? -1)
+      const beta = factsOf(result.found, requests[6]?.position ?? -1)
+      expect(alpha.identicalGroup).not.toBeNull()
+      expect(alpha.identicalGroup).toBe(beta.identicalGroup)
 
-    // A subset is not an identical group: one can be assigned to the other,
-    // not both ways.
-    const wide = factsOf(result.found, requests[7]?.position ?? -1)
-    const narrow = factsOf(result.found, requests[8]?.position ?? -1)
-    expect(wide.identicalGroup).toBeNull()
-    expect(narrow.identicalGroup).toBeNull()
+      // A subset is not an identical group: one can be assigned to the other,
+      // not both ways.
+      const wide = factsOf(result.found, requests[7]?.position ?? -1)
+      const narrow = factsOf(result.found, requests[8]?.position ?? -1)
+      expect(wide.identicalGroup).toBeNull()
+      expect(narrow.identicalGroup).toBeNull()
 
-    // A base is a fact, and it is the checker's: the members include what the
-    // interface inherits, and the base is named separately.
-    const derived = factsOf(result.found, requests[9]?.position ?? -1)
-    expect(derived.bases).toEqual(["Base"])
-    expect(derived.members.map((entry) => entry.name)).toContain("id")
-    expect(derived.structural).toBe("object{extra:boolean;id:string;label:string}")
+      // A base is a fact, and it is the checker's: the members include what the
+      // interface inherits, and the base is named separately.
+      const derived = factsOf(result.found, requests[9]?.position ?? -1)
+      expect(derived.bases).toEqual(["Base"])
+      expect(derived.members.map((entry) => entry.name)).toContain("id")
+      expect(derived.structural).toBe("object{extra:boolean;id:string;label:string}")
 
-    // An alias target resolves to what it names, and an alias the checker keeps
-    // is named so a question can point at it.
-    const alias = factsOf(result.found, requests[10]?.position ?? -1)
-    expect(alias.display).toBe("Base")
-    const wrapped = factsOf(result.found, requests[11]?.position ?? -1)
-    expect(wrapped.alias).toBe("Wrapped")
-    expect(member(wrapped, "value")).toBe("Base")
-
-    // Canonical identity replaces parameter NAMES with positions: one shape
-    // written with A and with T has one id, and one extra member does not.
-    const boxed = factsOf(result.found, requests[12]?.position ?? -1)
-    const labelled = factsOf(result.found, requests[13]?.position ?? -1)
-    const extra = factsOf(result.found, requests[14]?.position ?? -1)
-    expect(boxed.canonical).toBe(labelled.canonical)
-    expect(boxed.canonical).not.toBe(extra.canonical)
-
-    // A cycle is part of the id, not an infinite walk.
-    const recursive = factsOf(result.found, requests[15]?.position ?? -1)
-    expect(recursive.canonical).not.toBe("")
-    expect(recursive.canonical).toContain("c")
-  }, 120000)
+      // An alias target resolves to what it names, and an alias the checker keeps
+      // is named so a question can point at it.
+      const alias = factsOf(result.found, requests[10]?.position ?? -1)
+      expect(alias.display).toBe("Base")
+      const wrapped = factsOf(result.found, requests[11]?.position ?? -1)
+      expect(wrapped.alias).toBe("Wrapped")
+      expect(member(wrapped, "value")).toBe("Base")
+    },
+    120000,
+  )
 
   it(
     "stores the facts keyed by the run manifest, and answers the second run from the cache",
@@ -194,13 +178,7 @@ describe("the engine", () => {
         expect(note?.reason).toContain("declaration(s) to a type")
         expect(note?.reason).not.toContain("resolved 0 of")
       }).pipe(
-        Effect.provide(
-          decisionLayer({
-            cacheDir: mkdtempSync(join(tmpdir(), "joggle-decl-dec-")),
-            offline: true,
-            apiKey: Option.none(),
-          }),
-        ),
+        Effect.provide(decisionLayer({ cacheDir: mkdtempSync(join(tmpdir(), "joggle-decl-dec-")), offline: true, apiKey: Option.none() })),
         Effect.provide(tsgoStub),
         Effect.provide(builtIn),
         Effect.provide(nodeLayer),

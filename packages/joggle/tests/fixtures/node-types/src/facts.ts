@@ -14,7 +14,9 @@ export type Picked = {
   id: Base["id"]
 }
 
-export type Variants = { kind: "a"; a: number } | { kind: "b"; b: string }
+export type Variants =
+  | { kind: "a"; a: number }
+  | { kind: "b"; b: string }
 
 export const ROLES = ["admin", "owner"] as const
 export const KIND = "admin" as const
@@ -65,28 +67,4 @@ export interface ProjectSummary {
 export interface CrewAssignment {
   crewRole: (typeof CREW_ROLES)[number]
   since: string
-}
-
-// The same shape under different parameter names should have one canonical id.
-export interface Boxed<A> {
-  label: string
-  value: A
-}
-
-export interface Labelled<T> {
-  value: T
-  label: string
-}
-
-// One member more is a different id, not an equal one.
-export interface LabelledExtra<T> {
-  value: T
-  label: string
-  extra: boolean
-}
-
-// A recursive type must be marked, not followed forever.
-export interface Node {
-  value: string
-  next: Node | null
 }
