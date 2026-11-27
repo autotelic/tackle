@@ -4,6 +4,14 @@ import { Html } from "@effect/ui/html"
 import { Effect, Match, Result, Schema, Stream } from "effect"
 
 import { Atlas, type AtlasPackage } from "./atlas.ts"
+import {
+  RoomAction,
+  RoomForm,
+  type RoomFormField,
+  RoomList,
+  type RoomRecord,
+  emptyRoomForm,
+} from "./rooms.ts"
 import { visionView } from "./vision.ts"
 import {
   Activity,
@@ -22,7 +30,7 @@ import {
   environmentsByWorkstream,
 } from "./presence.ts"
 
-export const Route = Schema.Literals(["factory", "tackle", "vision"])
+export const Route = Schema.Literals(["factory", "rooms", "tackle", "vision"])
 export type Route = typeof Route.Type
 
 export const Model = Schema.Struct({
@@ -34,6 +42,15 @@ export const Model = Schema.Struct({
   error: Schema.NullOr(Schema.String),
   loading: Schema.Boolean,
   notice: Schema.NullOr(Schema.String),
+  // The room control plane's own document, absent until the rooms route reads it. The view
+  // never derives a room from presence: the list is what /rooms answered.
+  rooms: Schema.optional(Schema.NullOr(RoomList)),
+  // The new-room form is input state, not room state: the board remains the only writer.
+  roomForm: Schema.optional(RoomForm),
+  // Which create or lifecycle request is in flight, named so the page can show the wait.
+  roomPending: Schema.optional(Schema.NullOr(Schema.String)),
+  roomError: Schema.optional(Schema.NullOr(Schema.String)),
+  roomNotice: Schema.optional(Schema.NullOr(Schema.String)),
   visionStep: Schema.optional(Schema.Finite),
   visionFocus: Schema.optional(Schema.Literals(["permissions", "enterprise"])),
   visionMachine: Schema.optional(Schema.String),
@@ -61,6 +78,17 @@ export const Message = UiSchema.TaggedEnum({
   VisionReset: {},
   VisionFocus: { focus: Schema.Literals(["permissions", "enterprise"]) },
   VisionMachine: { machine: Schema.String },
+  RoomsSettled: { value: Schema.Unknown, error: Schema.NullOr(Schema.String) },
+  RoomFormChanged: { field: RoomFormField, value: Schema.String },
+  ClickedCreateRoom: {},
+  CreatedRoom: { ok: Schema.Boolean, error: Schema.NullOr(Schema.String) },
+  ClickedRoomAction: { id: Schema.String, action: RoomAction },
+  RoomActioned: {
+    id: Schema.String,
+    action: RoomAction,
+    ok: Schema.Boolean,
+    error: Schema.NullOr(Schema.String),
+  },
 })
 export type Message = typeof Message.Type
 
@@ -117,6 +145,102 @@ export const FetchAtlas = Command.make("board/FetchAtlas", { args: {} }, () =>
   ),
 )
 
+/** The form after one field changed; the switch keeps each field's own type in the record. */
+const withRoomField = (form: RoomForm, field: RoomFormField, value: string): RoomForm => {
+  switch (field) {
+    case "id":
+      return { ...form, id: value }
+    case "repo":
+      return { ...form, repo: value }
+    case "scope":
+      return { ...form, scope: value }
+    case "base":
+      return { ...form, base: value }
+    case "software":
+      return { ...form, software: value }
+  }
+}
+
+/** The board's refusal, decoded, so an error line names the reason instead of the JSON body. */
+const BoardRefusal = Schema.Struct({ error: Schema.String })
+const refusalOf = async (response: Response): Promise<string> => {
+  const text = await response.text()
+  const decoded = Schema.decodeResult(Schema.fromJsonString(BoardRefusal))(text)
+  if (Result.isSuccess(decoded)) return decoded.success.error
+  return text === "" ? "HTTP " + response.status : text
+}
+
+/** One write through the board; the room control plane owns the state it changes. */
+const postJson = (path: string, body: unknown) =>
+  Effect.tryPromise({
+    try: async () => {
+      const response = await fetch(path, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      })
+      if (!response.ok) return Promise.reject(await refusalOf(response))
+      return true
+    },
+    catch: (cause) => String(cause),
+  })
+
+/** The room control plane's list: the one read the /rooms page needs. */
+export const FetchRooms = Command.make("board/FetchRooms", { args: {} }, () =>
+  fetchJson("/rooms").pipe(
+    Effect.match({
+      onFailure: (error) => Message.RoomsSettled({ value: null, error }),
+      onSuccess: (value) => Message.RoomsSettled({ value, error: null }),
+    }),
+  ),
+)
+
+/**
+ * Create a room through the board, which runs the room tool rather than copying its store.
+ *
+ * Empty optional fields are omitted rather than sent empty: a field the form left alone has to
+ * create the room the room command would, with its own default.
+ */
+export const CreateRoom = Command.make(
+  "board/CreateRoom",
+  {
+    args: {
+      id: Schema.String,
+      repo: Schema.String,
+      scope: Schema.String,
+      base: Schema.String,
+      software: Schema.String,
+    },
+    mode: "switch",
+  },
+  (form) =>
+    postJson("/rooms", {
+      id: form.id,
+      repo: form.repo,
+      scope: form.scope,
+      ...(form.base === "" ? {} : { base: form.base }),
+      ...(form.software === "" ? {} : { software: form.software }),
+    }).pipe(
+      Effect.match({
+        onFailure: (error) => Message.CreatedRoom({ ok: false, error }),
+        onSuccess: () => Message.CreatedRoom({ ok: true, error: null }),
+      }),
+    ),
+)
+
+/** One lifecycle verb on one room: `start` starts the VM, `up` starts its service. */
+export const RoomLifecycle = Command.make(
+  "board/RoomLifecycle",
+  { args: { id: Schema.String, action: RoomAction }, mode: "switch" },
+  ({ id, action }) =>
+    postJson("/rooms/" + encodeURIComponent(id) + "/" + action, {}).pipe(
+      Effect.match({
+        onFailure: (error) => Message.RoomActioned({ id, action, ok: false, error }),
+        onSuccess: () => Message.RoomActioned({ id, action, ok: true, error: null }),
+      }),
+    ),
+)
+
 /** The one action the view takes: record a choice on the desk. */
 export const AnswerDesk = Command.make(
   "board/AnswerDesk",
@@ -166,31 +290,38 @@ export const OpenSession = Command.make(
 )
 
 /**
- * Presence refreshes itself; the button is for impatience, not the only path.
+ * The route's document refreshes itself; the button is for impatience, not the only path.
  *
- * A Subscription rather than a timer the view owns: its lifetime is the Model's, and the
- * vision route reads no presence, so it asks for none.
+ * A Subscription rather than a timer the view owns: its lifetime is the Model's, and the vision
+ * route reads no document of its own, so it asks for none.
  */
-const presenceTicks = Subscription.make(
-  "presence-ticks",
+const routeTicks = Subscription.make(
+  "route-ticks",
   Stream.tick("20 seconds").pipe(Stream.as(Message.Ticked())),
 )
 
 /** Start with a fetch and an empty model. */
 const routeOf = (): Route => {
   if (typeof window === "undefined") return "factory"
+  if (window.location.pathname.startsWith("/rooms")) return "rooms"
   if (window.location.pathname.startsWith("/tackle")) return "tackle"
   if (window.location.pathname.startsWith("/vision")) return "vision"
   return "factory"
 }
 
 /** The one fetch a route needs to fill an empty model. */
-const fetchFor = (route: Route) => (route === "tackle" ? FetchAtlas.make() : FetchPresence.make())
+const fetchFor = (route: Route) =>
+  route === "tackle"
+    ? FetchAtlas.make()
+    : route === "rooms"
+      ? FetchRooms.make()
+      : FetchPresence.make()
 
 const titleOf = (route: Route): string =>
   Match.value(route).pipe(
     Match.when("tackle", () => "Tackle overview"),
     Match.when("vision", () => "Tackle — how the factory moves"),
+    Match.when("rooms", () => "Rooms"),
     Match.when("factory", () => "Software factory"),
     Match.exhaustive,
   )
@@ -215,6 +346,11 @@ export const BoardView = Html.component({
       error: null,
       loading: route !== "vision",
       notice: null,
+      rooms: null,
+      roomForm: emptyRoomForm,
+      roomPending: null,
+      roomError: null,
+      roomNotice: null,
       visionStep: 0,
       visionFocus: "permissions" as const,
       visionMachine: "mbp1",
@@ -257,6 +393,49 @@ export const BoardView = Html.component({
         ? $.evolve({ fleet: decoded.success })
         : $.evolve({ fleet: null })
     },
+    RoomsSettled: ($, { value, error }) => {
+      if (error !== null) return $.evolve({ rooms: null, roomError: error, loading: false })
+      const decoded = Schema.decodeUnknownResult(RoomList)(value)
+      return Result.isSuccess(decoded)
+        ? $.evolve({ rooms: decoded.success, roomError: null, loading: false })
+        : $.evolve({ rooms: null, roomError: String(decoded.failure), loading: false })
+    },
+    RoomFormChanged: ($, { field, value }) =>
+      $.evolve({ roomForm: (form) => withRoomField(form ?? emptyRoomForm, field, value) }),
+    ClickedCreateRoom: ($) => {
+      const form = $.model.roomForm ?? emptyRoomForm
+      const id = form.id.trim()
+      const repo = form.repo.trim()
+      const scope = form.scope.trim()
+      const missing = id === "" ? "id" : repo === "" ? "repo" : scope === "" ? "scope" : undefined
+      if (missing !== undefined)
+        return $.evolve({ roomError: "A new room needs " + missing + ".", roomNotice: null })
+      return $.evolve({
+        roomPending: "Creating " + id,
+        roomError: null,
+        roomNotice: null,
+      }).run(CreateRoom.make({ ...form, id, repo, scope }))
+    },
+    CreatedRoom: ($, { ok, error }) => {
+      const evolved = $.evolve({
+        roomPending: null,
+        roomError: ok ? null : (error ?? "the board refused the room"),
+        roomNotice: ok ? "Room created" : null,
+      })
+      return ok ? evolved.run(FetchRooms.make()) : evolved
+    },
+    ClickedRoomAction: ($, { id, action }) =>
+      $.evolve({ roomPending: action + " " + id, roomError: null, roomNotice: null }).run(
+        RoomLifecycle.make({ id, action }),
+      ),
+    RoomActioned: ($, { id, action, ok, error }) => {
+      const evolved = $.evolve({
+        roomPending: null,
+        roomError: ok ? null : (error ?? action + " failed for " + id),
+        roomNotice: ok ? "Room " + id + " · " + action + " requested" : null,
+      })
+      return ok ? evolved.run(FetchRooms.make()) : evolved
+    },
     AtlasSettled: ($, { value, error }) => {
       if (error !== null) return $.evolve({ atlas: null, error, loading: false })
       const decoded = Schema.decodeUnknownResult(Atlas)(value)
@@ -287,7 +466,7 @@ export const BoardView = Html.component({
     VisionMachine: ($, { machine }) => $.evolve({ visionMachine: machine }),
   },
 
-  subscriptions: ({ model }) => (model.route === "vision" ? [] : [presenceTicks]),
+  subscriptions: ({ model }) => (model.route === "vision" ? [] : [routeTicks]),
 
   head: ({ model }) => [Head.title(titleOf(model.route))],
 
@@ -295,6 +474,7 @@ export const BoardView = Html.component({
     Match.value(model.route).pipe(
       Match.when("tackle", () => atlasView(h, model)),
       Match.when("vision", () => visionView(h, model)),
+      Match.when("rooms", () => roomsView(h, model)),
       Match.when("factory", () => factoryView(h, model)),
       Match.exhaustive,
     ),
@@ -809,6 +989,10 @@ const routeNav = (h: Html.H<Message>, active: Route) =>
       .attr("href", "/")
       .children("Factory"),
     h.a
+      .class(active === "rooms" && "active")
+      .attr("href", "/rooms")
+      .children("Rooms"),
+    h.a
       .class(active === "tackle" && "active")
       .attr("href", "/tackle")
       .children("Tackle"),
@@ -1149,6 +1333,181 @@ const factoryPulse = (h: Html.H<Message>, presence: NonNullable<Model["presence"
           ),
       ),
     )
+}
+
+/** The five verbs, in the order a room's lifecycle moves: boot, serve, hold, release, stop. */
+const roomActions: ReadonlyArray<RoomAction> = ["start", "up", "pause", "resume", "down"]
+const roomActionLabel: Readonly<Record<RoomAction, string>> = {
+  start: "Start VM",
+  up: "Up",
+  pause: "Pause",
+  resume: "Resume",
+  down: "Down",
+}
+
+/** One labelled text field of the new-room form, controlled by the Model. */
+const roomField = (
+  h: Html.H<Message>,
+  input: {
+    readonly field: RoomFormField
+    readonly label: string
+    readonly value: string
+    readonly placeholder?: string | undefined
+  },
+) =>
+  h.label.class("room-field").children(
+    h.span.children(input.label),
+    h.input
+      .attr("name", input.field)
+      .attr("placeholder", input.placeholder ?? "")
+      .value(input.value)
+      .on("input", ({ value }) => Message.RoomFormChanged({ field: input.field, value })),
+  )
+
+/**
+ * The front door's one write surface.
+ *
+ * It posts the five fields the board's own RoomCreateRequest names and nothing else: the
+ * worktree, the journal, and the state are the room tool's to make, and the form does not
+ * predict them.
+ */
+const newRoomForm = (h: Html.H<Message>, model: Model) => {
+  const form = model.roomForm ?? emptyRoomForm
+  const creating = (model.roomPending ?? "").startsWith("Creating")
+  return h.form
+    .class("room-form")
+    .on("submit", Message.ClickedCreateRoom())
+    .children(
+      h.h2.children("New room"),
+      h.p
+        .class("muted")
+        .children(
+          "The board runs room new: a worktree on the base branch, and a journal of its own. It writes neither itself.",
+        ),
+      roomField(h, { field: "id", label: "Room id", value: form.id }),
+      roomField(h, {
+        field: "repo",
+        label: "Repository",
+        value: form.repo,
+        placeholder: "/path/to/repo",
+      }),
+      roomField(h, { field: "scope", label: "Scope", value: form.scope }),
+      roomField(h, { field: "base", label: "Base branch", value: form.base, placeholder: "main" }),
+      roomField(h, {
+        field: "software",
+        label: "Software (optional)",
+        value: form.software,
+        placeholder: "git,node",
+      }),
+      h.button.attr("type", "submit").children(creating ? "Creating…" : "Create room"),
+    )
+}
+
+/**
+ * One room: what the board served, and the five verbs it accepts.
+ *
+ * A missing field draws nothing rather than a guess: a room with no branch observed is not a
+ * room on `main`, and a journal the board did not name is not an absent journal.
+ */
+const roomRow = (h: Html.H<Message>, room: RoomRecord) => {
+  const vm = room.vm
+  const session = room.session
+  const preview = room.preview
+  return h.article
+    .class("room-row")
+    .attr("id", "room-" + room.id)
+    .children(
+      h.div.class("room-head").children(
+        h.strong.class("mono").children(room.id),
+        h.span.class("chip").children(room.state),
+        room.runtime === undefined ? undefined : h.span.class("mono").children(room.runtime),
+        room.port === undefined ? undefined : h.span.class("mono").children("port " + room.port),
+        preview === undefined
+          ? undefined
+          : h.a
+              .class("mono")
+              .attr("href", preview)
+              .attr("target", "_blank")
+              .attr("rel", "noreferrer")
+              .children("preview " + preview),
+      ),
+      h.div
+        .class("room-detail")
+        .children(
+          room.branch === undefined
+            ? undefined
+            : h.span.class("mono").children("branch " + room.branch),
+          room.worktree === undefined
+            ? undefined
+            : h.span.class("mono").children("worktree " + room.worktree),
+          session === null || session === undefined
+            ? h.span.class("muted").children("no journal")
+            : h.span.class("mono").children("journal " + session.state + " · " + session.path),
+          vm === null || vm === undefined
+            ? h.span.class("muted").children("no vm")
+            : h.span
+                .class("mono")
+                .children("vm " + vm.state + (vm.pid === undefined ? "" : " · pid " + vm.pid)),
+          room.socket === undefined
+            ? undefined
+            : h.span.class("mono").children("socket " + room.socket),
+        ),
+      h.div
+        .class("room-actions")
+        .children(
+          roomActions.map((action) =>
+            h.button
+              .on("click", Message.ClickedRoomAction({ id: room.id, action }))
+              .children(roomActionLabel[action]),
+          ),
+        ),
+    )
+}
+
+/**
+ * The room front door: create one, list what the board serves, and move one through its verbs.
+ *
+ * It is the only page that reads /rooms, and it is the same seam the POST handlers write: no
+ * second store, no local room state. The form remembers its own fields while it is typed, and
+ * every fact about a room comes back from the board.
+ */
+const roomsView = (h: Html.H<Message>, model: Model) => {
+  const rooms = model.rooms ?? null
+  const summary =
+    rooms === null
+      ? "waiting for /rooms"
+      : (() => {
+          const supervisors = rooms.rooms.filter((room) => room.vm?.state === "running").length
+          return (
+            rooms.rooms.length +
+            (rooms.rooms.length === 1 ? " room" : " rooms") +
+            " · " +
+            supervisors +
+            (supervisors === 1 ? " vm running" : " vms running")
+          )
+        })()
+  return h.div.class("shell").children(
+    appHeader(h, { model, title: "Rooms", summary }),
+    model.roomError === null || model.roomError === undefined
+      ? undefined
+      : h.p.class("error").children(model.roomError),
+    model.roomNotice === null || model.roomNotice === undefined
+      ? undefined
+      : h.p.class("notice").children(model.roomNotice),
+    model.roomPending === null || model.roomPending === undefined
+      ? undefined
+      : h.p.class("notice").children(model.roomPending + "…"),
+    newRoomForm(h, model),
+    rooms === null
+      ? h.p.class("muted").children(model.loading ? "Reading /rooms…" : "No /rooms document.")
+      : rooms.rooms.length === 0
+        ? h.p.class("muted").children("No rooms yet.")
+        : card(h, {
+            title: "Rooms",
+            id: "room-list",
+            children: rooms.rooms.map((room) => roomRow(h, room)),
+          }),
+  )
 }
 
 const factoryView = (h: Html.H<Message>, model: Model) => {

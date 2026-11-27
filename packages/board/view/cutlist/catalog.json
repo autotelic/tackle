@@ -1,5 +1,5 @@
 {
-  "hash": "c5646e8d8222defb81ddf452be8f9def1e4809ce7a494d3c02789a6da24c8ed9",
+  "hash": "b2bbfbb022c940c001fa86493b4b7507bc1dbc649a57ee85c5b56ff41cb303a8",
   "lexicon": {
     "name": "catalog",
     "version": 1
@@ -134,11 +134,14 @@
       "tier": "local",
       "owners": [],
       "props": [
+        "action",
         "address",
         "choice",
+        "id",
         "item",
         "model",
-        "source"
+        "source",
+        "value"
       ],
       "tags": [
         "a",
@@ -161,15 +164,22 @@
         "factoryFloor",
         "factoryPulse",
         "factoryView",
+        "form",
         "h1",
         "h2",
         "h3",
         "header",
+        "input",
+        "label",
+        "newRoomForm",
         "p",
         "peerSection",
         "repoSection",
         "reportRow",
+        "roomField",
         "roomInventory",
+        "roomRow",
+        "roomsView",
         "routeNav",
         "section",
         "sessionRow",
@@ -196,10 +206,14 @@
         "view:factoryFloor",
         "view:factoryPulse",
         "view:factoryView",
+        "view:newRoomForm",
         "view:peerSection",
         "view:repoSection",
         "view:reportRow",
+        "view:roomField",
         "view:roomInventory",
+        "view:roomRow",
+        "view:roomsView",
         "view:routeNav",
         "view:sessionRow",
         "view:visionView",
@@ -214,10 +228,13 @@
       "exports": [
         "AnswerDesk",
         "BoardView",
+        "CreateRoom",
         "FetchAtlas",
         "FetchFleet",
         "FetchPresence",
-        "OpenSession"
+        "FetchRooms",
+        "OpenSession",
+        "RoomLifecycle"
       ],
       "usedBy": 2,
       "declarations": [
@@ -345,6 +362,87 @@
           "tags": []
         },
         {
+          "name": "BoardRefusal",
+          "kind": "variable",
+          "exported": false,
+          "renders": false,
+          "calls": [
+            "Struct"
+          ],
+          "tags": []
+        },
+        {
+          "name": "refusalOf",
+          "kind": "function",
+          "exported": false,
+          "renders": false,
+          "calls": [
+            "decodeResult",
+            "fromJsonString",
+            "isSuccess",
+            "text"
+          ],
+          "tags": []
+        },
+        {
+          "name": "postJson",
+          "kind": "function",
+          "exported": false,
+          "renders": false,
+          "calls": [
+            "String",
+            "fetch",
+            "refusalOf",
+            "reject",
+            "stringify",
+            "tryPromise"
+          ],
+          "tags": []
+        },
+        {
+          "name": "FetchRooms",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "RoomsSettled",
+            "fetchJson",
+            "make",
+            "match",
+            "pipe"
+          ],
+          "tags": []
+        },
+        {
+          "name": "CreateRoom",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "CreatedRoom",
+            "make",
+            "match",
+            "pipe",
+            "postJson"
+          ],
+          "tags": []
+        },
+        {
+          "name": "RoomLifecycle",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "RoomActioned",
+            "encodeURIComponent",
+            "make",
+            "match",
+            "pipe",
+            "postJson"
+          ],
+          "tags": []
+        },
+        {
           "name": "AnswerDesk",
           "kind": "variable",
           "exported": true,
@@ -383,7 +481,7 @@
           "tags": []
         },
         {
-          "name": "presenceTicks",
+          "name": "routeTicks",
           "kind": "variable",
           "exported": false,
           "renders": false,
@@ -444,11 +542,13 @@
             "isSuccess",
             "make",
             "pipe",
+            "roomsView",
             "routeOf",
             "run",
             "set",
             "title",
             "titleOf",
+            "trim",
             "value",
             "visionView",
             "when"
@@ -456,6 +556,7 @@
           "tags": [
             "atlasView",
             "factoryView",
+            "roomsView",
             "visionView"
           ]
         },
@@ -937,6 +1038,116 @@
           ]
         },
         {
+          "name": "roomActions",
+          "kind": "variable",
+          "exported": false,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
+          "name": "roomActionLabel",
+          "kind": "variable",
+          "exported": false,
+          "renders": false,
+          "calls": [],
+          "tags": [],
+          "objectKeys": [
+            "start",
+            "up",
+            "pause",
+            "resume",
+            "down"
+          ]
+        },
+        {
+          "name": "roomField",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "RoomFormChanged",
+            "attr",
+            "children",
+            "class",
+            "on",
+            "value"
+          ],
+          "tags": [
+            "input",
+            "label",
+            "span"
+          ]
+        },
+        {
+          "name": "newRoomForm",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "ClickedCreateRoom",
+            "attr",
+            "children",
+            "class",
+            "on",
+            "roomField",
+            "startsWith"
+          ],
+          "tags": [
+            "button",
+            "form",
+            "h2",
+            "p",
+            "roomField"
+          ]
+        },
+        {
+          "name": "roomRow",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "ClickedRoomAction",
+            "attr",
+            "children",
+            "class",
+            "map",
+            "on"
+          ],
+          "tags": [
+            "a",
+            "article",
+            "button",
+            "div",
+            "span",
+            "strong"
+          ]
+        },
+        {
+          "name": "roomsView",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "appHeader",
+            "card",
+            "children",
+            "class",
+            "filter",
+            "map",
+            "newRoomForm",
+            "roomRow"
+          ],
+          "tags": [
+            "appHeader",
+            "card",
+            "div",
+            "newRoomForm",
+            "p",
+            "roomRow"
+          ]
+        },
+        {
           "name": "factoryView",
           "kind": "function",
           "exported": false,
@@ -1104,7 +1315,7 @@
         {
           "part": "src/vision.ts",
           "tag": "visionView",
-          "line": 297,
+          "line": 460,
           "count": 1
         }
       ]
@@ -1479,6 +1690,146 @@
       ]
     },
     {
+      "id": "src--rooms",
+      "path": "src/rooms.ts",
+      "name": "rooms",
+      "tier": "local",
+      "owners": [],
+      "props": [],
+      "tags": [],
+      "signature": [],
+      "documented": true,
+      "kind": "module",
+      "roles": [
+        "module"
+      ],
+      "exports": [
+        "RoomJournal",
+        "emptyRoomForm"
+      ],
+      "usedBy": 1,
+      "declarations": [
+        {
+          "name": "RoomJournal",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "Struct"
+          ],
+          "tags": []
+        },
+        {
+          "name": "RoomAction",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "Literals"
+          ],
+          "tags": []
+        },
+        {
+          "name": "RoomAction",
+          "kind": "type",
+          "exported": true,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
+          "name": "RoomRecord",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "NullOr",
+            "Struct",
+            "optional"
+          ],
+          "tags": []
+        },
+        {
+          "name": "RoomRecord",
+          "kind": "type",
+          "exported": true,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
+          "name": "RoomList",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "Array",
+            "Struct"
+          ],
+          "tags": []
+        },
+        {
+          "name": "RoomList",
+          "kind": "type",
+          "exported": true,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
+          "name": "RoomForm",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "Struct"
+          ],
+          "tags": []
+        },
+        {
+          "name": "RoomForm",
+          "kind": "type",
+          "exported": true,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
+          "name": "RoomFormField",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "Literals"
+          ],
+          "tags": []
+        },
+        {
+          "name": "RoomFormField",
+          "kind": "type",
+          "exported": true,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
+          "name": "emptyRoomForm",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [],
+          "tags": [],
+          "objectKeys": [
+            "id",
+            "repo",
+            "scope",
+            "base",
+            "software"
+          ]
+        }
+      ]
+    },
+    {
       "id": "src--vision",
       "path": "src/vision.ts",
       "name": "vision",
@@ -1828,7 +2179,7 @@
   ],
   "features": [],
   "health": {
-    "parts": 5,
+    "parts": 6,
     "sharedReach": 0,
     "localOnly": 2,
     "duplicateClusters": 0
@@ -1838,6 +2189,7 @@
     "src/atlas.ts",
     "src/main.ts",
     "src/presence.ts",
+    "src/rooms.ts",
     "src/vision.ts"
   ],
   "duplicates": []

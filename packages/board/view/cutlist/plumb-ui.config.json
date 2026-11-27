@@ -40,11 +40,14 @@
       "tier": "local",
       "owners": [],
       "props": [
+        "action",
         "address",
         "choice",
+        "id",
         "item",
         "model",
-        "source"
+        "source",
+        "value"
       ],
       "tags": [
         "a",
@@ -67,15 +70,22 @@
         "factoryFloor",
         "factoryPulse",
         "factoryView",
+        "form",
         "h1",
         "h2",
         "h3",
         "header",
+        "input",
+        "label",
+        "newRoomForm",
         "p",
         "peerSection",
         "repoSection",
         "reportRow",
+        "roomField",
         "roomInventory",
+        "roomRow",
+        "roomsView",
         "routeNav",
         "section",
         "sessionRow",
@@ -93,10 +103,13 @@
       "exports": [
         "AnswerDesk",
         "BoardView",
+        "CreateRoom",
         "FetchAtlas",
         "FetchFleet",
         "FetchPresence",
-        "OpenSession"
+        "FetchRooms",
+        "OpenSession",
+        "RoomLifecycle"
       ],
       "usedBy": 2,
       "signature": [
@@ -115,10 +128,14 @@
         "view:factoryFloor",
         "view:factoryPulse",
         "view:factoryView",
+        "view:newRoomForm",
         "view:peerSection",
         "view:repoSection",
         "view:reportRow",
+        "view:roomField",
         "view:roomInventory",
+        "view:roomRow",
+        "view:roomsView",
         "view:routeNav",
         "view:sessionRow",
         "view:visionView",
@@ -148,6 +165,24 @@
         "Workstream",
         "candidatesByWorkstream",
         "environmentsByWorkstream"
+      ],
+      "usedBy": 1,
+      "signature": []
+    },
+    {
+      "path": "src/rooms.ts",
+      "name": "rooms",
+      "tier": "local",
+      "owners": [],
+      "props": [],
+      "tags": [],
+      "kind": "module",
+      "roles": [
+        "module"
+      ],
+      "exports": [
+        "RoomJournal",
+        "emptyRoomForm"
       ],
       "usedBy": 1,
       "signature": []

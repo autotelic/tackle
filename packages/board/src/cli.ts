@@ -48,7 +48,7 @@ import {
   type RoomServiceObservation,
 } from "./environment.ts"
 import { listCandidateEnvironments } from "./factory/candidate-environments.ts"
-import { previewPrefix, previewRequestOf } from "./preview.ts"
+import { previewPrefix, previewRequestOf, previewRoute } from "./preview.ts"
 import { workstreamsWithGates } from "./gate.ts"
 import { discoverTailnet } from "./tailnet.ts"
 import { fleet, type Fleet } from "./fleet.ts"
@@ -70,7 +70,7 @@ const usage = [
   "  board run|watch|report|phase|cursor|budget|desk … (factory commands)",
   "  board queue [--root .room] [--json]",
   "",
-  "board up serves /health, /presence, /fleet, /queue, /factory, /preview/<workstream>/ and /open",
+  "board up serves /health, /presence, /fleet, /queue, /factory, /rooms, /preview/<workstream>/ and /open",
   "while it holds the lock.",
   "Exit codes: 0 ok, 1 declined, 2 usage, 3 infrastructure.",
 ].join("\n")
@@ -83,7 +83,8 @@ const usage = [
  * the fact.
  */
 const roomSessionOf = (root: string, room: RoomFile) => {
-  if (room.session === undefined) return null
+  // A room file written before the field existed names no journal, and that absence is not the
+  // absence of one: the room opens the default file, so the list reports the same bytes.
   const dir = roomDir({ root, id: room.id })
   return {
     path: roomSessionPath({ dir, session: room.session }),
@@ -443,6 +444,91 @@ type RoomAction = "up" | "start" | "pause" | "resume" | "down"
 const isLoopbackAddress = (address: string | undefined): boolean =>
   address === "127.0.0.1" || address === "::1" || address === "::ffff:127.0.0.1"
 
+/** The worktree a room owns, canonicalized so a symlinked room directory names one place. */
+const roomWorktree = async (input: {
+  readonly root: string
+  readonly id: string
+}): Promise<string> => {
+  const link = join(input.root, input.id, "worktree")
+  return realpath(link).catch(() => resolve(link))
+}
+
+/**
+ * The branch a room's worktree is on, read from git rather than guessed from the room's base.
+ *
+ * `symbolic-ref` answers the branch question where a sha cannot: after a fast-forward the same
+ * commit sits on several branches. A detached HEAD and a path that is not a repository both
+ * answer none, and neither is a branch the board can report.
+ */
+const worktreeBranch = async (worktree: string): Promise<string | undefined> => {
+  const result = await execFileAsync("git", ["-C", worktree, "symbolic-ref", "--short", "HEAD"], {
+    encoding: "utf8",
+  }).catch(() => undefined)
+  const branch = result?.stdout.trim()
+  return branch === undefined || branch === "" ? undefined : branch
+}
+
+/**
+ * The preview segment that names each room worktree.
+ *
+ * The preview router names a route after the workstream or candidate that owns the worktree, so
+ * listing a room goes the other way: the same canonical path, read once per request. A room no
+ * record names has no route the board can answer, and it is not given one.
+ */
+const previewSegmentsOf = async (): Promise<ReadonlyMap<string, string>> => {
+  const segments = new Map<string, string>()
+  const canonical = async (path: string): Promise<string> =>
+    realpath(path).catch(() => resolve(path))
+  for (const record of await listWorkstreams())
+    segments.set(await canonical(record.path), record.id)
+  for (const lane of await listCandidateEnvironments()) {
+    if (lane.state === "dropped") continue
+    const path = await canonical(lane.path)
+    if (segments.has(path)) continue
+    segments.set(path, lane.id)
+  }
+  return segments
+}
+
+/**
+ * The one route a room's preview answers, only when a probe found its service healthy.
+ *
+ * The list is an observation surface like the floor: it advertises a route the board can answer
+ * now, never one it could merely build. A room that declares no service, or whose service does
+ * not answer, gets no link.
+ */
+const roomPreviewOf = async (input: {
+  readonly root: string
+  readonly room: RoomFile
+  readonly run: Awaited<ReturnType<typeof readRun>>
+  readonly segment: string
+  readonly checkedAt: string
+}): Promise<string | undefined> => {
+  const service = input.room.service
+  if (service === undefined) return undefined
+  const runtime = input.room.runtime
+  if (runtime?.kind === "agentos" && runtime.previewPort !== undefined) {
+    const observed = await observeVmService({
+      root: input.root,
+      id: input.room.id,
+      service,
+      port: runtime.previewPort,
+      pid: runtime.servicePid,
+      checkedAt: input.checkedAt,
+    })
+    return observed.status === "healthy" ? previewRoute(input.segment) : undefined
+  }
+  const port = input.room.port
+  if (port === undefined) return undefined
+  const observed = await observeService({
+    service,
+    port: port.number,
+    run: input.run,
+    checkedAt: input.checkedAt,
+  })
+  return observed.status === "healthy" ? previewRoute(input.segment) : undefined
+}
+
 /** Run one room command through the room package's bin, never by reimplementing its store. */
 const runRoom = async (input: {
   readonly root: string
@@ -543,6 +629,8 @@ const serveView = async ({
   const relative =
     path === "/" ||
     path === "/factory" ||
+    path === "/rooms" ||
+    path === "/rooms/" ||
     path === "/tackle" ||
     path === "/tackle/" ||
     path === "/vision" ||
@@ -796,6 +884,8 @@ const serve = async ({
         // oxlint-disable-next-line plumb-effect/no-try-catch -- the HTTP handler consumes room/store failures here
         try {
           const rooms = await listRooms(root)
+          const segments = await previewSegmentsOf()
+          const checkedAt = new Date().toISOString()
           json({
             response,
             status: 200,
@@ -803,14 +893,26 @@ const serve = async ({
               rooms: await Promise.all(
                 rooms.map(async (room) => {
                   const vm = await readVmStatus({ root, id: room.id })
+                  const worktree = await roomWorktree({ root, id: room.id })
+                  const run = await readRun({ root, id: room.id })
+                  const segment = segments.get(worktree)
                   return {
                     id: room.id,
                     state: room.state._tag,
                     runtime: room.runtime?.kind,
+                    // The branch is the checkout's own answer, not the room's base: a room
+                    // created on `main` works on `room/<id>-main`, and a listed branch that
+                    // repeated `base` would name the trunk the work has left.
+                    branch: await worktreeBranch(worktree),
+                    worktree,
                     port: room.port?.number,
                     session: roomSessionOf(root, room),
                     socket: vmSocketFile({ root, id: room.id }),
                     vm: { state: vm.state, ...(vm.run === undefined ? {} : { pid: vm.run.pid }) },
+                    preview:
+                      segment === undefined
+                        ? undefined
+                        : await roomPreviewOf({ root, room, run, segment, checkedAt }),
                   }
                 }),
               ),

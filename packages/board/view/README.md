@@ -6,26 +6,30 @@ the reports the factory has consumed. `/tackle` is the same application's
 workspace atlas: every package, its README summary, and its internal dependency
 edges, read from `/atlas`. `/vision` is a static map of the factory's process,
 including Alchemy's room inventory: what the stack declares, what the room owns,
-and what agentOS runs.
+and what agentOS runs. `/rooms` is the room front door: create one, read the control
+plane's list, and move a room through its lifecycle.
 
-It is an **Effect UI** application (`@effect/ui`). The factory route arrives as
-one `/presence` read and the tackle route as one `/atlas` read; every transition
-is a message, and the UI has no local source of truth.
+It is an **Effect UI** application (`@effect/ui`). The factory route arrives as one
+`/presence` read, the tackle route as one `/atlas` read, and `/rooms` as one room control
+document read; every transition is a message, and the UI has no local source of truth.
 
 ## Shape
 
 `src/main.ts` is the component: a `Model` and a message union declared with
 `Schema` and `UiSchema.TaggedEnum`, a pure `update` whose every transition is one
 entry of the record, and a `view` assembled from `h.div.class(...).children(...)`.
-The four side effects are declared, not performed by the view:
+The side effects are declared, not performed by the view:
 
-| Effect          | Kind           | What it does                                              |
-| --------------- | -------------- | --------------------------------------------------------- |
-| `FetchPresence` | `Command`      | reads `/presence`, decodes it, updates the Model          |
-| `FetchAtlas`    | `Command`      | reads `/atlas`, decodes it, updates the Model             |
-| `OpenSession`   | `Command`      | `POST /open`, so the board focuses Herdr or Rex           |
-| `AnswerDesk`    | `Command`      | `POST /desk/answer`, recording a human choice             |
-| `presenceTicks` | `Subscription` | refreshes presence every 20 seconds, off the vision route |
+| Effect          | Kind           | What it does                                     |
+| --------------- | -------------- | ------------------------------------------------ |
+| `FetchPresence` | `Command`      | reads `/presence`, decodes it, updates the Model |
+| `FetchAtlas`    | `Command`      | reads `/atlas`, decodes it, updates the Model    |
+| `FetchRooms`    | `Command`      | reads `/rooms`, decodes it, updates the Model    |
+| `CreateRoom`    | `Command`      | `POST /rooms`; the board runs `room new`         |
+| `RoomLifecycle` | `Command`      | `POST /rooms/:id/<verb>`, then re-reads the list |
+| `OpenSession`   | `Command`      | `POST /open`, so the board focuses Herdr or Rex  |
+| `AnswerDesk`    | `Command`      | `POST /desk/answer`, recording a human choice    |
+| `routeTicks`    | `Subscription` | refreshes the route's document every 20 seconds  |
 
 `src/entry.ts` mounts the component with `BrowserHost.mount` and launches the
 Layer. The page keeps its own plain CSS (`src/style.css`): a repo is a section
@@ -56,6 +60,35 @@ When a change lands, evaluate both pages before deciding it needs UI work:
 
 If neither answer is yes, do not add a panel. The view is an observation surface, not a
 changelog.
+
+## The room front door
+
+`/rooms` is the first vertical slice of the room flow: create a room, read the rooms the
+board serves, and move one through its lifecycle. It is a client of the board's room control
+plane, not a second one.
+
+- **New room** — the form posts the board's own `RoomCreateRequest`: id, repo, scope, an
+  optional base, and an optional software declaration. The board runs `room new`, so the
+  worktree, the journal, and the state are the room tool's to make; the page predicts none of
+  them.
+- **The list** — one row per room from `GET /rooms`: state, runtime, branch, worktree, port,
+  the journal's path and whether its bytes are there, the VM's state and pid, the supervisor
+  socket, and a preview route only when the board can answer one. A field the board did not
+  send draws nothing.
+- **Lifecycle** — `start`, `up`, `pause`, `resume`, `down` post to
+  `/rooms/:id/<verb>` and re-read the list. `start` starts the room's VM and `up` starts its
+  service; the board keeps both verbs because they are different machines of work.
+- **Errors and pending** — a refusal the board wrote is drawn as its own sentence, and the
+  request in flight is named (`pause alpha…`) until it settles.
+
+The seam is the JSON, exactly as on the other routes: the form is input state the Model holds
+while it is typed, and every fact about a room comes back from `/rooms`.
+
+**Next, deliberately not in this slice:** a terminal attached to the room, the changes the
+worktree accumulated, and ship/archive. Each is a new read on the board (or a room verb that
+already exists) before it is a panel; none of them changes this page's seam. The board's
+loopback rule stays as it is: only the board's own listener may mutate a room, and the view
+reaches it from the same origin.
 
 ## The cutlist catalog
 
@@ -96,7 +129,7 @@ For UI work, run Vite with the board already up:
 
 ```sh
 pnpm --filter @autotelic/board-view dev
-# http://127.0.0.1:4782/ — proxies /presence to 4780
+# http://127.0.0.1:4782/ — proxies /presence and /rooms to 4780
 ```
 
 Tests render the component with `Scene` from `@effect/ui/testing`: the served

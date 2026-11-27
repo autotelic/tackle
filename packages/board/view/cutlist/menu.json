@@ -4,10 +4,10 @@
     "version": 1
   },
   "title": "UI menu",
-  "hash": "c5646e8d8222defb81ddf452be8f9def1e4809ce7a494d3c02789a6da24c8ed9",
+  "hash": "b2bbfbb022c940c001fa86493b4b7507bc1dbc649a57ee85c5b56ff41cb303a8",
   "features": [],
   "health": {
-    "parts": 5,
+    "parts": 6,
     "sharedReach": 0,
     "localOnly": 2,
     "duplicateClusters": 0,
@@ -51,10 +51,13 @@
       "exports": [
         "AnswerDesk",
         "BoardView",
+        "CreateRoom",
         "FetchAtlas",
         "FetchFleet",
         "FetchPresence",
-        "OpenSession"
+        "FetchRooms",
+        "OpenSession",
+        "RoomLifecycle"
       ],
       "usedBy": 2,
       "composedOf": []
@@ -84,6 +87,22 @@
       "composedOf": []
     },
     {
+      "id": "src--rooms",
+      "name": "rooms",
+      "path": "src/rooms.ts",
+      "tier": "local",
+      "kind": "module",
+      "roles": [
+        "module"
+      ],
+      "exports": [
+        "RoomJournal",
+        "emptyRoomForm"
+      ],
+      "usedBy": 1,
+      "composedOf": []
+    },
+    {
       "id": "src--vision",
       "name": "vision",
       "path": "src/vision.ts",
@@ -103,6 +122,7 @@
     "src/atlas.ts",
     "src/main.ts",
     "src/presence.ts",
+    "src/rooms.ts",
     "src/vision.ts"
   ],
   "duplicates": []

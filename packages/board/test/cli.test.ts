@@ -1,7 +1,15 @@
 import { spawn, spawnSync } from "node:child_process"
 import { createServer } from "node:http"
 import { createServer as createNetServer } from "node:net"
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -692,8 +700,34 @@ test("board exposes room lifecycle to its loopback control plane", async () => {
 
     const listed = await fetch(origin + "/rooms")
     expect(listed.status).toBe(200)
-    const rooms = (await listed.json()) as { rooms: Array<{ id: string; state: string }> }
-    expect(rooms.rooms).toContainEqual(expect.objectContaining({ id: "api-room", state: "Ready" }))
+    // The listing is the UI's one read: a parsed room must name the checkout, its journal and
+    // its supervisor, not only the state word.
+    const rooms = (await listed.json()) as {
+      rooms: Array<{
+        id: string
+        state: string
+        branch?: string
+        worktree?: string
+        port?: number
+        socket?: string
+        session: { path: string; state: string } | null
+        vm: { state: string; pid?: number }
+        preview?: string
+      }>
+    }
+    const room = rooms.rooms.find((entry) => entry.id === "api-room")
+    expect(room?.state).toBe("Ready")
+    // The checkout's own branch, not the base the room was created from: a room created on
+    // `main` works on `room/api-room-main`.
+    expect(room?.branch).toBe("room/api-room-main")
+    expect(room?.worktree).toBe(realpathSync(join(root, "rooms", "api-room", "worktree")))
+    expect(room?.session?.state).toBe("durable")
+    expect(room?.session?.path.endsWith("session.sqlite")).toBe(true)
+    expect(room?.vm.state).toBe("absent")
+    expect(room?.socket?.endsWith("vm.sock")).toBe(true)
+    // No workstream or candidate names this room, so the board cannot answer a preview route
+    // for it; the list omits the field instead of linking to a 404.
+    expect(room?.preview).toBeUndefined()
 
     for (const action of ["up", "start", "pause", "resume", "down"]) {
       const response = await fetch(origin + "/rooms/api-room/" + action, { method: "POST" })
