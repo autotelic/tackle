@@ -1,3 +1,4 @@
+import { containment } from "./containment.ts"
 import { duplicateImplementation } from "./duplicate-implementation.ts"
 import { duplicateCallRun } from "./duplicate-call-run.ts"
 import { duplicateMeaning } from "./duplicate-meaning.ts"
@@ -75,6 +76,7 @@ export const allRules: ReadonlyArray<Rule | PlannedRule> = [
   hoistToDomain,
   languageDrift,
   duplicateCallRun,
+  containment,
   duplicateImplementation,
   duplicateMeaning,
   namingDrift,
@@ -110,7 +112,9 @@ export const allRules: ReadonlyArray<Rule | PlannedRule> = [
  * That is what lets a preset be a layer, a test provide three rules, and a
  * repository add its own without editing this file.
  */
-export class Rules extends Context.Service<Rules, ReadonlyArray<Rule | PlannedRule>>()("@joggle/Rules") {}
+export class Rules extends Context.Service<Rules, ReadonlyArray<Rule | PlannedRule>>()(
+  "@joggle/Rules",
+) {}
 
 /** The built-in rules, as the default `Rules` layer. */
 export const builtIn: Layer.Layer<Rules> = Layer.succeed(Rules, allRules)

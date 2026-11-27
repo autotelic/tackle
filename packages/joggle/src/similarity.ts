@@ -36,6 +36,41 @@ export const similarityOf = ({
   return union === 0 ? 0 : intersection / union
 }
 
+/**
+ * Containment over two shingle sets: the share of the SMALLER side that the
+ * larger one also has.
+ *
+ * This exists beside `similarityOf` because Jaccard answers a different
+ * question. Jaccard asks "was this edited?" -- it penalises a large addition
+ * because the union grows with it, so a small declaration can be a complete
+ * subset of a large one and still score 0.17. Containment asks "is this a
+ * specialization of that?" -- every shingle of the smaller is in the larger, so
+ * the relation survives the size difference. A collapse needs the second
+ * question, and no threshold on the first can recover it.
+ */
+export const containmentOf = ({
+  left,
+  right,
+}: {
+  readonly left: ReadonlySet<string>
+  readonly right: ReadonlySet<string>
+}): number => {
+  const [small, large] = left.size <= right.size ? [left, right] : [right, left]
+  if (small.size === 0) return left.size === right.size ? 1 : 0
+  let intersection = 0
+  for (const shingle of small) if (large.has(shingle)) intersection += 1
+  return intersection / small.size
+}
+
+/** Convenience for callers holding tokens rather than shingle sets. */
+export const containment = ({
+  left,
+  right,
+}: {
+  readonly left: ReadonlyArray<string>
+  readonly right: ReadonlyArray<string>
+}): number => containmentOf({ left: shinglesOf(left), right: shinglesOf(right) })
+
 /** Convenience for callers holding tokens rather than shingle sets. */
 export const similarity = ({
   left,
@@ -93,15 +128,17 @@ export const allPairs = (
     .forEach(([shingle], position) => rank.set(shingle, position))
 
   const prefixes = entries.map((entry) => {
-    const sorted = [...entry.shingles].sort(
-      (a, b) => (rank.get(a) ?? 0) - (rank.get(b) ?? 0),
-    )
+    const sorted = [...entry.shingles].sort((a, b) => (rank.get(a) ?? 0) - (rank.get(b) ?? 0))
     const keep = Math.max(1, sorted.length - Math.ceil(threshold * sorted.length) + 1)
     return sorted.slice(0, keep)
   })
 
   const order = entries
-    .map((entry, position) => ({ size: entry.shingles.size, slot: position, callerIndex: entry.position }))
+    .map((entry, position) => ({
+      size: entry.shingles.size,
+      slot: position,
+      callerIndex: entry.position,
+    }))
     .filter((entry) => entry.size > 0)
     .sort((a, b) => a.size - b.size || a.callerIndex - b.callerIndex)
 
@@ -132,6 +169,100 @@ export const allPairs = (
         const left = candidate.position
         const right = entry.position
         pairs.push(left <= right ? { left, right, score } : { left: right, right: left, score })
+      }
+    }
+
+    const prefix = prefixes[current.slot]
+    if (prefix === undefined) continue
+    for (const shingle of prefix) {
+      const list = postings.get(shingle)
+      if (list === undefined) postings.set(shingle, [current.slot])
+      else list.push(current.slot)
+    }
+  }
+
+  return pairs
+}
+
+export interface ContainmentPair {
+  /** The larger side's position in the caller's array. */
+  readonly whole: number
+  /** The smaller side's position in the caller's array. */
+  readonly part: number
+  /** |part n whole| / |part|. */
+  readonly score: number
+}
+
+/**
+ * Every containment pair at or above a threshold, without comparing every pair.
+ *
+ * The prefix-filter argument is the one `allPairs` uses, with the direction
+ * fixed: if containment(A, B) >= t and |A| <= |B|, then |A n B| >= t|A|, so A's
+ * prefix of size ceil(t|A|) - 1 cannot hold every shared shingle. One shared
+ * shingle is therefore always in A's prefix. Index prefixes by ascending
+ * document frequency, process sets by ascending size so the smaller side is the
+ * one already indexed, and probe with the whole larger set. Each unordered pair
+ * is reported once, with the smaller side named as `part`; equal-sized pairs
+ * have no smaller side, and the one processed first is kept as `part`.
+ *
+ * A differential test against a brute-force sweep is the contract: the join must
+ * find exactly the pairs the sweep finds, not merely many of them.
+ */
+export const allContainmentPairs = (
+  entries: ReadonlyArray<SizedShingles>,
+  threshold: number,
+): ReadonlyArray<ContainmentPair> => {
+  if (threshold <= 0) return []
+
+  const frequency = new Map<string, number>()
+  for (const entry of entries) {
+    for (const shingle of entry.shingles) {
+      frequency.set(shingle, (frequency.get(shingle) ?? 0) + 1)
+    }
+  }
+
+  // Rarest first, exactly as in `allPairs`: the prefix then carries the most
+  // discriminating shingles and the posting lists stay short.
+  const rank = new Map<string, number>()
+  ;[...frequency.entries()]
+    .sort((a, b) => a[1] - b[1] || (a[0] < b[0] ? -1 : 1))
+    .forEach(([shingle], position) => rank.set(shingle, position))
+
+  const prefixes = entries.map((entry) => {
+    const sorted = [...entry.shingles].sort((a, b) => (rank.get(a) ?? 0) - (rank.get(b) ?? 0))
+    const keep = Math.max(1, sorted.length - Math.ceil(threshold * sorted.length) + 1)
+    return sorted.slice(0, keep)
+  })
+
+  const order = entries
+    .map((entry, position) => ({
+      size: entry.shingles.size,
+      slot: position,
+      callerIndex: entry.position,
+    }))
+    .filter((entry) => entry.size > 0)
+    .sort((a, b) => a.size - b.size || a.callerIndex - b.callerIndex)
+
+  const postings = new Map<string, Array<number>>()
+  const pairs: Array<ContainmentPair> = []
+
+  for (const current of order) {
+    const entry = entries[current.slot]
+    if (entry === undefined) continue
+
+    const seen = new Set<number>()
+    for (const shingle of entry.shingles) {
+      const list = postings.get(shingle)
+      if (list === undefined) continue
+      for (const other of list) {
+        if (other === current.slot || seen.has(other)) continue
+        seen.add(other)
+        const candidate = entries[other]
+        if (candidate === undefined) continue
+        // An earlier entry is never larger, because `order` is ascending by size.
+        const score = containmentOf({ left: candidate.shingles, right: entry.shingles })
+        if (score < threshold) continue
+        pairs.push({ whole: entry.position, part: candidate.position, score })
       }
     }
 

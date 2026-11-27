@@ -24,6 +24,7 @@ const declared = (
     typeFacts: {
       display: "{ id: string }",
       structural: "object{id:string}",
+      canonical: "c" + group,
       flags: ["Object"],
       members: [{ name: "id", type: "string", variants: [] }],
       variants: [],
@@ -35,7 +36,10 @@ const declared = (
     },
   }) as unknown as Unit
 
-const review = (units: ReadonlyArray<Unit>, verdict: "one_concept" | "two_concepts" = "one_concept") =>
+const review = (
+  units: ReadonlyArray<Unit>,
+  verdict: "one_concept" | "two_concepts" = "one_concept",
+) =>
   plannedDiagnosticsOf(structuralCollapse, { units } as unknown as Workspace).pipe(
     Effect.provide(modelStub({ verdict: choice(verdict, 0.95) })),
   )

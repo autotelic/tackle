@@ -1,5 +1,11 @@
 import { expect, it } from "@effect/vitest"
-import { allPairs, shinglesOf, similarityOf } from "../src/similarity.ts"
+import {
+  allContainmentPairs,
+  allPairs,
+  containmentOf,
+  shinglesOf,
+  similarityOf,
+} from "../src/similarity.ts"
 import { sweep } from "../src/rule.ts"
 
 /** Deterministic PRNG, so a failure is reproducible rather than a coin toss. */
@@ -55,7 +61,8 @@ const complete = (
     (item) => item.size,
     threshold,
     (a, b) => {
-      if (similarityOf({ left: a.item, right: b.item }) >= threshold) found.push(key(a.position, b.position))
+      if (similarityOf({ left: a.item, right: b.item }) >= threshold)
+        found.push(key(a.position, b.position))
     },
   )
   return found.sort()
@@ -124,7 +131,10 @@ it("finds pairs a token-length window would drop", () => {
   )
   const tokenWindow = (() => {
     const ordered = sets
-      .map((shingles, position) => ({ item: { shingles, tokens: tokenLengths[position] ?? 0 }, position }))
+      .map((shingles, position) => ({
+        item: { shingles, tokens: tokenLengths[position] ?? 0 },
+        position,
+      }))
       .sort((a, b) => a.item.tokens - b.item.tokens || a.position - b.position)
     const found: Array<string> = []
     sweep(
@@ -149,4 +159,58 @@ it("token shingles behave like the sets the join expects", () => {
   const b = shinglesOf(["return", "_", ".", "_"].map(String))
   expect(similarityOf({ left: a, right: b })).toBe(1)
   expect(similarityOf({ left: a, right: shinglesOf(["return", "_"]) })).toBeGreaterThan(0)
+})
+
+/** Every containment pair, scored by the brute-force sweep. */
+const completeContainment = (
+  sets: ReadonlyArray<ReadonlySet<string>>,
+  threshold: number,
+): ReadonlyArray<string> => {
+  const found: Array<string> = []
+  for (let a = 0; a < sets.length; a += 1) {
+    for (let b = a + 1; b < sets.length; b += 1) {
+      const left = sets[a]
+      const right = sets[b]
+      if (left === undefined || right === undefined) continue
+      const score = containmentOf({ left, right })
+      if (score < threshold) continue
+      // The join names the smaller side `part`; equal sides keep the earlier one.
+      const part = left.size <= right.size ? a : b
+      const whole = left.size <= right.size ? b : a
+      found.push(`${whole}-${part}`)
+    }
+  }
+  return found.sort()
+}
+
+it("the containment join finds exactly the pairs the brute-force sweep finds", () => {
+  for (const seed of [7, 99, 1234]) {
+    const sets = corpus(seed)
+    const fast = allContainmentPairs(
+      sets.map((shingles, index) => ({ position: index, shingles })),
+      0.7,
+    )
+      .map((pair) => `${pair.whole}-${pair.part}`)
+      .sort()
+    expect(fast).toEqual(completeContainment(sets, 0.7))
+  }
+})
+
+it("the containment join stays complete at a looser threshold too", () => {
+  const sets = corpus(11)
+  const fast = allContainmentPairs(
+    sets.map((shingles, index) => ({ position: index, shingles })),
+    0.3,
+  )
+    .map((pair) => `${pair.whole}-${pair.part}`)
+    .sort()
+  expect(fast).toEqual(completeContainment(sets, 0.3))
+})
+
+it("containment survives a size difference that collapses Jaccard", () => {
+  const small = new Set(Array.from({ length: 20 }, (_, index) => `s${index}`))
+  const large = new Set(small)
+  for (let index = 0; index < 80; index += 1) large.add(`extra${index}`)
+  expect(containmentOf({ left: small, right: large })).toBe(1)
+  expect(similarityOf({ left: small, right: large })).toBeLessThan(0.4)
 })
