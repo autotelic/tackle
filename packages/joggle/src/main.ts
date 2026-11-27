@@ -22,9 +22,17 @@ import { policy } from "./policy.ts"
 import { VERSION } from "./version.ts"
 import { exitCodeFor, render } from "./report.ts"
 import { applyDeclarationTypes, isRecord, loadWorkspace } from "./workspace.ts"
-import { answerPlansRaw, chunkPlans, type Plan, type PlanAnswers } from "./plans.ts"
-import { layer as atomsLayer, type Atoms } from "./atoms.ts"
-import { summarizeCalibration, type CalibrationState, type CalibrationSummary } from "./calibration.ts"
+import { answerPlansRaw, answerKeyFor, chunkPlans, type Plan, type PlanAnswers } from "./plans.ts"
+import { Atoms, layer as atomsLayer } from "./atoms.ts"
+import {
+  fragmentSetHash,
+  splitReport,
+  summarizeCalibration,
+  type CalibrationState,
+  type CalibrationSummary,
+  type Observation,
+  type SplitReport,
+} from "./calibration.ts"
 import { verdictOf } from "./verdict.ts"
 import { everyFile, qualityOf, type DecisionAnswers, type PlannedRule, type Rule } from "./rule.ts"
 import { allRules, builtIn, Rules } from "./rules/index.ts"
@@ -805,7 +813,14 @@ const calibrateCommand = Command.make(
             nodeTypes = indexOfNodeTypes(found.found)
           }
         }
-        const out: Array<{ readonly rule: string; readonly decision: string; readonly summary: CalibrationSummary; readonly note: string; readonly sample: ReadonlyArray<string> }> = []
+        const out: Array<{
+          readonly rule: string
+          readonly decision: string
+          readonly summary: CalibrationSummary
+          readonly note: string
+          readonly sample: ReadonlyArray<string>
+          readonly split: SplitReport
+        }> = []
         for (const rule of rules) {
           const planned = yield* rule.plan(workspace, everyFile, { config: ruleSet.effective, nodeTypes })
           // Chunked like the engine: one rule's candidates can exceed the
@@ -843,10 +858,27 @@ const calibrateCommand = Command.make(
           }
           const unreadable = answers.filter((answer) => answer === undefined).length
           const rejected = unreadable > 0 ? String(unreadable) + " candidate(s) the provider rejected" : ""
+          // The state each plan asked against, as values rather than atom ids.
+          // Two plans that read the same body in two files read different atoms
+          // (the file is part of the atom) but the same state, and rung 0 exists
+          // because that pair must land on one side of the split. The per-atom
+          // id would keep them apart; the state is what the question saw.
+          const atomStore = yield* Atoms
+          const evidence = yield* Effect.forEach(planned.plans, (plan) =>
+            Effect.map(atomStore.values(plan.atoms), (values) =>
+              Object.values(values).map(canonical).sort(),
+            ),
+          )
           // One row per DECISION that declares its violating labels, so a rule
           // that composes several questions is calibrated question by question
           // rather than named and skipped.
           const byDecision = new Map<string, Array<CalibrationState>>()
+          // Rung 0: the same observation, seen by the split. The key is the
+          // per-question cache key (`answerKeyFor`, the same model + state +
+          // questions `cacheKeyFor` hashes for the wire), and the fragment set is
+          // the atoms the plan read. Two plans that read the same body in two
+          // files share the fragments; they are one observation, not two votes.
+          const observationsByDecision = new Map<string, Array<Observation>>()
           planned.plans.forEach((plan, index) => {
             for (const [decision, labels] of Object.entries(plan.violations ?? {})) {
               const verdict = verdictOf(answers[index]?.[decision], labels)
@@ -859,6 +891,17 @@ const calibrateCommand = Command.make(
               const states = byDecision.get(decision) ?? []
               states.push({ probability: verdict.probability, acted: quality.quality === "act" })
               byDecision.set(decision, states)
+              const question = plan.decisions[decision]
+              if (question !== undefined) {
+                const observations = observationsByDecision.get(decision) ?? []
+                observations.push({
+                  key: answerKeyFor(question, evidence[index]),
+                  atom: plan.subject,
+                  fragments: fragmentSetHash(plan.atoms),
+                  label: verdict.label ?? (verdict.probability >= 0.5 ? "yes" : "no"),
+                })
+                observationsByDecision.set(decision, observations)
+              }
             }
           })
           const sample = planned.plans.slice(0, 3).map((plan) => plan.subject)
@@ -870,11 +913,19 @@ const calibrateCommand = Command.make(
               summary: summarizeCalibration([]),
               sample,
               note: note === "" ? "no violating decision declared" : note,
+              split: splitReport([]),
             })
             continue
           }
           for (const [decision, states] of byDecision) {
-            out.push({ rule: rule.id, decision, summary: summarizeCalibration(states), sample, note })
+            out.push({
+              rule: rule.id,
+              decision,
+              summary: summarizeCalibration(states),
+              sample,
+              note,
+              split: splitReport(observationsByDecision.get(decision) ?? []),
+            })
           }
         }
         for (const rule of plainRules) {
@@ -889,6 +940,7 @@ const calibrateCommand = Command.make(
               summary: summarizeCalibration([]),
               sample: [],
               note: "the rule could not run: " + String(ran.failure),
+              split: splitReport([]),
             })
             continue
           }
@@ -914,11 +966,22 @@ const calibrateCommand = Command.make(
               summary: summarizeCalibration([]),
               sample: [],
               note: "no violating decision was declared or asked",
+              // A plain rule answers its own questions, so the split has no
+              // subject to partition on: it is measured for planned rules only,
+              // and named rather than guessed at.
+              split: splitReport([]),
             })
             continue
           }
           for (const [decision, states] of byDecision) {
-            out.push({ rule: rule.id, decision, summary: summarizeCalibration(states), sample: [], note: "" })
+            out.push({
+              rule: rule.id,
+              decision,
+              summary: summarizeCalibration(states),
+              sample: [],
+              note: "",
+              split: splitReport([]),
+            })
           }
         }
         return out
@@ -949,7 +1012,8 @@ const calibrateCommand = Command.make(
       }
       const width = rows.reduce((max, row) => Math.max(max, (row.rule + "#" + row.decision).length), 0)
       const lines = [
-        "rule#decision".padEnd(width) + "  states  verdict   median   min   max  fired",
+        "rule#decision".padEnd(width) +
+          "  states  verdict   median   min   max  fired   atom  deduped  withheld",
         ...rows.map(
           (row) =>
             (row.rule + "#" + row.decision).padEnd(width) +
@@ -959,6 +1023,11 @@ const calibrateCommand = Command.make(
             "  " + row.summary.min.toFixed(2).padStart(5) +
             "  " + row.summary.max.toFixed(2).padStart(5) +
             "  " + String(row.summary.fired).padStart(5) +
+            // Both numbers side by side: the atom-keyed agreement that the
+            // leakiest split reports, and the deduped one that survives rung 0.
+            "  " + row.split.byAtom.rate.toFixed(2).padStart(5) +
+            "  " + row.split.byKey.rate.toFixed(2).padStart(7) +
+            "  " + String(row.split.withheld).padStart(8) +
             (row.note === "" ? "" : "  (" + row.note + ")"),
         ),
       ]

@@ -349,3 +349,36 @@ after), and the collapses it named in joggle were made real (`Move`/`Stage`,
 honest: `Diagnostic`/`MutableDiagnostic` is a deliberate mutable view, and
 `CachedFacts`/`CachedIndex` still blur because a const's referenced local name
 is erased before the shape comparison.
+
+## Rung 0: the split has to survive its own test
+
+A calibration number is only quotable if the observation it was measured on did
+not appear on both sides of the train/test split. Partitioning by the atom (a
+declaration's name) does not survive that test: the corpus repeats itself, so
+the same evidence is a test case and a training case at once.
+
+`calibration.ts` now reports both numbers side by side in `joggle calibrate`:
+`atom` is the old partition, `deduped` partitions on the decision cache key
+(`answerKeyFor`, the per-question form of `cacheKeyFor`'s model + state +
+questions) after withholding exact duplicates by fragment-set hash, and
+`withheld` counts what was removed. A duplicate is one observation, not two
+votes.
+
+The committed ledger cannot be replayed through the split: it records the
+answer key and the answer, not the state or the fragment set, so there is no
+atom or fragment hash to partition on. What it does carry is the repeat rate,
+and that is the number rung 0 exists to expose:
+
+| Measurement | Entries | Agreement |
+| --- | --: | --: |
+| Every observation | 2,597 | 0.271 |
+| Distinct answer bodies | 1,123 | 0.151 |
+
+1,474 observations (57%) are an exact repeat of an earlier body, and the largest
+body group is 41. "Agreement" here is the share the corpus's own majority answer
+would get, which is the baseline a memorised test answer has to beat: on every
+observation it is 0.271, and on the 1,123 distinct bodies it **collapses to
+0.151**, a 12.1-point drop. The repeat vote was carrying the number. The stored
+self-agreement (`consistency`) does not move — 0.987 over 53 probability
+answers, 0.986 over 48 distinct bodies — and that is the number that survives
+dedupe.
