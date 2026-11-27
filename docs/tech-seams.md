@@ -470,8 +470,8 @@ One row per concern that exists twice. This is the list the backlog is cut from.
 | room lifecycle state       | Alchemy Room/Move models           | none (room is the good case)                          |
 | workstream lifecycle state | Alchemy Domain (when a 2nd writer) | `factory/store.ts:10`                                 |
 | mailbox state              | Domain or SQLite                   | `protocol/src/mailbox.ts`, JSON snapshot              |
-| guest service lifecycle    | agentOS `process.*`                | room service pid and exit code                         |
-| guest durability           | agentOS `filesystem.export`        | room pause/resume snapshots                            |
+| guest service lifecycle    | agentOS `process.*`                | room service pid and exit code                        |
+| guest durability           | agentOS `filesystem.export`        | room pause/resume snapshots                           |
 | DID/lease/receipt wire     | Rat King lexicons                  | `protocol/src/mailbox.ts`, `board/src/mailbox/did.ts` |
 | credential policy          | Executor (later)                   | `factory/executor.ts` broker                          |
 | API surface for a peer     | board `/presence`                  | Herdr decode (`herdr/factory/presence.js`, read-only) |
