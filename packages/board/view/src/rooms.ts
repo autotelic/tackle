@@ -49,6 +49,20 @@ export type RoomRecord = typeof RoomRecord.Type
 export const RoomList = Schema.Struct({ rooms: Schema.Array(RoomRecord) })
 export type RoomList = typeof RoomList.Type
 
+/**
+ * What `POST /rooms/:id/open` answers, on either outcome.
+ *
+ * The rung names which Herdr client answered; a refusal names the reason in the same field so
+ * the page never has to explain an open it did not perform.
+ */
+export const RoomOpenResult = Schema.Struct({
+  ok: Schema.Boolean,
+  rung: Schema.optional(Schema.Literals(["herdr-app", "herdr-terminal"])),
+  address: Schema.optional(Schema.String),
+  reason: Schema.optional(Schema.String),
+})
+export type RoomOpenResult = typeof RoomOpenResult.Type
+
 /** The five fields a new room is created from, as the form holds them. */
 export const RoomForm = Schema.Struct({
   id: Schema.String,

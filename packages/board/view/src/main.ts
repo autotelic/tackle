@@ -9,6 +9,7 @@ import {
   RoomForm,
   RoomFormField,
   RoomList,
+  RoomOpenResult,
   type RoomRecord,
   emptyRoomForm,
 } from "./rooms.ts"
@@ -87,6 +88,14 @@ export const Message = UiSchema.TaggedEnum({
     id: Schema.String,
     action: RoomAction,
     ok: Schema.Boolean,
+    error: Schema.NullOr(Schema.String),
+  },
+  ClickedOpenRoom: { id: Schema.String },
+  RoomOpened: {
+    id: Schema.String,
+    ok: Schema.Boolean,
+    rung: Schema.NullOr(Schema.String),
+    address: Schema.NullOr(Schema.String),
     error: Schema.NullOr(Schema.String),
   },
 })
@@ -237,6 +246,53 @@ export const RoomLifecycle = Command.make(
       Effect.match({
         onFailure: (error) => Message.RoomActioned({ id, action, ok: false, error }),
         onSuccess: () => Message.RoomActioned({ id, action, ok: true, error: null }),
+      }),
+    ),
+)
+
+/**
+ * Open one room in Herdr, the terminal's owner.
+ *
+ * The board decides whether to focus an existing terminal or start the user's shell in the
+ * worktree; this command only names the room and draws what the board answered. A refusal is
+ * read from the document even when the status is not 2xx, so the page says the reason rather
+ * than "HTTP 502".
+ */
+export const OpenRoom = Command.make(
+  "board/OpenRoom",
+  { args: { id: Schema.String }, mode: "switch" },
+  ({ id }) =>
+    Effect.tryPromise({
+      try: async () => {
+        const response = await fetch("/rooms/" + encodeURIComponent(id) + "/open", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: "{}",
+        })
+        const body = await response.json().catch(() => undefined)
+        const decoded = Schema.decodeUnknownResult(RoomOpenResult)(body)
+        if (Result.isSuccess(decoded)) {
+          if (!decoded.success.ok)
+            return Promise.reject(decoded.success.reason ?? "the board could not open " + id)
+          return decoded.success
+        }
+        return Promise.reject(
+          response.ok ? "the board answered no room open" : "HTTP " + response.status,
+        )
+      },
+      catch: (cause) => String(cause),
+    }).pipe(
+      Effect.match({
+        onFailure: (error) =>
+          Message.RoomOpened({ id, ok: false, rung: null, address: null, error }),
+        onSuccess: (result) =>
+          Message.RoomOpened({
+            id,
+            ok: true,
+            rung: result.rung ?? null,
+            address: result.address ?? null,
+            error: null,
+          }),
       }),
     ),
 )
@@ -436,6 +492,24 @@ export const BoardView = Html.component({
       })
       return ok ? evolved.run(FetchRooms.make()) : evolved
     },
+    ClickedOpenRoom: ($, { id }) =>
+      $.evolve({
+        roomPending: "Opening " + id + " in Herdr",
+        roomError: null,
+        roomNotice: null,
+      }).run(OpenRoom.make({ id })),
+    RoomOpened: ($, { id, ok, rung, address, error }) =>
+      $.evolve({
+        roomPending: null,
+        roomError: ok ? null : (error ?? "the board could not open " + id),
+        roomNotice: ok
+          ? "Room " +
+            id +
+            " opened in Herdr" +
+            (rung === null ? "" : " · " + rung) +
+            (address === null ? "" : " · " + address)
+          : null,
+      }),
     AtlasSettled: ($, { value, error }) => {
       if (error !== null) return $.evolve({ atlas: null, error, loading: false })
       const decoded = Schema.decodeUnknownResult(Atlas)(value)
@@ -1452,15 +1526,16 @@ const roomRow = (h: Html.H<Message>, room: RoomRecord) => {
             ? undefined
             : h.span.class("mono").children("socket " + room.socket),
         ),
-      h.div
-        .class("room-actions")
-        .children(
-          roomActions.map((action) =>
-            h.button
-              .on("click", Message.ClickedRoomAction({ id: room.id, action }))
-              .children(roomActionLabel[action]),
-          ),
+      h.div.class("room-actions").children(
+        // The terminal surface is Herdr's: the board only focuses or starts a terminal, it
+        // never draws one. This is the human action; creating a room starts nothing.
+        h.button.on("click", Message.ClickedOpenRoom({ id: room.id })).children("Open in Herdr"),
+        roomActions.map((action) =>
+          h.button
+            .on("click", Message.ClickedRoomAction({ id: room.id, action }))
+            .children(roomActionLabel[action]),
         ),
+      ),
     )
 }
 

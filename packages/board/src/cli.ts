@@ -70,7 +70,7 @@ const usage = [
   "  board run|watch|report|phase|cursor|budget|desk … (factory commands)",
   "  board queue [--root .room] [--json]",
   "",
-  "board up serves /health, /presence, /fleet, /queue, /factory, /rooms, /preview/<workstream>/ and /open",
+  "board up serves /health, /presence, /fleet, /queue, /factory, /rooms, /rooms/<id>/open, /preview/<workstream>/ and /open",
   "while it holds the lock.",
   "Exit codes: 0 ok, 1 declined, 2 usage, 3 infrastructure.",
 ].join("\n")
@@ -423,6 +423,8 @@ const OpenRequest = Schema.Struct({
   source: Schema.Union([Schema.Literal("herdr"), Schema.Literal("rex")]),
   address: SessionAddress,
 })
+// `hc run --bg --json` answers with the terminal it made; the address is Herdr's, not ours.
+const HerdrRun = Schema.Struct({ address: Schema.String })
 const DeskAnswerRequest = Schema.Struct({
   item: Schema.String,
   choice: Schema.String,
@@ -579,44 +581,149 @@ const openSession = async ({
     await execFileAsync(binary.value, ["block", "focus", address], { timeout: 5_000 })
     return "rex"
   }
-  if (source === "herdr") {
-    const app = findHerdrAppBinary()
-    if (Option.isSome(app)) {
-      const focus = () =>
-        execFileAsync(app.value, ["do", "agent.focus", "--terminal", address], { timeout: 5_000 })
-      const focused = await focus().then(
-        () => true,
-        () => false,
-      )
-      if (focused) return "herdr-app"
-      await execFileAsync("/usr/bin/open", ["-a", "Herdr"], { timeout: 5_000 }).catch(
-        () => undefined,
-      )
-      await new Promise((resolve) => setTimeout(resolve, 500))
-      const retried = await focus().then(
-        () => true,
-        () => false,
-      )
-      if (retried) return "herdr-app"
-    }
-    const binary = findHerdrBinary()
-    // oxlint-disable-next-line plumb/no-builtin-throws -- this HTTP boundary turns it into a 400
-    if (Option.isNone(binary)) throw new Error("hc is not installed")
-    const directory = join(homedir(), ".factory", "open")
-    await mkdir(directory, { recursive: true, mode: 0o700 })
-    await chmod(directory, 0o700).catch(() => undefined)
-    const script = join(directory, `attach-${randomUUID()}.command`)
-    await writeFile(
-      script,
-      `#!/bin/sh\nexec ${shellQuote(binary.value)} attach ${shellQuote(address)}\n`,
-      { mode: 0o700 },
-    )
-    await execFileAsync("/usr/bin/open", ["-a", "Terminal", script], { timeout: 5_000 })
-    setTimeout(() => void rm(script, { force: true }), 60_000).unref()
-    return "herdr-terminal"
-  }
+  if (source === "herdr") return focusHerdrTerminal(address)
   // oxlint-disable-next-line plumb/no-builtin-throws -- this HTTP boundary turns it into a 400
   throw new Error("unknown session source")
+}
+
+/**
+ * Bring a Herdr terminal forward, through the app first and Terminal only as the last rung.
+ *
+ * The caller has already established the address; this function never accepts one that came
+ * from a request body without discovery having checked it.
+ */
+const focusHerdrTerminal = async (address: string): Promise<"herdr-app" | "herdr-terminal"> => {
+  const app = findHerdrAppBinary()
+  if (Option.isSome(app)) {
+    const focus = () =>
+      execFileAsync(app.value, ["do", "agent.focus", "--terminal", address], { timeout: 5_000 })
+    const focused = await focus().then(
+      () => true,
+      () => false,
+    )
+    if (focused) return "herdr-app"
+    await execFileAsync("/usr/bin/open", ["-a", "Herdr"], { timeout: 5_000 }).catch(() => undefined)
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    const retried = await focus().then(
+      () => true,
+      () => false,
+    )
+    if (retried) return "herdr-app"
+  }
+  const binary = findHerdrBinary()
+  // oxlint-disable-next-line plumb/no-builtin-throws -- this HTTP boundary turns it into a 400
+  if (Option.isNone(binary)) throw new Error("hc is not installed")
+  const directory = join(homedir(), ".factory", "open")
+  await mkdir(directory, { recursive: true, mode: 0o700 })
+  await chmod(directory, 0o700).catch(() => undefined)
+  const script = join(directory, `attach-${randomUUID()}.command`)
+  await writeFile(
+    script,
+    `#!/bin/sh\nexec ${shellQuote(binary.value)} attach ${shellQuote(address)}\n`,
+    { mode: 0o700 },
+  )
+  await execFileAsync("/usr/bin/open", ["-a", "Terminal", script], { timeout: 5_000 })
+  setTimeout(() => void rm(script, { force: true }), 60_000).unref()
+  return "herdr-terminal"
+}
+
+/** A terminal name hc accepts: 1-32 of a-z 0-9 - _. */
+const roomTerminalName = (id: string): string => {
+  const slug = id
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/gu, "-")
+    .replace(/^-|-$/gu, "")
+  return ("room-" + (slug === "" ? "room" : slug)).slice(0, 32)
+}
+
+/** Whether a session's cwd is the same directory after symlinks are resolved. */
+const inWorktree = async (input: {
+  readonly cwd: string | undefined
+  readonly worktree: string
+}): Promise<boolean> => {
+  if (input.cwd === undefined) return false
+  const cwd = await realpath(input.cwd).catch(() => resolve(input.cwd ?? ""))
+  return cwd === input.worktree
+}
+
+/**
+ * Open a room in Herdr: focus the terminal that already carries the room, or make one.
+ *
+ * A terminal is the room's only when the evidence says so. `room=<id>` is the exact claim;
+ * a cwd inside the room's worktree is accepted only after that terminal's labels were read,
+ * because a cwd alone is shared by every agent in the checkout. When neither exists, `hc run`
+ * starts the user's shell in the worktree with the label written at spawn, and the address it
+ * answers with is focused. No request body reaches this function: the id comes from the path.
+ */
+const openRoomInHerdr = async (input: {
+  readonly root: string
+  readonly id: string
+}): Promise<{ readonly rung: "herdr-app" | "herdr-terminal"; readonly address: string }> => {
+  const room = await readRoom({ root: input.root, id: input.id })
+  if (room === undefined || room.state._tag === "Absent") {
+    // oxlint-disable-next-line plumb/no-builtin-throws -- this HTTP boundary turns it into a 404
+    throw new Error("RoomNotFound: " + input.id)
+  }
+  const worktree = await roomWorktree({ root: input.root, id: input.id })
+  const sessions = await discoverSessions()
+  const labelled = sessions.herdr.sessions.find((session) => session.roomId === input.id)
+  const byWorktree =
+    labelled === undefined
+      ? (
+          await Promise.all(
+            sessions.herdr.sessions
+              .filter((session) => session.roomId === undefined && session.labels !== undefined)
+              .map(async (session) =>
+                (await inWorktree({ cwd: session.cwd, worktree })) ? session : undefined,
+              ),
+          )
+        ).find((session) => session !== undefined)
+      : undefined
+  const existing = labelled ?? byWorktree
+  if (existing !== undefined) {
+    const rung = await openSession({ source: "herdr", address: existing.address })
+    // `source` is herdr, so the rex rung is unreachable; the branch keeps the union honest.
+    if (rung === "rex") {
+      // oxlint-disable-next-line plumb/no-builtin-throws -- this HTTP boundary turns it into a 502
+      throw new Error("unknown session source")
+    }
+    return { rung, address: existing.address }
+  }
+  if (!existsSync(worktree)) {
+    // oxlint-disable-next-line plumb/no-builtin-throws -- this HTTP boundary turns it into a 502
+    throw new Error("room " + input.id + " has no worktree at " + worktree)
+  }
+  const binary = findHerdrBinary()
+  if (Option.isNone(binary)) {
+    // oxlint-disable-next-line plumb/no-builtin-throws -- this HTTP boundary turns it into a 502
+    throw new Error("hc is not installed")
+  }
+  const output = await execFileAsync(
+    binary.value,
+    [
+      "run",
+      "--bg",
+      "--json",
+      "--name",
+      roomTerminalName(input.id),
+      "--label",
+      "room=" + input.id,
+      "--cwd",
+      worktree,
+    ],
+    { cwd: worktree, timeout: 15_000 },
+  ).catch((cause: unknown) => {
+    // oxlint-disable-next-line plumb/no-builtin-throws -- this HTTP boundary turns it into a 502
+    throw new Error("hc run failed: " + String(cause))
+  })
+  const decoded = Schema.decodeResult(Schema.fromJsonString(HerdrRun))(output.stdout)
+  if (Result.isFailure(decoded)) {
+    // oxlint-disable-next-line plumb/no-builtin-throws -- this HTTP boundary turns it into a 502
+    throw new Error("hc run printed no terminal address")
+  }
+  const address = decoded.success.address
+  const rung = await focusHerdrTerminal(address)
+  return { rung, address }
 }
 
 const serveView = async ({
@@ -920,6 +1027,27 @@ const serve = async ({
           })
         } catch (cause: unknown) {
           json({ response, status: 500, body: { error: String(cause) } })
+        }
+      })()
+      return
+    }
+    const roomOpen = /^\/rooms\/([^/]+)\/open$/u.exec(path)
+    if (roomOpen !== null && request.method === "POST") {
+      void (async () => {
+        // oxlint-disable-next-line plumb-effect/no-try-catch -- the HTTP handler consumes child-process failures here
+        try {
+          if (!isLoopbackAddress(request.socket.remoteAddress)) {
+            json({ response, status: 403, body: { error: "room control is loopback only" } })
+            return
+          }
+          const id = decodeURIComponent(roomOpen[1] ?? "")
+          // The id is the whole request: no command, no address, no shell fragment is accepted.
+          const opened = await openRoomInHerdr({ root, id })
+          json({ response, status: 200, body: { ok: true, id, ...opened } })
+        } catch (cause: unknown) {
+          const reason = String(cause)
+          const status = reason.startsWith("RoomNotFound") ? 404 : 502
+          json({ response, status, body: { ok: false, reason } })
         }
       })()
       return

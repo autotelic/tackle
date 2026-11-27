@@ -27,6 +27,7 @@ The side effects are declared, not performed by the view:
 | `FetchRooms`    | `Command`      | reads `/rooms`, decodes it, updates the Model    |
 | `CreateRoom`    | `Command`      | `POST /rooms`; the board runs `room new`         |
 | `RoomLifecycle` | `Command`      | `POST /rooms/:id/<verb>`, then re-reads the list |
+| `OpenRoom`      | `Command`      | `POST /rooms/:id/open`; Herdr focuses or starts  |
 | `OpenSession`   | `Command`      | `POST /open`, so the board focuses Herdr or Rex  |
 | `AnswerDesk`    | `Command`      | `POST /desk/answer`, recording a human choice    |
 | `routeTicks`    | `Subscription` | refreshes the route's document every 20 seconds  |
@@ -80,13 +81,18 @@ plane, not a second one.
   service; the board keeps both verbs because they are different machines of work.
 - **Errors and pending** — a refusal the board wrote is drawn as its own sentence, and the
   request in flight is named (`pause alpha…`) until it settles.
+- **Open in Herdr** — the room's terminal surface is Herdr's, never an xterm in the page.
+  `POST /rooms/:id/open` focuses a live terminal labeled `room=<id>`; when none exists it
+  starts the user's shell in the room worktree with that label and focuses what `hc run`
+  answered. The response names the rung and the address, or the reason it could not open.
+  Creating a room starts nothing: the human action is the only trigger.
 
 The seam is the JSON, exactly as on the other routes: the form is input state the Model holds
 while it is typed, and every fact about a room comes back from `/rooms`.
 
-**Next, deliberately not in this slice:** a terminal attached to the room, the changes the
-worktree accumulated, and ship/archive. Each is a new read on the board (or a room verb that
-already exists) before it is a panel; none of them changes this page's seam. The board's
+**Next, deliberately not in this slice:** the changes the worktree accumulated and
+ship/archive. Each is a new read on the board (or a room verb that already exists) before it
+is a panel; neither changes this page's seam. The board's
 loopback rule stays as it is: only the board's own listener may mutate a room, and the view
 reaches it from the same origin.
 

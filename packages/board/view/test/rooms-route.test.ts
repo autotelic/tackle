@@ -2,7 +2,7 @@
 import { Locator, Scene } from "@effect/ui/testing"
 import { assert, it } from "@effect/vitest"
 import { Effect, Result, Schema } from "effect"
-import { BoardView, CreateRoom, Message, type Model, RoomLifecycle } from "../src/main.ts"
+import { BoardView, CreateRoom, Message, type Model, OpenRoom, RoomLifecycle } from "../src/main.ts"
 import { RoomList } from "../src/rooms.ts"
 
 /**
@@ -138,6 +138,29 @@ it.effect("a lifecycle button issues that room's verb and shows the wait", () =>
         RoomLifecycle,
         Message.RoomActioned({ id: "alpha", action: "pause", ok: false, error: "test" }),
       )
+  }),
+)
+
+it.effect("the room's Open in Herdr issues the board's open action and names the rung", () =>
+  Effect.gen(function* () {
+    const s = yield* Scene.make(BoardView, {})
+    const opened = s
+      .given(model(JSON.stringify([alpha])))
+      .click("Open in Herdr")
+      .expect(Locator.text("Opening alpha in Herdr…"))
+      .toExist()
+      .expectExact(OpenRoom.make({ id: "alpha" }))
+      .resolve(
+        OpenRoom,
+        Message.RoomOpened({
+          id: "alpha",
+          ok: true,
+          rung: "herdr-app",
+          address: "t18",
+          error: null,
+        }),
+      )
+    assert.include(Locator.textOf(opened.root), "Room alpha opened in Herdr · herdr-app · t18")
   }),
 )
 
