@@ -715,14 +715,6 @@ export const policy = {
   },
 
   /**
-   * How much of a cluster is described to the model.
-   *
-   * A cluster of two hundred declarations is one decision but not one question:
-   * sending every member's source blew the request budget and the API answered
-   * 400. The first N members are described and the rest are counted, so the
-   * decision still stands on the whole cluster even when the detail is bounded.
-   */
-  /**
    * Canonical type ids: off, because they cost an RPC per declaration.
    *
    * The id walks the checker's type graph (`getPropertiesOfType`,
@@ -734,7 +726,14 @@ export const policy = {
    * opt-in. An empty string means "not computed", never "computed and empty".
    */
   canonical: false,
-
+  /**
+   * How much of a cluster is described to the model.
+   *
+   * A cluster of two hundred declarations is one decision but not one question:
+   * sending every member's source blew the request budget and the API answered
+   * 400. The first N members are described and the rest are counted, so the
+   * decision still stands on the whole cluster even when the detail is bounded.
+   */
   evidence: {
     maxMembers: 12,
     maxSourceChars: 1500,

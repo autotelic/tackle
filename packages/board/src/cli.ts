@@ -764,22 +764,33 @@ const serve = async ({
       return
     }
     if (path === "/rooms" && request.method === "GET") {
-      void listRooms(root).then(
-        (rooms) =>
+      void (async () => {
+        // oxlint-disable-next-line plumb-effect/no-try-catch -- the HTTP handler consumes room/store failures here
+        try {
+          const rooms = await listRooms(root)
           json({
             response,
             status: 200,
             body: {
-              rooms: rooms.map((room) => ({
-                id: room.id,
-                state: room.state._tag,
-                runtime: room.runtime?.kind,
-                port: room.port?.number,
-              })),
+              rooms: await Promise.all(
+                rooms.map(async (room) => {
+                  const vm = await readVmStatus({ root, id: room.id })
+                  return {
+                    id: room.id,
+                    state: room.state._tag,
+                    runtime: room.runtime?.kind,
+                    port: room.port?.number,
+                    socket: vmSocketFile({ root, id: room.id }),
+                    vm: { state: vm.state, ...(vm.run === undefined ? {} : { pid: vm.run.pid }) },
+                  }
+                }),
+              ),
             },
-          }),
-        (cause: unknown) => json({ response, status: 500, body: { error: String(cause) } }),
-      )
+          })
+        } catch (cause: unknown) {
+          json({ response, status: 500, body: { error: String(cause) } })
+        }
+      })()
       return
     }
     const roomAction = /^\/rooms\/([^/]+)\/(up|pause|resume|down)$/u.exec(path)

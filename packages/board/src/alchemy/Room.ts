@@ -67,7 +67,33 @@ export interface RoomProps {
   readonly scope: string
   /** The guest software the room declares; absent writes the store's default declaration. */
   readonly software?: RoomSoftware
+  /**
+   * A running board's control URL. When present, this provider composes through board's room
+   * lifecycle instead of calling the store and worktree in-process.
+   */
+  readonly board?: string
 }
+
+interface BoardRoom {
+  readonly id: string
+  readonly state: string
+  readonly runtime?: string
+  readonly socket?: string
+  readonly vm?: { readonly state: string; readonly pid?: number }
+}
+
+const controlUrl = (base: string, path: string): string =>
+  new URL(path, base.endsWith("/") ? base : base + "/").toString()
+
+const boardRooms = async (base: string): Promise<ReadonlyArray<BoardRoom>> => {
+  const response = await fetch(controlUrl(base, "rooms"))
+  if (!response.ok) throw new Error("board GET /rooms answered " + response.status)
+  const body = (await response.json()) as { readonly rooms?: ReadonlyArray<BoardRoom> }
+  return body.rooms ?? []
+}
+
+const boardRoom = async (base: string, id: string): Promise<BoardRoom | undefined> =>
+  (await boardRooms(base)).find((entry) => entry.id === id)
 
 export interface RoomAttributes {
   readonly id: string
@@ -96,6 +122,8 @@ export interface RoomMachineProps {
   readonly root: string
   /** Where the VM's own disk (`agentos.sqlite`) lives; the room's directory by convention. */
   readonly stateDir: string
+  /** A running board's control URL; when present, start/stop through it. */
+  readonly board?: string
 }
 
 export interface RoomMachineAttributes {
@@ -143,10 +171,40 @@ export const RoomProvider = () =>
         // A plan calls `read` only when the declared props are resolved, and it passes those
         // props as `olds`: there is no row yet, so nothing else could be observed.
         read: Effect.fn(function* ({ olds }: { readonly olds: RoomProps }) {
+          if (olds.board !== undefined) {
+            const found = yield* attempt(() => boardRoom(olds.board!, olds.id))
+            return found === undefined ? undefined : roomAttributes(olds)
+          }
           const observed = yield* attempt(() => readRoom({ root: olds.root, id: olds.id }))
           return observed === undefined ? undefined : roomAttributes(olds)
         }),
         reconcile: Effect.fn(function* ({ news }: { readonly news: RoomProps }) {
+          if (news.board !== undefined) {
+            const found = yield* attempt(() => boardRoom(news.board!, news.id))
+            if (found === undefined) {
+              const response = yield* attempt(() =>
+                fetch(controlUrl(news.board!, "rooms"), {
+                  method: "POST",
+                  headers: { "content-type": "application/json" },
+                  body: JSON.stringify({
+                    id: news.id,
+                    repo: news.repo,
+                    scope: news.scope,
+                    base: news.base,
+                  }),
+                }),
+              )
+              if (!response.ok) {
+                const text = yield* attempt(() => response.text())
+                return yield* Effect.fail(
+                  new RoomResourceError({
+                    message: "board POST /rooms answered " + response.status + ": " + text,
+                  }),
+                )
+              }
+            }
+            return roomAttributes(news)
+          }
           const paths = roomPaths({ root: news.root, id: news.id })
           const observed = yield* attempt(() => readRoom({ root: news.root, id: news.id }))
           // The worktree comes first, exactly as the CLI does: git refuses a worktree whose
@@ -217,11 +275,37 @@ export const RoomMachineProvider = () =>
     Effect.succeed({
       list: () => Effect.succeed([]),
       read: Effect.fn(function* ({ olds }: { readonly olds: RoomMachineProps }) {
+        if (olds.board !== undefined) {
+          const found = yield* attempt(() => boardRoom(olds.board!, olds.room))
+          if (found?.vm === undefined || found.vm.state === "absent") return undefined
+          return { room: olds.room, socket: found.socket ?? "", state: found.vm.state as VmState }
+        }
         const status = yield* attempt(() => readVmStatus({ root: olds.root, id: olds.room }))
         if (status.run === undefined) return undefined
         return { room: olds.room, socket: status.run.socket, state: status.state }
       }),
       reconcile: Effect.fn(function* ({ news }: { readonly news: RoomMachineProps }) {
+        if (news.board !== undefined) {
+          const response = yield* attempt(() =>
+            fetch(controlUrl(news.board!, "rooms/" + encodeURIComponent(news.room) + "/up"), {
+              method: "POST",
+            }),
+          )
+          if (!response.ok) {
+            const text = yield* attempt(() => response.text())
+            return yield* Effect.fail(
+              new RoomResourceError({
+                message: "board room up answered " + response.status + ": " + text,
+              }),
+            )
+          }
+          const found = yield* attempt(() => boardRoom(news.board!, news.room))
+          return {
+            room: news.room,
+            socket: found?.socket ?? "",
+            state: (found?.vm?.state ?? "absent") as VmState,
+          }
+        }
         const paths = roomPaths({ root: news.root, id: news.room })
         const started = yield* attempt(() =>
           ensureVmSupervisor({
@@ -241,6 +325,22 @@ export const RoomMachineProvider = () =>
       }),
       // `delete` receives the previous props as `olds`, not the reconcile's `news`.
       delete: Effect.fn(function* ({ olds }: { readonly olds: RoomMachineProps }) {
+        if (olds.board !== undefined) {
+          const response = yield* attempt(() =>
+            fetch(controlUrl(olds.board!, "rooms/" + encodeURIComponent(olds.room) + "/down"), {
+              method: "POST",
+            }),
+          )
+          if (!response.ok) {
+            const text = yield* attempt(() => response.text())
+            return yield* Effect.fail(
+              new RoomResourceError({
+                message: "board room down answered " + response.status + ": " + text,
+              }),
+            )
+          }
+          return
+        }
         const stopped = yield* attempt(() => stopVmSupervisor({ root: olds.root, id: olds.room }))
         yield* Effect.logInfo(
           `Tackle.RoomMachine ${olds.room}: ${stopped.detail} (pid ${String(stopped.pid ?? "none")})`,

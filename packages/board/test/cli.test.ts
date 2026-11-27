@@ -693,7 +693,7 @@ test("board exposes room lifecycle to its loopback control plane", async () => {
     const listed = await fetch(origin + "/rooms")
     expect(listed.status).toBe(200)
     const rooms = (await listed.json()) as { rooms: Array<{ id: string; state: string }> }
-    expect(rooms.rooms).toContainEqual({ id: "api-room", state: "Ready" })
+    expect(rooms.rooms).toContainEqual(expect.objectContaining({ id: "api-room", state: "Ready" }))
 
     for (const action of ["up", "pause", "resume", "down"]) {
       const response = await fetch(origin + "/rooms/api-room/" + action, { method: "POST" })

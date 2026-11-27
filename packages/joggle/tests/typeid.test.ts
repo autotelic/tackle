@@ -59,6 +59,7 @@ const resolveFixture = () =>
         identity,
         maxMembers: 64,
         maxStrings: 12000,
+        canonical: true,
       }),
     )
     return factsByName(result.found)

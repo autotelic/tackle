@@ -245,6 +245,15 @@ export interface DeclarationQuery extends ProjectSource {
   readonly maxMembers: number
   /** Total `typeToString` calls for the run, which is the expensive part. */
   readonly maxStrings: number
+  /**
+   * Whether to compute canonical type ids, defaulting to `policy.canonical`.
+   *
+   * The walk is a sidecar round trip per declaration, so it is off by default and
+   * the caller sets it — a test of the ids themselves, or a run whose cost has been
+   * measured. Set for every declaration of a repository, it was an out-of-memory
+   * crash rather than a slow function.
+   */
+  readonly canonical?: boolean | undefined
 }
 
 const FLAG_TABLE: ReadonlyArray<readonly [string, number | undefined]> = [
@@ -494,7 +503,8 @@ export const resolveDeclarations = async (input: DeclarationQuery): Promise<Decl
           unresolved += 1
           continue
         }
-        const canonical = !policy.canonical
+        const wantsCanonical = input.canonical ?? policy.canonical
+        const canonical = !wantsCanonical
           ? ""
           : await typeIdOf({
           checker: project.checker,

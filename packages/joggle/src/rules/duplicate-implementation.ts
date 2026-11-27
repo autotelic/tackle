@@ -35,7 +35,12 @@ const find = (workspace: Workspace, scope: Scope): ReadonlyArray<Cluster> =>
     units: workspace.units,
     kinds: ["shape"],
     minTokens: policy.duplicateImplementation.minTokens,
-    distinctFiles: true,
+    // Same-file copies count: `bundles.ts` carried `blocksIn` and `declares` three
+    // lines apart with identical bodies, and `distinctFiles: true` made every
+    // duplicate rule blind to it. Two declarations in one file that share a shape
+    // and differ in name are the cheapest kind of duplication to see and the
+    // easiest to fix.
+    distinctFiles: false,
     separateTests: true,
     scope,
   }).map((group) => clusterOf(group.members, true, 1))

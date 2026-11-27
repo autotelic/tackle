@@ -17,9 +17,21 @@ tester.run(
 	{
 		valid: [
 			{ code: `const form = 1;`, filename: "a.ts" },
+			// Reading a field someone else declared is not a name this package chose.
+			{ code: `const value = unit.shape;`, filename: "a.ts" },
 		],
 		invalid: [
 			{ code: `const shape = 1;`, filename: "a.ts", errors: [{ messageId: "forbiddenSymbolName" }] },
+			{
+				code: `function shape() { return 1; }`,
+				filename: "a.ts",
+				errors: [{ messageId: "forbiddenSymbolName" }],
+			},
+			{
+				code: `interface Box { shape: string; }`,
+				filename: "a.ts",
+				errors: [{ messageId: "forbiddenSymbolName" }],
+			},
 		],
 	},
 );
