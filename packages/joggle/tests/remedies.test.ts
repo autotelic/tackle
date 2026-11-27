@@ -12,6 +12,7 @@ import {
   messageKeyOf,
   pairKeyOf,
   partitionsOf,
+  recomputeTraceDecision,
   repairLabel,
   remedyFamilies,
   witnessClause,
@@ -43,22 +44,38 @@ const opinionOf = (
   repairs: ReadonlyArray<readonly [RemedyFinding, string]>,
   same: ReadonlyArray<readonly [RemedyFinding, RemedyFinding, number]>,
   families?: ReadonlyArray<readonly [RemedyFinding, string]>,
-): RepairOpinion => ({
-  repairs: new Map(repairs.map(([item, label]) => [messageKeyOf(item), label])),
-  families:
-    families === undefined
-      ? undefined
-      : new Map(families.map(([item, family]) => [messageKeyOf(item), family])),
-  same: new Map(
-    same.map(([left, right, probability]) => [
-      pairKeyOf({ left: messageKeyOf(left), right: messageKeyOf(right) }),
-      probability,
-    ]),
-  ),
-  failures: [],
-  questions: repairs.length,
-  pairs: same.length,
-})
+  material?: ReadonlyArray<readonly [RemedyFinding, RemedyFinding, number]>,
+  subcase?: ReadonlyArray<readonly [RemedyFinding, RemedyFinding, number]>,
+): RepairOpinion => {
+  const keyOf = (left: RemedyFinding, right: RemedyFinding): string =>
+    pairKeyOf({ left: messageKeyOf(left), right: messageKeyOf(right) })
+  // These fixtures predate rung 2's second question. The default says the
+  // trigger difference is immaterial, which is what makes each existing `same`
+  // case still join; a fixture that wants a split passes `material` explicitly.
+  return {
+    repairs: new Map(repairs.map(([item, label]) => [messageKeyOf(item), label])),
+    families:
+      families === undefined
+        ? undefined
+        : new Map(families.map(([item, family]) => [messageKeyOf(item), family])),
+    same: new Map(same.map(([left, right, probability]) => [keyOf(left, right), probability])),
+    material: new Map(
+      same.map(([left, right]) => [
+        keyOf(left, right),
+        material?.find(([a, b]) => keyOf(a, b) === keyOf(left, right))?.[2] ?? 0.1,
+      ]),
+    ),
+    subcase: new Map(
+      same.map(([left, right]) => [
+        keyOf(left, right),
+        subcase?.find(([a, b]) => keyOf(a, b) === keyOf(left, right))?.[2] ?? 0.1,
+      ]),
+    ),
+    failures: [],
+    questions: repairs.length,
+    pairs: same.length,
+  }
+}
 
 test("both engines' JSON arrive unchanged", () => {
   const joggle = findingsOf({
@@ -188,6 +205,12 @@ test("a run that answered some pairs is partial, not witness-only", () => {
       [messageKeyOf(right), "accept"],
     ]),
     same: new Map([[pairKeyOf({ left: messageKeyOf(left), right: messageKeyOf(right) }), 0.91]]),
+    material: new Map([
+      [pairKeyOf({ left: messageKeyOf(left), right: messageKeyOf(right) }), 0.1],
+    ]),
+    subcase: new Map([
+      [pairKeyOf({ left: messageKeyOf(left), right: messageKeyOf(right) }), 0.1],
+    ]),
     failures: ["InvalidRequestError: max_tokens_exceeded"],
     questions: 3,
     pairs: 3,
@@ -513,13 +536,12 @@ test("a clause list longer than one Choice is split, not truncated", () => {
   for (const group of wide) expect(group.length).toBeLessThan(clauses.length)
 })
 
-test("a pairwise answer does not join two rules across a family boundary", () => {
+test("a material trigger difference does not join two rules", () => {
   // The measured defect: the stable-API family absorbed five
   // `no-nullish-default-on-partial-input` findings. Their repairs are unlike --
   // one is an API swap, the other a schema choice -- and their sites are
-  // disjoint, but the pair question scored them as one edit because both are
-  // "use the schema". The family is the coarse answer; it may not be widened by
-  // the fine question.
+  // disjoint, but the old pair question scored them as one edit because both are
+  // "use the schema". `j_material` is the question that settles it.
   const experimental = finding(
     "effecttsgo/experimental-api-usage",
     "@effect/ui/Command#make is an experimental API",
@@ -541,6 +563,7 @@ test("a pairwise answer does not join two rules across a family boundary", () =>
       [experimental, "use the stable API"],
       [nullish, "parse at the boundary"],
     ],
+    [[experimental, nullish, 0.91]],
   )
   const report = clusterRemedies([experimental, nullish], opinion)
   expect(report.clusters).toHaveLength(2)
@@ -609,8 +632,65 @@ test("a multi-rule cluster prints what held it together", () => {
       b: { rule: "b", sites: 1 },
       intersect: false,
       probability: 0.87,
+      material: 0.1,
+      subcase: 0.1,
+      decision: "same",
       sharedRepair: false,
       families: { a: "parse at the boundary", b: "parse at the boundary" },
     },
   ])
+})
+
+test("a trace recomputes its decision from JSON with no model call", () => {
+  const parse = finding("a", "A typeof check. Parse input at its I/O boundary.", 1, "src/k.ts")
+  const accept = finding(
+    "b",
+    "Parameter `value` is unparsed. Accept a named domain type.",
+    2,
+    "src/k.ts",
+  )
+  const opinion = opinionOf(
+    [
+      [parse, "parse at the boundary: Parse input at its I/O boundary"],
+      [accept, "parse at the boundary: Accept a named domain type"],
+    ],
+    [[parse, accept, 0.87]],
+    undefined,
+    [[parse, accept, 0.2]],
+  )
+  const report = clusterRemedies([parse, accept], opinion)
+  const trace = report.traces[0]
+  expect(trace?.decision.branch).toBe("same")
+  // The acceptance is offline: the emitted JSON carries the judgments and the
+  // published thresholds, so the branch is a function of the file alone.
+  const decoded = JSON.parse(JSON.stringify(trace)) as NonNullable<typeof trace>
+  expect(decoded.judgments).toEqual({ remedy: 0.87, material: 0.2, subcase: 0.1 })
+  expect(recomputeTraceDecision(decoded)).toBe(decoded.decision.branch)
+})
+
+test("a material trigger difference splits a high j_remedy pair", () => {
+  const experimental = finding(
+    "effecttsgo/experimental-api-usage",
+    "@effect/ui/Command#make is an experimental API",
+    1,
+  )
+  const nullish = finding(
+    "plumb-effect/no-nullish-default-on-partial-input",
+    "`?? false` on `body.enabled` conflates 'absent' with 'false' in partial updates. Use" +
+      " `Schema.optional` / `Schema.nullable` to distinguish absent from falsy.",
+    2,
+  )
+  const opinion = opinionOf(
+    [
+      [experimental, "use the stable API: Use the non-experimental, non-deprecated API"],
+      [nullish, "parse at the boundary: Use `Schema.optional` / `Schema.nullable`"],
+    ],
+    [[experimental, nullish, 0.91]],
+    undefined,
+    [[experimental, nullish, 0.82]],
+  )
+  const report = clusterRemedies([experimental, nullish], opinion)
+  expect(report.clusters).toHaveLength(2)
+  expect(report.traces[0]?.decision.branch).toBe("independent")
+  expect(report.traces[0]?.decision.reason).toContain("changes the repair")
 })

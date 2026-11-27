@@ -4,6 +4,7 @@ import type { DecisionModel } from "effect/ai"
 import { layer as atomsLayer, type Atoms } from "./atoms.ts"
 import { isUnreachable, DecisionStats } from "./decision.ts"
 import { answerPlans, chunkPlans, type Plan, type PlanAnswers, type PlanChunk } from "./plans.ts"
+import { describeQuestionCensus, questionnaireCensus } from "./questionnaire.ts"
 import { emptyTypeIndex, loadTypeFacts, type TypeFactRequest, type TypeIndex } from "./typetrace.ts"
 import {
   indexOfNodeTypes,
@@ -811,6 +812,14 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
       Result.isSuccess(phase) ? phase.success.plans.filter(inScopePlan) : [],
     )
     const allPlans = askedPerRule.flat()
+
+    // The shape gate runs over every collected questionnaire BEFORE anything is
+    // sent. It is a report, not a silent rewrite: the measured corpus contains
+    // working questions that a threshold rejects, and the rung asks for those to
+    // be named rather than edited to fit a number. A question that reaches the
+    // provider without this line was never checked against `docs/jev.md`.
+    const census = questionnaireCensus(allPlans)
+    notes.push({ ruleId: "joggle", reason: describeQuestionCensus(census) })
 
     // ONE request is the goal, and the provider's token ceiling is the reason it
     // cannot always be one: a whole run's evidence can exceed it, and an oversized

@@ -95,6 +95,33 @@ export const policy = {
      */
     maxChoiceOptions: 8,
     /**
+     * The shape a question must have before it is sent.
+     *
+     * `docs/jev.md` rule 1 says one snap judgment, and a 2,000-character
+     * instruction with 300-character option descriptions is a task wearing a
+     * question's clothes. The numbers are deliberately generous: they reject the
+     * measured essay, not a carefully worded sentence. The validator reports a
+     * breach with the passage it broke, so a question that works today can be
+     * listed rather than silently rewritten to fit.
+     */
+    questionShape: {
+      maxInstructionChars: 400,
+      maxOptionDescriptionChars: 200,
+    },
+    /**
+     * The published thresholds for rung 2's three atomic judgments.
+     *
+     * `same` needs both answers: the messages must prescribe one repair AND the
+     * difference between their triggers must not change it. The second question
+     * is what keeps the stable-API cluster from absorbing a schema choice. A
+     * subcase is a different relationship, not a merge.
+     */
+    remedy: {
+      sameRemedy: 0.8,
+      material: 0.5,
+      subcase: 0.8,
+    },
+    /**
      * Input tokens one run may spend on judgement.
      *
      * A backstop, not a target. The per-decision cache means a run pays only for
