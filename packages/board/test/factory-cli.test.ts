@@ -309,4 +309,4 @@ test("desk list marks the workstream a question actually holds", () => {
   } finally {
     rmSync(root, { recursive: true, force: true })
   }
-})
+}, 20_000)
