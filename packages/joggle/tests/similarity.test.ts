@@ -87,7 +87,7 @@ it("prefix filtering finds exactly the pairs the complete sweep finds", () => {
 it("prefix filtering stays complete at a looser threshold too", () => {
   const sets = corpus(11)
   const fast = allPairs(
-    sets.map((ids, index) => ({ position: index, ids })),
+    sets.map((ids, index) => ({ position: index, shingles: ids })),
     0.3,
   )
     .map((pair) => key(pair.left, pair.right))
