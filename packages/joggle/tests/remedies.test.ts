@@ -13,6 +13,7 @@ import {
   pairKeyOf,
   partitionsOf,
   recomputeTraceDecision,
+  refinementGateOf,
   remedyDecisionOf,
   repairLabel,
   remedyFamilies,
@@ -206,12 +207,8 @@ test("a run that answered some pairs is partial, not witness-only", () => {
       [messageKeyOf(right), "accept"],
     ]),
     same: new Map([[pairKeyOf({ left: messageKeyOf(left), right: messageKeyOf(right) }), 0.91]]),
-    material: new Map([
-      [pairKeyOf({ left: messageKeyOf(left), right: messageKeyOf(right) }), 0.1],
-    ]),
-    subcase: new Map([
-      [pairKeyOf({ left: messageKeyOf(left), right: messageKeyOf(right) }), 0.1],
-    ]),
+    material: new Map([[pairKeyOf({ left: messageKeyOf(left), right: messageKeyOf(right) }), 0.1]]),
+    subcase: new Map([[pairKeyOf({ left: messageKeyOf(left), right: messageKeyOf(right) }), 0.1]]),
     failures: ["InvalidRequestError: max_tokens_exceeded"],
     questions: 3,
     pairs: 3,
@@ -692,19 +689,18 @@ test("a material trigger difference splits a high j_remedy pair", () => {
   )
   const report = clusterRemedies([experimental, nullish], opinion)
   expect(report.clusters).toHaveLength(2)
-  expect(report.traces[0]?.decision.branch).toBe("independent")
-  expect(report.traces[0]?.decision.reason).toContain("changes the repair")
+  // A split is not a cross-rule cluster, so there is no trace row to carry the
+  // decision; the decision itself still names the material difference.
+  const decision = remedyDecisionOf({ remedy: 0.91, material: 0.82, subcase: 0.1 })
+  expect(decision.branch).toBe("independent")
+  expect(decision.reason).toContain("changes the repair")
 })
 
 test("a subcase is only reachable after the repairs already match", () => {
   // Rung 3's gate asks j_subcase after j_remedy says same, so a subcase refines
   // a material trigger difference rather than competing with the merge question.
-  expect(remedyDecisionOf({ remedy: 0.91, material: 0.82, subcase: 0.9 }).branch).toBe(
-    "subcase",
-  )
-  expect(remedyDecisionOf({ remedy: 0.1, material: 0.9, subcase: 0.9 }).branch).toBe(
-    "independent",
-  )
+  expect(remedyDecisionOf({ remedy: 0.91, material: 0.82, subcase: 0.9 }).branch).toBe("subcase")
+  expect(remedyDecisionOf({ remedy: 0.1, material: 0.9, subcase: 0.9 }).branch).toBe("independent")
 })
 
 test("the report carries how many pairs code settled without a second judgment", () => {
@@ -731,4 +727,87 @@ test("the report carries how many pairs code settled without a second judgment",
   }
   const report = clusterRemedies([parse, accept], opinion)
   expect(report.counts).toEqual({ remedy: 1, material: 0, subcase: 0, decidedByCode: 1 })
+})
+
+test("materiality is asked only of a merge that j_remedy accepted", () => {
+  const pairs = [{ key: "rejected" }, { key: "same-immaterial" }, { key: "same-material" }]
+  const gate = refinementGateOf({
+    pairs,
+    remedy: new Map([
+      ["rejected", 0.2],
+      ["same-immaterial", 0.91],
+      ["same-material", 0.88],
+    ]),
+    material: new Map([
+      ["same-immaterial", 0.1],
+      ["same-material", 0.82],
+    ]),
+  })
+  // The pair the merge question rejected never reaches a refinement; that is
+  // the count the gate exists to make visible.
+  expect(gate.material).toEqual(["same-immaterial", "same-material"])
+  expect(gate.subcase).toEqual(["same-material"])
+  expect(gate.decidedByCode).toBe(1)
+})
+
+test("an unanswered merge question is not a merge", () => {
+  const gate = refinementGateOf({
+    pairs: [{ key: "unanswered" }],
+    remedy: new Map(),
+    material: new Map(),
+  })
+  expect(gate.material).toEqual([])
+  expect(gate.subcase).toEqual([])
+  expect(gate.decidedByCode).toBe(0)
+})
+
+test("a cross-rule shared label yields to a merge question that says different", () => {
+  // The measured 88-site defect: the stable-API label absorbed five
+  // nullish-default findings. The merge question split them (0.04), so the
+  // cross-rule edge must not survive on the shared composed label alone.
+  const experimental = finding(
+    "effecttsgo/experimental-api-usage",
+    "@effect/ui/Command#make is an experimental API",
+    1,
+  )
+  const nullish = finding(
+    "plumb-effect/no-nullish-default-on-partial-input",
+    "`?? false` on `body.enabled` conflates 'absent' with 'false' in partial updates. Use" +
+      " `Schema.optional` / `Schema.nullable` to distinguish absent from falsy.",
+    2,
+  )
+  const label = "use the stable API: Use the non-experimental, non-deprecated API"
+  const opinion = opinionOf(
+    [
+      [experimental, label],
+      [nullish, label],
+    ],
+    [[experimental, nullish, 0.04]],
+  )
+  expect(clusterRemedies([experimental, nullish], opinion).clusters).toHaveLength(2)
+})
+
+test("one rule's shared label still normalizes its own messages", () => {
+  // The 83 experimental-API sites are one repair even though each message names
+  // a different API: the label is the rule's normalizer. Only a cross-rule edge
+  // needs the merge question's support.
+  const command = finding(
+    "effecttsgo/experimental-api-usage",
+    "@effect/ui/Command#make is an experimental API",
+    1,
+  )
+  const head = finding(
+    "effecttsgo/experimental-api-usage",
+    "@effect/ui/Head#title is an experimental API",
+    2,
+  )
+  const label = "use the stable API: Use the non-experimental, non-deprecated API"
+  const opinion = opinionOf(
+    [
+      [command, label],
+      [head, label],
+    ],
+    [[command, head, 0.04]],
+  )
+  expect(clusterRemedies([command, head], opinion).clusters).toHaveLength(1)
 })
