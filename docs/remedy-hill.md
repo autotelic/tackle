@@ -191,7 +191,11 @@ repair, and the family each side answered. A row with disjoint sites, no shared
 repair and different families is the shape the merge must not make, and the
 report now shows it without reading the ledger. The audit is a report, not a
 judgement: it names which clusters to inspect, and the inspection is the next
-rung's work.
+rung's work. On the measured run the 88-site stable-API cluster still carries the
+five `no-nullish-default-on-partial-input` findings, so that merge is carried
+forward as an open precision question for rung 2 -- `j_material` decides whether
+the trigger difference changes the repair -- and the cluster's audit row is the
+evidence a later reader will use to judge it.
 
 ### Acceptance
 

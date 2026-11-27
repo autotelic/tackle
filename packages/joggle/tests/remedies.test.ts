@@ -11,7 +11,7 @@ import {
   messageKeyOf,
   pairKeyOf,
   partitionsOf,
-  repairLabelProblem,
+  repairLabel,
   remedyFamilies,
   witnessClause,
   witnessOnlyOpinion,
@@ -19,6 +19,11 @@ import {
   type RepairOpinion,
 } from "../src/remedies.ts"
 import { policy } from "../src/policy.ts"
+
+const labelProblem = (label: string): string | undefined => {
+  const accepted = repairLabel(label)
+  return Result.isFailure(accepted) ? accepted.failure : undefined
+}
 
 const finding = (
   rule: string,
@@ -366,14 +371,18 @@ test("a subject is not a clause and is reported instead of offered", () => {
   expect(isImperativeClause("Narrow with a type predicate")).toBe(true)
   expect(isImperativeClause("@effect/ui/Command#make is an experimental API")).toBe(false)
   expect(isImperativeClause("This Effect.gen contains a single return statement")).toBe(false)
-  expect(repairLabelProblem("@effect/ui/Command#make is an experimental API")).toBe(
+  expect(labelProblem("@effect/ui/Command#make is an experimental API")).toBe(
     "starts with a quote or an API name",
   )
-  expect(repairLabelProblem("experimentalApi")).toBe("is a bare identifier")
-  expect(repairLabelProblem("Html#H is an experimental API")).toBe(
+  expect(labelProblem("experimentalApi")).toBe("is a bare identifier")
+  expect(labelProblem("Html#H is an experimental API")).toBe(
     "starts with a capitalised product name",
   )
-  expect(repairLabelProblem("Use the stable API: Use the non-experimental API")).toBeUndefined()
+  expect(labelProblem("Use the stable API: Use the non-experimental API")).toBeUndefined()
+  const accepted = repairLabel("  Narrow with a type predicate  ")
+  expect(Result.isSuccess(accepted) ? accepted.success : undefined).toBe(
+    "Narrow with a type predicate",
+  )
   expect(() =>
     composeRemedy({ family: "other", clause: "@effect/ui/Command#make is an experimental API" }),
   ).toThrow(/refusing to use/)
