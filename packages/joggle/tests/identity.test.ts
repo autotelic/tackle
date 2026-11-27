@@ -116,7 +116,7 @@ it.effect("fragments are distinct and complete", () =>
     const workspace = yield* workspaceOf({
       "src/f.ts": "export const run = (n: number) => n <= 0 ? 0 : run(n - 1)\n",
     })
-    const fragments = fragmentsOf(unitNamed(workspace, "run"))
+    const fragments = fragmentsOf(unitNamed(workspace, "run"), undefined)
     expect(fragments.ids.length).toBeGreaterThan(0)
     expect(new Set(fragments.ids).size).toBe(fragments.ids.length)
     expect(fragments.cut).toBe(false)
