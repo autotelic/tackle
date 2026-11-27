@@ -487,7 +487,7 @@ export const isRecord = (value: unknown): value is Record<string, unknown> =>
  * design therefore share one path predicate rather than each carrying a regex
  * that drifts from the others.
  */
-export const testOrFixturePath = (file: string): boolean =>
+export const testOrFixturePath: Predicate.Predicate<string> = (file) =>
   /\/(?:tests?|__tests__|fixtures?)\//u.test("/" + file)
 
 interface IdentifierSite {
