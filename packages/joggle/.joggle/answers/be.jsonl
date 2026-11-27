@@ -1,6 +1,7 @@
 be0f0feecb9cf7d5	{"consistency":1,"kind":"Probability","probability":0.05000000000000001}
 be1000834cc5b3a6	{"confidence":0.99,"kind":"Classify","label":"group 5","probabilities":{"group 1":0,"group 2":0,"group 3":0,"group 4":0,"group 5":0.99,"group 6":0.01,"group 7":0,"group 8":0}}
 be1ad2d9df2b988a	{"consistency":1,"kind":"Probability","probability":0.06}
+be2371987ff2a80e	{"confidence":1,"kind":"Classify","label":"Return Option<SurfacePackage> and express absence as Option.none()","probabilities":{"Return Option<ReadonlyArray<string>> and express absence as Option.none()":0,"Return Option<Record<string, unknown>> and express absence as Option.none()":0,"Return Option<SessionTelemetry> and express absence as Option.none()":0,"Return Option<SurfaceExport> and express absence as Option.none()":0,"Return Option<SurfacePackage> and express absence as Option.none()":1}}
 be2b23b411f0225e	{"confidence":0.1,"kind":"Classify","label":"two_concepts","probabilities":{"compatible":0.26,"drift":0.34,"two_concepts":0.4}}
 be2b648ef2952611	{"confidence":0.64,"kind":"Classify","label":"row_absence_is_normal","probabilities":{"not_applicable":0.02,"row_absence_is_an_error":0.22,"row_absence_is_normal":0.76}}
 be4ddcbf454aeb0f	{"consistency":1,"kind":"Probability","probability":0.04}

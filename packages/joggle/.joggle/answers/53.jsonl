@@ -1,4 +1,5 @@
 5326ee904725856a	{"consistency":1,"kind":"Probability","probability":0.05000000000000001}
+53292a0ac8cbd306	{"confidence":1,"kind":"Classify","label":"ordering) in the collection itself instead of a parallel array","probabilities":{"Only service identifiers should appear in the requirements channel":0,"ordering) in the collection itself instead of a parallel array":1,"Rename symbol \"VmSnapshotShape\" for its domain role; \"shape\" describes structure rather than ownership":0,"Return Option<EffectCounts> and express absence as Option.none()":0,"Return Option<number> and express absence as Option.none()":0}}
 533237a88bc61545	{"confidence":0.78,"kind":"Classify","label":"no_issue","probabilities":{"magic_threshold":0.03,"name_meaning":0,"no_issue":0.83,"semantic_verdict":0.14}}
 5348f16459f88991	{"consistency":1,"kind":"Probability","probability":0.02666666666666667}
 537602818d6c61db	{"consistency":1,"kind":"Probability","probability":0.05000000000000001}

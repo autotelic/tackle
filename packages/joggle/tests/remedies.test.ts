@@ -7,9 +7,11 @@ import {
   FindingsPayload,
   findingsOf,
   impliedRepairsOf,
+  isImperativeClause,
   messageKeyOf,
   pairKeyOf,
   partitionsOf,
+  repairLabelProblem,
   remedyFamilies,
   witnessClause,
   witnessOnlyOpinion,
@@ -345,21 +347,63 @@ test("a judgement's `none` never becomes a cluster label", () => {
 
 test("a diagnosis-only message offers the repair it implies", () => {
   expect(impliedRepairsOf("@effect/ui/Command#make is an experimental API")).toEqual([
-    "Use the non-experimental API",
+    "Use the non-experimental, non-deprecated API",
+  ])
+  expect(impliedRepairsOf("@effect/ui/Command#make is a deprecated API")).toEqual([
+    "Use the non-experimental, non-deprecated API",
   ])
   expect(impliedRepairsOf("Narrow with a type predicate")).toEqual([])
   expect(impliedRepairsOf("none")).toEqual([])
 })
 
+test("a subject is not a clause and is reported instead of offered", () => {
+  expect(isImperativeClause("Use the non-experimental, non-deprecated API")).toBe(true)
+  expect(isImperativeClause("Narrow with a type predicate")).toBe(true)
+  expect(isImperativeClause("@effect/ui/Command#make is an experimental API")).toBe(false)
+  expect(isImperativeClause("This Effect.gen contains a single return statement")).toBe(false)
+  expect(repairLabelProblem("@effect/ui/Command#make is an experimental API")).toBe(
+    "starts with a quote or an API name",
+  )
+  expect(repairLabelProblem("experimentalApi")).toBe("is a bare identifier")
+  expect(repairLabelProblem("Html#H is an experimental API")).toBe(
+    "starts with a capitalised product name",
+  )
+  expect(repairLabelProblem("Use the stable API: Use the non-experimental API")).toBeUndefined()
+  expect(() =>
+    composeRemedy({ family: "other", clause: "@effect/ui/Command#make is an experimental API" }),
+  ).toThrow(/refusing to use/)
+})
+
+test("a subject clause is recorded as rejected, not used as a cluster label", () => {
+  const experimental = finding(
+    "effecttsgo/experimental-api-usage",
+    "@effect/ui/Command#make is an experimental API",
+    1,
+  )
+  const report = clusterRemedies(
+    [experimental],
+    witnessOnlyOpinion([experimental], "TYPESAFE_API_KEY is not set"),
+  )
+  expect(report.rejectedClauses).toEqual([
+    {
+      message: "@effect/ui/Command#make is an experimental API",
+      clause: "@effect/ui/Command#make is an experimental API",
+    },
+  ])
+})
+
 test("the repair family is one bounded question, and the clause is another", () => {
   // The measured bug: 55 candidates in one Choice, answered 150 times. The
-  // family question is six options, so no run can exceed the contract's limit.
+  // family question is seven options, so no run can exceed the contract's limit.
+  // `use the stable API` is the family the corpus derivation missed: its message
+  // is diagnosis-only, so its clause was a subject rather than a repair.
   expect(Object.keys(remedyFamilies)).toEqual([
     "parse at the boundary",
     "narrow with a predicate",
     "own the value type",
     "justify the assertion",
     "inject the dependency",
+    "use the stable API",
     "other",
   ])
   expect(Object.keys(remedyFamilies).length).toBeLessThanOrEqual(policy.decision.maxChoiceOptions)
@@ -370,6 +414,12 @@ test("the repair family is one bounded question, and the clause is another", () 
       clause: "Narrow with discriminants/in checks",
     }),
   ).toBe("narrow with a predicate: Narrow with discriminants/in checks")
+  expect(
+    composeRemedy({
+      family: "use the stable API",
+      clause: "Use the non-experimental, non-deprecated API",
+    }),
+  ).toBe("use the stable API: Use the non-experimental, non-deprecated API")
 })
 
 test("one clause is answered in code, not asked as a one-option Choice", () => {

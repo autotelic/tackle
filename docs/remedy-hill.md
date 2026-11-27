@@ -107,8 +107,9 @@ diagnosis-only (`@effect/ui/Command#make is an experimental API`), so `j_repair`
 had no candidate that named an action and answered `none`; the label path then
 printed `none` as the cluster's repair, hiding 83 findings behind a non-answer.
 The fix is two-sided: a diagnosis-only experimental-API message now offers the
-implied repair (`Use the non-experimental API`) to the judgement's option set, and
-`none` is never used as a cluster label — it falls back to the witness clause.
+implied repair (`Use the non-experimental, non-deprecated API`) to the judgement's
+option set, and `none` is never used as a cluster label — it falls back to the
+witness clause.
 
 The ledger held the second defect beside the first. Every Classify answer the
 remedies run recorded is in `packages/joggle/.joggle/answers/*.jsonl` — 2,574
@@ -119,7 +120,7 @@ wearing a question's clothes, and the 55-option question is the 83-site cluster'
 bug seen from the other side: one question asked to pick among every witness
 clause in the corpus, so the only answer a model can give for an unfamiliar
 repair is the one that is not a repair. The remedy is now composed in code rather
-than widened: `j_family` names the kind of repair in six options, the clause
+than widened: `j_family` names the kind of repair in seven options, the clause
 question offers only the clauses code assigned to that family (split again when a
 family outgrows one question), and the identity is the composed `family: clause`,
 which reads as a sentence because it was built, not picked. The duty question was
@@ -130,11 +131,27 @@ question in the corpus exceeds eight options. A judgement that has to choose amo
 55 candidates cannot be wrong in a way the ledger can see; a judgement split into
 two bounded questions can.
 
-The split's own failure was a one-option Choice. Measured over the current corpus
-(75 messages, 55 clauses, every family answer in the committed ledger), the six
-families hold 3, 4, 4, 2, 6 and 36 clauses: **zero families hold exactly one
-clause, six hold two or more, and none holds zero**. The one-clause case appears
-one level down. `partitionsOf(36, 8)` divides `other` into seven groups of five
+The split's first measured output still had a subject where a repair belonged.
+Its largest cluster was 83 sites labelled `other: @effect/ui/html/Html#H is an
+experimental API`; the family answered `other` because the six families were
+derived from the witness clauses, and an experimental-API message has no
+imperative clause to derive from. The clause question then returned the API name,
+so the label restated the finding and every one of the 83 sites — each with a
+different API name — could never merge. The family set now reads the message as
+well as the corpus: `use the stable API` is a repair, so those messages route to
+it and share the derived clause `Use the non-experimental, non-deprecated API`.
+Two guards keep the shape from recurring. A clause candidate must open with an
+imperative verb; a subject is rejected and reported by message instead of being
+offered. And a composed label is rejected when it is a bare identifier or starts
+with `@`, a quote, or a capitalised product name. The rejected messages are the
+interesting ones: they say which diagnosis-only rules still need a derived
+repair, rather than hiding them behind a label that repeats the diagnosis.
+
+The split's own failure was a one-option Choice. Measured over the corpus at the
+split (75 messages, 55 clauses, every family answer in the committed ledger), the
+six families then held 3, 4, 4, 2, 6 and 36 clauses: **zero families held exactly
+one clause, six held two or more, and none held zero**. The seventh family is the
+correction above; the one-clause case appears one level down. `partitionsOf(36, 8)` divides `other` into seven groups of five
 and a tail of one, and a message that picked the tail produced a second-round
 `j_clause` with a single candidate -- the same non-question the provider had
 already refused, now hidden behind the group step. The route is therefore generic
@@ -151,10 +168,14 @@ appears.
 The rung is met when a fresh run reproduces the measured result, with any
 difference named:
 
-- **31 clusters**, the three-repair table above intact (33 / 29 / 26 sites), with
-  `no-unsafe-dictionary-type` below them rather than merged in.
+- **28 clusters or fewer**, the three-repair table above intact (33 / 29 / 26
+  sites), with `no-unsafe-dictionary-type` below them rather than merged in. The
+  family/clause split measured 28; the stable-API family may only reduce that
+  number and must not split one of the three repairs.
 - The largest cluster is the 83-site `effecttsgo(experimental-api-usage)` cluster,
-  labelled with a repair (`Use the non-experimental API`), never `none`.
+  labelled with an imperative repair shared by every site
+  (`use the stable API: Use the non-experimental, non-deprecated API`), never
+  `none` and never an API name.
 - A second run replays **100%** of its questions from the ledger and answers none
   of them again.
 - The witness still prints 54 clusters (largest 39 sites, one rule) beside the

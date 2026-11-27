@@ -636,6 +636,16 @@ const remedyLines = ({ report, ledger, cache }: RemedyLinesInput): ReadonlyArray
       String(report.pairsAsked) + " pair(s); cache " +
       String(cache.replayed) + "/" + String(total) + " replayed (" +
       (hit * 100).toFixed(1) + "%)",
+    ...(report.rejectedClauses.length === 0
+      ? []
+      : [
+          "non-imperative clauses: " + String(report.rejectedClauses.length) +
+            " message(s) not offered as repairs",
+          ...report.rejectedClauses.map(
+            (rejected) => "  rejected  " + JSON.stringify(rejected.clause) +
+              "  <- " + rejected.message,
+          ),
+        ]),
     "fact store: run " + ledger.run + ", " + String(ledger.written) + " finding row(s)",
   ]
   for (const cluster of report.clusters) {

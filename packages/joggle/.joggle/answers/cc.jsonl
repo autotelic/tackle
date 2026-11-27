@@ -7,6 +7,7 @@ cc39cb0847041c53	{"confidence":0.37,"kind":"Rate","label":"slightly_clearer","pr
 cc4a7bddeac8f8ab	{"confidence":0.82,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.12,"names_a_caller":0,"shared_vocabulary":0.88}}
 cc6bdd9a30ea76cc	{"confidence":0.46,"kind":"Classify","label":"collapse","probabilities":{"collapse":0.64,"keep_variants":0.33,"no_issue":0.03}}
 cc77d95c2ca8a708	{"confidence":0.61,"kind":"Classify","label":"compatible","probabilities":{"compatible":0.74,"drift":0.25,"two_concepts":0.01}}
+cc7d3fe61b9d42ec	{"confidence":0.99,"kind":"Classify","label":"Use the non-experimental API","probabilities":{"This Effect.gen contains a single return statement":0,"Use Effect's TaggedError (a tagged class per failure kind carrying structured evidence as fields) so the error flows through the typed channel":0,"Use parameterized queries or a query builder so values never become syntax":0,"Use the non-experimental API":0.99,"Write the value and its source: 'the answer's label is X', not 'the model knows X'":0.01}}
 cc8b05bbc2a7752c	{"consistency":1,"kind":"Probability","probability":0.04}
 cc8ddb0081f0bf11	{"confidence":0.99,"kind":"Classify","label":"other","probabilities":{"inject the dependency":0,"justify the assertion":0.01,"narrow with a predicate":0,"other":0.99,"own the value type":0,"parse at the boundary":0}}
 cc9111c8b512e74f	{"consistency":1,"kind":"Probability","probability":0.7133333333333333}

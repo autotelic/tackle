@@ -4,6 +4,7 @@
 3939547c5aff65ca	{"confidence":0.36,"kind":"Classify","label":"move","probabilities":{"leave_it":0.04,"merge":0.39,"move":0.49,"share_a_contract":0.02,"split":0.06}}
 395797835146eb5a	{"confidence":0.14,"kind":"Classify","label":"drift","probabilities":{"compatible":0.28,"drift":0.43,"two_concepts":0.29}}
 395d567257d2b26c	{"confidence":0.91,"kind":"Classify","label":"different_inputs","probabilities":{"different_inputs":0.93,"different_order":0,"different_work":0.01,"same_operation":0.06}}
+3971ee321bf01c2b	{"confidence":1,"kind":"Classify","label":"Write the value and its source: 'the answer's label is X', not 'the model knows X'","probabilities":{"This Effect.gen contains a single return statement":0,"Use Effect's TaggedError (a tagged class per failure kind carrying structured evidence as fields) so the error flows through the typed channel":0,"Use parameterized queries or a query builder so values never become syntax":0,"Use the non-experimental API":0,"Write the value and its source: 'the answer's label is X', not 'the model knows X'":1}}
 398d6b52a5412863	{"consistency":1,"kind":"Probability","probability":0.023333333333333334}
 398dfcb393cf62eb	{"confidence":0.98,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
 398ff13b7f69cb77	{"consistency":1,"kind":"Probability","probability":0.06666666666666667}

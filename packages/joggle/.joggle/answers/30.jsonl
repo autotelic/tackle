@@ -2,6 +2,7 @@
 300a68e476d00fc1	{"consistency":1,"kind":"Probability","probability":0.03}
 300dcd4391957018	{"consistency":1,"kind":"Probability","probability":0.036666666666666674}
 30114780a2162fed	{"consistency":1,"kind":"Probability","probability":0.11666666666666665}
+3026db57dd96b423	{"confidence":0.94,"kind":"Classify","label":"@effect/ui/testing/Locator#textOf is an experimental API","probabilities":{"@effect/ui/Subscription#make is an experimental API":0,"@effect/ui/testing/Locator#attr is an experimental API":0,"@effect/ui/testing/Locator#tag is an experimental API":0,"@effect/ui/testing/Locator#text is an experimental API":0.05,"@effect/ui/testing/Locator#textOf is an experimental API":0.95}}
 302aa35989d3eea8	{"consistency":1,"kind":"Probability","probability":0.07333333333333335}
 3032fc14181159e5	{"confidence":0.48,"kind":"Classify","label":"drift","probabilities":{"compatible":0.2,"drift":0.65,"two_concepts":0.15}}
 3038b0058c5b1d38	{"consistency":1,"kind":"Probability","probability":0.6366666666666667}

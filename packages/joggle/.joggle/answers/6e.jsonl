@@ -9,4 +9,5 @@
 6e78a20712308912	{"confidence":0.27,"kind":"Classify","label":"general","probabilities":{"general":0.51,"names_a_caller":0.01,"shared_vocabulary":0.48}}
 6eba707729799bcc	{"confidence":0.11,"kind":"Classify","label":"not_applicable","probabilities":{"agrees":0.25,"excludes":0.34,"not_applicable":0.41}}
 6ebd8891544cb915	{"confidence":0.11,"kind":"Classify","label":"not_applicable","probabilities":{"agrees":0.25,"excludes":0.34,"not_applicable":0.41}}
+6eeaf61914cbfad0	{"confidence":1,"kind":"Classify","label":"@effect/ui/html/Html#H is an experimental API","probabilities":{"@effect/ui/Command#make is an experimental API":0,"@effect/ui/Head#title is an experimental API":0,"@effect/ui/html/BrowserHost#mount is an experimental API":0,"@effect/ui/html/Html#component is an experimental API":0,"@effect/ui/html/Html#H is an experimental API":1}}
 6ef6d02122a80013	{"confidence":0.95,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.96,"infrastructure":0,"input_adaptation":0,"mechanical":0,"not_applicable":0.03,"orchestration":0,"rendering":0,"request_validation":0.01,"transport_concern":0}}
