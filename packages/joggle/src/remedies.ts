@@ -1682,11 +1682,15 @@ const familyOfRule = (
  * probability's own maximum would mix three different pairs and recompute a
  * decision no one answered.
  */
-const judgmentsBetween = (
-  aMembers: ReadonlyArray<RemedyFinding>,
-  bMembers: ReadonlyArray<RemedyFinding>,
-  opinion: RepairOpinion,
-): RemedyJudgments => {
+const judgmentsBetween = ({
+  aMembers,
+  bMembers,
+  opinion,
+}: {
+  readonly aMembers: ReadonlyArray<RemedyFinding>
+  readonly bMembers: ReadonlyArray<RemedyFinding>
+  readonly opinion: RepairOpinion
+}): RemedyJudgments => {
   let best: RemedyJudgments = { remedy: undefined, material: undefined, subcase: undefined }
   for (const leftMember of aMembers) {
     const leftKey = messageKeyOf(leftMember)
@@ -1733,7 +1737,7 @@ const crossRulesOf = (
       const intersect = b.sites.some((site) => aSites.has(site))
       const aMembers = members.filter((member) => member.rule === a.rule)
       const bMembers = members.filter((member) => member.rule === b.rule)
-      const judgments = judgmentsBetween(aMembers, bMembers, opinion)
+      const judgments = judgmentsBetween({ aMembers, bMembers, opinion })
       const aRepairs = new Set(
         aMembers
           .map((member) => opinion.repairs.get(messageKeyOf(member)))

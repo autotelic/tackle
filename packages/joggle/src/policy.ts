@@ -104,7 +104,7 @@ export const policy = {
      * breach with the passage it broke, so a question that works today can be
      * listed rather than silently rewritten to fit.
      */
-    questionShape: {
+    questionLimits: {
       maxInstructionChars: 400,
       maxOptionDescriptionChars: 200,
     },

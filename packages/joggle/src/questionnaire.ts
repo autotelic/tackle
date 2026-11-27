@@ -1,3 +1,4 @@
+import { Schema } from "effect"
 import type { Decision } from "effect/ai"
 import type { Plan, Questionnaire } from "./plans.ts"
 import { policy } from "./policy.ts"
@@ -42,28 +43,30 @@ export interface QuestionCensus {
   readonly worst: QuestionViolation | undefined
 }
 
-/** The shape limits, published in `policy` beside every other threshold. */
-export interface QuestionShapePolicy {
+/** The limits, published in `policy` beside every other threshold. */
+export interface QuestionLimits {
   readonly maxInstructionChars: number
   readonly maxOptionDescriptionChars: number
   readonly maxChoiceOptions: number
 }
 
-const shapePolicyOf = (): QuestionShapePolicy => ({
-  maxInstructionChars: policy.decision.questionShape.maxInstructionChars,
-  maxOptionDescriptionChars: policy.decision.questionShape.maxOptionDescriptionChars,
+const limitsOf = (): QuestionLimits => ({
+  maxInstructionChars: policy.decision.questionLimits.maxInstructionChars,
+  maxOptionDescriptionChars: policy.decision.questionLimits.maxOptionDescriptionChars,
   maxChoiceOptions: policy.decision.maxChoiceOptions,
 })
 
+const isText = Schema.is(Schema.String)
+
 /** A description as the text a reader (and the provider) actually receives. */
-export const descriptionText = (description: unknown): string => {
-  if (typeof description === "string") return description
+export const descriptionText = (description: Decision.Description | null | undefined): string => {
+  if (isText(description)) return description
   if (description === null || description === undefined) return ""
   return JSON.stringify(description) ?? ""
 }
 
 /** Every `atoms[...]` path one instruction names. */
-export const atomReferencesOf = (instructions: unknown): ReadonlyArray<string> => {
+export const atomReferencesOf = (instructions: Decision.Description): ReadonlyArray<string> => {
   const text = descriptionText(instructions)
   const references: Array<string> = []
   const pattern = /atoms\[([^\]]+)\]/gu
@@ -118,9 +121,9 @@ const optionCountOf = (decision: Decision.Any): number => {
  */
 export const validateQuestionnaire = (
   questionnaire: Questionnaire<unknown>,
-  subject = "questionnaire",
+  subject: string = "questionnaire",
 ): ReadonlyArray<QuestionViolation> => {
-  const limits = shapePolicyOf()
+  const limits = limitsOf()
   const violations: Array<QuestionViolation> = []
   const declared = new Set(questionnaire.atoms)
   for (const [name, decision] of Object.entries(questionnaire.decisions)) {
@@ -218,14 +221,15 @@ export const validateQuestionnaire = (
 export const validatePlan = (plan: Plan<unknown>): ReadonlyArray<QuestionViolation> =>
   validateQuestionnaire(plan, plan.subject)
 
-const emptyCounts = (): Record<QuestionRule, number> => ({
-  primitive: 0,
-  "atom-reference": 0,
-  "instruction-length": 0,
-  "option-count": 0,
-  "option-description-length": 0,
-  "declared-atom": 0,
-})
+const emptyCounts = () =>
+  ({
+    primitive: 0,
+    "atom-reference": 0,
+    "instruction-length": 0,
+    "option-count": 0,
+    "option-description-length": 0,
+    "declared-atom": 0,
+  }) satisfies Record<QuestionRule, number>
 
 /**
  * Validate every plan a run collected and count the breaches by rule.
@@ -259,7 +263,7 @@ export const questionnaireCensus = (plans: ReadonlyArray<Plan<unknown>>): Questi
 
 /** One line for the report: the counts, then the first offender. */
 export const describeQuestionCensus = (census: QuestionCensus): string => {
-  const counts = (Object.entries(census.byRule) as ReadonlyArray<[QuestionRule, number]>)
+  const counts = Object.entries(census.byRule)
     .filter(([, count]) => count > 0)
     .map(([rule, count]) => rule + " " + String(count))
     .join(", ")
