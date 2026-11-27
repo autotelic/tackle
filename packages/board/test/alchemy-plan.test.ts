@@ -16,7 +16,9 @@ type DurableObjectBinding = {
  */
 test("the shop plans the board Worker and its Room Durable Objects", async () => {
   const plan = await Effect.runPromise(
-    Effect.scoped(Alchemist.plan({ stack, operation: "deploy", stage: "test" })),
+    Effect.scoped(Alchemist.plan({ stack, operation: "deploy", stage: "test" })).pipe(
+      Effect.provide(Alchemist.layer()),
+    ),
   )
 
   const worker = Object.values(plan.native.resources).find(
