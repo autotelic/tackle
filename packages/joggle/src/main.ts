@@ -39,8 +39,8 @@ import {
 } from "./typefacts.ts"
 import { manifestOf } from "./run-cache.ts"
 import { sourceFingerprint } from "./fingerprint.ts"
-import { buildSurface, parseJson, projectRootOf, SURFACE_PATH, surfaceFileOf, surfaceOutputOf } from "./surface.ts"
-import { decodeSurface } from "@autotelic/protocol"
+import { buildSurface, projectRootOf, SURFACE_PATH, surfaceFileOf, surfaceOutputOf } from "./surface.ts"
+import { decodeSurface, parseJson } from "@autotelic/protocol"
 
 /**
  * One report, written and then WAITED for.
@@ -1261,7 +1261,7 @@ const surfaceCommand = Command.make(
         return
       }
       const text = yield* Effect.orElseSucceed(fs.readFileString(file), () => "")
-      const parsed = yield* parseJson(text)
+      const parsed = parseJson(text)
       if (parsed === undefined) {
         yield* write("joggle: the surface is not readable JSON: run `joggle surface build`")
         yield* Effect.sync(() => {

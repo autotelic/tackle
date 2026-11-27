@@ -4,8 +4,12 @@ import { dirname, join, resolve } from "node:path"
 import { parseSync } from "oxc-parser"
 import {
   SURFACE_VERSION,
+  decodeSurface,
+  emptySurface,
   int,
   isRecord,
+  parseJson,
+  str,
   type Surface,
   type SurfaceExport,
   type SurfaceKind,
@@ -87,18 +91,29 @@ export const surfaceOutputOf = ({
   return out === undefined ? surfaceFileOf({ root, surfacePath: undefined }) : resolve(root, out)
 }
 
-/** Parse JSON at the boundary, recording the failure instead of throwing it past the typed channel. */
-export const parseJson = (text: string): Effect.Effect<unknown, never> =>
-  Effect.try(() => JSON.parse(text)).pipe(Effect.orElseSucceed(() => undefined))
+/**
+ * Read the surface, or an empty one when it is absent or malformed.
+ *
+ * The reader and `surface build` share {@link surfaceFileOf}, and a corrupt file
+ * reads as "nothing is known" so the rule turns it into a note rather than silence.
+ */
+export const readSurface = ({
+  root,
+  surfacePath,
+}: {
+  readonly root: string
+  readonly surfacePath: string | undefined
+}): Surface => {
+  const file = surfaceFileOf({ root, surfacePath })
+  if (!existsSync(file)) return emptySurface()
+  return decodeSurface(parseJson(readFileSync(file, "utf8")))
+}
 
 const DEPENDENCY_FIELDS = ["dependencies", "devDependencies", "peerDependencies"] as const
 
-const stringAt = (value: unknown): string | undefined =>
-  typeof value === "string" ? value : undefined
-
 const nameAt = (value: unknown): string | undefined => {
   if (!isRecord(value)) return undefined
-  return stringAt(value["name"]) ?? stringAt(value["value"])
+  return str(value["name"]) ?? str(value["value"])
 }
 
 /** The declaration file beside a runtime entry, when the manifest names only the runtime one. */
@@ -110,7 +125,7 @@ const declarationBeside = (runtime: string): string | undefined => {
 
 /** The types entry a manifest names, if it names one. */
 const typesEntryOf = (manifest: Record<string, unknown>): string | undefined => {
-  const direct = stringAt(manifest["types"]) ?? stringAt(manifest["typings"])
+  const direct = str(manifest["types"]) ?? str(manifest["typings"])
   if (direct !== undefined) return direct
   const exported = manifest["exports"]
   if (isRecord(exported)) {
@@ -123,15 +138,15 @@ const typesEntryOf = (manifest: Record<string, unknown>): string | undefined => 
       const types = root["types"]
       if (typeof types === "string") return types
       if (isRecord(types)) {
-        const nested = stringAt(types["import"]) ?? stringAt(types["default"])
+        const nested = str(types["import"]) ?? str(types["default"])
         if (nested !== undefined) return nested
       }
-      const runtime = stringAt(root["import"]) ?? stringAt(root["default"])
+      const runtime = str(root["import"]) ?? str(root["default"])
       const beside = runtime === undefined ? undefined : declarationBeside(runtime)
       if (beside !== undefined) return beside
     }
   }
-  const main = stringAt(manifest["main"])
+  const main = str(manifest["main"])
   return main === undefined ? undefined : declarationBeside(main)
 }
 
@@ -199,10 +214,7 @@ const moduleDocOf = ({
     },
   )
 
-interface LocalDeclaration {
-  readonly name: string
-  readonly kind: SurfaceKind
-  readonly signature: string
+type LocalDeclaration = Omit<SurfaceExport, "module" | "doc"> & {
   readonly doc: string | undefined
 }
 
@@ -312,7 +324,7 @@ const declarationsIn = ({
     exportedName: string | undefined,
   ): void => {
     if (!isRecord(declaration)) return
-    const type = stringAt(declaration["type"])
+    const type = str(declaration["type"])
     if (type === undefined) return
     if (type === "VariableDeclaration") {
       const declarations = declaration["declarations"]
@@ -344,7 +356,7 @@ const declarationsIn = ({
         fromDeclaration(declaration, true, undefined)
       }
       const source = statement["source"]
-      const sourceValue = isRecord(source) ? stringAt(source["value"]) : undefined
+      const sourceValue = isRecord(source) ? str(source["value"]) : undefined
       const specifiers = statement["specifiers"]
       if (!Array.isArray(specifiers)) continue
       for (const specifier of specifiers) {
@@ -361,7 +373,7 @@ const declarationsIn = ({
         const localDeclaration = locals.get(local)
         const kind =
           localDeclaration?.kind ??
-          (stringAt(specifier["exportKind"]) === "type" ? "type" : "const")
+          (str(specifier["exportKind"]) === "type" ? "type" : "const")
         reexported.push({
           exported,
           local,
@@ -380,7 +392,7 @@ const declarationsIn = ({
     if (type === "ExportAllDeclaration") {
       const exported = nameAt(statement["exported"])
       const source = statement["source"]
-      const sourceValue = isRecord(source) ? stringAt(source["value"]) : undefined
+      const sourceValue = isRecord(source) ? str(source["value"]) : undefined
       // `export * from "./Duration.js"` is how effect's root exposes most of its API,
       // and a plain star contributed nothing. Read the one sibling declaration file
       // it names and take its exports, tagged with the module the specifier spells.
@@ -474,9 +486,9 @@ const packageSurface = ({
     const exists = yield* Effect.orElseSucceed(fs.exists(manifestFile), () => false)
     if (!exists) return { name, reason: "package.json is not installed" }
     const text = yield* Effect.orElseSucceed(fs.readFileString(manifestFile), () => "")
-    const manifest = yield* parseJson(text)
+    const manifest = parseJson(text)
     if (!isRecord(manifest)) return { name, reason: "package.json is not an object" }
-    const version = stringAt(manifest["version"]) ?? ""
+    const version = str(manifest["version"]) ?? ""
     const entry = typesEntryOf(manifest)
     if (entry === undefined) return { name, reason: "no types entry" }
     const file = path.resolve(directory, entry)
@@ -508,7 +520,7 @@ export const buildSurface = ({
     const exists = yield* Effect.orElseSucceed(fs.exists(manifestFile), () => false)
     if (!exists) return { surface: { version: SURFACE_VERSION, packages: [] }, skipped: [] }
     const text = yield* Effect.orElseSucceed(fs.readFileString(manifestFile), () => "")
-    const manifest = yield* parseJson(text)
+    const manifest = parseJson(text)
     if (!isRecord(manifest)) return { surface: { version: SURFACE_VERSION, packages: [] }, skipped: [] }
     const names = new Set<string>()
     for (const field of DEPENDENCY_FIELDS) {

@@ -1,14 +1,12 @@
-import { Effect, Result, Schema, SchemaParser } from "effect"
+import { Effect } from "effect"
 import { Decision } from "effect/ai"
-import { existsSync, readFileSync } from "node:fs"
-import { decodeSurface, isRecord, type SurfaceExport, type SurfacePackage } from "@autotelic/protocol"
+import type { SurfaceExport, SurfacePackage } from "@autotelic/protocol"
 import { Atoms } from "../atoms.ts"
 import { evidenceKinds, type EvidenceKind } from "../evidence.ts"
 import { policy } from "../policy.ts"
 import { verdictsOf, type Plan } from "../plans.ts"
 import { locator, messages, reporter, type Reporter } from "../reporting.ts"
 import {
-  budgetNote,
   inScope,
   outcome,
   qualityOf,
@@ -17,7 +15,7 @@ import {
   type Scope,
 } from "../rule.ts"
 import type { Diagnostic, Drop } from "../schema.ts"
-import { projectRootOf, surfaceFileOf } from "../surface.ts"
+import { projectRootOf, readSurface } from "../surface.ts"
 import type { Unit, Workspace } from "../workspace.ts"
 import { verdictOf } from "../verdict.ts"
 
@@ -28,17 +26,6 @@ const MIN_EVIDENCE_UNITS = 3
 
 /** The judgement sees a capability with examples, not 122 lines of it. */
 const MAX_SAMPLE_UNITS = 8
-
-/**
- * Files whose numbers are the suite's own, not a re-implementation.
- *
- * A `testTimeout: 30_000` in a vitest config and a fixture's clock arithmetic are
- * the harness being configured, not the product hand-rolling a duration. The unit's
- * own `test` flag covers test directories and `*.test.ts`; a config file is neither.
- */
-const CONFIG_FILE = /(?:^|\/)[^/]*\.config\.[cm]?[jt]sx?$/u
-
-const isEvidenceFile = (unit: Unit): boolean => !unit.test && !CONFIG_FILE.test(unit.file)
 
 /** One export the judgement is shown, and the plan that asks about it. */
 interface Attempt {
@@ -63,8 +50,7 @@ interface Candidate {
 /**
  * The sites a judgement is shown: one per normalized declaration, up to the sample bound.
  *
- * A pool that repeats the same `now - started` twenty times is one example with a
- * count beside it, not twenty examples. The count stays the true total.
+ * A repeated construction is one example with a count beside it, not twenty examples.
  */
 export const representativeUnits = (units: ReadonlyArray<Unit>): ReadonlyArray<Unit> => {
   const byConstruction = new Map<string, Unit>()
@@ -104,45 +90,26 @@ const importPathOf = (surfacePackage: SurfacePackage, surfaceExport: SurfaceExpo
     : surfacePackage.name + "/" + surfaceExport.module
 
 /**
- * The exports of one family, best first.
+ * The offers of one family, best first.
  *
- * A name that shares a word with the declarations doing the arithmetic is the one a
- * person would have found themselves; when no name does, the family head is the
- * honest first try rather than the first export alphabetically. The rest follow so a
+ * A name that shares a word with the evidence is the one a person would have found;
+ * when none does, the family head is the honest first try. The rest follow so a
  * declined head can fall through to the next export instead of losing the family.
  */
-const orderedExports = (
-  exports: ReadonlyArray<SurfaceExport>,
+const orderedOffers = (
+  offers: ReadonlyArray<Offer>,
   family: string,
   units: ReadonlyArray<Unit>,
-): ReadonlyArray<SurfaceExport> => {
+): ReadonlyArray<Offer> => {
   const unitWords = new Set(units.flatMap((unit) => [...wordSet(unit.name)]))
-  const shared = (surfaceExport: SurfaceExport): number =>
-    wordsOf(surfaceExport.name).filter((word) => unitWords.has(word)).length
-  const ranked = [...exports].sort(
+  const shared = (offer: Offer): number =>
+    wordsOf(offer.exported.name).filter((word) => unitWords.has(word)).length
+  return [...offers].sort(
     (left, right) =>
       shared(right) - shared(left) ||
-      Number(right.name === family) - Number(left.name === family) ||
-      left.name.localeCompare(right.name),
+      Number(right.exported.name === family) - Number(left.exported.name === family) ||
+      left.exported.name.localeCompare(right.exported.name),
   )
-  return ranked
-}
-
-/** Parse JSON without throwing it past the caller; a malformed surface is an empty one. */
-const parseSurfaceText = SchemaParser.decodeResult(Schema.fromJsonString(Schema.Unknown))
-
-/** The surface file, or undefined when it is absent, unreadable or malformed. */
-const readSurface = ({
-  root,
-  surfacePath,
-}: {
-  readonly root: string
-  readonly surfacePath: string
-}): ReturnType<typeof decodeSurface> | undefined => {
-  const file = surfaceFileOf({ root, surfacePath })
-  if (!existsSync(file)) return undefined
-  const parsed = Result.getOrUndefined(parseSurfaceText(readFileSync(file, "utf8")))
-  return isRecord(parsed) ? decodeSurface(parsed) : undefined
 }
 
 const sampleOf = (unit: Unit) => ({
@@ -285,22 +252,17 @@ export const underusedPrimitive: PlannedRule = {
     const report = reporter(underusedPrimitive, locator(workspace))
     const surface = readSurface({
       root: projectRootOf(workspace.root),
-      surfacePath: context.config.surfacePath ?? ".joggle/surface.json",
+      surfacePath: context.config.surfacePath,
     })
-    if (surface === undefined || surface.packages.length === 0) {
+    if (surface.packages.length === 0) {
       return {
         plans: [],
         read: () => outcome([], ["no dependency surface: run `joggle surface build`"]),
       }
     }
 
-    // Adoption is counted from PRODUCT code, using the workspace's own test flag.
-    //
-    // The absence this rule reports is "nobody uses the export". The fixture that
-    // proves the silent case imports Duration -- so counting every import edge read
-    // the fixture as the repository adopting Duration, and the rule fell silent on
-    // the whole repository, including the acceptance run meant to find the real
-    // sites. A file whose declarations are all test declarations has no say here.
+    // Adoption is product code only: a test fixture importing the export must not
+    // make the repository look like it already uses it.
     const productFiles = new Set(
       workspace.units.filter((unit) => !unit.test).map((unit) => unit.file),
     )
@@ -313,7 +275,7 @@ export const underusedPrimitive: PlannedRule = {
     const tooSmall: Array<Drop> = []
     for (const kind of evidenceKinds) {
       const units = workspace.units.filter(
-        (unit) => inScope(scope, unit.file) && isEvidenceFile(unit) && kind.matches(unit),
+        (unit) => inScope(scope, unit.file) && !unit.test && kind.matches(unit),
       )
       if (units.length < MIN_EVIDENCE_UNITS) {
         tooSmall.push({
@@ -324,57 +286,24 @@ export const underusedPrimitive: PlannedRule = {
         })
         continue
       }
-      const offers: Array<{ surfacePackage: SurfacePackage; exported: SurfaceExport }> = []
+      const offers: Array<Offer> = []
       for (const family of kind.families) {
         const inFamily = surface.packages.flatMap((surfacePackage) =>
           surfacePackage.exports
             .filter((surfaceExport) => exportedInFamily(surfaceExport, family))
             .map((surfaceExport) => ({ surfacePackage, exported: surfaceExport })),
         )
-        if (inFamily.length === 0) continue
-        // The absence is per EXPORT, not per family.
-        //
-        // This repository imports Clock for Clock.currentTimeMillis and has never
-        // imported Duration. Requiring the whole family to be absent found that the
-        // family was present and dropped the one export that was the point, so the
-        // rule reported nothing on the repository it was written for. The export a
-        // finding recommends must be one nobody imports; its siblings are free to be
-        // in use for other jobs.
+        // The absence is per export, not per family: a sibling may already be in use.
         const offered = inFamily.filter((offer) => !importedNames.has(offer.exported.name))
-        if (offered.length === 0) continue
-        const ordered = orderedExports(
-          offered.map((offer) => offer.exported),
-          family,
-          units,
-        )
-        for (const surfaceExport of ordered) {
-          const offer = offered.find((entry) => entry.exported === surfaceExport)
-          if (offer !== undefined) offers.push(offer)
-        }
+        offers.push(...orderedOffers(offered, family, units))
       }
       if (offers.length === 0) continue
       candidates.push({ kind, units, offers: offers.slice(0, 3) })
     }
 
-    candidates.sort(
-      (left, right) =>
-        right.units.length - left.units.length || left.kind.kind.localeCompare(right.kind.kind),
-    )
-    // Every shape is judged. The catalogue is four kinds, not a corpus; dropping the
-    // fourth to a budget would hide the one kind whose family was previously
-    // invisible, which is exactly the failure this pass is repairing.
-    const budget = evidenceKinds.length
-    const judged = candidates.slice(0, budget)
-    const overBudget: ReadonlyArray<Drop> = candidates.slice(budget).map((candidate) => ({
-      ruleId: RULE_ID,
-      subject: candidate.kind.description,
-      stage: "budget" as const,
-      reason: "past the budget of " + budget + " kinds",
-    }))
-
     const atoms = yield* Atoms
     const planned = yield* Effect.forEach(
-      judged,
+      candidates,
       (candidate) =>
         Effect.gen(function* () {
           const id = yield* atoms.add({
@@ -413,7 +342,7 @@ export const underusedPrimitive: PlannedRule = {
       read: (answers) => {
         const verdicts = verdictsOf<DecisionAnswers>(answers)
         const diagnostics: Array<Diagnostic> = []
-        const drops: Array<Drop> = [...overBudget, ...tooSmall]
+        const drops: Array<Drop> = [...tooSmall]
         let cursor = 0
         for (const entry of planned) {
           const { candidate } = entry
@@ -492,12 +421,7 @@ export const underusedPrimitive: PlannedRule = {
         }
         return outcome(
           diagnostics,
-          budgetNote({
-            unitKind: "kinds",
-            judged: budget,
-            candidates: candidates.length,
-            sample: candidates.slice(budget).map((candidate) => candidate.kind.kind),
-          }),
+          [],
           drops,
         )
       },

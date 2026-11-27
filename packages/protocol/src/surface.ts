@@ -1,4 +1,4 @@
-import { arrayOf, isRecord, str } from "./decode.ts"
+import { arrayOf, isRecord, oneOf, str } from "./decode.ts"
 
 /*
  * The dependency surface: the exports a repository's installed packages already offer.
@@ -80,21 +80,13 @@ export const decodeSurfaceExport = (value: unknown): SurfaceExport | undefined =
   const name = str(value.name)
   const module = str(value.module)
   const signature = str(value.signature)
-  const kind =
-    typeof value.kind === "string" && (SURFACE_KINDS as ReadonlyArray<string>).includes(value.kind)
-      ? (value.kind as SurfaceKind)
-      : undefined
+  const kind = oneOf(value.kind, SURFACE_KINDS)
   if (name === undefined || module === undefined || signature === undefined || kind === undefined) {
     return undefined
   }
   const doc = str(value.doc)
-  return {
-    name,
-    module,
-    kind,
-    signature,
-    ...(doc === undefined ? {} : { doc }),
-  }
+  const decoded: SurfaceExport = { name, module, kind, signature }
+  return doc === undefined ? decoded : { ...decoded, doc }
 }
 
 /** Read one package's surface, or `undefined` when it is not one. */
