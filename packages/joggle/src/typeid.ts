@@ -269,7 +269,7 @@ const encodeType = async (
           )
         }),
       )
-      members.sort(Order.String)
+      members.sort((left, right) => left.localeCompare(right))
       return "object{" + members.join(";") + "}"
     }
     return current === undefined ? body() : withVisit({ state, marker: current, body })
