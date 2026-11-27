@@ -15,7 +15,7 @@ import {
 } from './markdown-tracker.ts'
 
 export { BUDGET_RESET_MARKER } from '../receipt.ts'
-export { gh, ghJson, git } from './git-exec.ts'
+export { gh, ghJson, ghRetry, git } from './git-exec.ts'
 
 /**
  * The issue-tracker surface (#17, ADR-0002). The Loop's tracker is selected
