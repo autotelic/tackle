@@ -1,7 +1,6 @@
 import { Context, Effect, Option, Predicate, Result, Schema } from "effect"
 import * as AiError from "effect/ai/AiError"
 import { Decision, DecisionModel } from "effect/ai"
-import { lookup, type NoMatch } from "./either.ts"
 import { Atoms } from "./atoms.ts"
 import { canonical } from "./canonical.ts"
 import { policy } from "./policy.ts"
@@ -239,14 +238,10 @@ export const withQuestionMeta = <D extends Decision.Any>(decision: D, meta: Ques
   return annotated
 }
 
-const metaOf = (decision: Decision.Any): Result.Result<QuestionMeta, NoMatch> =>
-  lookup(
-    () =>
-      // SAFETY: QUESTION_META is written only by `withQuestionMeta`, which defines
-      // it on a `Decision.Any`; the value read here is that same QuestionMeta.
-      (decision as AnnotatedDecision)[QUESTION_META],
-    "the question annotation and state on a " + decision._tag + " decision",
-  )
+const metaOf = (decision: Decision.Any): Option.Option<QuestionMeta> =>
+  // SAFETY: QUESTION_META is written only by `withQuestionMeta`, which defines
+  // it on a `Decision.Any`; the value read here is that same QuestionMeta.
+  Option.fromNullishOr((decision as AnnotatedDecision)[QUESTION_META])
 
 /**
  * The key of one question's answer: the question, its OWN state, and the model.
@@ -356,7 +351,7 @@ export const memoize = (
           // question actually read.
           const key = answerKeyFor(
             decision,
-            Result.getOrElse(metaOf(decision), (): QuestionMeta => ({})).material ?? options.input,
+            Option.getOrElse(metaOf(decision), (): QuestionMeta => ({})).material ?? options.input,
           )
           keys.set(name, key)
           const stored = yield* cache.get(key)
@@ -385,7 +380,7 @@ export const memoize = (
             // Noul, which is what pushed a remedies request over the ceiling.
             const names =
               decision._tag === "Probability" &&
-              Result.getOrElse(metaOf(decision), (): QuestionMeta => ({})).repeatsHandled !== true
+              Option.getOrElse(metaOf(decision), (): QuestionMeta => ({})).repeatsHandled !== true
                 ? Array.from({ length: repeats }, (_, index) => name + "~" + String(index))
                 : [name]
             for (const one of names) requested[one] = decision
@@ -406,7 +401,7 @@ export const memoize = (
             let answer: Decision.Answer<Decision.Any> = first
             if (
               missing[name]?._tag === "Probability" &&
-              Result.getOrElse(metaOf(missing[name]), (): QuestionMeta => ({})).repeatsHandled !== true
+              Option.getOrElse(metaOf(missing[name]), (): QuestionMeta => ({})).repeatsHandled !== true
             ) {
               const values = gathered.flatMap((one) => ("probability" in one ? [one.probability] : []))
               const reduced = reduceRepeats(values)

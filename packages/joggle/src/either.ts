@@ -1,51 +1,20 @@
-import { Data, Result } from "effect"
+import { Data } from "effect"
 
 /*
- * The two answers this package kept inventing.
+ * The refusal this package kept inventing.
  *
- * Absence is a value with a reason: a sync lookup returns
- * `Result<A, NoMatch>` so the miss names what was looked for, and an operation
- * that can fail returns Effect with a tagged failure. Do not introduce Option
- * here -- the package already decided that an Option cannot carry the reason a
- * caller has to branch on.
+ * A lookup's absence is `Option`: the value was not there and the caller only
+ * needs to know that. This module used to carry a second helper, `lookup`, that
+ * returned `Result<A, NoMatch>` so the miss could name what it looked for. Both
+ * call sites immediately discarded the failure -- plans.ts with `getOrElse`, the
+ * remedy audit with `getOrUndefined` -- so the reason was never read and the
+ * wrapper only moved the absence one layer away from the primitive that already
+ * spells it. Option is the primitive; it does not need a reason attached.
  *
- * A refusal that must name its family and subject is BuildFailure. The findings
- * that paid for this module are plumb's `guarded-op-must-return-option`
- * (remedies.ts's `familyOfRule` returned `string | undefined`) and
- * `no-builtin-throws` (remedies.ts's `composeRemedy` threw `new Error`).
+ * A refusal that must name its subject is different, and is BuildFailure. The
+ * finding that paid for this module is plumb's `no-builtin-throws`: remedies.ts
+ * threw `new Error` when a repair label could not be composed.
  */
-
-/**
- * The absence a lookup reports: the value was not there, and this is the thing
- * that was looked for.
- *
- * A tagged error rather than `undefined`, so a caller that only needs "is it
- * there" still reads `Result.isFailure`, and a caller that reports the miss can
- * name it without reconstructing the context.
- */
-export class NoMatch extends Data.TaggedError("joggle/NoMatch")<{
-  readonly lookedFor: string
-}> {}
-
-/**
- * A lookup that may find nothing, with the miss carrying what was looked for.
- *
- * The ordinary absence: a Map miss, a search that found no member, an
- * annotation that was never attached. A lookup that must say WHY it found
- * nothing is a different Result, with the reason as its failure -- see store.ts's
- * `StoreError` and calibration.ts's `Majority` -- because "nothing" alone is not
- * a branch a caller can take.
- *
- * @param find - the lookup, evaluated once; `null` and `undefined` both mean
- * absent.
- * @param lookedFor - what the miss should name when the lookup finds nothing.
- * @returns the value, or a `NoMatch` naming the thing that was absent.
- */
-export const lookup = <A>(
-  find: () => A | null | undefined,
-  lookedFor: string,
-): Result.Result<NonNullable<A>, NoMatch> =>
-  Result.fromNullishOr(find(), () => new NoMatch({ lookedFor }))
 
 /**
  * A build failure that must carry its subject.
@@ -55,8 +24,8 @@ export const lookup = <A>(
  * prose a terminal prints. `Effect.catchTag("joggle/BuildFailure", …)` can tell
  * this apart from a provider failure without parsing a stack trace.
  *
- * Thrown only where the build cannot continue. A recoverable absence is
- * {@link lookup}, not a failure.
+ * Thrown only where the build cannot continue; a recoverable absence is
+ * `Option.none()`, not a failure.
  */
 export class BuildFailure extends Data.TaggedError("joggle/BuildFailure")<{
   readonly family: string

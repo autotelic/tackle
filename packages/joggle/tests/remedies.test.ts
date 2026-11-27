@@ -11,6 +11,7 @@ import {
   isImperativeClause,
   messageKeyOf,
   pairKeyOf,
+  pairOfKey,
   partitionsOf,
   recomputeTraceDecision,
   refinementGateOf,
@@ -147,6 +148,14 @@ test("the witness keeps the imperative clause and drops the diagnosis", () => {
   expect(
     witnessClause("A typeof check narrows a representation. Parse input at its I/O boundary."),
   ).toBe("Parse input at its I/O boundary")
+})
+
+test("a pair key round-trips in one spelling of the separator", () => {
+  const key = pairKeyOf({ left: "alpha", right: "beta" })
+  expect(key).toBe(pairKeyOf({ left: "beta", right: "alpha" }))
+  expect(pairOfKey(key)).toEqual({ left: "alpha", right: "beta" })
+  expect(pairOfKey("alpha")).toBeUndefined()
+  expect(pairOfKey("alpha\u0000beta\u0000gamma")).toBeUndefined()
 })
 
 test("two vocabularies for one repair cluster; a different repair does not", () => {

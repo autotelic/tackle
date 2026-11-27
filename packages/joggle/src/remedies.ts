@@ -1,7 +1,7 @@
 import { Effect, Predicate, Result, Schema } from "effect"
 import { Decision } from "effect/ai"
 import type { AiError, DecisionModel } from "effect/ai"
-import { BuildFailure, lookup, type NoMatch } from "./either.ts"
+import { BuildFailure } from "./either.ts"
 import { Atoms } from "./atoms.ts"
 import { canonical } from "./canonical.ts"
 import { isUnreachable } from "./decision.ts"
@@ -13,6 +13,7 @@ import {
   chunkPlans,
   type Plan,
 } from "./plans.ts"
+import { questionLimits } from "./questionnaire.ts"
 import { shortHash } from "./state.ts"
 import { createFactStore, type StoredFinding } from "./store.ts"
 
@@ -639,6 +640,25 @@ export const pairKeyOf = ({
 }): string => (left.localeCompare(right) <= 0 ? left + "\u0000" + right : right + "\u0000" + left)
 
 /**
+ * The two message keys a pair key was built from, or nothing when it is not one.
+ *
+ * The inverse of {@link pairKeyOf}, so the NUL separator is spelled in one place
+ * and a reader cannot silently accept a key with the wrong number of parts.
+ *
+ * @param key - a key produced by {@link pairKeyOf}.
+ * @returns the two message keys, unordered.
+ */
+export const pairOfKey = (
+  key: string,
+): { readonly left: string; readonly right: string } | undefined => {
+  const parts = key.split("\u0000")
+  const left = parts[0]
+  const right = parts[1]
+  if (left === undefined || right === undefined || parts.length !== 2) return undefined
+  return { left, right }
+}
+
+/**
  * The families a prescribed repair can belong to, one question over seven.
  *
  * This exists because the option list it replaces held every witness clause in
@@ -853,6 +873,59 @@ const askPlans = <A>(
     return { values, failures }
   })
 
+interface PairQuestion {
+  readonly key: string
+  readonly atom: string
+  readonly aRef: string
+  readonly bRef: string
+}
+
+const probabilityOf = (
+  answers: Readonly<Record<string, Decision.Answer<Decision.Any>>>,
+  name: string,
+): number | undefined => {
+  const answer = answers[name]
+  return answer !== undefined && "probability" in answer ? answer.probability : undefined
+}
+
+/**
+ * One probability question about one message pair.
+ *
+ * Rung 2 asks three questions of the same pair, and only the text differs: the
+ * subject is the pair key, the evidence is the pair's atoms, and the answer is a
+ * probability. Building that transport once keeps a fourth question from
+ * arriving with a fourth copy of it.
+ */
+const probabilityPlanOf = ({
+  pair,
+  name,
+  decision,
+}: {
+  readonly pair: PairQuestion
+  readonly name: string
+  readonly decision: Decision.Any
+}): Plan<number | undefined> => ({
+  ruleId: "joggle/remedies",
+  subject: pair.key,
+  concerns: [],
+  atoms: [pair.atom],
+  decisions: { [name]: decision },
+  read: (answers) => probabilityOf(answers, name),
+})
+
+/** The answers a plan round returned, keyed by the pair each plan asked about. */
+const answersByKey = (
+  pairs: ReadonlyArray<PairQuestion>,
+  values: ReadonlyArray<number | undefined>,
+): Map<string, number> => {
+  const byKey = new Map<string, number>()
+  pairs.forEach((pair, index) => {
+    const value = values[index]
+    if (value !== undefined) byKey.set(pair.key, value)
+  })
+  return byKey
+}
+
 /**
  * Ask the questions rung 1 needs, batched and cached.
  *
@@ -887,7 +960,7 @@ export const judgeRemedies = (
         ...derived.filter(repairClause),
       ]),
     ].sort((left, right) => left.localeCompare(right))
-    const limit = policy.decision.maxChoiceOptions
+    const limit = questionLimits.maxChoiceOptions
     const failures: Array<AiError.AiError> = []
 
     const familyOfAnswer = (value: string | undefined): string =>
@@ -1113,21 +1186,6 @@ export const judgeRemedies = (
       depth += 1
     }
 
-    const probabilityOf = (
-      answers: Readonly<Record<string, Decision.Answer<Decision.Any>>>,
-      name: string,
-    ): number | undefined => {
-      const answer = answers[name]
-      return answer !== undefined && "probability" in answer ? answer.probability : undefined
-    }
-
-    interface PairQuestion {
-      readonly key: string
-      readonly atom: string
-      readonly aRef: string
-      readonly bRef: string
-    }
-
     const pairs: Array<PairQuestion> = []
     for (let left = 0; left < groups.length; left += 1) {
       for (let right = left + 1; right < groups.length; right += 1) {
@@ -1164,13 +1222,11 @@ export const judgeRemedies = (
     // pair materiality says changes the repair. The measured regression was
     // 17,364 questions because every pair got all three; disjoint sites are the
     // normal case for two rules, so `suspect` gating settled nothing.
-    const remedyPlans: Array<Plan<number | undefined>> = pairs.map((pair) => ({
-      ruleId: "joggle/remedies",
-      subject: pair.key,
-      concerns: [],
-      atoms: [pair.atom],
-      decisions: {
-        j_remedy: Decision.probability({
+    const remedyPlans: Array<Plan<number | undefined>> = pairs.map((pair) =>
+      probabilityPlanOf({
+        pair,
+        name: "j_remedy",
+        decision: Decision.probability({
           instructions: [
             "Do `" +
               pair.aRef +
@@ -1191,26 +1247,19 @@ export const judgeRemedies = (
             true: "They prescribe the same repair.",
           },
         }),
-      },
-      read: (answers) => probabilityOf(answers, "j_remedy"),
-    }))
+      }),
+    )
     const remedyAnswers = yield* askPlans(remedyPlans)
     failures.push(...remedyAnswers.failures)
-    const remedyByKey = new Map<string, number>()
-    pairs.forEach((pair, index) => {
-      const remedy = remedyAnswers.values[index]
-      if (remedy !== undefined) remedyByKey.set(pair.key, remedy)
-    })
+    const remedyByKey = answersByKey(pairs, remedyAnswers.values)
     const startGate = refinementGateOf({ pairs, remedy: remedyByKey, material: new Map() })
     const materialKeys = new Set(startGate.material)
     const materialPairs = pairs.filter((pair) => materialKeys.has(pair.key))
-    const materialPlans: Array<Plan<number | undefined>> = materialPairs.map((pair) => ({
-      ruleId: "joggle/remedies",
-      subject: pair.key,
-      concerns: [],
-      atoms: [pair.atom],
-      decisions: {
-        j_material: Decision.probability({
+    const materialPlans: Array<Plan<number | undefined>> = materialPairs.map((pair) =>
+      probabilityPlanOf({
+        pair,
+        name: "j_material",
+        decision: Decision.probability({
           instructions: [
             "Does the difference between `" +
               pair.aRef +
@@ -1227,16 +1276,11 @@ export const judgeRemedies = (
             true: "The trigger difference changes the repair.",
           },
         }),
-      },
-      read: (answers) => probabilityOf(answers, "j_material"),
-    }))
+      }),
+    )
     const materialAnswers = yield* askPlans(materialPlans)
     failures.push(...materialAnswers.failures)
-    const materialByKey = new Map<string, number>()
-    materialPairs.forEach((pair, index) => {
-      const material = materialAnswers.values[index]
-      if (material !== undefined) materialByKey.set(pair.key, material)
-    })
+    const materialByKey = answersByKey(materialPairs, materialAnswers.values)
 
     // A subcase can only refine a material difference. Asking it before
     // `j_remedy` said same, or before `j_material` said the difference matters,
@@ -1244,13 +1288,11 @@ export const judgeRemedies = (
     const gate = refinementGateOf({ pairs, remedy: remedyByKey, material: materialByKey })
     const subcaseKeys = new Set(gate.subcase)
     const subcasePairs = pairs.filter((pair) => subcaseKeys.has(pair.key))
-    const subcasePlans: Array<Plan<number | undefined>> = subcasePairs.map((pair) => ({
-      ruleId: "joggle/remedies",
-      subject: pair.key,
-      concerns: [],
-      atoms: [pair.atom],
-      decisions: {
-        j_subcase: Decision.probability({
+    const subcasePlans: Array<Plan<number | undefined>> = subcasePairs.map((pair) =>
+      probabilityPlanOf({
+        pair,
+        name: "j_subcase",
+        decision: Decision.probability({
           instructions: [
             "Is `" + pair.bRef + ".trigger` a strict subset of `" + pair.aRef + ".trigger`?",
             "Strict means every case `" +
@@ -1266,21 +1308,12 @@ export const judgeRemedies = (
             true: "It is a strict subset.",
           },
         }),
-      },
-      read: (answers) => probabilityOf(answers, "j_subcase"),
-    }))
+      }),
+    )
     const subcaseAnswers = yield* askPlans(subcasePlans)
     failures.push(...subcaseAnswers.failures)
-    const subcaseByKey = new Map<string, number>()
-    subcasePairs.forEach((pair, index) => {
-      const subcase = subcaseAnswers.values[index]
-      if (subcase !== undefined) subcaseByKey.set(pair.key, subcase)
-    })
+    const subcaseByKey = answersByKey(subcasePairs, subcaseAnswers.values)
 
-    const repairMap = new Map(clauseByMessage)
-    const sameMap = new Map(remedyByKey)
-    const materialMap = new Map(materialByKey)
-    const subcaseMap = new Map(subcaseByKey)
     const counts = {
       remedy: remedyByKey.size,
       material: materialByKey.size,
@@ -1290,15 +1323,15 @@ export const judgeRemedies = (
     const failureText = failures.map(String)
     // Witness-only means the model was never reached. A size rejection is a
     // judgement that ran and failed, so it stays PARTIAL with a named reason.
-    const answered = repairMap.size + sameMap.size
+    const answered = clauseByMessage.size + remedyByKey.size
     const unavailable = answered === 0 && failures.some(isUnreachable) ? failureText[0] : undefined
     return {
-      repairs: repairMap,
+      repairs: clauseByMessage,
       families: familyByMessage,
       implied: impliedByMessage,
-      same: sameMap,
-      material: materialMap,
-      subcase: subcaseMap,
+      same: remedyByKey,
+      material: materialByKey,
+      subcase: subcaseByKey,
       unavailable,
       failures: failureText,
       questions: messages.length,
@@ -1606,11 +1639,7 @@ const clustersOf = (
         answer === undefined || answer === "none" ? witnessClause(member.message) : answer
       repairCounts.set(label, (repairCounts.get(label) ?? 0) + 1)
     }
-    const remedy =
-      [...repairCounts.entries()].sort(
-        ([leftLabel, leftCount], [rightLabel, rightCount]) =>
-          rightCount - leftCount || leftLabel.localeCompare(rightLabel),
-      )[0]?.[0] ?? "none"
+    const remedy = mostFrequentOf(repairCounts) ?? "none"
     const sites = [...new Set(members.map((member) => member.site))].sort((left, right) =>
       left.localeCompare(right),
     )
@@ -1644,7 +1673,7 @@ const familyOfRule = (
   members: ReadonlyArray<RemedyFinding>,
   rule: string,
   opinion: RepairOpinion,
-): Result.Result<string, NoMatch> => {
+): string | undefined => {
   const counts = new Map<string, number>()
   for (const member of members) {
     if (member.rule !== rule) continue
@@ -1652,14 +1681,7 @@ const familyOfRule = (
     if (family === undefined) continue
     counts.set(family, (counts.get(family) ?? 0) + 1)
   }
-  return lookup(
-    () =>
-      [...counts.entries()].sort(
-        ([leftLabel, leftCount], [rightLabel, rightCount]) =>
-          rightCount - leftCount || leftLabel.localeCompare(rightLabel),
-      )[0]?.[0],
-    "the family answer for every " + rule + " finding",
-  )
+  return mostFrequentOf(counts)
 }
 
 /**
@@ -1698,6 +1720,13 @@ const judgmentsBetween = ({
   }
   return best
 }
+
+/** The most frequent label, ties broken by label so a report is stable. */
+const mostFrequentOf = (counts: ReadonlyMap<string, number>): string | undefined =>
+  [...counts.entries()].sort(
+    ([leftLabel, leftCount], [rightLabel, rightCount]) =>
+      rightCount - leftCount || leftLabel.localeCompare(rightLabel),
+  )[0]?.[0]
 
 /** The first message's witness clause for one rule, for a trace's facts. */
 const clauseOfRule = (members: ReadonlyArray<RemedyFinding>, rule: string): string | undefined =>
@@ -1747,8 +1776,8 @@ const crossRulesOf = (
         decision: remedyDecisionOf(judgments).branch,
         sharedRepair,
         families: {
-          a: Result.getOrUndefined(familyOfRule(members, a.rule, opinion)),
-          b: Result.getOrUndefined(familyOfRule(members, b.rule, opinion)),
+          a: familyOfRule(members, a.rule, opinion),
+          b: familyOfRule(members, b.rule, opinion),
         },
       })
     }
@@ -1826,10 +1855,10 @@ export const clusterRemedies = (
   const disagreements: Array<{ a: string; b: string; probability: number }> = []
   for (const [key, probability] of opinion.same) {
     if (probability < policy.decision.gates.probabilityFloor) continue
-    const [left, right] = key.split("\u0000")
-    if (left === undefined || right === undefined) continue
-    const leftMessage = messages.find((message) => message.key === left)
-    const rightMessage = messages.find((message) => message.key === right)
+    const pair = pairOfKey(key)
+    if (pair === undefined) continue
+    const leftMessage = messages.find((message) => message.key === pair.left)
+    const rightMessage = messages.find((message) => message.key === pair.right)
     if (leftMessage === undefined || rightMessage === undefined) continue
     if (leftMessage.clause === rightMessage.clause) continue
     // Report only a join the clustering actually made: a high pair score that a
