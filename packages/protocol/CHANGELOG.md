@@ -1,5 +1,17 @@
 # @autotelic/protocol
 
+## 0.3.0
+
+### Minor Changes
+
+- The pattern's canonical value shape is one vocabulary again.
+
+  `joggle`'s `TRIPARTITE` and `cutlist`'s `DEFAULT_VALUE_KEYS` were the same three
+  strings — `["state","actions","meta"]` — declared in two packages that must not
+  import each other. `joggle identity` proves it: one id, repeated. The seam's
+  answer is a format, so `protocol` owns the vocabulary and both read it; cutlist
+  still lets a repository override it in config.
+
 ## 0.2.0
 
 ### Minor Changes

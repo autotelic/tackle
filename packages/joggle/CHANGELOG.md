@@ -1,5 +1,28 @@
 # @autotelic/joggle
 
+## 0.15.0
+
+### Minor Changes
+
+- `joggle/containment` joins over content-addressed fragment ids, not token shingles.
+
+  The shingle join held every declaration's shingle set for the whole repository and
+  stopped scaling: 238s, then a 4GB heap and an abort at 4,649 declarations. The
+  fragment index is expensive to compute once and cheap to compare — the opposite
+  trade — and the same rule on it measures **6.67s and 1.2GB peak RSS** on the same
+  repository, with the same 12 findings.
+
+  Containment is unchanged as a measure (`|shared| / min(|F_small|, |F_large|)`), and
+  so is everything the rule decides: the test/fixture exclusion, minTokens, the
+  Jaccard deferral, the rarity ranking, the budget, and the questionnaire. Document
+  frequency is now a counter over ids rather than a set of strings, which is where
+  the memory went.
+
+### Patch Changes
+
+- Updated dependencies
+  - @autotelic/protocol@0.3.0
+
 ## 0.14.2
 
 ### Patch Changes
