@@ -216,6 +216,14 @@ const messageNodesOf = (findings: ReadonlyArray<RemedyFinding>): ReadonlyArray<M
 export interface RepairOpinion {
   /** Message key to the repair label the judgement chose. */
   readonly repairs: ReadonlyMap<string, string>
+  /**
+   * Message keys whose repair was implied by the family, not asked.
+   *
+   * A Choice with one candidate is a decision already made. Recording the keys
+   * keeps that distinction visible: an implied repair is answered, but it was
+   * never a question.
+   */
+  readonly implied?: ReadonlySet<string> | undefined
   /** Message key pair to the probability the two prescribe the same repair. */
   readonly same: ReadonlyMap<string, number>
   /** Set when the model was never reached; witness-only clustering follows. */
@@ -254,7 +262,7 @@ export const pairKeyOf = ({
  * with a non-answer. The family is the first snap judgement; the clause, asked
  * only among the clauses of the family that answer named, is the second.
  */
-export const remedyFamilies: Readonly<Record<string, string>> = {
+export const remedyFamilies = {
   "parse at the boundary":
     "Turn untyped input into a domain value where it enters: parse, decode or validate at the I/O edge, then branch on the parsed value.",
   "narrow with a predicate":
@@ -266,7 +274,7 @@ export const remedyFamilies: Readonly<Record<string, string>> = {
   "inject the dependency":
     "Take the collaborator as a parameter or thread it through the signature, so it is explicit and replaceable instead of captured.",
   other: "None of these: the repair is something else. The next question names it.",
-}
+} as const
 
 /**
  * The remedy identity: the family the first answer named, then the clause.
@@ -275,8 +283,57 @@ export const remedyFamilies: Readonly<Record<string, string>> = {
  * sentence ("narrow with a predicate: Narrow with discriminants/in checks…")
  * and neither question carries more than `maxChoiceOptions` candidates.
  */
-export const composeRemedy = (family: string, clause: string): string =>
-  family === "" ? clause : family + ": " + clause
+export const composeRemedy = ({
+  family,
+  clause,
+}: {
+  readonly family: string
+  readonly clause: string
+}): string => (family === "" ? clause : family + ": " + clause)
+
+/** How a message's clause list is resolved: asked, implied, or a bug. */
+export type ClauseRoute =
+  | {
+      readonly kind: "implied"
+      readonly family: string
+      readonly clause: string
+    }
+  | {
+      readonly kind: "asked"
+      readonly family: string
+      readonly candidates: ReadonlyArray<string>
+    }
+  | {
+      readonly kind: "orphan"
+      readonly family: string
+      readonly message: string
+    }
+
+/**
+ * Decide whether a clause list is a question, an answer, or an empty bug.
+ *
+ * One candidate is not a Choice: the provider refuses it, and it is right to.
+ * The family already determined the answer, so code composes it and records
+ * that it was implied rather than judged. Zero candidates means the family
+ * assignment is inconsistent with the clause assignment, which is a bug in the
+ * build of the questions -- never an empty question sent to the model.
+ */
+export const clauseRouteOf = ({
+  family,
+  message,
+  candidates,
+}: {
+  readonly family: string
+  readonly message: string
+  readonly candidates: ReadonlyArray<string>
+}): ClauseRoute => {
+  if (candidates.length === 0) return { kind: "orphan", family, message }
+  const clause = candidates[0]
+  if (candidates.length === 1 && clause !== undefined) {
+    return { kind: "implied", family, clause }
+  }
+  return { kind: "asked", family, candidates }
+}
 
 /**
  * Split items into at most `limit` contiguous groups, each smaller than the
@@ -463,20 +520,40 @@ export const judgeRemedies = (
     // again -- so no question in this run exceeds `maxChoiceOptions`, and no
     // clause is dropped to make the count fit.
     const clauseByMessage = new Map<string, string>()
+    const impliedByMessage = new Set<string>()
     interface PendingClause {
       readonly message: MessageNode
       readonly family: string
       readonly candidates: ReadonlyArray<string>
     }
-    let pending: ReadonlyArray<PendingClause> = messages.map((message) => {
+    const pending: Array<PendingClause> = []
+    for (const message of messages) {
       const family = familyByMessage.get(message.key) ?? "other"
-      const inFamily = clauses.filter(
+      const candidates = clauses.filter(
         (clause) => (familyByClause.get(clause) ?? "other") === family,
       )
-      // A family no clause was assigned to still needs an answer; the message's
-      // own witness clause is the one clause known to be about it.
-      return { message, family, candidates: inFamily.length === 0 ? [message.clause] : inFamily }
-    })
+      const route = clauseRouteOf({ family, message: message.message, candidates })
+      if (route.kind === "orphan") {
+        return yield* Effect.die(
+          new Error(
+            "remedies: repair family `" +
+              route.family +
+              "` has no clause assigned for " +
+              JSON.stringify(route.message) +
+              "; refusing to send an empty Choice",
+          ),
+        )
+      }
+      if (route.kind === "implied") {
+        clauseByMessage.set(
+          message.key,
+          composeRemedy({ family: route.family, clause: route.clause }),
+        )
+        impliedByMessage.add(message.key)
+        continue
+      }
+      pending.push({ message, family, candidates: route.candidates })
+    }
     let depth = 0
     while (pending.length > 0 && depth < 8) {
       const plans: Array<Plan<unknown>> = []
@@ -484,7 +561,31 @@ export const judgeRemedies = (
       const next: Array<PendingClause> = []
       for (const item of pending) {
         const finding = { message: item.message.message, help: item.message.help ?? "" }
-        if (item.candidates.length <= limit) {
+        const route = clauseRouteOf({
+          family: item.family,
+          message: item.message.message,
+          candidates: item.candidates,
+        })
+        if (route.kind === "orphan") {
+          return yield* Effect.die(
+            new Error(
+              "remedies: repair family `" +
+                route.family +
+                "` has no clause assigned for " +
+                JSON.stringify(route.message) +
+                "; refusing to send an empty Choice",
+            ),
+          )
+        }
+        if (route.kind === "implied") {
+          clauseByMessage.set(
+            item.message.key,
+            composeRemedy({ family: route.family, clause: route.clause }),
+          )
+          impliedByMessage.add(item.message.key)
+          continue
+        }
+        if (route.candidates.length <= limit) {
           const atom = yield* atoms.add({ finding, candidates: item.candidates })
           plans.push({
             ruleId: "joggle/remedies",
@@ -521,7 +622,10 @@ export const judgeRemedies = (
           })
           actions.push((value) => {
             if (!Predicate.isString(value) || value === "") return
-            clauseByMessage.set(item.message.key, composeRemedy(item.family, value))
+            clauseByMessage.set(
+              item.message.key,
+              composeRemedy({ family: item.family, clause: value }),
+            )
           })
           continue
         }
@@ -636,6 +740,7 @@ export const judgeRemedies = (
     const unavailable = answered === 0 && failures.some(isUnreachable) ? failureText[0] : undefined
     return {
       repairs: repairMap,
+      implied: impliedByMessage,
       same: sameMap,
       unavailable,
       failures: failureText,
@@ -697,6 +802,8 @@ export interface RemedyReport {
   readonly answeredPairs: number
   /** Distinct messages the judgement answered, out of `distinctMessages`. */
   readonly answeredRepairs: number
+  /** Of those, the repairs the family implied rather than asked. */
+  readonly impliedRepairs: number
   readonly judgementStatus: JudgementStatus
   readonly judgementUnavailable: string | undefined
   /** Requests that still failed after halving, named so the gap is visible. */
@@ -958,6 +1065,7 @@ export const clusterRemedies = (
     pairsAsked: opinion.pairs,
     answeredPairs,
     answeredRepairs,
+    impliedRepairs: opinion.implied?.size ?? 0,
     judgementStatus,
     judgementUnavailable: opinion.unavailable,
     judgementFailures: opinion.failures,

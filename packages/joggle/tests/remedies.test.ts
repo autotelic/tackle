@@ -1,6 +1,7 @@
 import { Result, Schema, SchemaParser } from "effect"
 import { expect, test } from "vitest"
 import {
+  clauseRouteOf,
   clusterRemedies,
   composeRemedy,
   FindingsPayload,
@@ -363,9 +364,54 @@ test("the repair family is one bounded question, and the clause is another", () 
   ])
   expect(Object.keys(remedyFamilies).length).toBeLessThanOrEqual(policy.decision.maxChoiceOptions)
   // The identity is composed, and it reads as a sentence rather than a token.
-  expect(composeRemedy("narrow with a predicate", "Narrow with discriminants/in checks")).toBe(
-    "narrow with a predicate: Narrow with discriminants/in checks",
-  )
+  expect(
+    composeRemedy({
+      family: "narrow with a predicate",
+      clause: "Narrow with discriminants/in checks",
+    }),
+  ).toBe("narrow with a predicate: Narrow with discriminants/in checks")
+})
+
+test("one clause is answered in code, not asked as a one-option Choice", () => {
+  expect(
+    clauseRouteOf({
+      family: "parse at the boundary",
+      message: "A message.",
+      candidates: ["Parse input at its I/O boundary"],
+    }),
+  ).toEqual({
+    kind: "implied",
+    family: "parse at the boundary",
+    clause: "Parse input at its I/O boundary",
+  })
+})
+
+test("two or more clauses are still asked", () => {
+  expect(
+    clauseRouteOf({
+      family: "parse at the boundary",
+      message: "A message.",
+      candidates: ["Parse at the edge", "Validate at the edge"],
+    }),
+  ).toEqual({
+    kind: "asked",
+    family: "parse at the boundary",
+    candidates: ["Parse at the edge", "Validate at the edge"],
+  })
+})
+
+test("zero clauses name the family and message instead of sending an empty question", () => {
+  expect(
+    clauseRouteOf({
+      family: "inject the dependency",
+      message: "Thread the clock through the signature.",
+      candidates: [],
+    }),
+  ).toEqual({
+    kind: "orphan",
+    family: "inject the dependency",
+    message: "Thread the clock through the signature.",
+  })
 })
 
 test("a clause list longer than one Choice is split, not truncated", () => {
