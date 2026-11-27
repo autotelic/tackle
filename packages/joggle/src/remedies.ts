@@ -394,24 +394,78 @@ export interface RepairOpinion {
    * interesting failure visible: a diagnosis-only message needs its repair
    * derived (the experimental API is the measured case), not restated.
    */
-  readonly rejectedClauses?: ReadonlyArray<{
-    readonly message: string
-    readonly clause: string
-  }> | undefined
+  readonly rejectedClauses?:
+    | ReadonlyArray<{
+        readonly message: string
+        readonly clause: string
+      }>
+    | undefined
 }
 
 /**
  * The gated question counts, so a run can say what it did not ask.
  *
- * `decidedByCode` is the interesting number: pairs where the sites overlap and
- * the families agree, so no materiality or subcase judgment could change the
- * merge. Rung 3's preview is how much of the corpus code can settle alone.
+ * `decidedByCode` is the interesting number: pairs whose merge `j_remedy`
+ * already rejected, so no materiality or subcase judgment could change it.
+ * Rung 3's preview is how much of the corpus code can settle alone.
  */
 export interface RemedyQuestionCounts {
   readonly remedy: number
   readonly material: number
   readonly subcase: number
   readonly decidedByCode: number
+}
+
+/** Which pairs get the refinement questions, and which the merge question settled alone. */
+export interface RefinementGate {
+  /** Pair keys whose repairs match, so materiality is worth asking. */
+  readonly material: ReadonlyArray<string>
+  /** Pair keys whose trigger difference is material, so a subcase is worth asking. */
+  readonly subcase: ReadonlyArray<string>
+  /** Pairs `j_remedy` rejected; no refinement can change the merge. */
+  readonly decidedByCode: number
+}
+
+/**
+ * Gate the two refinement questions on the answer that can make them matter.
+ *
+ * Materiality is not a property of a pair in isolation: it matters only for a
+ * merge under consideration. A pair the merge question already rejected has no
+ * repair for a trigger difference to affect. Likewise a subcase only refines a
+ * difference that materiality says changes the repair.
+ *
+ * @param input.pairs - The pairs, by stable key.
+ * @param input.remedy - `j_remedy` answers; a missing answer is not a merge.
+ * @param input.material - `j_material` answers for the pairs asked so far.
+ * @returns the keys each refinement is asked of, and the count code settles at step one.
+ */
+export const refinementGateOf = ({
+  pairs,
+  remedy,
+  material,
+}: {
+  readonly pairs: ReadonlyArray<{ readonly key: string }>
+  readonly remedy: ReadonlyMap<string, number>
+  readonly material: ReadonlyMap<string, number>
+}): RefinementGate => {
+  const same = pairs.filter((pair) => {
+    const probability = remedy.get(pair.key)
+    return probability !== undefined && probability > policy.decision.remedy.sameRemedy
+  })
+  const rejected = pairs.filter((pair) => {
+    const probability = remedy.get(pair.key)
+    return probability !== undefined && probability <= policy.decision.remedy.sameRemedy
+  })
+  return {
+    material: same.map((pair) => pair.key),
+    subcase: same
+      .filter((pair) => {
+        const probability = material.get(pair.key)
+        return probability !== undefined && probability >= policy.decision.remedy.material
+      })
+      .map((pair) => pair.key),
+    decidedByCode: rejected.length,
+  }
 }
 
 /** The three probabilities one pair question answers, and no sentence. */
@@ -1082,15 +1136,6 @@ export const judgeRemedies = (
       readonly atom: string
       readonly aRef: string
       readonly bRef: string
-      /**
-       * Whether the trigger difference could change the repair: the two groups
-       * reach disjoint sites, or their rules answered different families.
-       *
-       * Both facts are computed. A pair with overlapping sites and one family
-       * needs no materiality judgment, because the counterexample pack already
-       * shows the triggers coincide.
-       */
-      readonly suspect: boolean
     }
 
     const pairs: Array<PairQuestion> = []
@@ -1115,28 +1160,20 @@ export const judgeRemedies = (
           },
         }
         const atom = yield* atoms.add(state)
-        const aSites = new Set(a.findings.map((finding) => finding.site))
-        const intersect = b.findings.some((finding) => aSites.has(finding.site))
-        const familyA = familyByMessage.get(a.key)
-        const familyB = familyByMessage.get(b.key)
         pairs.push({
           key,
           atom,
           aRef: "atoms[" + atom + "].a",
           bRef: "atoms[" + atom + "].b",
-          suspect:
-            !intersect ||
-            familyA === undefined ||
-            familyB === undefined ||
-            familyA !== familyB,
         })
       }
     }
 
-    // RUNG 3'S GATE: ask the merge question of every pair, but ask the two
-    // questions that refine it only where they can change the answer. The
-    // measured regression was 17,364 questions because every pair got all three;
-    // a pair with one family and overlapping sites is already settled by code.
+    // RUNG 3'S GATE: ask the merge question of every pair, then ask materiality
+    // only of a pair whose merge question said same, and a subcase only of a
+    // pair materiality says changes the repair. The measured regression was
+    // 17,364 questions because every pair got all three; disjoint sites are the
+    // normal case for two rules, so `suspect` gating settled nothing.
     const remedyPlans: Array<Plan<number | undefined>> = pairs.map((pair) => ({
       ruleId: "joggle/remedies",
       subject: pair.key,
@@ -1174,12 +1211,9 @@ export const judgeRemedies = (
       const remedy = remedyAnswers.values[index]
       if (remedy !== undefined) remedyByKey.set(pair.key, remedy)
     })
-    const saysSame = (key: string): boolean => {
-      const remedy = remedyByKey.get(key)
-      return remedy !== undefined && remedy > policy.decision.remedy.sameRemedy
-    }
-
-    const materialPairs = pairs.filter((pair) => pair.suspect)
+    const startGate = refinementGateOf({ pairs, remedy: remedyByKey, material: new Map() })
+    const materialKeys = new Set(startGate.material)
+    const materialPairs = pairs.filter((pair) => materialKeys.has(pair.key))
     const materialPlans: Array<Plan<number | undefined>> = materialPairs.map((pair) => ({
       ruleId: "joggle/remedies",
       subject: pair.key,
@@ -1214,9 +1248,12 @@ export const judgeRemedies = (
       if (material !== undefined) materialByKey.set(pair.key, material)
     })
 
-    // A subcase can only refine a pair whose repairs already match. Asking it
-    // before `j_remedy` was the other half of the measured over-asking.
-    const subcasePairs = pairs.filter((pair) => pair.suspect && saysSame(pair.key))
+    // A subcase can only refine a material difference. Asking it before
+    // `j_remedy` said same, or before `j_material` said the difference matters,
+    // was the other half of the measured over-asking.
+    const gate = refinementGateOf({ pairs, remedy: remedyByKey, material: materialByKey })
+    const subcaseKeys = new Set(gate.subcase)
+    const subcasePairs = pairs.filter((pair) => subcaseKeys.has(pair.key))
     const subcasePlans: Array<Plan<number | undefined>> = subcasePairs.map((pair) => ({
       ruleId: "joggle/remedies",
       subject: pair.key,
@@ -1254,19 +1291,11 @@ export const judgeRemedies = (
     const sameMap = new Map(remedyByKey)
     const materialMap = new Map(materialByKey)
     const subcaseMap = new Map(subcaseByKey)
-    let decidedByCode = 0
-    for (const pair of pairs) {
-      if (pair.suspect) continue
-      // The sites overlap and the families agree, so code knows the trigger
-      // difference cannot change the repair. That is a decision, not a judgment.
-      decidedByCode += 1
-      if (saysSame(pair.key)) materialMap.set(pair.key, 0)
-    }
     const counts = {
       remedy: remedyByKey.size,
       material: materialByKey.size,
       subcase: subcaseByKey.size,
-      decidedByCode,
+      decidedByCode: gate.decidedByCode,
     }
     const failureText = failures.map(String)
     // Witness-only means the model was never reached. A size rejection is a
@@ -1403,22 +1432,39 @@ const sameRepair = ({
   opinion,
   left,
   right,
+  crossRule = false,
 }: {
   readonly opinion: RepairOpinion
   readonly left: string
   readonly right: string
+  /** Whether the two messages come from different rules. */
+  readonly crossRule?: boolean | undefined
 }): boolean => {
-  // The Choice is the normaliser: two messages the model put on one candidate
-  // clause prescribe one repair, whatever their wording. The pairwise Noul is
-  // the second opinion, for two messages that each kept their own clause.
+  const key = pairKeyOf({ left, right })
+  const remedy = opinion.same.get(key)
+  // A cross-rule merge is the judgement's strongest claim, so the merge question
+  // must support it. A composed label can still normalize the messages of one
+  // rule -- the 83 experimental-API sites share a derived repair whose wordings
+  // the pair question reasonably calls different -- but it may not widen one
+  // rule's answer to another. This is the measured 88-site defect: the
+  // stable-API label absorbed five nullish-default findings that j_remedy split.
+  if (crossRule && remedy !== undefined) {
+    const decision = remedyDecisionOf({
+      remedy,
+      material: opinion.material?.get(key),
+      subcase: opinion.subcase?.get(key),
+    })
+    return decision.branch === "same"
+  }
+  // Within one rule the Choice is the normaliser: two messages the model put on
+  // one candidate clause prescribe one repair, whatever their wording.
   const leftRepair = opinion.repairs.get(left)
   const rightRepair = opinion.repairs.get(right)
   if (leftRepair !== undefined && leftRepair === rightRepair && leftRepair !== "none") {
     return true
   }
-  const key = pairKeyOf({ left, right })
   const decision = remedyDecisionOf({
-    remedy: opinion.same.get(key),
+    remedy,
     material: opinion.material?.get(key),
     subcase: opinion.subcase?.get(key),
   })
@@ -1538,7 +1584,11 @@ const clustersOf = (
         const a = groups[left]?.messages[0]
         const b = groups[right]?.messages[0]
         if (a === undefined || b === undefined) continue
-        if (sameRepair({ opinion, left: a.key, right: b.key })) sets.union(left, right)
+        const aRule = a.findings[0]?.rule ?? "unknown"
+        const bRule = b.findings[0]?.rule ?? "unknown"
+        if (sameRepair({ opinion, left: a.key, right: b.key, crossRule: aRule !== bRule })) {
+          sets.union(left, right)
+        }
       }
     }
   }
@@ -1685,7 +1735,9 @@ const crossRulesOf = (
       const bMembers = members.filter((member) => member.rule === b.rule)
       const judgments = judgmentsBetween(aMembers, bMembers, opinion)
       const aRepairs = new Set(
-        aMembers.map((member) => opinion.repairs.get(messageKeyOf(member))).filter(Predicate.isString),
+        aMembers
+          .map((member) => opinion.repairs.get(messageKeyOf(member)))
+          .filter(Predicate.isString),
       )
       const sharedRepair = bMembers.some((member) => {
         const repair = opinion.repairs.get(messageKeyOf(member))
