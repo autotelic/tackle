@@ -17,6 +17,65 @@ export const ENGINE_SCRATCH_FILES = ['PROGRESS.md']
  */
 export const ENGINE_LEDGER_FILES = ['.jig-baseline.json', '.joggle-baseline.json']
 
+/**
+ * The conflicted paths git reports, unmerged, in sorted order. Used to say
+ * *what* is conflicted rather than "outside the engine's own files", which
+ * tells a reader nothing they can act on.
+ */
+export async function conflictPaths(dir: string): Promise<ReadonlyArray<string>> {
+  const status = await git(dir, 'status', '--porcelain').catch(() => '')
+  return status
+    .split('\n')
+    .filter((line) => /^(UU|AA|DU|UD|AU|UA|DD)/.test(line))
+    .map((line) => line.slice(3).trim())
+    .filter((path) => path !== '')
+    .sort()
+}
+
+/**
+ * Why a conflicted path is conflicted, from the engine's point of view. The
+ * classification is what a reader needs: a generated catalog is regenerated,
+ * a ledger is unioned, a note is dropped, and only a source file is a
+ * judgement about code.
+ */
+export const conflictKind = (
+  path: string,
+  options: {
+    readonly scratch?: ReadonlyArray<string>
+    readonly ledgers?: ReadonlyArray<string>
+    readonly generated?: ReadonlyArray<string>
+  } = {},
+): 'scratch' | 'ledger' | 'generated' | 'source' => {
+  const matches = (patterns: ReadonlyArray<string> | undefined): boolean =>
+    (patterns ?? []).some((pattern) => path === pattern || path.startsWith(pattern))
+  if (matches(options.scratch ?? ENGINE_SCRATCH_FILES)) return 'scratch'
+  if (matches(options.ledgers ?? ENGINE_LEDGER_FILES)) return 'ledger'
+  if (matches(options.generated)) return 'generated'
+  return 'source'
+}
+
+/**
+ * One sentence naming the conflicted files and what each one is. A `source`
+ * conflict is the caller's to report; the others explain themselves.
+ */
+export const describeConflicts = (
+  paths: ReadonlyArray<string>,
+  options: {
+    readonly scratch?: ReadonlyArray<string>
+    readonly ledgers?: ReadonlyArray<string>
+    readonly generated?: ReadonlyArray<string>
+  } = {},
+): string => {
+  if (paths.length === 0) return 'no conflicted paths'
+  const byKind = new Map<string, string[]>()
+  for (const path of paths) {
+    const kind = conflictKind(path, options)
+    byKind.set(kind, [...(byKind.get(kind) ?? []), path])
+  }
+  const parts = [...byKind].map(([kind, files]) => `${files.join(', ')} (${kind})`)
+  return `${paths.length} conflicted file(s): ${parts.join('; ')}`
+}
+
 /** Resolve a conflicted engine-owned scratch file by dropping it. False when none is conflicted. */
 export async function dropEngineScratch(dir: string): Promise<boolean> {
   let dropped = false
@@ -68,20 +127,68 @@ export async function unionLedgerConflict(dir: string): Promise<boolean> {
 }
 
 /**
- * Rebase, resolving only the engine's own scratch files between attempts. Any
- * other conflict is the caller's to report: this never guesses at code.
+ * Resolve a conflicted generated artifact by taking the integration side. The
+ * branch's own Checks regenerate the file, and a stale copy of a generated
+ * artifact is never worth stopping the Loop for: two branches producing
+ * different compilations of the same inputs is the normal case, not a
+ * disagreement about code.
  */
-export async function rebaseResolvingScratch(dir: string, ...args: string[]): Promise<void> {
+export async function takeIntegrationSide(
+  dir: string,
+  patterns: ReadonlyArray<string>,
+): Promise<boolean> {
+  if (patterns.length === 0) return false
+  const conflicted = await conflictPaths(dir)
+  const generated = conflicted.filter(
+    (path) => conflictKind(path, { generated: patterns }) === 'generated',
+  )
+  if (generated.length === 0) return false
+  for (const path of generated) {
+    /* Stage 2 is the side already applied (the upstream/integration tree). */
+    const applied = await git(dir, 'checkout', '--ours', '--', path).then(
+      () => true,
+      () => false,
+    )
+    if (applied) await git(dir, 'add', '--', path).catch(() => undefined)
+  }
+  return true
+}
+
+/**
+ * Rebase, resolving the engine's own scratch files, its ledgers and the repo's
+ * declared generated artifacts between attempts. Any other conflict is the
+ * caller's to report: this never guesses at code.
+ */
+export async function rebaseResolvingScratch(
+  dir: string,
+  ...args: [...string[], { readonly generatedPaths?: ReadonlyArray<string> } | string]
+): Promise<void> {
+  /* The last argument may be the option bag, so the git arguments stay
+   * positional and the call sites that pass none keep working. */
+  const last = args[args.length - 1]
+  const options = typeof last === 'object' && last !== null ? last : undefined
+  const gitArgs = (options === undefined ? args : args.slice(0, -1)) as string[]
+  const generatedPaths = options?.generatedPaths ?? []
   for (let attempt = 0; attempt < ENGINE_SCRATCH_FILES.length * 8; attempt += 1) {
     try {
-      if (attempt === 0) await git(dir, 'rebase', ...args)
+      if (attempt === 0) await git(dir, 'rebase', ...gitArgs)
       else await git(dir, '-c', 'core.editor=true', 'rebase', '--continue')
       return
     } catch (error) {
-      // Scratch notes are dropped; ledgers are unioned. Anything else is real.
+      // Scratch notes are dropped, ledgers unioned, generated artifacts taken
+      // from the integration side. Anything else is real.
       const scratch = await dropEngineScratch(dir)
       const ledger = await unionLedgerConflict(dir)
-      if (!scratch && !ledger) throw error
+      const generated = await takeIntegrationSide(dir, generatedPaths)
+      if (!scratch && !ledger && !generated) {
+        const remaining = await conflictPaths(dir)
+        if (remaining.length > 0) {
+          throw new Error(
+            `rebase conflicted on ${describeConflicts(remaining, { generated: generatedPaths })}`,
+          )
+        }
+        throw error
+      }
       await git(dir, 'add', '-A').catch(() => undefined)
       // A commit that only touched the dropped file is now empty; skip it.
       if (attempt % 2 === 1) await git(dir, 'rebase', '--skip').catch(() => undefined)

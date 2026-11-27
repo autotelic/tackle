@@ -290,7 +290,10 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
   const runSessionFn = deps.runSessionFn ?? runSession
   const sleepFn = deps.sleepFn ?? ((ms: number) => Effect.sleep(ms))
   const budget = config.budgets.passesPerIssue
-  const nightlyCap = config.budgets.passesPerNight
+  /* A Pass cap is a proxy for the money it costs. When the repo set a dollar
+   * cap, that is the real bound and an unset Pass cap means "let the dollars
+   * decide" — a 24-Pass cap stopped a $2.53 night against a $40 budget. */
+  const nightlyCap = config.budgets.passesPerNight ?? Number.POSITIVE_INFINITY
   const branch = `loop/${issue.number}`
   const worktreeDir = join(repoDir, '.treadle', 'worktrees', String(issue.number))
   const treadleDir = join(repoDir, '.treadle')
@@ -525,6 +528,8 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
         }
       }
       if (deps.passesTonight.passes() >= nightlyCap) {
+        /* Only reachable with an explicit `passesPerNight`: absent means the
+         * dollar cap (or nothing) is the night's bound. */
         yield* tryP(() =>
           notify(
             `Nightly cap of ${nightlyCap} Passes reached ` +
@@ -643,6 +648,7 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
           worktreeDir,
           branch,
           `treadle: pass ${passNumber} checkpoint for #${issue.number} (${outcome.terminal})`,
+          config.generatedPaths ?? [],
         ),
       )
       if (sha === null) {
@@ -940,6 +946,7 @@ async function checkpoint(
   worktreeDir: string,
   branch: string,
   message: string,
+  generatedPaths: ReadonlyArray<string> = [],
 ): Promise<string | null> {
   // Guardrail (#16): the Loop only ever pushes loop/* branches.
   if (!branch.startsWith('loop/')) throw new Error(`refusing to push non-loop branch: ${branch}`)
@@ -968,7 +975,9 @@ async function checkpoint(
     await git(worktreeDir, 'fetch', 'origin', branch)
     // The engine's own scratch note is not a reason to park: a conflict on it
     // is resolved by dropping the file, the same rule maintenance applies.
-    const rebased = await rebaseResolvingScratch(worktreeDir, `origin/${branch}`).then(
+    const rebased = await rebaseResolvingScratch(worktreeDir, `origin/${branch}`, {
+      generatedPaths,
+    }).then(
       () => true,
       () => {
         git(worktreeDir, 'rebase', '--abort').catch(() => undefined)
