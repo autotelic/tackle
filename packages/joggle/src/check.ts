@@ -1,4 +1,4 @@
-import { Clock, Effect, FileSystem, Option, Order, Path, Result } from "effect"
+import { Clock, Effect, FileSystem, Order, Path, Result } from "effect"
 import * as AiError from "effect/ai/AiError"
 import type { DecisionModel } from "effect/ai"
 import { layer as atomsLayer, type Atoms } from "./atoms.ts"

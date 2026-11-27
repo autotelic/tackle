@@ -1,14 +1,10 @@
 {
   "note": "Known plumb findings, by identity and count. `pnpm lint:update` accepts the current state; `pnpm lint` fails when a count rises or a new identity appears.",
-  "total": 20,
+  "total": 15,
   "census": {
-    "effecttsgo(prefer-typed-schema-decoder)\u0000src/store.ts\u0000This input is already assignable to the schema's Encoded type. Use `decodeResult` to preserve compile-time type checking instead of discarding the input type through `decodeUnknownResult`.": 2,
-    "eslint(no-unused-vars)\u0000src/check.ts\u0000Identifier 'Option' is imported but never used.": 1,
-    "eslint(no-unused-vars)\u0000src/fragments.ts\u0000Type 'StoredFragments' is imported but never used.": 1,
     "plumb-effect(guarded-op-must-return-option)\u0000src/store.ts\u0000This function returns `S[\"Type\"] | undefined`, conflating absence with a value. Return Option<S[\"Type\"]> and express absence as Option.none().": 1,
     "plumb-effect(guarded-op-must-return-option)\u0000src/surface.ts\u0000This function returns `string | undefined`, conflating absence with a value. Return Option<string> and express absence as Option.none().": 5,
     "plumb-effect(guarded-op-must-return-option)\u0000src/surface.ts\u0000This function returns `SurfaceKind | undefined`, conflating absence with a value. Return Option<SurfaceKind> and express absence as Option.none().": 1,
-    "plumb(no-anthropomorphic-program)\u0000src/store.ts\u0000'that knows' gives a program a mind. Write the value and its source: 'the answer's label is X', not 'the model knows X'.": 1,
     "plumb(no-runtime-typeof)\u0000src/surface.ts\u0000A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.": 4,
     "plumb(no-unknown-parameters)\u0000src/surface.ts\u0000Parameter `declaration` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.": 1,
     "plumb(no-unknown-parameters)\u0000src/surface.ts\u0000Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.": 1,
