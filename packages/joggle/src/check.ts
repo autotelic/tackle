@@ -1,4 +1,4 @@
-import { Clock, Effect, FileSystem, Order, Path, Result } from "effect"
+import { Clock, Effect, FileSystem, Option, Order, Path, Result } from "effect"
 import * as AiError from "effect/ai/AiError"
 import type { DecisionModel } from "effect/ai"
 import { layer as atomsLayer, type Atoms } from "./atoms.ts"
@@ -17,7 +17,7 @@ import { canonical } from "./canonical.ts"
 import { sourceFingerprint } from "./fingerprint.ts"
 import { loadParses } from "./parsecache.ts"
 import { answerStoreBytes } from "./answer-store.ts"
-import { closeFactStore, useFactStore } from "./store.ts"
+import { createFactStore } from "./store.ts"
 import {
   baselinePath,
   manifestOf,
@@ -613,9 +613,9 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
   yield* parseCache.save
 
   // Facts are derived and machine-local, unlike the reviewed answer ledger. The
-  // fragment index is behind `fragmentsOf`, so this only points it at the root;
-  // it opens the database on the first rule that asks for a fragment set.
-  useFactStore(options.cwd)
+  // handle is passed to the rules that read fragments, and it opens the database
+  // on the first rule that asks for a fragment set.
+  const factStore = createFactStore(options.cwd)
 
   // What each declaration IS, according to the compiler. On by default and
   // separate from the trace: the trace is a whole-program side channel for the
@@ -791,7 +791,7 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
       (rule) =>
         Effect.gen(function* () {
           const ruleStarted = yield* Clock.currentTimeMillis
-          const result = yield* rule.plan(workspace, scope, { config: options.config, nodeTypes }).pipe(
+          const result = yield* rule.plan(workspace, scope, { config: options.config, nodeTypes, store: factStore }).pipe(
             Effect.map((value) => Result.succeed(value)),
             Effect.catch((error) => Effect.succeed(Result.fail(error))),
           )
@@ -995,7 +995,7 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
           const ruleStarted = yield* Clock.currentTimeMillis
           // The config goes in, because a rule that enforces a layering is
           // entitled to know what the layering is.
-          const result = yield* rule.run(workspace, scope, { config: options.config, nodeTypes }).pipe(
+          const result = yield* rule.run(workspace, scope, { config: options.config, nodeTypes, store: factStore }).pipe(
             Effect.map((value) => Result.succeed(value)),
             Effect.catch((error) => Effect.succeed(Result.fail(error))),
           )
@@ -1007,7 +1007,7 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
   })
 
   const { plannedOutcomes, plainResults } = yield* engine.pipe(Effect.provide(atomsLayer))
-  const factStore = closeFactStore()
+  const storeReport = factStore.close()
 
   const results: ReadonlyArray<{
     readonly rule: { readonly id: string }
@@ -1134,20 +1134,21 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
         " parse(s) from the cache",
     })
   }
-  if (factStore !== undefined) {
+  if (Option.isSome(storeReport)) {
+    const report = storeReport.value
     notes.push({
       ruleId: "joggle",
       reason:
         "fragment store: " +
-        factStore.state +
+        report.state +
         "; " +
-        factStore.reused +
+        report.reused +
         " unit(s) reused, " +
-        factStore.walked +
+        report.walked +
         " walked, " +
-        factStore.units +
+        report.units +
         " stored" +
-        (factStore.issue === undefined ? "" : "; " + factStore.issue),
+        (report.issue === undefined ? "" : "; " + report.issue),
     })
   }
   if (workspace.testDeclarations > 0) {

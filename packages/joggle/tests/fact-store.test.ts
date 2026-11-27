@@ -1,6 +1,6 @@
 import { expect, test } from "vitest"
 import { Effect, Option } from "effect"
-import { cpSync, existsSync, mkdtempSync, writeFileSync } from "node:fs"
+import { cpSync, existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { DatabaseSync } from "node:sqlite"
@@ -8,7 +8,13 @@ import { checkRepository } from "../src/check.ts"
 import { layer as decisionLayer } from "../src/decision.ts"
 import { fragmentsOf } from "../src/fragments.ts"
 import { builtIn } from "../src/rules/index.ts"
-import { STORE_PATH, closeFactStore, storeVersionOf, useFactStore } from "../src/store.ts"
+import {
+  STORE_PATH,
+  createFactStore,
+  storeVersionOf,
+  type FactStore,
+  type FactStoreReport,
+} from "../src/store.ts"
 import { loadWorkspace, type Workspace } from "../src/workspace.ts"
 import { nodeLayer, tsgoStub } from "./support.ts"
 
@@ -17,29 +23,34 @@ const run = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
 
 const fixture = () => loadWorkspace("testdata/containment", ["src"])
 
-const idsOf = (workspace: Workspace): ReadonlyArray<ReadonlyArray<string>> =>
-  workspace.units.map((unit) => fragmentsOf(unit).ids)
+const idsOf = (workspace: Workspace, store?: FactStore): ReadonlyArray<ReadonlyArray<string>> =>
+  workspace.units.map((unit) => fragmentsOf(unit, store).ids)
+
+const reportOf = (report: Option.Option<FactStoreReport>): FactStoreReport => {
+  if (Option.isNone(report)) throw new Error("expected a fact store report")
+  return report.value
+}
 
 const storeFile = (root: string): string => join(root, STORE_PATH)
 
 test("a cold store fills, a warm store reuses, and the ids do not move", async () => {
   const root = mkdtempSync(join(tmpdir(), "joggle-store-"))
   const first = await run(fixture())
-  useFactStore(root)
-  const coldIds = idsOf(first)
-  const cold = closeFactStore()
-  expect(cold?.state).toBe("cold")
-  expect(cold?.walked).toBe(first.units.length)
-  expect(cold?.reused).toBe(0)
+  const store = createFactStore(root)
+  const coldIds = idsOf(first, store)
+  const cold = reportOf(store.close())
+  expect(cold.state).toBe("cold")
+  expect(cold.walked).toBe(first.units.length)
+  expect(cold.reused).toBe(0)
   expect(existsSync(storeFile(root))).toBe(true)
 
   const second = await run(fixture())
-  useFactStore(root)
-  const warmIds = idsOf(second)
-  const warm = closeFactStore()
-  expect(warm?.state).toBe("warm")
-  expect(warm?.walked).toBe(0)
-  expect(warm?.reused).toBe(second.units.length)
+  const warmStore = createFactStore(root)
+  const warmIds = idsOf(second, warmStore)
+  const warm = reportOf(warmStore.close())
+  expect(warm.state).toBe("warm")
+  expect(warm.walked).toBe(0)
+  expect(warm.reused).toBe(second.units.length)
   // A cache that changes the answer is not a cache. Same unit, same ids.
   expect(warmIds).toEqual(coldIds)
 
@@ -58,40 +69,56 @@ test("a cold store fills, a warm store reuses, and the ids do not move", async (
 test("a store from another normaliser is rebuilt, not re-read", async () => {
   const root = mkdtempSync(join(tmpdir(), "joggle-store-"))
   const first = await run(fixture())
-  useFactStore(root)
-  const before = idsOf(first)
-  closeFactStore()
+  const coldStore = createFactStore(root)
+  const before = idsOf(first, coldStore)
+  coldStore.close()
 
   const stale = storeVersionOf() === 1 ? 2 : 1
   const db = new DatabaseSync(storeFile(root))
   db.exec("PRAGMA user_version = " + String(stale))
   db.close()
 
-  useFactStore(root)
-  const after = idsOf(first)
-  const rebuilt = closeFactStore()
-  expect(rebuilt?.state).toBe("rebuilt-on-version-change")
+  const store = createFactStore(root)
+  const after = idsOf(first, store)
+  const rebuilt = reportOf(store.close())
+  expect(rebuilt.state).toBe("rebuilt-on-version-change")
+  expect(after).toEqual(before)
+})
+
+test("a deleted database is rebuilt, and the census says so", async () => {
+  const root = mkdtempSync(join(tmpdir(), "joggle-store-"))
+  const first = await run(fixture())
+  const coldStore = createFactStore(root)
+  const before = idsOf(first, coldStore)
+  expect(reportOf(coldStore.close()).state).toBe("cold")
+
+  rmSync(storeFile(root), { force: true })
+
+  const store = createFactStore(root)
+  const after = idsOf(first, store)
+  const rebuilt = reportOf(store.close())
+  expect(rebuilt.state).toBe("rebuilt")
   expect(after).toEqual(before)
 })
 
 test("a corrupt store is replaced, and the run still has its facts", async () => {
   const root = mkdtempSync(join(tmpdir(), "joggle-store-"))
   const first = await run(fixture())
-  useFactStore(root)
-  const expected = idsOf(first)
-  closeFactStore()
+  const coldStore = createFactStore(root)
+  const expected = idsOf(first, coldStore)
+  coldStore.close()
 
   writeFileSync(storeFile(root), "this is not a SQLite database")
 
-  useFactStore(root)
-  const after = idsOf(first)
-  const recovered = closeFactStore()
-  expect(recovered?.state).toBe("cold")
-  expect(recovered?.issue).toContain("could not be read")
+  const store = createFactStore(root)
+  const after = idsOf(first, store)
+  const recovered = reportOf(store.close())
+  expect(recovered.state).toBe("rebuilt")
+  expect(recovered.issue).toContain("could not be read")
   expect(after).toEqual(expected)
 })
 
-test("a check says cold then warm in its census, with the same findings", async () => {
+test("a check says cold, warm, then rebuilt in its census, with the same findings", async () => {
   const base = mkdtempSync(join(tmpdir(), "joggle-store-check-"))
   const root = join(base, "fixture")
   cpSync("testdata/containment", root, { recursive: true })
@@ -120,12 +147,18 @@ test("a check says cold then warm in its census, with the same findings", async 
       ),
     )
 
+  const noteOf = (report: Awaited<ReturnType<typeof check>>) =>
+    report.notes.find((note) => note.reason.startsWith("fragment store:"))
+
   const cold = await check()
-  const coldNote = cold.notes.find((note) => note.reason.startsWith("fragment store:"))
-  expect(coldNote?.reason).toContain("fragment store: cold")
+  expect(noteOf(cold)?.reason).toContain("fragment store: cold")
 
   const warm = await check()
-  const warmNote = warm.notes.find((note) => note.reason.startsWith("fragment store:"))
-  expect(warmNote?.reason).toContain("fragment store: warm")
+  expect(noteOf(warm)?.reason).toContain("fragment store: warm")
   expect(warm.diagnostics).toEqual(cold.diagnostics)
+
+  rmSync(storeFile(root), { force: true })
+  const rebuilt = await check()
+  expect(noteOf(rebuilt)?.reason).toContain("fragment store: rebuilt")
+  expect(rebuilt.diagnostics).toEqual(cold.diagnostics)
 })

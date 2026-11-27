@@ -21,6 +21,8 @@ coverage/
 .joggle/cache/store.sqlite
 .joggle/cache/store.sqlite-wal
 .joggle/cache/store.sqlite-shm
+# Evidence that this machine had a store, so a deleted database reads as rebuilt.
+.joggle/cache/store.seen
 .joggle/types.json
 .joggle/declaration-types.json
 # Machine-local dependency surface: `joggle surface build` regenerates it per checkout.

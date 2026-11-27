@@ -21,6 +21,7 @@ import {
   qualityOf,
   type DecisionAnswers,
   type PlannedRule,
+  type RunContext,
   type Scope,
 } from "../rule.ts"
 import type { Diagnostic, Drop } from "../schema.ts"
@@ -179,7 +180,7 @@ export const containment: PlannedRule = {
     contains_help:
       "{{action}} This pair was found by containment, not similarity, so the duplicate rules could not see it.{{review}}{{truncated}}{{unverifiedHelp}}",
   }),
-  plan: Effect.fn("joggle/containment")(function* (workspace: Workspace, scope: Scope) {
+  plan: Effect.fn("joggle/containment")(function* (workspace: Workspace, scope: Scope, context: RunContext) {
     const report = reporter(containment, locator(workspace))
     const { minTokens, floor, percentile: cutoffPercentile, maxCandidates } = policy.containment
     const eligible = workspace.units.filter((unit) => unit.tokens.length >= minTokens)
@@ -191,7 +192,7 @@ export const containment: PlannedRule = {
     const fragmented: Array<Fragmented> = []
     const unencoded: Array<Unit> = []
     for (const unit of eligible) {
-      const { ids, cut } = fragmentsOf(unit)
+      const { ids, cut } = fragmentsOf(unit, context.store)
       if (ids.length === 0) unencoded.push(unit)
       else fragmented.push({ unit, ids: new Set(ids), cut })
     }

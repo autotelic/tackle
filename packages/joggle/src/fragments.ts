@@ -1,5 +1,6 @@
+import { Option } from "effect"
 import { policy } from "./policy.ts"
-import { cachedFragmentsOf, storeFragmentsOf } from "./store.ts"
+import type { FactStore, StoredFragments } from "./store.ts"
 import { canonicalRegion, nodeSpansOf, prepareUnit, stableId, type PreparedUnit } from "./identity.ts"
 import type { Unit } from "./workspace.ts"
 
@@ -85,9 +86,9 @@ export interface Fragments {
  * stops at `maxFragments` would make containment under-report, and under-reporting
  * reads as "nothing here" rather than "I stopped looking".
  */
-export const fragmentsOf = (unit: Unit): Fragments => {
-  const cached = cachedFragmentsOf(unit)
-  if (cached !== undefined) return cached
+export const fragmentsOf = (unit: Unit, store?: FactStore): Fragments => {
+  const cached = store === undefined ? Option.none<StoredFragments>() : store.cached(unit)
+  if (Option.isSome(cached)) return cached.value
   const prepared = prepareUnit(unit)
   const ids: Array<string> = []
   const seen = new Set<string>()
@@ -105,6 +106,6 @@ export const fragmentsOf = (unit: Unit): Fragments => {
   const fragments = { ids, cut }
   // The store is a cache of this exact walk, keyed by the unit's text. A hit
   // returned above; a miss fills it so the next run never parses this unit again.
-  storeFragmentsOf(unit, fragments)
+  store?.store(unit, fragments)
   return fragments
 }
