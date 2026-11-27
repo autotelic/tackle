@@ -64,7 +64,13 @@ export type Budgets = {
   maxTurnsPerSession: number
   sessionTimeoutMinutes: number
   askHumanTimeoutMinutes: number
-  passesPerNight: number
+  /**
+   * Optional Passes-per-day cap. A Pass is a proxy, not the thing: with a
+   * `maxCostPerNightUsd` set, the dollar cap is the real bound and this one
+   * only stops the Loop early. Absent (with a cost cap) = the dollar cap
+   * decides; absent with no cost cap = no nightly Pass cap.
+   */
+  passesPerNight?: number
   stopAfterParkedInARow: number
   /**
    * Optional dollar cap per Session (#18): the runaway-cost bound, checked
@@ -110,6 +116,13 @@ export type LoopConfig = {
    */
   build?: string
   protectedPaths: string[]
+  /**
+   * Paths the repo regenerates rather than edits (a compiled catalog, a lockfile's
+   * sibling, a generated menu). A conflict on one is never a code conflict: the
+   * branch's own Checks regenerate and verify it, so the rebase takes the
+   * integration side and moves on. Prefix match, as in `protectedPaths`.
+   */
+  generatedPaths?: string[]
   featureDone: FeatureDoneGuard
   budgets: Budgets
   /** User rules (#6, #15): (event, state, guard?) → action, declaration order. */
@@ -224,6 +237,8 @@ export function assertLoopConfig(
   }
 
   assertStringArray(c.protectedPaths, 'protectedPaths', configPath)
+  if (c.generatedPaths !== undefined)
+    assertStringArray(c.generatedPaths, 'generatedPaths', configPath)
 
   if (typeof c.featureDone !== 'object' || c.featureDone === null)
     fail(configPath, 'featureDone is required')
@@ -235,7 +250,10 @@ export function assertLoopConfig(
   if (typeof c.budgets !== 'object' || c.budgets === null) fail(configPath, 'budgets is required')
   for (const [key, value] of Object.entries(c.budgets as Record<string, unknown>)) {
     if (
-      (key === 'maxCostPerIssueUsd' || key === 'maxCostPerNightUsd' || key === 'maxOpenLoopPrs') &&
+      (key === 'maxCostPerIssueUsd' ||
+        key === 'maxCostPerNightUsd' ||
+        key === 'maxOpenLoopPrs' ||
+        key === 'passesPerNight') &&
       value === undefined
     )
       continue

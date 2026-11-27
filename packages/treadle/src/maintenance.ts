@@ -301,14 +301,15 @@ export async function maintenance(options: {
       try {
         await git(repoDir, 'worktree', 'add', tmpWorktree, branch)
         await git(tmpWorktree, 'rebase', '--onto', newBase, upstream)
-      } catch {
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error)
         await git(tmpWorktree, 'rebase', '--abort').catch(() => undefined)
         conflicted.add(issue)
         report.conflicts.push(branch)
         await noteConflict(
           branch,
           `Stack maintenance: rebase conflict on ${branch} (after ${parentBranch} merged). ` +
-            'The branch is untouched — a person needs to rebase it by hand.',
+            `The branch is untouched. ${reason}`,
         )
         return
       } finally {
@@ -399,10 +400,13 @@ export async function maintenance(options: {
           const tmpWorktree = join(repoDir, '.treadle', 'maintenance-worktrees', `pr-${pr.number}`)
           await git(repoDir, 'worktree', 'remove', tmpWorktree, '--force').catch(() => undefined)
           let resolved = true
+          let conflictReason: string | null = null
           const expected = await git(repoDir, 'rev-parse', `origin/${branch}`)
           try {
             await git(repoDir, 'worktree', 'add', '--detach', tmpWorktree, `origin/${branch}`)
-            await rebaseResolvingScratch(tmpWorktree, `origin/${integrationBranch}`)
+            await rebaseResolvingScratch(tmpWorktree, `origin/${integrationBranch}`, {
+              generatedPaths: config.generatedPaths ?? [],
+            })
             await git(
               tmpWorktree,
               'push',
@@ -410,8 +414,9 @@ export async function maintenance(options: {
               'origin',
               `HEAD:${branch}`,
             )
-          } catch {
+          } catch (error) {
             resolved = false
+            conflictReason = error instanceof Error ? error.message : String(error)
             await git(tmpWorktree, 'rebase', '--abort').catch(() => undefined)
           } finally {
             await git(repoDir, 'worktree', 'remove', tmpWorktree, '--force').catch(() => undefined)
@@ -427,8 +432,9 @@ export async function maintenance(options: {
           report.conflicts.push(branch)
           await noteConflict(
             branch,
-            `Stack maintenance: ${ref} conflicts with ${integrationBranch} outside the engine's ` +
-              'own files — a person needs to rebase it by hand.',
+            `Stack maintenance: ${ref} conflicts with ${integrationBranch} and the engine will not ` +
+              'guess at code. ' +
+              (conflictReason ?? 'Resolve it and push, or close the PR.'),
           )
         }
         let issueFiles: IssueFile[] | null = null

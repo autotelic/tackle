@@ -787,7 +787,12 @@ describe('maintenance', () => {
       notify,
     })
     expect(report.conflicts).toEqual(['loop/1'])
-    const nags = () => notifyMessages.filter((m) => m.includes('needs to rebase it by hand')).length
+    /* The page names the conflicted files and what each one is, instead of
+     * asking a reader to find out which ones and guess whether they matter. */
+    const nags = () =>
+      notifyMessages.filter(
+        (m) => m.includes('will not guess at code') && m.includes('conflicted file'),
+      ).length
     expect(nags()).toBe(1)
     // Same state next pass: silent. Genuine code conflicts still dedupe.
     await maintenance({
