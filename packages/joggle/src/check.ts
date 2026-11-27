@@ -818,12 +818,13 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
     // reads as unreadable. So the plans are cut into requests that fit, and each is
     // answered from the per-decision cache first, so a chunk boundary does not
     // cost a re-judgement.
-    const chunks = yield* chunkPlans(allPlans, policy.decision.maxStateChars)
+    const chunks = yield* chunkPlans(allPlans, policy.decision.maxRequestChars)
 
-    // The run's token budget. A chunk is estimated from the state it carries --
-    // the provider charges for the state, and it dominates -- so the run stops
-    // before a pathological change spends without bound. What it did not judge is
-    // reported as a budget drop, never dropped in silence.
+    // The run's token budget. A chunk is estimated from the state AND the
+    // questions it carries, because the provider charges for both and the old
+    // state-only estimate let a question-heavy batch pass the ceiling. The run
+    // stops before a pathological change spends without bound; what it did not
+    // judge is reported as a budget drop, never dropped in silence.
     const allowed: Array<PlanChunk<unknown>> = []
     const overBudget: Array<Plan<unknown>> = []
     let estimated = 0

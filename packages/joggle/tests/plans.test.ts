@@ -1,10 +1,13 @@
 import { expect, test } from "vitest"
 import { Effect, Layer, Option, Ref, Result, SchemaParser } from "effect"
-import { Decision, DecisionModel } from "effect/ai"
+import { AiError, Decision, DecisionModel } from "effect/ai"
 import { Atoms, layer as atomsLayer } from "../src/atoms.ts"
 import {
   answerOf,
   answerPlans,
+  answerPlansResilient,
+  chunkPlans,
+  isRequestTooLarge,
   PlanAnswers,
   StoredAnswer,
   type JoggleDecision,
@@ -12,6 +15,8 @@ import {
   type Plan,
   type PlanAnswerStore,
 } from "../src/plans.ts"
+import type { DecisionAnswers } from "../src/rule.ts"
+import { canonical } from "../src/canonical.ts"
 
 /** An answer cache that lives in a Ref, for a test that is about the engine. */
 const cacheLayer = (
@@ -226,4 +231,75 @@ test("no plans is no request", async () => {
   )
   expect(result.results).toEqual([])
   expect(result.calls).toBe(0)
+})
+
+/** The provider's size rejection, in the shape the TypeSafe client produces. */
+const tooLarge = (): AiError.AiError =>
+  AiError.make({
+    module: "test",
+    method: "systemOne",
+    reason: new AiError.InvalidRequestError({
+      description: 'HTTP 400 {"detail":{"error_type":"max_tokens_exceeded"}}',
+    }),
+  })
+
+test("a max_tokens_exceeded batch is halved until every piece answers", async () => {
+  const calls: Array<number> = []
+  const plans = Array.from({ length: 8 }, (_, index) => plan("p" + String(index), "a"))
+  const answer = (
+    batch: ReadonlyArray<Plan<unknown>>,
+  ): Effect.Effect<ReadonlyArray<DecisionAnswers>, AiError.AiError> => {
+    calls.push(batch.length)
+    if (batch.length > 2) return Effect.fail(tooLarge())
+    return Effect.succeed(batch.map(() => ({}) as DecisionAnswers))
+  }
+  const result = await Effect.runPromise(answerPlansResilient({ plans, answer }))
+  expect(isRequestTooLarge(tooLarge())).toBe(true)
+  expect(calls.length).toBeGreaterThan(1)
+  expect(result.answers).toHaveLength(8)
+  expect(result.answers.every((answer) => answer !== undefined)).toBe(true)
+  expect(result.failures).toEqual([])
+})
+
+test("a single oversized question is a named failure, not a retry loop", async () => {
+  const calls: Array<number> = []
+  const plans = [plan("p0", "a")]
+  const answer = (
+    batch: ReadonlyArray<Plan<unknown>>,
+  ): Effect.Effect<ReadonlyArray<DecisionAnswers>, AiError.AiError> => {
+    calls.push(batch.length)
+    return Effect.fail(tooLarge())
+  }
+  const result = await Effect.runPromise(answerPlansResilient({ plans, answer }))
+  expect(calls).toEqual([1])
+  expect(result.answers).toEqual([undefined])
+  expect(result.failures).toHaveLength(1)
+  expect(isRequestTooLarge(result.failures[0]?.error ?? tooLarge())).toBe(true)
+})
+
+test("the chunk budget counts the encoded questions, not only the state", async () => {
+  const result = await Effect.runPromise(
+    Effect.gen(function* () {
+      const atoms = yield* Atoms
+      const id = yield* atoms.add({ x: 1 })
+      const long = {
+        ...plan("p0", id),
+        decisions: {
+          verdict: Decision.classify({
+            instructions: "A question with a deliberately long instruction that dominates the atom.",
+            criteria: {
+              yes:
+                "A deliberately long criterion that makes the encoded question larger than the " +
+                "state, so a state-only budget would put both plans in one request.",
+              no: "The other answer.",
+            },
+          }),
+        },
+      }
+      const state = yield* atoms.values([id])
+      const budget = canonical(state).length + canonical(long.decisions).length + 1
+      return yield* chunkPlans([long, { ...long, subject: "p1" }], budget)
+    }).pipe(Effect.provide(atomsLayer)),
+  )
+  expect(result).toHaveLength(2)
 })

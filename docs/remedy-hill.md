@@ -74,21 +74,27 @@ never reports rule redundancy. That is the work the judgement is load-bearing
 for, and it is why rung 1 is not met yet: one cluster holding all five rules has
 not been observed.
 
-The judgement path is **unmeasured**, not merely unproven: this host has no
-`TYPESAFE_API_KEY`. That is the contract in [SECRETS.md](../SECRETS.md), not a gap
-to patch. A tool-side loader would work in one host and silently diverge in the
-other; the four rules under "Why the environment, and not a tool-side loader" are
-why we do not add one. A host that has the key finishes the measurement with:
+The judgement path has now run with the host's key, through the launcher
+[SECRETS.md](../SECRETS.md) documents: **122 of 1,431 pairs were answered and
+cached** before the provider rejected one request with `max_tokens_exceeded`. That
+is a request-size bug, not a witness result. The budget now counts the encoded
+state **and** the encoded questions (`policy.decision.maxRequestChars`), a
+rejected batch is halved and retried down to one question, and a single oversized
+question is a named failure. The report therefore has three states instead of
+two: `WITNESS-ONLY` means the model was never reached, `PARTIAL` means the
+judgement ran and reports how many pairs it answered, and only a complete run is
+unmarked. A run that cannot reach the model still prints the reason, so a pasted
+witness count cannot be mistaken for the judgement having agreed.
+
+Finish the measurement with:
 
 ```sh
 pnpm lint:json > findings.json
-pnpm --filter @autotelic/joggle joggle remedies findings.json
+doppler run -p joggle -c dev -- node --conditions=development src/main.ts remedies findings.json
 ```
 
 The first command produces the input; the second prints the judgement's clusters
-beside the witness's. A run that cannot reach the model now says `WITNESS-ONLY`
-and prints the reason, so a pasted witness count cannot be mistaken for the
-judgement having agreed.
+beside the witness's and the answered-pair count.
 
 Acceptance: one cluster contains all five boundary rules, 99 sites, naming
 `kernel.ts` (28) and `telemetry.ts` (28). Paste it, with the pair counterexample.

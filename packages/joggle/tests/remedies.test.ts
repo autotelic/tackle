@@ -36,6 +36,7 @@ const opinionOf = (
       probability,
     ]),
   ),
+  failures: [],
   questions: repairs.length,
   pairs: same.length,
 })
@@ -130,6 +131,8 @@ test("two vocabularies for one repair cluster; a different repair does not", () 
     ],
   )
   const report = clusterRemedies([parse, accept, narrow], opinion)
+  expect(report.judgementStatus).toBe("complete")
+  expect(report.answeredPairs).toBe(3)
   expect(report.witness.clusters).toBe(3)
   expect(report.judgement.clusters).toBe(2)
   expect(report.clusters).toHaveLength(2)
@@ -151,7 +154,31 @@ test("a missing judgement keeps the witness count and carries the reason", () =>
     witnessOnlyOpinion([left, right], "TYPESAFE_API_KEY is not set"),
   )
   expect(report.judgementUnavailable).toBe("TYPESAFE_API_KEY is not set")
+  expect(report.judgementStatus).toBe("witness-only")
+  expect(report.answeredPairs).toBe(0)
   expect(report.clusters).toHaveLength(report.witness.clusters)
+})
+
+test("a run that answered some pairs is partial, not witness-only", () => {
+  const left = finding("a", "Diagnosis. Parse input at its boundary.", 1)
+  const right = finding("b", "Diagnosis. Accept a named domain type.", 2)
+  const third = finding("c", "Diagnosis. Narrow with a type predicate.", 3)
+  const opinion: RepairOpinion = {
+    repairs: new Map([
+      [messageKeyOf(left), "parse"],
+      [messageKeyOf(right), "accept"],
+    ]),
+    same: new Map([[pairKeyOf({ left: messageKeyOf(left), right: messageKeyOf(right) }), 0.91]]),
+    failures: ["InvalidRequestError: max_tokens_exceeded"],
+    questions: 3,
+    pairs: 3,
+  }
+  const report = clusterRemedies([left, right, third], opinion)
+  expect(report.judgementStatus).toBe("partial")
+  expect(report.answeredPairs).toBe(1)
+  expect(report.answeredRepairs).toBe(2)
+  expect(report.judgementFailures).toEqual(["InvalidRequestError: max_tokens_exceeded"])
+  expect(report.clusters).toHaveLength(2)
 })
 
 test("a threshold keeps a pair the judgement calls different apart", () => {

@@ -1,10 +1,11 @@
-import { Effect, Predicate, Result, Schema } from "effect"
+import { Effect, Predicate, Schema } from "effect"
 import { Decision } from "effect/ai"
-import type { DecisionModel } from "effect/ai"
+import type { AiError, DecisionModel } from "effect/ai"
 import { Atoms } from "./atoms.ts"
 import { canonical } from "./canonical.ts"
+import { isUnreachable } from "./decision.ts"
 import { policy } from "./policy.ts"
-import { answerPlansRaw, PlanAnswers, chunkPlans, type Plan } from "./plans.ts"
+import { answerPlansRaw, answerPlansResilient, PlanAnswers, chunkPlans, type Plan } from "./plans.ts"
 import { shortHash } from "./state.ts"
 import { createFactStore, type StoredFinding } from "./store.ts"
 
@@ -196,6 +197,8 @@ export interface RepairOpinion {
   readonly same: ReadonlyMap<string, number>
   /** Set when the model was never reached; witness-only clustering follows. */
   readonly unavailable?: string | undefined
+  /** Requests that still failed after halving, named rather than hidden. */
+  readonly failures: ReadonlyArray<string>
   readonly questions: number
   readonly pairs: number
 }
@@ -352,19 +355,23 @@ export const judgeRemedies = (
     }
 
     const read = new Map<number, unknown>()
-    let unavailable: string | undefined
+    const failureErrors: Array<AiError.AiError> = []
     let offset = 0
-    for (const chunk of yield* chunkPlans(plans, policy.decision.maxStateChars)) {
-      const attempted = yield* Effect.result(answerPlansRaw(chunk.plans))
-      if (Result.isFailure(attempted)) {
-        unavailable ??= String(attempted.failure)
-      } else {
-        attempted.success.forEach((record, index) => {
-          // `answerPlansRaw` preserves the chunk's plan order, and the chunk came
-          // from the run's list, so the running offset is the plan's index.
-          read.set(offset + index, chunk.plans[index]?.read(record))
-        })
-      }
+    for (const chunk of yield* chunkPlans(plans, policy.decision.maxRequestChars)) {
+      // A batch the provider rejects for size is halved and retried; a lone
+      // oversized question comes back as a failure rather than a witness
+      // fallback. The per-question cache means a split re-asks only what was
+      // not already answered.
+      const settled = yield* answerPlansResilient({
+        plans: chunk.plans,
+        answer: answerPlansRaw,
+      })
+      settled.answers.forEach((record, index) => {
+        // `answerPlansResilient` preserves the chunk's plan order, and the chunk
+        // came from the run's list, so the running offset is the plan's index.
+        if (record !== undefined) read.set(offset + index, chunk.plans[index]?.read(record))
+      })
+      for (const failure of settled.failures) failureErrors.push(failure.error)
       offset += chunk.plans.length
     }
 
@@ -379,10 +386,19 @@ export const judgeRemedies = (
       const answer = read.get(pairStart + index)
       if (Predicate.isNumber(answer)) sameMap.set(pair.key, answer)
     })
+    const failures = failureErrors.map(String)
+    // Witness-only means the model was never reached. A size rejection is a
+    // judgement that ran and failed, so it stays PARTIAL with a named reason.
+    const answered = repairMap.size + sameMap.size
+    const unavailable =
+      answered === 0 && failureErrors.length > 0 && failureErrors.some(isUnreachable)
+        ? failures[0]
+        : undefined
     return {
       repairs: repairMap,
       same: sameMap,
       unavailable,
+      failures,
       questions: messages.length,
       pairs: pairs.length,
     }
@@ -423,11 +439,28 @@ export interface ClusterSummary {
   readonly largestRules: number
 }
 
+/**
+ * How much of the judgement the run actually got.
+ *
+ * `witness-only` is reserved for "the model was never reached"; a run where a
+ * request failed after halving is `partial`, because the judgement did run and
+ * its answered pairs are in the clusters. The old report called both
+ * witness-only, which hid 122 answered pairs behind a missing key's label.
+ */
+export type JudgementStatus = "complete" | "partial" | "witness-only"
+
 export interface RemedyReport {
   readonly findings: number
   readonly distinctMessages: number
   readonly pairsAsked: number
+  /** Pairs the judgement answered, out of `pairsAsked`. */
+  readonly answeredPairs: number
+  /** Distinct messages the judgement answered, out of `distinctMessages`. */
+  readonly answeredRepairs: number
+  readonly judgementStatus: JudgementStatus
   readonly judgementUnavailable: string | undefined
+  /** Requests that still failed after halving, named so the gap is visible. */
+  readonly judgementFailures: ReadonlyArray<string>
   readonly witness: ClusterSummary
   readonly judgement: ClusterSummary
   readonly disagreements: ReadonlyArray<{
@@ -665,11 +698,23 @@ export const clusterRemedies = (
     if (leftMessage.clause === rightMessage.clause) continue
     disagreements.push({ a: leftMessage.clause, b: rightMessage.clause, probability })
   }
+  const answeredPairs = opinion.same.size
+  const answeredRepairs = opinion.repairs.size
+  const judgementStatus: JudgementStatus =
+    opinion.unavailable !== undefined
+      ? "witness-only"
+      : answeredPairs < opinion.pairs || answeredRepairs < opinion.questions
+        ? "partial"
+        : "complete"
   return {
     findings: findings.length,
     distinctMessages: messages.length,
     pairsAsked: opinion.pairs,
+    answeredPairs,
+    answeredRepairs,
+    judgementStatus,
     judgementUnavailable: opinion.unavailable,
+    judgementFailures: opinion.failures,
     witness: summaryOf(witnesses),
     judgement: summaryOf(judges),
     disagreements,
@@ -741,6 +786,7 @@ export const witnessOnlyOpinion = (
   repairs: new Map(),
   same: new Map(),
   unavailable: reason,
+  failures: [],
   questions: messageNodesOf(findings).length,
   pairs: 0,
 })
