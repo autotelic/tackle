@@ -2,7 +2,7 @@
 import { Locator, Scene } from "@effect/ui/testing"
 import { assert, it } from "@effect/vitest"
 import { Effect, Result, Schema } from "effect"
-import { BoardView, CreateRoom, type Model, RoomLifecycle } from "../src/main.ts"
+import { BoardView, CreateRoom, Message, type Model, RoomLifecycle } from "../src/main.ts"
 import { RoomList } from "../src/rooms.ts"
 
 /**
@@ -112,6 +112,7 @@ it.effect("a typed field is what the create command posts", () =>
           software: "",
         }),
       )
+      .resolve(CreateRoom, Message.CreatedRoom({ ok: false, error: "test" }))
   }),
 )
 
@@ -130,8 +131,13 @@ it.effect("a lifecycle button issues that room's verb and shows the wait", () =>
     const s = yield* Scene.make(BoardView, {})
     s.given(model(JSON.stringify([alpha])))
       .click("Pause")
+      .expect(Locator.text("pause alpha…"))
+      .toExist()
       .expectExact(RoomLifecycle.make({ id: "alpha", action: "pause" }))
-    assert.include(Locator.textOf(s.root), "pause alpha…")
+      .resolve(
+        RoomLifecycle,
+        Message.RoomActioned({ id: "alpha", action: "pause", ok: false, error: "test" }),
+      )
   }),
 )
 

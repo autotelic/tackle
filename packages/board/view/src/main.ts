@@ -7,7 +7,7 @@ import { Atlas, type AtlasPackage } from "./atlas.ts"
 import {
   RoomAction,
   RoomForm,
-  type RoomFormField,
+  RoomFormField,
   RoomList,
   type RoomRecord,
   emptyRoomForm,
