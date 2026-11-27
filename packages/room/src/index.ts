@@ -55,6 +55,7 @@ export {
   openRoomJournal,
   recordRoomSnapshot,
   roomSoftware,
+  roomWorktree,
   RoomRuntime,
   setRoomRuntime,
 } from "./store.ts"

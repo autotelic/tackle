@@ -41,7 +41,7 @@ const usage = [
   "factory — adopt in-flight work as durable workstreams",
   "",
   "Usage:",
-  "  factory adopt --path <worktree> --project <linear> --label <label> [--pr <n> | --delivery trunk] [--reports <dir>] [--repo <owner/name>] [--phase reconcile|build|compress|land] [--id <id>]",
+  "  factory adopt --path <worktree> --project <linear> --label <label> [--pr <n> | --delivery trunk] [--reports <dir>] [--repo <owner/name>] [--room <id> --room-root <path>] [--phase reconcile|build|compress|land] [--id <id>]",
   "  factory status [--json]",
   "  factory credentials list [--json]",
   "  factory credentials set --id <id> --kind github|opencode|mcp|service|generic --env NAME[=HOST] [--env ...] [--description <text>]",
@@ -1168,6 +1168,8 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
       delivery: { type: "string" },
       reports: { type: "string" },
       repo: { type: "string" },
+      room: { type: "string" },
+      "room-root": { type: "string" },
       pr: { type: "string" },
       id: { type: "string" },
       phase: { type: "string", default: "reconcile" },
@@ -1197,6 +1199,13 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
   if (!Schema.is(Phase)(phase))
     return fail("--phase must be one of reconcile, build, compress, land, blocked, done")
   const id = parsed.values.id ?? slug(number === undefined ? label : label + "-" + number)
+  const roomId = parsed.values.room
+  const roomRoot = parsed.values["room-root"]
+  // Both or neither: an id with no root names no directory, and a root with no id names no room.
+  if ((roomId === undefined) !== (roomRoot === undefined))
+    return fail("--room and --room-root go together")
+  const room =
+    roomId === undefined || roomRoot === undefined ? undefined : { id: roomId, root: roomRoot }
 
   const result = await adopt({
     path,
@@ -1204,6 +1213,7 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
     linearProjectId: parsed.values["linear-project-id"],
     linearUrl,
     worker: parsed.values.worker,
+    room,
     label,
     delivery,
     reports: parsed.values.reports,
@@ -1220,6 +1230,8 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
       "factory: adopted " + record.id,
       "  project    " + record.project,
       "  path       " + record.path,
+      "  room       " +
+        (record.room === undefined ? "unbound" : record.room.id + " (" + record.room.root + ")"),
       "  branch     " + record.branch + " @ " + record.head.slice(0, 8),
       "  delivery   " +
         (record.delivery ?? "pr") +

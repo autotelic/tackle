@@ -5,6 +5,7 @@ import { tmpdir } from "node:os"
 import { basename, join, resolve } from "node:path"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
+import { resolveRoom } from "./room-binding.ts"
 import {
   collision,
   listWorkstreams,
@@ -194,6 +195,13 @@ export interface AdoptInput {
   readonly linearProjectId?: string | undefined
   readonly linearUrl?: string | undefined
   readonly worker?: string | undefined
+  /**
+   * The room this workstream's passes occupy.
+   *
+   * Adoption refuses a room that does not exist, or one whose worktree is not this checkout:
+   * the record's `path` is the one worktree, and the binding only ever refers to it.
+   */
+  readonly room?: { readonly id: string; readonly root: string } | undefined
   readonly label: string
   readonly delivery?: "pr" | "trunk" | undefined
   readonly reports?: string | undefined
@@ -214,6 +222,12 @@ export const adopt = async (input: AdoptInput): Promise<Outcome<Workstream>> => 
   })
   if (!top.ok) return fail({ step: "worktree", detail: top.error.detail })
   const path = resolve(top.value)
+  // The binding is checked while the operator is still here to fix it. The pass checks it again,
+  // because a room can be moved or archived between adoption and the next pass.
+  const room =
+    input.room === undefined ? undefined : { id: input.room.id, root: resolve(input.room.root) }
+  const bound = await resolveRoom({ room, path })
+  if (bound !== undefined && !bound.ok) return fail({ step: "room", detail: bound.reason })
 
   const branch = gitOk({ path, args: ["symbolic-ref", "--short", "HEAD"], step: "branch" })
   if (!branch.ok) return fail({ step: "branch", detail: "detached HEAD has no branch to adopt" })
@@ -294,6 +308,7 @@ export const adopt = async (input: AdoptInput): Promise<Outcome<Workstream>> => 
       linearProjectId: input.linearProjectId,
       linearUrl: input.linearUrl,
       worker: input.worker,
+      room,
       label: input.label,
       repo,
       path,

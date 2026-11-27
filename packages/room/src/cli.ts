@@ -25,6 +25,7 @@ import {
   setRoomService,
   roomDir,
   RoomDecodeError,
+  roomWorktree,
   type RoomRuntime,
 } from "./store.ts"
 import { alive, readRun, removeRun, signalRun, startRoomRun } from "./run.ts"
@@ -184,7 +185,7 @@ const main = async (): Promise<void> => {
       if (!existsSync(source)) return fail("worktree does not exist: " + source, EXIT.usage)
       if ((await readRoom({ root, id })) !== undefined)
         return fail("RoomAlreadyExists", EXIT.declined)
-      const link = join(roomDir({ root, id }), "worktree")
+      const link = roomWorktree({ root, id })
       await mkdir(dirname(link), { recursive: true })
       // The room directory is a lease over an existing checkout, not a second copy of it.
       await symlink(source, link)
@@ -352,7 +353,7 @@ const main = async (): Promise<void> => {
     if (room === undefined || room.state._tag === "Absent")
       return fail("RoomNotFound", EXIT.declined)
     const stateDir = roomDir({ root, id })
-    const worktree = join(stateDir, "worktree")
+    const worktree = roomWorktree({ root, id })
     if (!existsSync(worktree))
       return fail("room " + id + " has no worktree at " + worktree, EXIT.declined)
     const verb = parsed.positionals[0]
@@ -793,7 +794,7 @@ const main = async (): Promise<void> => {
     const parts: string[] = ["journal " + journal.path + " reopened"]
     if (snapshot !== undefined) {
       const stateDir = resolve(roomDir({ root, id }))
-      const worktree = join(stateDir, "worktree")
+      const worktree = roomWorktree({ root: resolve(root), id })
       if (!existsSync(worktree))
         return fail("room " + id + " has no worktree at " + worktree, EXIT.declined)
       // A fresh VM directory, so the files it reads come from the snapshot's lowers and not from

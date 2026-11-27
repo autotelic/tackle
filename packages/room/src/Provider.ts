@@ -1,5 +1,5 @@
 import { Effect } from "effect"
-import { join } from "node:path"
+import { roomWorktree } from "./store.ts"
 import { WorktreeError, type WorktreeService } from "./Worktree.ts"
 
 export { WorktreeError as ProviderError } from "./Worktree.ts"
@@ -32,7 +32,7 @@ export interface RoomProvider {
 }
 
 const placementRoot = (input: { readonly root: string; readonly id: string }): string =>
-  join(input.root, input.id, "worktree")
+  roomWorktree(input)
 
 /** The existing worktree provider, adapted to the room-provider contract. */
 export const localRoomProvider = (trees: WorktreeService): RoomProvider => ({

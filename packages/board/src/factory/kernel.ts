@@ -15,6 +15,7 @@ import { raiseDesk } from "./desk.ts"
 import { appendEvent, consumeEvents, readEvents, type Event } from "./events.ts"
 import { baseWorkerEnv, prepareWorkstreamCredentials, resolveCredentialEnv } from "./executor.ts"
 import { snapshotJournal } from "./journal.ts"
+import { resolveRoom } from "./room-binding.ts"
 import {
   factoryHome,
   landingLock,
@@ -611,6 +612,8 @@ const runInTerminal = async (input: {
   readonly record: Workstream
   readonly pass: number
   readonly worker: string
+  readonly cwd: string
+  readonly room: string | undefined
   readonly env: NodeJS.ProcessEnv
   readonly wallMs: number
 }) => {
@@ -637,15 +640,18 @@ const runInTerminal = async (input: {
       "workstream=" + input.record.id,
       "--label",
       "factory=worker",
+      // The station and the pass join on the room, not only on the workstream: a room's
+      // terminals are what `room use` and the factory panel both look for.
+      ...(input.room === undefined ? [] : ["--label", "room=" + input.room]),
       "--cwd",
-      input.record.path,
+      input.cwd,
       "--no-parent",
       "--timeout",
       String(Math.ceil(input.wallMs / 1000) + 10),
       "--",
       script,
     ],
-    { cwd: input.record.path, env: input.env, timeout: input.wallMs },
+    { cwd: input.cwd, env: input.env, timeout: input.wallMs },
   )
 }
 
@@ -661,7 +667,7 @@ const intercomCli = (): string =>
  * workstream's wall-clock budget.
  */
 const runIntercom = async (input: {
-  readonly record: Workstream
+  readonly cwd: string
   readonly session: string
   readonly prompt: string
   readonly env: NodeJS.ProcessEnv
@@ -678,9 +684,9 @@ const runIntercom = async (input: {
       "--timeout-ms",
       String(Math.max(1_000, input.wallMs - 300_000)),
       "--text",
-      "Work in " + input.record.path + ". Do not edit another worktree.\n\n" + input.prompt,
+      "Work in " + input.cwd + ". Do not edit another worktree.\n\n" + input.prompt,
     ],
-    { cwd: input.record.path, env: input.env, timeout: input.wallMs },
+    { cwd: input.cwd, env: input.env, timeout: input.wallMs },
   )
 
 /**
@@ -755,6 +761,14 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
   // run is not charged and its events stay pending for whoever fixes the branch.
   const guard = await branchGuard({ path: record.path, record, home: input.home })
   if (guard._tag === "Mismatch") return { ok: false, reason: guard.reason }
+
+  // A bound pass runs in its room, or it does not run. A missing room is a refusal, never a
+  // quiet fallback to `record.path`: that fallback would make the binding a note rather than a
+  // contract, and the worker would write to a checkout nobody is watching.
+  const bound = await resolveRoom({ room: record.room, path: record.path })
+  if (bound !== undefined && !bound.ok) return { ok: false, reason: bound.reason }
+  const room = bound !== undefined && bound.ok ? bound.value : undefined
+  const cwd = room?.worktree ?? record.path
   if (record.delivery === "pr" && record.pr !== undefined) {
     const labeled = ensurePullRequestLabel({
       repo: record.repo,
@@ -833,6 +847,9 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
   await mkdir(join(factoryHome(), "compress"), { recursive: true, mode: 0o700 })
   const workerEnv = {
     ...workerBase,
+    // The room's own contract: root, id and the absolute journal path. The worker opens the
+    // same file the control plane checkpoints, so a restarted pass resumes one conversation.
+    ...(room?.environment ?? {}),
     // The worker is an agent this factory creates. Low thinking is the default; a Pi
     // worker must pass it to `pi --thinking` because this env is a descriptor, not a flag.
     FACTORY_THINKING: "low",
@@ -847,7 +864,7 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
   }
   const result = worker.startsWith("intercom:")
     ? await runIntercom({
-        record,
+        cwd,
         session: worker.slice("intercom:".length),
         prompt: workerEnv.FACTORY_PROMPT ?? "",
         env: workerEnv,
@@ -857,11 +874,13 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
         record,
         pass,
         worker,
+        cwd,
+        room: record.room?.id,
         env: workerEnv,
         wallMs,
       })) ??
       (await runProcess(worker, [], {
-        cwd: record.path,
+        cwd,
         shell: true,
         timeout: wallMs,
         env: workerEnv,

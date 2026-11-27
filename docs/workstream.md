@@ -15,6 +15,7 @@ One record per workstream, written **outside** the tree it governs.
   "id": "perms-1862", // stable; the lease key and the checkpoint prefix
   "project": "P-AUT-128", // Linear project
   "label": "permissions-overhaul", // GitHub label
+  "room": { "id": "perms-1862", "root": "/Users/togmund/.room" }, // optional; must resolve to "path"
   "repo": "Shakti-Reforestation/forestbuilder",
   "path": "/Users/togmund/autotelic/shakti-perms", // adopted, never moved or rewritten
   "branch": "feature/permissions-overhaul",
@@ -83,11 +84,16 @@ proved by a test. **One query per refusal** against the store.
 | `PrRequired`     | `--delivery pr` with no `--pr`                                   | the workstream id     | 2    |
 | `TrunkNeedsGate` | `--delivery trunk` and the config declares no checks             | the config path       | 1    |
 | `GateProtected`  | a pass touches a declared protected path (the gate itself)       | the path and the rule | 1    |
+| `RoomMissing`    | `--room` names no room under `--room-root`                       | the room id and root  | 1    |
+| `RoomMismatch`   | the room's worktree is not the adopted path                      | both paths            | 1    |
 
 Two notes that are easy to get wrong:
 
 - **Same path or same PR is the same bug** (two owners), but they are separate refusals because the message
   must name _which_ owner was found. A single “already owned” error sends the operator looking in two places.
+- **A room binding never moves the worktree.** `--room` is a reference that must resolve to the
+  adopted `path` (ADR 0010); a room whose worktree is another checkout is refused, and a pass
+  re-checks before it is charged. There is no fallback to `path` for a missing room.
 - **`DirtyTree` does not refuse adoption by default** — it checkpoints what is dirty and records it. Refusing
   uncommitted work is how you train people to stash before adopting, which loses the evidence of what they
   were doing. The refusal exists only for `--no-checkpoint`, where the operator explicitly asked for a clean

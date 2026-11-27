@@ -20,6 +20,19 @@ export const Gates = Schema.Struct({
   onReady: Schema.Array(Gate),
 })
 
+/**
+ * The room a workstream's passes run in.
+ *
+ * A reference, never a second worktree: `path` is the adopted checkout and
+ * `docs/workstream.md` rule 2 says it never changes, so a binding whose room resolves to a
+ * different directory is refused rather than silently becoming the place the worker runs.
+ */
+export const RoomBinding = Schema.Struct({
+  id: Schema.String,
+  root: Schema.String,
+})
+export type RoomBinding = typeof RoomBinding.Type
+
 export const Workstream = Schema.Struct({
   version: Schema.Literal(1),
   id: Schema.String,
@@ -27,6 +40,8 @@ export const Workstream = Schema.Struct({
   linearProjectId: Schema.optional(Schema.String),
   linearUrl: Schema.optional(Schema.String),
   worker: Schema.optional(Schema.String),
+  /** The room this workstream's passes occupy; absent is a workstream with no room. */
+  room: Schema.optional(RoomBinding),
   label: Schema.String,
   repo: Schema.String,
   path: Schema.String,
@@ -113,6 +128,7 @@ export interface Facts {
   readonly linearProjectId?: string | undefined
   readonly linearUrl?: string | undefined
   readonly worker?: string | undefined
+  readonly room?: RoomBinding | undefined
   readonly label: string
   readonly repo: string
   readonly path: string
@@ -236,6 +252,9 @@ export const writeWorkstream = async (input: {
     ? {
         ...input.record,
         budgets: current.budgets,
+        // The binding is an operator control written by adopt, like the budgets: a pass that
+        // started before a rebind must not write its stale copy back over the new one.
+        room: current.room,
         desk: current.desk,
         phase: current.phase,
         cursors: current.cursors,
@@ -253,8 +272,13 @@ export const writeWorkstream = async (input: {
   await rename(temporary, path)
 }
 
-/** A path or PR already owned is a refusal, and the owner is named. */
-const canonical = (path: string): string => {
+/**
+ * A path as the filesystem names it.
+ *
+ * Adoption, the branch guard and the room binding all ask "is this the same checkout", so they
+ * compare paths one way: realpath, never string equality.
+ */
+export const canonicalPath = (path: string): string => {
   // SAFETY: realpath is a filesystem boundary; a missing path is resolved lexically.
   try {
     return realpathSync(path)
@@ -287,8 +311,8 @@ export const ownerOfPath = (input: {
   readonly records: ReadonlyArray<Workstream>
   readonly path: string
 }): Collision => {
-  const path = canonical(input.path)
-  const found = input.records.find((record) => canonical(record.path) === path)
+  const path = canonicalPath(input.path)
+  const found = input.records.find((record) => canonicalPath(record.path) === path)
   return found === undefined ? Collision.Free() : Collision.Owned({ workstream: found })
 }
 
@@ -323,6 +347,7 @@ export const recordOf = (input: { readonly id: string; readonly facts: Facts }):
   linearProjectId: input.facts.linearProjectId,
   linearUrl: input.facts.linearUrl,
   worker: input.facts.worker,
+  room: input.facts.room,
   label: input.facts.label,
   repo: input.facts.repo,
   path: resolve(input.facts.path),

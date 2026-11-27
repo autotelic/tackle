@@ -121,6 +121,17 @@ export const roomFile = (input: { readonly root: string; readonly id: string }):
   join(roomDir(input), "room.json")
 
 /**
+ * The worktree a room owns.
+ *
+ * The convention every command already joined by hand (`new`, `vm`, `resume`), written once now
+ * so a consumer outside this package — the factory's room binding — cannot restate it and drift.
+ * A room created over an existing checkout has a symlink here, so the path is the room's own
+ * name for the checkout even when the bytes live elsewhere.
+ */
+export const roomWorktree = (input: { readonly root: string; readonly id: string }): string =>
+  join(input.root, input.id, "worktree")
+
+/**
  * Open one room's durable journal through the room's own record.
  *
  * The record names the file and an old room without the field takes the default name, so every
