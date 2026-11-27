@@ -9,5 +9,6 @@
 1ab5be5843740e04	{"confidence":0.66,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.78,"not_a_derivation":0.22,"reimplements":0}}
 1abe097f70b4b3d5	{"confidence":0.95,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.96,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0.01}}
 1ac34d6cedd86abf	{"confidence":0.57,"kind":"Classify","label":"leave_it","probabilities":{"leave_it":0.66,"merge":0.12,"move":0.19,"share_a_contract":0.03,"split":0}}
+1acc7931167411aa	{"confidence":0.35,"kind":"Classify","label":"other","probabilities":{"inject the dependency":0,"justify the assertion":0.01,"narrow with a predicate":0.24,"other":0.46,"own the value type":0.08,"parse at the boundary":0.21}}
 1acf88ef06f589af	{"confidence":0.95,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.96,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0.01}}
 1adb5abe42f47aaf	{"consistency":1,"kind":"Probability","probability":0.03}

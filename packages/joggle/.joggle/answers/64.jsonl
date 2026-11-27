@@ -2,6 +2,7 @@
 642a07b954af5dbe	{"confidence":0.05,"kind":"Rate","label":"slightly_clearer","probabilities":{"meaningfully_better":0.22,"no_difference":0.27,"removes_a_hazard":0.23,"slightly_clearer":0.28},"rating":1.4}
 6439c07bea70ae97	{"confidence":0.97,"kind":"Classify","label":"same_module","probabilities":{"different_deployables":0,"same_module":0.98,"same_package":0.02,"sibling_packages":0}}
 643f89a4d5200e36	{"confidence":0.59,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.31,"framework_glue":0,"implementation_detail":0.69,"wire_contract":0}}
+644a4ba2ebbabb83	{"confidence":0.86,"kind":"Classify","label":"parse at the boundary","probabilities":{"inject the dependency":0,"justify the assertion":0,"narrow with a predicate":0,"other":0,"own the value type":0.12,"parse at the boundary":0.88}}
 644b2e7c353380df	{"consistency":1,"kind":"Probability","probability":0.06333333333333334}
 64678b8013c913a7	{"confidence":0.6,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.7,"component_or_feature":0,"not_applicable":0.29,"route_or_handler":0.01}}
 6467edf6ea14fcf6	{"consistency":1,"kind":"Probability","probability":0.03}

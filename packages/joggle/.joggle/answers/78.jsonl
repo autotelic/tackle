@@ -16,4 +16,5 @@
 78d1be00d84741d7	{"consistency":1,"kind":"Probability","probability":0.07333333333333335}
 78d67b88783a262a	{"consistency":1,"kind":"Probability","probability":0.5966666666666667}
 78daea40dafa87b7	{"consistency":1,"kind":"Probability","probability":0.06333333333333334}
+78e0d82efb68d2f7	{"confidence":1,"kind":"Classify","label":"group 3","probabilities":{"group 1":0,"group 2":0,"group 3":1,"group 4":0,"group 5":0,"group 6":0,"group 7":0,"group 8":0}}
 78e594e2293954ce	{"confidence":0.8,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.84,"infrastructure":0.01,"input_adaptation":0,"mechanical":0.04,"not_applicable":0.03,"orchestration":0.08,"rendering":0,"request_validation":0,"transport_concern":0}}

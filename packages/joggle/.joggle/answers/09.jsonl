@@ -18,3 +18,4 @@
 09e1904d2571ebab	{"confidence":0.47,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.64,"not_a_derivation":0.03,"reimplements":0.33}}
 09ea915b499cf160	{"kind":"Probability","probability":0.16}
 09f141bc66861bf4	{"consistency":1,"kind":"Probability","probability":0.04}
+09f583623a5d2d70	{"confidence":1,"kind":"Classify","label":"group 4","probabilities":{"group 1":0,"group 2":0,"group 3":0,"group 4":1,"group 5":0,"group 6":0,"group 7":0,"group 8":0}}

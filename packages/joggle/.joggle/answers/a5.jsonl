@@ -18,6 +18,7 @@ a5a3d83076cb2644	{"kind":"Probability","probability":0.32}
 a5a8b2fd75d50158	{"confidence":0.44,"kind":"Classify","label":"drift","probabilities":{"compatible":0.14,"drift":0.63,"two_concepts":0.23}}
 a5abd02c02a7e3e1	{"confidence":0.45,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.73,"member_1":0.27}}
 a5b2025a396d1b92	{"confidence":0.32,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.55,"not_a_derivation":0.36,"reimplements":0.09}}
+a5d5e42d42d6d1f5	{"confidence":1,"kind":"Classify","label":"group 5","probabilities":{"group 1":0,"group 2":0,"group 3":0,"group 4":0,"group 5":1,"group 6":0,"group 7":0,"group 8":0}}
 a5e77ca99a72fee2	{"consistency":1,"kind":"Probability","probability":0.05333333333333334}
 a5f1e4694d64b14f	{"confidence":0.93,"kind":"Classify","label":"same_module","probabilities":{"different_deployables":0,"same_module":0.95,"same_package":0.05,"sibling_packages":0}}
 a5f3dfb8b95b212a	{"consistency":1,"kind":"Probability","probability":0.04666666666666667}

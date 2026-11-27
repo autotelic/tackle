@@ -13,3 +13,4 @@
 06e2377e004b694c	{"consistency":1,"kind":"Probability","probability":0.03333333333333333}
 06ea170889600489	{"confidence":0.94,"kind":"Classify","label":"general","probabilities":{"general":0.96,"names_a_caller":0.01,"shared_vocabulary":0.03}}
 06eb0a7a19329e56	{"confidence":0.83,"kind":"Classify","label":"infrastructure","probabilities":{"domain_logic":0,"infrastructure":0.85,"input_adaptation":0.02,"mechanical":0,"not_applicable":0,"orchestration":0.12,"rendering":0,"request_validation":0,"transport_concern":0.01}}
+06f125d5788e1c7d	{"confidence":1,"kind":"Classify","label":"parse at the boundary","probabilities":{"inject the dependency":0,"justify the assertion":0,"narrow with a predicate":0,"other":0,"own the value type":0,"parse at the boundary":1}}

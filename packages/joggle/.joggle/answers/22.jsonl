@@ -17,5 +17,6 @@
 22d498483b1fd56f	{"consistency":1,"kind":"Probability","probability":0.04}
 22e272bb10893a8c	{"consistency":1,"kind":"Probability","probability":0.09888888888888892}
 22e2a60f3e62e557	{"consistency":1,"kind":"Probability","probability":0.04}
+22ecb516372af931	{"confidence":0.92,"kind":"Classify","label":"other","probabilities":{"inject the dependency":0,"justify the assertion":0,"narrow with a predicate":0,"other":0.93,"own the value type":0.07,"parse at the boundary":0}}
 22f676913cad0b49	{"confidence":0.53,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.77,"member_1":0.23}}
 22fe9065f54efcbd	{"consistency":1,"kind":"Probability","probability":0.04}

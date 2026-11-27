@@ -1,6 +1,7 @@
 14022f174c621618	{"consistency":1,"kind":"Probability","probability":0.03333333333333333}
 1413431e7e75f78a	{"confidence":0.37,"kind":"Classify","label":"different_inputs","probabilities":{"coincidental":0.04,"different_inputs":0.53,"different_work":0.04,"same_orchestration":0.39}}
 142348159970f159	{"confidence":0.44,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.02,"internal_only":0.63,"unaccounted":0.35}}
+1433b5b1382ed64e	{"confidence":0.94,"kind":"Classify","label":"own the value type","probabilities":{"inject the dependency":0,"justify the assertion":0,"narrow with a predicate":0,"other":0.05,"own the value type":0.95,"parse at the boundary":0}}
 1452d3ce5815b0d0	{"consistency":1,"kind":"Probability","probability":0.03333333333333333}
 14673544d6372916	{"kind":"Probability","probability":0.5}
 146813918712f02d	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}

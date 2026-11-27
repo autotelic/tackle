@@ -2,6 +2,7 @@
 2c149949a8f7d92c	{"consistency":1,"kind":"Probability","probability":0.06333333333333334}
 2c26da74fe96d995	{"confidence":0.8,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.04,"inferred":0.1,"not_applicable":0.86}}
 2c4946b65eaa8585	{"consistency":1,"kind":"Probability","probability":0.06333333333333334}
+2c4ece37b044fd1e	{"confidence":0.78,"kind":"Classify","label":"other","probabilities":{"inject the dependency":0,"justify the assertion":0,"narrow with a predicate":0,"other":0.82,"own the value type":0.18,"parse at the boundary":0}}
 2c4f78eb903f64d3	{"consistency":1,"kind":"Probability","probability":0.03333333333333333}
 2c4fcfceccab6594	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
 2c6d8a2ec6fb9032	{"consistency":1,"kind":"Probability","probability":0.07}

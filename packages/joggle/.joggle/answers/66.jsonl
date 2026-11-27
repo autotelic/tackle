@@ -6,6 +6,8 @@
 66a695949147ad1a	{"confidence":0.48,"kind":"Classify","label":"move","probabilities":{"merge":0.23,"move":0.66,"no_issue":0.11}}
 66a823a70506e1e2	{"confidence":0.24,"kind":"Classify","label":"component_or_feature","probabilities":{"already_there":0.38,"component_or_feature":0.43,"not_applicable":0.08,"route_or_handler":0.11}}
 66b3c2e3c93c1309	{"consistency":1,"kind":"Probability","probability":0.04}
+66d962988adb5417	{"confidence":0.99,"kind":"Classify","label":"Inject fleetCache at the call site or thread it through the signature so the dependency is explicit","probabilities":{"Capture it at the boundary and pass it in as a parameter":0.01,"Inject fleetCache at the call site or thread it through the signature so the dependency is explicit":0.99,"Inject fleetInFlight at the call site or thread it through the signature so the dependency is explicit":0,"Make it local, or hold it in explicit state/service passed by parameter":0,"Route the request through a client dependency so calls are injectable, cancellable, and testable":0,"Take the instant as a parameter (or use a fixed epoch for pure conversions)":0}}
 66e4fe062d043f37	{"consistency":1,"kind":"Probability","probability":0.19666666666666666}
+66ee676b91269673	{"confidence":1,"kind":"Classify","label":"group 6","probabilities":{"group 1":0,"group 2":0,"group 3":0,"group 4":0,"group 5":0,"group 6":1,"group 7":0,"group 8":0}}
 66f094c6201f3808	{"confidence":0.81,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.88,"not_a_derivation":0.12,"reimplements":0}}
 66f1c02831718c2a	{"consistency":1,"kind":"Probability","probability":0.7200000000000001}

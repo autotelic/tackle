@@ -1,3 +1,4 @@
+700c6abf70e47b19	{"confidence":0.9,"kind":"Classify","label":"other","probabilities":{"inject the dependency":0,"justify the assertion":0.01,"narrow with a predicate":0.01,"other":0.92,"own the value type":0.04,"parse at the boundary":0.02}}
 701c8d071e4d3c3f	{"confidence":0.93,"kind":"Classify","label":"library_core","probabilities":{"domain_core":0.03,"infrastructure":0,"library_core":0.94,"not_applicable":0,"rendering_edge":0,"transport_edge":0,"utilities":0.03}}
 7022db0a46455ec4	{"confidence":0.88,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.9,"infrastructure":0,"input_adaptation":0,"mechanical":0.06,"not_applicable":0.01,"orchestration":0.03,"rendering":0,"request_validation":0,"transport_concern":0}}
 7045f249b2e4ad1e	{"confidence":0.4,"kind":"Classify","label":"same_module","probabilities":{"different_deployables":0,"same_module":0.56,"same_package":0.44,"sibling_packages":0}}

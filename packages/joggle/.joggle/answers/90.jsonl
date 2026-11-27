@@ -16,3 +16,4 @@
 90ebd398fa473887	{"confidence":0.33,"kind":"Classify","label":"drift","probabilities":{"compatible":0.03,"drift":0.56,"two_concepts":0.41}}
 90ed32515d9fdcf2	{"kind":"Probability","probability":0.25}
 90f7133c97fe2725	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
+90fe5c4da11bad7e	{"confidence":1,"kind":"Classify","label":"Keep inference, validate with satisfies, or use a named owner contract","probabilities":{"Data.TaggedError) whose fields carry the operation, offending value, and domain, and render this context as its message":0,"Keep inference, validate with satisfies, or use a named owner contract":1,"type UserId = string & Brand.Brand<\"UserId\">) so the compiler rejects transposed arguments":0,"Use an owner/schema-derived value type; parse external payloads before insertion":0}}

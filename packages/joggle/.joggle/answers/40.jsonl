@@ -15,4 +15,5 @@
 40bbf566b836bfe5	{"confidence":0.49,"kind":"Classify","label":"infrastructure","probabilities":{"domain_logic":0.11,"infrastructure":0.55,"input_adaptation":0.02,"mechanical":0.03,"not_applicable":0.01,"orchestration":0.28,"rendering":0,"request_validation":0,"transport_concern":0}}
 40c778bff74691f0	{"consistency":1,"kind":"Probability","probability":0.036666666666666674}
 40c7ab1bd8a093ac	{"kind":"Probability","probability":0.59}
+40e0a9b863227a62	{"confidence":0.9,"kind":"Classify","label":"other","probabilities":{"inject the dependency":0,"justify the assertion":0.01,"narrow with a predicate":0.02,"other":0.92,"own the value type":0.05,"parse at the boundary":0}}
 40e53fcb901a1b36	{"confidence":0.94,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0.02}}

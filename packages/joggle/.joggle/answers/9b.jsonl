@@ -21,3 +21,4 @@
 9bbfa5ac5882fb50	{"confidence":0.1,"kind":"Classify","label":"two_concepts","probabilities":{"compatible":0.26,"drift":0.34,"two_concepts":0.4}}
 9bca0a5cbe914740	{"confidence":0.64,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.73,"component_or_feature":0.01,"not_applicable":0.25,"route_or_handler":0.01}}
 9bd1ea114e9d4472	{"confidence":0.76,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.82,"component_or_feature":0.01,"not_applicable":0.16,"route_or_handler":0.01}}
+9bf770973cd8c6bb	{"confidence":1,"kind":"Classify","label":"group 5","probabilities":{"group 1":0,"group 2":0,"group 3":0,"group 4":0,"group 5":1,"group 6":0,"group 7":0,"group 8":0}}

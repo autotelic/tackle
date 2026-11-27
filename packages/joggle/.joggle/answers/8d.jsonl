@@ -1,10 +1,14 @@
+8d08a413e8ca5d05	{"confidence":0.99,"kind":"Classify","label":"other","probabilities":{"inject the dependency":0,"justify the assertion":0.01,"narrow with a predicate":0,"other":0.99,"own the value type":0,"parse at the boundary":0}}
 8d2010ddad97cbae	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
 8d24cadfd89da5dd	{"confidence":0.86,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.91,"not_a_derivation":0.03,"reimplements":0.06}}
 8d312517c166dfe0	{"confidence":0.95,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.96,"not_a_derivation":0.03,"reimplements":0.01}}
 8d43a3bbc19e8012	{"kind":"Probability","probability":0.69}
 8d4c077eed03afed	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
+8d5b108f5a3993f3	{"confidence":0.46,"kind":"Classify","label":"group 1","probabilities":{"group 1":0.53,"group 2":0,"group 3":0,"group 4":0,"group 5":0,"group 6":0,"group 7":0.47,"group 8":0}}
 8d79d258bfc37394	{"consistency":1,"kind":"Probability","probability":0.29000000000000004}
 8d89f80a24a698ec	{"consistency":1,"kind":"Probability","probability":0.03333333333333333}
+8d900c70b2304ab5	{"confidence":1,"kind":"Classify","label":"parse at the boundary","probabilities":{"inject the dependency":0,"justify the assertion":0,"narrow with a predicate":0,"other":0,"own the value type":0,"parse at the boundary":1}}
+8d9065aae1c759f6	{"confidence":0.95,"kind":"Classify","label":"own the value type","probabilities":{"inject the dependency":0,"justify the assertion":0,"narrow with a predicate":0.01,"other":0.03,"own the value type":0.96,"parse at the boundary":0}}
 8d9c94d4c823bdcf	{"confidence":0.55,"kind":"Classify","label":"input_adaptation","probabilities":{"domain_logic":0.21,"infrastructure":0,"input_adaptation":0.6,"mechanical":0.11,"not_applicable":0.05,"orchestration":0,"rendering":0.01,"request_validation":0,"transport_concern":0.02}}
 8da2479eb8a25538	{"confidence":0.69,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.05,"name_meaning":0.14,"no_issue":0.05,"semantic_verdict":0.76}}
 8daccc7065cce056	{"consistency":1,"kind":"Probability","probability":0.04}
