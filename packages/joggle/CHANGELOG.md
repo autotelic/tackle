@@ -1,5 +1,51 @@
 # @autotelic/joggle
 
+## 0.14.0
+
+### Minor Changes
+
+- New relation and rule: containment, `joggle/containment`.
+
+  Jaccard divides by the union, so a declaration that is a specialization of
+  another collapses as the size gap grows: a pair can share every bigram of the
+  smaller side and still score far below the duplicate threshold. No threshold on
+  Jaccard recovers what its denominator throws away. Containment divides by the
+  smaller side, so the subset relation survives — on this repository 6,589 pairs sit
+  at containment 0.8 or above, with Jaccard as low as 0.17.
+
+  The rule reports those pairs, ranks them by rarity so test scaffolding and shared
+  idiom fall away, and asks one question: is the smaller a specialization of the
+  larger, or two unrelated things that share tokens.
+
+- Content-addressed identity for declarations: `joggle identity <paths...>`.
+
+  A declaration's id is a Merkle hash over its own structure. Bound names become
+  positions, the declared name is erased, free references resolve to the target's
+  own id, and mutually recursive groups key from their sorted member hashes with
+  the cycle removed. `HASH_VERSION` rides in every id, so a normaliser change is a
+  visible migration rather than a silent re-interpretation of an old id.
+
+  Proven on this repository: `packages/jig-cli/src/version.ts` and
+  `packages/cutlist/src/version.ts` — identical by token bag — share every id, and
+  each file loaded alone yields the same ids as loaded together. A rename is inert
+  for identity; a changed literal is not.
+
+  `fragmentsOf` exposes the subtree ids and `dependentsOf` the declaration-level
+  reverse index a collapse proposal needs.
+
+- Canonical type identity, from the checker's type graph rather than its printed text.
+
+  A type's printed form is not its identity: `Box<A>` and `Cell<T>` print
+  differently and are one shape, while two Effect programs differing only in their
+  error channel print almost alike and are different programs. `typeIdOf` walks the
+  `@typescript/native` async `Checker`: union and intersection members sorted by
+  their own ids, tuples and literals encoded, type parameters as de Bruijn
+  positions, a referenced declaration as its content id, and a cycle keyed by that
+  id so a recursive type terminates and stays stable.
+
+  It is a pre-filter, not an oracle: `identicalGroup` (mutual assignability) remains
+  the authoritative answer, and the two are kept beside each other deliberately.
+
 ## 0.13.0
 
 ### Minor Changes
