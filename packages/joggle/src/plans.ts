@@ -203,13 +203,40 @@ export const answerOf = (stored: StoredAnswer): Decision.Answer<Decision.Any> =>
 }
 
 /**
- * The key of one question's answer: the question, the atoms it read, and the
- * model.
+ * The state ONE question read, attached to a decision that travels in a batch.
+ *
+ * A request's input is the union of every question's state, so hashing it would
+ * make a question's identity move whenever its neighbours change -- and a
+ * re-chunked run would replay nothing. The plan engine knows each plan's own
+ * atoms, so it attaches them here; the memoizer keys the answer on that material
+ * instead of the batch. A WeakMap, because the annotation is transport for one
+ * request and must never reach the provider or a cache file.
+ */
+interface QuestionMeta {
+  /** The state this one question read: its plan's atom ids. */
+  readonly material?: unknown
+  /** The plan engine has already asked a Noul `repeats` times in this request. */
+  readonly repeatsHandled?: boolean
+}
+
+const questionMeta = new WeakMap<object, QuestionMeta>()
+
+/** Attach the state a question read, for the cache key. Returns the same decision. */
+export const withQuestionMeta = <D extends Decision.Any>(decision: D, meta: QuestionMeta): D => {
+  questionMeta.set(decision, meta)
+  return decision
+}
+
+const metaOf = (decision: Decision.Any): QuestionMeta | undefined => questionMeta.get(decision)
+
+/**
+ * The key of one question's answer: the question, its OWN state, and the model.
  *
  * Per question rather than per request, which is the whole reason a batched call
  * does not lose cache granularity: adding a question to a request leaves every
  * other question's key unchanged, and so does changing a declaration the other
- * questions do not name.
+ * questions do not name. A batch is a transport detail; it is not part of the
+ * identity.
  */
 export const answerKeyFor = (decision: Decision.Any, material: unknown): string =>
   shortHash(
@@ -305,7 +332,10 @@ export const memoize = (
         const keys = new Map<string, string>()
         for (const [name, decision] of entries) {
           if (!isJoggleDecision(decision)) continue
-          const key = answerKeyFor(decision, options.input)
+          // A question keyed by the batch's whole state would be unreachable as
+          // soon as its neighbours change; the plan engine names the state each
+          // question actually read.
+          const key = answerKeyFor(decision, metaOf(decision)?.material ?? options.input)
           keys.set(name, key)
           const stored = yield* cache.get(key)
           if (Option.isSome(stored)) {
@@ -327,8 +357,12 @@ export const memoize = (
           const requested: Record<string, JoggleDecision> = {}
           const asked = new Map<string, ReadonlyArray<string>>()
           for (const [name, decision] of Object.entries(missing)) {
+            // The plan engine already expanded this Noul into its repeats, each
+            // under its own request name. Repeating again here asked every pair
+            // three times as many times as the budget counted -- 9 asks for a
+            // Noul, which is what pushed a remedies request over the ceiling.
             const names =
-              decision._tag === "Probability"
+              decision._tag === "Probability" && metaOf(decision)?.repeatsHandled !== true
                 ? Array.from({ length: repeats }, (_, index) => name + "~" + String(index))
                 : [name]
             for (const one of names) requested[one] = decision
@@ -347,7 +381,10 @@ export const memoize = (
             const first = gathered[0]
             if (first === undefined) continue
             let answer: Decision.Answer<Decision.Any> = first
-            if (missing[name]?._tag === "Probability") {
+            if (
+              missing[name]?._tag === "Probability" &&
+              metaOf(missing[name])?.repeatsHandled !== true
+            ) {
               const values = gathered.flatMap((one) => ("probability" in one ? [one.probability] : []))
               const reduced = reduceRepeats(values)
               if (reduced === undefined) continue
@@ -546,7 +583,14 @@ export const answerPlansRaw = (
           found.decision._tag === "Probability"
             ? Array.from({ length: repeats }, (_, index) => found.requestName + "~" + String(index))
             : [found.requestName]
-        for (const name of requestNames) decisions[name] = found.decision
+        // Key each answer by its own plan's atoms, not the union this batch
+        // assembled. The name is still per-request; the identity is not.
+        for (const name of requestNames) {
+          decisions[name] = withQuestionMeta(found.decision, {
+            material: found.atoms,
+            repeatsHandled: true,
+          })
+        }
         names.set(entry.key, requestNames)
       }
       const definition = Decision.make({ input: Schema.Json, decisions })
