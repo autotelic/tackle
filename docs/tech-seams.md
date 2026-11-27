@@ -470,8 +470,8 @@ One row per concern that exists twice. This is the list the backlog is cut from.
 | room lifecycle state       | Alchemy Room/Move models           | none (room is the good case)                          |
 | workstream lifecycle state | Alchemy Domain (when a 2nd writer) | `factory/store.ts:10`                                 |
 | mailbox state              | Domain or SQLite                   | `protocol/src/mailbox.ts`, JSON snapshot              |
-| guest service lifecycle    | agentOS `process.*`                | pid in a log line (`room/cli.ts:397`)                 |
-| guest durability           | agentOS `filesystem.export`        | pause = room-file flip                                |
+| guest service lifecycle    | agentOS `process.*`                | room service pid and exit code                         |
+| guest durability           | agentOS `filesystem.export`        | room pause/resume snapshots                            |
 | DID/lease/receipt wire     | Rat King lexicons                  | `protocol/src/mailbox.ts`, `board/src/mailbox/did.ts` |
 | credential policy          | Executor (later)                   | `factory/executor.ts` broker                          |
 | API surface for a peer     | board `/presence`                  | Herdr decode (`herdr/factory/presence.js`, read-only) |
@@ -481,7 +481,8 @@ One row per concern that exists twice. This is the list the backlog is cut from.
 ## The backlog, ranked
 
 Ranked by "what silently lies or leaks first", then by cost. Every cut names the owning package,
-the API to call instead, and the test that proves it. None of these is started in this pass.
+the API to call instead, and the test that proves it. Cuts 1 and 2 are landed; the rest are
+not started.
 
 ### 1. Report a room service from the VM's process table, not from a forgotten pid
 
@@ -495,6 +496,7 @@ the API to call instead, and the test that proves it. None of these is started i
   `stopped` with its exit code without a port probe, and `room down --service` kills a service that
   ignores the socket.
 - **Size:** S–M.
+- **Status:** landed at `2da831f9`; the guest process is the truth, and a legacy pid still decodes.
 
 ### 2. Make pause mean a snapshot, and prove it
 
@@ -505,6 +507,8 @@ the API to call instead, and the test that proves it. None of these is started i
 - **Proof:** new `packages/room/test/vm-snapshot.test.ts`: write a file, pause, resume into a fresh
   VM directory, read the file back; a second pause of a resumed room is not a duplicate export.
 - **Size:** M.
+- **Status:** landed at `fbd20f71`; pause exports a root snapshot, resume boots a fresh VM on it,
+  and a snapshot carrying `/workspace/*` is refused as an API gap rather than restored.
 
 ### 3. Declare a room's software instead of inheriting the default bundle
 
