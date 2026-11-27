@@ -261,6 +261,23 @@ Acceptance: `--trace` prints `facts · joggle` / `judgments · joggle` /
 `decision · code`, and the emitted trace JSON **recomputes the same decision with no
 model call**. Paste both.
 
+### What the measurement found
+
+The keyed run answered **41 clusters against the witness's 54**, replaying
+**1,635 of 1,635 questions (100%)** and asking nothing again. It asked **1,431
+pairs**: `j_remedy` 1,431, `j_material` 7 and `j_subcase` 5, while the published
+thresholds decided **1,424 of them in code**. The 88-site merge is gone — the
+stable-API cluster is now **83 sites over one rule** — so the carried question is
+answered **SPLIT, not upheld**: the five `no-nullish-default-on-partial-input`
+findings separated once the trigger difference was asked about. That 1,424 of
+1,431 is rung 3's headline arriving early: on this corpus almost every contraction
+is already a decision once the judgment is split into one question per cap.
+
+The rung's own claim is the trace, not the label. The acceptance above asks for a
+trace that recomputes the same decision with no model call; the replayed ledger is
+that property measured at scale, and the split verdict is what the second and
+third questions were added to make visible.
+
 ## Rung 3 — audit every rule on the new axis
 
 For all 103 rules (55 plumb, 48 joggle), one table: each rule's questions, and each
