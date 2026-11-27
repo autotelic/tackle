@@ -1,4 +1,5 @@
 import { defineRule } from "@oxlint/plugins";
+import { ABSENCE_TYPE, TAGGED_REASON } from "../absence-shape.js";
 import { ancestorsOf } from "../../shared/ancestors.js";
 const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$|\/test\//u;
 /** Whether the member chain ends in the Option namespace, e.g. `Option` or `O`.
@@ -90,9 +91,10 @@ function optionTypeReference(type) {
     return null;
 }
 /**
- * Guarded operations must surface failure reasons as tagged MoneyError values
- * through the Effect error channel, not as bare Option.None which conflates
- * every possible why into one silent absence.
+ * Guarded operations must surface failure reasons as tagged values through the
+ * Effect error channel, not as bare Option.None which conflates every possible
+ * why into one silent absence. Sync cores name ABSENCE_TYPE, the same spelling
+ * `guarded-op-must-return-option` requires.
  */
 export const guardedOpMustReturnEffectRule = defineRule({
     meta: {
@@ -101,8 +103,8 @@ export const guardedOpMustReturnEffectRule = defineRule({
             description: "Require guarded operations to fail with typed MoneyError reasons via Effect/Either instead of returning bare Option values.",
         },
         messages: {
-            optionReturn: "`{{found}}` hides why the operation failed. Return `Effect.Effect<T, MoneyError>` (or `Either<T, MoneyError>` in sync cores) with Schema.TaggedError reasons so callers can match Overflow vs InvalidInput vs ZeroDivisor. Options buried in tuples, records or arrays hide it just as well.",
-            bareNone: "`Option.none()` here discards the reason for failure. Fail with a tagged MoneyError reason instead, or keep the Option strictly internal while a converted public API owns the error channel.",
+            optionReturn: `\`{{found}}\` hides why the operation failed. Return \`Effect.Effect<T, MoneyError>\` (or \`${ABSENCE_TYPE}\` in sync cores) with ${TAGGED_REASON} reasons so callers can match Overflow vs InvalidInput vs ZeroDivisor. Options buried in tuples, records or arrays hide it just as well.`,
+            bareNone: `\`Option.none()\` here discards the reason for failure. Fail with ${TAGGED_REASON} instead, or keep the Option strictly internal while a converted public API owns the error channel.`,
         },
     },
     createOnce(context) {
