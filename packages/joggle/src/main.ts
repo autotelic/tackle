@@ -21,6 +21,8 @@ import {
   judgeRemedies,
   previousRemedyFindings,
   rememberRemedyFindings,
+  sortedSites,
+  soundnessCounts,
   type RemedyReport,
 } from "./remedies.ts"
 import { cacheDirFor, runCacheDirFor, scopedAnswerCacheDir, shortHash } from "./state.ts"
@@ -604,6 +606,7 @@ const remedyLines = ({ report, ledger, cache, trace }: RemedyLinesInput): Readon
   const partial = report.judgementStatus === "partial"
   const firstFailure = report.judgementFailures[0] ?? "unknown"
   const moreFailures = report.judgementFailures.length - 1
+  const soundness = soundnessCounts(report.soundness_observed)
   const counts = witnessOnly
     ? input + " -> " + String(report.witness.clusters) + " witness cluster(s) from " +
       String(report.distinctMessages) + " distinct message(s); NOT judgement clusters"
@@ -654,20 +657,8 @@ const remedyLines = ({ report, ledger, cache, trace }: RemedyLinesInput): Readon
           ),
         ]),
     "fact store: run " + ledger.run + ", " + String(ledger.written) + " finding row(s)",
-    "soundness observed: " +
-      String(
-        report.soundness_observed.filter((entry) => entry.soundness_observed === "sound").length,
-      ) +
-      " sound · " +
-      String(
-        report.soundness_observed.filter((entry) => entry.soundness_observed === "unsound").length,
-      ) +
-      " unsound · " +
-      String(
-        report.soundness_observed.filter((entry) => entry.soundness_observed === "unobserved")
-          .length,
-      ) +
-      " unobserved",
+    "soundness observed: " + String(soundness.sound) + " sound · " +
+      String(soundness.unsound) + " unsound · " + String(soundness.unobserved) + " unobserved",
   ]
   for (const observed of report.soundness_observed) {
     if (observed.soundness_observed === "unobserved") continue
@@ -693,9 +684,7 @@ const remedyLines = ({ report, ledger, cache, trace }: RemedyLinesInput): Readon
       "  rules   " +
         cluster.rules.map((rule) => rule.rule + " " + String(rule.findings)).join(", "),
     )
-    const sites = [...new Set(cluster.members.map((member) => member.site))].sort((left, right) =>
-      left.localeCompare(right),
-    )
+    const sites = sortedSites(cluster.members.map((member) => member.site))
     const shown = sites.length <= 6
       ? sites.join(", ")
       : sites.slice(0, 6).join(", ") + ", +" + String(sites.length - 6)

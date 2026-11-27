@@ -1558,7 +1558,7 @@ const rulesOf = (findings: ReadonlyArray<RemedyFinding>): ReadonlyArray<RuleSite
     .map(([rule, entry]) => ({
       rule,
       findings: entry.findings,
-      sites: [...entry.sites].sort((left, right) => left.localeCompare(right)),
+      sites: sortedSites(entry.sites),
     }))
     .sort((left, right) => right.findings - left.findings || left.rule.localeCompare(right.rule))
 }
@@ -1689,9 +1689,7 @@ const clustersOf = (
       repairCounts.set(label, (repairCounts.get(label) ?? 0) + 1)
     }
     const remedy = mostFrequentOf(repairCounts) ?? "none"
-    const sites = [...new Set(members.map((member) => member.site))].sort((left, right) =>
-      left.localeCompare(right),
-    )
+    const sites = sortedSites(members.map((member) => member.site))
     const fileCounts = new Map<string, Set<string>>()
     for (const member of members) {
       const set = fileCounts.get(member.file)
@@ -1721,7 +1719,105 @@ const clustersOf = (
 const findingKeyOf = (finding: Pick<StoredFinding, "site" | "rule">): string =>
   finding.site + "\u0000" + finding.rule
 
+/**
+ * Sites in stable order, one entry each.
+ *
+ * Every report that names sites for a human prints them in this order, and a
+ * cluster holds one site per rule, so the de-duplication belongs with the sort
+ * rather than at each call site.
+ */
+export const sortedSites = (sites: Iterable<string>): ReadonlyArray<string> =>
+  [...new Set(sites)].sort((left, right) => left.localeCompare(right))
+
+/**
+ * What the diff licenses, from the representative's fate and its siblings'.
+ *
+ * The three answers exhaust the cases: no fix observed at the representative,
+ * no siblings to carry the evidence, or an answer of `sound`/`unsound`. The
+ * return type is the observation's own shape minus the fields this function does
+ * not decide, so the two cannot drift apart.
+ */
+const verdictOf = ({
+  previous,
+  representative,
+  current,
+}: {
+  readonly previous: ReadonlyArray<StoredFinding>
+  readonly representative: string | undefined
+  readonly current: ReadonlySet<string>
+}): Omit<SoundnessObservation, "remedy" | "remedyHash" | "representative" | "sites"> => {
+  const present = (finding: StoredFinding): boolean => current.has(findingKeyOf(finding))
+  const stillReported = previous.filter(present)
+  if (stillReported.some((finding) => finding.site === representative)) {
+    return {
+      soundness_observed: "unobserved",
+      cleared: [],
+      remaining: sortedSites(stillReported.map((finding) => finding.site)),
+      reason: "the representative site still carries the finding, so no fix at it was observed",
+    }
+  }
+  const siblings = previous.filter((finding) => finding.site !== representative)
+  if (siblings.length === 0) {
+    return {
+      soundness_observed: "unobserved",
+      cleared: [],
+      remaining: [],
+      reason:
+        "the previous cluster held no sibling sites, so clearing its one site proves nothing" +
+        " about soundness",
+    }
+  }
+  const remaining = sortedSites(siblings.filter(present).map((finding) => finding.site))
+  const cleared = sortedSites(
+    siblings.filter((finding) => !present(finding)).map((finding) => finding.site),
+  )
+  return remaining.length === 0
+    ? {
+        soundness_observed: "sound",
+        cleared,
+        remaining,
+        reason: "the representative site cleared, and every sibling site cleared with it",
+      }
+    : {
+        soundness_observed: "unsound",
+        cleared,
+        remaining,
+        reason: "the representative site cleared, but " +
+          String(remaining.length) +
+          " sibling site(s) still report the finding",
+      }
+}
+
+/** One observation in the report's single shape; every path below fills this one. */
 const observationOf = ({
+  remedyHash,
+  remedy,
+  sites,
+  soundness_observed,
+  cleared = [],
+  remaining = [],
+  reason,
+}: {
+  readonly remedyHash: string
+  readonly remedy: string
+  readonly sites: ReadonlyArray<string>
+  readonly soundness_observed: SoundnessStatus
+  readonly cleared?: ReadonlyArray<string> | undefined
+  readonly remaining?: ReadonlyArray<string> | undefined
+  readonly reason: string
+}): SoundnessObservation => ({
+  soundness_observed,
+  remedy,
+  remedyHash,
+  representative: sites[0],
+  sites,
+  cleared,
+  remaining,
+  reason,
+})
+
+/** The observation a previous run's cluster earns from this run's findings. */
+const diffedObservationOf = ({
   remedyHash,
   remedy,
   previous,
@@ -1732,65 +1828,41 @@ const observationOf = ({
   readonly previous: ReadonlyArray<StoredFinding>
   readonly current: ReadonlySet<string>
 }): SoundnessObservation => {
-  const sites = [...new Set(previous.map((finding) => finding.site))].sort((left, right) =>
-    left.localeCompare(right),
-  )
-  const representative = sites[0]
-  const representativePresent =
-    representative !== undefined &&
-    previous.some(
-      (finding) => finding.site === representative && current.has(findingKeyOf(finding)),
-    )
-  if (representativePresent) {
-    return {
-      soundness_observed: "unobserved",
-      remedy,
-      remedyHash,
-      representative,
-      sites,
-      cleared: [],
-      remaining: previous
-        .filter((finding) => current.has(findingKeyOf(finding)))
-        .map((finding) => finding.site),
-      reason: "the representative site still carries the finding, so no fix at it was observed",
-    }
-  }
-  const siblings = previous.filter((finding) => finding.site !== representative)
-  if (siblings.length === 0) {
-    return {
-      soundness_observed: "unobserved",
-      remedy,
-      remedyHash,
-      representative,
-      sites,
-      cleared: [],
-      remaining: [],
-      reason:
-        "the previous cluster held no sibling sites, so clearing its one site proves nothing" +
-        " about soundness",
-    }
-  }
-  const remaining = siblings
-    .filter((finding) => current.has(findingKeyOf(finding)))
-    .map((finding) => finding.site)
-  const cleared = siblings
-    .filter((finding) => !current.has(findingKeyOf(finding)))
-    .map((finding) => finding.site)
-  const sound = remaining.length === 0
-  return {
-    soundness_observed: sound ? "sound" : "unsound",
+  const sites = sortedSites(previous.map((finding) => finding.site))
+  return observationOf({
+    ...verdictOf({ previous, representative: sites[0], current }),
     remedy,
     remedyHash,
-    representative,
     sites,
-    cleared: [...new Set(cleared)].sort((left, right) => left.localeCompare(right)),
-    remaining: [...new Set(remaining)].sort((left, right) => left.localeCompare(right)),
-    reason: sound
-      ? "the representative site cleared, and every sibling site cleared with it"
-      : "the representative site cleared, but " +
-        String(new Set(remaining).size) +
-        " sibling site(s) still report the finding",
-  }
+  })
+}
+
+/** A cluster this run reports for the first time: a record, not evidence. */
+const firstRecordOf = (cluster: RemedyCluster): SoundnessObservation => {
+  const sites = sortedSites(cluster.members.map((member) => member.site))
+  return observationOf({
+    soundness_observed: "unobserved",
+    remedy: cluster.remedy,
+    remedyHash: cluster.remedyHash,
+    sites,
+    reason: "this run is the first record for this repair, so there is no diff yet",
+  })
+}
+
+/** One count per status, named so the report header reads the field it means. */
+export interface SoundnessCounts {
+  readonly sound: number
+  readonly unsound: number
+  readonly unobserved: number
+}
+
+/** How many observations landed in each status, for the report header. */
+export const soundnessCounts = (
+  observations: ReadonlyArray<SoundnessObservation>,
+): SoundnessCounts => {
+  const counts = { sound: 0, unsound: 0, unobserved: 0 }
+  for (const observation of observations) counts[observation.soundness_observed] += 1
+  return counts
 }
 
 /**
@@ -1828,7 +1900,7 @@ export const observeSoundness = ({
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([remedyHash, rows]) => {
       const named = clusters.find((cluster) => cluster.remedyHash === remedyHash)?.remedy
-      return observationOf({
+      return diffedObservationOf({
         remedyHash,
         remedy: named ?? "previous run",
         previous: rows,
@@ -1837,19 +1909,7 @@ export const observeSoundness = ({
     })
   for (const cluster of clusters) {
     if (byHash.has(cluster.remedyHash)) continue
-    const sites = [...new Set(cluster.members.map((member) => member.site))].sort((left, right) =>
-      left.localeCompare(right),
-    )
-    observations.push({
-      soundness_observed: "unobserved",
-      remedy: cluster.remedy,
-      remedyHash: cluster.remedyHash,
-      representative: sites[0],
-      sites,
-      cleared: [],
-      remaining: [],
-      reason: "this run is the first record for this repair, so there is no diff yet",
-    })
+    observations.push(firstRecordOf(cluster))
   }
   return observations.sort((left, right) => left.remedyHash.localeCompare(right.remedyHash))
 }
@@ -2113,9 +2173,7 @@ export const rememberRemedyFindings = (root: string, report: RemedyReport): Reme
             remedy: cluster.remedyHash,
           })),
         )
-        .sort((left, right) =>
-          (left.site + "\u0000" + left.rule).localeCompare(right.site + "\u0000" + right.rule),
-        ),
+        .sort((left, right) => findingKeyOf(left).localeCompare(findingKeyOf(right))),
     ),
   )
   const rows: Array<Omit<StoredFinding, "run">> = report.clusters.flatMap((cluster) =>

@@ -66,6 +66,16 @@
       "reason": "The other side of the `lines` pair: jig-cli and joggle each carry the helper because the tools never import each other. Recorded on both files so the finding cannot move with whichever side the detector names."
     },
     {
+      "rule": "joggle/duplicate-meaning",
+      "path": "packages/jig-cli/src/commands.ts",
+      "reason": "`sortedUnique` (jig-cli) and `sortedSites` (joggle) de-duplicate then sort the same kind of value, so the detector reads one helper written twice. The harness never links an engine, so each side keeps its own three-line copy — the seam this file already records for `lines` and `dirOf`. Recorded on both files so the finding cannot move with whichever side the detector names."
+    },
+    {
+      "rule": "joggle/duplicate-meaning",
+      "path": "packages/joggle/src/remedies.ts",
+      "reason": "`sortedUnique` (jig-cli) and `sortedSites` (joggle) de-duplicate then sort the same kind of value, so the detector reads one helper written twice. The harness never links an engine, so each side keeps its own three-line copy — the seam this file already records for `lines` and `dirOf`. Recorded on both files so the finding cannot move with whichever side the detector names."
+    },
+    {
       "rule": "joggle/reversal",
       "path": "packages/cutlist/src/features.ts",
       "reason": "The same seam as the duplicate-implementation entry above: `dirOf` exists in cutlist and joggle because the tools never import each other, so the detector naming it a second time under the reversal rule is the same fact, not a new one."

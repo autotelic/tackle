@@ -11,6 +11,7 @@ import {
   isImperativeClause,
   messageKeyOf,
   observeSoundness,
+  soundnessCounts,
   pairKeyOf,
   pairOfKey,
   partitionsOf,
@@ -886,4 +887,46 @@ test("no fix at the representative is unobserved, not sound", () => {
   ]
   const observed = observeSoundness({ previous, current, clusters: [] })
   expect(observed[0]?.soundness_observed).toBe("unobserved")
+})
+
+test("a repair this run sees for the first time is a record, not evidence", () => {
+  const member = finding("plumb/a", "Diagnosis. Parse input at its boundary.", 1, "src/kernel.ts")
+  const cluster = {
+    remedy: "Parse input at its boundary",
+    remedyHash: "remedy-1",
+    sites: 1,
+    findings: 1,
+    rules: [],
+    files: [],
+    counterexamples: [],
+    crossRules: [],
+    members: [member],
+  }
+  const observed = observeSoundness({ previous: [], current: [member], clusters: [cluster] })
+  expect(observed).toHaveLength(1)
+  expect(observed[0]).toMatchObject({
+    soundness_observed: "unobserved",
+    remedy: "Parse input at its boundary",
+    representative: "src/kernel.ts:1",
+    sites: ["src/kernel.ts:1"],
+    cleared: [],
+    remaining: [],
+  })
+  expect(soundnessCounts(observed)).toEqual({ sound: 0, unsound: 0, unobserved: 1 })
+})
+
+test("one site reached by two rules is named once, in stable order", () => {
+  const previous = [
+    { site: "b.ts:2", rule: "plumb/b", remedyHash: "remedy-1", run: "run-before" },
+    { site: "a.ts:1", rule: "plumb/a", remedyHash: "remedy-1", run: "run-before" },
+    { site: "a.ts:1", rule: "plumb/b", remedyHash: "remedy-1", run: "run-before" },
+  ]
+  const observed = observeSoundness({ previous, current: [], clusters: [] })
+  expect(observed[0]).toMatchObject({
+    sites: ["a.ts:1", "b.ts:2"],
+    representative: "a.ts:1",
+    cleared: ["b.ts:2"],
+    remaining: [],
+  })
+  expect(soundnessCounts(observed)).toEqual({ sound: 1, unsound: 0, unobserved: 0 })
 })

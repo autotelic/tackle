@@ -289,7 +289,9 @@ full run planned **1,388 judgments and finished none** — the token budget ran 
 Intelligence at the wrong layer does not get cheaper with more tokens.
 
 Acceptance: totals pasted (rules / questions / judgments / code-answerable
-judgments) and the five worst offenders with a proposed fact for each.
+judgments) and the five worst offenders with a proposed fact for each. The audit is
+[question-audit.md](./question-audit.md): 110 rules, 86 questions, 67 judgments, and
+12 judgments a workspace fact already answers.
 
 ## Rung 4 — soundness is observed, not asserted
 
@@ -303,4 +305,6 @@ runs, which is what the store is for, and it is the one move in the 130 studies
 that their tooling could not make.
 
 Acceptance: a fixture where a cluster is declared sound only after the diff, plus
-the column over this repository's real clusters.
+the column over this repository's real clusters. `observeSoundness` in
+`packages/joggle/src/remedies.ts` computes it from `previousRemedyFindings`, which
+reads the latest stored run; `packages/joggle/tests/remedies.test.ts` is the fixture.
