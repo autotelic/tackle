@@ -150,6 +150,13 @@ kernel ──spawn──▶ treadle --config <generated>.ts --repo <worktree>
 | ------------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | phase, cursors, deps, budgets, desk, lease, checkpoints | one session, deterministic checks, checkpoint on failure, receipt, per-pass budgets |
 
+A workstream bound to a room (`factory adopt --room`) runs that pass in the room's agentOS VM
+rather than on the host: the kernel asks the room's own supervisor for the guest, and the worker
+command runs there with the room's checkout at `/workspace` and the room contract in its
+environment (`docs/adr/0011-a-bound-pass-runs-in-the-rooms-vm.md`). The kernel is still the
+scheduler — only the pass is the room's occupant — and a worker the guest cannot run is a
+refusal that names the gap, never a host process wearing the room's cwd.
+
 What the kernel must add because Pi goal mode is absent: **resume after death** (journal + checkpoint) and
 **a stop condition** (phase `done`, and `blocked: budget`). Nothing else from goal mode is needed.
 

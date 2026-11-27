@@ -16,6 +16,7 @@ import { appendEvent, consumeEvents, readEvents, type Event } from "./events.ts"
 import { baseWorkerEnv, prepareWorkstreamCredentials, resolveCredentialEnv } from "./executor.ts"
 import { snapshotJournal } from "./journal.ts"
 import { resolveRoom } from "./room-binding.ts"
+import { guestEnv, supervisorGuest, type RoomGuest } from "./room-vm.ts"
 import {
   factoryHome,
   landingLock,
@@ -270,6 +271,20 @@ export interface Receipt {
   }
   readonly journal?: string
   readonly compress?: CompressReport | undefined
+  /**
+   * The room VM the pass occupied, and whether this pass is what started it.
+   *
+   * Recorded rather than inferred: the room owns the VM's lifetime, so "the pass booted one"
+   * is a fact an operator needs when the VM is still up after the pass ends.
+   */
+  readonly vm?:
+    | {
+        readonly room: string
+        readonly socket: string
+        readonly pid: number
+        readonly started: boolean
+      }
+    | undefined
 }
 
 /** Conformance is a landing gate; a pass records that it was deliberately not measured. */
@@ -607,13 +622,17 @@ const runProcess = (
 /**
  * Run the worker inside a Herdr terminal when hc is available. The terminal carries
  * the workstream label, so the factory panel can focus the live pass instead of guessing.
+ *
+ * This is the unbound pass's runner. A bound pass runs in the room's VM and has no host
+ * terminal to label: the room's own label is on its station terminal (`room use`) and on the
+ * receipt's `vm.room`, and the worker inside the guest is told which room it is in by the room
+ * contract's `TACKLE_ROOM_ID`, not by a terminal it cannot see.
  */
 const runInTerminal = async (input: {
   readonly record: Workstream
   readonly pass: number
   readonly worker: string
   readonly cwd: string
-  readonly room: string | undefined
   readonly env: NodeJS.ProcessEnv
   readonly wallMs: number
 }) => {
@@ -640,9 +659,6 @@ const runInTerminal = async (input: {
       "workstream=" + input.record.id,
       "--label",
       "factory=worker",
-      // The station and the pass join on the room, not only on the workstream: a room's
-      // terminals are what `room use` and the factory panel both look for.
-      ...(input.room === undefined ? [] : ["--label", "room=" + input.room]),
       "--cwd",
       input.cwd,
       "--no-parent",
@@ -701,6 +717,8 @@ interface RunPassInput {
   readonly at: string
   readonly home?: string | undefined
   readonly eventIds?: ReadonlyArray<string>
+  /** The room VM seam; absent is the room's own supervisor. Replaced only by a test. */
+  readonly guest?: RoomGuest | undefined
 }
 
 const passLock = (input: { readonly id: string; readonly home?: string | undefined }): string =>
@@ -823,6 +841,32 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
     return { ok: false, reason: "Executor: " + String(cause) }
   }
 
+  // A bound pass occupies the room's VM, so the boot is part of starting the pass — and it
+  // happens before the receipt for the same reason the room resolution does: a pass that could
+  // not run is not charged, and its events stay pending for whoever fixes the VM. A missing or
+  // unstartable VM is that refusal, never a host process wearing the room's cwd.
+  const binding = record.room
+  const guest = input.guest ?? supervisorGuest
+  // An intercom worker is a live host session answering an ask; there is no guest copy of it to
+  // run, so a bound room refuses it here rather than quietly running the pass on the host.
+  if (binding !== undefined && room !== undefined && worker.startsWith("intercom:"))
+    return {
+      ok: false,
+      reason:
+        "RoomVmHostWorker: room " +
+        binding.id +
+        " runs passes in its guest, and an intercom worker is a host session",
+    }
+  const booted =
+    binding === undefined || room === undefined
+      ? undefined
+      : await guest.start({ room: binding, worktree: room.worktree })
+  if (booted !== undefined && !booted.ok) return { ok: false, reason: booted.reason }
+  const vm: Receipt["vm"] =
+    booted === undefined || binding === undefined
+      ? undefined
+      : { room: binding.id, socket: booted.socket, pid: booted.pid, started: booted.started }
+
   const pass = used + 1
   const startHeadResult = spawnSync("git", ["-C", record.path, "rev-parse", "HEAD"], {
     encoding: "utf8",
@@ -839,6 +883,7 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
     checkpoint: undefined,
     exit: undefined,
     pid: process.pid,
+    ...(vm === undefined ? {} : { vm }),
   }
   await writeReceipt({ id: input.id, receipt, home: input.home })
 
@@ -862,20 +907,53 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
     FACTORY_COMPRESS_REPORT: compressReport,
     FACTORY_PROMPT: promptOf({ record, events }),
   }
-  const result = worker.startsWith("intercom:")
-    ? await runIntercom({
-        cwd,
-        session: worker.slice("intercom:".length),
-        prompt: workerEnv.FACTORY_PROMPT ?? "",
-        env: workerEnv,
-        wallMs,
-      })
-    : ((await runInTerminal({
+  // A bound pass is the guest's or it does not run: the host shell and the host terminal below
+  // are what an unbound pass runs in, and the guest's exit code is the worker's own, so the
+  // receipt reads the same either way.
+  const inGuest =
+    vm === undefined || binding === undefined
+      ? undefined
+      : await guest.run({
+          socket: vm.socket,
+          room: binding,
+          worker,
+          env: guestEnv(workerEnv),
+          wallMs,
+        })
+  if (inGuest !== undefined && !inGuest.ok) {
+    const journal = await snapshotJournal({
+      id: record.id,
+      pass,
+      at: input.at,
+      status: "failed",
+      home: input.home,
+    })
+    const failed: Receipt = { ...receipt, status: "failed", exit: -1, journal }
+    await writeReceipt({ id: input.id, receipt: failed, home: input.home })
+    return { ok: false, reason: inGuest.reason, receipt: failed }
+  }
+  let result: ProcessResult
+  if (inGuest !== undefined && inGuest.ok) {
+    // A guest command has no terminal attached to it, so what it printed is written here or
+    // lost: the pass's own transcript is the only record of the worker's voice.
+    if (inGuest.stdout !== "") process.stdout.write(inGuest.stdout)
+    if (inGuest.stderr !== "") process.stderr.write(inGuest.stderr)
+    result = { status: inGuest.status, signal: null }
+  } else if (worker.startsWith("intercom:")) {
+    result = await runIntercom({
+      cwd,
+      session: worker.slice("intercom:".length),
+      prompt: workerEnv.FACTORY_PROMPT ?? "",
+      env: workerEnv,
+      wallMs,
+    })
+  } else {
+    result =
+      (await runInTerminal({
         record,
         pass,
         worker,
         cwd,
-        room: record.room?.id,
         env: workerEnv,
         wallMs,
       })) ??
@@ -884,7 +962,8 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
         shell: true,
         timeout: wallMs,
         env: workerEnv,
-      })))
+      }))
+  }
 
   if (result.status === 2) {
     const journal = await snapshotJournal({

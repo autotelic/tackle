@@ -46,7 +46,10 @@ becomes decorative. There is no third option that keeps one source of truth.
 6. A Herdr terminal started for the pass carries `room=<id>` beside `workstream=<id>`, so the
    station (`room use`) and the pass join on the same label.
 7. The kernel stays the scheduler. It starts no VM and no room service in this cut; the pass is
-   the room's occupant, not its supervisor.
+   the room's occupant, not its supervisor. (ADR 0011 closes this cut: a bound pass now boots or
+   joins the room's VM through the room's own supervisor and runs there, which is also why it
+   starts no host terminal — rule 6's label moved to the receipt's `vm.room` and the worker's
+   environment.)
 
 ## Consequences
 
