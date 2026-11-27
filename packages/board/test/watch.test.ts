@@ -492,3 +492,84 @@ test("Linear offsets normalize to instants, so the same cursor returns the same 
     expect(after, item.cursor).toEqual(item.mustReturn)
   }
 })
+
+/**
+ * A report is an event, not an inbox -- and a report raised before this
+ * workstream existed is not its work.
+ *
+ * tackle-underused-primitive consumed six reports from three days before it was
+ * adopted, and committed them: docs/feedback.md grew and a 655-line document was
+ * deleted. The cursor that prevents this is written at adoption and was read by
+ * nothing until now.
+ */
+import { reportEvents } from "../src/factory/watch.ts"
+
+const reportRecord = (reports: string) => {
+  const base = recordOf({
+    id: "tackle-underused",
+    facts: {
+      project: "tackle",
+      label: "underused",
+      repo: "autotelic/tackle",
+      path: "/tmp/tackle",
+      branch: "room/underused",
+      head: "abc",
+      delivery: "trunk",
+      pr: undefined,
+      base: "main",
+      baseSha: "abc",
+      prHead: "abc",
+      phase: "build",
+      at: "2026-11-26T19:00:00.000Z",
+      checkpoint: {
+        sha: "abc",
+        ref: "refs/bench/tackle-underused",
+        at: "2026-11-26T19:00:00.000Z",
+        pushed: false,
+      },
+    },
+  })
+  return { ...base, cursors: { ...base.cursors, reports } }
+}
+
+const withReports = (at: string) => {
+  const root = mkdtempSync(join(tmpdir(), "factory-reports-"))
+  const dir = join(root, "reports")
+  mkdirSync(dir, { recursive: true })
+  writeFileSync(
+    join(dir, "report-elsewhere.json"),
+    JSON.stringify({
+      id: "report-elsewhere",
+      workstream: "permissions-1862",
+      kind: "conformance",
+      at,
+      command: "pnpm test",
+      expected: "the suite passes",
+      actual: "a shard failed",
+      output: "",
+      blocked: false,
+      fingerprint: "conformance:pnpm test:abc",
+    }),
+  )
+  return { root, dir }
+}
+
+const eventsOf = async (at: string, cursor: string) => {
+  const { root, dir } = withReports(at)
+  try {
+    const record = { ...reportRecord(cursor), sources: [{ kind: "reports" as const, dir }] }
+    return await reportEvents({ record })
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+}
+
+test("a report raised before the cursor is not this workstream's event", async () => {
+  expect(await eventsOf("2026-11-21T23:00:00.000Z", "2026-11-26T19:00:00.000Z")).toEqual([])
+})
+
+test("a report raised after the cursor is an event", async () => {
+  const events = await eventsOf("2026-11-26T20:00:00.000Z", "2026-11-26T19:00:00.000Z")
+  expect(events.length).toBe(1)
+  expect(events[0]?.id).toBe("report:report-elsewhere")
+})

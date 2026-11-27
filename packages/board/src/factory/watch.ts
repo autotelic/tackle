@@ -336,6 +336,15 @@ export const reportEvents = async (input: {
   readonly record: Workstream
 }): Promise<ReadonlyArray<WatchEvent>> => {
   const sources = (input.record.sources ?? []).filter((source) => source.kind === "reports")
+  // A report raised before this workstream existed is history, not work.
+  //
+  // `cursors.reports` is written at adoption for exactly this and was read by
+  // nothing: on tackle-underused-primitive, six passes consumed reports raised by
+  // other workstreams three days earlier and committed them -- appending to
+  // docs/feedback.md and deleting a 655-line document that had nothing to do with
+  // the task. The desk reader below has the same guard for the same reason ("it
+  // would wake a pass that the human had already used"); this one did not.
+  const since = Date.parse(input.record.cursors.reports ?? "1970-01-01T00:00:00.000Z")
   const events: Array<WatchEvent> = []
   for (const source of sources) {
     const dir = expand(source.dir)
@@ -348,6 +357,8 @@ export const reportEvents = async (input: {
       if (Result.isFailure(decoded)) continue
       const report = decoded.success
       if (report.workstream === input.record.id) continue
+      const at = Date.parse(report.at)
+      if (Number.isFinite(at) && at < since) continue
       events.push({
         id: "report:" + report.id,
         kind: "report",
