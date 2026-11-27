@@ -4,6 +4,12 @@ import * as Result from "effect/Result"
 import { mkdir, readFile, readdir, unlink, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { PortClaim, PortLease, portClaimFile, portRange, portsDir } from "./PortLease.ts"
+import {
+  defaultRoomSession,
+  openRoomSession,
+  RoomSessionRecord,
+  type RoomSession,
+} from "./RoomSession.ts"
 import { Room } from "./Room/Room.aggregate.ts"
 import { RoomId } from "./Room/Room.id.ts"
 import { CreateRoom } from "./Room/CreateRoom.command.ts"
@@ -73,6 +79,13 @@ const RoomFileSchema = Schema.Struct({
   service: Schema.optional(ServiceDeclaration),
   runtime: Schema.optional(RoomRuntime),
   /**
+   * The durable journal this room keeps its position in.
+   *
+   * Optional because a room file written before the journal existed has no field; a reader takes
+   * that to mean the default name, never that the room has no journal.
+   */
+  session: Schema.optional(RoomSessionRecord),
+  /**
    * The software this room declares its guest needs.
    *
    * Optional because a room file written before the declaration existed has no field; a reader
@@ -106,6 +119,20 @@ export const roomDir = (input: { readonly root: string; readonly id: string }): 
 /** The room's own file. */
 export const roomFile = (input: { readonly root: string; readonly id: string }): string =>
   join(roomDir(input), "room.json")
+
+/**
+ * Open one room's durable journal through the room's own record.
+ *
+ * The record names the file and an old room without the field takes the default name, so every
+ * lifecycle command opens the same journal that creating the room initialized.
+ */
+export const openRoomJournal = async (input: {
+  readonly root: string
+  readonly id: string
+}): Promise<RoomSession> => {
+  const room = await readRoom(input)
+  return openRoomSession({ dir: roomDir(input), session: room?.session })
+}
 
 /** A room file that exists but does not decode is an input error, not a missing room. */
 export class RoomDecodeError extends Error {
@@ -189,6 +216,14 @@ export const createRoom = async (input: {
     input.at,
   )
   if (!decided.ok) return decided
+  const session = defaultRoomSession(input.at)
+  // The journal is opened and closed before the room file names it: a record that names a
+  // session is one whose storage was created and checkpointed, and an open that fails leaves no
+  // room behind to claim it. Every creator — room new, Alchemy, the factory's candidate rooms —
+  // passes through here, so none of them can now make a room without a journal.
+  await (
+    await openRoomSession({ dir: roomDir({ root: input.root, id: input.id }), session })
+  ).close()
   // The declaration is written at the boundary rather than left to a boot: a room file that
   // names its software is one whose guest can be read without starting a VM.
   const room: RoomFile = {
@@ -196,6 +231,7 @@ export const createRoom = async (input: {
     base: input.base,
     state: decided.value,
     software: input.software ?? defaultRoomSoftware,
+    session,
   }
   await write({ root: input.root, room })
   return { ok: true, value: room }

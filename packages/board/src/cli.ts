@@ -15,7 +15,8 @@ import { fileURLToPath } from "node:url"
 import { parseArgs, promisify } from "node:util"
 import { Option } from "effect"
 import { alive } from "@autotelic/room/run"
-import { listRooms } from "@autotelic/room/store"
+import { listRooms, readRoom, roomDir, type RoomFile } from "@autotelic/room/store"
+import { roomSessionPath, roomSessionState } from "@autotelic/room/RoomSession"
 import { readRun, startRoomRun } from "@autotelic/room/run"
 import { observeService } from "@autotelic/room/Service"
 import { observeVmService, readVmStatus, vmHttp, vmSocketFile } from "@autotelic/room/VmSupervisor"
@@ -68,6 +69,22 @@ const usage = [
   "while it holds the lock.",
   "Exit codes: 0 ok, 1 declined, 2 usage, 3 infrastructure.",
 ].join("\n")
+
+/**
+ * The journal a room names, or null for a room created before the field existed.
+ *
+ * The state is read from the disk rather than from the record: a room file can name a journal on
+ * a disk that was since cleared, and a reader asking whether the position is still there wants
+ * the fact.
+ */
+const roomSessionOf = (root: string, room: RoomFile) => {
+  if (room.session === undefined) return null
+  const dir = roomDir({ root, id: room.id })
+  return {
+    path: roomSessionPath({ dir, session: room.session }),
+    state: roomSessionState({ dir, session: room.session }),
+  }
+}
 
 const EXIT = { clean: 0, declined: 1, usage: 2, infrastructure: 3 } as const
 
@@ -780,6 +797,7 @@ const serve = async ({
                     state: room.state._tag,
                     runtime: room.runtime?.kind,
                     port: room.port?.number,
+                    session: roomSessionOf(root, room),
                     socket: vmSocketFile({ root, id: room.id }),
                     vm: { state: vm.state, ...(vm.run === undefined ? {} : { pid: vm.run.pid }) },
                   }
@@ -805,7 +823,21 @@ const serve = async ({
           const id = decodeURIComponent(roomAction[1] ?? "")
           const action = roomAction[2] as RoomAction
           const result = await runRoom({ root, args: [action, "--id", id] })
-          json({ response, status: 200, body: { ok: true, id, action, ...result } })
+          // The lifecycle's answer carries the journal's path and whether its bytes are there,
+          // read after the command ran: the caller learns where the room's position lives
+          // without a second request.
+          const room = await readRoom({ root, id })
+          json({
+            response,
+            status: 200,
+            body: {
+              ok: true,
+              id,
+              action,
+              session: room === undefined ? null : roomSessionOf(root, room),
+              ...result,
+            },
+          })
         } catch (cause: unknown) {
           json({ response, status: 500, body: { error: String(cause) } })
         }

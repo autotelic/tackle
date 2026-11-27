@@ -33,6 +33,8 @@
   },
   "dependencies": {
     "@alchemy.run/domain": "2.0.0-beta.87",
+    "@earendil-works/chord": "catalog:",
+    "@earendil-works/pi-durable": "catalog:",
     "@effect/platform-node": "catalog:",
     "@ipld/dag-cbor": "11.0.0",
     "@rivet-dev/agentos-core": "0.4.9",

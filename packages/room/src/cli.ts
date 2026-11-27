@@ -13,6 +13,7 @@ import {
   createRoom,
   leaseRoomPort,
   listRooms,
+  openRoomJournal,
   pauseRoom,
   readRoom,
   releaseRoomPort,
@@ -723,11 +724,16 @@ const main = async (): Promise<void> => {
   if (command === "pause") {
     const result = await pauseRoom({ root, id, at: Date.now() })
     if (!result.ok) return fail(result.error, EXIT.declined)
+    // The journal quiesces before the room's processes stop: opening it settles any commit a
+    // crashed writer left half-stored, and closing it writes the checkpoint a moved room's bytes
+    // need (docs/shop.md §5 — copy after quiesce, never during).
+    const journal = await openRoomJournal({ root, id })
+    await journal.close()
     const stateDir = resolve(roomDir({ root, id }))
     // A room placed in a VM has a disk worth keeping; a local room has only its record, which is
     // already written. The generation is one past the last capture, so a resumed room's next
     // pause writes its own file instead of overwriting the one its VM was restored from.
-    const parts: string[] = []
+    const parts: string[] = ["journal " + journal.path + " checkpointed"]
     if (result.value.runtime !== undefined) {
       const captured = await snapshotRoomVm({
         root,
@@ -774,7 +780,12 @@ const main = async (): Promise<void> => {
     }
     const result = await resumeRoom({ root, id, at: Date.now() })
     if (!result.ok) return fail(result.error, EXIT.declined)
-    const parts: string[] = []
+    // Resume reopens the journal before anything else calls the room ready: its bytes are the
+    // position a bench resumes from, so a journal that cannot be opened is a resume that did
+    // not happen.
+    const journal = await openRoomJournal({ root, id })
+    await journal.close()
+    const parts: string[] = ["journal " + journal.path + " reopened"]
     if (snapshot !== undefined) {
       const stateDir = resolve(roomDir({ root, id }))
       const worktree = join(stateDir, "worktree")

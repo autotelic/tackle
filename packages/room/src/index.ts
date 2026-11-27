@@ -51,7 +51,25 @@ export {
   type VmStatus,
   type VmStopOutcome,
 } from "./VmSupervisor.ts"
-export { recordRoomSnapshot, roomSoftware, RoomRuntime, setRoomRuntime } from "./store.ts"
+export {
+  openRoomJournal,
+  recordRoomSnapshot,
+  roomSoftware,
+  RoomRuntime,
+  setRoomRuntime,
+} from "./store.ts"
+export {
+  defaultRoomSession,
+  openRoomSession,
+  roomSessionFile,
+  roomSessionPath,
+  roomSessionState,
+  RoomSessionError,
+  RoomSessionRecord,
+  type RoomSession,
+  type SessionWrite,
+  type SessionWriteOutcome,
+} from "./RoomSession.ts"
 export {
   declaredSoftware,
   defaultRoomSoftware,

@@ -79,6 +79,11 @@ catalog:
   # its own lockfile resolved, so the move does not also change its behaviour.
   "@biomejs/biome": "2.6.5"
   "@earendil-works/pi-coding-agent": "1.5.0"
+  # The room's durable journal (docs/shop.md §2.5, §5): its Session kernel and the Context every
+  # one of its commits is invoked with. Same line as pi itself, and both are named in
+  # minimumReleaseAgeExclude so a fresh install does not wait out the age floor.
+  "@earendil-works/pi-durable": "1.5.0"
+  "@earendil-works/chord": "1.5.0"
   "@xstate/effect": "1.0.0-alpha.12"
   xstate: "6.0.0-alpha.73"
   typebox: "1.4.4"
