@@ -82,7 +82,9 @@ const GENERIC = [
 
 const EFFECT = [
   "guarded-op-must-return-effect",
-  "guarded-op-must-return-option",
+  // guarded-op-must-return-option is not enabled: joggle's exported surface spells
+  // absence as `T | undefined`, in the seven sites lint-baseline.json accepts. The
+  // rule pair now agrees on Either, so re-enabling means re-deriving that baseline.
   "no-cascading-layer-provide",
   "no-decode-unknown-option",
   "no-direct-browser-storage",
@@ -136,10 +138,7 @@ export default {
   options: { typeAware: true },
   settings: { jsdoc: { mode: "typescript" } },
   jsPlugins: [
-    // The installed package, which is what a consumer has. Its dist was three
-    // rules behind its src until I rebuilt it, which is the same lesson as every
-    // other stale artifact in this session: a build output is another thing that
-    // can quietly disagree with its source.
+    // The installed package, which is what a consumer has.
     { name: "plumb", specifier: "@autotelic/plumb" },
     { name: "plumb-effect", specifier: "@autotelic/plumb/effect" },
   ],
@@ -253,7 +252,6 @@ export default {
         "plumb/require-safety-comment-for-type-assertion": "off",
         "plumb/no-unsafe-dictionary-type": "off",
         "plumb/no-unknown-parameters": "off",
-        "plumb-effect/guarded-op-must-return-option": "off",
       },
     },
     {
@@ -292,7 +290,6 @@ export default {
         "plumb/no-runtime-typeof": "off",
         "plumb/no-unsafe-dictionary-type": "off",
         "plumb/no-unknown-parameters": "off",
-        "plumb-effect/guarded-op-must-return-option": "off",
       },
     },
     {
@@ -309,7 +306,6 @@ export default {
         // already a reported fact: `settle` says so in its reason, and the run
         // prints it. Wrapping each hop in Option would put ceremony around a
         // boundary that names its own misses.
-        "plumb-effect/guarded-op-must-return-option": "off",
       },
     },
     {
