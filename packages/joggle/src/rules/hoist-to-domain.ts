@@ -139,7 +139,13 @@ const dutyFamilyReview = (id: string) => ({
  * keeps the answer for the family that was chosen and ignores the rest. Each
  * question is under the contract's option limit, and no duty label is dropped.
  */
-const dutyClauseReview = (id: string, family: string) => ({
+const dutyClauseReview = ({
+  id,
+  family,
+}: {
+  readonly id: string
+  readonly family: string
+}) => ({
   duty: Decision.classify({
     instructions: [
       `What is \`atoms[${id}].declaration.name\` doing, within the family \`${family}\`?`,
@@ -278,16 +284,21 @@ export const hoistToDomain: PlannedRule = {
         },
       })
       for (const family of Object.keys(dutyFamilies)) {
+        const clause: Plan<DecisionAnswers> = {
+          ...shared,
+          decisions: dutyClauseReview({ id, family }),
+          read: (answers) => answers,
+        }
+        // Only the business-rule clause can carry the finding this rule
+        // reports, so calibration sees that decision and not the four others.
+        // Built in two statements rather than a conditional spread: the spread
+        // hid property omission behind an empty object.
         planned.push({
           question: { unit, kind: "duty", family },
-          plan: {
-            ...shared,
-            // Only the business-rule clause can carry the finding this rule
-            // reports, so calibration sees that decision and not the four others.
-            ...(family === "business_rule" ? { violations: { duty: ["domain_logic"] } } : {}),
-            decisions: dutyClauseReview(id, family),
-            read: (answers) => answers,
-          },
+          plan:
+            family === "business_rule"
+              ? { ...clause, violations: { duty: ["domain_logic"] } }
+              : clause,
         })
       }
     }

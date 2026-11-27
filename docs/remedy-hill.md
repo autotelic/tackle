@@ -130,6 +130,22 @@ question in the corpus exceeds eight options. A judgement that has to choose amo
 55 candidates cannot be wrong in a way the ledger can see; a judgement split into
 two bounded questions can.
 
+The split's own failure was a one-option Choice. Measured over the current corpus
+(75 messages, 55 clauses, every family answer in the committed ledger), the six
+families hold 3, 4, 4, 2, 6 and 36 clauses: **zero families hold exactly one
+clause, six hold two or more, and none holds zero**. The one-clause case appears
+one level down. `partitionsOf(36, 8)` divides `other` into seven groups of five
+and a tail of one, and a message that picked the tail produced a second-round
+`j_clause` with a single candidate -- the same non-question the provider had
+already refused, now hidden behind the group step. The route is therefore generic
+rather than a special case for a one-clause family: zero candidates is an
+inconsistent family assignment and fails loudly with the family and the message;
+one candidate is composed in code and recorded as implied, never judged; two or
+more are asked, in bounded groups. The distribution is also the evidence that six
+families is not sufficient by itself: any family that outgrows the option limit
+will eventually have a one-clause tail, so the route has to handle it wherever it
+appears.
+
 ### Acceptance
 
 The rung is met when a fresh run reproduces the measured result, with any
