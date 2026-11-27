@@ -5,6 +5,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from "node:fs"
@@ -318,7 +319,7 @@ describe("a verb that prints a completion is a claim", () => {
       expect(first.status).toBe(0)
       const [firstStatus, firstEntry, firstPath] = first.stdout.trim().split(" ")
       expect(firstStatus).toBe("admitted")
-      expect(firstPath).toBe(join(root, ".room", "dev-repo", "session.sqlite"))
+      expect(firstPath).toBe(realpathSync(join(root, ".room", "dev-repo", "session.sqlite")))
 
       const second = roomWithEnv(
         root,
