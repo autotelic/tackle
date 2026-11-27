@@ -1,5 +1,28 @@
 # @autotelic/joggle
 
+## 0.16.0
+
+### Minor Changes
+
+- The fact store: what a run derives, in SQLite, beside the repo rather than in it.
+
+  `node:sqlite` (built in, no dependency) at `.joggle/cache/store.sqlite`, gitignored,
+  with `PRAGMA user_version` carrying `HASH_VERSION` plus a schema number so a
+  normaliser change is a migration and never a silent re-read of another normaliser's ids.
+
+  Measured on this repository, same rule, same 13 findings:
+
+  cold 7.95s 1.31 GB (the store is built)
+  warm 2.11s 0.57 GB (2,628 units reused, 0 walked)
+
+  3.8x faster and 2.3x less memory on every run after the first, because the fragment
+  walk stops being the dominant term.
+
+  What is NOT in the store, deliberately: judgements. `.joggle/answers` stays text with
+  its `merge=union` attributes, because its job is to be reviewed and merged; a binary
+  blob cannot be diffed and cannot be merged. Write-through judgements now live beside
+  the store instead, so a judged run no longer rewrites 181 committed files.
+
 ## 0.15.0
 
 ### Minor Changes
