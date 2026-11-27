@@ -1,5 +1,14 @@
 import { spawnSync } from "node:child_process"
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -54,7 +63,7 @@ const room = (root: string, id: string) => {
     JSON.stringify({
       id,
       base: "main",
-      state: { _tag: "Paused", repo: "/repo", scope: "dev", createdAt: 1 },
+      state: { _tag: "Ready", repo: "/repo", scope: "dev", createdAt: 1 },
     }),
   )
   return join(dir, "worktree")
@@ -163,7 +172,9 @@ test("starts the shell in the room worktree with the label at spawn, then focuse
     const calls = readFileSync(log, "utf8")
     // No argv after the flags: `hc run` starts the user's own shell.
     expect(calls).toContain(
-      "hc run --bg --json --name room-r1 --label room=r1 --cwd " + worktree + " --no-parent",
+      "hc run --bg --json --name room-r1 --label room=r1 --cwd " +
+        realpathSync(worktree) +
+        " --no-parent",
     )
     expect(calls).toContain("herdr-app do agent.focus --terminal t99")
   } finally {
@@ -200,7 +211,7 @@ test("reports a failed start instead of opening another room's terminal", async 
       method: "POST",
     })
     expect(answer.status).toBe(502)
-    const body = await answer.json()
+    const body = (await answer.json()) as { readonly ok: boolean; readonly reason: string }
     expect(body.ok).toBe(false)
     expect(body.reason).toContain("hc run failed")
     const calls = readFileSync(log, "utf8")
@@ -238,7 +249,7 @@ test("refuses a room that does not exist before it looks for a terminal", async 
     })
     expect(answer.status).toBe(404)
     expect(await answer.json()).toMatchObject({ ok: false, reason: "RoomNotFound: r1" })
-    expect(readFileSync(log, "utf8")).not.toContain("agent.focus")
+    expect(existsSync(log) ? readFileSync(log, "utf8") : "").not.toContain("agent.focus")
   } finally {
     down(root)
     rmSync(root, { recursive: true, force: true })

@@ -1047,7 +1047,7 @@ const serve = async ({
           const opened = await openRoomInHerdr({ root, id })
           json({ response, status: 200, body: { ok: true, id, ...opened } })
         } catch (cause: unknown) {
-          const reason = String(cause)
+          const reason = cause instanceof Error ? cause.message : String(cause)
           const status = reason.startsWith("RoomNotFound") ? 404 : 502
           json({ response, status, body: { ok: false, reason } })
         }
