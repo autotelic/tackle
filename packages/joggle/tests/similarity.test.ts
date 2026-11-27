@@ -3,9 +3,9 @@ import {
   allContainmentPairs,
   allPairs,
   containmentOf,
+  frequencyOf,
   inverseFrequencyOf,
-  sharedShingles,
-  shingleFrequencyOf,
+  sharedOf,
   shinglesOf,
   similarityOf,
 } from "../src/similarity.ts"
@@ -87,7 +87,7 @@ it("prefix filtering finds exactly the pairs the complete sweep finds", () => {
 it("prefix filtering stays complete at a looser threshold too", () => {
   const sets = corpus(11)
   const fast = allPairs(
-    sets.map((shingles, index) => ({ position: index, shingles })),
+    sets.map((ids, index) => ({ position: index, ids })),
     0.3,
   )
     .map((pair) => key(pair.left, pair.right))
@@ -190,7 +190,7 @@ it("the containment join finds exactly the pairs the brute-force sweep finds", (
   for (const seed of [7, 99, 1234]) {
     const sets = corpus(seed)
     const fast = allContainmentPairs(
-      sets.map((shingles, index) => ({ position: index, shingles })),
+      sets.map((ids, index) => ({ position: index, ids })),
       0.7,
     )
       .map((pair) => `${pair.whole}-${pair.part}`)
@@ -202,7 +202,7 @@ it("the containment join finds exactly the pairs the brute-force sweep finds", (
 it("the containment join stays complete at a looser threshold too", () => {
   const sets = corpus(11)
   const fast = allContainmentPairs(
-    sets.map((shingles, index) => ({ position: index, shingles })),
+    sets.map((ids, index) => ({ position: index, ids })),
     0.3,
   )
     .map((pair) => `${pair.whole}-${pair.part}`)
@@ -218,14 +218,14 @@ it("containment survives a size difference that collapses Jaccard", () => {
   expect(similarityOf({ left: small, right: large })).toBeLessThan(0.4)
 })
 
-it("shared shingles are the containment intersection", () => {
+it("the shared set is the containment intersection", () => {
   const left = new Set(["a", "b", "c"])
   const right = new Set(["b", "c", "d", "e"])
-  expect([...sharedShingles({ left, right })].sort()).toEqual(["b", "c"])
+  expect([...sharedOf({ left, right })].sort()).toEqual(["b", "c"])
 })
 
-it("rarity falls when the shared shingles are common", () => {
-  const frequency = shingleFrequencyOf([
+it("rarity falls when the shared elements are common", () => {
+  const frequency = frequencyOf([
     new Set(["rare", "common"]),
     ...Array.from({ length: 99 }, () => new Set(["common"])),
   ])

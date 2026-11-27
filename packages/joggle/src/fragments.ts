@@ -21,13 +21,18 @@ import type { Unit } from "./workspace.ts"
  * type annotations and patterns that belong to their parents. A type node's id
  * would change whenever a field is renamed, which is a change to the shape, not
  * a piece of behaviour to find inside another body.
+ *
+ * A `BlockStatement` is deliberately not one. Its id is a Merkle root of
+ * everything it holds, so it duplicates the ids of the statements inside it and
+ * adds nothing but noise: every edit inside the block changes the block too,
+ * which double-counts the edit and makes containment a whole-body comparison
+ * again -- the comparison fragments exist to avoid.
  */
 const FRAGMENT_KINDS = new Set([
   "ArrayExpression",
   "ArrowFunctionExpression",
   "AssignmentExpression",
   "AwaitExpression",
-  "BlockStatement",
   "BreakStatement",
   "CallExpression",
   "ConditionalExpression",
