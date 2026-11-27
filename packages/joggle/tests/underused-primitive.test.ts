@@ -167,7 +167,10 @@ it.effect("a star export contributes its sibling's names at depth one", () =>
       join(packageDirectory, "package.json"),
       JSON.stringify({ name: "starred", version: "1.0.0", types: "dist/index.d.ts" }),
     )
-    writeFileSync(join(packageDirectory, "dist", "index.d.ts"), 'export * from "./Data.js"\n')
+    writeFileSync(
+      join(packageDirectory, "dist", "index.d.ts"),
+      ['export * from "./Data.js"', 'export * as Namespace from "./Namespaced.js"'].join("\n"),
+    )
     writeFileSync(
       join(packageDirectory, "dist", "Data.d.ts"),
       [
@@ -178,13 +181,20 @@ it.effect("a star export contributes its sibling's names at depth one", () =>
       ].join("\n"),
     )
     writeFileSync(join(packageDirectory, "dist", "Deeper.d.ts"), "export declare const TooDeep: string\n")
+    writeFileSync(
+      join(packageDirectory, "dist", "Namespaced.d.ts"),
+      "export declare const Aliased: string\n",
+    )
 
     const built = yield* buildSurface({ root })
     const builtPackage = built.surface.packages.find((entry) => entry.name === "starred")
     const names = (builtPackage?.exports ?? []).map((entry) => entry.name).sort()
-    expect(names).toEqual(["TaggedError", "TaggedValue"])
+    expect(names).toEqual(["Aliased", "Namespace", "TaggedError", "TaggedValue"])
     expect(builtPackage?.exports.find((entry) => entry.name === "TaggedError")?.module).toBe(
       "Data",
+    )
+    expect(builtPackage?.exports.find((entry) => entry.name === "Aliased")?.module).toBe(
+      "Namespaced",
     )
   }).pipe(Effect.provide(NodeServices.layer)),
 )
