@@ -17,6 +17,7 @@ import {
   storedOf,
   type Plan,
   type PlanAnswerStore,
+  verdictsOf,
 } from "../src/plans.ts"
 import type { DecisionAnswers } from "../src/rule.ts"
 import { canonical } from "../src/canonical.ts"
@@ -411,4 +412,14 @@ test("a question's cache key is its own state, not the batch it travelled in", a
     }),
   )
   expect(result.calls).toBe(1)
+})
+
+test("verdictsOf accepts the engine's erased answers at the reader boundary", () => {
+  // The engine hands every planned rule's reader `ReadonlyArray<unknown>` so
+  // plans from different rules can share one request. The reader puts its own
+  // answer type back here; requiring the typed array at this seam made all 41
+  // rule readers fail typecheck against the very value the engine produces.
+  const erased: ReadonlyArray<unknown> = [{ verdict: "one thing" }, undefined]
+  const typed = verdictsOf<{ readonly verdict: string }>(erased)
+  expect(typed).toBe(erased)
 })

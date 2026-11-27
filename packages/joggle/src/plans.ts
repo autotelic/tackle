@@ -436,11 +436,12 @@ export const memoize = (
  *
  * The engine erases the verdict type so plans from different rules can travel in
  * one request; this puts it back at the boundary, where every answer came from the
- * rule's own decisions, in the order it asked them.
+ * rule's own decisions, in the order it asked them. The parameter is the erased
+ * `unknown[]` the engine hands a reader, not `DecisionAnswers[]`: requiring the
+ * typed form made every rule's `read` a type error at the seam the function
+ * exists to bridge.
  */
-export const verdictsOf = <A>(
-  answers: ReadonlyArray<DecisionAnswers>,
-): ReadonlyArray<A | undefined> =>
+export const verdictsOf = <A>(answers: ReadonlyArray<unknown>): ReadonlyArray<A | undefined> =>
   // SAFETY: the caller built these plans, so each answer is the type its own
   // decisions produced; the engine erased it only to batch rules together.
   answers as ReadonlyArray<A | undefined>
