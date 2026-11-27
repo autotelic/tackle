@@ -40,14 +40,22 @@ it.effect("the room inventory draws the record and the process it owns", () =>
   Effect.gen(function* () {
     const { text } = yield* draw(
       JSON.stringify([
-        { id: "alpha", state: "Ready", process: { pid: 4242, alive: true, exec: "pnpm dev" } },
+        {
+          id: "alpha",
+          state: "Ready",
+          runtime: "agentos",
+          process: { pid: 4242, alive: true, exec: "pnpm dev" },
+          vm: { state: "running", pid: 9001 },
+        },
         { id: "beta", state: "Paused", process: null },
       ]),
     )
     assert.include(text, "Room inventory")
     assert.include(text, "alpha")
     assert.include(text, "Ready")
-    assert.include(text, "pid 4242 · alive · pnpm dev")
+    assert.include(text, "vm running · pid 9001")
+    assert.include(text, "process 4242 · alive · pnpm dev")
+    assert.include(text, "1 supervisor running")
     assert.include(text, "beta")
     assert.include(text, "no process")
   }),

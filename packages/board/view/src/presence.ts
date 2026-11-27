@@ -255,12 +255,23 @@ export type Tailnet = typeof Tailnet.Type
 export const Room = Schema.Struct({
   id: Schema.String,
   state: Schema.String,
+  runtime: Schema.optional(Schema.String),
   process: Schema.NullOr(
     Schema.Struct({
       pid: Schema.Finite,
       alive: Schema.Boolean,
       exec: Schema.optional(Schema.String),
     }),
+  ),
+  // The VM supervisor is a separate process from the room's own exec. Absent means the board
+  // did not serve it, not that no VM exists.
+  vm: Schema.optional(
+    Schema.NullOr(
+      Schema.Struct({
+        state: Schema.String,
+        pid: Schema.optional(Schema.Finite),
+      }),
+    ),
   ),
 })
 export type Room = typeof Room.Type

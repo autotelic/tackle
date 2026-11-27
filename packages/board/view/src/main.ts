@@ -1077,15 +1077,21 @@ const peerSection = (h: Html.H<Message>, fleet: Fleet | null | undefined) => {
  * process the room owns, read from room.json and the run record. It does not invent a VM state;
  * the Environment line on a card names the runtime the board actually observed.
  */
-const roomInventory = (h: Html.H<Message>, rooms: ReadonlyArray<Room>) =>
-  card(h, {
+const roomInventory = (h: Html.H<Message>, rooms: ReadonlyArray<Room>) => {
+  const supervisors = rooms.filter((room) => room.vm?.state === "running").length
+  return card(h, {
     title: "Room inventory",
     id: "rooms",
     children: [
       h.p
         .class("muted")
         .children(
-          "Rooms read from room.json. A machine that is not running leaves no process line.",
+          rooms.length +
+            (rooms.length === 1 ? " room" : " rooms") +
+            " · " +
+            supervisors +
+            (supervisors === 1 ? " supervisor running" : " supervisors running") +
+            " · read from room.json and each VM record",
         ),
       ...rooms.map((room) =>
         h.div
@@ -1093,12 +1099,22 @@ const roomInventory = (h: Html.H<Message>, rooms: ReadonlyArray<Room>) =>
           .children(
             h.span.class("mono").children(room.id),
             h.span.class("chip").children(room.state),
+            room.runtime === undefined ? undefined : h.span.class("mono").children(room.runtime),
+            room.vm === null || room.vm === undefined
+              ? undefined
+              : h.span
+                  .class("mono")
+                  .children(
+                    "vm " +
+                      room.vm.state +
+                      (room.vm.pid === undefined ? "" : " · pid " + room.vm.pid),
+                  ),
             room.process === null
               ? h.span.class("muted").children("no process")
               : h.span
                   .class("mono")
                   .children(
-                    "pid " +
+                    "process " +
                       room.process.pid +
                       " · " +
                       (room.process.alive ? "alive" : "dead") +
@@ -1108,6 +1124,7 @@ const roomInventory = (h: Html.H<Message>, rooms: ReadonlyArray<Room>) =>
       ),
     ],
   })
+}
 
 const factoryPulse = (h: Html.H<Message>, presence: NonNullable<Model["presence"]>) => {
   const activities = presence.factory.activity

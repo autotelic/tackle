@@ -366,13 +366,13 @@ export const visionView = (h: Html.H<Message>, model: Model) => {
       sceneHeader(h, {
         title: "The factory is a place",
         caption:
-          "board is the control plane. room is the bench. protocol is the floor they stand on.",
+          "board is the control plane. Alchemy is the inventory. room is the bench. protocol is the floor they stand on.",
       }),
       h.div.class("shop-floor").children(
         machine(h, { title: "you + Pi", detail: "Herdr terminal", zone: "human-zone" }),
         machine(h, {
           title: "board",
-          detail: "factory kernel · daemon · queue · relay",
+          detail: "factory kernel · daemon · queue · Alchemy stack",
           zone: "board-zone",
         }),
         h.div
@@ -764,6 +764,11 @@ export const visionView = (h: Html.H<Message>, model: Model) => {
             tone: "built",
             title: "room",
             detail: "one service · one port · one preview · isolated checkout",
+          }),
+          horizonItem(h, {
+            tone: "built",
+            title: "Alchemy inventory",
+            detail: "Room + RoomMachine declarations · plan and apply tested",
           }),
         ),
         h.div.class("horizon-layer next").children(

@@ -34,7 +34,7 @@ and a phase is a lane, not a widget with its own state.
 ```
 /presence  ──decode──▶  Presence
                          ├─ factory.workstreams  id, repo, project, phase, pr, checkpoint
-                         ├─ rooms                id, state, process
+                         ├─ rooms                id, state, runtime, process, vm
                          ├─ factory.desk         id, title, workstream
                          ├─ factory.reports      kind, workstream, expected, actual
                          └─ sessions             herdr / rex addresses + workstream
@@ -42,6 +42,20 @@ and a phase is a lane, not a widget with its own state.
 
 The view never imports `board` or `factory`. The JSON is the seam; the local
 schema is the wire contract.
+
+## Change impact: two pages, two questions
+
+When a change lands, evaluate both pages before deciding it needs UI work:
+
+1. **/factory** — is there a new live fact a person can observe? If yes, it belongs in a
+   board document first (`/presence`, `/atlas`, or `/fleet`) and then in a row. A fact the
+   board does not serve does not become a view claim.
+2. **/vision** — did the explanation of the system change? If yes, update the scene and its
+   `WORKS` / `NOT BUILT` badge. If the change is internal to an existing box, leave the map
+   alone; a new box is not a status update.
+
+If neither answer is yes, do not add a panel. The view is an observation surface, not a
+changelog.
 
 ## The cutlist catalog
 
