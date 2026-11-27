@@ -54,6 +54,28 @@ it.effect("the two version files — containment 1.00 by token bag — share eve
   }).pipe(Effect.provide(NodeServices.layer)),
 )
 
+it.effect("the declared name is not an input: two files, one body, one id", () =>
+  Effect.gen(function* () {
+    // The whole identity layer exists for this. Only the declared name differs --
+    // including the space `beta (` leaves where `alpha(` had none -- and a rename
+    // must not re-open the ledger or the baseline.
+    const workspace = yield* workspaceOf({
+      "src/a.ts": "export function alpha(x: number) { const total = x + 1; return total }\n",
+      "src/b.ts": "export function beta (x: number) { const total = x + 1; return total }\n",
+    })
+    const alpha = identityOf(workspace).ids.get(unitNamed(workspace, "alpha"))
+    const beta = identityOf(workspace).ids.get(unitNamed(workspace, "beta"))
+    expect(alpha).toBeDefined()
+    expect(beta).toBe(alpha)
+
+    const changed = yield* workspaceOf({
+      "src/a.ts": 'export function alpha(x: number) { const total = x + 1; return "" + total }\n',
+      "src/b.ts": "export function beta (x: number) { const total = x + 1; return total }\n",
+    })
+    expect(identityOf(changed).ids.get(unitNamed(changed, "alpha"))).not.toBe(beta)
+  }).pipe(Effect.provide(NodeServices.layer)),
+)
+
 it.effect("a renamed function and local keep the id; a changed string does not", () =>
   Effect.gen(function* () {
     const before = yield* workspaceOf({

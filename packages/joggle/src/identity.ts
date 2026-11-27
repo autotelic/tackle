@@ -38,7 +38,7 @@ import {
  * A ledger keyed by these ids must migrate as a deliberate act; bumping this
  * string is that act.
  */
-export const HASH_VERSION = "joggle-identity-1"
+export const HASH_VERSION = "joggle-identity-2"
 
 /** Crockford's alphabet, lowercased: no i, l, o or u to misread. */
 const ALPHABET = "0123456789abcdefghjkmnpqrstvwxyz"
@@ -320,6 +320,13 @@ const collapse = (text: string): string => text.replace(/\s+/g, " ")
  * string literals are kept verbatim: renaming `user.name` or editing `"yes"`
  * changes what the code means, and an identity that ignored either would be
  * lying about change.
+ *
+ * The declaration's own name is the one name with no slot at all. Skipping the
+ * identifier site is not enough: the text between slots is emitted verbatim, so
+ * `alpha` would still ride along inside `function alpha(`. The name is therefore
+ * a slot that emits nothing, and it swallows the whitespace on either side --
+ * `function beta (` and `function alpha(` are the same declaration, and a rename
+ * must not be visible through the space the old name left behind.
  */
 export const canonicalRegion = ({
   prepared,
@@ -336,7 +343,16 @@ export const canonicalRegion = ({
   const positions = new Map<string, number>()
   for (const site of prepared.sites) {
     if (site.start < region.start || site.end > region.end) continue
-    if (site.start === prepared.declared) continue
+    if (site.start === prepared.declared) {
+      // Unison's rule: a term's name is metadata, not structure. Drop the name
+      // and the gap it occupied, so the declared name is never an input.
+      let start = site.start
+      while (start > region.start && /\s/.test(prepared.text.charAt(start - 1))) start -= 1
+      let end = site.end
+      while (end < region.end && /\s/.test(prepared.text.charAt(end))) end += 1
+      slots.push({ start, end, text: "", preserve: false })
+      continue
+    }
     if (site.siteKind === "property") continue
     if (prepared.bound.has(site.name)) {
       let position = positions.get(site.name)
