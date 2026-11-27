@@ -51,7 +51,16 @@ export {
   type VmStatus,
   type VmStopOutcome,
 } from "./VmSupervisor.ts"
-export { recordRoomSnapshot, RoomRuntime, setRoomRuntime } from "./store.ts"
+export { recordRoomSnapshot, roomSoftware, RoomRuntime, setRoomRuntime } from "./store.ts"
+export {
+  declaredSoftware,
+  defaultRoomSoftware,
+  InstalledPackage,
+  RoomSoftware,
+  softwareInputs,
+  softwareReport,
+  VmSoftwareReport,
+} from "./VmSoftware.ts"
 export {
   readSnapshot,
   snapshotFile,

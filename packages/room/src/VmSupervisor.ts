@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url"
 import { alive } from "./run.ts"
 import type { ServiceDeclaration, ServiceObservation } from "./Service.ts"
 import { roomDir } from "./store.ts"
+import type { VmSoftwareReport } from "./VmSoftware.ts"
 import { snapshotFile, snapshotMaxBytes, type VmSnapshotOutcome } from "./VmSnapshot.ts"
 
 /*
@@ -45,6 +46,13 @@ export const VmRun = Schema.Struct({
   database: Schema.String,
   log: Schema.optional(Schema.String),
   startedAt: Schema.Finite,
+  /**
+   * What software the VM booted with, as its own registry reported it.
+   *
+   * Written by the process that owns the VM, so a room that recorded no boot has no report
+   * rather than an assumed one.
+   */
+  software: Schema.optional(VmSoftwareReport),
 })
 export type VmRun = typeof VmRun.Type
 

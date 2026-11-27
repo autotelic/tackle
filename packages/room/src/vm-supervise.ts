@@ -8,6 +8,7 @@ import { parseArgs } from "node:util"
 import { agentOsDatabaseFile, createAgentOsRoom, type AgentOsRoom } from "./AgentOs.ts"
 import { alive } from "./run.ts"
 import { healthTimeoutMs } from "./Service.ts"
+import { readRoom, roomSoftware } from "./store.ts"
 import { readSnapshot, snapshotGuard, snapshotHash } from "./VmSnapshot.ts"
 import {
   readVmRun,
@@ -259,11 +260,15 @@ const main = async (): Promise<void> => {
     console.error("room vm supervise: " + restored.reason)
     process.exit(3)
   }
+  // The declaration comes from the room file rather than from argv: one owner of what the guest
+  // gets, and a room that declares nothing boots on the default declaration.
+  const record = await readRoom({ root, id })
   const room = await Effect.runPromise(
     createAgentOsRoom({
       id,
       worktree,
       stateDir,
+      software: roomSoftware(record),
       ...(restored === undefined || !restored.ok ? {} : { snapshot: restored.value }),
     }),
   )
@@ -311,6 +316,9 @@ const main = async (): Promise<void> => {
     stateDir,
     database: agentOsDatabaseFile(stateDir),
     startedAt: Date.now(),
+    // The VM's own account of what it booted with, recorded by the process that owns it: a
+    // boot that stopped short of an install says nothing rather than claiming it.
+    software: room.software,
   }
   await writeVmRun({ root, id, run: log === undefined ? run : { ...run, log } })
 

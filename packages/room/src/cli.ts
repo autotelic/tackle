@@ -24,6 +24,7 @@ import {
   setRoomService,
   roomDir,
   RoomDecodeError,
+  type RoomRuntime,
 } from "./store.ts"
 import { alive, readRun, removeRun, signalRun, startRoomRun } from "./run.ts"
 import {
@@ -38,6 +39,7 @@ import {
   vmHttp,
   vmService,
   type VmExecRequest,
+  type VmRun,
 } from "./VmSupervisor.ts"
 import { verifySnapshot } from "./VmSnapshot.ts"
 import { observeService } from "./Service.ts"
@@ -46,7 +48,7 @@ const usage = [
   "room — one durable place per scope",
   "",
   "Usage:",
-  "  room new --repo <path> --scope <name> [--base main] [--branch <existing>] [--worktree <existing>] [--id <id>] [--root .room]",
+  "  room new --repo <path> --scope <name> [--base main] [--branch <existing>] [--worktree <existing>] [--id <id>] [--root .room] [--software git,node]",
   "  room up --id <id> [--exec <command>] [--service <name>] [--health <path>] [--root .room]",
   "  room down --id <id> [--root .room]",
   "  room status [--id <id>] [--root .room] [--json]",
@@ -88,6 +90,7 @@ const options = {
   port: { type: "string" },
   path: { type: "string" },
   command: { type: "string" },
+  software: { type: "string" },
   arg: { type: "string", multiple: true },
   help: { type: "boolean", short: "h", default: false },
 } as const
@@ -149,6 +152,12 @@ const ensureWorktree = (input: {
     }).pipe(Effect.provide(WorktreeLive)),
   )
 
+/** The runtime facts a booted VM established, in the shape the room file keeps them. */
+const vmRuntime = (run: VmRun): RoomRuntime => ({
+  kind: "agentos",
+  ...(run.software === undefined ? {} : { software: run.software }),
+})
+
 const main = async (): Promise<void> => {
   const command = process.argv[2]
   if (command === undefined || command === "--help" || command === "-h") {
@@ -200,6 +209,17 @@ const main = async (): Promise<void> => {
         return fail("worktree failed: " + String(cause), EXIT.infrastructure)
       }
     }
+    // A declaration the caller names is the room's. A room that names none is written with the
+    // default list, so the file always says what its guest is for rather than implying a bundle.
+    const software =
+      values.software === undefined
+        ? undefined
+        : {
+            packages: values.software
+              .split(",")
+              .map((name) => name.trim())
+              .filter((name) => name !== ""),
+          }
     const created = await createRoom({
       root,
       id,
@@ -207,6 +227,7 @@ const main = async (): Promise<void> => {
       scope: values.scope,
       base: values.branch ?? values.base,
       at: Date.now(),
+      ...(software === undefined ? {} : { software }),
     })
     if (!created.ok) return fail(created.error, EXIT.declined)
     console.log("room " + id + " ready at " + worktree)
@@ -259,6 +280,15 @@ const main = async (): Promise<void> => {
             (room.runtime?.snapshotError === undefined
               ? ""
               : " no snapshot (" + room.runtime.snapshotError + ")") +
+            (room.runtime?.software === undefined
+              ? ""
+              : " software " +
+                (room.runtime.software.installed
+                  .map((pkg) => pkg.name + "@" + pkg.version)
+                  .join(",") || "none") +
+                (room.runtime.software.missing.length === 0
+                  ? ""
+                  : " missing software " + room.runtime.software.missing.join(","))) +
             (room.port === undefined ? "" : " port " + room.port.number) +
             (service === null
               ? ""
@@ -327,7 +357,7 @@ const main = async (): Promise<void> => {
       if (!started.ok) return fail(started.reason, EXIT.infrastructure)
       // The runtime is recorded once a VM is actually behind the room, so a room that never
       // started one keeps the local placement its file has always implied.
-      const saved = await setRoomRuntime({ root, id, runtime: { kind: "agentos" } })
+      const saved = await setRoomRuntime({ root, id, runtime: vmRuntime(started.run) })
       if (!saved.ok) return fail(saved.error, EXIT.declined)
       if (values.json) console.log(JSON.stringify(started.run, null, 2))
       else
@@ -507,7 +537,7 @@ const main = async (): Promise<void> => {
     // a previous command left behind is the state this one starts from.
     const started = await ensureVmSupervisor({ root, id, worktree, stateDir })
     if (!started.ok) return fail(started.reason, EXIT.infrastructure)
-    const saved = await setRoomRuntime({ root, id, runtime: { kind: "agentos" } })
+    const saved = await setRoomRuntime({ root, id, runtime: vmRuntime(started.run) })
     if (!saved.ok) return fail(saved.error, EXIT.declined)
     const args = parsed.positionals.slice(1)
     const request: VmExecRequest =

@@ -3,12 +3,24 @@ import { Effect } from "effect"
 import { mkdir } from "node:fs/promises"
 import { join, resolve } from "node:path"
 import type { VmSnapshotExport } from "./VmSnapshot.ts"
+import {
+  declaredSoftware,
+  softwareInputs,
+  softwareReport,
+  type RoomSoftware,
+  type VmSoftwareReport,
+} from "./VmSoftware.ts"
 
 /** An embedded agentOS VM owned by one room. The VM owns its filesystem and processes. */
 export interface AgentOsRoom {
   readonly id: string
   readonly vm: AgentOs
   readonly workspace: string
+  /**
+   * What the VM's own software registry reported at boot: the declaration, the installed
+   * packages, and the declared names the VM does not list.
+   */
+  readonly software: VmSoftwareReport
   readonly dispose: () => Promise<void>
 }
 
@@ -37,6 +49,18 @@ export interface AgentOsRoomOptions {
    * wrote them, which is what makes a resume a restore rather than a thawed freeze.
    */
   readonly snapshot?: VmSnapshotExport | undefined
+  /**
+   * The software this room declares its guest needs. Absent is the default declaration, never
+   * a bare VM: a room that names nothing still gets the tools its work depends on.
+   */
+  readonly software?: RoomSoftware | undefined
+  /**
+   * Whether Core's vendored default bundle is installed beside the declaration.
+   *
+   * False is a bare VM — only the declared packages are there — and the declared commands still
+   * run, which is what makes the declaration the room's rather than the bundle's.
+   */
+  readonly defaultSoftware?: boolean | undefined
 }
 
 /**
@@ -60,9 +84,14 @@ export const createAgentOsRoom = (
       // the room belongs to this user; matching the ids is what makes the projection usable.
       const uid = process.getuid?.() ?? 1000
       const gid = process.getgid?.() ?? 1000
+      // The declaration is the room's, always: a VM created without one would boot on
+      // whatever bundle Core vendors today, which is the inheritance this seam removes.
+      const software = declaredSoftware(input.software)
       const options: Parameters<typeof AgentOs.create>[0] = {
         user: { uid, gid, euid: uid, egid: gid },
+        software: [...softwareInputs(software)],
       }
+      if (input.defaultSoftware !== undefined) options.defaultSoftware = input.defaultSoftware
       if (input.stateDir !== undefined)
         options.database = {
           type: "sqlite_file",
@@ -82,6 +111,9 @@ export const createAgentOsRoom = (
         id: input.id,
         vm,
         workspace: WORKSPACE,
+        // The VM's own answer, read once at boot: installed() is the runtime's registry, so
+        // the record says what the guest has instead of what the declaration hoped for.
+        software: softwareReport(software, vm.software.installed()),
         dispose: async () => {
           await vm.dispose()
         },
@@ -98,6 +130,10 @@ export interface AgentOsCommand {
   readonly args?: ReadonlyArray<string>
   /** The resolved executor lease environment; absent means the VM's own base environment. */
   readonly env?: Record<string, string> | undefined
+  /** The software the command's room declares; absent is the default declaration. */
+  readonly software?: RoomSoftware | undefined
+  /** Whether Core's default bundle is installed beside the declaration. */
+  readonly defaultSoftware?: boolean | undefined
 }
 
 /** What one command in a room's VM did, in the shape a caller can print and exit on. */

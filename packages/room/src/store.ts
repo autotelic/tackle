@@ -12,6 +12,12 @@ import { ResumeRoom } from "./Room/ResumeRoom.command.ts"
 import { RoomState } from "./Room/Room.aggregate.ts"
 import { ServiceDeclaration } from "./Service.ts"
 import { VmSnapshot, type VmSnapshotOutcome } from "./VmSnapshot.ts"
+import {
+  declaredSoftware,
+  defaultRoomSoftware,
+  RoomSoftware,
+  type VmSoftwareReport,
+} from "./VmSoftware.ts"
 
 /**
  * Where a room is placed.
@@ -23,6 +29,14 @@ export const RoomRuntime = Schema.Struct({
   kind: Schema.Literal("agentos"),
   /** The guest port a started VM service answers on; absent until `room vm serve`. */
   previewPort: Schema.optional(Schema.Int),
+  /**
+   * What software the VM booted with, as its own registry reported it.
+   *
+   * The declaration is the room file's; this is the runtime's answer to it, so an operator can
+   * read what the guest actually has instead of assuming the boot installed it. Optional, so a
+   * room file written before a VM was placed decodes unchanged.
+   */
+  software: Schema.optional(VmSoftwareReport),
   /**
    * The guest pid of that service, as the VM's own process table named it.
    *
@@ -58,10 +72,26 @@ const RoomFileSchema = Schema.Struct({
   port: Schema.optional(PortLease),
   service: Schema.optional(ServiceDeclaration),
   runtime: Schema.optional(RoomRuntime),
+  /**
+   * The software this room declares its guest needs.
+   *
+   * Optional because a room file written before the declaration existed has no field; a reader
+   * takes that to mean the default declaration (`roomSoftware`), never a bare VM.
+   */
+  software: Schema.optional(RoomSoftware),
 })
 
 /** The file a room is: its id, its base branch, and the control-plane state. */
 export type RoomFile = typeof RoomFileSchema.Type
+
+/**
+ * The declaration a room's VM is booted with.
+ *
+ * An absent field is the default declaration, not a bare VM: the rooms written before the field
+ * existed still boot with the tools their work needs.
+ */
+export const roomSoftware = (room: RoomFile | undefined): RoomSoftware =>
+  declaredSoftware(room?.software)
 
 export interface Refusal {
   readonly ok: false
@@ -147,6 +177,8 @@ export const createRoom = async (input: {
   readonly scope: string
   readonly base: string
   readonly at: number
+  /** The room's own declaration; absent writes the default one, so the file names it. */
+  readonly software?: RoomSoftware | undefined
 }): Promise<StoreResult<RoomFile>> => {
   if ((await readRoom({ root: input.root, id: input.id })) !== undefined)
     return { ok: false, error: "RoomAlreadyExists" }
@@ -157,7 +189,14 @@ export const createRoom = async (input: {
     input.at,
   )
   if (!decided.ok) return decided
-  const room: RoomFile = { id: input.id, base: input.base, state: decided.value }
+  // The declaration is written at the boundary rather than left to a boot: a room file that
+  // names its software is one whose guest can be read without starting a VM.
+  const room: RoomFile = {
+    id: input.id,
+    base: input.base,
+    state: decided.value,
+    software: input.software ?? defaultRoomSoftware,
+  }
   await write({ root: input.root, room })
   return { ok: true, value: room }
 }
