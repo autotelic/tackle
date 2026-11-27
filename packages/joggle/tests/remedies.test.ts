@@ -5,6 +5,7 @@ import {
   messageKeyOf,
   pairKeyOf,
   witnessClause,
+  witnessOnlyOpinion,
   type RemedyFinding,
   type RepairOpinion,
 } from "../src/remedies.ts"
@@ -29,7 +30,7 @@ const opinionOf = (
   repairs: new Map(repairs.map(([item, label]) => [messageKeyOf(item), label])),
   same: new Map(
     same.map(([left, right, probability]) => [
-      pairKeyOf(messageKeyOf(left), messageKeyOf(right)),
+      pairKeyOf({ left: messageKeyOf(left), right: messageKeyOf(right) }),
       probability,
     ]),
   ),
@@ -128,6 +129,17 @@ test("two vocabularies for one repair cluster; a different repair does not", () 
   expect(repaired?.counterexamples).toHaveLength(1)
   expect(repaired?.counterexamples[0]?.onlyA).toEqual(["src/kernel.ts:1"])
   expect(repaired?.counterexamples[0]?.onlyB).toEqual(["src/kernel.ts:2"])
+})
+
+test("a missing judgement keeps the witness count and carries the reason", () => {
+  const left = finding("a", "Diagnosis. Parse input at its boundary.", 1)
+  const right = finding("b", "Diagnosis. Accept a named domain type.", 2)
+  const report = clusterRemedies(
+    [left, right],
+    witnessOnlyOpinion([left, right], "TYPESAFE_API_KEY is not set"),
+  )
+  expect(report.judgementUnavailable).toBe("TYPESAFE_API_KEY is not set")
+  expect(report.clusters).toHaveLength(report.witness.clusters)
 })
 
 test("a threshold keeps a pair the judgement calls different apart", () => {
