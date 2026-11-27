@@ -4,7 +4,8 @@ import { NodeServices } from "@effect/platform-node"
 import { mkdirSync, mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { underusedPrimitive } from "../src/rules/underused-primitive.ts"
+import { evidenceKinds } from "../src/evidence.ts"
+import { representativeUnits, underusedPrimitive } from "../src/rules/underused-primitive.ts"
 import { projectRootOf, surfaceFileOf, surfaceOutputOf } from "../src/surface.ts"
 import { plannedDiagnosticsOf } from "../src/testing.ts"
 import { loadWorkspace } from "../src/workspace.ts"
@@ -28,7 +29,7 @@ it.effect("three declarations doing raw milliseconds are one finding when Durati
     expect(found.message).toContain("Duration")
     expect(found.message).toContain("3 declaration")
     expect(found.message).toContain("import { Duration } from \"effect\"")
-    expect(found.identity).toContain("duration")
+    expect(found.identity).toContain("round-millisecond")
     expect(found.judged).toBe(true)
   }).pipe(Effect.provide(modelStub(judged)), Effect.provide(NodeServices.layer)),
 )
@@ -97,6 +98,44 @@ it.effect("a declined Duration falls through to Clock, and the finding names Clo
     ),
     Effect.provide(NodeServices.layer),
   ),
+)
+
+it.effect("test files and config files are the suite's numbers, not evidence", () =>
+  Effect.gen(function* () {
+    const workspace = yield* fixture([
+      "src/pair.ts",
+      "vitest.config.ts",
+      "tests/timing.test.ts",
+    ])
+    const result = yield* plannedDiagnosticsOf(underusedPrimitive, workspace, {
+      config: { surfacePath: surface("surface.json") },
+    })
+    expect(result.diagnostics).toEqual([])
+    // src/pair.ts holds the only two product sites left; the config's three round
+    // literals and the spec's clock arithmetic subtract from nothing.
+    expect(result.drops.some((drop) => drop.reason.includes("only 2 declaration"))).toBe(true)
+  }).pipe(Effect.provide(modelStub(judged)), Effect.provide(NodeServices.layer)),
+)
+
+it.effect("the sample is one site per shape, and the count stays the true total", () =>
+  Effect.gen(function* () {
+    const workspace = yield* fixture(["src/repeated.ts"])
+    const result = yield* plannedDiagnosticsOf(underusedPrimitive, workspace, {
+      config: { surfacePath: surface("surface.json") },
+    })
+    expect(result.diagnostics.length).toBe(1)
+    const found = result.diagnostics[0]!
+    expect(found.message).toContain("4 declaration")
+  }).pipe(Effect.provide(modelStub(judged)), Effect.provide(NodeServices.layer)),
+)
+
+it.effect("the judgement is shown one site per normalized shape, not the pool", () =>
+  Effect.gen(function* () {
+    const workspace = yield* fixture(["src/repeated.ts"])
+    const units = workspace.units.filter((unit) => evidenceKinds[0]!.matches(unit))
+    expect(units.length).toBe(4)
+    expect(representativeUnits(units).length).toBe(1)
+  }).pipe(Effect.provide(NodeServices.layer)),
 )
 
 it("surface build's default output is the path the rule reads", () => {

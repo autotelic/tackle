@@ -24,7 +24,21 @@ import { verdictOf } from "../verdict.ts"
 const RULE_ID = "joggle/underused-primitive"
 
 /** Three declarations are a capability; two are a coincidence. */
-const MIN_CLUSTER_UNITS = 3
+const MIN_EVIDENCE_UNITS = 3
+
+/** The judgement sees a capability with examples, not 122 lines of it. */
+const MAX_SAMPLE_UNITS = 8
+
+/**
+ * Files whose numbers are the suite's own, not a re-implementation.
+ *
+ * A `testTimeout: 30_000` in a vitest config and a fixture's clock arithmetic are
+ * the harness being configured, not the product hand-rolling a duration. The unit's
+ * own `test` flag covers test directories and `*.test.ts`; a config file is neither.
+ */
+const CONFIG_FILE = /(?:^|\/)[^/]*\.config\.[cm]?[jt]sx?$/u
+
+const isEvidenceFile = (unit: Unit): boolean => !unit.test && !CONFIG_FILE.test(unit.file)
 
 /** One export the judgement is shown, and the plan that asks about it. */
 interface Attempt {
@@ -34,7 +48,7 @@ interface Attempt {
   readonly disposition: Decision.Classify<string>
 }
 
-/** One export the surface offers for a cluster. */
+/** One export the surface offers for a kind's evidence. */
 interface Offer {
   readonly surfacePackage: SurfacePackage
   readonly exported: SurfaceExport
@@ -42,9 +56,22 @@ interface Offer {
 
 interface Candidate {
   readonly kind: EvidenceKind
-  readonly cluster: string
   readonly units: ReadonlyArray<Unit>
   readonly offers: ReadonlyArray<Offer>
+}
+
+/**
+ * The sites a judgement is shown: one per normalized shape, up to the sample bound.
+ *
+ * A pool that repeats the same `now - started` twenty times is one example with a
+ * count beside it, not twenty examples. The count stays the true total.
+ */
+export const representativeUnits = (units: ReadonlyArray<Unit>): ReadonlyArray<Unit> => {
+  const byShape = new Map<string, Unit>()
+  for (const unit of units) {
+    if (!byShape.has(unit.shape)) byShape.set(unit.shape, unit)
+  }
+  return [...byShape.values()].slice(0, MAX_SAMPLE_UNITS)
 }
 
 const wordsOf = (name: string): ReadonlyArray<string> =>
@@ -156,7 +183,7 @@ const findingFor = (input: {
     about: first ?? location,
     messageId: "underused_primitive",
     data: {
-      family: candidate.cluster,
+      family: candidate.kind.description,
       kind: candidate.kind.kind,
       count: candidate.units.length,
       exportName: attempt.exported.name,
@@ -165,7 +192,7 @@ const findingFor = (input: {
       advice: adviceFor({ disposition, path, name: attempt.exported.name }),
     },
     helpId: "underused_primitive_help",
-    identity: [RULE_ID, candidate.kind.kind, candidate.cluster, attempt.exported.name].join("\u0000"),
+    identity: [RULE_ID, candidate.kind.kind, attempt.exported.name].join("\u0000"),
     judged: input.unverifiedReason === undefined,
     confidence: input.confidence,
     score: input.score,
@@ -191,8 +218,6 @@ const dispositionReview = (): Decision.Classify<string> =>
     },
   })
 
-const clusterLabel = (cluster: string): string => cluster.replace(/-/gu, " ")
-
 /** One plan per export attempt: the same question, asked about the next named export. */
 const planFor = (input: {
   readonly candidate: Candidate
@@ -205,7 +230,7 @@ const planFor = (input: {
   const disposition = dispositionReview()
   const plan: Plan<DecisionAnswers> = {
     ruleId: RULE_ID,
-    subject: candidate.cluster + " (" + surfacePackage.name + ")",
+    subject: candidate.kind.description + " (" + surfacePackage.name + ")",
     concerns: [...new Set(candidate.units.map((unit) => unit.file))],
     atoms: [id],
     violations: { disposition: ["use_export", "use_our_wrapper", "home_it"] },
@@ -237,7 +262,7 @@ export const underusedPrimitive: PlannedRule = {
   onUnavailable: "report",
   messages: messages({
     underused_primitive:
-      "{{count}} declaration(s) do {{kind}} arithmetic ({{family}}) and {{exportName}} from {{importPath}} is imported nowhere: import { {{exportName}} } from \"{{importPath}}\" ({{signature}}).",
+      "{{count}} declaration(s) do {{family}} by hand ({{kind}}) and {{exportName}} from {{importPath}} is imported nowhere: import { {{exportName}} } from \"{{importPath}}\" ({{signature}}).",
     underused_primitive_help: "{{advice}}",
   }),
   plan: Effect.fn("joggle/underused-primitive")(function* (
@@ -261,61 +286,53 @@ export const underusedPrimitive: PlannedRule = {
     const candidates: Array<Candidate> = []
     const tooSmall: Array<Drop> = []
     for (const kind of evidenceKinds) {
-      const matches = new Map<string, Array<Unit>>()
-      for (const unit of workspace.units) {
-        if (!inScope(scope, unit.file)) continue
-        const cluster = kind.clusterOf(unit)
-        if (cluster === undefined) continue
-        const existing = matches.get(cluster)
-        if (existing === undefined) matches.set(cluster, [unit])
-        else existing.push(unit)
+      const units = workspace.units.filter(
+        (unit) => inScope(scope, unit.file) && isEvidenceFile(unit) && kind.matches(unit),
+      )
+      if (units.length < MIN_EVIDENCE_UNITS) {
+        tooSmall.push({
+          ruleId: RULE_ID,
+          subject: `${kind.kind} (${kind.description})`,
+          stage: "gated",
+          reason: `only ${units.length} declaration(s); ${MIN_EVIDENCE_UNITS} are a capability, fewer are a coincidence`,
+        })
+        continue
       }
-      for (const [cluster, units] of matches) {
-        if (units.length < MIN_CLUSTER_UNITS) {
-          tooSmall.push({
-            ruleId: RULE_ID,
-            subject: `${cluster} (${clusterLabel(cluster)})`,
-            stage: "gated",
-            reason: `only ${units.length} declaration(s); ${MIN_CLUSTER_UNITS} are a capability, fewer are a coincidence`,
-          })
-          continue
+      const offers: Array<{ surfacePackage: SurfacePackage; exported: SurfaceExport }> = []
+      for (const family of kind.families) {
+        const inFamily = surface.packages.flatMap((surfacePackage) =>
+          surfacePackage.exports
+            .filter((surfaceExport) => exportedInFamily(surfaceExport, family))
+            .map((surfaceExport) => ({ surfacePackage, exported: surfaceExport })),
+        )
+        if (inFamily.length === 0) continue
+        // The absence: no name in this family is imported anywhere in the workspace.
+        if (inFamily.some((offer) => importedNames.has(offer.exported.name))) continue
+        const ordered = orderedExports(
+          inFamily.map((offer) => offer.exported),
+          family,
+          units,
+        )
+        for (const surfaceExport of ordered) {
+          const offer = inFamily.find((entry) => entry.exported === surfaceExport)
+          if (offer !== undefined) offers.push(offer)
         }
-        const offers: Array<{ surfacePackage: SurfacePackage; exported: SurfaceExport }> = []
-        for (const family of kind.families) {
-          const inFamily = surface.packages.flatMap((surfacePackage) =>
-            surfacePackage.exports
-              .filter((surfaceExport) => exportedInFamily(surfaceExport, family))
-              .map((surfaceExport) => ({ surfacePackage, exported: surfaceExport })),
-          )
-          if (inFamily.length === 0) continue
-          // The absence: no name in this family is imported anywhere in the workspace.
-          if (inFamily.some((offer) => importedNames.has(offer.exported.name))) continue
-          const ordered = orderedExports(
-            inFamily.map((offer) => offer.exported),
-            family,
-            units,
-          )
-          for (const surfaceExport of ordered) {
-            const offer = inFamily.find((entry) => entry.exported === surfaceExport)
-            if (offer !== undefined) offers.push(offer)
-          }
-        }
-        if (offers.length === 0) continue
-        candidates.push({ kind, cluster, units, offers: offers.slice(0, 3) })
       }
+      if (offers.length === 0) continue
+      candidates.push({ kind, units, offers: offers.slice(0, 3) })
     }
 
     candidates.sort(
       (left, right) =>
-        right.units.length - left.units.length || left.cluster.localeCompare(right.cluster),
+        right.units.length - left.units.length || left.kind.kind.localeCompare(right.kind.kind),
     )
     const budget = 3
     const judged = candidates.slice(0, budget)
     const overBudget: ReadonlyArray<Drop> = candidates.slice(budget).map((candidate) => ({
       ruleId: RULE_ID,
-      subject: candidate.cluster,
+      subject: candidate.kind.description,
       stage: "budget" as const,
-      reason: "past the budget of " + budget + " clusters",
+      reason: "past the budget of " + budget + " kinds",
     }))
 
     const atoms = yield* Atoms
@@ -325,7 +342,7 @@ export const underusedPrimitive: PlannedRule = {
         Effect.gen(function* () {
           const id = yield* atoms.add({
             kind: candidate.kind.kind,
-            family: candidate.cluster,
+            family: candidate.kind.description,
             count: candidate.units.length,
             exports: candidate.offers.map((offer) => ({
               name: offer.exported.name,
@@ -336,7 +353,7 @@ export const underusedPrimitive: PlannedRule = {
               package: offer.surfacePackage.name,
               version: offer.surfacePackage.version,
             })),
-            declarations: candidate.units.slice(0, 8).map(sampleOf),
+            declarations: representativeUnits(candidate.units).map(sampleOf),
           })
           return {
             candidate,
@@ -427,7 +444,7 @@ export const underusedPrimitive: PlannedRule = {
           }
           drops.push({
             ruleId: RULE_ID,
-            subject: candidate.cluster,
+            subject: candidate.kind.description,
             stage: "declined",
             reason:
               "no export does what the declarations do: " +
@@ -439,10 +456,10 @@ export const underusedPrimitive: PlannedRule = {
         return outcome(
           diagnostics,
           budgetNote({
-            unitKind: "clusters",
+            unitKind: "kinds",
             judged: budget,
             candidates: candidates.length,
-            sample: candidates.slice(budget).map((candidate) => candidate.cluster),
+            sample: candidates.slice(budget).map((candidate) => candidate.kind.kind),
           }),
           drops,
         )

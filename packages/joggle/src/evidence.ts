@@ -3,54 +3,73 @@ import type { Unit } from "./workspace.ts"
 /*
  * The evidence catalogue for `joggle/underused-primitive`.
  *
- * One entry, for one reason: a rule that recognises everything recognises nothing. The
- * kind names the capability the evidence is about, the families are the dependency
- * exports that would supply it, and `clusterOf` is the only pattern this pass reads.
+ * One entry per syntactic shape, and the shapes are the whole classification. An
+ * earlier version cut each matched site into a hand-named sub-kind (`epoch
+ * conversion`, `round interval`, ...), which fragmented one capability into
+ * singletons: the ground truth in this repository is 122 round-millisecond
+ * literals, 26 conversions and 20 clock subtractions, and none of the resulting
+ * sub-groups cleared the three-site bar. The candidate is (kind), not (kind,
+ * invented label); coherence comes from the sample the judgement is shown.
  *
- * The signal is an ABSENCE, so `clusterOf` has to be cheap and generous. It looks for
- * the shape of hand-rolled duration arithmetic, not for a particular library's spelling.
- * It returns the shape of the arithmetic itself, because a pool of every `Date.now()`
- * subtraction beside every millisecond conversion is not one capability: the model shown
- * that grab bag correctly answers that the export does not do all of it.
+ * The signal is an ABSENCE, so `matches` has to be cheap and generous. It looks
+ * for the shape of hand-rolled duration arithmetic, not for a library's spelling.
  */
 
 /** One family of exports that does the same job as the evidence it is compared with. */
 export interface EvidenceKind {
-  readonly kind: "duration"
-  /** Export-name families that would already supply this capability. */
+  /** The stable id of the shape: one candidate per kind. */
+  readonly kind: "round-millisecond" | "millisecond-conversion" | "clock-arithmetic"
+  /** How the kind reads in a sentence: "3 declarations do Date.now() arithmetic". */
+  readonly description: string
+  /** Export-name families that would already supply this capability, best first. */
   readonly families: ReadonlyArray<string>
-  /** The coherent arithmetic a declaration carries, or undefined when it carries none. */
-  readonly clusterOf: (unit: Unit) => string | undefined
+  /** The syntactic shape a declaration carries, or false when it carries none. */
+  readonly matches: (unit: Unit) => boolean
 }
 
 const ROUND_MILLISECOND = /(?<![\w.])(?:1|5|30|60|300|600|900|1800|3600)_?000(?![\w.])/u
-const DIVISION_BY_MILLIS = /(?<!\w)\/\s*1_?000(?!\d)/u
-const MULTIPLICATION_BY_MILLIS = /(?<!\w)\*\s*1_?000(?!\d)/u
+const MILLISECOND_CONVERSION = /(?<!\w)[*/]\s*1_?000(?![\d.])/u
 const DATE_NOW_ARITHMETIC = /Date\.now\(\)\s*(?:[-+*/]|&&|\|\|)/u
 
 /**
- * Duration arithmetic, split into the shapes it actually takes.
+ * A round millisecond literal: `60_000`, `1_000`, `1_800_000`.
  *
- * A clock reading and adjustment is a different capability from a round interval
- * literal, which is a different capability again from converting milliseconds to a
- * human unit. Direction matters: `millis / 1_000` is a conversion Duration supplies,
- * while `seconds * 1_000` beside it is the reverse and is not the same arithmetic.
- * Precision matters too: a bare round literal is only a duration when it is used in
- * time math, so an object of token and walk limits is not evidence.
+ * The literal alone is the evidence. A walk-limit object and a retry delay are
+ * the same hand-rolled unit, and requiring time arithmetic beside it only moved
+ * the measurement away from the ground truth.
  */
-export const durationKind: EvidenceKind = {
-  kind: "duration",
-  families: ["Duration", "Clock", "DateTime"],
-  clusterOf: (unit) => {
-    if (DATE_NOW_ARITHMETIC.test(unit.text)) return "clock-arithmetic"
-    if (DIVISION_BY_MILLIS.test(unit.text)) return "millisecond-conversion"
-    if (MULTIPLICATION_BY_MILLIS.test(unit.text)) return "epoch-conversion"
-    if (ROUND_MILLISECOND.test(unit.text) && /(?:[-+>]=?|return)\s*[\w(]/u.test(unit.text)) {
-      return "round-interval"
-    }
-    return undefined
-  },
+const roundMillisecondKind: EvidenceKind = {
+  kind: "round-millisecond",
+  description: "round millisecond literals",
+  families: ["Duration", "DateTime", "Clock"],
+  matches: (unit) => ROUND_MILLISECOND.test(unit.text),
 }
 
-/** Every evidence kind this version of the rule reads. One, on purpose. */
-export const evidenceKinds: ReadonlyArray<EvidenceKind> = [durationKind]
+/**
+ * A conversion between milliseconds and a human unit, in either direction.
+ *
+ * `millis / 1_000` and `seconds * 1_000` are the same missing capability read
+ * from two sides; splitting them by direction is the sub-kind classification
+ * that hid the capability.
+ */
+const millisecondConversionKind: EvidenceKind = {
+  kind: "millisecond-conversion",
+  description: "millisecond conversion",
+  families: ["Duration", "DateTime", "Clock"],
+  matches: (unit) => MILLISECOND_CONVERSION.test(unit.text),
+}
+
+/** Arithmetic on a clock reading: elapsed time, deadlines, skewed stamps. */
+const clockArithmeticKind: EvidenceKind = {
+  kind: "clock-arithmetic",
+  description: "Date.now() arithmetic",
+  families: ["Clock", "DateTime", "Duration"],
+  matches: (unit) => DATE_NOW_ARITHMETIC.test(unit.text),
+}
+
+/** Every evidence kind this version of the rule reads. Three, one per shape. */
+export const evidenceKinds: ReadonlyArray<EvidenceKind> = [
+  roundMillisecondKind,
+  millisecondConversionKind,
+  clockArithmeticKind,
+]
