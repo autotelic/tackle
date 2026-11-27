@@ -1,4 +1,4 @@
-import { Effect, Option, Predicate, Result } from "effect"
+import { Effect, Predicate, Result, Schema } from "effect"
 import { Decision } from "effect/ai"
 import type { DecisionModel } from "effect/ai"
 import { Atoms } from "./atoms.ts"
@@ -33,71 +33,74 @@ export interface RemedyFinding {
   readonly help?: string | undefined
 }
 
-const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
-  Predicate.isReadonlyObject(value)
+/**
+ * One diagnostic, in either engine's vocabulary.
+ *
+ * oxlint names the file `filename`, calls the rule `code`, and puts the line
+ * inside its first label span; joggle names them `location.file`, `ruleId` and
+ * `location.line`. Every field is optional because the decode is the one place
+ * both shapes are spelled; the reader below takes whichever each engine gave.
+ */
+const EngineDiagnostic = Schema.Struct({
+  filename: Schema.optional(Schema.String),
+  file: Schema.optional(Schema.String),
+  line: Schema.optional(Schema.Number),
+  code: Schema.optional(Schema.String),
+  ruleId: Schema.optional(Schema.String),
+  message: Schema.optional(Schema.String),
+  help: Schema.optional(Schema.String),
+  location: Schema.optional(
+    Schema.Struct({
+      file: Schema.optional(Schema.String),
+      line: Schema.optional(Schema.Number),
+      column: Schema.optional(Schema.Number),
+    }),
+  ),
+  labels: Schema.optional(
+    Schema.Array(
+      Schema.Struct({
+        span: Schema.optional(
+          Schema.Struct({
+            line: Schema.optional(Schema.Number),
+          }),
+        ),
+      }),
+    ),
+  ),
+})
 
-const textOf = (value: unknown): Option.Option<string> =>
-  Predicate.isString(value) ? Option.some(value) : Option.none()
+/** Either engine's findings document: joggle's object or oxlint's bare array. */
+export const FindingsPayload = Schema.Union([
+  Schema.Struct({ diagnostics: Schema.Array(EngineDiagnostic) }),
+  Schema.Array(EngineDiagnostic),
+])
 
-const numberOf = (value: unknown): Option.Option<number> =>
-  Predicate.isNumber(value) && Number.isFinite(value) ? Option.some(value) : Option.none()
+/** The decoded findings document {@link findingsOf} reads. */
+export type FindingsPayload = typeof FindingsPayload.Type
 
-const firstLabel = (value: unknown): Option.Option<Readonly<Record<string, unknown>>> => {
-  if (!Array.isArray(value)) return Option.none()
-  const first: unknown = value[0]
-  return isRecord(first) ? Option.some(first) : Option.none()
-}
-
-const nestedLine = (diagnostic: Readonly<Record<string, unknown>>): Option.Option<number> => {
-  const location = diagnostic["location"]
-  const located = isRecord(location) ? numberOf(location["line"]) : Option.none<number>()
-  if (Option.isSome(located)) return located
-  const label = firstLabel(diagnostic["labels"])
-  if (Option.isNone(label)) return Option.none()
-  const span = label.value["span"]
-  return isRecord(span) ? numberOf(span["line"]) : Option.none()
-}
+type EngineDiagnostic = typeof EngineDiagnostic.Type
 
 /**
  * Read either engine's JSON, without asking either to change.
  *
- * oxlint names the file `filename`, calls the rule `code`, and puts the line
- * inside its first label span; joggle names them `location.file`, `ruleId` and
- * `location.line`. The reader accepts both and degrades a missing line to 1
- * rather than dropping the finding: an unlocated finding is still a finding.
+ * The payload has already been decoded by {@link FindingsPayload}; this only
+ * normalises the two vocabularies. A missing line degrades to 1 rather than
+ * dropping the finding: an unlocated finding is still a finding.
  */
-export const findingsOf = (payload: unknown): ReadonlyArray<RemedyFinding> => {
-  const diagnostics: ReadonlyArray<unknown> = Array.isArray(payload)
-    ? payload
-    : isRecord(payload) && Array.isArray(payload["diagnostics"])
-      ? payload["diagnostics"]
-      : []
+export const findingsOf = (payload: FindingsPayload): ReadonlyArray<RemedyFinding> => {
+  const diagnostics = "diagnostics" in payload ? payload.diagnostics : payload
   const out: Array<RemedyFinding> = []
   for (const raw of diagnostics) {
-    if (!isRecord(raw)) continue
-    const location = raw["location"]
-    const located = isRecord(location) ? location : undefined
-    const file = Option.firstSomeOf([
-      textOf(raw["filename"]),
-      textOf(raw["file"]),
-      located === undefined ? Option.none<string>() : textOf(located["file"]),
-    ]).pipe(Option.getOrElse(() => "<unknown>"))
-    const line = Option.firstSomeOf([
-      numberOf(raw["line"]),
-      located === undefined ? Option.none<number>() : numberOf(located["line"]),
-      nestedLine(raw),
-    ]).pipe(Option.getOrElse(() => 1))
-    const rule = Option.firstSomeOf([textOf(raw["code"]), textOf(raw["ruleId"])]).pipe(
-      Option.getOrElse(() => "unknown"),
-    )
-    const message = textOf(raw["message"]).pipe(Option.getOrElse(() => ""))
+    const file = raw.filename ?? raw.file ?? raw.location?.file ?? "<unknown>"
+    const line = raw.line ?? raw.location?.line ?? raw.labels?.[0]?.span?.line ?? 1
+    const rule = raw.code ?? raw.ruleId ?? "unknown"
     out.push({
       site: file + ":" + String(line),
       file,
       line,
       rule,
-      message,
-      help: Option.getOrUndefined(textOf(raw["help"])),
+      message: raw.message ?? "",
+      help: raw.help,
     })
   }
   return out
@@ -144,6 +147,15 @@ interface MessageNode {
   readonly findings: ReadonlyArray<RemedyFinding>
 }
 
+/**
+ * The identity of one message: canonical JSON of its text and help.
+ *
+ * Findings sharing a key are one node in every grouping, so the key must not
+ * depend on the site or the rule.
+ *
+ * @param finding - the finding whose message is keyed.
+ * @returns a stable key for the message and its help text.
+ */
 export const messageKeyOf = (finding: RemedyFinding): string =>
   canonical({ message: finding.message, help: finding.help ?? "" })
 
@@ -188,6 +200,16 @@ export interface RepairOpinion {
   readonly pairs: number
 }
 
+/**
+ * The unordered key for a pair of message keys.
+ *
+ * `j_same` is symmetric, so the pair must have one key whichever side a caller
+ * passes first.
+ *
+ * @param pair.left - the first message key.
+ * @param pair.right - the second message key.
+ * @returns the two keys in locale order, joined by a NUL.
+ */
 export const pairKeyOf = ({
   left,
   right,
@@ -655,11 +677,14 @@ export const clusterRemedies = (
   }
 }
 
+/** What one persisted run wrote: its hash and its row count. */
+export interface RemedyLedger {
+  readonly run: string
+  readonly written: number
+}
+
 /** Persist one run's clusters as the new `finding` rows. */
-export const rememberRemedyFindings = (
-  root: string,
-  report: RemedyReport,
-): { readonly run: string; readonly written: number } => {
+export const rememberRemedyFindings = (root: string, report: RemedyReport): RemedyLedger => {
   const run = shortHash(
     canonical(
       report.clusters

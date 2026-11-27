@@ -1,6 +1,8 @@
+import { Result, Schema, SchemaParser } from "effect"
 import { expect, test } from "vitest"
 import {
   clusterRemedies,
+  FindingsPayload,
   findingsOf,
   messageKeyOf,
   pairKeyOf,
@@ -70,6 +72,16 @@ test("both engines' JSON arrive unchanged", () => {
   })
   expect(oxlint[0]?.site).toBe("src/b.ts:9")
   expect(oxlint[0]?.rule).toBe("plumb/example")
+})
+
+test("the findings JSON is decoded at one named boundary", () => {
+  const decode = SchemaParser.decodeResult(Schema.fromJsonString(FindingsPayload))
+  expect(
+    Result.isSuccess(
+      decode(JSON.stringify([{ code: "plumb/a", message: "Do it.", filename: "a.ts" }])),
+    ),
+  ).toBe(true)
+  expect(Result.isSuccess(decode(JSON.stringify({ diagnostics: "not an array" })))).toBe(false)
 })
 
 test("the witness keeps the imperative clause and drops the diagnosis", () => {
