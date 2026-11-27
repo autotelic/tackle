@@ -319,6 +319,9 @@ const main = async (): Promise<void> => {
     // The VM's own account of what it booted with, recorded by the process that owns it: a
     // boot that stopped short of an install says nothing rather than claiming it.
     software: room.software,
+    // And what it may reach, from the boot that applied the policy — the same rule: the owner
+    // writes it, so a run file without one is a boot that recorded none.
+    permissions: room.permissions,
   }
   await writeVmRun({ root, id, run: log === undefined ? run : { ...run, log } })
 

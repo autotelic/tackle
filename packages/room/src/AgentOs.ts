@@ -2,6 +2,7 @@ import { AgentOs, hostDirMount, type ExecutionOutcome } from "@rivet-dev/agentos
 import { Effect } from "effect"
 import { mkdir } from "node:fs/promises"
 import { join, resolve } from "node:path"
+import { permissionsReport, roomVmPermissions, type VmPermissionsReport } from "./VmPermissions.ts"
 import type { VmSnapshotExport } from "./VmSnapshot.ts"
 import {
   declaredSoftware,
@@ -21,6 +22,14 @@ export interface AgentOsRoom {
    * packages, and the declared names the VM does not list.
    */
   readonly software: VmSoftwareReport
+  /**
+   * What this guest may reach: the policy the VM was created with, and the sidecar that runs it.
+   *
+   * The policy half is the room's declaration (`roomVmPermissions`); the sidecar half is the
+   * runtime's own `describe()`, recorded so the record never claims a policy the runtime did not
+   * run on. `AgentOsSidecarDescription` carries no permission member at 0.4.9 — ADR 0007.
+   */
+  readonly permissions: VmPermissionsReport
   readonly dispose: () => Promise<void>
 }
 
@@ -90,6 +99,9 @@ export const createAgentOsRoom = (
       const options: Parameters<typeof AgentOs.create>[0] = {
         user: { uid, gid, euid: uid, egid: gid },
         software: [...softwareInputs(software)],
+        // Explicit on purpose: the VM is created with a policy the room declares, so what the
+        // guest may reach is a fact of this file rather than whatever Core's default is today.
+        permissions: roomVmPermissions,
       }
       if (input.defaultSoftware !== undefined) options.defaultSoftware = input.defaultSoftware
       if (input.stateDir !== undefined)
@@ -114,6 +126,7 @@ export const createAgentOsRoom = (
         // The VM's own answer, read once at boot: installed() is the runtime's registry, so
         // the record says what the guest has instead of what the declaration hoped for.
         software: softwareReport(software, vm.software.installed()),
+        permissions: permissionsReport({ permissions: roomVmPermissions, sidecar: vm.sidecar }),
         dispose: async () => {
           await vm.dispose()
         },

@@ -53,6 +53,19 @@ export {
 } from "./VmSupervisor.ts"
 export { recordRoomSnapshot, roomSoftware, RoomRuntime, setRoomRuntime } from "./store.ts"
 export {
+  declaredScopes,
+  describeSidecar,
+  NetworkPolicy,
+  PermissionMode,
+  permissionsLine,
+  permissionsReport,
+  roomAllowedHosts,
+  roomVmPermissions,
+  SidecarDescription,
+  SidecarPlacement,
+  VmPermissionsReport,
+} from "./VmPermissions.ts"
+export {
   declaredSoftware,
   defaultRoomSoftware,
   InstalledPackage,

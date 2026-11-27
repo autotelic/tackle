@@ -11,6 +11,7 @@ import { PauseRoom } from "./Room/PauseRoom.command.ts"
 import { ResumeRoom } from "./Room/ResumeRoom.command.ts"
 import { RoomState } from "./Room/Room.aggregate.ts"
 import { ServiceDeclaration } from "./Service.ts"
+import { VmPermissionsReport } from "./VmPermissions.ts"
 import { VmSnapshot, type VmSnapshotOutcome } from "./VmSnapshot.ts"
 import {
   declaredSoftware,
@@ -37,6 +38,13 @@ export const RoomRuntime = Schema.Struct({
    * room file written before a VM was placed decodes unchanged.
    */
   software: Schema.optional(VmSoftwareReport),
+  /**
+   * What the guest may reach, as the boot that applied the policy recorded it.
+   *
+   * Optional like `software`: a room file written before the policy was recorded decodes
+   * unchanged, and a room whose record carries none prints no line rather than a guessed one.
+   */
+  permissions: Schema.optional(VmPermissionsReport),
   /**
    * The guest pid of that service, as the VM's own process table named it.
    *
