@@ -5,12 +5,11 @@
  * to agree on what a set is. Splitting them across two files is how you end up
  * with a candidate generator and a scorer that disagree about the answer.
  *
- * The set carries two substrates now. Jaccard is measured over token bigrams
- * (`shinglesOf`), because that is the question the duplicate rules ask. Containment
- * is measured over a declaration's fragment ids (`fragmentsOf`), because a subtree
- * id is the thing one declaration can contain whole. Both are just sets of opaque
- * strings, so `containmentOf`, the frequency count and the shared set are written
- * once and take whichever substrate the caller has.
+ * Two substrates, one set of functions. Jaccard is measured over token bigrams
+ * (`shinglesOf`), the question the duplicate rules ask; containment over a
+ * declaration's fragment ids (`fragmentsOf`), the piece one declaration can hold
+ * whole. Both are sets of opaque strings, so an entry is a `SizedSet` and a pair
+ * is scored by whichever function the rule asks.
  */
 
 /** Token bigrams, the unit of comparison between two declarations. */
@@ -23,11 +22,27 @@ export const shinglesOf = (tokens: ReadonlyArray<string>): ReadonlySet<string> =
 }
 
 /**
- * Jaccard similarity over two sets.
+ * The elements two sets share.
  *
  * Iterates the smaller side: an intersection cannot be larger than it, and for
- * the size-skewed pairs a threshold admits, that is most of the work saved.
+ * the size-skewed pairs a threshold admits, that is most of the work saved. Both
+ * scorers below are this one walk, so they cannot disagree about what "shared"
+ * means.
  */
+export const sharedOf = ({
+  left,
+  right,
+}: {
+  readonly left: ReadonlySet<string>
+  readonly right: ReadonlySet<string>
+}): ReadonlyArray<string> => {
+  const [small, large] = left.size <= right.size ? [left, right] : [right, left]
+  const shared: Array<string> = []
+  for (const item of small) if (large.has(item)) shared.push(item)
+  return shared
+}
+
+/** Jaccard similarity over two sets. */
 export const similarityOf = ({
   left,
   right,
@@ -37,8 +52,7 @@ export const similarityOf = ({
 }): number => {
   const [small, large] = left.size <= right.size ? [left, right] : [right, left]
   if (small.size === 0) return left.size === right.size ? 1 : 0
-  let intersection = 0
-  for (const item of small) if (large.has(item)) intersection += 1
+  const intersection = sharedOf({ left: small, right: large }).length
   const union = left.size + right.size - intersection
   return union === 0 ? 0 : intersection / union
 }
@@ -67,9 +81,7 @@ export const containmentOf = ({
 }): number => {
   const [small, large] = left.size <= right.size ? [left, right] : [right, left]
   if (small.size === 0) return left.size === right.size ? 1 : 0
-  let intersection = 0
-  for (const item of small) if (large.has(item)) intersection += 1
-  return intersection / small.size
+  return sharedOf({ left: small, right: large }).length / small.size
 }
 
 /** Convenience for callers holding tokens rather than shingle sets. */
@@ -116,25 +128,6 @@ export const frequencyOf = (
 }
 
 /**
- * A pair's shared elements, as the intersection the containment score uses.
- *
- * Iterating the smaller side is the same reason `containmentOf` does: the
- * intersection cannot be larger than it.
- */
-export const sharedOf = ({
-  left,
-  right,
-}: {
-  readonly left: ReadonlySet<string>
-  readonly right: ReadonlySet<string>
-}): ReadonlyArray<string> => {
-  const [small, large] = left.size <= right.size ? [left, right] : [right, left]
-  const shared: Array<string> = []
-  for (const item of small) if (large.has(item)) shared.push(item)
-  return shared
-}
-
-/**
  * Inverse document frequency of a shared set, normalised to 0..1.
  *
  * An element unique to one declaration contributes 1; one present in every
@@ -167,18 +160,17 @@ export const inverseFrequencyOf = ({
   return Math.min(1, total / count / ceiling)
 }
 
-export interface SizedShingles {
+/**
+ * One set to join, and where it sits in the caller's array.
+ *
+ * One shape for both substrates: a token-bigram set and a fragment-id set are
+ * the same thing to a join, and separate interfaces differing only by a field
+ * name is how the two joins drifted apart before.
+ */
+export interface SizedSet {
   /** Position in the caller's array, so results refer to the caller's data. */
   readonly position: number
-  readonly shingles: ReadonlySet<string>
-}
-
-/** A declaration's fragment ids, positioned in the caller's array. */
-export interface SizedIds {
-  /** Position in the caller's array, so results refer to the caller's data. */
-  readonly position: number
-  /** The subtree ids of one declaration. */
-  readonly ids: ReadonlySet<string>
+  readonly values: ReadonlySet<string>
 }
 
 export interface ScoredPair {
@@ -192,12 +184,6 @@ interface OrderedEntry {
   readonly size: number
   readonly slot: number
   readonly callerIndex: number
-}
-
-/** The set a join indexes, whichever substrate it came from. */
-interface SetEntry {
-  readonly position: number
-  readonly values: ReadonlySet<string>
 }
 
 /**
@@ -222,9 +208,9 @@ interface SetEntry {
  * the guarantee is checked, not argued.
  */
 const probePrefixes = (
-  entries: ReadonlyArray<SetEntry>,
+  entries: ReadonlyArray<SizedSet>,
   threshold: number,
-  visit: (candidate: SetEntry, current: SetEntry) => void,
+  visit: (candidate: SizedSet, current: SizedSet) => void,
 ): void => {
   const frequency = frequencyOf(entries.map((entry) => entry.values))
 
@@ -293,25 +279,21 @@ const probePrefixes = (
  * sweep in rule.ts finds.
  */
 export const allPairs = (
-  entries: ReadonlyArray<SizedShingles>,
+  entries: ReadonlyArray<SizedSet>,
   threshold: number,
 ): ReadonlyArray<ScoredPair> => {
   if (threshold <= 0) return []
   const pairs: Array<ScoredPair> = []
-  probePrefixes(
-    entries.map((entry) => ({ position: entry.position, values: entry.shingles })),
-    threshold,
-    (candidate, current) => {
-      // Exact size filter: Jaccard cannot exceed the ratio of the smaller side to
-      // the larger, so a pair outside it cannot qualify.
-      if (candidate.values.size < threshold * current.values.size) return
-      const score = similarityOf({ left: candidate.values, right: current.values })
-      if (score < threshold) return
-      const left = candidate.position
-      const right = current.position
-      pairs.push(left <= right ? { left, right, score } : { left: right, right: left, score })
-    },
-  )
+  probePrefixes(entries, threshold, (candidate, current) => {
+    // Exact size filter: Jaccard cannot exceed the ratio of the smaller side to
+    // the larger, so a pair outside it cannot qualify.
+    if (candidate.values.size < threshold * current.values.size) return
+    const score = similarityOf({ left: candidate.values, right: current.values })
+    if (score < threshold) return
+    const left = candidate.position
+    const right = current.position
+    pairs.push(left <= right ? { left, right, score } : { left: right, right: left, score })
+  })
   return pairs
 }
 
@@ -327,34 +309,27 @@ export interface ContainmentPair {
 /**
  * Every containment pair at or above a threshold, over fragment ids.
  *
- * Containment on this substrate is the relation the shingle join was standing in
- * for: a declaration is a specialization of another when the smaller one's subtree
- * ids are carried by the larger one. Two declarations that share no fragment
- * cannot be that pair, so the only pairs this visits are pairs with a shared id --
- * the inverted index guarantees it, and no set is held beyond the caller's.
+ * Over fragment ids it is the relation the shingle join stood in for: one
+ * declaration is a specialization of another when the smaller one's subtree ids
+ * are carried by the larger. Two declarations that share no fragment cannot be
+ * that pair, so the only pairs this visits are pairs with a shared id.
  *
  * Each unordered pair is reported once, with the smaller side named as `part`.
  * Equal-sized pairs have no smaller side, and the one processed first is kept as
- * `part`.
- *
- * A differential test against a brute-force sweep is the contract: the join must
- * find exactly the pairs the sweep finds, not merely many of them.
+ * `part`. A differential test against a brute-force sweep is the contract: the
+ * join must find exactly the pairs the sweep finds, not merely many of them.
  */
 export const allContainmentPairs = (
-  entries: ReadonlyArray<SizedIds>,
+  entries: ReadonlyArray<SizedSet>,
   threshold: number,
 ): ReadonlyArray<ContainmentPair> => {
   if (threshold <= 0) return []
   const pairs: Array<ContainmentPair> = []
-  probePrefixes(
-    entries.map((entry) => ({ position: entry.position, values: entry.ids })),
-    threshold,
-    (candidate, current) => {
-      // An earlier entry is never larger, because the sweep is ascending by size.
-      const score = containmentOf({ left: candidate.values, right: current.values })
-      if (score < threshold) return
-      pairs.push({ whole: current.position, part: candidate.position, score })
-    },
-  )
+  probePrefixes(entries, threshold, (candidate, current) => {
+    // An earlier entry is never larger, because the sweep is ascending by size.
+    const score = containmentOf({ left: candidate.values, right: current.values })
+    if (score < threshold) return
+    pairs.push({ whole: current.position, part: candidate.position, score })
+  })
   return pairs
 }

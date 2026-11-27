@@ -50,8 +50,15 @@ interface Candidate {
   readonly rarity: number
   /** `containment * rarity`: the order the budget sees. */
   readonly rank: number
-  /** Names of the sides whose fragment set was cut, so the finding can say so. */
-  readonly truncated: ReadonlyArray<string>
+  /** The finding's sentence about a cut fragment set, or the empty string. */
+  readonly truncated: string
+}
+
+/** A joined pair, resolved back to the declarations the join indexed. */
+interface FragmentedPair {
+  readonly part: Fragmented
+  readonly whole: Fragmented
+  readonly score: number
 }
 
 /** A test or a fixture path. `Unit.test` catches declarations inside a test
@@ -96,14 +103,24 @@ const actionOf = (label: string | undefined): string => {
  * the pieces that were not encoded cannot be counted as shared. Silence here
  * would read as an exact measurement.
  */
-const truncatedNote = (candidate: Candidate): string =>
-  candidate.truncated.length === 0
+const truncatedNote = (sides: ReadonlyArray<Fragmented>): string => {
+  const names = sides.filter((side) => side.cut).map((side) => side.unit.name)
+  return names.length === 0
     ? ""
     : " The fragment set for " +
-      candidate.truncated.join(" and ") +
-      " was cut at " +
-      policy.identity.maxFragments +
-      " ids, so this containment is a lower bound."
+        names.join(" and ") +
+        " was cut at " +
+        policy.identity.maxFragments +
+        " ids, so this containment is a lower bound."
+}
+
+/** The pair as the drops name it, so every stage describes it the same way. */
+const pairSubject = (candidate: Candidate): string =>
+  candidate.smaller.name + " inside " + candidate.larger.name
+
+/** The p50/p90/p95 clause the size notes share. */
+const spreadNote = (sizes: ReadonlyArray<number>): string =>
+  `across ${sizes.length} surviving pair(s), the smaller side has p50 ${percentile(sizes, 50)}, p90 ${percentile(sizes, 90)}, and p95 ${percentile(sizes, 95)}`
 
 const relationReview = (input: {
   readonly id: string
@@ -137,23 +154,15 @@ const relationReview = (input: {
  * The question is therefore not "are these the same?" but "is the smaller one a
  * special case of the larger, or two unrelated things that share tokens?".
  *
- * The measure is over FRAGMENT IDS, not token bigrams. A shingle set per
- * declaration is the wrong substrate twice over: it ran out of memory on this
- * repository (4GB heap, OOM, at 4,649 declarations), and a bigram is not a piece
- * one declaration can contain whole -- a run of statements inside a helper
- * matches the helper's body, but not any declaration's shingle set as a unit.
- * Fragment ids are cheap to compare and expensive to compute, which is the trade
- * a join wants: compute each declaration's subtrees once, then index id ->
- * declarations and visit only pairs that share an id. Two declarations that
- * share no fragment cannot be a specialization pair.
- *
- * Everything else the rule decided is unchanged: tests and fixtures are not
+ * The measure is over fragment ids rather than token bigrams: a subtree id is a
+ * piece one declaration can contain whole, and it is cheap to compare after one
+ * pass that computes it (see `fragments.ts`). Tests and fixtures are not
  * candidates, the floor is a size a declaration can actually specialize, the
  * Jaccard exclusion is computed for the pairs the fragment join surfaced, and the
  * budget is spent by containment weighted by how RARE the shared ids are. The
- * message and the question still say "token bigrams" on purpose: a judgement
- * cache keyed by question wording must not be reopened for a substrate change,
- * and the question being asked is the same one.
+ * message still says "token bigrams" on purpose: a judgement cache keyed by
+ * question wording must not be reopened for a substrate change, and the question
+ * asked is the same one.
  */
 export const containment: PlannedRule = {
   id: RULE_ID,
@@ -201,22 +210,18 @@ export const containment: PlannedRule = {
     const cutSets = fragmented.filter((entry) => entry.cut).length
 
     const joined = allContainmentPairs(
-      fragmented.map((entry, position) => ({ position, ids: entry.ids })),
+      fragmented.map((entry, position) => ({ position, values: entry.ids })),
       floor,
     )
-    const relatedAll = joined
-      .map((pair) => {
-        const part = fragmented[pair.part]
-        const whole = fragmented[pair.whole]
-        return part === undefined || whole === undefined
-          ? undefined
-          : { part, whole, score: pair.score }
-      })
-      .filter(
-        (entry): entry is { part: Fragmented; whole: Fragmented; score: number } =>
-          entry !== undefined,
-      )
-      .filter((entry) => related({ part: entry.part.unit, whole: entry.whole.unit }))
+    const relatedAll: ReadonlyArray<FragmentedPair> = joined.flatMap((pair) => {
+      const part = fragmented[pair.part]
+      const whole = fragmented[pair.whole]
+      return part === undefined ||
+        whole === undefined ||
+        !related({ part: part.unit, whole: whole.unit })
+        ? []
+        : [{ part, whole, score: pair.score }]
+    })
 
     // Test and fixture declarations are not candidates. The pair count is kept
     // beside the survivors so the funnel still says how much the filter removed;
@@ -243,7 +248,7 @@ export const containment: PlannedRule = {
     const fragmentNote =
       fragmentSizes.length === 0
         ? "no non-test pair shared a fragment id"
-        : `fragment ids: across ${fragmentSizes.length} surviving pair(s), the smaller side has p50 ${percentile(fragmentSizes, 50)}, p90 ${percentile(fragmentSizes, 90)}, and p95 ${percentile(fragmentSizes, 95)} ids`
+        : `fragment ids: ${spreadNote(fragmentSizes)} ids`
 
     const tokenSizes = relatedPairs
       .map((entry) => Math.min(entry.part.unit.tokens.length, entry.whole.unit.tokens.length))
@@ -251,7 +256,7 @@ export const containment: PlannedRule = {
     const tokenNote =
       tokenSizes.length === 0
         ? `min-token floor ${minTokens}: no non-test pair survived it`
-        : `min-token floor ${minTokens}: ${sourceDeclarations} source declaration(s) at or above it; across ${tokenSizes.length} surviving pair(s), the smaller side has p50 ${percentile(tokenSizes, 50)}, p90 ${percentile(tokenSizes, 90)}, and p95 ${percentile(tokenSizes, 95)} tokens`
+        : `min-token floor ${minTokens}: ${sourceDeclarations} source declaration(s) at or above it; ${spreadNote(tokenSizes)} tokens`
 
     const similarityThreshold = policy.duplicateMeaning.minSimilarity
     const aboveCutoff = relatedPairs.filter((entry) => entry.score >= cutoff)
@@ -263,10 +268,7 @@ export const containment: PlannedRule = {
     let skippedSimilar = 0
     const candidates: Array<Candidate> = []
     for (const entry of aboveCutoff) {
-      if (
-        !inScope(scope, entry.part.unit.file) &&
-        !inScope(scope, entry.whole.unit.file)
-      ) {
+      if (!inScope(scope, entry.part.unit.file) && !inScope(scope, entry.whole.unit.file)) {
         outOfScope += 1
         continue
       }
@@ -294,10 +296,7 @@ export const containment: PlannedRule = {
         similarity,
         rarity,
         rank: entry.score * rarity,
-        truncated: [
-          ...(entry.part.cut ? [entry.part.unit.name] : []),
-          ...(entry.whole.cut ? [entry.whole.unit.name] : []),
-        ],
+        truncated: truncatedNote([entry.part, entry.whole]),
       })
     }
 
@@ -356,7 +355,7 @@ export const containment: PlannedRule = {
     const judged = candidates.slice(0, maxCandidates)
     const overflow: ReadonlyArray<Drop> = candidates.slice(maxCandidates).map((candidate) => ({
       ruleId: RULE_ID,
-      subject: candidate.smaller.name + " inside " + candidate.larger.name,
+      subject: pairSubject(candidate),
       stage: "budget" as const,
       reason: "past the budget of " + maxCandidates + " containment pairs",
     }))
@@ -388,7 +387,7 @@ export const containment: PlannedRule = {
         candidate,
         plan: {
           ruleId: RULE_ID,
-          subject: candidate.smaller.name + " inside " + candidate.larger.name,
+          subject: pairSubject(candidate),
           concerns: [candidate.smaller.file, candidate.larger.file],
           atoms: [id],
           violations: VIOLATIONS,
@@ -428,7 +427,7 @@ export const containment: PlannedRule = {
           difference: differenceOf(label),
           action: actionOf(label),
           review: review ? " For review: the choice was not decisive." : "",
-          truncated: truncatedNote(candidate),
+          truncated: candidate.truncated,
           unverified: unverified === undefined ? "" : " Unjudged: " + unverified + ".",
           unverifiedHelp: unverified === undefined ? "" : " " + unverified + ".",
         },
@@ -470,7 +469,7 @@ export const containment: PlannedRule = {
           if (verdict.label === "coincidence") {
             drops.push({
               ruleId: RULE_ID,
-              subject: candidate.smaller.name + " inside " + candidate.larger.name,
+              subject: pairSubject(candidate),
               stage: "declined",
               reason: "the two declarations are unrelated things that share tokens",
             })
@@ -484,7 +483,7 @@ export const containment: PlannedRule = {
           if (quality.quality === "drop") {
             drops.push({
               ruleId: RULE_ID,
-              subject: candidate.smaller.name + " inside " + candidate.larger.name,
+              subject: pairSubject(candidate),
               stage: "gated",
               reason: quality.reason,
             })
@@ -508,9 +507,7 @@ export const containment: PlannedRule = {
               unitKind: "containment pairs",
               judged: maxCandidates,
               candidates: candidates.length,
-              sample: candidates
-                .slice(maxCandidates)
-                .map((candidate) => candidate.smaller.name + " inside " + candidate.larger.name),
+              sample: candidates.slice(maxCandidates).map((candidate) => pairSubject(candidate)),
             }),
           ],
           drops,

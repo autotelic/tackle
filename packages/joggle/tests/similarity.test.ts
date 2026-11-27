@@ -75,7 +75,7 @@ it("prefix filtering finds exactly the pairs the complete sweep finds", () => {
   for (const seed of [7, 99, 1234]) {
     const sets = corpus(seed)
     const fast = allPairs(
-      sets.map((shingles, index) => ({ position: index, shingles })),
+      sets.map((values, index) => ({ position: index, values })),
       0.7,
     )
       .map((pair) => key(pair.left, pair.right))
@@ -87,7 +87,7 @@ it("prefix filtering finds exactly the pairs the complete sweep finds", () => {
 it("prefix filtering stays complete at a looser threshold too", () => {
   const sets = corpus(11)
   const fast = allPairs(
-    sets.map((ids, index) => ({ position: index, shingles: ids })),
+    sets.map((values, index) => ({ position: index, values })),
     0.3,
   )
     .map((pair) => key(pair.left, pair.right))
@@ -97,7 +97,7 @@ it("prefix filtering stays complete at a looser threshold too", () => {
 
 it("it is much cheaper than comparing every pair in the window", () => {
   const sets = corpus(7)
-  const index = sets.map((shingles, position) => ({ position, shingles }))
+  const index = sets.map((values, position) => ({ position, values }))
   let windowPairs = 0
   const ordered = index
     .map((entry) => ({ item: entry, position: entry.position }))
@@ -129,7 +129,7 @@ it("finds pairs a token-length window would drop", () => {
   const sets = [narrow, wide]
   const tokenLengths = [100, 200]
   const shingleSized = allPairs(
-    sets.map((shingles, index) => ({ position: index, shingles })),
+    sets.map((values, index) => ({ position: index, values })),
     0.7,
   )
   const tokenWindow = (() => {
@@ -190,7 +190,7 @@ it("the containment join finds exactly the pairs the brute-force sweep finds", (
   for (const seed of [7, 99, 1234]) {
     const sets = corpus(seed)
     const fast = allContainmentPairs(
-      sets.map((ids, index) => ({ position: index, ids })),
+      sets.map((values, index) => ({ position: index, values })),
       0.7,
     )
       .map((pair) => `${pair.whole}-${pair.part}`)
@@ -202,7 +202,7 @@ it("the containment join finds exactly the pairs the brute-force sweep finds", (
 it("the containment join stays complete at a looser threshold too", () => {
   const sets = corpus(11)
   const fast = allContainmentPairs(
-    sets.map((ids, index) => ({ position: index, ids })),
+    sets.map((values, index) => ({ position: index, values })),
     0.3,
   )
     .map((pair) => `${pair.whole}-${pair.part}`)

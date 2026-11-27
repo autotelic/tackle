@@ -172,7 +172,7 @@ export const similarPairs = (input: SimilarOptions): ReadonlyArray<UnitPair> => 
     eligible.push({ unit, index })
   })
   const pairs = allPairs(
-    eligible.map((entry) => ({ position: entry.index, shingles: entry.unit.shingles })),
+    eligible.map((entry) => ({ position: entry.index, values: entry.unit.shingles })),
     input.minSimilarity,
   )
   const found: Array<UnitPair> = []
