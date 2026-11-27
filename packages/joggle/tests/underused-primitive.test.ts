@@ -1,7 +1,11 @@
 import { expect, it } from "@effect/vitest"
 import { Effect } from "effect"
 import { NodeServices } from "@effect/platform-node"
+import { mkdirSync, mkdtempSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { underusedPrimitive } from "../src/rules/underused-primitive.ts"
+import { projectRootOf, surfaceFileOf, surfaceOutputOf } from "../src/surface.ts"
 import { plannedDiagnosticsOf } from "../src/testing.ts"
 import { loadWorkspace } from "../src/workspace.ts"
 import { choice, modelStub, noul } from "./support.ts"
@@ -11,19 +15,32 @@ const fixture = (paths: ReadonlyArray<string> = ["src/timing.ts"]) =>
 
 const judged = { does: noul(0.92), disposition: choice("use_export", 0.95) }
 
-it.effect("two declarations doing raw milliseconds are one finding when Duration is imported nowhere", () =>
+const surface = (name: string): string => join(process.cwd(), "tests/fixtures/underused", name)
+
+it.effect("three declarations doing raw milliseconds are one finding when Duration is imported nowhere", () =>
   Effect.gen(function* () {
     const workspace = yield* fixture()
     const result = yield* plannedDiagnosticsOf(underusedPrimitive, workspace, {
-      config: { surfacePath: "surface.json" },
+      config: { surfacePath: surface("surface.json") },
     })
     expect(result.diagnostics.length).toBe(1)
     const found = result.diagnostics[0]!
     expect(found.message).toContain("Duration")
-    expect(found.message).toContain("2 declaration")
+    expect(found.message).toContain("3 declaration")
     expect(found.message).toContain("import { Duration } from \"effect\"")
     expect(found.identity).toContain("duration")
     expect(found.judged).toBe(true)
+  }).pipe(Effect.provide(modelStub(judged)), Effect.provide(NodeServices.layer)),
+)
+
+it.effect("two declarations are a coincidence, not a capability", () =>
+  Effect.gen(function* () {
+    const workspace = yield* fixture(["src/pair.ts"])
+    const result = yield* plannedDiagnosticsOf(underusedPrimitive, workspace, {
+      config: { surfacePath: surface("surface.json") },
+    })
+    expect(result.diagnostics).toEqual([])
+    expect(result.drops.some((drop) => drop.reason.includes("coincidence"))).toBe(true)
   }).pipe(Effect.provide(modelStub(judged)), Effect.provide(NodeServices.layer)),
 )
 
@@ -31,7 +48,7 @@ it.effect("the same arithmetic is silent when the workspace imports Duration", (
   Effect.gen(function* () {
     const workspace = yield* fixture(["src/importing.ts"])
     const result = yield* plannedDiagnosticsOf(underusedPrimitive, workspace, {
-      config: { surfacePath: "surface.json" },
+      config: { surfacePath: surface("surface.json") },
     })
     expect(result.diagnostics).toEqual([])
   }).pipe(Effect.provide(modelStub(judged)), Effect.provide(NodeServices.layer)),
@@ -41,7 +58,7 @@ it.effect("a missing surface is a note, never silence and never a crash", () =>
   Effect.gen(function* () {
     const workspace = yield* fixture()
     const result = yield* plannedDiagnosticsOf(underusedPrimitive, workspace, {
-      config: { surfacePath: "missing.json" },
+      config: { surfacePath: surface("missing.json") },
     })
     expect(result.diagnostics).toEqual([])
     expect(result.notes.some((note) => note.includes("surface"))).toBe(true)
@@ -52,8 +69,49 @@ it.effect("a family the surface does not offer is not a candidate", () =>
   Effect.gen(function* () {
     const workspace = yield* fixture()
     const result = yield* plannedDiagnosticsOf(underusedPrimitive, workspace, {
-      config: { surfacePath: "surface-no-family.json" },
+      config: { surfacePath: surface("surface-no-family.json") },
     })
     expect(result.diagnostics).toEqual([])
   }).pipe(Effect.provide(modelStub(judged)), Effect.provide(NodeServices.layer)),
 )
+
+it.effect("a declined Duration falls through to Clock, and the finding names Clock", () =>
+  Effect.gen(function* () {
+    const workspace = yield* fixture()
+    const result = yield* plannedDiagnosticsOf(underusedPrimitive, workspace, {
+      config: { surfacePath: surface("surface-fallback.json") },
+    })
+    expect(result.diagnostics.length).toBe(1)
+    const found = result.diagnostics[0]!
+    expect(found.message).toContain("Clock")
+    expect(found.message).not.toContain("import { Duration }")
+    expect(found.message).toContain("3 declaration")
+  }).pipe(
+    Effect.provide(
+      modelStub({
+        "does@0": noul(0.04),
+        "disposition@0": choice("use_export", 0.9),
+        "does@1": noul(0.92),
+        "disposition@1": choice("use_export", 0.95),
+      }),
+    ),
+    Effect.provide(NodeServices.layer),
+  ),
+)
+
+it("surface build's default output is the path the rule reads", () => {
+  const root = mkdtempSync(join(tmpdir(), "joggle-surface-"))
+  const packageDirectory = join(root, "packages", "joggle")
+  mkdirSync(join(root, ".git"), { recursive: true })
+  mkdirSync(packageDirectory, { recursive: true })
+
+  const built = surfaceOutputOf({ start: packageDirectory, out: undefined })
+  const read = surfaceFileOf({
+    root: projectRootOf(packageDirectory),
+    surfacePath: undefined,
+  })
+
+  expect(projectRootOf(packageDirectory)).toBe(root)
+  expect(built).toBe(join(root, ".joggle", "surface.json"))
+  expect(read).toBe(built)
+})

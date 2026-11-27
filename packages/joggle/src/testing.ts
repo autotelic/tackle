@@ -168,7 +168,12 @@ export const decisionStub = (
         Effect.succeed({
           answers: Object.fromEntries(
             Object.entries(decisions).map(([key, decision]) => {
-              const answer = supplied[localName(key)]
+              // A test may name a decision by plan (`does@1`) when two plans ask the
+              // same question and must answer differently; otherwise the bare name
+              // applies to every plan that asks it. A Noul repeats inside the same
+              // plan (`does@1~2`), and every repeat is the same answer.
+              const answer =
+                supplied[key.replace(/~\d+$/u, "")] ?? supplied[localName(key)]
               if (decision._tag === "Classify") {
                 const labels = Object.keys(decision.criteria)
                 const label =
