@@ -5,7 +5,12 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { expect, test } from "vitest"
-import { roomSessionState } from "../src/RoomSession.ts"
+import {
+  roomSessionEnv,
+  roomSessionEnvironment,
+  roomSessionEnvironmentFrom,
+  roomSessionState,
+} from "../src/RoomSession.ts"
 import {
   createRoom,
   openRoomJournal,
@@ -152,6 +157,33 @@ test("pause and resume leave the journal and its requests intact", async () => {
   } finally {
     await rm(root, { recursive: true, force: true })
   }
+})
+
+test("the environment a worker reads names the journal the room opens", () => {
+  const environment = roomSessionEnvironment({
+    root: "/shop/.room",
+    id: "dev",
+    session: { path: "session.sqlite", openedAt: 1 },
+  })
+  expect(roomSessionEnvironmentFrom(roomSessionEnv(environment))).toEqual({
+    root: "/shop/.room",
+    id: "dev",
+    path: join("/shop/.room", "dev", "session.sqlite"),
+  })
+  // A room file written before the record existed names no path, but the worker still gets the
+  // default journal rather than a second file beside it.
+  expect(roomSessionEnvironment({ root: "/shop/.room", id: "old" }).path).toBe(
+    join("/shop/.room", "old", "session.sqlite"),
+  )
+})
+
+test("a worker with a partial contract is refused instead of guessing a journal", () => {
+  expect(() =>
+    roomSessionEnvironmentFrom({
+      TACKLE_ROOM_ID: "dev",
+      TACKLE_ROOM_SESSION: "/tmp/session.sqlite",
+    }),
+  ).toThrow(/TACKLE_ROOM_ROOT/)
 })
 
 test("a room file written before the session field still decodes", async () => {
