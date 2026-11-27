@@ -1,5 +1,18 @@
 # @autotelic/protocol
 
+## 0.2.0
+
+### Minor Changes
+
+- The dependency surface: the exports a repository's installed packages already
+  offer, as a lexicon.
+
+  `joggle surface build` reads each direct dependency's type declaration and
+  writes `{ packages: [{ name, version, exports: [{ name, module, kind, signature, doc }] }] }`.
+  It follows `export * from "./X.js"` one level into the sibling `.d.ts` — without
+  that, effect's root declaration contributes 151 names instead of 4111, and
+  `Data`/`TaggedError` are invisible.
+
 ## 0.1.2
 
 ### Patch Changes

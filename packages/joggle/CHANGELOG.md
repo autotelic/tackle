@@ -1,5 +1,34 @@
 # @autotelic/joggle
 
+## 0.13.0
+
+### Minor Changes
+
+- New rule `joggle/underused-primitive`: a capability hand-rolled in this
+  repository that an installed dependency already exports.
+
+  The signal is an ABSENCE, which no existing join could see: the dependency is
+  never called, so there is no duplicate to compare. The candidate is a syntactic
+  evidence kind (one today: a failure kind spelled `class X extends Error` or a
+  type carrying `_tag`) crossed with an export nobody imports, judged against the
+  one export that would replace it.
+
+  Proven on this repository rather than argued:
+
+  packages/board/src/Supervisor.ts — 9 declarations do tagged errors by hand and
+  TaggedError from effect/Data is imported nowhere.
+
+  `joggle surface build` writes the surface (machine-local, never committed);
+  `joggle surface --check` gates staleness. The catalogue holds one kind on
+  purpose: three duration shapes were deleted because the model declined every one
+  of them, correctly — `Duration` represents a length of time, it does not remove
+  a literal.
+
+### Patch Changes
+
+- Updated dependencies
+  - @autotelic/protocol@0.2.0
+
 ## 0.12.0
 
 ### Minor Changes
