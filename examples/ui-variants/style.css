@@ -1,0 +1,169 @@
+:root {
+  color: #101828;
+  background: #f9fafb;
+  font:
+    14px/1.5 ui-sans-serif,
+    system-ui,
+    sans-serif;
+}
+body {
+  margin: 0;
+}
+.page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 40px 24px 72px;
+}
+.kicker {
+  margin: 0 0 8px;
+  color: #667085;
+  font:
+    11px/1.4 ui-monospace,
+    SFMono-Regular,
+    monospace;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+h1 {
+  margin: 0 0 12px;
+  font-size: 28px;
+  line-height: 1.15;
+}
+.lede {
+  max-width: 62ch;
+  margin: 0 0 28px;
+  color: #475467;
+}
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+.card-link {
+  display: grid;
+  gap: 6px;
+  padding: 18px;
+  border: 1px solid #d0d5dd;
+  border-radius: 10px;
+  background: #fff;
+  color: inherit;
+  text-decoration: none;
+}
+.card-link:hover {
+  border-color: #344054;
+}
+.card-link strong {
+  font-size: 16px;
+}
+.card-link span:last-child {
+  color: #667085;
+  font-size: 12px;
+}
+.card-kicker {
+  color: #667085;
+  font:
+    11px/1.4 ui-monospace,
+    SFMono-Regular,
+    monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.hint {
+  margin-top: 22px;
+  color: #667085;
+  font-size: 12px;
+}
+.nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  color: #667085;
+  font:
+    12px/1.5 ui-monospace,
+    SFMono-Regular,
+    monospace;
+}
+.nav a {
+  color: #344054;
+}
+.head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: baseline;
+  margin-bottom: 14px;
+}
+.head h2 {
+  margin: 0;
+  font-size: 20px;
+}
+.summary {
+  color: #667085;
+  font:
+    12px/1.4 ui-monospace,
+    SFMono-Regular,
+    monospace;
+}
+.room {
+  border: 1px solid #d0d5dd;
+  border-radius: 10px;
+  padding: 14px;
+  margin-top: 10px;
+  background: #fff;
+}
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+}
+.id {
+  font:
+    600 15px/1.2 ui-monospace,
+    SFMono-Regular,
+    monospace;
+}
+.state {
+  border: 1px solid #98a2b3;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font:
+    11px/1.5 ui-monospace,
+    SFMono-Regular,
+    monospace;
+}
+.mono {
+  color: #475467;
+  font:
+    12px/1.5 ui-monospace,
+    SFMono-Regular,
+    monospace;
+}
+.muted {
+  color: #98a2b3;
+  font:
+    12px/1.5 ui-monospace,
+    SFMono-Regular,
+    monospace;
+}
+button {
+  margin-left: auto;
+  border: 1px solid #344054;
+  background: #fff;
+  border-radius: 6px;
+  padding: 5px 9px;
+  cursor: pointer;
+  font:
+    12px/1 ui-monospace,
+    SFMono-Regular,
+    monospace;
+}
+button:hover {
+  background: #f2f4f7;
+}
+.note {
+  margin-top: 16px;
+  color: #667085;
+  font-size: 12px;
+}
