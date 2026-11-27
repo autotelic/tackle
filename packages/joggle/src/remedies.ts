@@ -1,6 +1,7 @@
-import { Effect, Predicate, Result, Schema } from "effect"
+import { Effect, Option, Predicate, Result, Schema } from "effect"
 import { Decision } from "effect/ai"
 import type { AiError, DecisionModel } from "effect/ai"
+import { BuildFailure, lookup } from "./absence.ts"
 import { Atoms } from "./atoms.ts"
 import { canonical } from "./canonical.ts"
 import { isUnreachable } from "./decision.ts"
@@ -456,22 +457,28 @@ export const composeRemedy = ({
 }): string => {
   const clauseLabel = repairLabel(clause)
   if (Result.isFailure(clauseLabel)) {
-    throw new Error(
-      "remedies: refusing to use " +
+    throw new BuildFailure({
+      family,
+      subject: JSON.stringify(clause),
+      message:
+        "remedies: refusing to use " +
         JSON.stringify(clause) +
         " as a repair; it " +
         clauseLabel.failure,
-    )
+    })
   }
   const composed = family === "" ? clauseLabel.success : family + ": " + clauseLabel.success
   const label = repairLabel(composed)
   if (Result.isFailure(label)) {
-    throw new Error(
-      "remedies: refusing to label a cluster " +
+    throw new BuildFailure({
+      family,
+      subject: JSON.stringify(composed),
+      message:
+        "remedies: refusing to label a cluster " +
         JSON.stringify(composed) +
         "; it " +
         label.failure,
-    )
+    })
   }
   return label.success
 }
@@ -567,15 +574,18 @@ const groupsOf = (messages: ReadonlyArray<MessageNode>): ReadonlyArray<ClauseGro
  * they cannot share a request with it. Rounding here rather than in the rule
  * keeps every round batched and every question cached on its own state.
  */
-const askPlans = (
-  plans: ReadonlyArray<Plan<unknown>>,
+const askPlans = <A>(
+  plans: ReadonlyArray<Plan<A>>,
 ): Effect.Effect<
-  { readonly values: ReadonlyArray<unknown>; readonly failures: ReadonlyArray<AiError.AiError> },
+  {
+    readonly values: ReadonlyArray<A | undefined>
+    readonly failures: ReadonlyArray<AiError.AiError>
+  },
   never,
   Atoms | PlanAnswers | DecisionModel.DecisionModel
 > =>
   Effect.gen(function* () {
-    const values: Array<unknown> = plans.map(() => undefined)
+    const values: Array<A | undefined> = plans.map(() => undefined)
     const failures: Array<AiError.AiError> = []
     let offset = 0
     for (const chunk of yield* chunkPlans(plans, policy.decision.maxRequestChars)) {
@@ -635,13 +645,13 @@ export const judgeRemedies = (
     const limit = policy.decision.maxChoiceOptions
     const failures: Array<AiError.AiError> = []
 
-    const familyOfAnswer = (value: unknown): string =>
+    const familyOfAnswer = (value: string | undefined): string =>
       Predicate.isString(value) && value in remedyFamilies ? value : "other"
 
     // ROUND ONE: which family of repair? Asked of every message, and of every
     // candidate clause, so the next round can restrict itself to the clauses
     // belonging to the family the message named.
-    const familyPlans: Array<Plan<unknown>> = []
+    const familyPlans: Array<Plan<string>> = []
     const familySubjects: Array<{ readonly kind: "message" | "clause"; readonly key: string }> = []
     for (const message of messages) {
       const atom = yield* atoms.add({
@@ -741,13 +751,16 @@ export const judgeRemedies = (
       const route = clauseRouteOf({ family, message: message.message, candidates })
       if (route.kind === "orphan") {
         return yield* Effect.die(
-          new Error(
-            "remedies: repair family `" +
+          new BuildFailure({
+            family: route.family,
+            subject: route.message,
+            message:
+              "remedies: repair family `" +
               route.family +
               "` has no clause assigned for " +
               JSON.stringify(route.message) +
               "; refusing to send an empty Choice",
-          ),
+          }),
         )
       }
       if (route.kind === "implied") {
@@ -762,8 +775,8 @@ export const judgeRemedies = (
     }
     let depth = 0
     while (pending.length > 0 && depth < 8) {
-      const plans: Array<Plan<unknown>> = []
-      const actions: Array<(value: unknown) => void> = []
+      const plans: Array<Plan<string>> = []
+      const actions: Array<(value: string | undefined) => void> = []
       const next: Array<PendingClause> = []
       for (const item of pending) {
         const finding = { message: item.message.message, help: item.message.help ?? "" }
@@ -774,13 +787,16 @@ export const judgeRemedies = (
         })
         if (route.kind === "orphan") {
           return yield* Effect.die(
-            new Error(
-              "remedies: repair family `" +
+            new BuildFailure({
+              family: route.family,
+              subject: route.message,
+              message:
+                "remedies: repair family `" +
                 route.family +
                 "` has no clause assigned for " +
                 JSON.stringify(route.message) +
                 "; refusing to send an empty Choice",
-            ),
+            }),
           )
         }
         if (route.kind === "implied") {
@@ -879,7 +895,7 @@ export const judgeRemedies = (
     }
 
     const pairs: Array<{ readonly key: string }> = []
-    const pairPlans: Array<Plan<unknown>> = []
+    const pairPlans: Array<Plan<number>> = []
 
     for (let left = 0; left < groups.length; left += 1) {
       for (let right = left + 1; right < groups.length; right += 1) {
@@ -1270,7 +1286,7 @@ const familyOfRule = (
   members: ReadonlyArray<RemedyFinding>,
   rule: string,
   opinion: RepairOpinion,
-): string | undefined => {
+): Option.Option<string> => {
   const counts = new Map<string, number>()
   for (const member of members) {
     if (member.rule !== rule) continue
@@ -1278,10 +1294,13 @@ const familyOfRule = (
     if (family === undefined) continue
     counts.set(family, (counts.get(family) ?? 0) + 1)
   }
-  return [...counts.entries()].sort(
-    ([leftLabel, leftCount], [rightLabel, rightCount]) =>
-      rightCount - leftCount || leftLabel.localeCompare(rightLabel),
-  )[0]?.[0]
+  return lookup(
+    () =>
+      [...counts.entries()].sort(
+        ([leftLabel, leftCount], [rightLabel, rightCount]) =>
+          rightCount - leftCount || leftLabel.localeCompare(rightLabel),
+      )[0]?.[0],
+  )
 }
 
 /**
@@ -1334,8 +1353,8 @@ const crossRulesOf = (
         probability,
         sharedRepair,
         families: {
-          a: familyOfRule(members, a.rule, opinion),
-          b: familyOfRule(members, b.rule, opinion),
+          a: Option.getOrUndefined(familyOfRule(members, a.rule, opinion)),
+          b: Option.getOrUndefined(familyOfRule(members, b.rule, opinion)),
         },
       })
     }
