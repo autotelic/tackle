@@ -11,6 +11,7 @@ import {
   baseEvents,
   deskEvents,
   githubEvents,
+  reopenFor,
   shouldWake,
   watchOnce,
   type WatchEvent,
@@ -452,6 +453,20 @@ test("a desk answer becomes an event for its own workstream", async () => {
   } finally {
     rmSync(root, { recursive: true, force: true })
   }
+})
+
+test("a done workstream reopens for a conflict or a moved parent, and only those", () => {
+  const done = { ...base(), phase: "done" as const }
+  const event = (kind: string): WatchEvent => ({
+    id: "github:" + kind + ":1",
+    kind,
+    at: "2026-11-24T00:00:00.000Z",
+    payload: {},
+  })
+  expect(reopenFor(done, event("merge-conflict"))?.phase).toBe("build")
+  expect(reopenFor(done, event("parent"))?.phase).toBe("build")
+  expect(reopenFor(done, event("review"))).toBeUndefined()
+  expect(reopenFor({ ...base(), phase: "build" }, event("merge-conflict"))).toBeUndefined()
 })
 
 test("the six wake cases agree with the decision", () => {

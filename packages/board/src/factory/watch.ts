@@ -427,6 +427,16 @@ export const linearEvents = (input: {
     }))
 }
 
+/**
+ * A done workstream that receives new PR work is not done: a conflict or a moved parent base is
+ * new work, and consuming it without a pass loses it silently. Reopen only those two event kinds;
+ * a review/comment on a retired PR stays a desk decision rather than an automatic restart.
+ */
+export const reopenFor = (record: Workstream, event: WatchEvent): Workstream | undefined =>
+  record.phase === "done" && (event.kind === "merge-conflict" || event.kind === "parent")
+    ? { ...record, phase: "build", updatedAt: event.at }
+    : undefined
+
 export interface WakeDecision {
   readonly wake: boolean
   readonly reason: string
@@ -735,6 +745,11 @@ export const watchOnce = async (input: {
       else await consumeEvents({ id: input.id, ids: [event.id], home: input.home })
       appended.push(event.id)
       continue
+    }
+    const reopened = reopenFor(record, event)
+    if (reopened !== undefined) {
+      record = reopened
+      await writeWorkstream({ record, home: input.home })
     }
     const decision = shouldWake({
       record,
