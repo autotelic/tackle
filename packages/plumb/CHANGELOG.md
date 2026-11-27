@@ -1,5 +1,20 @@
 # @autotelic/plumb
 
+## 0.7.1
+
+### Patch Changes
+
+- `no-shape-in-symbol-names` fires at declaration sites, not on every identifier.
+
+  It flagged any identifier containing "shape", including a member read
+  (`unit.shape`) and an import of someone else's export. Neither is a name this
+  package chose, and the only way to satisfy the rule was to spell the read
+  `unit["shape"]` — strictly worse code, which is what an unfixable finding
+  produces. The rule now narrows by node type at the places a name is introduced
+  (variables, functions, classes, interfaces, type aliases, enums, and member
+  signatures), which also removes the need for a parent pointer the rule API does
+  not provide.
+
 ## 0.7.0
 
 ### Minor Changes

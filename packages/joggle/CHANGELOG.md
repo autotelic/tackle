@@ -1,5 +1,21 @@
 # @autotelic/joggle
 
+## 0.14.2
+
+### Patch Changes
+
+- `duplicate-implementation` sees a copy in the same file.
+
+  `distinctFiles: true` made every duplicate rule blind to the cheapest kind of
+  duplication there is: `bundles.ts` carried `blocksIn` and `declares` three lines
+  apart with identical bodies and nothing fired. The join now allows same-file
+  pairs, with `distinctNames` still required so a declaration is not compared with
+  itself. Measured on this repository: 60 clusters before, 71 after — eleven of them
+  same-file copies.
+
+  `DeclarationQuery` also carries `canonical?: boolean`, so a caller can ask for
+  canonical type ids without turning them on for every declaration of a repository.
+
 ## 0.14.1
 
 ### Patch Changes
