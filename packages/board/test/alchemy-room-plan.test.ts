@@ -35,7 +35,7 @@ const stack = Alchemy.Stack(
       scope: "alpha",
     })
     const machine = yield* RoomMachine("alpha-vm", {
-      room: room.roomFile,
+      room: room.id,
       root,
       stateDir: join(root, "alpha"),
     })
