@@ -1,5 +1,5 @@
 {
-  "hash": "b4cc019618cb9d0714f73ea1f2e98a509c94921acb8a644a92555d072178c18b",
+  "hash": "5f290b4e795a3a96bf00eee3065894f662c5d91a013d5f22b6ff84b72a5dff3a",
   "lexicon": {
     "name": "catalog",
     "version": 1
@@ -150,6 +150,8 @@
         "atlasView",
         "brandLink",
         "button",
+        "candidateList",
+        "candidateRow",
         "card",
         "chip",
         "deskRow",
@@ -164,8 +166,10 @@
         "h3",
         "header",
         "p",
+        "peerSection",
         "repoSection",
         "reportRow",
+        "roomInventory",
         "routeNav",
         "section",
         "sessionRow",
@@ -183,6 +187,8 @@
         "view:atlasPackageCard",
         "view:atlasView",
         "view:brandLink",
+        "view:candidateList",
+        "view:candidateRow",
         "view:card",
         "view:chip",
         "view:deskRow",
@@ -190,8 +196,10 @@
         "view:factoryFloor",
         "view:factoryPulse",
         "view:factoryView",
+        "view:peerSection",
         "view:repoSection",
         "view:reportRow",
+        "view:roomInventory",
         "view:routeNav",
         "view:sessionRow",
         "view:visionView",
@@ -207,6 +215,7 @@
         "AnswerDesk",
         "BoardView",
         "FetchAtlas",
+        "FetchFleet",
         "FetchPresence",
         "OpenSession"
       ],
@@ -300,6 +309,20 @@
           "renders": false,
           "calls": [
             "Settled",
+            "fetchJson",
+            "make",
+            "match",
+            "pipe"
+          ],
+          "tags": []
+        },
+        {
+          "name": "FetchFleet",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "FleetSettled",
             "fetchJson",
             "make",
             "match",
@@ -567,6 +590,43 @@
           ]
         },
         {
+          "name": "candidateRow",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "attr",
+            "children",
+            "class",
+            "join",
+            "map",
+            "slice"
+          ],
+          "tags": [
+            "a",
+            "div",
+            "span"
+          ]
+        },
+        {
+          "name": "candidateList",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "candidateRow",
+            "children",
+            "class",
+            "filter",
+            "map"
+          ],
+          "tags": [
+            "candidateRow",
+            "div",
+            "span"
+          ]
+        },
+        {
           "name": "githubRepoUrl",
           "kind": "function",
           "exported": false,
@@ -634,6 +694,7 @@
           "calls": [
             "activityBlock",
             "attr",
+            "candidateList",
             "children",
             "class",
             "environmentLine",
@@ -647,6 +708,7 @@
             "a",
             "activityBlock",
             "article",
+            "candidateList",
             "div",
             "environmentLine",
             "h3",
@@ -816,6 +878,46 @@
           ]
         },
         {
+          "name": "peerSection",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "at",
+            "children",
+            "class",
+            "filter",
+            "join",
+            "map",
+            "split"
+          ],
+          "tags": [
+            "div",
+            "h2",
+            "h3",
+            "section",
+            "span"
+          ]
+        },
+        {
+          "name": "roomInventory",
+          "kind": "function",
+          "exported": false,
+          "renders": true,
+          "calls": [
+            "card",
+            "children",
+            "class",
+            "map"
+          ],
+          "tags": [
+            "card",
+            "div",
+            "p",
+            "span"
+          ]
+        },
+        {
           "name": "factoryPulse",
           "kind": "function",
           "exported": false,
@@ -840,6 +942,7 @@
           "renders": true,
           "calls": [
             "appHeader",
+            "candidatesByWorkstream",
             "card",
             "children",
             "class",
@@ -850,10 +953,12 @@
             "filter",
             "from",
             "map",
+            "peerSection",
             "reduce",
             "repoName",
             "repoSection",
-            "reportRow"
+            "reportRow",
+            "roomInventory"
           ],
           "tags": [
             "appHeader",
@@ -864,8 +969,10 @@
             "factoryFloor",
             "factoryPulse",
             "p",
+            "peerSection",
             "repoSection",
             "reportRow",
+            "roomInventory",
             "span",
             "strong",
             "summary"
@@ -996,7 +1103,7 @@
         {
           "part": "src/vision.ts",
           "tag": "visionView",
-          "line": 256,
+          "line": 297,
           "count": 1
         }
       ]
@@ -1024,6 +1131,7 @@
         "SessionSource",
         "SessionSourceView",
         "Workstream",
+        "candidatesByWorkstream",
         "environmentsByWorkstream"
       ],
       "usedBy": 1,
@@ -1194,6 +1302,88 @@
           "tags": []
         },
         {
+          "name": "Candidate",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "Array",
+            "NullOr",
+            "Struct",
+            "optional"
+          ],
+          "tags": []
+        },
+        {
+          "name": "Candidate",
+          "kind": "type",
+          "exported": true,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
+          "name": "PeerEnvironment",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "Array",
+            "NullOr",
+            "Struct",
+            "optional"
+          ],
+          "tags": []
+        },
+        {
+          "name": "PeerEnvironment",
+          "kind": "type",
+          "exported": true,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
+          "name": "FleetHost",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "NullOr",
+            "Struct",
+            "optional"
+          ],
+          "tags": []
+        },
+        {
+          "name": "FleetHost",
+          "kind": "type",
+          "exported": true,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
+          "name": "Fleet",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "Array",
+            "Struct",
+            "optional"
+          ],
+          "tags": []
+        },
+        {
+          "name": "Fleet",
+          "kind": "type",
+          "exported": true,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
           "name": "TailnetPeer",
           "kind": "variable",
           "exported": false,
@@ -1218,6 +1408,26 @@
         },
         {
           "name": "Tailnet",
+          "kind": "type",
+          "exported": true,
+          "renders": false,
+          "calls": [],
+          "tags": []
+        },
+        {
+          "name": "Room",
+          "kind": "variable",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "NullOr",
+            "Struct",
+            "optional"
+          ],
+          "tags": []
+        },
+        {
+          "name": "Room",
           "kind": "type",
           "exported": true,
           "renders": false,
@@ -1252,6 +1462,16 @@
           "calls": [
             "fromEntries",
             "map"
+          ],
+          "tags": []
+        },
+        {
+          "name": "candidatesByWorkstream",
+          "kind": "function",
+          "exported": true,
+          "renders": false,
+          "calls": [
+            "push"
           ],
           "tags": []
         }

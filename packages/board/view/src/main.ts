@@ -13,6 +13,7 @@ import {
   Fleet,
   Presence,
   Report,
+  type Room,
   Session,
   SessionSource,
   type Tailnet,
@@ -1069,6 +1070,45 @@ const peerSection = (h: Html.H<Message>, fleet: Fleet | null | undefined) => {
   )
 }
 
+/**
+ * The room inventory the board serves under /presence.rooms.
+ *
+ * It is the observation surface for the rooms Alchemy can declare: the aggregate state and the
+ * process the room owns, read from room.json and the run record. It does not invent a VM state;
+ * the Environment line on a card names the runtime the board actually observed.
+ */
+const roomInventory = (h: Html.H<Message>, rooms: ReadonlyArray<Room>) =>
+  card(h, {
+    title: "Room inventory",
+    id: "rooms",
+    children: [
+      h.p
+        .class("muted")
+        .children(
+          "Rooms read from room.json. A machine that is not running leaves no process line.",
+        ),
+      ...rooms.map((room) =>
+        h.div
+          .class("package-meta")
+          .children(
+            h.span.class("mono").children(room.id),
+            h.span.class("chip").children(room.state),
+            room.process === null
+              ? h.span.class("muted").children("no process")
+              : h.span
+                  .class("mono")
+                  .children(
+                    "pid " +
+                      room.process.pid +
+                      " · " +
+                      (room.process.alive ? "alive" : "dead") +
+                      (room.process.exec === undefined ? "" : " · " + room.process.exec),
+                  ),
+          ),
+      ),
+    ],
+  })
+
 const factoryPulse = (h: Html.H<Message>, presence: NonNullable<Model["presence"]>) => {
   const activities = presence.factory.activity
   const count = (state: typeof Activity.Type.state): number =>
@@ -1122,6 +1162,9 @@ const factoryView = (h: Html.H<Message>, model: Model) => {
       : h.p.class("error").children("Could not read /presence: " + model.error),
     model.notice === null ? undefined : h.p.class("notice").children(model.notice),
     presence === null ? undefined : factoryPulse(h, presence),
+    presence === null || presence.rooms === undefined || presence.rooms.length === 0
+      ? undefined
+      : roomInventory(h, presence.rooms),
     presence === null || (presence.factory.workstreamIssues ?? []).length === 0
       ? undefined
       : card(h, {

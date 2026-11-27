@@ -4,7 +4,9 @@ The software factory's view: one page that shows every open workstream, its
 phase, its checkpoint, the pending desk item, the sessions that can open it, and
 the reports the factory has consumed. `/tackle` is the same application's
 workspace atlas: every package, its README summary, and its internal dependency
-edges, read from `/atlas`. `/vision` is a static map of the factory's process.
+edges, read from `/atlas`. `/vision` is a static map of the factory's process,
+including Alchemy's room inventory: what the stack declares, what the room owns,
+and what agentOS runs.
 
 It is an **Effect UI** application (`@effect/ui`). The factory route arrives as
 one `/presence` read and the tackle route as one `/atlas` read; every transition
@@ -32,6 +34,7 @@ and a phase is a lane, not a widget with its own state.
 ```
 /presence  ──decode──▶  Presence
                          ├─ factory.workstreams  id, repo, project, phase, pr, checkpoint
+                         ├─ rooms                id, state, process
                          ├─ factory.desk         id, title, workstream
                          ├─ factory.reports      kind, workstream, expected, actual
                          └─ sessions             herdr / rex addresses + workstream
@@ -104,6 +107,9 @@ so a repo is a section and its lanes are the states it currently occupies.
   `workstream=<id>` label, by cwd inside the workstream path, or by the words in
   its tab title; an unmatched session stays in the bottom list rather than
   being guessed onto a workstream.
+- **Room inventory** — the rooms the board serves under `/presence.rooms`: each
+  `room.json` state and the process the room owns. It is the observation surface for the rooms
+  Alchemy can declare; a room with no process says `no process` rather than implying a machine.
 - **Environment** — each card also carries the parts of `factory.environments` the board
   sent: the machine, the worktree, the room's leased port, each declared service with the status a
   probe observed, and the preview route. A missing field draws nothing; a preview is drawn only

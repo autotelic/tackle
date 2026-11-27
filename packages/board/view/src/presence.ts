@@ -251,7 +251,23 @@ export const Tailnet = Schema.Struct({
 })
 export type Tailnet = typeof Tailnet.Type
 
+/** One room record the board serves: its aggregate state and the process it owns, if any. */
+export const Room = Schema.Struct({
+  id: Schema.String,
+  state: Schema.String,
+  process: Schema.NullOr(
+    Schema.Struct({
+      pid: Schema.Finite,
+      alive: Schema.Boolean,
+      exec: Schema.optional(Schema.String),
+    }),
+  ),
+})
+export type Room = typeof Room.Type
+
 export const Presence = Schema.Struct({
+  // The board's room inventory. Optional so a board that predates this field still decodes.
+  rooms: Schema.optional(Schema.Array(Room)),
   factory: Schema.Struct({
     workstreams: Schema.Array(Workstream),
     workstreamIssues: Schema.optional(

@@ -4,7 +4,7 @@
     "version": 1
   },
   "title": "UI menu",
-  "hash": "b4cc019618cb9d0714f73ea1f2e98a509c94921acb8a644a92555d072178c18b",
+  "hash": "5f290b4e795a3a96bf00eee3065894f662c5d91a013d5f22b6ff84b72a5dff3a",
   "features": [],
   "health": {
     "parts": 5,
@@ -52,6 +52,7 @@
         "AnswerDesk",
         "BoardView",
         "FetchAtlas",
+        "FetchFleet",
         "FetchPresence",
         "OpenSession"
       ],
@@ -76,6 +77,7 @@
         "SessionSource",
         "SessionSourceView",
         "Workstream",
+        "candidatesByWorkstream",
         "environmentsByWorkstream"
       ],
       "usedBy": 1,
