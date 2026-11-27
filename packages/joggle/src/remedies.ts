@@ -128,6 +128,23 @@ export const witnessClause = (message: string): string => {
 }
 
 /**
+ * The repairs a diagnosis-only message implies, for the judgement's option set.
+ *
+ * Some rules state the finding without an imperative: `@effect/ui/Command#make
+ * is an experimental API` prescribes exactly one action. The witness cannot see
+ * it, because there is no imperative sentence to take. If the option set is
+ * built from witness clauses alone, `j_repair` can only answer `none`, and an
+ * 83-site experimental-API cluster is labelled with a non-answer. So the code
+ * derives the implied repair and offers it as a candidate; the judgement still
+ * chooses, this only stops the choice being absent.
+ *
+ * @param clause - a message's witness clause.
+ * @returns the repairs the clause implies, empty when it names no action.
+ */
+export const impliedRepairsOf = (clause: string): ReadonlyArray<string> =>
+  /\bis an experimental API$/iu.test(clause.trim()) ? ["Use the non-experimental API"] : []
+
+/**
  * The diagnosis a message opens with, dropped from the witness clause.
  *
  * A counterexample pack quotes it rather than the whole message, so the reason a
@@ -254,7 +271,8 @@ export const judgeRemedies = (
     const atoms = yield* Atoms
     const messages = messageNodesOf(findings)
     const groups = groupsOf(messages)
-    const clauses = [...new Set([...groups.map((group) => group.clause), "none"])].sort(
+    const derived = messages.flatMap((message) => impliedRepairsOf(message.clause))
+    const clauses = [...new Set([...groups.map((group) => group.clause), ...derived, "none"])].sort(
       (left, right) => left.localeCompare(right),
     )
     const plans: Array<Plan<unknown>> = []
@@ -391,9 +409,7 @@ export const judgeRemedies = (
     // judgement that ran and failed, so it stays PARTIAL with a named reason.
     const answered = repairMap.size + sameMap.size
     const unavailable =
-      answered === 0 && failureErrors.length > 0 && failureErrors.some(isUnreachable)
-        ? failures[0]
-        : undefined
+      answered === 0 && failureErrors.some(isUnreachable) ? failures[0] : undefined
     return {
       repairs: repairMap,
       same: sameMap,
@@ -626,7 +642,13 @@ const clustersOf = (
   for (const members of byRoot.values()) {
     const repairCounts = new Map<string, number>()
     for (const member of members) {
-      const label = opinion.repairs.get(messageKeyOf(member)) ?? witnessClause(member.message)
+      // `none` is a judgement's way of saying "no candidate applies", not the
+      // name of a repair. Falling back to the witness clause keeps the cluster
+      // labelled with the best code-derived repair instead of hiding its
+      // findings behind a non-answer.
+      const answer = opinion.repairs.get(messageKeyOf(member))
+      const label =
+        answer === undefined || answer === "none" ? witnessClause(member.message) : answer
       repairCounts.set(label, (repairCounts.get(label) ?? 0) + 1)
     }
     const remedy =

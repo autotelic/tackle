@@ -1,4 +1,4 @@
-import { Context, Effect, Option, Result, Schema } from "effect"
+import { Context, Effect, Option, Predicate, Result, Schema } from "effect"
 import * as AiError from "effect/ai/AiError"
 import { Decision, DecisionModel } from "effect/ai"
 import { Atoms } from "./atoms.ts"
@@ -209,8 +209,12 @@ export const answerOf = (stored: StoredAnswer): Decision.Answer<Decision.Any> =>
  * make a question's identity move whenever its neighbours change -- and a
  * re-chunked run would replay nothing. The plan engine knows each plan's own
  * atoms, so it attaches them here; the memoizer keys the answer on that material
- * instead of the batch. A WeakMap, because the annotation is transport for one
- * request and must never reach the provider or a cache file.
+ * instead of the batch.
+ *
+ * The annotation is a non-enumerable symbol on a copy of the decision, not a
+ * module-level map. It is transport for one request: JSON, Schema and the wire
+ * never see a symbol key, and a copy keeps the annotation out of shared module
+ * state, where two runs in one process would overwrite each other's material.
  */
 interface QuestionMeta {
   /** The state this one question read: its plan's atom ids. */
@@ -219,15 +223,20 @@ interface QuestionMeta {
   readonly repeatsHandled?: boolean
 }
 
-const questionMeta = new WeakMap<object, QuestionMeta>()
+const QUESTION_META: unique symbol = Symbol("joggle/plans/QuestionMeta")
 
-/** Attach the state a question read, for the cache key. Returns the same decision. */
+/** The decision as the memoizer sees it: the provider's answer plus our annotation. */
+type AnnotatedDecision = { readonly [QUESTION_META]?: QuestionMeta }
+
+/** Attach the state a question read, for the cache key. Returns a copy carrying it. */
 export const withQuestionMeta = <D extends Decision.Any>(decision: D, meta: QuestionMeta): D => {
-  questionMeta.set(decision, meta)
-  return decision
+  const annotated = { ...decision } as D
+  Object.defineProperty(annotated, QUESTION_META, { value: meta, enumerable: false })
+  return annotated
 }
 
-const metaOf = (decision: Decision.Any): QuestionMeta | undefined => questionMeta.get(decision)
+const metaOf = (decision: Decision.Any): QuestionMeta | undefined =>
+  (decision as AnnotatedDecision)[QUESTION_META]
 
 /**
  * The key of one question's answer: the question, its OWN state, and the model.
@@ -652,7 +661,7 @@ export interface ResilientAnswers {
  * @param error - the failure a request produced.
  * @returns true when the batch was too large for the provider.
  */
-export const isRequestTooLarge = (error: AiError.AiError): boolean => {
+export const isRequestTooLarge: Predicate.Predicate<AiError.AiError> = (error) => {
   if (error.reason._tag !== "InvalidRequestError") return false
   const text = (error.reason.description ?? "") + "\n" + (error.reason.http?.body ?? "")
   return text.includes("max_tokens_exceeded") || text.includes("max_tokens")
