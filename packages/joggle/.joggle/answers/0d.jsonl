@@ -8,6 +8,7 @@
 0d827be9675f1d43	{"consistency":1,"kind":"Probability","probability":0.05000000000000001}
 0da29f89dbdaa705	{"confidence":0.47,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.06,"internal_only":0.64,"unaccounted":0.3}}
 0da44ec573537e97	{"confidence":0.9,"kind":"Classify","label":"library_core","probabilities":{"domain_core":0.08,"infrastructure":0,"library_core":0.92,"not_applicable":0,"rendering_edge":0,"transport_edge":0,"utilities":0}}
+0da6c5a985167df4	{"confidence":1,"kind":"Classify","label":"Return Option<Record<string, unknown>> and express absence as Option.none()","probabilities":{"Return Option<ReadonlyArray<string>> and express absence as Option.none()":0,"Return Option<Record<string, unknown>> and express absence as Option.none()":1,"Return Option<SessionTelemetry> and express absence as Option.none()":0,"Return Option<SurfaceExport> and express absence as Option.none()":0,"Return Option<SurfacePackage> and express absence as Option.none()":0}}
 0dc09fb3bdded13b	{"consistency":1,"kind":"Probability","probability":0.023333333333333334}
 0dc24de513f430d7	{"consistency":1,"kind":"Probability","probability":0.03333333333333333}
 0dc69671beb4cf22	{"consistency":1,"kind":"Probability","probability":0.04}

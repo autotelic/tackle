@@ -147,8 +147,142 @@ export const witnessClause = (message: string): string => {
  * @param clause - a message's witness clause.
  * @returns the repairs the clause implies, empty when it names no action.
  */
-export const impliedRepairsOf = (clause: string): ReadonlyArray<string> =>
-  /\bis an experimental API$/iu.test(clause.trim()) ? ["Use the non-experimental API"] : []
+export const impliedRepairsOf = (clause: string): ReadonlyArray<string> => {
+  const text = clause.trim()
+  if (/\bis (?:an? )?(?:experimental|deprecated)(?: API)?$/iu.test(text)) {
+    return ["Use the non-experimental, non-deprecated API"]
+  }
+  return []
+}
+
+/**
+ * The verbs a repair clause may open with.
+ *
+ * This is deliberately a whitelist rather than a grammar: the witness takes the
+ * last sentence of a rule message, and a sentence that opens with a noun is the
+ * subject the message is about, not an instruction. The list started from the
+ * verbs the measured corpus uses; adding a verb here is a deliberate widening,
+ * not a fallback for a clause that failed to parse.
+ */
+const imperativeVerbs: ReadonlySet<string> = new Set([
+  "accept",
+  "add",
+  "apply",
+  "avoid",
+  "bind",
+  "build",
+  "call",
+  "capture",
+  "check",
+  "convert",
+  "create",
+  "declare",
+  "define",
+  "delete",
+  "derive",
+  "document",
+  "drop",
+  "encode",
+  "ensure",
+  "export",
+  "extract",
+  "fix",
+  "give",
+  "guard",
+  "handle",
+  "import",
+  "include",
+  "inject",
+  "keep",
+  "leave",
+  "limit",
+  "make",
+  "merge",
+  "move",
+  "name",
+  "narrow",
+  "normalise",
+  "normalize",
+  "parse",
+  "pass",
+  "prefer",
+  "produce",
+  "provide",
+  "read",
+  "reject",
+  "remove",
+  "rename",
+  "replace",
+  "require",
+  "return",
+  "route",
+  "run",
+  "set",
+  "signal",
+  "skip",
+  "split",
+  "state",
+  "stop",
+  "store",
+  "supply",
+  "take",
+  "test",
+  "throw",
+  "treat",
+  "type",
+  "update",
+  "use",
+  "validate",
+  "verify",
+  "wait",
+  "wrap",
+  "write",
+])
+
+const firstWordOf = (text: string): string =>
+  text
+    .trim()
+    .replace(/^["'`\u2018\u2019\u201c\u201d]+/u, "")
+    .split(/[\s:]/u)[0]
+    ?.toLowerCase() ?? ""
+
+/**
+ * Whether a witness clause is a repair instruction rather than its subject.
+ *
+ * `Use the non-experimental API` is an imperative. `@effect/ui/Command#make is
+ * an experimental API` is the subject of the finding, and naming a cluster after
+ * it restates the finding instead of prescribing a repair -- worse, every site
+ * carries a different API name, so the cluster can never merge.
+ *
+ * @param clause - a message's witness clause.
+ * @returns true when the clause opens with an imperative verb.
+ */
+export const isImperativeClause = (clause: string): boolean =>
+  imperativeVerbs.has(firstWordOf(clause))
+
+/**
+ * Why a composed remedy is not a repair label, or `undefined` when it is.
+ *
+ * This is the cheap gate the first family/clause run lacked: the composed label
+ * must not be a bare identifier, and it must not start with `@`, a quote, or a
+ * capitalised product name. Those are the shapes a subject takes when it leaks
+ * into the label, and they are cheap to reject at the point of composition.
+ *
+ * @param label - the composed `family: clause` remedy.
+ * @returns a human-readable reason, or `undefined` when the label is a repair.
+ */
+export const repairLabelProblem = (label: string): string | undefined => {
+  const trimmed = label.trim()
+  if (trimmed === "") return "is empty"
+  if (/^[@'"`\u2018\u2019\u201c\u201d]/u.test(trimmed)) {
+    return "starts with a quote or an API name"
+  }
+  if (/^[A-Za-z_$][\w$]*$/u.test(trimmed)) return "is a bare identifier"
+  if (/^[A-Z]/u.test(trimmed) && !imperativeVerbs.has(firstWordOf(trimmed))) {
+    return "starts with a capitalised product name"
+  }
+  return undefined
+}
 
 /**
  * The diagnosis a message opens with, dropped from the witness clause.
@@ -232,6 +366,17 @@ export interface RepairOpinion {
   readonly failures: ReadonlyArray<string>
   readonly questions: number
   readonly pairs: number
+  /**
+   * Messages whose witness clause is a subject, not an imperative.
+   *
+   * They are not offered as clause candidates. Reporting them keeps the
+   * interesting failure visible: a diagnosis-only message needs its repair
+   * derived (the experimental API is the measured case), not restated.
+   */
+  readonly rejectedClauses?: ReadonlyArray<{
+    readonly message: string
+    readonly clause: string
+  }> | undefined
 }
 
 /**
@@ -253,7 +398,7 @@ export const pairKeyOf = ({
 }): string => (left.localeCompare(right) <= 0 ? left + "\u0000" + right : right + "\u0000" + left)
 
 /**
- * The families a prescribed repair can belong to, one question over six.
+ * The families a prescribed repair can belong to, one question over seven.
  *
  * This exists because the option list it replaces held every witness clause in
  * the corpus: 55 candidates in one Choice, asked 150 times in one run. A Choice
@@ -261,6 +406,12 @@ export const pairKeyOf = ({
  * (`docs/jev.md` rule 4), and the measured consequence was 83 findings labelled
  * with a non-answer. The family is the first snap judgement; the clause, asked
  * only among the clauses of the family that answer named, is the second.
+ *
+ * The first six were derived from the measured witness clauses, not read off
+ * every message. That is why the experimental-API repair was missed: its message
+ * has no imperative sentence, so it never appeared as a family candidate and the
+ * clause question named the API instead. `use the stable API` is read off the
+ * message, which is the rule the corpus derivation cannot supply.
  */
 export const remedyFamilies = {
   "parse at the boundary":
@@ -273,6 +424,8 @@ export const remedyFamilies = {
     "Keep the assertion but state the invariant it relies on, immediately before it, so the next reader can check the claim.",
   "inject the dependency":
     "Take the collaborator as a parameter or thread it through the signature, so it is explicit and replaceable instead of captured.",
+  "use the stable API":
+    "Use the stable, non-experimental, non-deprecated API: replace the unstable surface with its supported equivalent.",
   other: "None of these: the repair is something else. The next question names it.",
 } as const
 
@@ -289,7 +442,22 @@ export const composeRemedy = ({
 }: {
   readonly family: string
   readonly clause: string
-}): string => (family === "" ? clause : family + ": " + clause)
+}): string => {
+  const clauseProblem = repairLabelProblem(clause)
+  if (clauseProblem !== undefined) {
+    throw new Error(
+      "remedies: refusing to use " + JSON.stringify(clause) + " as a repair; it " + clauseProblem,
+    )
+  }
+  const composed = family === "" ? clause : family + ": " + clause
+  const problem = repairLabelProblem(composed)
+  if (problem !== undefined) {
+    throw new Error(
+      "remedies: refusing to label a cluster " + JSON.stringify(composed) + "; it " + problem,
+    )
+  }
+  return composed
+}
 
 /** How a message's clause list is resolved: asked, implied, or a bug. */
 export type ClauseRoute =
@@ -432,12 +600,21 @@ export const judgeRemedies = (
     const messages = messageNodesOf(findings)
     const groups = groupsOf(messages)
     const derived = messages.flatMap((message) => impliedRepairsOf(message.clause))
+    const rejectedClauses = messages
+      .filter((message) => !isImperativeClause(message.clause))
+      .map((message) => ({ message: message.message, clause: message.clause }))
     // No `none` option: a message that fits no family answers `other`, and the
     // clause question then names the repair inside it. A non-answer is not a
     // candidate repair, and offering it made 83 findings label themselves `none`.
-    const clauses = [...new Set([...groups.map((group) => group.clause), ...derived])].sort(
-      (left, right) => left.localeCompare(right),
-    )
+    // A subject is not a candidate either: the clause must be an imperative.
+    const repairClause = (clause: string): boolean =>
+      isImperativeClause(clause) && repairLabelProblem(clause) === undefined
+    const clauses = [
+      ...new Set([
+        ...groups.map((group) => group.clause).filter(repairClause),
+        ...derived.filter(repairClause),
+      ]),
+    ].sort((left, right) => left.localeCompare(right))
     const limit = policy.decision.maxChoiceOptions
     const failures: Array<AiError.AiError> = []
 
@@ -514,6 +691,16 @@ export const judgeRemedies = (
       if (subject.kind === "message") familyByMessage.set(subject.key, family)
       else familyByClause.set(subject.key, family)
     })
+    // A diagnosis-only message already had its family decided in code when the
+    // repair was derived; asking the family question as well let the model answer
+    // `other` and the clause question then named the API. The derived repair is
+    // the one case where the family is not a judgment.
+    for (const message of messages) {
+      if (impliedRepairsOf(message.clause).length > 0) {
+        familyByMessage.set(message.key, "use the stable API")
+      }
+    }
+    for (const clause of derived) familyByClause.set(clause, "use the stable API")
 
     // ROUND TWO..N: which clause? A family with more clauses than one Choice may
     // hold is itself split into bounded groups, and the chosen group is asked
@@ -748,6 +935,7 @@ export const judgeRemedies = (
       failures: failureText,
       questions: messages.length,
       pairs: pairs.length,
+      rejectedClauses,
     }
   })
 
@@ -810,6 +998,11 @@ export interface RemedyReport {
   readonly judgementUnavailable: string | undefined
   /** Requests that still failed after halving, named so the gap is visible. */
   readonly judgementFailures: ReadonlyArray<string>
+  /** Messages whose clause was a subject and was not offered as a repair. */
+  readonly rejectedClauses: ReadonlyArray<{
+    readonly message: string
+    readonly clause: string
+  }>
   readonly witness: ClusterSummary
   readonly judgement: ClusterSummary
   readonly disagreements: ReadonlyArray<{
@@ -1071,6 +1264,7 @@ export const clusterRemedies = (
     judgementStatus,
     judgementUnavailable: opinion.unavailable,
     judgementFailures: opinion.failures,
+    rejectedClauses: opinion.rejectedClauses ?? [],
     witness: summaryOf(witnesses),
     judgement: summaryOf(judges),
     disagreements,
@@ -1145,4 +1339,7 @@ export const witnessOnlyOpinion = (
   failures: [],
   questions: messageNodesOf(findings).length,
   pairs: 0,
+  rejectedClauses: messageNodesOf(findings)
+    .filter((message) => !isImperativeClause(message.clause))
+    .map((message) => ({ message: message.message, clause: message.clause })),
 })
