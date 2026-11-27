@@ -8,6 +8,7 @@ import {
   type Type,
 } from "@typescript/native/unstable/async"
 import type { IdentityKeys } from "./identity.ts"
+import { policy } from "./policy.ts"
 import { shortHash } from "./state.ts"
 import { typeIdOf } from "./typeid.ts"
 
@@ -493,7 +494,9 @@ export const resolveDeclarations = async (input: DeclarationQuery): Promise<Decl
           unresolved += 1
           continue
         }
-        const canonical = await typeIdOf({
+        const canonical = !policy.canonical
+          ? ""
+          : await typeIdOf({
           checker: project.checker,
           type,
           declarationId: input.identity?.byPosition.get(

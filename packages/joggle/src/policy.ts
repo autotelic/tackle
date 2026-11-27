@@ -722,6 +722,19 @@ export const policy = {
    * 400. The first N members are described and the rest are counted, so the
    * decision still stands on the whole cluster even when the detail is bounded.
    */
+  /**
+   * Canonical type ids: off, because they cost an RPC per declaration.
+   *
+   * The id walks the checker's type graph (`getPropertiesOfType`,
+   * `getTypeArguments`, `getTypeOfSymbol`), and those are round-trips to the sidecar.
+   * Asked once per declaration over a whole repository that is tens of thousands of
+   * round-trips: `joggle check packages` went from 238s to a 4GB heap and OOM, and
+   * even a one-package scope stopped finishing. The ids are right; the cost is in the
+   * batching, and until the walk is batched the way `getTypeAtPosition` is, they stay
+   * opt-in. An empty string means "not computed", never "computed and empty".
+   */
+  canonical: false,
+
   evidence: {
     maxMembers: 12,
     maxSourceChars: 1500,
