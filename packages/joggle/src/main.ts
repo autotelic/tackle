@@ -38,7 +38,7 @@ import {
   type NodeTypeQuery,
 } from "./typefacts.ts"
 import { manifestOf } from "./run-cache.ts"
-import { identityOf } from "./identity.ts"
+import { identityKeysOf, identityOf } from "./identity.ts"
 import { sourceFingerprint } from "./fingerprint.ts"
 import { buildSurface, projectRootOf, SURFACE_PATH, surfaceFileOf, surfaceOutputOf } from "./surface.ts"
 import { decodeSurface, parseJson } from "@autotelic/protocol"
@@ -780,6 +780,7 @@ const calibrateCommand = Command.make(
             manifest: factsManifest,
             maxMembers: policy.typeFacts.maxMembers,
             maxStrings: policy.typeFacts.maxStrings,
+            identity: identityKeysOf({ workspace, root: cwd }),
             requests: workspace.units.map((unit) => ({ file: unit.file, position: unit.namePosition })),
           })
           applyDeclarationTypes(workspace, declarations.index)

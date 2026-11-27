@@ -1,7 +1,15 @@
 import { Effect, FileSystem, Path, Predicate, Result, Schema, SchemaParser } from "effect"
 import { resolve } from "node:path"
-import { API, TypeFlags, type Project, type Type } from "@typescript/native/unstable/async"
+import {
+  API,
+  TypeFlags,
+  type Project,
+  type Symbol as CheckerSymbol,
+  type Type,
+} from "@typescript/native/unstable/async"
+import type { IdentityKeys } from "./identity.ts"
 import { shortHash } from "./state.ts"
+import { typeIdOf } from "./typeid.ts"
 
 /**
  * The checker's answer about a declaration, by file and byte offset.
@@ -173,6 +181,19 @@ export const ResolvedType = Schema.Struct({
   display: Schema.String,
   /** Member-sorted `name:type` fingerprint, complete only when not truncated. */
   structural: Schema.String,
+  /**
+   * The checker's type graph, canonically encoded and hashed by the identity pass.
+   *
+   * `structural` is a fingerprint of printed member types; it is a useful
+   * summary but its parts are text. `canonical` walks the Type objects instead:
+   * union members are sorted by their own ids, bound type parameters become
+   * de Bruijn positions, and a referenced declaration becomes its content id.
+   * It is cheap, structural and total -- every type gets an id, including an
+   * error. It is not an assignability oracle: `identicalGroup` remains the
+   * authoritative answer from the checker, and the two are deliberately kept
+   * beside each other rather than made to replace one another.
+   */
+  canonical: Schema.String,
   /** The checker's own vocabulary: `Object`, `Union`, `Any`, `Conditional`, ... */
   flags: Schema.Array(Schema.String),
   members: Schema.Array(MemberFact),
@@ -213,6 +234,12 @@ export interface DeclarationResult {
 
 export interface DeclarationQuery extends ProjectSource {
   readonly requests: ReadonlyArray<DeclarationRequest>
+  /**
+   * Content ids from the identity pass, used for the declarations this run asks
+   * about and for the declarations their types reference. Omitted means the
+   * canonical id falls back to structural/named markers, never to a file path.
+   */
+  readonly identity?: IdentityKeys | undefined
   /** Members printed per declaration. Past this the fingerprint is partial. */
   readonly maxMembers: number
   /** Total `typeToString` calls for the run, which is the expensive part. */
@@ -294,6 +321,7 @@ const contentful = (facts: ResolvedType): boolean =>
 const withGroup = (facts: ResolvedType, identicalGroup: string | undefined): ResolvedType => ({
   display: facts.display,
   structural: facts.structural,
+  canonical: facts.canonical,
   flags: facts.flags,
   members: facts.members,
   variants: facts.variants,
@@ -304,12 +332,32 @@ const withGroup = (facts: ResolvedType, identicalGroup: string | undefined): Res
   truncated: facts.truncated,
 })
 
+/** The content id of the declaration a checker symbol names, when the pass has one. */
+const identityOfSymbol = async ({
+  symbol,
+  identity,
+  cwd,
+}: {
+  readonly symbol: CheckerSymbol
+  readonly identity: IdentityKeys | undefined
+  readonly cwd: string
+}): Promise<string | undefined> => {
+  if (identity === undefined) return undefined
+  for (const declaration of symbol.declarations) {
+    const key = resolve(cwd, String(declaration.path)) + "\u0000" + symbol.name
+    const id = identity.byName.get(key) ?? identity.byNameLower.get(key.toLowerCase())
+    if (id !== undefined) return id
+  }
+  return undefined
+}
+
 /** One declaration, described. */
 const describe = async (
   checker: Project["checker"],
   type: Type,
   budget: { strings: number; maxStrings: number },
   maxMembers: number,
+  canonical: string,
 ): Promise<ResolvedType> => {
   const printed = async (value: Type): Promise<string | undefined> => {
     if (budget.strings >= budget.maxStrings) return undefined
@@ -388,6 +436,7 @@ const describe = async (
   return {
     display,
     structural: structuralOf({ flags, display, members, variants, value: literalValue }),
+    canonical,
     flags,
     members,
     variants,
@@ -444,11 +493,20 @@ export const resolveDeclarations = async (input: DeclarationQuery): Promise<Decl
           unresolved += 1
           continue
         }
+        const canonical = await typeIdOf({
+          checker: project.checker,
+          type,
+          declarationId: input.identity?.byPosition.get(
+            resolve(input.cwd, request.file) + "\u0000" + String(request.position),
+          ),
+          declarationIdOf: (symbol) =>
+            identityOfSymbol({ symbol, identity: input.identity, cwd: input.cwd }),
+        })
         described.push({
           request,
           checker: project.checker,
           type,
-          facts: await describe(project.checker, type, budget, input.maxMembers),
+          facts: await describe(project.checker, type, budget, input.maxMembers, canonical),
         })
       }
     }
@@ -501,7 +559,7 @@ export const resolveDeclarations = async (input: DeclarationQuery): Promise<Decl
 /* -------------------------------------------------------------------------- */
 
 /** Bumped when the shape of a fact changes: an old entry is not a hit. */
-const DECLARATION_TYPES_VERSION = "2"
+const DECLARATION_TYPES_VERSION = "3"
 
 const CachedDeclaration = Schema.Struct({
   file: Schema.String,
@@ -524,6 +582,7 @@ export const declarationKey = (file: string, position: number): string =>
 
 export interface DeclarationTypesRequest {
   readonly root: string
+  readonly identity?: IdentityKeys | undefined
   /** The project's tsconfig, relative to the root. */
   readonly tsconfig: string
   readonly cacheDir: string
@@ -600,6 +659,7 @@ export const loadDeclarationTypes = (
         cwd: input.root,
         tsconfig: input.tsconfig,
         requests: input.requests,
+        identity: input.identity,
         maxMembers: input.maxMembers,
         maxStrings: input.maxStrings,
       }),
