@@ -432,7 +432,7 @@ const RoomCreateRequest = Schema.Struct({
   software: Schema.optional(Schema.String),
 })
 
-type RoomAction = "up" | "pause" | "resume" | "down"
+type RoomAction = "up" | "start" | "pause" | "resume" | "down"
 
 /** The board's own listener is the only caller allowed to mutate rooms. */
 const isLoopbackAddress = (address: string | undefined): boolean =>
@@ -817,7 +817,7 @@ const serve = async ({
       })()
       return
     }
-    const roomAction = /^\/rooms\/([^/]+)\/(up|pause|resume|down)$/u.exec(path)
+    const roomAction = /^\/rooms\/([^/]+)\/(up|start|pause|resume|down)$/u.exec(path)
     if (roomAction !== null && request.method === "POST") {
       void (async () => {
         // oxlint-disable-next-line plumb-effect/no-try-catch -- the HTTP handler consumes child-process failures here
@@ -828,7 +828,10 @@ const serve = async ({
           }
           const id = decodeURIComponent(roomAction[1] ?? "")
           const action = roomAction[2] as RoomAction
-          const result = await runRoom({ root, args: [action, "--id", id] })
+          // `up` starts the room's declared service; `start` starts its VM. They are different
+          // machines of work, so the control plane keeps both verbs instead of guessing.
+          const args = action === "start" ? ["vm", "start", "--id", id] : [action, "--id", id]
+          const result = await runRoom({ root, args })
           // The lifecycle's answer carries the journal's path and whether its bytes are there,
           // read after the command ran: the caller learns where the room's position lives
           // without a second request.
@@ -960,7 +963,7 @@ const serve = async ({
           "/.well-known/presence.json",
           "/queue",
           "/rooms",
-          "/rooms/<id>/up|pause|resume|down",
+          "/rooms/<id>/up|start|pause|resume|down",
           "/preview/<workstream>/",
           "/open",
           "/desk/answer",

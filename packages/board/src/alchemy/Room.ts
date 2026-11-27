@@ -287,7 +287,7 @@ export const RoomMachineProvider = () =>
       reconcile: Effect.fn(function* ({ news }: { readonly news: RoomMachineProps }) {
         if (news.board !== undefined) {
           const response = yield* attempt(() =>
-            fetch(controlUrl(news.board!, "rooms/" + encodeURIComponent(news.room) + "/up"), {
+            fetch(controlUrl(news.board!, "rooms/" + encodeURIComponent(news.room) + "/start"), {
               method: "POST",
             }),
           )
