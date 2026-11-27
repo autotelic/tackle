@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
-import { readFile } from "node:fs/promises"
+import { readdir, readFile } from "node:fs/promises"
 import { join } from "node:path"
 import { pathToFileURL } from "node:url"
 import { parseArgs } from "node:util"
@@ -86,6 +86,43 @@ const usage = [
   "",
   "FACTORY_HOME defaults to ~/.factory; records live outside the governed repository.",
 ].join("\n")
+
+/**
+ * The commit a workstream's most recent compression cut read.
+ *
+ * A cut is worth running only against a head that moved since the last one; the
+ * receipt records the commit it ran at, so this is the cheapest possible guard
+ * against re-reading the same tree and calling the result compression.
+ */
+const lastCompressAt = async (id: string): Promise<string | undefined> => {
+  const dir = join(
+    process.env["FACTORY_HOME"] ?? join(process.env["HOME"] ?? ".", ".factory"),
+    "workstreams",
+    id + ".receipts",
+  )
+  const names = (await readdir(dir).catch(() => [] as Array<string>)).filter((name) =>
+    name.endsWith(".json"),
+  )
+  for (const name of names.sort((left, right) => right.localeCompare(left))) {
+    const text = await readFile(join(dir, name), "utf8").catch(() => undefined)
+    if (text === undefined) continue
+    const decoded = Schema.decodeUnknownResult(
+      Schema.Struct({
+        commit: Schema.optional(Schema.String),
+        compress: Schema.optional(Schema.Unknown),
+      }),
+    )(
+      Result.match(Schema.decodeUnknownResult(Schema.fromJsonString(Schema.Unknown))(text), {
+        onFailure: () => undefined,
+        onSuccess: (value) => value,
+      }),
+    )
+    if (Result.isFailure(decoded)) continue
+    if (decoded.success.compress === undefined) continue
+    return decoded.success.commit
+  }
+  return undefined
+}
 
 const fail = (message: string): never => {
   console.error("factory: " + message)
@@ -730,6 +767,17 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
     }
     if (record.phase === "land" || record.phase === "done")
       return fail("workstream is already " + record.phase)
+    // A second cut at the same head is a loop, not a compression. The first cut
+    // already read this code, and the only honest answer to "what did this buy" is
+    // "nothing, the tree has not moved". Refuse it here so the caller is told rather
+    // than the phase quietly re-running the same read.
+    const cut = await lastCompressAt(record.id)
+    if (cut !== undefined && cut === record.checkpoint.sha)
+      return fail(
+        "CompressRepeated: the last cut ran at " +
+          cut.slice(0, 8) +
+          " and the head has not moved. Land the branch, or commit the work that would give a cut something to read",
+      )
     const at = new Date().toISOString()
     await writeWorkstream({
       record: { ...record, phase: "compress", updatedAt: at },

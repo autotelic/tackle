@@ -50,6 +50,16 @@ const CompressionProof = Schema.Struct({
     consoleLog: Schema.Finite,
   }),
   ruleGaps: Schema.Array(Schema.String),
+  /**
+   * Why a consolidation that removed nothing was still worth making.
+   *
+   * A cut that reports consolidations with `locNet >= 0` moved code rather than
+   * compressing it. That is sometimes right (one shape replacing two, at equal
+   * length) and sometimes churn, and the receipt cannot tell them apart, so the
+   * worker has to say which. Required by the proof check below, not by the schema:
+   * a zero-net cut that omits it fails readiness with the numbers attached.
+   */
+  churnReason: Schema.optional(Schema.String),
 })
 
 const CompressionReceipt = Schema.Struct({
@@ -60,7 +70,7 @@ const CompressionReceipt = Schema.Struct({
 const hasCompressionProof = async (input: {
   readonly id: string
   readonly home?: string | undefined
-}): Promise<boolean> => {
+}): Promise<string | true> => {
   const names = (await readdir(receiptsDir(input)).catch(() => [])).filter((name) =>
     name.endsWith(".json"),
   )
@@ -71,9 +81,22 @@ const hasCompressionProof = async (input: {
     if (Result.isFailure(decoded)) continue
     if (decoded.success.phase !== "compress" || decoded.success.compress === undefined) continue
     const proof = Schema.decodeUnknownResult(CompressionProof)(decoded.success.compress)
-    if (Result.isSuccess(proof)) return true
+    if (Result.isFailure(proof)) continue
+    // A consolidation that removed nothing is a code motion wearing the name of a
+    // cut. It may be the right motion, but it has to say so: the receipt is the
+    // only place a later reader can find out, and a silent zero-net cut reads as
+    // compression that worked.
+    if (proof.success.consolidated > 0 && proof.success.locNet >= 0)
+      return (
+        "ChurnNotJustified: consolidated " +
+        proof.success.consolidated +
+        " at locNet " +
+        proof.success.locNet +
+        "; a cut that removes nothing must say what it bought in churnReason"
+      )
+    return true
   }
-  return false
+  return "CompressionProofRequired: a compress receipt must carry findingsBefore, findingsAfter, consolidated, deleted, locNet, and ruleGaps"
 }
 
 const failureTitles = (output: string): ReadonlyArray<string> => {
@@ -194,12 +217,15 @@ const runReadyInner = async (input: {
       checks: [],
       reason: "CompressRequired: set phase compress and run the compression pass before ready",
     }
-  if (!(await hasCompressionProof({ id: record.id, home: input.home })))
+  const proof = await hasCompressionProof({ id: record.id, home: input.home })
+  if (proof !== true)
     return {
       ok: false,
       checks: [],
       reason:
-        "CompressionProofRequired: a compress receipt must carry findingsBefore, findingsAfter, consolidated, deleted, locNet, and ruleGaps",
+        typeof proof === "string"
+          ? proof
+          : "CompressionProofRequired: a compress receipt must carry findingsBefore, findingsAfter, consolidated, deleted, locNet, and ruleGaps",
     }
   if (record.delivery === "pr" && record.pr !== undefined) {
     const body = spawnSync(
