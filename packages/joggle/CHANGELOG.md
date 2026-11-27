@@ -1,5 +1,27 @@
 # @autotelic/joggle
 
+## 0.18.0
+
+### Minor Changes
+
+- The question audit, and observed soundness.
+
+  `docs/question-audit.md` classifies every question the rules ask as a **fact** the
+  workspace already holds, a **judgment** that genuinely needs the model, or a
+  **decision** code makes from earlier answers. Measured on this repository: 110 rules,
+  86 questions, 67 judgments, and **12 judgments whose answer a workspace fact already
+  answers** — with the five worst offenders named and the fact that would replace each
+  one.
+
+  The lesson generalised from rung 2 is not "ask fewer questions" but "put the question
+  one layer lower": 1,424 of 1,431 pair judgments were decided by code, and only 7
+  needed materiality.
+
+  `soundness_observed` reports what a cluster's fix actually cleared: **sound** when
+  the representative's fix removed its siblings, **unsound** when the sites survived,
+  **unobserved** when no fix has been tried. Soundness is now measured or absent, never
+  asserted.
+
 ## 0.17.0
 
 ### Minor Changes
