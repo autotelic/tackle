@@ -123,12 +123,13 @@ aggregates, views, policies, projections, streams, sagas, and queries (`dist/lib
 - **Projections, CatchUp, Query.** The mailbox keeps its own log and state in
   `packages/protocol/src/mailbox.ts` and `packages/board/src/mailbox/service.ts`; it is a third
   state machine with its own receipts.
-- **The stack declaration.** `packages/board/alchemy.run.ts` exists and is committed
-  (`e7d99e2e`), so ADR 0001's file claim is true. The stack is empty: `providers: Layer.empty` and
-  `Effect.succeed({})` declare no room, worktree, or service resources. `alchemy plan --no-input`
-  resolves an empty plan, which is not the same as a resource plan. Either the stack grows the
-  resources the ADR names, with a plan test, or the ADR's `plan` sentence is narrowed to "the
-  authoring path resolves". ADR 0001 is wrong only about the resources, not the file.
+- **The stack declaration.** `packages/board/alchemy.run.ts` now declares the board Worker
+  (`packages/board/src/worker.ts`) and, through the same Room model, the Room Durable Object
+  classes. `packages/board/test/alchemy-plan.test.ts` plans the stack under the Alchemist
+  runtime and asserts the Worker and `RoomModel.RoomAggregate` / `RoomView` bindings. The
+  authoring path still uses local state, so the plan needs no Cloudflare credentials. This is
+  the first real Alchemy resource graph; it does not yet declare a room VM or an agentOS
+  provider.
 
 **Where we duplicate.** The Workstream phase machine and the mailbox state machine are the two
 places. Neither duplicates Alchemy's hosting; they duplicate the idea of a state machine that
