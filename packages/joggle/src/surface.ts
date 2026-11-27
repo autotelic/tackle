@@ -156,15 +156,17 @@ const declarationFileOf = ({
 }: {
   readonly from: string
   readonly specifier: string
-}): string | undefined => {
-  if (!specifier.startsWith(".")) return undefined
+}): Option.Option<string> => {
+  if (!specifier.startsWith(".")) return Option.none()
   const target = resolve(dirname(from), specifier)
-  return [
-    target,
-    target.replace(/\.(?:[cm]?ts)$/u, ".d.ts"),
-    target.replace(/\.(?:[cm]?js)$/u, ".d.ts"),
-    target + ".d.ts",
-  ].find((candidate) => existsSync(candidate))
+  return Option.fromUndefinedOr(
+    [
+      target,
+      target.replace(/\.(?:[cm]?ts)$/u, ".d.ts"),
+      target.replace(/\.(?:[cm]?js)$/u, ".d.ts"),
+      target + ".d.ts",
+    ].find((candidate) => existsSync(candidate)),
+  )
 }
 
 /**
@@ -186,7 +188,7 @@ const moduleDocOf = ({
   Option.flatMap(
     Option.some(specifier).pipe(Option.filter((relative) => relative.startsWith("."))),
     (relative) => {
-      const found = declarationFileOf({ from, specifier: relative })
+      const found = Option.getOrUndefined(declarationFileOf({ from, specifier: relative }))
       return Option.flatMap(Option.fromUndefinedOr(found), (file) => {
         const text = readFileSync(file, "utf8")
         const parsed = parseSync(file, text, { sourceType: "module", lang: "ts" })
@@ -385,7 +387,7 @@ const declarationsIn = ({
       // The sibling is parsed with followStar false, so depth is bounded at one; the
       // visited set makes a cycle terminate even if that bound is ever raised.
       if (followStar && sourceValue !== undefined) {
-        const target = declarationFileOf({ from: file, specifier: sourceValue })
+        const target = Option.getOrUndefined(declarationFileOf({ from: file, specifier: sourceValue }))
         if (target !== undefined && !visited.has(resolve(target))) {
           const targetText = readFileSync(target, "utf8")
           const nested = declarationsIn({
