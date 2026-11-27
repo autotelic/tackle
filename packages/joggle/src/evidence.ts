@@ -12,13 +12,17 @@ import type { Unit } from "./workspace.ts"
  * invented label); coherence comes from the sample the judgement is shown.
  *
  * The signal is an ABSENCE, so `matches` has to be cheap and generous. It looks
- * for the shape of hand-rolled duration arithmetic, not for a library's spelling.
+ * for the shape of hand-rolled work, not for a library's spelling.
  */
 
 /** One family of exports that does the same job as the evidence it is compared with. */
 export interface EvidenceKind {
   /** The stable id of the shape: one candidate per kind. */
-  readonly kind: "round-millisecond" | "millisecond-conversion" | "clock-arithmetic"
+  readonly kind:
+    | "round-millisecond"
+    | "millisecond-conversion"
+    | "clock-arithmetic"
+    | "tagged-error"
   /** How the kind reads in a sentence: "3 declarations do Date.now() arithmetic". */
   readonly description: string
   /** Export-name families that would already supply this capability, best first. */
@@ -30,6 +34,8 @@ export interface EvidenceKind {
 const ROUND_MILLISECOND = /(?<![\w.])(?:1|5|30|60|300|600|900|1800|3600)_?000(?![\w.])/u
 const MILLISECOND_CONVERSION = /(?<!\w)[*/]\s*1_?000(?![\d.])/u
 const DATE_NOW_ARITHMETIC = /Date\.now\(\)\s*(?:[-+*/]|&&|\|\|)/u
+const CLASS_EXTENDS_ERROR = /\bclass\s+[A-Za-z_$][\w$]*\s+extends\s+Error\b/u
+const TAGGED_MEMBER = /\b_tag\s*\??\s*:/u
 
 /**
  * A round millisecond literal: `60_000`, `1_000`, `1_800_000`.
@@ -67,9 +73,27 @@ const clockArithmeticKind: EvidenceKind = {
   matches: (unit) => DATE_NOW_ARITHMETIC.test(unit.text),
 }
 
-/** Every evidence kind this version of the rule reads. Three, one per shape. */
+/**
+ * An error declared by hand where `Data.TaggedError` already supplies the shape.
+ *
+ * `class X extends Error` and a type carrying `_tag` are the same concept spelled
+ * two ways: a failure kind that callers can match. TaggedError replaces the
+ * constructor and `_tag` boilerplate, so this is the absence the rule can point at
+ * without having to believe Duration removes a literal.
+ */
+const taggedErrorKind: EvidenceKind = {
+  kind: "tagged-error",
+  description: "tagged errors",
+  families: ["TaggedError"],
+  matches: (unit) =>
+    CLASS_EXTENDS_ERROR.test(unit.text) ||
+    ((unit.kind === "interface" || unit.kind === "type") && TAGGED_MEMBER.test(unit.text)),
+}
+
+/** Every evidence kind this version of the rule reads. */
 export const evidenceKinds: ReadonlyArray<EvidenceKind> = [
   roundMillisecondKind,
   millisecondConversionKind,
   clockArithmeticKind,
+  taggedErrorKind,
 ]

@@ -83,8 +83,20 @@ const wordsOf = (name: string): ReadonlyArray<string> =>
 
 const wordSet = (name: string): ReadonlySet<string> => new Set(wordsOf(name))
 
-const exportedInFamily = (surfaceExport: SurfaceExport, family: string): boolean =>
-  wordSet(surfaceExport.name).has(family.toLowerCase())
+/**
+ * Whether an export is in a family.
+ *
+ * The word match kept Duration/Clock working, but a camel-case family such as
+ * TaggedError is two words (`tagged`, `error`), so comparing its lowercase spelling
+ * against the word set never found it. The joined comparison covers the name the
+ * family actually spells while the word match still allows `DurationInput` beside
+ * `Duration`.
+ */
+const exportedInFamily = (surfaceExport: SurfaceExport, family: string): boolean => {
+  const words = wordsOf(surfaceExport.name)
+  const key = words.join("")
+  return words.includes(family.toLowerCase()) || key === wordsOf(family).join("")
+}
 
 const importPathOf = (surfacePackage: SurfacePackage, surfaceExport: SurfaceExport): string =>
   surfaceExport.module === "root"
@@ -151,9 +163,9 @@ const adviceFor = ({
 }): string => {
   switch (disposition) {
     case "use_export":
-      return "Replace the hand-rolled arithmetic with `" + name + "` from `" + path + "`."
+      return "Replace the hand-rolled declaration with `" + name + "` from `" + path + "`."
     case "use_our_wrapper":
-      return "Route the arithmetic through the existing wrapper that `" + name + "` backs."
+      return "Route the declaration through the existing wrapper that `" + name + "` backs."
     case "home_it":
       return "`" + name + "` lives in `" + path + "`; import it from there. Do not create a wrapper module."
     default:
@@ -211,7 +223,7 @@ const dispositionReview = (): Decision.Classify<string> =>
       "Choose `different` when the export does not do this at all.",
     ].join("\n"),
     criteria: {
-      use_export: "Replace the arithmetic with the dependency's export.",
+      use_export: "Replace the hand-rolled declarations with the dependency's export.",
       use_our_wrapper: "Route through the wrapper this repository already has.",
       home_it: "Import the export from its existing module. Do not create a wrapper.",
       different: "The export does not do this. Leave the declarations alone.",
@@ -239,7 +251,7 @@ const planFor = (input: {
         instructions: [
           `Does \`atoms[${id}].exports[${position}]\` already do what the declarations in \`atoms[${id}].declarations\` do?`,
           "Read the export's signature and doc, then the sample declarations. The declarations were selected for an absence: none of them imports this family.",
-          "Answer yes when a call to the export would replace the arithmetic without changing what the caller means. Answer no when the export is a different capability that happens to share a word.",
+          "Answer yes when a call to the export would replace the declarations without changing what the caller means. Answer no when the export is a different capability that happens to share a word.",
         ].join("\n"),
         criteria: {
           false: "The export is a different capability. The declarations are doing something it does not do.",
@@ -348,7 +360,10 @@ export const underusedPrimitive: PlannedRule = {
       (left, right) =>
         right.units.length - left.units.length || left.kind.kind.localeCompare(right.kind.kind),
     )
-    const budget = 3
+    // Every shape is judged. The catalogue is four kinds, not a corpus; dropping the
+    // fourth to a budget would hide the one kind whose family was previously
+    // invisible, which is exactly the failure this pass is repairing.
+    const budget = evidenceKinds.length
     const judged = candidates.slice(0, budget)
     const overBudget: ReadonlyArray<Drop> = candidates.slice(budget).map((candidate) => ({
       ruleId: RULE_ID,

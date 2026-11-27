@@ -144,6 +144,30 @@ const firstDocLine = (comment: string): string | undefined => {
 }
 
 /**
+ * The declaration file a relative specifier names.
+ *
+ * A root `.d.ts` writes `./Duration.js` or `./Data.ts` even though the file beside it
+ * is `Duration.d.ts`; both spellings resolve to the same declaration. Returning
+ * undefined for a bare package name keeps the walk inside the dependency's own tree.
+ */
+const declarationFileOf = ({
+  from,
+  specifier,
+}: {
+  readonly from: string
+  readonly specifier: string
+}): string | undefined => {
+  if (!specifier.startsWith(".")) return undefined
+  const target = resolve(dirname(from), specifier)
+  return [
+    target,
+    target.replace(/\.(?:[cm]?ts)$/u, ".d.ts"),
+    target.replace(/\.(?:[cm]?js)$/u, ".d.ts"),
+    target + ".d.ts",
+  ].find((candidate) => existsSync(candidate))
+}
+
+/**
  * The target's module doc, for a namespace re-export.
  *
  * A root file that says `export * as Duration from "./Duration.ts"` tells a reader
@@ -162,13 +186,7 @@ const moduleDocOf = ({
   Option.flatMap(
     Option.some(specifier).pipe(Option.filter((relative) => relative.startsWith("."))),
     (relative) => {
-      const target = resolve(dirname(from), relative)
-      const found = [
-        target,
-        target.replace(/\.(?:[cm]?ts)$/u, ".d.ts"),
-        target.replace(/\.(?:[cm]?js)$/u, ".d.ts"),
-        target + ".d.ts",
-      ].find((candidate) => existsSync(candidate))
+      const found = declarationFileOf({ from, specifier: relative })
       return Option.flatMap(Option.fromUndefinedOr(found), (file) => {
         const text = readFileSync(file, "utf8")
         const parsed = parseSync(file, text, { sourceType: "module", lang: "ts" })
@@ -214,16 +232,24 @@ const moduleOfSpecifier = (specifier: string): string =>
   specifier
     .replace(/^\.\//u, "")
     .replace(/\.d\.[cm]?ts$/u, "")
+    .replace(/\.(?:[cm]?ts)$/u, "")
     .replace(/\.(?:[cm]?js)$/u, "")
 
 /** Collect the exported declarations of one `.d.ts`, with a bounded signature and first doc line. */
 const declarationsIn = ({
   file,
   text,
+  visited = new Set<string>(),
+  followStar = true,
 }: {
   readonly file: string
   readonly text: string
+  /** Declaration files already read in this walk; a cycle stops at the second sight. */
+  readonly visited?: Set<string>
+  /** Whether a star export may be followed. False in the sibling, so depth is one. */
+  readonly followStar?: boolean
 }): ParsedDeclaration => {
+  visited.add(resolve(file))
   const parsed = parseSync(file, text, { sourceType: "module", lang: "ts" })
   const comments = parsed.comments.map((comment) => ({
     start: comment.start,
@@ -242,6 +268,7 @@ const declarationsIn = ({
 
   const locals = new Map<string, LocalDeclaration>()
   const direct: Array<SurfaceExport> = []
+  const expanded: Array<SurfaceExport> = []
   const reexported: Array<{
     exported: string
     local: string
@@ -352,6 +379,25 @@ const declarationsIn = ({
       const exported = nameAt(statement["exported"])
       const source = statement["source"]
       const sourceValue = isRecord(source) ? stringAt(source["value"]) : undefined
+      // `export * from "./Duration.js"` is how effect's root exposes most of its API,
+      // and a plain star contributed nothing. Read the one sibling declaration file
+      // it names and take its exports, tagged with the module the specifier spells.
+      // The sibling is parsed with followStar false, so depth is bounded at one; the
+      // visited set makes a cycle terminate even if that bound is ever raised.
+      if (followStar && sourceValue !== undefined) {
+        const target = declarationFileOf({ from: file, specifier: sourceValue })
+        if (target !== undefined && !visited.has(resolve(target))) {
+          const targetText = readFileSync(target, "utf8")
+          const nested = declarationsIn({
+            file: target,
+            text: targetText,
+            visited,
+            followStar: false,
+          })
+          const module = moduleOfSpecifier(sourceValue)
+          for (const entry of nested.exports) expanded.push({ ...entry, module })
+        }
+      }
       if (exported !== undefined && sourceValue !== undefined) {
         const start = int(statement["start"])
         const end = int(statement["end"])
@@ -373,6 +419,12 @@ const declarationsIn = ({
   }
 
   const seen = new Set(direct.map((entry) => entry.module + "\u0000" + entry.name))
+  for (const entry of expanded) {
+    const key = entry.module + "\u0000" + entry.name
+    if (seen.has(key)) continue
+    seen.add(key)
+    direct.push(entry)
+  }
   for (const entry of reexported) {
     const key = entry.module + "\u0000" + entry.exported
     if (seen.has(key)) continue
