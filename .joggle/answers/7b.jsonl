@@ -6,6 +6,7 @@
 7b109e8e249d369b	{"confidence":0.86,"kind":"Classify","label":"not_a_projection","probabilities":{"allowed":0.05,"must_be_current":0.04,"not_a_projection":0.91}}
 7b10bd3fbe3fcc7f	{"consistency":1,"kind":"Probability","probability":0.8233333333333333}
 7b111e1b78a6b37b	{"confidence":0.22,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.39,"member_1":0.61}}
+7b151c38bcc5bb1b	{"consistency":1,"kind":"Probability","probability":0.16666666666666666}
 7b1b4d6c0d714c0b	{"consistency":1,"kind":"Probability","probability":0.8766666666666666}
 7b1c20b3dbec2d12	{"confidence":0.87,"kind":"Classify","label":"component_or_feature","probabilities":{"already_there":0.02,"component_or_feature":0.9,"not_applicable":0.03,"route_or_handler":0.05}}
 7b1f914aa3e08cfc	{"confidence":0.77,"kind":"Classify","label":"neither","probabilities":{"fact":0.09,"neither":0.85,"recomputation":0.06}}

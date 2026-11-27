@@ -1,4 +1,5 @@
 b50024623f4c73cd	{"confidence":0.8,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.13,"names_a_caller":0,"shared_vocabulary":0.87}}
+b5084fe9edf7087a	{"confidence":0.52,"kind":"Classify","label":"different","probabilities":{"different":0.64,"home_it":0.15,"use_export":0.18,"use_our_wrapper":0.03}}
 b50acd995f9b7801	{"consistency":1,"kind":"Probability","probability":0.3433333333333333}
 b50ce1c3d5099701	{"consistency":1,"kind":"Probability","probability":0.4133333333333334}
 b5155095a2d5eb3f	{"confidence":0.34,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.1,"merge":0.47,"move":0.41,"share_a_contract":0.01,"split":0.01}}

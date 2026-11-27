@@ -1,7 +1,10 @@
-import { Effect, FileSystem, Path } from "effect"
+import { Effect, FileSystem, Option, Path } from "effect"
+import { existsSync, readFileSync } from "node:fs"
+import { dirname, join, resolve } from "node:path"
 import { parseSync } from "oxc-parser"
 import {
   SURFACE_VERSION,
+  int,
   isRecord,
   type Surface,
   type SurfaceExport,
@@ -30,6 +33,63 @@ export interface BuiltSurface {
   readonly surface: Surface
   readonly skipped: ReadonlyArray<SurfaceSkip>
 }
+
+/** Where `surface build` writes, relative to the workspace root, and the rule reads. */
+export const SURFACE_PATH = ".joggle/surface.json"
+
+/**
+ * The workspace root a surface path is resolved against.
+ *
+ * `surface build` and the rule that reads its file must agree on one base, or the
+ * build writes under the package directory pnpm happened to start in while the
+ * rule looks under the workspace root. The nearest `.git` is the boundary the
+ * launcher already walks to, so a nested repository does not borrow its host's
+ * surface and a scratch directory does not walk to `/`.
+ *
+ * @param start - the directory the command was started from.
+ * @returns the nearest enclosing repository root, or `start` when there is none.
+ */
+export const projectRootOf = (start: string): string => {
+  const begin = resolve(start)
+  let dir = begin
+  for (;;) {
+    if (existsSync(join(dir, ".git"))) return dir
+    const parent = dirname(dir)
+    if (parent === dir) return begin
+    dir = parent
+  }
+}
+
+/** Where the surface file lives: one expression for the writer and the reader. */
+export const surfaceFileOf = ({
+  root,
+  surfacePath,
+}: {
+  readonly root: string
+  readonly surfacePath: string | undefined
+}): string => resolve(root, surfacePath ?? SURFACE_PATH)
+
+/**
+ * Where `surface build` writes by default.
+ *
+ * One function so the writer and the rule cannot drift: both anchor on
+ * {@link projectRootOf}, and a test can prove the default output is the path the rule
+ * then reads without spawning a command.
+ */
+export const surfaceOutputOf = ({
+  start,
+  out,
+}: {
+  readonly start: string
+  readonly out: string | undefined
+}): string => {
+  const root = projectRootOf(start)
+  return out === undefined ? surfaceFileOf({ root, surfacePath: undefined }) : resolve(root, out)
+}
+
+/** Parse JSON at the boundary, recording the failure instead of throwing it past the typed channel. */
+export const parseJson = (text: string): Effect.Effect<unknown, never> =>
+  Effect.try(() => JSON.parse(text)).pipe(Effect.orElseSucceed(() => undefined))
 
 const DEPENDENCY_FIELDS = ["dependencies", "devDependencies", "peerDependencies"] as const
 
@@ -75,8 +135,6 @@ const typesEntryOf = (manifest: Record<string, unknown>): string | undefined => 
   return main === undefined ? undefined : declarationBeside(main)
 }
 
-const isDeclarationFile = (file: string): boolean => /\.d\.[cm]?ts$/u.test(file)
-
 const firstDocLine = (comment: string): string | undefined => {
   for (const line of comment.split("\n")) {
     const cleaned = line.replace(/^\s*\*+\s?/u, "").trim()
@@ -84,6 +142,42 @@ const firstDocLine = (comment: string): string | undefined => {
   }
   return undefined
 }
+
+/**
+ * The target's module doc, for a namespace re-export.
+ *
+ * A root file that says `export * as Duration from "./Duration.ts"` tells a reader
+ * nothing about Duration. The judgement rule is shown that signature and asked what
+ * the export does, so the target module's own opening comment is the only fact on
+ * offer. Following one sibling declaration file is not walking a dependency tree; it
+ * is reading the file the re-export names.
+ */
+const moduleDocOf = ({
+  from,
+  specifier,
+}: {
+  readonly from: string
+  readonly specifier: string
+}): Option.Option<string> =>
+  Option.flatMap(
+    Option.some(specifier).pipe(Option.filter((relative) => relative.startsWith("."))),
+    (relative) => {
+      const target = resolve(dirname(from), relative)
+      const found = [
+        target,
+        target.replace(/\.(?:[cm]?ts)$/u, ".d.ts"),
+        target.replace(/\.(?:[cm]?js)$/u, ".d.ts"),
+        target + ".d.ts",
+      ].find((candidate) => existsSync(candidate))
+      return Option.flatMap(Option.fromUndefinedOr(found), (file) => {
+        const text = readFileSync(file, "utf8")
+        const parsed = parseSync(file, text, { sourceType: "module", lang: "ts" })
+        return Option.flatMap(Option.fromUndefinedOr(parsed.comments[0]), (comment) =>
+          Option.fromUndefinedOr(firstDocLine(comment.value)),
+        )
+      })
+    },
+  )
 
 interface LocalDeclaration {
   readonly name: string
@@ -123,7 +217,13 @@ const moduleOfSpecifier = (specifier: string): string =>
     .replace(/\.(?:[cm]?js)$/u, "")
 
 /** Collect the exported declarations of one `.d.ts`, with a bounded signature and first doc line. */
-const declarationsIn = (file: string, text: string): ParsedDeclaration => {
+const declarationsIn = ({
+  file,
+  text,
+}: {
+  readonly file: string
+  readonly text: string
+}): ParsedDeclaration => {
   const parsed = parseSync(file, text, { sourceType: "module", lang: "ts" })
   const comments = parsed.comments.map((comment) => ({
     start: comment.start,
@@ -142,7 +242,14 @@ const declarationsIn = (file: string, text: string): ParsedDeclaration => {
 
   const locals = new Map<string, LocalDeclaration>()
   const direct: Array<SurfaceExport> = []
-  const reexported: Array<{ exported: string; local: string; module: string; signature: string; kind: SurfaceKind }> = []
+  const reexported: Array<{
+    exported: string
+    local: string
+    module: string
+    source: string | undefined
+    signature: string
+    kind: SurfaceKind
+  }> = []
 
   const remember = (
     name: string,
@@ -163,19 +270,17 @@ const declarationsIn = (file: string, text: string): ParsedDeclaration => {
     if (!locals.has(name)) locals.set(name, declaration)
     if (!exported) return
     if (direct.some((entry) => entry.name === name && entry.module === "root")) return
-    direct.push({
-      name,
-      module: "root",
-      kind,
-      signature,
-      ...(declaration.doc === undefined ? {} : { doc: declaration.doc }),
-    })
+    const entry: SurfaceExport =
+      declaration.doc === undefined
+        ? { name, module: "root", kind, signature }
+        : { name, module: "root", kind, signature, doc: declaration.doc }
+    direct.push(entry)
   }
 
   const fromDeclaration = (
     declaration: unknown,
     exported: boolean,
-    exportedName?: string,
+    exportedName: string | undefined,
   ): void => {
     if (!isRecord(declaration)) return
     const type = stringAt(declaration["type"])
@@ -207,7 +312,7 @@ const declarationsIn = (file: string, text: string): ParsedDeclaration => {
     if (type === "ExportNamedDeclaration") {
       const declaration = statement["declaration"]
       if (isRecord(declaration)) {
-        fromDeclaration(declaration, true)
+        fromDeclaration(declaration, true, undefined)
       }
       const source = statement["source"]
       const sourceValue = isRecord(source) ? stringAt(source["value"]) : undefined
@@ -218,12 +323,12 @@ const declarationsIn = (file: string, text: string): ParsedDeclaration => {
         const exported = nameAt(specifier["exported"]) ?? nameAt(specifier["local"])
         const local = nameAt(specifier["local"]) ?? exported
         if (exported === undefined || local === undefined) continue
-        const start = specifier["start"]
-        const end = specifier["end"]
+        const start = int(specifier["start"])
+        const end = int(specifier["end"])
         const signature =
-          typeof start === "number" && typeof end === "number"
-            ? text.slice(start, Math.min(end, start + 400))
-            : local
+          start === undefined || end === undefined
+            ? local
+            : text.slice(start, Math.min(end, start + 400))
         const localDeclaration = locals.get(local)
         const kind =
           localDeclaration?.kind ??
@@ -232,6 +337,7 @@ const declarationsIn = (file: string, text: string): ParsedDeclaration => {
           exported,
           local,
           module: sourceValue === undefined ? "root" : moduleOfSpecifier(sourceValue),
+          source: sourceValue,
           signature: localDeclaration?.signature ?? signature,
           kind,
         })
@@ -247,22 +353,23 @@ const declarationsIn = (file: string, text: string): ParsedDeclaration => {
       const source = statement["source"]
       const sourceValue = isRecord(source) ? stringAt(source["value"]) : undefined
       if (exported !== undefined && sourceValue !== undefined) {
-        const start = statement["start"]
-        const end = statement["end"]
+        const start = int(statement["start"])
+        const end = int(statement["end"])
         reexported.push({
           exported,
           local: exported,
           module: moduleOfSpecifier(sourceValue),
+          source: sourceValue,
           signature:
-            typeof start === "number" && typeof end === "number"
-              ? text.slice(start, Math.min(end, start + 400))
-              : exported,
+            start === undefined || end === undefined
+              ? exported
+              : text.slice(start, Math.min(end, start + 400)),
           kind: "const",
         })
       }
       continue
     }
-    fromDeclaration(statement, false)
+    fromDeclaration(statement, false, undefined)
   }
 
   const seen = new Set(direct.map((entry) => entry.module + "\u0000" + entry.name))
@@ -271,23 +378,40 @@ const declarationsIn = (file: string, text: string): ParsedDeclaration => {
     if (seen.has(key)) continue
     seen.add(key)
     const localDeclaration = locals.get(entry.local)
-    direct.push({
-      name: entry.exported,
-      module: entry.module,
-      kind: entry.kind,
-      signature: entry.signature,
-      ...(localDeclaration?.doc === undefined ? {} : { doc: localDeclaration.doc }),
-    })
+    const doc =
+      localDeclaration?.doc ??
+      (entry.source === undefined
+        ? undefined
+        : Option.getOrUndefined(moduleDocOf({ from: file, specifier: entry.source })))
+    const surfaceExport: SurfaceExport =
+      doc === undefined
+        ? {
+            name: entry.exported,
+            module: entry.module,
+            kind: entry.kind,
+            signature: entry.signature,
+          }
+        : {
+            name: entry.exported,
+            module: entry.module,
+            kind: entry.kind,
+            signature: entry.signature,
+            doc,
+          }
+    direct.push(surfaceExport)
   }
 
   return { exports: direct.sort((left, right) => left.name.localeCompare(right.name)) }
 }
 
 /** Read one dependency's manifest, type file and exports. */
-const packageSurface = (
-  root: string,
-  name: string,
-): Effect.Effect<SurfacePackage | SurfaceSkip, never, FileSystem.FileSystem | Path.Path> =>
+const packageSurface = ({
+  root,
+  name,
+}: {
+  readonly root: string
+  readonly name: string
+}): Effect.Effect<SurfacePackage | SurfaceSkip, never, FileSystem.FileSystem | Path.Path> =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
@@ -296,23 +420,18 @@ const packageSurface = (
     const exists = yield* Effect.orElseSucceed(fs.exists(manifestFile), () => false)
     if (!exists) return { name, reason: "package.json is not installed" }
     const text = yield* Effect.orElseSucceed(fs.readFileString(manifestFile), () => "")
-    let manifest: unknown
-    try {
-      manifest = JSON.parse(text)
-    } catch {
-      return { name, reason: "package.json is not readable JSON" }
-    }
+    const manifest = yield* parseJson(text)
     if (!isRecord(manifest)) return { name, reason: "package.json is not an object" }
     const version = stringAt(manifest["version"]) ?? ""
     const entry = typesEntryOf(manifest)
     if (entry === undefined) return { name, reason: "no types entry" }
     const file = path.resolve(directory, entry)
-    if (!isDeclarationFile(file)) return { name, reason: "types entry is not a .d.ts file" }
+    if (!/\.d\.[cm]?ts$/u.test(file)) return { name, reason: "types entry is not a .d.ts file" }
     const fileExists = yield* Effect.orElseSucceed(fs.exists(file), () => false)
     if (!fileExists) return { name, reason: "types entry does not exist" }
     const declarationText = yield* Effect.orElseSucceed(fs.readFileString(file), () => "")
     if (declarationText === "") return { name, reason: "types entry is empty" }
-    const parsed = declarationsIn(file, declarationText)
+    const parsed = declarationsIn({ file, text: declarationText })
     if (parsed.exports.length === 0) return { name, reason: "types entry exports nothing" }
     return { name, version, exports: parsed.exports }
   })
@@ -335,12 +454,7 @@ export const buildSurface = ({
     const exists = yield* Effect.orElseSucceed(fs.exists(manifestFile), () => false)
     if (!exists) return { surface: { version: SURFACE_VERSION, packages: [] }, skipped: [] }
     const text = yield* Effect.orElseSucceed(fs.readFileString(manifestFile), () => "")
-    let manifest: unknown
-    try {
-      manifest = JSON.parse(text)
-    } catch {
-      return { surface: { version: SURFACE_VERSION, packages: [] }, skipped: [] }
-    }
+    const manifest = yield* parseJson(text)
     if (!isRecord(manifest)) return { surface: { version: SURFACE_VERSION, packages: [] }, skipped: [] }
     const names = new Set<string>()
     for (const field of DEPENDENCY_FIELDS) {
@@ -350,7 +464,7 @@ export const buildSurface = ({
     }
     const built = yield* Effect.forEach(
       [...names].sort((left, right) => left.localeCompare(right)),
-      (name) => packageSurface(root, name),
+      (name) => packageSurface({ root, name }),
       { concurrency: 8 },
     )
     const packages: Array<SurfacePackage> = []

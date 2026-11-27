@@ -39,7 +39,7 @@ import {
 } from "./typefacts.ts"
 import { manifestOf } from "./run-cache.ts"
 import { sourceFingerprint } from "./fingerprint.ts"
-import { buildSurface } from "./surface.ts"
+import { buildSurface, parseJson, projectRootOf, SURFACE_PATH, surfaceFileOf, surfaceOutputOf } from "./surface.ts"
 import { decodeSurface } from "@autotelic/protocol"
 
 /**
@@ -1169,11 +1169,13 @@ const surfaceBuild = Command.make(
   "build",
   {
     out: Flag.String("out").pipe(
-      Flag.withDescription("Where to write the surface (default .joggle/surface.json)."),
+      Flag.withDescription(
+        "Where to write the surface (default <workspace root>/.joggle/surface.json).",
+      ),
       Flag.optional,
     ),
     cwd: Flag.String("cwd").pipe(
-      Flag.withDescription("Project root to read (default: the current directory)."),
+      Flag.withDescription("Project root to read (default: the nearest repository root)."),
       Flag.optional,
     ),
   },
@@ -1181,12 +1183,10 @@ const surfaceBuild = Command.make(
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem
       const path = yield* Path.Path
-      const cwd = path.resolve(Option.getOrUndefined(config.cwd) ?? process.cwd())
-      const out = path.resolve(
-        cwd,
-        Option.getOrUndefined(config.out) ?? ".joggle/surface.json",
-      )
-      const built = yield* buildSurface({ root: cwd })
+      const start = path.resolve(Option.getOrUndefined(config.cwd) ?? process.cwd())
+      const root = projectRootOf(start)
+      const out = surfaceOutputOf({ start, out: Option.getOrUndefined(config.out) })
+      const built = yield* buildSurface({ root })
       yield* fs.makeDirectory(path.dirname(out), { recursive: true })
       yield* fs.writeFileString(out, JSON.stringify(built.surface, null, 2) + "\n")
       const exports = built.surface.packages.reduce(
@@ -1249,8 +1249,9 @@ const surfaceCommand = Command.make(
       }
       const fs = yield* FileSystem.FileSystem
       const path = yield* Path.Path
-      const cwd = path.resolve(Option.getOrUndefined(config.cwd) ?? process.cwd())
-      const file = path.join(cwd, ".joggle/surface.json")
+      const start = path.resolve(Option.getOrUndefined(config.cwd) ?? process.cwd())
+      const cwd = projectRootOf(start)
+      const file = surfaceFileOf({ root: cwd, surfacePath: SURFACE_PATH })
       const exists = yield* Effect.orElseSucceed(fs.exists(file), () => false)
       if (!exists) {
         yield* write("joggle: no surface at " + file + ": run `joggle surface build`")
@@ -1260,12 +1261,7 @@ const surfaceCommand = Command.make(
         return
       }
       const text = yield* Effect.orElseSucceed(fs.readFileString(file), () => "")
-      let parsed: unknown
-      try {
-        parsed = JSON.parse(text)
-      } catch {
-        parsed = undefined
-      }
+      const parsed = yield* parseJson(text)
       if (parsed === undefined) {
         yield* write("joggle: the surface is not readable JSON: run `joggle surface build`")
         yield* Effect.sync(() => {
