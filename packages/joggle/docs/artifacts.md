@@ -15,7 +15,7 @@ the reasoning can be checked rather than taken on faith.
 
 | artifact | lives in | committed | nature | model |
 | --- | --- | --- | --- | --- |
-| `answers.jsonl` (or `answers/` when sharded) — one answered question, keyed by question + atoms + model | `<root>/.joggle/` or the machine cache | opt-in | disposable, grows, mostly negatives | **Bazel action cache / sccache**: content-addressed, with GC; sharded only when size earns it |
+| `answers.jsonl` (or `answers/` when sharded) — one answered question, keyed by question + atoms + model | `<root>/.joggle/answers*` (reviewed, read) · `<root>/.joggle/cache/answers*` (write-through) · the machine cache | opt-in | disposable, grows, mostly negatives | **Bazel action cache / sccache**: content-addressed, with GC; sharded only when size earns it |
 | `baseline/` — the findings a person accepted | `<root>/.joggle/` | **yes** | durable, human-authored, per-PR | **changesets / towncrier**: one fragment per entry |
 | `wire.json` — a whole wire request's response | machine cache | no | pure performance artifact | **Nix's hidden lockfile**: machine-local, deletable |
 | `last-run.json` — the manifest and the last report | machine cache | no | pure performance artifact | **Nix's hidden lockfile**: machine-local, deletable |
@@ -52,6 +52,14 @@ Two layouts, one format:
 Both are read, and `joggle cache migrate --layout` moves between them. The older
 `answers.json` object is read and consolidated into the single file on the first
 write.
+
+A judged run reads the reviewed ledger and writes the answers it produced into
+`<root>/.joggle/cache/`, beside the fact store. That directory is gitignored and
+machine-local; `.joggle/answers` is the reviewed set a person signed off, and a
+check may only read it. Keeping a write-through cache in the same files as the
+ledger is what made one judged run dirty 181 committed shards. `--cache-dir`
+still names the store a caller deliberately wants written, which is how a ledger
+is migrated.
 
 Each line is one entry: the key and the stored answer. Nothing else.
 
@@ -166,14 +174,17 @@ three real deployments have different constraints, and joggle now names them:
   otherwise. Explicit `--cache-dir` always wins, so onboarding is
   `joggle check --cache-dir .joggle` once, then the directory exists and every
   later run finds it.
-- **ci** — keyless replay. The answer cache is persisted through the CI cache
-  service (`actions/cache`), keyed on the lockfile and the decision version. A
-  cold cache degrades to deterministic rules plus baseline, which is what a
-  missing key already means.
+- **ci** — keyless replay. The reviewed answer ledger is persisted through the
+  CI cache service (`actions/cache`), keyed on the lockfile and the decision
+  version, or committed. A cold cache degrades to deterministic rules plus
+  baseline, which is what a missing key already means.
 - **committed** — a repository that wants keyless replay without a cache
-  service. `answers.jsonl` is committed (sharded explicitly only when the store
-  is large enough to need it), and `cache prune --max-age`/`--max-bytes` keeps it
-  from growing without a ceiling. joggle's own repository is in this mode.
+  service. The reviewed `answers.jsonl`/`answers/` is committed (sharded
+  explicitly only when the store is large enough to need it), and
+  `cache prune --max-age`/`--max-bytes` keeps it from growing without a ceiling.
+  A judged run never appends to it: new answers go to `.joggle/cache/` until a
+  person promotes them with `joggle cache migrate`. joggle's own repository is in
+  this mode.
   The ceiling is not optional in practice: GitHub warns above 50 MB per file and
   refuses above 100 MB, every clone pays for the bytes, and a deep stack multiplies
   them because each branch's scoped accept adds its own answers to the same file. A

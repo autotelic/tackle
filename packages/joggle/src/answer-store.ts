@@ -269,12 +269,16 @@ interface Loaded {
  *
  * The layouts are not mutually exclusive on disk: a repository that migrated
  * may still carry the old file after a crash, and reading both is how that
- * degrades to the union rather than to whichever the walk hit first.
+ * degrades to the union rather than to whichever the walk hit first. The same
+ * rule applies across directories: a reviewed ledger and this machine's
+ * write-through cache are one answer set, with the cached answer winning a key
+ * the reviewed ledger already carries (an age is evidence; an unstamped line is
+ * the committed shape).
  */
 const loadAll = (
   fs: FileSystem.FileSystem,
   path: Path.Path,
-  dir: string,
+  dirs: ReadonlyArray<string>,
 ): Effect.Effect<Loaded> =>
   Effect.gen(function* () {
     const now = seconds(yield* Clock.currentTimeMillis)
@@ -290,44 +294,45 @@ const loadAll = (
     let lines = 0
     let bytes = 0
     let skippedLines = 0
+    let shards = 0
 
-    const older = answersObject(path, dir)
-    if (yield* exists(fs, older)) {
-      const text = yield* readText(fs, older)
-      const decoded = Result.getOrUndefined(SchemaParser.decodeResult(Schema.fromJsonString(AnswersObject))(text))
-      if (decoded !== undefined) {
+    for (const dir of dirs) {
+      const older = answersObject(path, dir)
+      if (yield* exists(fs, older)) {
+        const text = yield* readText(fs, older)
+        const decoded = Result.getOrUndefined(SchemaParser.decodeResult(Schema.fromJsonString(AnswersObject))(text))
+        if (decoded !== undefined) {
+          files += 1
+          bytes += bytesOf(text)
+          for (const [key, answer] of Object.entries(decoded.entries)) absorb({ key, writtenAt: now, answer })
+        }
+      }
+
+      const single = answersFile(path, dir)
+      if (yield* exists(fs, single)) {
+        const text = yield* readText(fs, single)
+        const parsed = parseLines(text)
         files += 1
         bytes += bytesOf(text)
-        for (const [key, answer] of Object.entries(decoded.entries)) absorb({ key, writtenAt: now, answer })
+        skippedLines += parsed.skippedLines
+        lines += parsed.entries.length + parsed.skippedLines
+        for (const entry of parsed.entries) absorb(entry)
       }
-    }
 
-    const single = answersFile(path, dir)
-    const singleExists = yield* exists(fs, single)
-    if (singleExists) {
-      const text = yield* readText(fs, single)
-      const parsed = parseLines(text)
-      files += 1
-      bytes += bytesOf(text)
-      skippedLines += parsed.skippedLines
-      lines += parsed.entries.length + parsed.skippedLines
-      for (const entry of parsed.entries) absorb(entry)
-    }
-
-    const target = answersDir(path, dir)
-    const names = yield* fs.readDirectory(target).pipe(Effect.orElseSucceed(() => []))
-    let shards = 0
-    for (const name of names) {
-      if (!name.endsWith(".jsonl")) continue
-      const text = yield* readText(fs, path.join(target, name))
-      const parsed = parseLines(text)
-      if (text === "") continue
-      shards += 1
-      files += 1
-      bytes += bytesOf(text)
-      skippedLines += parsed.skippedLines
-      lines += parsed.entries.length + parsed.skippedLines
-      for (const entry of parsed.entries) absorb(entry)
+      const target = answersDir(path, dir)
+      const names = yield* fs.readDirectory(target).pipe(Effect.orElseSucceed(() => []))
+      for (const name of names) {
+        if (!name.endsWith(".jsonl")) continue
+        const text = yield* readText(fs, path.join(target, name))
+        const parsed = parseLines(text)
+        if (text === "") continue
+        shards += 1
+        files += 1
+        bytes += bytesOf(text)
+        skippedLines += parsed.skippedLines
+        lines += parsed.entries.length + parsed.skippedLines
+        for (const entry of parsed.entries) absorb(entry)
+      }
     }
 
     // Sharded wins when both exist: it is the form a migration finishes by
@@ -456,6 +461,14 @@ export interface StoreOptions {
    * every clone and defeat the merge.
    */
   readonly timestamps?: boolean | undefined
+  /**
+   * Extra directories to read, never to write.
+   *
+   * A judged run reads the reviewed ledger and writes the answers it judged into
+   * a machine-local cache beside the fact store. Keeping those roles apart is
+   * what stops a check from rewriting the 181 committed shards it just replayed.
+   */
+  readonly readDirs?: ReadonlyArray<string> | undefined
 }
 
 /**
@@ -473,7 +486,7 @@ export const make = (
   options: StoreOptions = {},
 ): Effect.Effect<Store> =>
   Effect.gen(function* () {
-    const loaded = yield* loadAll(fs, path, dir)
+    const loaded = yield* loadAll(fs, path, [...new Set([...(options.readDirs ?? []), dir])])
     const chosen: Layout = options.layout ?? loaded.layout
     const entries = yield* Ref.make(loaded.entries)
     const dirty = yield* Ref.make<ReadonlySet<string>>(new Set())
@@ -625,7 +638,7 @@ export const census = (
   dir: string,
 ): Effect.Effect<Census> =>
   Effect.gen(function* () {
-    const loaded = yield* loadAll(fs, path, dir)
+    const loaded = yield* loadAll(fs, path, [dir])
     const kinds = new Map<string, number>()
     const labels = new Map<string, number>()
     let yes = 0
@@ -677,7 +690,7 @@ export const prune = (
   Effect.gen(function* () {
     const now = options.now ?? seconds(yield* Clock.currentTimeMillis)
     const cutoff = options.olderThanSeconds === undefined ? undefined : now - options.olderThanSeconds
-    const loaded = yield* loadAll(fs, path, dir)
+    const loaded = yield* loadAll(fs, path, [dir])
     const kept = new Map<string, Entry>()
     let removed = 0
     for (const entry of loaded.entries.values()) {
@@ -742,7 +755,7 @@ export const compact = (
 ): Effect.Effect<CompactResult> =>
   Effect.gen(function* () {
     const bytesBefore = yield* answerStoreBytes(fs, path, dir)
-    const loaded = yield* loadAll(fs, path, dir)
+    const loaded = yield* loadAll(fs, path, [dir])
     // Ages are a machine fact: the repaired file is the set, in the one committed shape.
     const set = new Map(
       [...loaded.entries].map(([key, entry]) => [key, { key, answer: entry.answer }]),

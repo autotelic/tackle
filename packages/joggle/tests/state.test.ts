@@ -36,9 +36,9 @@ it.effect("a scoped run answers into the machine cache, not the committed ledger
     expect(scopedAnswerCacheDir({ declared: undefined, repository, machine, scoped: true })).toBe(
       machine,
     )
-    // A full run still writes the ledger, which is what trunk commits.
+    // A full run writes a cache beside the reviewed ledger, never the ledger itself.
     expect(scopedAnswerCacheDir({ declared: undefined, repository, machine, scoped: false })).toBe(
-      repository,
+      join(repository, "cache"),
     )
     // A caller that names a store means it.
     expect(

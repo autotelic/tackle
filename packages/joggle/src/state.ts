@@ -1,6 +1,7 @@
 import { Config, Effect, FileSystem, Option, Path } from "effect"
 import { createHash } from "node:crypto"
 import { homedir } from "node:os"
+import { join } from "node:path"
 
 /*
  * Where joggle's state lives, and how it is read back.
@@ -49,7 +50,7 @@ export const runCacheDirFor = (root: string): Effect.Effect<string> =>
   Effect.map(machineCacheRoot, (base) => `${base}/joggle/${shortHash(root)}`)
 
 /**
- * Where a SCOPED run's answers go.
+ * Where a judged run's write-through answers go.
  *
  * A scoped run answers "what did this branch introduce", and a branch's answers are a cache,
  * not a commit. Writing them into the repository's `.joggle/` puts thousands of lines into
@@ -57,9 +58,12 @@ export const runCacheDirFor = (root: string): Effect.Effect<string> =>
  * checkout — which is what a 22-branch migration produced: a 55 MB file, 777 commits touching
  * it, and a diff nobody could read.
  *
- * So a scoped run writes the machine cache unless the caller names a store with
- * `--cache-dir`. The committed ledger stays the trunk's: one full run on the base branch
- * decides what is accepted, and a branch's answers warm that machine and nobody else's diff.
+ * A full run has the same problem for a different reason: the reviewed ledger is a set a
+ * person signed off, and appending a write-through cache to it makes every judged run dirty
+ * the tree. So even a full run on an onboarded repository writes `<root>/.joggle/cache/`,
+ * beside the fact store; `.joggle/answers` is read and never rewritten by a check. A caller
+ * that names a store with `--cache-dir` still means it, because that is how a ledger is
+ * migrated deliberately.
  *
  * @param input.declared - `--cache-dir`, when the caller gave one. It always wins.
  * @param input.repository - What {@link cacheDirFor} resolved: `.joggle/` or the machine.
@@ -73,7 +77,8 @@ export const scopedAnswerCacheDir = (input: {
   readonly scoped: boolean
 }): string => {
   if (input.declared !== undefined) return input.declared
-  return input.scoped ? input.machine : input.repository
+  if (input.scoped || input.repository === input.machine) return input.machine
+  return join(input.repository, "cache")
 }
 
 /**

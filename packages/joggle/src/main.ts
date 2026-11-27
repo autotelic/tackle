@@ -278,18 +278,25 @@ const checkCommand = Command.make(
             : gitScope.since
 
       // The machine cache holds the run cache and the wire cache. The
-      // per-decision answer cache in `cacheDir` is the one CI replays.
+      // per-decision answer cache reads the reviewed ledger and writes judged
+      // answers into a cache; `joggle cache migrate` is the explicit way to move
+      // the ledger's shape.
       const machineCache = yield* runCacheDirFor(cwd)
       // A branch's answers are a cache, not a commit: a scoped run warms this machine and
       // leaves the committed ledger alone. Otherwise every pull request in a stack carries
       // thousands of lines of verdicts nobody can review (see docs/artifacts.md).
       const scopedRun = config.changed || changedPaths !== undefined
+      // Write-through answers live beside the fact store. The reviewed
+      // `.joggle/answers` ledger is read, never rewritten by a check: its lines are
+      // a reviewed set, and a judged run that appended to it dirtied 181 files.
       const cacheDir = scopedAnswerCacheDir({
         declared: declaredCacheDir,
         repository: repositoryCache,
         machine: machineCache,
         scoped: scopedRun,
       })
+      const answerReadDirs = [...new Set([repositoryCache, cacheDir])]
+      const machineAnswers = cacheDir !== repositoryCache || repositoryCache === machineCache
 
       const report = yield* checkRepository({
         config: effective,
@@ -338,7 +345,8 @@ const checkCommand = Command.make(
               offline: config.offline,
               apiKey,
               layout: effective.cache?.layout,
-              timestamps: cacheDir === machineCache,
+              answerReadDirs,
+              timestamps: machineAnswers,
               readOnly: config.readOnly || process.env["JIG_READ_ONLY"] === "1",
             }),
             tsgoLayer(cwd, {
