@@ -64,7 +64,7 @@ test("a cold store fills, a warm store reuses, and the ids do not move", async (
     }>
   ).map((row) => row.name)
   db.close()
-  for (const table of ["object", "fragment", "df", "surface"]) {
+  for (const table of ["object", "fragment"]) {
     expect(tables).toContain(table)
   }
 })

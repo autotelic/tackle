@@ -12,8 +12,8 @@ import { langOf, type Unit } from "./workspace.ts"
  *
  * Judgements are decisions and stay in `.joggle/answers` as text, because a
  * reviewer has to read a verdict change and two branches have to merge one.
- * Facts -- fragment ids, document frequency, the dependency surface -- are
- * derived from the tree, so they are not reviewed and must not be committed.
+ * Facts -- fragment ids and whether a unit's set was cut -- are derived from the
+ * tree, so they are not reviewed and must not be committed.
  * They live in one machine-local SQLite file instead.
  *
  * The file is disposable. A corrupt one is replaced rather than repaired, and a
@@ -33,10 +33,10 @@ export const STORE_PATH = ".joggle/cache/store.sqlite"
  * not `rm -rf .joggle/cache`, which is exactly the line between a rebuild and a
  * genuinely cold machine.
  */
-export const STORE_MARKER = ".joggle/cache/store.seen"
+const STORE_MARKER = ".joggle/cache/store.seen"
 
 /** The schema this build writes. Part of the version, beside {@link HASH_VERSION}. */
-export const STORE_SCHEMA = "1"
+const STORE_SCHEMA = "2"
 
 const STORE_FILE = (root: string): string => join(root, STORE_PATH)
 const STORE_MARK = (root: string): string => join(root, STORE_MARKER)
@@ -55,7 +55,7 @@ export const storeVersionOf = (identity: string = HASH_VERSION): number => {
   return digest.readUInt32BE(0) & 0x7fffffff || 1
 }
 
-const TABLES = ["object", "fragment", "df", "surface"] as const
+const TABLES = ["object", "fragment"] as const
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS "object" (
@@ -69,17 +69,6 @@ CREATE TABLE IF NOT EXISTS fragment (
   PRIMARY KEY (id, unit)
 );
 CREATE INDEX IF NOT EXISTS fragment_unit ON fragment (unit);
-CREATE TABLE IF NOT EXISTS df (
-  id BLOB PRIMARY KEY,
-  units INTEGER NOT NULL
-);
-CREATE TABLE IF NOT EXISTS surface (
-  package TEXT NOT NULL,
-  name TEXT NOT NULL,
-  module TEXT NOT NULL,
-  signature TEXT NOT NULL,
-  doc TEXT
-);
 `
 
 export type FactStoreState = "cold" | "warm" | "rebuilt" | "rebuilt-on-version-change"
@@ -129,11 +118,9 @@ export class StoreError extends Schema.TaggedError<
  */
 export interface FactStore {
   /** The fragment set already stored for this unit, or the reason there is none. */
-  readonly cached: (unit: Unit) => Result.Result<StoredFragments, StoreError>
-  /** Write one unit's fragment set, and keep the document-frequency table truthful. */
-  readonly store: (unit: Unit, fragments: StoredFragments) => void
-  /** The store's document frequency, keyed by fragment id. */
-  readonly frequency: () => ReadonlyMap<string, number>
+  readonly cached: (unit: Unit) => Result.Result<FragmentSet, StoreError>
+  /** Write one unit's fragment set. */
+  readonly store: (unit: Unit, fragments: FragmentSet) => void
   /** Close the store and say which kind of run this was, or why it never opened. */
   readonly close: () => Result.Result<FactStoreReport, StoreError>
 }
@@ -151,7 +138,7 @@ const messageOf = (cause: unknown): string =>
  * The columns `node:sqlite` hands back, spelled as the driver spells them.
  *
  * Every reader takes this union rather than narrowing its own argument, so the
- * one place that knows about driver representations is {@link textOf}.
+ * one place that reads a driver representation is {@link textOf}.
  */
 type Column = string | number | bigint | Uint8Array | null | undefined
 
@@ -169,10 +156,6 @@ const CountRow = Schema.Struct({ count: Schema.optional(Schema.Number) })
 const NameRow = Schema.Struct({ name: Schema.optional(Schema.String) })
 const BodyRow = Schema.Struct({ body: Schema.optional(Schema.Uint8Array) })
 const IdRow = Schema.Struct({ id: Schema.optional(Schema.Uint8Array) })
-const DfRow = Schema.Struct({
-  id: Schema.optional(Schema.Uint8Array),
-  units: Schema.optional(Schema.Number),
-})
 
 /** The JSON the store writes into `object.body` for a fragment set. */
 const FragmentSetBody = Schema.Struct({ cut: Schema.optional(Schema.Boolean) })
@@ -183,7 +166,7 @@ function decodeRow<S extends Schema.ConstraintDecoder<unknown>>(
   row: ColumnRow | undefined,
 ): S["Type"] | undefined {
   if (row === undefined) return undefined
-  const decoded = SchemaParser.decodeUnknownResult(schema)(row)
+  const decoded = SchemaParser.decodeResult(schema)(row)
   return Result.isSuccess(decoded) ? decoded.success : undefined
 }
 
@@ -323,10 +306,12 @@ const openFile = (input: {
  * version rides in the store's `user_version`), so a changed declaration is a
  * miss and an unchanged one never walks its tree again.
  */
-export const unitKeyOf = (unit: Unit): string => shortHash(langOf(unit.file) + "\u0000" + unit.text)
+const unitKeyOf = (unit: Unit): string => shortHash(langOf(unit.file) + "\u0000" + unit.text)
 
-export interface StoredFragments {
+export interface FragmentSet {
+  /** Deduplicated subtree ids, in the order the code first presents them. */
   readonly ids: ReadonlyArray<string>
+  /** True when the policy bound cut the set, so a caller never reads it as complete. */
   readonly cut: boolean
 }
 
@@ -361,7 +346,7 @@ export const createFactStore = (root: string): FactStore => {
     return opened.db
   }
 
-  const cached = (unit: Unit): Result.Result<StoredFragments, StoreError> => {
+  const cached = (unit: Unit): Result.Result<FragmentSet, StoreError> => {
     const database = ensure()
     const key = unitKeyOf(unit)
     // SAFETY: reading a cache through `node:sqlite` throws for a row or schema
@@ -378,7 +363,7 @@ export const createFactStore = (root: string): FactStore => {
           StoreError.make({ reason: "Rejected", detail: "no stored fragment set for " + key }),
         )
       }
-      const body = SchemaParser.decodeUnknownResult(
+      const body = SchemaParser.decodeResult(
         Schema.fromJsonString(FragmentSetBody),
       )(textOf(row.body))
       const ids = database
@@ -404,7 +389,7 @@ export const createFactStore = (root: string): FactStore => {
     }
   }
 
-  const storeFragments = (unit: Unit, fragments: StoredFragments): void => {
+  const storeFragments = (unit: Unit, fragments: FragmentSet): void => {
     const database = ensure()
     const key = unitKeyOf(unit)
     // SAFETY: writing through `node:sqlite` throws on a locked or corrupt file;
@@ -412,20 +397,10 @@ export const createFactStore = (root: string): FactStore => {
     // facts and reports that they were not stored.
     try {
       database.exec("BEGIN IMMEDIATE")
-      const before = database.prepare("SELECT id FROM fragment WHERE unit = ?").all(key)
       const existed =
         database
           .prepare('SELECT 1 AS present FROM "object" WHERE id = ? AND kind = ?')
           .get(idBytes(key), "fragment-set") !== undefined
-      const decrement = database.prepare("UPDATE df SET units = units - 1 WHERE id = ?")
-      const prune = database.prepare("DELETE FROM df WHERE id = ? AND units <= 0")
-      for (const entry of before) {
-        const stored = decodeRow(IdRow, entry)?.id
-        if (stored === undefined) continue
-        const id = idBytes(textOf(stored))
-        decrement.run(id)
-        prune.run(id)
-      }
       database.prepare("DELETE FROM fragment WHERE unit = ?").run(key)
       database
         .prepare('INSERT OR REPLACE INTO "object" (id, kind, body) VALUES (?, ?, ?)')
@@ -435,13 +410,7 @@ export const createFactStore = (root: string): FactStore => {
           Buffer.from(JSON.stringify({ cut: fragments.cut }), "utf8"),
         )
       const insert = database.prepare("INSERT OR IGNORE INTO fragment (id, unit) VALUES (?, ?)")
-      const count = database.prepare(
-        "INSERT INTO df (id, units) VALUES (?, 1) ON CONFLICT(id) DO UPDATE SET units = units + 1",
-      )
-      for (const id of fragments.ids) {
-        insert.run(idBytes(id), key)
-        count.run(idBytes(id))
-      }
+      for (const id of fragments.ids) insert.run(idBytes(id), key)
       database.exec("COMMIT")
       if (!existed) units += 1
       walked += 1
@@ -455,25 +424,6 @@ export const createFactStore = (root: string): FactStore => {
       }
       issue ??= "a fragment set could not be written: " + messageOf(cause)
       walked += 1
-    }
-  }
-
-  const frequency = (): ReadonlyMap<string, number> => {
-    const current = ensure()
-    // SAFETY: reading the frequency table through `node:sqlite` throws for a
-    // damaged file; an empty map is the cache's honest miss, and `issue` says so.
-    try {
-      const rows = current.prepare("SELECT id, units FROM df").all()
-      const entries: Array<readonly [string, number]> = []
-      for (const row of rows) {
-        const decoded = decodeRow(DfRow, row)
-        if (decoded?.id === undefined) continue
-        entries.push([textOf(decoded.id), Number(decoded.units ?? 0)])
-      }
-      return new Map(entries)
-    } catch (cause) {
-      issue ??= "the document frequency table could not be read: " + messageOf(cause)
-      return new Map()
     }
   }
 
@@ -499,5 +449,5 @@ export const createFactStore = (root: string): FactStore => {
     return Result.succeed(report)
   }
 
-  return { cached, store: storeFragments, frequency, close }
+  return { cached, store: storeFragments, close }
 }
