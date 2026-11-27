@@ -688,6 +688,17 @@ const remedyLines = ({ report, ledger, cache }: RemedyLinesInput): ReadonlyArray
       )
       lines.push("      " + counterexample.reason)
     }
+    if (cluster.crossRules.length > 0) lines.push("  cross-rule merges")
+    for (const merge of cluster.crossRules) {
+      lines.push(
+        "    " + merge.a.rule + " (" + String(merge.a.sites) + " sites) × " + merge.b.rule +
+          " (" + String(merge.b.sites) + " sites): sites intersect " +
+          (merge.intersect ? "yes" : "no") + " · j_same " +
+          (merge.probability === undefined ? "unanswered" : merge.probability.toFixed(2)) +
+          " · shared repair " + (merge.sharedRepair ? "yes" : "no") + " · family " +
+          (merge.families.a ?? "?") + " / " + (merge.families.b ?? "?"),
+      )
+    }
   }
   for (const disagreement of report.disagreements) {
     lines.push(

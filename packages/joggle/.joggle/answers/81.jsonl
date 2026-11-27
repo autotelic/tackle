@@ -1,4 +1,5 @@
 81121074c3934f75	{"confidence":0.53,"kind":"Classify","label":"name_meaning","probabilities":{"magic_threshold":0,"name_meaning":0.65,"no_issue":0.09,"semantic_verdict":0.26}}
+811d01e44a0d4563	{"confidence":0.98,"kind":"Classify","label":"own the value type","probabilities":{"inject the dependency":0,"justify the assertion":0,"narrow with a predicate":0,"other":0.02,"own the value type":0.98,"parse at the boundary":0,"use the stable API":0}}
 81265bffee3f4773	{"confidence":0.95,"kind":"Classify","label":"inject the dependency","probabilities":{"inject the dependency":0.96,"justify the assertion":0,"narrow with a predicate":0,"other":0.04,"own the value type":0,"parse at the boundary":0}}
 812689e9e3c86597	{"confidence":0.98,"kind":"Classify","label":"other","probabilities":{"inject the dependency":0,"justify the assertion":0.01,"narrow with a predicate":0,"other":0.98,"own the value type":0,"parse at the boundary":0.01}}
 812768838336ec28	{"confidence":0.32,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.55,"not_a_derivation":0.43,"reimplements":0.02}}

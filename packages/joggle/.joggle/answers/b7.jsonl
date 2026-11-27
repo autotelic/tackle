@@ -17,3 +17,4 @@ b79fc078ad432628	{"confidence":0.71,"kind":"Classify","label":"legitimate_local"
 b7b727fcf8a0d615	{"consistency":1,"kind":"Probability","probability":0.05000000000000001}
 b7c0d8cd3dee899c	{"consistency":1,"kind":"Probability","probability":0.02666666666666667}
 b7c1ba2f1a37656f	{"kind":"Probability","probability":0.5}
+b7d8920a5d6c944d	{"confidence":1,"kind":"Classify","label":"Build the object in separate statements and add the property only when present","probabilities":{"Add property-based coverage (generate inputs, assert invariants), or disable this rule inline with a reason if the behavior is truly non-property-testable":0,"Build the object in separate statements and add the property only when present":1}}

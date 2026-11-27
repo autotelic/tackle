@@ -1,4 +1,5 @@
 2b17016b0f1e6775	{"confidence":0.15,"kind":"Classify","label":"not_a_derivation","probabilities":{"legitimate_local":0.37,"not_a_derivation":0.43,"reimplements":0.2}}
+2b1eb338f3423265	{"confidence":0.43,"kind":"Classify","label":"use the stable API","probabilities":{"inject the dependency":0,"justify the assertion":0.01,"narrow with a predicate":0,"other":0.48,"own the value type":0,"parse at the boundary":0,"use the stable API":0.51}}
 2b21e80b7d7d0e57	{"consistency":1,"kind":"Probability","probability":0.12}
 2b2f44d3df13f839	{"consistency":1,"kind":"Probability","probability":0.1922222222222222}
 2b2fa29c7027a02e	{"confidence":0.83,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.08,"member_1":0.92}}

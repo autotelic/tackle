@@ -7,3 +7,4 @@ b05aeae8a481aceb	{"confidence":0.75,"kind":"Classify","label":"semantic_verdict"
 b08bd1439618a3ad	{"consistency":1,"kind":"Probability","probability":0.03}
 b0a7954475d9e32d	{"consistency":1,"kind":"Probability","probability":0.05000000000000001}
 b0cbed0f164f7c7d	{"confidence":1,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":1,"infrastructure":0,"input_adaptation":0,"mechanical":0,"not_applicable":0,"orchestration":0,"rendering":0,"request_validation":0,"transport_concern":0}}
+b0d2983585198d3f	{"confidence":0.58,"kind":"Classify","label":"other","probabilities":{"inject the dependency":0,"justify the assertion":0.01,"narrow with a predicate":0,"other":0.64,"own the value type":0,"parse at the boundary":0,"use the stable API":0.35}}

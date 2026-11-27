@@ -11,6 +11,7 @@ ffbddc529ef9cc5f	{"confidence":0.99,"kind":"Classify","label":"Make it local, or
 ffcd363a7b539271	{"consistency":1,"kind":"Probability","probability":0.04666666666666667}
 ffce80a49b9af617	{"confidence":0.58,"kind":"Classify","label":"group 2","probabilities":{"group 1":0.01,"group 2":0.63,"group 3":0.01,"group 4":0,"group 5":0,"group 6":0,"group 7":0.35,"group 8":0}}
 ffea00d3eb790ff2	{"consistency":1,"kind":"Probability","probability":0.043333333333333335}
+fff118227c8ab4d3	{"confidence":1,"kind":"Classify","label":"Use parameterized queries or a query builder so values never become syntax","probabilities":{"Use Effect's TaggedError (a tagged class per failure kind carrying structured evidence as fields) so the error flows through the typed channel":0,"Use parameterized queries or a query builder so values never become syntax":1}}
 fff47a07af104cb0	{"consistency":1,"kind":"Probability","probability":0.03}
 fff50ed6231c69ed	{"confidence":0.61,"kind":"Classify","label":"group 7","probabilities":{"group 1":0.06,"group 2":0,"group 3":0.21,"group 4":0.01,"group 5":0.02,"group 6":0.01,"group 7":0.66,"group 8":0.03}}
 fffa0178c59d6391	{"confidence":0.93,"kind":"Classify","label":"type_surface","probabilities":{"facade":0,"no_issue":0.05,"related_helpers":0,"type_surface":0.95}}

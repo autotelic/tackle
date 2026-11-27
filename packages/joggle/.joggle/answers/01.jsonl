@@ -11,3 +11,4 @@
 01de97a9c033fe39	{"consistency":1,"kind":"Probability","probability":0.043333333333333335}
 01eb0134841ea296	{"consistency":1,"kind":"Probability","probability":0.03666666666666667}
 01f0bedc1c093583	{"consistency":1,"kind":"Probability","probability":0.056666666666666664}
+01f9b260d4e45484	{"confidence":0.4,"kind":"Classify","label":"Build the object in separate statements and add the property only when present","probabilities":{"Add property-based coverage (generate inputs, assert invariants), or disable this rule inline with a reason if the behavior is truly non-property-testable":0.3,"Build the object in separate statements and add the property only when present":0.7}}

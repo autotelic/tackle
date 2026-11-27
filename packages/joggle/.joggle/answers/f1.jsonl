@@ -1,3 +1,4 @@
+f10572ffea3d8f8c	{"confidence":0.84,"kind":"Classify","label":"other","probabilities":{"inject the dependency":0,"justify the assertion":0,"narrow with a predicate":0,"other":0.86,"own the value type":0.14,"parse at the boundary":0,"use the stable API":0}}
 f106e59d3a14d806	{"consistency":1,"kind":"Probability","probability":0.07}
 f108654003f4edd8	{"confidence":0.62,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.25,"independent":0.75,"meaning_switched":0}}
 f10c9de26158550e	{"confidence":0.99,"kind":"Classify","label":"other","probabilities":{"inject the dependency":0,"justify the assertion":0,"narrow with a predicate":0.01,"other":0.99,"own the value type":0,"parse at the boundary":0}}
@@ -19,4 +20,5 @@ f1b243ae69924415	{"confidence":0.89,"kind":"Classify","label":"other","probabili
 f1b302e4a0960d6c	{"consistency":1,"kind":"Probability","probability":0.06666666666666667}
 f1bcac7e738a9fd6	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0}}
 f1d24bbaa194d8bf	{"confidence":0.63,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.72,"component_or_feature":0,"not_applicable":0.27,"route_or_handler":0.01}}
+f1db34794b20cf0d	{"confidence":1,"kind":"Classify","label":"Return Option<number> and express absence as Option.none()","probabilities":{"Return Option<number> and express absence as Option.none()":1,"Return Option<ReadonlyArray<string>> and express absence as Option.none()":0}}
 f1db7b3d54949bb8	{"confidence":0.61,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.71,"component_or_feature":0.01,"not_applicable":0.27,"route_or_handler":0.01}}

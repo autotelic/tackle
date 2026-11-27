@@ -10,6 +10,7 @@
 4988c12549e1346e	{"consistency":1,"kind":"Probability","probability":0.7333333333333334}
 4990c2c47682f0f2	{"confidence":0.8,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.85,"stale_reference":0,"wrong_behavior":0.13,"wrong_contract":0.02}}
 499dcf4bc1e7cbae	{"consistency":1,"kind":"Probability","probability":0.6822222222222222}
+49aaa0e9c524776e	{"confidence":0.86,"kind":"Classify","label":"parse at the boundary","probabilities":{"inject the dependency":0,"justify the assertion":0,"narrow with a predicate":0,"other":0,"own the value type":0.12,"parse at the boundary":0.88,"use the stable API":0}}
 49b0f316b533c02c	{"consistency":1,"kind":"Probability","probability":0.07333333333333335}
 49c5cde0164b5097	{"consistency":1,"kind":"Probability","probability":0.03}
 49de526d920835fc	{"confidence":0.22,"kind":"Classify","label":"input_adaptation","probabilities":{"domain_logic":0.3,"infrastructure":0,"input_adaptation":0.3,"mechanical":0.08,"not_applicable":0.13,"orchestration":0.13,"rendering":0.05,"request_validation":0,"transport_concern":0.01}}

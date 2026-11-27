@@ -10,6 +10,7 @@
 3a7040f29b62422d	{"confidence":0.44,"kind":"Classify","label":"two_concepts","probabilities":{"compatible":0.03,"drift":0.35,"two_concepts":0.62}}
 3a8f7d3cad98eee7	{"consistency":1,"kind":"Probability","probability":0.11666666666666665}
 3aa3495ef20fa4c0	{"confidence":0.98,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
+3aa78cc3d7effbd5	{"confidence":0.96,"kind":"Classify","label":"other","probabilities":{"inject the dependency":0,"justify the assertion":0,"narrow with a predicate":0,"other":0.97,"own the value type":0.03,"parse at the boundary":0,"use the stable API":0}}
 3aa9056866824f0f	{"consistency":1,"kind":"Probability","probability":0.04666666666666667}
 3aac0af12b068ecb	{"consistency":1,"kind":"Probability","probability":0.08666666666666667}
 3ab1e8e8696d3801	{"consistency":1,"kind":"Probability","probability":0.03}

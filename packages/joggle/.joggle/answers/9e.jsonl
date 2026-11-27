@@ -1,4 +1,5 @@
 9e0bde46f91794d0	{"consistency":1,"kind":"Probability","probability":0.04666666666666667}
+9e0c7f41fa7f7513	{"confidence":0.54,"kind":"Classify","label":"other","probabilities":{"inject the dependency":0,"justify the assertion":0.01,"narrow with a predicate":0,"other":0.61,"own the value type":0,"parse at the boundary":0,"use the stable API":0.38}}
 9e1d7523cfd71f7d	{"consistency":1,"kind":"Probability","probability":0.03666666666666667}
 9e232f201be446cb	{"confidence":0.36,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.68,"member_1":0.32}}
 9e2dfb6276e55f4e	{"confidence":1,"kind":"Classify","label":"Use an owner/schema-derived value type; parse external payloads before insertion","probabilities":{"Data.TaggedError) whose fields carry the operation, offending value, and domain, and render this context as its message":0,"Keep inference, validate with satisfies, or use a named owner contract":0,"type UserId = string & Brand.Brand<\"UserId\">) so the compiler rejects transposed arguments":0,"Use an owner/schema-derived value type; parse external payloads before insertion":1}}

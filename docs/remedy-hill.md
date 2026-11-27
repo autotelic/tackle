@@ -163,6 +163,36 @@ families is not sufficient by itself: any family that outgrows the option limit
 will eventually have a one-clause tail, so the route has to handle it wherever it
 appears.
 
+### The family answer is not the repair
+
+The first cross-rule clusters after the split exposed the composed label's own
+failure. A cluster forms on the composed `family: clause`, so two rules merge for
+one of two reasons: they landed on the same composed repair, or the pairwise
+`j_same` answered as one edit. The second path ignored the family, and the
+83-site stable-API cluster absorbed five
+`plumb-effect/no-nullish-default-on-partial-input` findings -- 88 sites over two
+rules with disjoint site sets. The two repairs are unlike: one swaps an
+experimental API, the other chooses `Schema.optional` over `?? false`. The pair
+question answered what it was asked -- both messages tell a reader to use a
+supported schema -- and the clustering read that as one repair.
+
+`j_same` now closes an edge only inside one family. The family is the coarse
+answer, the clause is the fine one, and the pairwise question may not widen the
+coarse one -- a clause that differs by more than a synonym keeps the rules apart,
+and deciding synonymy is the clause question's job. The witness's merge of the
+five boundary rules is untouched: `no-runtime-typeof` and
+`no-unknown-parameters` answer one family (`parse at the boundary`) with two
+clauses, and the pairwise question is exactly what joins them.
+
+Every multi-rule cluster now prints its own audit, computed and never asked: each
+rule pair with both site counts, whether their site sets intersect, the highest
+`j_same` over a message pair from the two rules, whether they share a composed
+repair, and the family each side answered. A row with disjoint sites, no shared
+repair and different families is the shape the merge must not make, and the
+report now shows it without reading the ledger. The audit is a report, not a
+judgement: it names which clusters to inspect, and the inspection is the next
+rung's work.
+
 ### Acceptance
 
 The rung is met when a fresh run reproduces the measured result, with any

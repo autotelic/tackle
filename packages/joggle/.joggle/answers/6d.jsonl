@@ -5,6 +5,7 @@
 6d6db57047bcc55d	{"consistency":1,"kind":"Probability","probability":0.04}
 6d7c11f08dde9746	{"confidence":0.91,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.93,"component_or_feature":0.01,"not_applicable":0.06,"route_or_handler":0}}
 6d83d502b83a9b37	{"consistency":1,"kind":"Probability","probability":0.03}
+6d96e26db13ff3b3	{"confidence":1,"kind":"Classify","label":"Keep inference, validate with satisfies, or use a named owner contract","probabilities":{"Accept a single named payload object instead; two parameters of the same type transpose silently":0,"Keep inference, validate with satisfies, or use a named owner contract":1,"type UserId = string & Brand.Brand<\"UserId\">) so the compiler rejects transposed arguments":0,"Use an owner/schema-derived value type; parse external payloads before insertion":0}}
 6d9a96b137281e43	{"confidence":0.4,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.6,"unclear":0.01,"value":0.39}}
 6d9c8b12fd7d3a94	{"confidence":0.95,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.97,"not_a_derivation":0.01,"reimplements":0.02}}
 6da15416e4994419	{"confidence":0.66,"kind":"Rate","label":"no_difference","probabilities":{"meaningfully_better":0.05,"no_difference":0.79,"removes_a_hazard":0.03,"slightly_clearer":0.13},"rating":0.34}

@@ -3,6 +3,7 @@
 3e32a2a5b4bf1b5b	{"confidence":0.88,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.91,"stale_reference":0,"wrong_behavior":0.07,"wrong_contract":0.02}}
 3e3761c871f44aab	{"confidence":0.45,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.64,"not_a_derivation":0.36,"reimplements":0}}
 3e3c6e8b2410b797	{"consistency":1,"kind":"Probability","probability":0.03333333333333333}
+3e4eeadff1149608	{"confidence":0.89,"kind":"Classify","label":"inject the dependency","probabilities":{"inject the dependency":0.91,"justify the assertion":0,"narrow with a predicate":0,"other":0.09,"own the value type":0,"parse at the boundary":0,"use the stable API":0}}
 3e505b194d8252f4	{"confidence":0.27,"kind":"Classify","label":"two_concepts","probabilities":{"compatible":0.08,"drift":0.41,"two_concepts":0.51}}
 3e513471d474b519	{"confidence":0.97,"kind":"Classify","label":"same_module","probabilities":{"different_deployables":0,"same_module":0.98,"same_package":0.02,"sibling_packages":0}}
 3e52736e604ffd0a	{"consistency":1,"kind":"Probability","probability":0.10000000000000002}

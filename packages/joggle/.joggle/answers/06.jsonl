@@ -10,6 +10,7 @@
 06a8f697613cbbce	{"confidence":0.59,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.13,"keep_variants":0.73,"no_issue":0.14}}
 06ab657714b8b695	{"consistency":1,"kind":"Probability","probability":0.04}
 06df4a77d79ea10f	{"consistency":1,"kind":"Probability","probability":0.5933333333333333}
+06df4cad8e35f34d	{"confidence":1,"kind":"Classify","label":"group 4","probabilities":{"group 1":0,"group 2":0,"group 3":0,"group 4":1,"group 5":0,"group 6":0,"group 7":0,"group 8":0}}
 06e2377e004b694c	{"consistency":1,"kind":"Probability","probability":0.03333333333333333}
 06ea170889600489	{"confidence":0.94,"kind":"Classify","label":"general","probabilities":{"general":0.96,"names_a_caller":0.01,"shared_vocabulary":0.03}}
 06eb0a7a19329e56	{"confidence":0.83,"kind":"Classify","label":"infrastructure","probabilities":{"domain_logic":0,"infrastructure":0.85,"input_adaptation":0.02,"mechanical":0,"not_applicable":0,"orchestration":0.12,"rendering":0,"request_validation":0,"transport_concern":0.01}}

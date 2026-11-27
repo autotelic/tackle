@@ -1,4 +1,5 @@
 ec294db2087af330	{"confidence":0.83,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.88,"not_a_derivation":0.11,"reimplements":0.01}}
+ec29d9be9f2652e7	{"confidence":0.68,"kind":"Classify","label":"other","probabilities":{"inject the dependency":0,"justify the assertion":0.27,"narrow with a predicate":0,"other":0.73,"own the value type":0,"parse at the boundary":0,"use the stable API":0}}
 ec333fc43fb6ad06	{"consistency":1,"kind":"Probability","probability":0.6266666666666666}
 ec494cf052e19803	{"confidence":0.83,"kind":"Classify","label":"same_module","probabilities":{"different_deployables":0,"same_module":0.88,"same_package":0.12,"sibling_packages":0}}
 ec54d3bb082f570a	{"confidence":0.94,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.97,"not_a_derivation":0.03,"reimplements":0}}

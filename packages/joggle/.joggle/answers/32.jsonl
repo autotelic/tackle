@@ -3,6 +3,7 @@
 320d93f288394a5e	{"confidence":0.95,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.97,"not_a_derivation":0.03,"reimplements":0}}
 321126cda0f525a7	{"consistency":1,"kind":"Probability","probability":0.07666666666666667}
 322602fc2495d163	{"consistency":1,"kind":"Probability","probability":0.04666666666666667}
+322e6761ed2a3a1c	{"confidence":1,"kind":"Classify","label":"group 3","probabilities":{"group 1":0,"group 2":0,"group 3":1,"group 4":0,"group 5":0,"group 6":0,"group 7":0,"group 8":0}}
 32387d3b69043af7	{"confidence":0.81,"kind":"Classify","label":"input_adaptation","probabilities":{"domain_logic":0.04,"infrastructure":0,"input_adaptation":0.84,"mechanical":0.02,"not_applicable":0.06,"orchestration":0,"rendering":0,"request_validation":0.02,"transport_concern":0.02}}
 323d91ad54c8af36	{"consistency":1,"kind":"Probability","probability":0.05000000000000001}
 323e4d95870f62ea	{"confidence":0.28,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.08,"merge":0.41,"move":0.36,"share_a_contract":0.12,"split":0.03}}

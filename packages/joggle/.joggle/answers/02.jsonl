@@ -2,6 +2,7 @@
 022c26554d1ae981	{"consistency":1,"kind":"Probability","probability":0.8666666666666667}
 023294eb45e60f48	{"confidence":0.58,"kind":"Classify","label":"no_issue","probabilities":{"collapse":0,"keep_variants":0.28,"no_issue":0.72}}
 02345ca598786a94	{"consistency":1,"kind":"Probability","probability":0.09000000000000001}
+024a8d5b37ee6cee	{"confidence":0.26,"kind":"Classify","label":"Build the object in separate statements and add the property only when present","probabilities":{"Add property-based coverage (generate inputs, assert invariants), or disable this rule inline with a reason if the behavior is truly non-property-testable":0.37,"Build the object in separate statements and add the property only when present":0.63}}
 024eae166a860fe1	{"confidence":0.61,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.71,"component_or_feature":0,"not_applicable":0.29,"route_or_handler":0}}
 025011a7e93e922e	{"consistency":1,"kind":"Probability","probability":0.04}
 026ddeb34f3ea3e8	{"consistency":1,"kind":"Probability","probability":0.04}

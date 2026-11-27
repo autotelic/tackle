@@ -13,6 +13,7 @@ b98231a6412e30ea	{"confidence":0.36,"kind":"Classify","label":"already_there","p
 b99db1c15b1929b6	{"confidence":0.99,"kind":"Classify","label":"other","probabilities":{"inject the dependency":0,"justify the assertion":0.01,"narrow with a predicate":0,"other":0.99,"own the value type":0,"parse at the boundary":0}}
 b99eed3d37c9083c	{"confidence":0.39,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.35,"internal_only":0.6,"unaccounted":0.05}}
 b9a9f5556108d369	{"consistency":1,"kind":"Probability","probability":0.06333333333333334}
+b9ac0f7d6cf96bed	{"confidence":0.16,"kind":"Classify","label":"Add property-based coverage (generate inputs, assert invariants), or disable this rule inline with a reason if the behavior is truly non-property-testable","probabilities":{"Add property-based coverage (generate inputs, assert invariants), or disable this rule inline with a reason if the behavior is truly non-property-testable":0.58,"Build the object in separate statements and add the property only when present":0.42}}
 b9acd23f0f92d08f	{"confidence":0.45,"kind":"Classify","label":"general","probabilities":{"general":0.63,"names_a_caller":0.01,"shared_vocabulary":0.36}}
 b9c9d2f6393cd9a7	{"consistency":1,"kind":"Probability","probability":0.062222222222222213}
 b9cd0a0e39cd09ca	{"confidence":0.85,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.87,"infrastructure":0,"input_adaptation":0,"mechanical":0.11,"not_applicable":0.01,"orchestration":0.01,"rendering":0,"request_validation":0,"transport_concern":0}}

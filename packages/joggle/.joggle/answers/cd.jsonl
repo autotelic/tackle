@@ -3,6 +3,7 @@ cd066fd7fac68967	{"confidence":1,"kind":"Classify","label":"no_issue","probabili
 cd1a1c1f53313175	{"confidence":0.72,"kind":"Classify","label":"general","probabilities":{"general":0.81,"names_a_caller":0.01,"shared_vocabulary":0.18}}
 cd1d815a7f046da9	{"consistency":1,"kind":"Probability","probability":0.05000000000000001}
 cd23a18eac8ca6ba	{"confidence":0.47,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.01,"name_meaning":0.08,"no_issue":0.31,"semantic_verdict":0.6}}
+cd6440b4153f1896	{"confidence":1,"kind":"Classify","label":"parse at the boundary","probabilities":{"inject the dependency":0,"justify the assertion":0,"narrow with a predicate":0,"other":0,"own the value type":0,"parse at the boundary":1,"use the stable API":0}}
 cd7039924bf987bd	{"consistency":1,"kind":"Probability","probability":0.06}
 cd94431a5072556d	{"consistency":1,"kind":"Probability","probability":0.023333333333333334}
 cd983d1cbe01c030	{"consistency":1,"kind":"Probability","probability":0.06777777777777777}
