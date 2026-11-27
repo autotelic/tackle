@@ -16,7 +16,7 @@ import {
   declaredSoftware,
   defaultRoomSoftware,
   RoomSoftware,
-  type VmSoftwareReport,
+  VmSoftwareReport,
 } from "./VmSoftware.ts"
 
 /**

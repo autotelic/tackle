@@ -33,31 +33,35 @@ artifacts: `acl`, `attr`, `browserbase`, `coreutils`, `curl`, `diffutils`, `duck
 
 ## Decision
 
-1. The room boundary carries an explicit declaration — `software: { packages: ["git"] }` in
-   `room.json` (`packages/room/src/store.ts`), written by `room new` (or `--software`), and
-   passed through as `AgentOsOptions.software` (`{ registry: name }` per entry) by
-   `createAgentOsRoom`. A room file with no `software` field decodes and means the default, so
-   an older room is declared rather than bare.
-2. `defaultSoftware: false` is a room-visible option: a bare VM still installs the declared
-   packages, and `packages/room/test/vm-software.test.ts` proves `git --version` answers in
-   one.
+1. The room boundary carries an explicit declaration in `room.json`
+   (`packages/room/src/store.ts`), written by `room new` (or `--software`), and passed through
+   as `AgentOsOptions.software` (`{ registry: name }` per entry) by `createAgentOsRoom`. A
+   room file with no `software` field decodes to the empty declaration, so an older room is
+   readable and starts offline.
+2. The default declaration is **empty**, not `["git"]`. A registry package is downloaded on
+   the host before `create` resolves, so defaulting to `git` would make every room boot depend
+   on `releases.rivet.dev`: a new network requirement, and a test suite that fails offline.
+   `--software git` is opt-in and fails honestly when the registry is unreachable.
+   `defaultSoftware: false` remains a room-visible option for a bare VM.
 3. At boot the supervisor records **the VM's own report** — `vm.software.installed()`, narrowed
    to `{ name, version, commands }` — in `room.json`'s `runtime.software`, beside the
    declaration and the derived `missing` list. There is no second manifest in this package: the
    installed set is always the runtime's answer, and `missing` is the declared name it does not
-   list (`softwareReport` in `packages/room/src/VmSoftware.ts`).
+   list (`softwareReport` in `packages/room/src/VmSoftware.ts`). `installed()` reports packages
+   the boot added, not Core's vendored bundle, so an empty default room reports `installed: []`;
+   the record does not fill that in from a guess.
 4. `missing` is recorded, not fatal. Failing the boot on it would make a name the registry does
    not publish (`pnpm`) a room that cannot start at all; the record is what makes the gap
    visible at boot instead of at the first command that needed it.
 
 ## Consequences
 
-- A room VM boot now resolves `git` from the agentOS software registry, or from the mirror
-  `AGENTOS_SOFTWARE_REGISTRY_URL` names. The test that proves it needs that registry: `git`
-  being published there is the requirement, and skipping the test would be a green run that
-  looked at nothing.
-- The day the manifest publishes `node`/`pnpm`, the names go in
-  `packages/room/src/VmSoftware.ts`'s `defaultRoomSoftware` — one place — and `missing` stops
-  naming them.
+- A default room boots without the registry and records the Core bundle's own installed set. A
+  room that declares `git` resolves it from the agentOS software registry, or from the mirror
+  `AGENTOS_SOFTWARE_REGISTRY_URL` names, and that boot fails honestly when the registry is
+  unreachable.
+- The day the manifest publishes `node`/`pnpm`, naming them in a room declaration is a one-line
+  change; `missing` stops naming them. They are not added to the default for the same network
+  reason `git` is not.
 - `room status` prints the installed set and any missing declaration; `room vm status --json`
   prints the boot record the supervisor wrote.

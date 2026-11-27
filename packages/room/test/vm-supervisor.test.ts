@@ -254,8 +254,11 @@ test("down stops the vm supervisor and releases the socket", async () => {
     expect(live.state).toBe("running")
     expect(existsSync(vmSocketFile(paths))).toBe(true)
 
-    // The placement is recorded, and status names it.
-    expect((await readRoom(paths))?.runtime).toEqual({ kind: "agentos" })
+    // The placement is recorded with the VM's software answer, and status names it.
+    expect((await readRoom(paths))?.runtime).toEqual({
+      kind: "agentos",
+      software: { declared: [], installed: [], missing: [] },
+    })
     expect(roomCli(root, "status", "--id", "dev").stdout).toContain("runtime agentos")
 
     const down = roomCli(root, "down", "--id", "dev")

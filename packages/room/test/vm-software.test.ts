@@ -1,4 +1,4 @@
-/* oxlint-disable plumb/prefer-property-tests -- one real agentOS VM over a scratch room plus two pure decodes; the assertion is what the guest and the record actually report. */
+/* oxlint-disable plumb/prefer-property-tests -- one real agentOS VM over a scratch room plus pure decodes; the assertion is what the guest and the record actually report. */
 import { Effect } from "effect"
 import { execFileSync, spawnSync } from "node:child_process"
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
@@ -9,21 +9,19 @@ import { fileURLToPath } from "node:url"
 import { expect, test } from "vitest"
 import { createAgentOsRoom } from "../src/AgentOs.ts"
 import { createRoom, readRoom, roomFile, roomSoftware } from "../src/store.ts"
-import { defaultRoomSoftware, softwareReport } from "../src/VmSoftware.ts"
+import { defaultRoomSoftware, softwareInputs, softwareReport } from "../src/VmSoftware.ts"
 
 /*
- * The registry is the requirement, not the fixture: `git` is the one tool of the three a room
- * needs that the agentOS release manifest publishes (ADR 0006), so a boot that declares it
- * resolves it from https://releases.rivet.dev/agent-os/ (or AGENTOS_SOFTWARE_REGISTRY_URL).
- * A machine without that registry fails here instead of passing on a skipped VM.
+ * The default declaration is empty on purpose (ADR 0006): a registry package is downloaded on
+ * the host before the VM resolves, so defaulting to git would make every room boot depend on
+ * releases.rivet.dev. The declaration path is covered through the room file and softwareInputs;
+ * the boot test records the Core bundle the VM actually installed.
  */
 
 const cli = fileURLToPath(new URL("../src/cli.ts", import.meta.url))
 
-/** A room made by the CLI over a scratch checkout, so nothing here re-creates the store. */
 interface Scratch {
   readonly cwd: string
-  /** The `.room` root: where `room.json` and the VM's own record live. */
   readonly root: string
   readonly id: string
   readonly stateDir: string
@@ -50,28 +48,12 @@ const repository = (root: string): string => {
   return repo
 }
 
-/**
- * A room that declares its software, made the way an operator would make one.
- *
- * The declaration travels the boundary under test: argv on `room new`, the room file, and the
- * supervisor that reads it before booting the VM.
- */
-const scratchRoom = (label: string, software: string): Scratch => {
-  // Short on purpose: a Unix socket path is capped near 104 bytes on macOS, and this
-  // scratch directory holds `.room/<id>/vm.sock` below it.
+const scratchRoom = (label: string, software?: string): Scratch => {
+  // Short on purpose: a Unix socket path is capped near 104 bytes on macOS.
   const cwd = mkdtempSync(join(tmpdir(), "sw-" + label + "-"))
-  const created = roomCli(
-    cwd,
-    "new",
-    "--repo",
-    repository(cwd),
-    "--scope",
-    label,
-    "--id",
-    label,
-    "--software",
-    software,
-  )
+  const args = ["new", "--repo", repository(cwd), "--scope", label, "--id", label]
+  if (software !== undefined) args.push("--software", software)
+  const created = roomCli(cwd, ...args)
   if (created.status !== 0) throw new Error("room new failed: " + created.stderr)
   return {
     cwd,
@@ -82,7 +64,6 @@ const scratchRoom = (label: string, software: string): Scratch => {
   }
 }
 
-/** Run one command in the room's VM, surfacing the supervisor log when it fails. */
 const guest = (room: Scratch, command: ReadonlyArray<string>) => {
   const ran = roomCli(room.cwd, "vm", "--id", room.id, "--", ...command)
   if (ran.status === 0) return ran
@@ -105,10 +86,9 @@ test("a room file written before the declaration still decodes to the default", 
       at: Date.now(),
     })
     if (!created.ok) throw new Error("createRoom refused: " + created.error)
-    // A room made today names its software in its own file, so the guest can be read without a
-    // VM: the boundary declares, it does not inherit.
+    // A room made today names its software in its own file, even when that declaration is empty.
     expect(created.value.software).toEqual(defaultRoomSoftware)
-    expect(defaultRoomSoftware.packages).toContain("git")
+    expect(defaultRoomSoftware.packages).toEqual([])
 
     // An older room file has no field at all. Reading it must not fail, and the declaration it
     // implies is the default rather than a bare VM.
@@ -125,10 +105,19 @@ test("a room file written before the declaration still decodes to the default", 
   }
 })
 
+test("a room declaration becomes the registry entries the VM receives", () => {
+  expect(softwareInputs({ packages: ["git", "jq"] })).toEqual([
+    { registry: "git" },
+    { registry: "jq" },
+  ])
+  // Empty is the default, and it installs nothing beyond Core's own bundle.
+  expect(softwareInputs(defaultRoomSoftware)).toEqual([])
+})
+
 test("a declared package the VM does not report is visible as missing", () => {
-  // The declaration is the room's claim; `installed` is the VM's answer. A package the VM does
+  // The declaration is the room's claim; installed is the VM's answer. A package the VM does
   // not list is named here, so a Core release that drops one is a finding in the record and not
-  // a later `command not found` in a pass.
+  // a later command not found in a pass.
   const report = softwareReport({ packages: ["git", "pnpm"] }, [
     { packageName: "git", version: "2.45.2", commands: ["git"] },
   ])
@@ -137,49 +126,43 @@ test("a declared package the VM does not report is visible as missing", () => {
   expect(report.missing).toEqual(["pnpm"])
 })
 
-test("a declared room's guest has git and records what the VM installed", async () => {
-  const room = scratchRoom("git", "git")
+test("a default room records its empty declaration without inventing packages", async () => {
+  const room = scratchRoom("default")
   try {
-    const ran = guest(room, ["git", "--version"])
+    const ran = guest(room, ["sh", "-c", "echo ok"])
     expect(ran.status, ran.stderr).toBe(0)
-    expect(ran.stdout).toContain("git version")
+    expect(ran.stdout).toBe("ok\n")
 
     const record = await readRoom({ root: room.root, id: room.id })
     const software = record?.runtime?.software
     if (software === undefined)
       throw new Error("the boot recorded no software: " + JSON.stringify(record?.runtime))
-    expect(software.declared).toEqual(["git"])
-    const installed = software.installed.find((pkg) => pkg.name === "git")
-    if (installed === undefined)
-      throw new Error("the VM did not report git: " + JSON.stringify(software))
-    // The version is the VM's, so it is asserted as present rather than pinned: what matters is
-    // that the record names the package the declaration asked for.
-    expect(installed.version).not.toBe("")
-    expect(installed.commands).toContain("git")
+    expect(software.declared).toEqual([])
     expect(software.missing).toEqual([])
+    // installed() reports the packages this boot added; Core's vendored bundle is not in that
+    // list. The record echoes the VM's answer rather than filling the bundle in from a guess.
+    expect(software.installed).toEqual([])
   } finally {
     await room.close()
   }
 }, 180_000)
 
-test("a bare VM still runs the software its room declares", async () => {
+test("a bare VM with an empty declaration can still run node", async () => {
   const room = await Effect.runPromise(
     createAgentOsRoom({
       id: "bare",
-      software: { packages: ["git"] },
-      // No Core default bundle in this VM: only the declared packages are installed, so the one
-      // command that can answer is the one the room asked for.
+      software: { packages: [] },
+      // No Core default bundle in this VM: only the declared packages (none) are installed.
       defaultSoftware: false,
     }),
   )
   try {
-    const ran = await room.vm.process.execFile("git", ["--version"], {
+    const ran = await room.vm.process.execFile("node", ["-e", "console.log('bare')"], {
       cwd: room.workspace,
       output: { capture: "all" },
     })
-    expect(ran.stdout ?? "").toContain("git version")
-    expect(room.software.declared).toEqual(["git"])
-    expect(room.software.installed.map((pkg) => pkg.name)).toContain("git")
+    expect(ran.stdout ?? "").toContain("bare")
+    expect(room.software.declared).toEqual([])
     expect(room.software.missing).toEqual([])
   } finally {
     await room.dispose()

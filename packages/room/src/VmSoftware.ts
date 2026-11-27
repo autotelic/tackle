@@ -22,16 +22,20 @@ export const RoomSoftware = Schema.Struct({
 export type RoomSoftware = typeof RoomSoftware.Type
 
 /**
- * The declaration a room that names none gets.
+ * The declaration a room that names none gets: the empty declaration.
  *
- * Only `git` is declarable at `@rivet-dev/agentos-core@0.4.9`; ADR 0006 records the manifest
- * the claim was read from. `node` is not a software package at all — the guest's `node` is the
- * sidecar's own JS runtime, which is why a default VM answers it — and `pnpm` is published by
- * neither the default bundle nor the registry. A room that needs `pnpm` today gets
- * `command not found` in the guest: a gap in Core's registry, which this list records rather
- * than papers over. The day the manifest publishes a name, it goes here and nowhere else.
+ * Empty is deliberate. A registry package is downloaded on the host before `create` resolves,
+ * so defaulting to `git` would make every room boot depend on
+ * `releases.rivet.dev` — a new network requirement on a tool whose tests and offline use must
+ * work from a checkout. The Core bundle still provides its baseline; `runtime.software`
+ * records what it actually installed. A room that needs `git` opts in with
+ * `--software git`, and that boot fails honestly when the registry is unreachable.
+ *
+ * `node` is not a software package at all — the guest's `node` is the sidecar's own JS runtime
+ * — and `pnpm` is published by neither the default bundle nor the registry. ADR 0006 records
+ * the manifest those claims were read from.
  */
-export const defaultRoomSoftware: RoomSoftware = { packages: ["git"] }
+export const defaultRoomSoftware: RoomSoftware = { packages: [] }
 
 /** The declaration a room file implies: an absent field is the default, never a bare VM. */
 export const declaredSoftware = (software: RoomSoftware | undefined): RoomSoftware =>
