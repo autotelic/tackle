@@ -1,5 +1,28 @@
 # @autotelic/joggle
 
+## 0.17.0
+
+### Minor Changes
+
+- `joggle remedies`: findings clustered by the repair their messages prescribe.
+
+  The repair is a judgment, not a regex: a `Choice` over candidate families plus a
+  `Choice` over that family's clauses, composed in code as `family: clause`. A witness —
+  the imperative clause with the diagnosis dropped — runs beside it, and where the two
+  disagree the disagreement is reported, because a regex cannot see that "narrow with a
+  predicate" and "parse at the boundary" are one repair and a judgment that misses it
+  means the evidence is wrong.
+
+  Measured on this repository: 304 findings over 34 rules and 75 distinct messages, 54
+  witness clusters against **41 judgement clusters**. plumb's five boundary rules turn out
+  to be **three repairs** — `no-runtime-typeof` and `no-unknown-parameters` share "parse
+  at the boundary" (33 sites), `no-reinterpret-cast` is "narrow with a predicate" (29),
+  and `require-safety-comment-for-type-assertion` is "state the invariant" (26). The
+  predicted reading, five rules for one repair, was wrong, and the measurement said so.
+
+  Pair judgments are gated by code: **1,424 of 1,431 pairs needed no refinement**, with
+  `j_material` asked only where the merge question already said same.
+
 ## 0.16.0
 
 ### Minor Changes
