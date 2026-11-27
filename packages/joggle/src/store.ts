@@ -36,7 +36,7 @@ export const STORE_PATH = ".joggle/cache/store.sqlite"
 const STORE_MARKER = ".joggle/cache/store.seen"
 
 /** The schema this build writes. Part of the version, beside {@link HASH_VERSION}. */
-const STORE_SCHEMA = "2"
+const STORE_SCHEMA = "3"
 
 const STORE_FILE = (root: string): string => join(root, STORE_PATH)
 const STORE_MARK = (root: string): string => join(root, STORE_MARKER)
@@ -55,7 +55,7 @@ export const storeVersionOf = (identity: string = HASH_VERSION): number => {
   return digest.readUInt32BE(0) & 0x7fffffff || 1
 }
 
-const TABLES = ["object", "fragment"] as const
+const TABLES = ["object", "fragment", "finding"] as const
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS "object" (
@@ -69,6 +69,15 @@ CREATE TABLE IF NOT EXISTS fragment (
   PRIMARY KEY (id, unit)
 );
 CREATE INDEX IF NOT EXISTS fragment_unit ON fragment (unit);
+CREATE TABLE IF NOT EXISTS finding (
+  site TEXT NOT NULL,
+  rule TEXT NOT NULL,
+  remedy_hash TEXT NOT NULL,
+  run TEXT NOT NULL,
+  PRIMARY KEY (site, rule, run)
+);
+CREATE INDEX IF NOT EXISTS finding_run ON finding (run);
+CREATE INDEX IF NOT EXISTS finding_remedy ON finding (remedy_hash);
 `
 
 export type FactStoreState = "cold" | "warm" | "rebuilt" | "rebuilt-on-version-change"
@@ -116,11 +125,26 @@ export class StoreError extends Schema.TaggedError<
  * state, issue) belongs to the run that owns it. Two callers can hold two stores,
  * and a test never has to tear down global state left by another test.
  */
+export interface StoredFinding {
+  /** `file:line`, the place the finding is about. */
+  readonly site: string
+  readonly rule: string
+  readonly remedyHash: string
+  readonly run: string
+}
+
 export interface FactStore {
   /** The fragment set already stored for this unit, or the reason there is none. */
   readonly cached: (unit: Unit) => Result.Result<FragmentSet, StoreError>
   /** Write one unit's fragment set. */
   readonly store: (unit: Unit, fragments: FragmentSet) => void
+  /** The findings one remedies run recorded. */
+  readonly findingsOf: (run: string) => ReadonlyArray<StoredFinding>
+  /** Replace the findings for this run, atomically. Returns the rows written. */
+  readonly rememberFindings: (
+    run: string,
+    findings: ReadonlyArray<Omit<StoredFinding, "run">>,
+  ) => number
   /** Close the store and say which kind of run this was, or why it never opened. */
   readonly close: () => Result.Result<FactStoreReport, StoreError>
 }
@@ -156,6 +180,12 @@ const CountRow = Schema.Struct({ count: Schema.optional(Schema.Number) })
 const NameRow = Schema.Struct({ name: Schema.optional(Schema.String) })
 const BodyRow = Schema.Struct({ body: Schema.optional(Schema.Uint8Array) })
 const IdRow = Schema.Struct({ id: Schema.optional(Schema.Uint8Array) })
+const FindingRow = Schema.Struct({
+  site: Schema.optional(Schema.String),
+  rule: Schema.optional(Schema.String),
+  remedy_hash: Schema.optional(Schema.String),
+  run: Schema.optional(Schema.String),
+})
 
 /** The JSON the store writes into `object.body` for a fragment set. */
 const FragmentSetBody = Schema.Struct({ cut: Schema.optional(Schema.Boolean) })
@@ -427,6 +457,73 @@ export const createFactStore = (root: string): FactStore => {
     }
   }
 
+  const findingsOf = (run: string): ReadonlyArray<StoredFinding> => {
+    const database = ensure()
+    // SAFETY: reading through `node:sqlite` throws for a schema this build cannot
+    // read; an empty answer is the same degradation as a cold store.
+    try {
+      return database
+        .prepare(
+          "SELECT site, rule, remedy_hash, run FROM finding WHERE run = ? ORDER BY site, rule",
+        )
+        .all(run)
+        .flatMap((row) => {
+          const decoded = decodeRow(FindingRow, row)
+          if (
+            decoded?.site === undefined ||
+            decoded.rule === undefined ||
+            decoded.remedy_hash === undefined ||
+            decoded.run === undefined
+          ) {
+            return []
+          }
+          return [
+            {
+              site: decoded.site,
+              rule: decoded.rule,
+              remedyHash: decoded.remedy_hash,
+              run: decoded.run,
+            },
+          ]
+        })
+    } catch (cause) {
+      issue ??= "stored findings could not be read: " + messageOf(cause)
+      return []
+    }
+  }
+
+  const rememberFindings = (
+    run: string,
+    findings: ReadonlyArray<Omit<StoredFinding, "run">>,
+  ): number => {
+    const database = ensure()
+    // SAFETY: writing through `node:sqlite` throws on a locked or corrupt file;
+    // the caller already has the report, so a failed write is a cache miss, not
+    // a failed remedies run.
+    try {
+      database.exec("BEGIN IMMEDIATE")
+      database.prepare("DELETE FROM finding WHERE run = ?").run(run)
+      const insert = database.prepare(
+        "INSERT OR REPLACE INTO finding (site, rule, remedy_hash, run) VALUES (?, ?, ?, ?)",
+      )
+      for (const finding of findings) {
+        insert.run(finding.site, finding.rule, finding.remedyHash, run)
+      }
+      database.exec("COMMIT")
+      return findings.length
+    } catch (cause) {
+      // SAFETY: rolling back a transaction that already failed is the same
+      // `node:sqlite` boundary and may throw because there is nothing to roll back.
+      try {
+        database.exec("ROLLBACK")
+      } catch {
+        // No transaction to roll back.
+      }
+      issue ??= "findings could not be written: " + messageOf(cause)
+      return 0
+    }
+  }
+
   const close = (): Result.Result<FactStoreReport, StoreError> => {
     const current = db
     if (current === undefined) {
@@ -449,5 +546,5 @@ export const createFactStore = (root: string): FactStore => {
     return Result.succeed(report)
   }
 
-  return { cached, store: storeFragments, close }
+  return { cached, store: storeFragments, findingsOf, rememberFindings, close }
 }
