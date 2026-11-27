@@ -1,3 +1,4 @@
+1e5c00a02f0a141a	{"confidence":0.83,"kind":"Classify","label":"other","probabilities":{"inject the dependency":0,"justify the assertion":0.11,"narrow with a predicate":0.01,"other":0.86,"own the value type":0.01,"parse at the boundary":0.01}}
 1e5e59d47a0ff6e2	{"kind":"Probability","probability":0.12}
 1e62bd7939e7c42d	{"confidence":0.28,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.41,"keep_variants":0.52,"no_issue":0.07}}
 1e6742696e753298	{"consistency":1,"kind":"Probability","probability":0.056666666666666664}

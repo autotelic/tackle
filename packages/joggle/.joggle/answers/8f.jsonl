@@ -7,4 +7,5 @@
 8fb00aeaec315622	{"confidence":0.93,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0,"wrong_behavior":0.04,"wrong_contract":0.01}}
 8fb5336087e60887	{"confidence":0.96,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.97,"component_or_feature":0.01,"not_applicable":0.02,"route_or_handler":0}}
 8fbab1148bd82dee	{"confidence":0.65,"kind":"Classify","label":"no_issue","probabilities":{"merge":0.02,"move":0.21,"no_issue":0.77}}
+8fc1d1888b7f93d8	{"confidence":1,"kind":"Classify","label":"group 4","probabilities":{"group 1":0,"group 2":0,"group 3":0,"group 4":1,"group 5":0,"group 6":0,"group 7":0,"group 8":0}}
 8fc5e8f2c3c6ef69	{"confidence":0.61,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.72,"component_or_feature":0.08,"not_applicable":0.13,"route_or_handler":0.07}}

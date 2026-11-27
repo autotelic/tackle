@@ -1,5 +1,6 @@
 f60c07bf484388ba	{"consistency":1,"kind":"Probability","probability":0.03}
 f619fb1b170500ec	{"consistency":1,"kind":"Probability","probability":0.03333333333333333}
+f61db8fea905ab3c	{"confidence":0.98,"kind":"Classify","label":"narrow with a predicate","probabilities":{"inject the dependency":0,"justify the assertion":0,"narrow with a predicate":0.98,"other":0.01,"own the value type":0.01,"parse at the boundary":0}}
 f640b7e19ffc6041	{"confidence":0.46,"kind":"Classify","label":"drift","probabilities":{"compatible":0.05,"drift":0.64,"two_concepts":0.31}}
 f65002eed660b733	{"confidence":0.35,"kind":"Classify","label":"same_package","probabilities":{"different_deployables":0,"same_module":0.49,"same_package":0.51,"sibling_packages":0}}
 f653e52a2a5d1698	{"confidence":0.97,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.98,"component_or_feature":0,"not_applicable":0.02,"route_or_handler":0}}

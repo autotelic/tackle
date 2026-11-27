@@ -1,4 +1,5 @@
 0d1b04972ea63757	{"consistency":1,"kind":"Probability","probability":0.06333333333333334}
+0d249911f8c3f11e	{"confidence":1,"kind":"Classify","label":"group 7","probabilities":{"group 1":0,"group 2":0,"group 3":0,"group 4":0,"group 5":0,"group 6":0,"group 7":1,"group 8":0}}
 0d2cea675059f58b	{"consistency":0.6666666666666667,"kind":"Probability","probability":0.4366666666666667}
 0d41638c2ab3f0c9	{"consistency":1,"kind":"Probability","probability":0.08333333333333333}
 0d462f7932fc444d	{"consistency":1,"kind":"Probability","probability":0.02666666666666667}

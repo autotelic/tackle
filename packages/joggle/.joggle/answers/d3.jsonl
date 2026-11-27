@@ -11,4 +11,5 @@ d3babc28f32c9d35	{"consistency":1,"kind":"Probability","probability":0.033333333
 d3c9a666aac1b56d	{"confidence":0.26,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.37,"no_difference":0.1,"removes_a_hazard":0.19,"slightly_clearer":0.34},"rating":1.64}
 d3ca242701d5b619	{"confidence":0.98,"kind":"Classify","label":"route_page","probabilities":{"layout":0,"modal":0,"not_applicable":0.02,"route_page":0.98}}
 d3d967679f0eb655	{"consistency":1,"kind":"Probability","probability":0.05000000000000001}
+d3e441009a6f6801	{"confidence":0.83,"kind":"Classify","label":"other","probabilities":{"inject the dependency":0,"justify the assertion":0.11,"narrow with a predicate":0.01,"other":0.86,"own the value type":0.01,"parse at the boundary":0.01}}
 d3ea49d6993eb039	{"consistency":1,"kind":"Probability","probability":0.05333333333333334}

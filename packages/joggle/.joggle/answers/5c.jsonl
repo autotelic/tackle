@@ -8,6 +8,7 @@
 5c8b3fd1d585d334	{"confidence":0.87,"kind":"Classify","label":"infrastructure","probabilities":{"domain_logic":0.03,"infrastructure":0.89,"input_adaptation":0.01,"mechanical":0.05,"not_applicable":0,"orchestration":0.02,"rendering":0,"request_validation":0,"transport_concern":0}}
 5c9b920677ad7ef2	{"consistency":1,"kind":"Probability","probability":0.6633333333333333}
 5cb366712430b66b	{"consistency":1,"kind":"Probability","probability":0.0888888888888889}
+5cbd5961536ef96a	{"confidence":0.52,"kind":"Classify","label":"own the value type","probabilities":{"inject the dependency":0,"justify the assertion":0.02,"narrow with a predicate":0.01,"other":0.31,"own the value type":0.6,"parse at the boundary":0.06}}
 5cd46c3b608f72e3	{"consistency":1,"kind":"Probability","probability":0.05000000000000001}
 5cec49df9f00636b	{"consistency":1,"kind":"Probability","probability":0.6766666666666667}
 5cf4284b01770c77	{"confidence":0.82,"kind":"Classify","label":"drift","probabilities":{"drift":0.88,"handled":0.06,"mismapped":0.06}}

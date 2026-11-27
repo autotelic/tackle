@@ -9,6 +9,7 @@
 275c3b4b136209b5	{"confidence":0.68,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.75,"component_or_feature":0.01,"not_applicable":0.23,"route_or_handler":0.01}}
 275fa90363b20630	{"confidence":0.98,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
 276039f9684d12e5	{"confidence":0.56,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.01,"name_meaning":0,"no_issue":0.32,"semantic_verdict":0.67}}
+277768061b37222f	{"confidence":1,"kind":"Classify","label":"other","probabilities":{"inject the dependency":0,"justify the assertion":0,"narrow with a predicate":0,"other":1,"own the value type":0,"parse at the boundary":0}}
 27780cd6997af39d	{"consistency":1,"kind":"Probability","probability":0.03333333333333333}
 277b32ff2672622f	{"consistency":1,"kind":"Probability","probability":0.043333333333333335}
 278247ca4dabddfd	{"consistency":1,"kind":"Probability","probability":0.043333333333333335}

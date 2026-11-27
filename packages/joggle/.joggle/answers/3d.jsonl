@@ -3,6 +3,7 @@
 3d19541f43fe9e73	{"consistency":1,"kind":"Probability","probability":0.03}
 3d1a3fe7b7195f62	{"confidence":0.87,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.9,"stale_reference":0,"wrong_behavior":0.08,"wrong_contract":0.02}}
 3d1e1cbc49975a04	{"confidence":0.9,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.92,"stale_reference":0.02,"wrong_behavior":0.03,"wrong_contract":0.03}}
+3d388c55e58dd85c	{"confidence":0.81,"kind":"Classify","label":"group 3","probabilities":{"group 1":0.01,"group 2":0,"group 3":0.83,"group 4":0,"group 5":0,"group 6":0,"group 7":0.16,"group 8":0}}
 3d3a248a5b6b6a65	{"confidence":0.45,"kind":"Classify","label":"drift","probabilities":{"compatible":0.19,"drift":0.63,"two_concepts":0.18}}
 3d4ff3fe833362f6	{"consistency":1,"kind":"Probability","probability":0.02}
 3d5859a130b034b9	{"consistency":1,"kind":"Probability","probability":0.043333333333333335}

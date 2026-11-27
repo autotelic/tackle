@@ -1,6 +1,7 @@
 9e0bde46f91794d0	{"consistency":1,"kind":"Probability","probability":0.04666666666666667}
 9e1d7523cfd71f7d	{"consistency":1,"kind":"Probability","probability":0.03666666666666667}
 9e232f201be446cb	{"confidence":0.36,"kind":"Classify","label":"member_0","probabilities":{"member_0":0.68,"member_1":0.32}}
+9e2dfb6276e55f4e	{"confidence":1,"kind":"Classify","label":"Use an owner/schema-derived value type; parse external payloads before insertion","probabilities":{"Data.TaggedError) whose fields carry the operation, offending value, and domain, and render this context as its message":0,"Keep inference, validate with satisfies, or use a named owner contract":0,"type UserId = string & Brand.Brand<\"UserId\">) so the compiler rejects transposed arguments":0,"Use an owner/schema-derived value type; parse external payloads before insertion":1}}
 9e36567752730efe	{"confidence":0.88,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.92,"not_a_derivation":0.05,"reimplements":0.03}}
 9e38d20d94b949e7	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
 9e4e76be1ab12bd1	{"confidence":0.37,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.03,"merge":0.5,"move":0.32,"share_a_contract":0.13,"split":0.02}}
@@ -10,5 +11,6 @@
 9e9a0f961e489095	{"confidence":0.84,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.1,"independent":0.89,"meaning_switched":0.01}}
 9ea6b36e781cc6ed	{"confidence":0.92,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.95,"not_a_derivation":0.04,"reimplements":0.01}}
 9ea6bfc80aa633ac	{"consistency":1,"kind":"Probability","probability":0.05333333333333334}
+9eb94835ef60cfa6	{"confidence":0.3,"kind":"Classify","label":"group 4","probabilities":{"group 1":0.01,"group 2":0,"group 3":0.09,"group 4":0.39,"group 5":0.16,"group 6":0.24,"group 7":0.1,"group 8":0.01}}
 9ed934abab8fd816	{"consistency":1,"kind":"Probability","probability":0.056666666666666664}
 9ee5f30106b99461	{"consistency":1,"kind":"Probability","probability":0.04}

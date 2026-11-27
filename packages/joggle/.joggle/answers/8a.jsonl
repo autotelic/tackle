@@ -11,5 +11,6 @@
 8a8a77512289e446	{"confidence":0.95,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.97,"component_or_feature":0.01,"not_applicable":0.02,"route_or_handler":0}}
 8a9a2a31d44e411f	{"confidence":0.9,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.92,"infrastructure":0,"input_adaptation":0,"mechanical":0,"not_applicable":0,"orchestration":0.08,"rendering":0,"request_validation":0,"transport_concern":0}}
 8aa6c6fca2ad2734	{"confidence":0.44,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.5,"infrastructure":0,"input_adaptation":0.11,"mechanical":0.1,"not_applicable":0.14,"orchestration":0.14,"rendering":0,"request_validation":0,"transport_concern":0.01}}
+8ac1dee329b9e5e6	{"confidence":1,"kind":"Classify","label":"group 7","probabilities":{"group 1":0,"group 2":0,"group 3":0,"group 4":0,"group 5":0,"group 6":0,"group 7":1,"group 8":0}}
 8af4ad8b3ed83fd6	{"confidence":0.87,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.07,"independent":0.92,"meaning_switched":0.01}}
 8afb58033cb26c2e	{"confidence":0.51,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.67,"not_a_derivation":0.31,"reimplements":0.02}}

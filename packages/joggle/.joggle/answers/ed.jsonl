@@ -6,6 +6,7 @@ ed820294165f2be3	{"confidence":0.98,"kind":"Classify","label":"no_issue","probab
 ed936d1c72de98bc	{"consistency":1,"kind":"Probability","probability":0.06666666666666667}
 edb49ada3590b807	{"consistency":1,"kind":"Probability","probability":0.03}
 edb882f8e0a4284b	{"confidence":0.41,"kind":"Classify","label":"mechanical","probabilities":{"domain_logic":0.43,"infrastructure":0,"input_adaptation":0.05,"mechanical":0.49,"not_applicable":0.03,"orchestration":0,"rendering":0,"request_validation":0,"transport_concern":0}}
+edbbb50193e407ec	{"confidence":0.96,"kind":"Classify","label":"inject the dependency","probabilities":{"inject the dependency":0.97,"justify the assertion":0,"narrow with a predicate":0,"other":0.03,"own the value type":0,"parse at the boundary":0}}
 edc4614c9798bbec	{"consistency":1,"kind":"Probability","probability":0.04}
 edc4ec295fccc568	{"consistency":1,"kind":"Probability","probability":0.07333333333333335}
 edeba4928e59607b	{"consistency":1,"kind":"Probability","probability":0.5833333333333334}

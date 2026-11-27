@@ -1,5 +1,6 @@
 75063f64e15888cf	{"consistency":1,"kind":"Probability","probability":0.04666666666666667}
 750b745661a27a75	{"confidence":0.92,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.94,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0.04}}
+750dc14fb963f038	{"confidence":0.8,"kind":"Classify","label":"other","probabilities":{"inject the dependency":0,"justify the assertion":0,"narrow with a predicate":0,"other":0.83,"own the value type":0.17,"parse at the boundary":0}}
 7515463547bfff63	{"confidence":0.39,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.6,"not_a_derivation":0.3,"reimplements":0.1}}
 7518bbd224d1a0ae	{"confidence":0.92,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.95,"not_a_derivation":0.05,"reimplements":0}}
 752fc3048d4a0e29	{"confidence":0.25,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.5,"not_a_derivation":0.43,"reimplements":0.07}}

@@ -2,6 +2,7 @@
 6b088e48748797f5	{"consistency":1,"kind":"Probability","probability":0.03}
 6b21856098d2d948	{"consistency":1,"kind":"Probability","probability":0.03}
 6b2d146ec4c18ac1	{"consistency":1,"kind":"Probability","probability":0.09000000000000001}
+6b37f579e7cdea00	{"confidence":0.99,"kind":"Classify","label":"other","probabilities":{"inject the dependency":0,"justify the assertion":0.01,"narrow with a predicate":0,"other":0.99,"own the value type":0,"parse at the boundary":0}}
 6b51a17facbb0f4f	{"confidence":0.85,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.89,"not_a_derivation":0.1,"reimplements":0.01}}
 6b5461c0b1ea23a7	{"consistency":1,"kind":"Probability","probability":0.08}
 6b5819eaf73120a9	{"consistency":1,"kind":"Probability","probability":0.6333333333333333}
