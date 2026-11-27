@@ -336,7 +336,11 @@ export async function runChecks(
         infrastructureFailure = {
           kind: 'report-unreadable',
           step: step.name,
-          detail: `no readable ${step.report.format} report at ${step.report.path}`,
+          /* The path is resolved against the repo root, but the check's own
+           * `cd` decides where the tool writes: a report written relative to a
+           * package directory lands elsewhere and reads as "unreadable" with
+           * no hint. Name the absolute path that was tried. */
+          detail: `no readable ${step.report.format} report at ${step.report.path} (looked for ${join(repoDir, step.report.path)})`,
         }
         break
       }

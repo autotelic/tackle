@@ -9,7 +9,9 @@
     "lint": "biome check .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "check": "pnpm lint && pnpm typecheck && pnpm test"
+    "check": "pnpm lint && pnpm typecheck && pnpm test",
+    "stats": "node --conditions=development src/stats-cli.ts",
+    "maintenance": "node --conditions=development src/maintenance.ts"
   },
   "dependencies": {
     "@earendil-works/pi-coding-agent": "catalog:",

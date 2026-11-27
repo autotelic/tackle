@@ -123,6 +123,14 @@ export type LoopConfig = {
    * integration side and moves on. Prefix match, as in `protectedPaths`.
    */
   generatedPaths?: string[]
+  /**
+   * Days to keep a Pass's session transcript under `.treadle/sessions/`.
+   * Absent = keep everything (the old behaviour). A transcript is a debugging
+   * convenience, not the record: the Receipt in the tracker is. Two days of one
+   * project reached 13 GB, with single files over 300 MB. An open issue's newest
+   * transcript always survives, because re-entry distils it.
+   */
+  sessionsKeepDays?: number
   featureDone: FeatureDoneGuard
   budgets: Budgets
   /** User rules (#6, #15): (event, state, guard?) → action, declaration order. */
