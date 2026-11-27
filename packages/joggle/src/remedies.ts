@@ -1064,7 +1064,7 @@ export const judgeRemedies = (
         (clause) => (familyByClause.get(clause) ?? "other") === family,
       )
       const route = clauseRouteOf({ family, message: message.message, candidates })
-      if (route.kind === "orphan") return yield* Effect.fail(orphanFailureOf(route))
+      if (route.kind === "orphan") return yield* orphanFailureOf(route)
       if (route.kind === "implied") {
         const composed = yield* composeOrFail({ family: route.family, clause: route.clause })
         clauseByMessage.set(message.key, composed)
@@ -1085,7 +1085,7 @@ export const judgeRemedies = (
           message: item.message.message,
           candidates: item.candidates,
         })
-        if (route.kind === "orphan") return yield* Effect.fail(orphanFailureOf(route))
+        if (route.kind === "orphan") return yield* orphanFailureOf(route)
         if (route.kind === "implied") {
           const composed = yield* composeOrFail({ family: route.family, clause: route.clause })
           clauseByMessage.set(item.message.key, composed)
