@@ -1,5 +1,5 @@
 import { expect, test } from "vitest"
-import { Effect, Layer, Option, Ref, Result, SchemaParser } from "effect"
+import { Effect, Layer, Option, Ref, Result, Schema, SchemaParser } from "effect"
 import { AiError, Decision, DecisionModel } from "effect/ai"
 import { Atoms, layer as atomsLayer } from "../src/atoms.ts"
 import {
@@ -8,7 +8,9 @@ import {
   answerPlansResilient,
   chunkPlans,
   isRequestTooLarge,
+  memoize,
   PlanAnswers,
+  withQuestionMeta,
   StoredAnswer,
   type JoggleDecision,
   storedOf,
@@ -17,6 +19,7 @@ import {
 } from "../src/plans.ts"
 import type { DecisionAnswers } from "../src/rule.ts"
 import { canonical } from "../src/canonical.ts"
+import { policy } from "../src/policy.ts"
 
 /** An answer cache that lives in a Ref, for a test that is about the engine. */
 const cacheLayer = (
@@ -302,4 +305,109 @@ test("the chunk budget counts the encoded questions, not only the state", async 
     }).pipe(Effect.provide(atomsLayer)),
   )
   expect(result).toHaveLength(2)
+})
+
+test("a Noul is asked repeats times, not repeats squared, through the memoizer", async () => {
+  const result = await Effect.runPromise(
+    Effect.gen(function* () {
+      const atoms = yield* Atoms
+      const id = yield* atoms.add({ x: 1 })
+      const store = yield* Ref.make<Record<string, Decision.Answer<Decision.Any>>>({})
+      const asked: Array<string> = []
+      const provider = yield* DecisionModel.make({
+        decide: ({ decisions }) =>
+          Effect.sync(() => {
+            asked.push(...Object.keys(decisions))
+            const answers: Record<string, DecisionModel.ProviderAnswer> = {}
+            for (const [key, decision] of Object.entries(decisions)) {
+              if (decision._tag === "Probability") {
+                answers[key] = { _tag: "Probability", probability: 0.8 }
+              }
+            }
+            return { answers, usage: { inputTokens: 0, outputTokens: 0 } }
+          }),
+      })
+      const model = memoize(provider, {
+        get: (key) => Effect.map(Ref.get(store), (current) => Option.fromUndefinedOr(current[key])),
+        put: (key, answer) => Ref.update(store, (current) => ({ ...current, [key]: answer })),
+      })
+      const records = yield* answerPlansRaw([
+        {
+          ruleId: "test/consistency",
+          subject: "x",
+          concerns: [],
+          atoms: [id],
+          decisions: {
+            same: Decision.probability({ instructions: "Is `x` one?" }),
+          },
+          read: (answers) => answers,
+        },
+      ]).pipe(
+        Effect.provide(cacheLayer(store)),
+        Effect.provideService(DecisionModel.DecisionModel, model),
+      )
+      const answer = records[0]?.["same"]
+      return {
+        asked: asked.length,
+        consistency:
+          answer === undefined ? undefined : (answer as { consistency?: number }).consistency,
+        probability: answer !== undefined && "probability" in answer ? answer.probability : undefined,
+      }
+    }).pipe(Effect.provide(atomsLayer)),
+  )
+  // Three asks carry the agreement; nine was the double expansion that made a
+  // remedies request far larger than the budget counted.
+  expect(result.asked).toBe(policy.decision.consistency.repeats)
+  expect(result.probability).toBeCloseTo(0.8)
+  expect(result.consistency).toBe(1)
+})
+
+test("a question's cache key is its own state, not the batch it travelled in", async () => {
+  const result = await Effect.runPromise(
+    Effect.gen(function* () {
+      const calls = yield* Ref.make(0)
+      const provider = yield* DecisionModel.make({
+        decide: ({ decisions }) =>
+          Effect.gen(function* () {
+            yield* Ref.update(calls, (count) => count + 1)
+            const answers: Record<string, DecisionModel.ProviderAnswer> = {}
+            for (const [key, decision] of Object.entries(decisions)) {
+              if (decision._tag === "Classify") {
+                const labels = Object.keys(decision.criteria)
+                answers[key] = {
+                  _tag: "Classify",
+                  label: labels[0] ?? "",
+                  probabilities: Object.fromEntries(
+                    labels.map((label) => [label, 1 / labels.length]),
+                  ),
+                }
+              }
+            }
+            return { answers, usage: { inputTokens: 0, outputTokens: 0 } }
+          }),
+      })
+      const store = yield* Ref.make<Record<string, Decision.Answer<Decision.Any>>>({})
+      const model = memoize(provider, {
+        get: (key) => Effect.map(Ref.get(store), (current) => Option.fromUndefinedOr(current[key])),
+        put: (key, answer) => Ref.update(store, (current) => ({ ...current, [key]: answer })),
+      })
+      const decision = withQuestionMeta(
+        Decision.classify({
+          instructions: "Is `a1` one thing?",
+          criteria: { yes: "One thing.", no: "Two things." },
+        }),
+        { material: { atoms: { a1: { x: 1 } } } },
+      )
+      const ask = (input: Schema.Json) =>
+        model.decide(Decision.make({ input: Schema.Json, decisions: { verdict: decision } }), {
+          input,
+        })
+      yield* ask({ atoms: { a1: { x: 1 } } })
+      // A second chunk with a different neighbour: the question's own state is
+      // unchanged, so its answer must replay.
+      yield* ask({ atoms: { a1: { x: 1 }, a2: { y: 2 } } })
+      return { calls: yield* Ref.get(calls) }
+    }),
+  )
+  expect(result.calls).toBe(1)
 })
