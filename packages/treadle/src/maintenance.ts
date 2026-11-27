@@ -30,6 +30,7 @@ import { type LoopConfig, loadConfig } from './config.ts'
 import { branchExists, gh, ghJson, git } from './loop/git-exec.ts'
 import { commitAndPush, type IssueFile, readIssueFiles } from './loop/markdown-tracker.ts'
 import { rebaseResolvingScratch } from './loop/rebase.ts'
+import { pruneSessions } from './sessions.ts'
 import { takeLock } from './loop/reconcile.ts'
 import { parseBaseFromBody, relabel, resolveBaseRef } from './loop/tracker.ts'
 import { loadTelePiConfig, sendTelegramMessage } from './telepi.ts'
@@ -45,6 +46,8 @@ export type MaintenanceReport = {
   skippedWorking: number[]
   skippedMissing: number[]
   conflicts: string[]
+  /** Transcripts removed by retention (`sessionsKeepDays`); 0 when disabled. */
+  sessionsPruned: number
   errors: string[]
 }
 
@@ -60,6 +63,7 @@ function emptyReport(): MaintenanceReport {
     skippedWorking: [],
     skippedMissing: [],
     conflicts: [],
+    sessionsPruned: 0,
     errors: [],
   }
 }
@@ -242,6 +246,28 @@ export async function maintenance(options: {
   if (unlock === null) return report
 
   try {
+    /* Transcript retention (see `sessionsKeepDays`): cheap, and the only place
+     * that knows which issues are still open, which is what decides whether a
+     * newest transcript is still load-bearing. */
+    if (config.sessionsKeepDays !== undefined) {
+      const openIssues = new Set<number>()
+      if (config.issues.tracker === 'markdown') {
+        const files = await readIssueFiles(config.issues.dir as string).catch(() => [] as IssueFile[])
+        for (const file of files) if (file.state !== 'done') openIssues.add(file.number)
+      }
+      const pruned = await pruneSessions({
+        sessionsDir: join(repoDir, '.treadle', 'sessions'),
+        keepDays: config.sessionsKeepDays,
+        openIssues,
+      })
+      report.sessionsPruned = pruned.removed
+      if (pruned.removed > 0) {
+        console.log(
+          `[maintenance] pruned ${pruned.removed} session transcript(s), ${(pruned.removedBytes / 1_048_576).toFixed(1)} MiB`,
+        )
+      }
+    }
+
     // ADR-0003: with an integration branch configured, the default base —
     // what dependent branches rebase onto and PRs retarget to after a merge
     // — is that branch, not the repo's default branch.
