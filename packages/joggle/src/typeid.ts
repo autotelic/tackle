@@ -8,7 +8,7 @@ import {
   type TypeReference,
 } from "@typescript/native/unstable/async"
 import { SyntaxKind } from "@typescript/native/unstable/ast"
-import { Option } from "effect"
+import { Option, Order } from "effect"
 import { isRecord } from "./workspace.ts"
 import { stableId } from "./identity.ts"
 
@@ -44,11 +44,7 @@ interface EncodingState extends TypeIdContext {
   readonly visiting: Set<string>
 }
 
-const byHash = (payload: { readonly left: string; readonly right: string }): number => {
-  const a = stableId(payload.left)
-  const b = stableId(payload.right)
-  return a < b ? -1 : a > b ? 1 : 0
-}
+const byHash: Order.Order<string> = Order.mapInput(Order.String, (value: string) => stableId(value))
 
 const literalOf = (type: Type): Option.Option<string> => {
   if (!type.isLiteralType()) return Option.none()
@@ -125,11 +121,11 @@ const markerOf = async (type: Type, state: EncodingState): Promise<string> => {
 }
 
 /** The canonical encoding of one type, relative to the parameters in scope. */
-const encode = async (
+const encodeType = async (
   type: Type,
   scope: ReadonlyArray<TypeParameter>,
   state: EncodingState,
-  currentDeclaration: string | undefined = undefined,
+  currentDeclaration: string | undefined,
 ): Promise<string> => {
   // The checker's own failure is a fact, and it is not `any` or `unknown`.
   if (type.isErrorType()) return "error"
@@ -145,7 +141,7 @@ const encode = async (
     const kind = type.isUnionType() ? "union" : "intersection"
     const parts = await type.getTypes()
     const encoded = await Promise.all(parts.map((part) => encode(part, scope, state)))
-    return kind + "(" + encoded.sort((left, right) => byHash({ left, right })).join("|") + ")"
+    return kind + "(" + encoded.sort(byHash).join("|") + ")"
   }
 
   if (type.isTupleType()) {
@@ -273,7 +269,7 @@ const encode = async (
           )
         }),
       )
-      members.sort((left, right) => left.localeCompare(right))
+      members.sort(Order.String)
       return "object{" + members.join(";") + "}"
     }
     return current === undefined ? body() : withVisit({ state, marker: current, body })
@@ -282,6 +278,13 @@ const encode = async (
   // A type kind this walk has not named still gets its flags, never printed text.
   return "flags:" + String(type.flags)
 }
+
+/** Encode one type in a fresh scope, with no declaration id forced. */
+const encode = async (
+  type: Type,
+  scope: ReadonlyArray<TypeParameter>,
+  state: EncodingState,
+): Promise<string> => encodeType(type, scope, state, undefined)
 
 /**
  * The canonical id of one declaration's type.
@@ -309,6 +312,6 @@ export const typeIdOf = async (
       )
   const encoding = input.type.isTypeReference()
     ? await encode(input.type, scope, state)
-    : await encode(input.type, scope, state, input.declarationId)
+    : await encodeType(input.type, scope, state, input.declarationId)
   return stableId(encoding)
 }

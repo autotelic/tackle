@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto"
 import { resolve } from "node:path"
+import { Predicate, Order } from "effect"
 import { parseSync } from "oxc-parser"
 import { blockingErrors, type Region } from "./astro.ts"
 import {
@@ -67,7 +68,12 @@ const base32 = (bytes: Uint8Array): string => {
  * enough that a collision is not the thing that will break first.
  */
 export const stableId = (encoding: string): string =>
-  base32(createHash("sha256").update(HASH_VERSION + "\u0000" + encoding).digest().subarray(0, 10))
+  base32(
+    createHash("sha256")
+      .update(HASH_VERSION + "\u0000" + encoding)
+      .digest()
+      .subarray(0, 10),
+  )
 
 /* -------------------------------------------------------------------------- */
 /* Reading one declaration                                                     */
@@ -90,10 +96,19 @@ export interface PreparedUnit {
   readonly literals: ReadonlyArray<Region>
   /** Offset of the declared name inside the text, when the text contains it. */
   readonly declared: number | undefined
-  readonly program: Record<string, unknown> | undefined
+  readonly program: AstNode | undefined
+  /** The blanked text used when the declaration cannot be parsed on its own. */
+  readonly opaque: string
   /** How far the parsed program is shifted from the unit's own text. */
   readonly shift: number
   readonly failed: boolean
+}
+
+/** The parsed node fields this module reads before narrowing the rest of the tree. */
+interface AstNode {
+  readonly type?: string
+  readonly start?: number
+  readonly end?: number
 }
 
 /** Identifiers bound by a declaration: parameters, locals, catch params, type params. */
@@ -115,7 +130,7 @@ const addBindingPattern = ({
     const kind = current["type"]
     if (kind === "Identifier") {
       const name = current["name"]
-      if (typeof name === "string") names.add(name)
+      if (Predicate.isString(name)) names.add(name)
       continue
     }
     if (kind === "Property") {
@@ -153,7 +168,7 @@ const addBindingPattern = ({
  * resolver. The important half is the other one -- a name NOT in this set is a
  * reference, and references are what make a Merkle id.
  */
-const collectBoundNames = (root: Record<string, unknown>): ReadonlySet<string> => {
+const collectBoundNames = (root: AstNode): ReadonlySet<string> => {
   const names = new Set<string>()
   const stack: Array<unknown> = [root]
   while (stack.length > 0) {
@@ -168,7 +183,7 @@ const collectBoundNames = (root: Record<string, unknown>): ReadonlySet<string> =
     if (kind === "CatchClause") addBindingPattern({ node: current["param"], names })
     if (kind === "TSTypeParameter") {
       const name = current["name"]
-      if (isRecord(name) && typeof name["name"] === "string") names.add(name["name"])
+      if (isRecord(name) && Predicate.isString(name["name"])) names.add(name["name"])
     }
     if (
       kind === "FunctionDeclaration" ||
@@ -177,7 +192,7 @@ const collectBoundNames = (root: Record<string, unknown>): ReadonlySet<string> =
       kind === "ClassExpression"
     ) {
       const id = current["id"]
-      if (isRecord(id) && typeof id["name"] === "string") names.add(id["name"])
+      if (isRecord(id) && Predicate.isString(id["name"])) names.add(id["name"])
     }
     const params = current["params"]
     if (Array.isArray(params)) {
@@ -190,7 +205,7 @@ const collectBoundNames = (root: Record<string, unknown>): ReadonlySet<string> =
     }
 
     for (const value of Object.values(current)) {
-      if (value !== null && typeof value === "object") stack.push(value)
+      if (Predicate.isObjectOrArray(value)) stack.push(value)
     }
   }
   return names
@@ -208,7 +223,7 @@ const LITERAL_KINDS = new Set([
   "JSXText",
 ])
 
-const literalSpans = (root: Record<string, unknown>): ReadonlyArray<Region> => {
+const literalSpans = (root: AstNode): ReadonlyArray<Region> => {
   const spans: Array<Region> = []
   const stack: Array<unknown> = [root]
   while (stack.length > 0) {
@@ -219,15 +234,15 @@ const literalSpans = (root: Record<string, unknown>): ReadonlyArray<Region> => {
     }
     if (!isRecord(current)) continue
     if (
-      typeof current["type"] === "string" &&
+      Predicate.isString(current["type"]) &&
       LITERAL_KINDS.has(current["type"]) &&
-      typeof current["start"] === "number" &&
-      typeof current["end"] === "number"
+      Predicate.isNumber(current["start"]) &&
+      Predicate.isNumber(current["end"])
     ) {
       spans.push({ start: current["start"], end: current["end"] })
     }
     for (const value of Object.values(current)) {
-      if (value !== null && typeof value === "object") stack.push(value)
+      if (Predicate.isObjectOrArray(value)) stack.push(value)
     }
   }
   return spans
@@ -236,6 +251,7 @@ const literalSpans = (root: Record<string, unknown>): ReadonlyArray<Region> => {
 /** Read a declaration's text as a program of its own. */
 export const prepareUnit = (unit: Unit): PreparedUnit => {
   const text = unit.text
+  const opaque = unit["shape"]
   const failed = (): PreparedUnit => ({
     unit,
     text,
@@ -245,6 +261,7 @@ export const prepareUnit = (unit: Unit): PreparedUnit => {
     literals: [],
     declared: undefined,
     program: undefined,
+    opaque,
     shift: 0,
     failed: true,
   })
@@ -290,6 +307,7 @@ export const prepareUnit = (unit: Unit): PreparedUnit => {
       .map((span) => ({ start: span.start - shift, end: span.end - shift })),
     declared,
     program,
+    opaque,
     shift,
     failed: false,
   }
@@ -337,7 +355,7 @@ export const canonicalRegion = ({
   readonly region: Region
   readonly reference: (name: string) => string
 }): string => {
-  if (prepared.failed) return "opaque:" + prepared.unit.shape
+  if (prepared.failed) return "opaque:" + prepared.opaque
 
   const slots: Array<Slot> = []
   const positions = new Map<string, number>()
@@ -693,9 +711,7 @@ export const identityOf = (workspace: Workspace): IdentityIndex => {
         }).encoding,
       )
     })
-    const sorted = [...placeholders].sort((left, right) =>
-      left < right ? -1 : left > right ? 1 : 0,
-    )
+    const sorted = [...placeholders].sort(Order.String)
     const cycleKey = stableId(sorted.join("\u0000"))
     component.forEach((unit, index) => {
       const placeholder = placeholders[index] ?? ""
