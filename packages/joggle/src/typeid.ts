@@ -53,6 +53,13 @@ export interface TypeIdContext {
  * object shapes built only from those. A bare declaration name is not an
  * identity: two modules can both print `User` for different interfaces, and
  * caching by that name would make them equal.
+ *
+ * Reuse is not termination, and it is not the reason `policy.canonical` is off.
+ * An entry is stored only after its walk returns, so a type that re-enters
+ * itself with the same cycle path misses every time; `DagValue` in
+ * `packages/board/src/mailbox/records.ts` does exactly that through
+ * `ReadonlyArray<DagValue>`. See the comment on `policy.canonical` for the
+ * measurement.
  */
 export interface TypeIdMemo {
   readonly printed: Map<string, string>

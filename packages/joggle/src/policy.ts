@@ -723,18 +723,30 @@ export const policy = {
    * decision still stands on the whole cluster even when the detail is bounded.
    */
   /**
-   * Canonical type ids: on, with the walk memoised.
+   * Canonical type ids: off, because the walk does not terminate on every type a
+   * repository contains.
    *
    * The id walks the checker's type graph (`getPropertiesOfType`,
    * `getTypeArguments`, `getTypeOfSymbol`), and those are round-trips to the sidecar.
-   * Asked once per declaration over a whole repository that was tens of thousands
-   * of round-trips and a 4GB heap. The API cannot batch the walk the way it batches
-   * `getTypeAtPosition`, so `typeIdOf` reuses what the checker already returned:
-   * by `Type.id`, by a closed printed form, and by the sub-encoding with its scope
-   * and cycle path. An empty string still means "not computed", never "computed
-   * and empty"; the walk statistics in `typeIdWalks` say what was reused.
+   * Memoising that walk does not save it: on this repository
+   * `joggle check packages --rule joggle/naming-drift --offline` aborts with exit
+   * 134 after 150s and 4.48GB, and `--max-old-space-size=6144` only moves the
+   * abort to 250s and 6.06GB, so the cost is not a fixed graph the heap could hold.
+   *
+   * The measurement named the recursion. `packages/board/src/mailbox/records.ts`
+   * declares `DagValue` as a union whose member is `ReadonlyArray<DagValue>`. The
+   * array branch encodes its argument without holding a marker (by design: `Tree[]`
+   * must not be a cycle through `Array`), so that alias re-enters itself with an
+   * empty cycle path: 6.5M `encodeType` calls on one declaration, no cache hit,
+   * and the memo cannot break it because an entry is written only after its walk
+   * completes. `packages/joggle` alone has no such alias, which is why a single
+   * package finished at 130MB while the repository did not.
+   *
+   * An empty string still means "not computed", never "computed and empty", and the
+   * memo and the walk statistics in `typeIdWalks` stay with the flag: they are the
+   * instrument that found the recursion, not a fix for it.
    */
-  canonical: true,
+  canonical: false,
 
   evidence: {
     maxMembers: 12,
