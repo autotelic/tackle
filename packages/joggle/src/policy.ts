@@ -65,16 +65,24 @@ export const policy = {
      */
     consistency: { repeats: 3 },
     /**
-     * Characters of shared state one request may carry.
+     * Characters one request may carry: encoded state PLUS encoded questions.
      *
-     * The engine batches every planned rule's questions into one request, and the
-     * provider has a token ceiling: a run of joggle against itself sent 105
-     * candidates' evidence at once and came back HTTP 400
-     * `max_tokens_exceeded`, which every judged rule then read as "unreadable".
-     * So the plans are cut into requests that fit. The per-question cache keeps a
-     * chunk boundary from costing a re-judgement.
+     * The first budget counted state alone, and that was the bug. A remedies run
+     * of 1,431 pairwise Nouls (each repeated three times) stayed under 24,000
+     * characters of state while the encoded questions pushed the request past
+     * the provider ceiling; the provider answered HTTP 400
+     * `max_tokens_exceeded`, and the run fell back to the witness. Counting the
+     * questions changes the cut: a batch of small pair plans can no longer hide
+     * behind a small state.
+     *
+     * At the four-characters-per-token proxy, 12,000 characters is roughly 3,000
+     * tokens -- room for the provider's request envelope under the ceiling it
+     * rejected, with the per-question cache keeping a chunk boundary from
+     * costing a re-judgement. A request that still exceeds the ceiling is
+     * halved by `answerPlansResilient`, and a single oversized question is a
+     * named failure rather than a silent witness fallback.
      */
-    maxStateChars: 24000,
+    maxRequestChars: 12000,
     /**
      * Input tokens one run may spend on judgement.
      *

@@ -597,7 +597,10 @@ const remedyLines = ({ report, ledger, cache }: RemedyLinesInput): ReadonlyArray
   const total = cache.replayed + cache.judged
   const hit = total === 0 ? 0 : cache.replayed / total
   const input = describeInput(report.clusters.flatMap((cluster) => cluster.members))
-  const witnessOnly = report.judgementUnavailable !== undefined
+  const witnessOnly = report.judgementStatus === "witness-only"
+  const partial = report.judgementStatus === "partial"
+  const firstFailure = report.judgementFailures[0] ?? "unknown"
+  const moreFailures = report.judgementFailures.length - 1
   const counts = witnessOnly
     ? input + " -> " + String(report.witness.clusters) + " witness cluster(s) from " +
       String(report.distinctMessages) + " distinct message(s); NOT judgement clusters"
@@ -609,7 +612,19 @@ const remedyLines = ({ report, ledger, cache }: RemedyLinesInput): ReadonlyArray
           "WITNESS-ONLY — the judgement path did not run",
           "reason: " + String(report.judgementUnavailable),
         ]
-      : []),
+      : partial
+        ? [
+            "PARTIAL — the judgement answered " + String(report.answeredPairs) + "/" +
+              String(report.pairsAsked) + " pair(s) and " + String(report.answeredRepairs) + "/" +
+              String(report.distinctMessages) + " message(s)",
+            ...(report.judgementFailures.length === 0
+              ? []
+              : [
+                  "reason: " + firstFailure +
+                    (moreFailures > 0 ? " (+" + String(moreFailures) + " more request(s))" : ""),
+                ]),
+          ]
+        : []),
     counts,
     "witness alone: " + String(report.witness.clusters) + " cluster(s), largest " +
       String(report.witness.largestSites) + " site(s) / " + String(report.witness.largestRules) +
@@ -617,6 +632,7 @@ const remedyLines = ({ report, ledger, cache }: RemedyLinesInput): ReadonlyArray
       String(report.judgement.largestSites) + " site(s) / " +
       String(report.judgement.largestRules) + " rule(s)",
     "questions: " + String(report.distinctMessages) + " message(s), " +
+      String(report.pairsAsked) + " pair(s); answered " + String(report.answeredPairs) + "/" +
       String(report.pairsAsked) + " pair(s); cache " +
       String(cache.replayed) + "/" + String(total) + " replayed (" +
       (hit * 100).toFixed(1) + "%)",
@@ -1059,7 +1075,7 @@ const calibrateCommand = Command.make(
               return [...left, ...right]
             })
           const answers: Array<DecisionAnswers | undefined> = []
-          for (const chunk of yield* chunkPlans(planned.plans, policy.decision.maxStateChars)) {
+          for (const chunk of yield* chunkPlans(planned.plans, policy.decision.maxRequestChars)) {
             answers.push(...(yield* answerChunk(chunk.plans)))
           }
           const unreadable = answers.filter((answer) => answer === undefined).length

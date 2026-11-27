@@ -1,4 +1,4 @@
-import { Context, Effect, Option, Schema } from "effect"
+import { Context, Effect, Option, Result, Schema } from "effect"
 import * as AiError from "effect/ai/AiError"
 import { Decision, DecisionModel } from "effect/ai"
 import { Atoms } from "./atoms.ts"
@@ -397,24 +397,47 @@ export interface PlannedCandidate<C> {
 }
 
 /**
- * Plans cut to fit one request, with the characters of state they carry.
+ * Plans cut to fit one request, with the characters of state and questions they
+ * carry.
  *
- * The characters are what the caller estimates tokens from: the provider charges
- * for the state, and the state dominates every request.
+ * The characters are what the caller estimates tokens from. State alone was the
+ * wrong estimate: a remedies run stayed under a state-only budget while its
+ * encoded pairwise questions pushed the request past the provider's ceiling.
  */
 export interface PlanChunk<A> {
   readonly plans: ReadonlyArray<Plan<A>>
-  /** The characters of shared state this chunk carries. */
+  /** The encoded state plus the encoded questions this chunk carries. */
   readonly chars: number
+}
+
+/**
+ * The characters one plan's questions add to a request.
+ *
+ * A Probability is asked `policy.decision.consistency.repeats` times in the
+ * same request, under distinct names, so its question is paid for once per ask.
+ * A Choice is asked once. The encoding is the same canonical JSON the request
+ * uses, so a long criteria list costs what it will actually cost.
+ */
+const questionCharsOf = (plan: Plan<unknown>): number => {
+  let chars = 0
+  for (const decision of Object.values(plan.decisions)) {
+    const encoded = canonical(decision).length
+    chars +=
+      decision._tag === "Probability"
+        ? encoded * policy.decision.consistency.repeats
+        : encoded
+  }
+  return chars
 }
 
 /**
  * Cut plans into requests that fit the provider's ceiling.
  *
  * The engine's goal is one request, and the provider's token limit is the reason
- * it cannot always be one. A plan's cost is the state it needs -- the atoms it
- * named -- so the cut is by that, not by plan count: one cluster of twelve large
- * declarations costs more than forty small ones.
+ * it cannot always be one. A plan's cost is the state it names PLUS the
+ * questions it asks, so the cut is by that encoded size, not by plan count: one
+ * cluster of twelve large declarations costs more than forty small ones, and a
+ * batch of small pairwise Nouls still costs three questions each.
  */
 export const chunkPlans = <A>(
   plans: ReadonlyArray<Plan<A>>,
@@ -427,7 +450,7 @@ export const chunkPlans = <A>(
     let size = 0
     for (const plan of plans) {
       const state = yield* atoms.values([...new Set(plan.atoms)])
-      const cost = canonical(state).length
+      const cost = canonical(state).length + questionCharsOf(plan)
       if (current.length > 0 && size + cost > maxChars) {
         chunks.push({ plans: current, chars: size })
         current = []
@@ -560,6 +583,82 @@ export const answerPlansRaw = (
       return collected
     })
   })
+
+/** One request the provider rejected, and the plans it was carrying. */
+export interface RejectedPlanBatch {
+  readonly plans: ReadonlyArray<Plan<unknown>>
+  readonly error: AiError.AiError
+}
+
+/** Answers aligned with the input plans; an undefined slot is a rejected plan. */
+export interface ResilientAnswers {
+  readonly answers: ReadonlyArray<DecisionAnswers | undefined>
+  readonly failures: ReadonlyArray<RejectedPlanBatch>
+}
+
+/**
+ * True when the provider rejected a request because it carried too much.
+ *
+ * The TypeSafe client folds an HTTP error into an `InvalidRequestError`; its
+ * description and `http.body` keep the raw provider body, where this run's
+ * ceiling arrives as `{"detail":{"error_type":"max_tokens_exceeded"}}`. The
+ * check is deliberately narrow: an authentication or malformed-response error
+ * must not be retried as if shrinking the batch could fix it.
+ *
+ * @param error - the failure a request produced.
+ * @returns true when the batch was too large for the provider.
+ */
+export const isRequestTooLarge = (error: AiError.AiError): boolean => {
+  if (error.reason._tag !== "InvalidRequestError") return false
+  const text = (error.reason.description ?? "") + "\n" + (error.reason.http?.body ?? "")
+  return text.includes("max_tokens_exceeded") || text.includes("max_tokens")
+}
+
+/**
+ * Answer plans, halving a request the provider rejected for size.
+ *
+ * A batch is the only place the ceiling can be hit, and the cache is
+ * per-question, so splitting on a size rejection costs nothing already answered.
+ * The split recurses until the halves answer or one plan is left; a lone plan
+ * that is still too large is reported as a named failure, never as a silent
+ * witness fallback. Other errors are returned with the batch intact: shrinking
+ * cannot fix an authentication failure, and pretending it might would hide it.
+ *
+ * @param input.plans - the plans to answer, in order.
+ * @param input.answer - the batch answerer, injected so the split is testable.
+ * @returns one answer slot per plan and every rejected batch.
+ */
+export const answerPlansResilient = <R>(input: {
+  readonly plans: ReadonlyArray<Plan<unknown>>
+  readonly answer: (
+    plans: ReadonlyArray<Plan<unknown>>,
+  ) => Effect.Effect<ReadonlyArray<DecisionAnswers>, AiError.AiError, R>
+}): Effect.Effect<ResilientAnswers, never, R> => {
+  const split = (
+    plans: ReadonlyArray<Plan<unknown>>,
+  ): Effect.Effect<ResilientAnswers, never, R> =>
+    Effect.gen(function* () {
+      if (plans.length === 0) return { answers: [], failures: [] }
+      const attempted = yield* Effect.result(input.answer(plans))
+      if (Result.isSuccess(attempted)) {
+        return { answers: attempted.success, failures: [] }
+      }
+      if (plans.length > 1 && isRequestTooLarge(attempted.failure)) {
+        const middle = Math.ceil(plans.length / 2)
+        const left = yield* split(plans.slice(0, middle))
+        const right = yield* split(plans.slice(middle))
+        return {
+          answers: [...left.answers, ...right.answers],
+          failures: [...left.failures, ...right.failures],
+        }
+      }
+      return {
+        answers: plans.map(() => undefined),
+        failures: [{ plans, error: attempted.failure }],
+      }
+    })
+  return split(input.plans)
+}
 
 /**
  * Answer the plans and READ them, which is what the engine consumes.
