@@ -1,6 +1,6 @@
 import { Result, Schema, SchemaParser } from "effect"
 import { expect, test } from "vitest"
-import { BuildFailure } from "../src/absence.ts"
+import { BuildFailure } from "../src/either.ts"
 import {
   clauseRouteOf,
   clusterRemedies,

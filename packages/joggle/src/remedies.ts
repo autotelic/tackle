@@ -1,7 +1,7 @@
-import { Effect, Option, Predicate, Result, Schema } from "effect"
+import { Effect, Predicate, Result, Schema } from "effect"
 import { Decision } from "effect/ai"
 import type { AiError, DecisionModel } from "effect/ai"
-import { BuildFailure, lookup } from "./absence.ts"
+import { BuildFailure, lookup, type NoMatch } from "./either.ts"
 import { Atoms } from "./atoms.ts"
 import { canonical } from "./canonical.ts"
 import { isUnreachable } from "./decision.ts"
@@ -1286,7 +1286,7 @@ const familyOfRule = (
   members: ReadonlyArray<RemedyFinding>,
   rule: string,
   opinion: RepairOpinion,
-): Option.Option<string> => {
+): Result.Result<string, NoMatch> => {
   const counts = new Map<string, number>()
   for (const member of members) {
     if (member.rule !== rule) continue
@@ -1300,6 +1300,7 @@ const familyOfRule = (
         ([leftLabel, leftCount], [rightLabel, rightCount]) =>
           rightCount - leftCount || leftLabel.localeCompare(rightLabel),
       )[0]?.[0],
+    "the family answer for every " + rule + " finding",
   )
 }
 
@@ -1353,8 +1354,8 @@ const crossRulesOf = (
         probability,
         sharedRepair,
         families: {
-          a: Option.getOrUndefined(familyOfRule(members, a.rule, opinion)),
-          b: Option.getOrUndefined(familyOfRule(members, b.rule, opinion)),
+          a: Result.getOrUndefined(familyOfRule(members, a.rule, opinion)),
+          b: Result.getOrUndefined(familyOfRule(members, b.rule, opinion)),
         },
       })
     }

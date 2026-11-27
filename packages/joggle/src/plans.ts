@@ -1,7 +1,7 @@
 import { Context, Effect, Option, Predicate, Result, Schema } from "effect"
 import * as AiError from "effect/ai/AiError"
 import { Decision, DecisionModel } from "effect/ai"
-import { lookup } from "./absence.ts"
+import { lookup, type NoMatch } from "./either.ts"
 import { Atoms } from "./atoms.ts"
 import { canonical } from "./canonical.ts"
 import { policy } from "./policy.ts"
@@ -239,17 +239,14 @@ export const withQuestionMeta = <D extends Decision.Any>(decision: D, meta: Ques
   return annotated
 }
 
-const metaOf = (decision: Decision.Any): Option.Option<QuestionMeta> =>
+const metaOf = (decision: Decision.Any): Result.Result<QuestionMeta, NoMatch> =>
   lookup(
     () =>
       // SAFETY: QUESTION_META is written only by `withQuestionMeta`, which defines
       // it on a `Decision.Any`; the value read here is that same QuestionMeta.
       (decision as AnnotatedDecision)[QUESTION_META],
+    "the question annotation and state on a " + decision._tag + " decision",
   )
-
-/** The annotation, or an empty one, for a caller that only reads an optional field. */
-const metaOrEmpty = (decision: Decision.Any): QuestionMeta =>
-  Option.getOrElse(metaOf(decision), (): QuestionMeta => ({}))
 
 /**
  * The key of one question's answer: the question, its OWN state, and the model.
@@ -357,7 +354,10 @@ export const memoize = (
           // A question keyed by the batch's whole state would be unreachable as
           // soon as its neighbours change; the plan engine names the state each
           // question actually read.
-          const key = answerKeyFor(decision, metaOrEmpty(decision).material ?? options.input)
+          const key = answerKeyFor(
+            decision,
+            Result.getOrElse(metaOf(decision), (): QuestionMeta => ({})).material ?? options.input,
+          )
           keys.set(name, key)
           const stored = yield* cache.get(key)
           if (Option.isSome(stored)) {
@@ -384,7 +384,8 @@ export const memoize = (
             // three times as many times as the budget counted -- 9 asks for a
             // Noul, which is what pushed a remedies request over the ceiling.
             const names =
-              decision._tag === "Probability" && metaOrEmpty(decision).repeatsHandled !== true
+              decision._tag === "Probability" &&
+              Result.getOrElse(metaOf(decision), (): QuestionMeta => ({})).repeatsHandled !== true
                 ? Array.from({ length: repeats }, (_, index) => name + "~" + String(index))
                 : [name]
             for (const one of names) requested[one] = decision
@@ -405,7 +406,7 @@ export const memoize = (
             let answer: Decision.Answer<Decision.Any> = first
             if (
               missing[name]?._tag === "Probability" &&
-              metaOrEmpty(missing[name]).repeatsHandled !== true
+              Result.getOrElse(metaOf(missing[name]), (): QuestionMeta => ({})).repeatsHandled !== true
             ) {
               const values = gathered.flatMap((one) => ("probability" in one ? [one.probability] : []))
               const reduced = reduceRepeats(values)
@@ -437,7 +438,9 @@ export const memoize = (
  * one request; this puts it back at the boundary, where every answer came from the
  * rule's own decisions, in the order it asked them.
  */
-export const verdictsOf = <A>(answers: ReadonlyArray<unknown>): ReadonlyArray<A | undefined> =>
+export const verdictsOf = <A>(
+  answers: ReadonlyArray<DecisionAnswers>,
+): ReadonlyArray<A | undefined> =>
   // SAFETY: the caller built these plans, so each answer is the type its own
   // decisions produced; the engine erased it only to batch rules together.
   answers as ReadonlyArray<A | undefined>
@@ -477,7 +480,7 @@ export interface PlanChunk<A> {
  * A Choice is asked once. The encoding is the same canonical JSON the request
  * uses, so a long criteria list costs what it will actually cost.
  */
-const questionCharsOf = (plan: Plan<unknown>): number => {
+const questionCharsOf = <A>(plan: Plan<A>): number => {
   let chars = 0
   for (const decision of Object.values(plan.decisions)) {
     const encoded = canonical(decision).length
@@ -542,8 +545,8 @@ export const chunkPlans = <A>(
  * A plan-local state (`declarations`, `files`) could not be merged into one
  * request without rewriting every instruction; atoms can.
  */
-export const answerPlansRaw = (
-  plans: ReadonlyArray<Plan<unknown>>,
+export const answerPlansRaw = <A>(
+  plans: ReadonlyArray<Plan<A>>,
 ): Effect.Effect<
   ReadonlyArray<DecisionAnswers>,
   AiError.AiError,
