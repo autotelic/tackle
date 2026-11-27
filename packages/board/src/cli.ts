@@ -18,7 +18,7 @@ import { alive } from "@autotelic/room/run"
 import { listRooms } from "@autotelic/room/store"
 import { readRun, startRoomRun } from "@autotelic/room/run"
 import { observeService } from "@autotelic/room/Service"
-import { readVmStatus, vmHttp, vmSocketFile } from "@autotelic/room/VmSupervisor"
+import { observeVmService, vmHttp, vmSocketFile } from "@autotelic/room/VmSupervisor"
 import { activityOf } from "./factory/activity.ts"
 import { answerDesk, listDesk } from "./factory/desk.ts"
 import { listReports } from "./factory/report.ts"
@@ -224,52 +224,18 @@ const observe = async (root: string) => {
           const declared = room.service
           const port = room.runtime.previewPort
           if (declared === undefined || port === undefined) return undefined
-          const status = await readVmStatus({ root, id: room.id })
-          if (status.state !== "running")
-            return {
-              worktree,
-              name: declared.name,
-              command: declared.command,
-              port,
-              healthPath: declared.healthPath,
-              status: "stopped" as const,
-              detail: "no vm supervisor",
-              checkedAt: observedAt,
-            }
-          const answer = await vmHttp({
-            socket: vmSocketFile({ root, id: room.id }),
-            request: {
-              kind: "http",
-              port,
-              path: declared.healthPath,
-              method: "GET",
-            },
-          }).catch(() => undefined)
-          if (answer === undefined || answer.kind === "error" || answer.kind !== "http")
-            return {
-              worktree,
-              name: declared.name,
-              command: declared.command,
-              port,
-              healthPath: declared.healthPath,
-              status: "unhealthy" as const,
-              detail: "no answer from the guest service",
-              checkedAt: observedAt,
-            }
-          return {
-            worktree,
-            name: declared.name,
-            command: declared.command,
+          // The guest's own process table says whether the service is still there, and the
+          // health path says whether it is well; the room makes both observations, so the
+          // board serves them instead of deriving one from the other.
+          const observed = await observeVmService({
+            root,
+            id: room.id,
+            service: declared,
             port,
-            healthPath: declared.healthPath,
-            status:
-              answer.status >= 200 && answer.status < 300
-                ? ("healthy" as const)
-                : ("unhealthy" as const),
-            detail:
-              answer.status >= 200 && answer.status < 300 ? null : "answered " + answer.status,
+            pid: room.runtime.servicePid,
             checkedAt: observedAt,
-          }
+          })
+          return { worktree, ...observed }
         }
         const port = room.port
         if (room.service === undefined || port === undefined) return undefined

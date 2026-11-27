@@ -137,6 +137,11 @@ export interface ServiceHost {
  * reason instead of a health state nobody observed. Only a live probe that answered 2xx reports
  * `healthy`.
  *
+ * This is the local room's path: the room's supervisor runs the command on this host, so a dead
+ * supervisor means no service. A room whose service runs inside a VM is observed through the
+ * guest's own process table (`observeVmService` in `VmSupervisor.ts`), where a dead process is a
+ * finding with an exit code and not a missing answer.
+ *
  * @param input - the room's declaration and lease, its run record, the probe budget, and
  * the instant the observation is stamped with.
  * @returns the service status, or undefined when the room declares no service.

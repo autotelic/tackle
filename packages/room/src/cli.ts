@@ -27,7 +27,9 @@ import {
 import { alive, readRun, removeRun, signalRun, startRoomRun } from "./run.ts"
 import {
   ensureVmSupervisor,
+  observeVmService,
   readVmStatus,
+  stopVmService,
   stopVmSupervisor,
   vmExec,
   vmHttp,
@@ -215,15 +217,29 @@ const main = async (): Promise<void> => {
       const process = run === undefined ? undefined : { ...run, alive: alive(run.pid) }
       // The status is what a probe saw just now, never the declaration's optimism: a room whose
       // service does not answer says so here, with the evidence the probe collected.
+      const checkedAt = new Date().toISOString()
+      // Two places a service can run, so two observations: a VM service is reported from the
+      // guest's own process table, and a local room from the supervisor holding its command.
       const service =
-        room.service === undefined || room.port === undefined
+        room.service === undefined
           ? null
-          : await observeService({
-              service: room.service,
-              port: room.port.number,
-              run,
-              checkedAt: new Date().toISOString(),
-            })
+          : room.runtime?.kind === "agentos" && room.runtime.previewPort !== undefined
+            ? await observeVmService({
+                root,
+                id: values.id,
+                service: room.service,
+                port: room.runtime.previewPort,
+                pid: room.runtime.servicePid,
+                checkedAt,
+              })
+            : room.port === undefined
+              ? null
+              : await observeService({
+                  service: room.service,
+                  port: room.port.number,
+                  run,
+                  checkedAt,
+                })
       if (values.json) console.log(JSON.stringify({ ...room, run: process, service }, null, 2))
       else
         console.log(
@@ -310,14 +326,25 @@ const main = async (): Promise<void> => {
     }
 
     if (verb === "stop") {
+      // The guest service is killed while the VM that holds it can still be asked, so the stop
+      // names the process it took instead of leaving the reader to infer it from a disposal.
+      const guest = await stopVmService({ root, id, pid: room.runtime?.servicePid })
       const stopped = await stopVmSupervisor({ root, id })
-      if (values.json) console.log(JSON.stringify(stopped, null, 2))
+      if (values.json) console.log(JSON.stringify({ ...stopped, service: guest }, null, 2))
       else if (stopped.detail === "absent") console.log("room " + id + " had no vm supervisor")
       else if (stopped.detail === "stale")
         console.log(
           "room " + id + " had a stale vm supervisor " + stopped.pid + "; socket released",
         )
-      else console.log("room " + id + " vm supervisor " + stopped.pid + " stopped")
+      else
+        console.log(
+          "room " +
+            id +
+            " vm supervisor " +
+            stopped.pid +
+            " stopped" +
+            (guest.stopped ? "; vm service " + room.runtime?.servicePid + " killed" : ""),
+        )
       return
     }
 
@@ -386,10 +413,12 @@ const main = async (): Promise<void> => {
         },
       })
       if (!declared.ok) return fail(declared.error, EXIT.declined)
+      // The guest pid is part of the room's record, not a line in a log: it is the id the VM's
+      // process table must be asked about to report the service honestly later.
       const saved = await setRoomRuntime({
         root,
         id,
-        runtime: { kind: "agentos", previewPort: port },
+        runtime: { kind: "agentos", previewPort: port, servicePid: response.pid },
       })
       if (!saved.ok) return fail(saved.error, EXIT.declined)
       if (values.json)
@@ -617,8 +646,11 @@ const main = async (): Promise<void> => {
       return fail("room " + id + " has no process", EXIT.declined)
     // Clear desire before the signal: the shop must not restart it during the stop.
     await setRoomDesired({ root, id, desired: false })
-    // The VM supervisor goes first: it holds the socket, and a room that stops its command
-    // while its VM still answers is not stopped.
+    // The guest service is killed first, while the VM that holds it can still be asked; a stale
+    // record has no process table, and the disposal below is the stop that remains.
+    const guest = await stopVmService({ root, id, pid: room.runtime?.servicePid })
+    // The VM supervisor goes next: it holds the socket, and a room that stops its command while
+    // its VM still answers is not stopped.
     const vmStop = vm.state === "absent" ? undefined : await stopVmSupervisor({ root, id })
     if (run !== undefined) {
       // A supervisor that died between the read and the signal needs no wait; the room is
@@ -637,6 +669,7 @@ const main = async (): Promise<void> => {
     const released = await releaseRoomPort({ root, id })
     if (!released.ok) return fail(released.error, EXIT.declined)
     const parts = ["room " + id + " stopped"]
+    if (guest.stopped) parts.push("killed vm service " + room.runtime?.servicePid)
     if (run !== undefined) parts.push("supervisor " + run.pid)
     if (vmStop !== undefined && vmStop.pid !== undefined)
       parts.push("vm supervisor " + vmStop.pid + (vmStop.detail === "stale" ? " (stale)" : ""))
