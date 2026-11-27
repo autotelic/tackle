@@ -38,6 +38,7 @@ import {
   type NodeTypeQuery,
 } from "./typefacts.ts"
 import { manifestOf } from "./run-cache.ts"
+import { identityOf } from "./identity.ts"
 import { sourceFingerprint } from "./fingerprint.ts"
 import { buildSurface, projectRootOf, SURFACE_PATH, surfaceFileOf, surfaceOutputOf } from "./surface.ts"
 import { decodeSurface, parseJson } from "@autotelic/protocol"
@@ -600,6 +601,50 @@ const rules = Command.make(
     {
       command: "joggle rules --cwd ../other-repo",
       description: "What another repository enforces.",
+    },
+  ]),
+)
+
+const identityCommand = Command.make(
+  "identity",
+  {
+    paths: Argument.String("paths").pipe(
+      Argument.withDescription("Files or directories whose declarations to identify. Default: the whole project."),
+      Argument.variadic(),
+    ),
+    cwd: Flag.String("cwd").pipe(
+      Flag.withDescription("Project root to analyse (default: the current directory)."),
+      Flag.optional,
+    ),
+  },
+  (config) =>
+    Effect.gen(function* () {
+      const path = yield* Path.Path
+      const cwd = path.resolve(Option.getOrUndefined(config.cwd) ?? process.cwd())
+      const workspace = yield* loadWorkspace(cwd, config.paths.length > 0 ? config.paths : ["."])
+      const index = identityOf(workspace)
+      const declarations = [...index.declarations].sort(
+        (left, right) =>
+          left.unit.file.localeCompare(right.unit.file) ||
+          left.unit.location.line - right.unit.location.line ||
+          left.unit.name.localeCompare(right.unit.name),
+      )
+      yield* write(
+        [
+          ...declarations.map(
+            ({ unit, id }) => `${id}  ${unit.file}:${unit.location.line}  ${unit.name}`,
+          ),
+          `${declarations.length} declaration(s); ${index.unresolved} unresolved reference(s)`,
+        ].join("\n"),
+      )
+    }),
+).pipe(
+  Command.withDescription("Print the content-addressed id of each declaration, and what could not be resolved."),
+  Command.withShortDescription("Identify declarations by structure, not by name or path."),
+  Command.withExamples([
+    {
+      command: "joggle identity packages/jig-cli/src/version.ts",
+      description: "The id of every declaration in one file.",
     },
   ]),
 )
@@ -1337,6 +1382,7 @@ const cli = Command.make("joggle").pipe(
     proseCommand,
     askCommand,
     rules,
+    identityCommand,
     calibrateCommand,
     cacheCommand,
     surfaceCommand,
