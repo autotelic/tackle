@@ -866,7 +866,7 @@ const calibrateCommand = Command.make(
           const atomStore = yield* Atoms
           const evidence = yield* Effect.forEach(planned.plans, (plan) =>
             Effect.map(atomStore.values(plan.atoms), (values) =>
-              Object.values(values).map(canonical).sort(),
+              Object.values(values).map(canonical).sort((left, right) => left.localeCompare(right)),
             ),
           )
           // One row per DECISION that declares its violating labels, so a rule
