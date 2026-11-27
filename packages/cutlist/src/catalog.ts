@@ -43,7 +43,7 @@ export const DUPLICATE_THRESHOLD = 0.7
 
 /** A component's name: its file, or the directory for `index`/`route` conventions. */
 const nameOfModule = (path: string): string => {
-  const file = path.slice(path.lastIndexOf("/") + 1).replace(/\.(tsx?|jsx?)$/u, "")
+  const file = path.slice(path.lastIndexOf("/") + 1).replace(/\.(tsx?|jsx?|astro)$/u, "")
   if (file !== "index" && file !== "route") return file
   const dirName = dirnamePosix(path).slice(dirnamePosix(path).lastIndexOf("/") + 1)
   return dirName === "" ? file : dirName
@@ -86,8 +86,8 @@ const aliasRules = (
   return rules
 }
 
-/** A source extension, written the way an import specifier spells it (`./Button.tsx`). */
-const SOURCE_EXTENSION = /\.(tsx?|jsx?|mts|cts|mjs|cjs)$/u
+/** A source extension, written the way an import specifier spells it (`./Button.tsx`, `./Card.astro`). */
+const SOURCE_EXTENSION = /\.(tsx?|jsx?|mts|cts|mjs|cjs|astro)$/u
 
 /** What `resolveSpecifier` needs: the three values travel as one so a swap cannot compile. */
 interface SpecifierQuery {
