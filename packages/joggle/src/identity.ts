@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import { resolve } from "node:path"
 import { parseSync } from "oxc-parser"
 import { blockingErrors, type Region } from "./astro.ts"
 import {
@@ -562,6 +563,49 @@ const componentsOf = ({
 export interface DeclarationIdentity {
   readonly unit: Unit
   readonly id: string
+}
+
+/**
+ * The identity index, keyed the two ways a caller already has a declaration.
+ *
+ * A rule knows a file and a name; a request knows a file and the NAME's offset.
+ * Neither key is part of an id -- they only find the content id the Merkle pass
+ * already computed, so moving the declaration does not change what it hashes to.
+ */
+export interface IdentityKeys {
+  readonly byName: ReadonlyMap<string, string>
+  /**
+   * The same names, lowercased.
+   *
+   * The checker hands back some paths with their first component lowercased
+   * (`/Users/...` becomes `/users/...`), which is not a file identity question;
+   * it is a lookup spelling. Exact keys win, and this is only the fallback.
+   */
+  readonly byNameLower: ReadonlyMap<string, string>
+  readonly byPosition: ReadonlyMap<string, string>
+}
+
+/** Build both lookup maps once, from the workspace's content ids. */
+export const identityKeysOf = ({
+  workspace,
+  root,
+}: {
+  readonly workspace: Workspace
+  readonly root: string
+}): IdentityKeys => {
+  const index = identityOf(workspace)
+  const byName = new Map<string, string>()
+  const byNameLower = new Map<string, string>()
+  const byPosition = new Map<string, string>()
+  for (const { unit, id } of index.declarations) {
+    const file = resolve(root, unit.file)
+    const key = file + "\u0000" + unit.name
+    byName.set(key, id)
+    const lower = key.toLowerCase()
+    if (!byNameLower.has(lower)) byNameLower.set(lower, id)
+    byPosition.set(file + "\u0000" + String(unit.namePosition), id)
+  }
+  return { byName, byNameLower, byPosition }
 }
 
 export interface IdentityIndex {
