@@ -10,6 +10,7 @@ import {
   impliedRepairsOf,
   isImperativeClause,
   messageKeyOf,
+  observeSoundness,
   pairKeyOf,
   pairOfKey,
   partitionsOf,
@@ -833,4 +834,56 @@ test("one rule's shared label still normalizes its own messages", () => {
     [[command, head, 0.04]],
   )
   expect(clusterRemedies([command, head], opinion).clusters).toHaveLength(1)
+})
+
+test("a cluster earns sound only after the re-run clears its siblings", () => {
+  // The representative is the first site in stable order. Fixing it and finding
+  // the sibling sites gone is the diff that licenses `sound`; the assertion is
+  // about two runs, not about the cluster's shape.
+  const previous = [
+    { site: "src/kernel.ts:1", rule: "plumb/a", remedyHash: "remedy-1", run: "run-before" },
+    { site: "src/kernel.ts:2", rule: "plumb/a", remedyHash: "remedy-1", run: "run-before" },
+    { site: "src/kernel.ts:3", rule: "plumb/a", remedyHash: "remedy-1", run: "run-before" },
+  ]
+  const observed = observeSoundness({ previous, current: [], clusters: [] })
+  expect(observed).toHaveLength(1)
+  expect(observed[0]).toMatchObject({
+    soundness_observed: "sound",
+    representative: "src/kernel.ts:1",
+    sites: ["src/kernel.ts:1", "src/kernel.ts:2", "src/kernel.ts:3"],
+    cleared: ["src/kernel.ts:2", "src/kernel.ts:3"],
+    remaining: [],
+  })
+})
+
+test("a cluster stays unsound when the representative fix leaves a sibling behind", () => {
+  const previous = [
+    { site: "src/kernel.ts:1", rule: "plumb/a", remedyHash: "remedy-1", run: "run-before" },
+    { site: "src/kernel.ts:2", rule: "plumb/a", remedyHash: "remedy-1", run: "run-before" },
+    { site: "src/kernel.ts:3", rule: "plumb/a", remedyHash: "remedy-1", run: "run-before" },
+  ]
+  const current = [
+    finding("plumb/a", "Diagnosis. Parse input at its boundary.", 2, "src/kernel.ts"),
+  ]
+  const observed = observeSoundness({ previous, current, clusters: [] })
+  expect(observed[0]).toMatchObject({
+    soundness_observed: "unsound",
+    representative: "src/kernel.ts:1",
+    cleared: ["src/kernel.ts:3"],
+    remaining: ["src/kernel.ts:2"],
+  })
+  expect(observed[0]?.reason).toContain("sibling site(s) still report")
+})
+
+test("no fix at the representative is unobserved, not sound", () => {
+  const previous = [
+    { site: "src/kernel.ts:1", rule: "plumb/a", remedyHash: "remedy-1", run: "run-before" },
+    { site: "src/kernel.ts:2", rule: "plumb/a", remedyHash: "remedy-1", run: "run-before" },
+  ]
+  const current = [
+    finding("plumb/a", "Diagnosis. Parse input at its boundary.", 1, "src/kernel.ts"),
+    finding("plumb/a", "Diagnosis. Parse input at its boundary.", 2, "src/kernel.ts"),
+  ]
+  const observed = observeSoundness({ previous, current, clusters: [] })
+  expect(observed[0]?.soundness_observed).toBe("unobserved")
 })

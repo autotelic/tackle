@@ -209,3 +209,17 @@ test("a remedies run owns one finding row per site, rule and run", () => {
   ])
   store.close()
 })
+
+test("a store names the most recent remedies run for the soundness diff", () => {
+  const root = mkdtempSync(join(tmpdir(), "joggle-store-"))
+  const store = createFactStore(root)
+  expect(store.latestRun()).toBeUndefined()
+  store.rememberFindings("run-a", [
+    { site: "src/a.ts:1", rule: "plumb/a", remedyHash: "remedy-1" },
+  ])
+  store.rememberFindings("run-b", [
+    { site: "src/a.ts:1", rule: "plumb/a", remedyHash: "remedy-1" },
+  ])
+  expect(store.latestRun()).toBe("run-b")
+  store.close()
+})

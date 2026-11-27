@@ -138,6 +138,8 @@ export interface FactStore {
   readonly cached: (unit: Unit) => Result.Result<FragmentSet, StoreError>
   /** Write one unit's fragment set. */
   readonly store: (unit: Unit, fragments: FragmentSet) => void
+  /** The most recently written remedies run, or nothing when the store is cold. */
+  readonly latestRun: () => string | undefined
   /** The findings one remedies run recorded. */
   readonly findingsOf: (run: string) => ReadonlyArray<StoredFinding>
   /** Replace the findings for this run, atomically. Returns the rows written. */
@@ -186,6 +188,7 @@ const FindingRow = Schema.Struct({
   remedy_hash: Schema.optional(Schema.String),
   run: Schema.optional(Schema.String),
 })
+const RunRow = Schema.Struct({ run: Schema.optional(Schema.String) })
 
 /** The JSON the store writes into `object.body` for a fragment set. */
 const FragmentSetBody = Schema.Struct({ cut: Schema.optional(Schema.Boolean) })
@@ -457,6 +460,24 @@ export const createFactStore = (root: string): FactStore => {
     }
   }
 
+  const latestRun = (): string | undefined => {
+    const database = ensure()
+    // SAFETY: reading through `node:sqlite` throws for a schema this build cannot
+    // read; a cold answer is the same degradation as a store with no rows.
+    try {
+      const row = decodeRow(
+        RunRow,
+        database
+          .prepare("SELECT run FROM finding GROUP BY run ORDER BY MAX(rowid) DESC LIMIT 1")
+          .get(),
+      )
+      return row?.run
+    } catch (cause) {
+      issue ??= "stored findings could not be read: " + messageOf(cause)
+      return undefined
+    }
+  }
+
   const findingsOf = (run: string): ReadonlyArray<StoredFinding> => {
     const database = ensure()
     // SAFETY: reading through `node:sqlite` throws for a schema this build cannot
@@ -546,5 +567,5 @@ export const createFactStore = (root: string): FactStore => {
     return Result.succeed(report)
   }
 
-  return { cached, store: storeFragments, findingsOf, rememberFindings, close }
+  return { cached, store: storeFragments, latestRun, findingsOf, rememberFindings, close }
 }

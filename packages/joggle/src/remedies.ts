@@ -1359,6 +1359,39 @@ export interface RemedyCluster {
 }
 
 /**
+ * What the previous run lets this one say about a cluster's soundness.
+ *
+ * The survey's distinction is between dominant alarms, where one representative
+ * fix clears the rest, and similarity, where it does not. Ours is the second by
+ * construction, so the field starts `unobserved` and is earned only by a diff
+ * across two stored runs. `sound` is never an assertion from the cluster's shape;
+ * it is the arithmetic of a representative site disappearing AND its siblings
+ * disappearing with it.
+ */
+export type SoundnessStatus = "sound" | "unsound" | "unobserved"
+
+export interface SoundnessObservation {
+  /**
+   * The rung's name and the report's key, deliberately kept in snake case.
+   *
+   * A reader of the JSON should not have to translate the field the hill names;
+   * the camel-case convention stops at this external measurement.
+   */
+  readonly soundness_observed: SoundnessStatus
+  readonly remedy: string
+  readonly remedyHash: string
+  /** The site whose fix the diff is about: the first previous site, in order. */
+  readonly representative: string | undefined
+  /** Every site the previous cluster held. */
+  readonly sites: ReadonlyArray<string>
+  /** Sibling sites the current run no longer reports. */
+  readonly cleared: ReadonlyArray<string>
+  /** Sibling sites the current run still reports. Empty is what earns `sound`. */
+  readonly remaining: ReadonlyArray<string>
+  readonly reason: string
+}
+
+/**
  * The facts behind one cross-rule merge, printed so a wrong merge is visible.
  *
  * A cluster holding more than one rule is the judgement's strongest claim, and
@@ -1432,6 +1465,12 @@ export interface RemedyReport {
   }>
   /** One facts/judgments/decision trace per cross-rule cluster pair. */
   readonly traces: ReadonlyArray<ClusterTrace>
+  /**
+   * The soundness earned from the previous stored run, one observation per
+   * previous cluster and one first-record row per current cluster with no
+   * history. Empty on a cold store only when there is no current cluster.
+   */
+  readonly soundness_observed: ReadonlyArray<SoundnessObservation>
   readonly clusters: ReadonlyArray<RemedyCluster>
 }
 
@@ -1678,6 +1717,143 @@ const clustersOf = (
   )
 }
 
+/** One finding's identity across runs: the site and the rule that reached it. */
+const findingKeyOf = (finding: Pick<StoredFinding, "site" | "rule">): string =>
+  finding.site + "\u0000" + finding.rule
+
+const observationOf = ({
+  remedyHash,
+  remedy,
+  previous,
+  current,
+}: {
+  readonly remedyHash: string
+  readonly remedy: string
+  readonly previous: ReadonlyArray<StoredFinding>
+  readonly current: ReadonlySet<string>
+}): SoundnessObservation => {
+  const sites = [...new Set(previous.map((finding) => finding.site))].sort((left, right) =>
+    left.localeCompare(right),
+  )
+  const representative = sites[0]
+  const representativePresent =
+    representative !== undefined &&
+    previous.some(
+      (finding) => finding.site === representative && current.has(findingKeyOf(finding)),
+    )
+  if (representativePresent) {
+    return {
+      soundness_observed: "unobserved",
+      remedy,
+      remedyHash,
+      representative,
+      sites,
+      cleared: [],
+      remaining: previous
+        .filter((finding) => current.has(findingKeyOf(finding)))
+        .map((finding) => finding.site),
+      reason: "the representative site still carries the finding, so no fix at it was observed",
+    }
+  }
+  const siblings = previous.filter((finding) => finding.site !== representative)
+  if (siblings.length === 0) {
+    return {
+      soundness_observed: "unobserved",
+      remedy,
+      remedyHash,
+      representative,
+      sites,
+      cleared: [],
+      remaining: [],
+      reason:
+        "the previous cluster held no sibling sites, so clearing its one site proves nothing" +
+        " about soundness",
+    }
+  }
+  const remaining = siblings
+    .filter((finding) => current.has(findingKeyOf(finding)))
+    .map((finding) => finding.site)
+  const cleared = siblings
+    .filter((finding) => !current.has(findingKeyOf(finding)))
+    .map((finding) => finding.site)
+  const sound = remaining.length === 0
+  return {
+    soundness_observed: sound ? "sound" : "unsound",
+    remedy,
+    remedyHash,
+    representative,
+    sites,
+    cleared: [...new Set(cleared)].sort((left, right) => left.localeCompare(right)),
+    remaining: [...new Set(remaining)].sort((left, right) => left.localeCompare(right)),
+    reason: sound
+      ? "the representative site cleared, and every sibling site cleared with it"
+      : "the representative site cleared, but " +
+        String(new Set(remaining).size) +
+        " sibling site(s) still report the finding",
+  }
+}
+
+/**
+ * Diff a previous run against this one to observe, never assert, soundness.
+ *
+ * The previous cluster is matched by its remedy hash. The representative is the
+ * first site of that previous cluster in stable order. A cluster is `sound` only
+ * when the representative no longer reports the finding AND the current run
+ * reports none of its siblings either; a fix that clears only the site it touched
+ * is the definition of `unsound`. A current cluster with no previous incarnation
+ * is `unobserved`: it is a first record, not evidence.
+ *
+ * @param input.previous - the most recent stored run, if any.
+ * @param input.current - this run's findings.
+ * @param input.clusters - this run's clusters, so a new repair is still named.
+ * @returns one observation per previous cluster, plus first records for new ones.
+ */
+export const observeSoundness = ({
+  previous,
+  current,
+  clusters,
+}: {
+  readonly previous: ReadonlyArray<StoredFinding>
+  readonly current: ReadonlyArray<RemedyFinding>
+  readonly clusters: ReadonlyArray<RemedyCluster>
+}): ReadonlyArray<SoundnessObservation> => {
+  const currentKeys = new Set(current.map(findingKeyOf))
+  const byHash = new Map<string, Array<StoredFinding>>()
+  for (const finding of previous) {
+    const list = byHash.get(finding.remedyHash)
+    if (list === undefined) byHash.set(finding.remedyHash, [finding])
+    else list.push(finding)
+  }
+  const observations = [...byHash.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([remedyHash, rows]) => {
+      const named = clusters.find((cluster) => cluster.remedyHash === remedyHash)?.remedy
+      return observationOf({
+        remedyHash,
+        remedy: named ?? "previous run",
+        previous: rows,
+        current: currentKeys,
+      })
+    })
+  for (const cluster of clusters) {
+    if (byHash.has(cluster.remedyHash)) continue
+    const sites = [...new Set(cluster.members.map((member) => member.site))].sort((left, right) =>
+      left.localeCompare(right),
+    )
+    observations.push({
+      soundness_observed: "unobserved",
+      remedy: cluster.remedy,
+      remedyHash: cluster.remedyHash,
+      representative: sites[0],
+      sites,
+      cleared: [],
+      remaining: [],
+      reason: "this run is the first record for this repair, so there is no diff yet",
+    })
+  }
+  return observations.sort((left, right) => left.remedyHash.localeCompare(right.remedyHash))
+}
+
 /** The highest, then the first, family answer among one rule's messages. */
 const familyOfRule = (
   members: ReadonlyArray<RemedyFinding>,
@@ -1846,6 +2022,7 @@ const summaryOf = (clusters: ReadonlyArray<RemedyCluster>): ClusterSummary => {
 export const clusterRemedies = (
   findings: ReadonlyArray<RemedyFinding>,
   opinion: RepairOpinion,
+  previous: ReadonlyArray<StoredFinding> = [],
 ): RemedyReport => {
   const messages = messageNodesOf(findings)
   const judges = clustersOf(findings, opinion, "judgement")
@@ -1895,6 +2072,7 @@ export const clusterRemedies = (
     judgement: summaryOf(judges),
     disagreements,
     traces: tracesOf(clusters),
+    soundness_observed: observeSoundness({ previous, current: findings, clusters }),
     clusters,
   }
 }
@@ -1903,6 +2081,24 @@ export const clusterRemedies = (
 export interface RemedyLedger {
   readonly run: string
   readonly written: number
+}
+
+/**
+ * The previous run's rows, for the soundness diff.
+ *
+ * The store already keeps every run in `finding`, so this is a read of the most
+ * recent one rather than a new table. A cold store answers no rows, which makes
+ * every cluster `unobserved` instead of inventing a history.
+ *
+ * @param root - the project root whose fact store is read.
+ * @returns the latest stored run's findings, or an empty list.
+ */
+export const previousRemedyFindings = (root: string): ReadonlyArray<StoredFinding> => {
+  const store = createFactStore(root)
+  const run = store.latestRun()
+  const findings = run === undefined ? [] : store.findingsOf(run)
+  store.close()
+  return findings
 }
 
 /** Persist one run's clusters as the new `finding` rows. */

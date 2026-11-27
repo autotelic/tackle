@@ -19,6 +19,7 @@ import {
   FindingsPayload,
   findingsOf,
   judgeRemedies,
+  previousRemedyFindings,
   rememberRemedyFindings,
   type RemedyReport,
 } from "./remedies.ts"
@@ -653,7 +654,34 @@ const remedyLines = ({ report, ledger, cache, trace }: RemedyLinesInput): Readon
           ),
         ]),
     "fact store: run " + ledger.run + ", " + String(ledger.written) + " finding row(s)",
+    "soundness observed: " +
+      String(
+        report.soundness_observed.filter((entry) => entry.soundness_observed === "sound").length,
+      ) +
+      " sound · " +
+      String(
+        report.soundness_observed.filter((entry) => entry.soundness_observed === "unsound").length,
+      ) +
+      " unsound · " +
+      String(
+        report.soundness_observed.filter((entry) => entry.soundness_observed === "unobserved")
+          .length,
+      ) +
+      " unobserved",
   ]
+  for (const observed of report.soundness_observed) {
+    if (observed.soundness_observed === "unobserved") continue
+    lines.push(
+      "  " +
+        observed.soundness_observed +
+        "  " +
+        observed.remedy +
+        " at " +
+        String(observed.representative) +
+        " — " +
+        observed.reason,
+    )
+  }
   for (const cluster of report.clusters) {
     lines.push("")
     lines.push(
@@ -824,7 +852,8 @@ const remediesCommand = Command.make(
       )
       const opinion = judged.opinion
       const stats = judged.stats
-      const report = clusterRemedies(findings, opinion)
+      const previous = previousRemedyFindings(cwd)
+      const report = clusterRemedies(findings, opinion, previous)
       const ledger = rememberRemedyFindings(cwd, report)
       if (config.format === "json") {
         yield* write(
