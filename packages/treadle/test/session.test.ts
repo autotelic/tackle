@@ -104,11 +104,7 @@ afterEach(async () => {
   tmp = null
 })
 
-async function run(
-  script: Script,
-  overrides: Partial<RunSessionOptions> = {},
-  now?: () => number,
-) {
+async function run(script: Script, overrides: Partial<RunSessionOptions> = {}, now?: () => number) {
   tmp = await mkdtemp(join(tmpdir(), 'treadle-session-'))
   const fake = new FakeSession(script)
   let captured: CapturedCreate | null = null
