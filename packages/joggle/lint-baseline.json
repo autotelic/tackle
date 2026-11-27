@@ -1,13 +1,21 @@
 {
   "note": "Known plumb findings, by identity and count. `pnpm lint:update` accepts the current state; `pnpm lint` fails when a count rises or a new identity appears.",
-  "total": 15,
+  "total": 22,
   "census": {
-    "plumb-effect(guarded-op-must-return-option)\u0000src/store.ts\u0000This function returns `S[\"Type\"] | undefined`, conflating absence with a value. Return Option<S[\"Type\"]> and express absence as Option.none().": 1,
-    "plumb-effect(guarded-op-must-return-option)\u0000src/surface.ts\u0000This function returns `string | undefined`, conflating absence with a value. Return Option<string> and express absence as Option.none().": 5,
-    "plumb-effect(guarded-op-must-return-option)\u0000src/surface.ts\u0000This function returns `SurfaceKind | undefined`, conflating absence with a value. Return Option<SurfaceKind> and express absence as Option.none().": 1,
+    "plumb(no-known-value-widening)\u0000src/questionnaire.ts\u0000The explicit open dictionary type on return value of `emptyCounts` discards known type evidence. Keep inference, validate with `satisfies`, or use a named owner contract.": 1,
+    "plumb(no-multiple-function-params)\u0000src/questionnaire.ts\u0000`validateQuestionnaire` takes 2 positional parameters without distinct types. Accept a single named payload object instead; two parameters of the same type transpose silently.": 1,
+    "plumb(no-multiple-function-params)\u0000src/remedies.ts\u0000`judgmentsBetween` takes 3 positional parameters without distinct types. Accept a single named payload object instead; two parameters of the same type transpose silently.": 1,
+    "plumb(no-reinterpret-cast)\u0000src/questionnaire.ts\u0000Type assertion discards type evidence. Narrow with discriminants/`in` checks or a type predicate instead.": 1,
+    "plumb(no-runtime-typeof)\u0000src/questionnaire.ts\u0000A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.": 1,
     "plumb(no-runtime-typeof)\u0000src/surface.ts\u0000A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.": 4,
+    "plumb(no-shape-in-symbol-names)\u0000src/questionnaire.ts\u0000Rename symbol \"questionShape\" for its domain role; \"shape\" describes structure rather than ownership.": 2,
+    "plumb(no-shape-in-symbol-names)\u0000src/questionnaire.ts\u0000Rename symbol \"QuestionShapePolicy\" for its domain role; \"shape\" describes structure rather than ownership.": 2,
+    "plumb(no-shape-in-symbol-names)\u0000src/questionnaire.ts\u0000Rename symbol \"shapePolicyOf\" for its domain role; \"shape\" describes structure rather than ownership.": 2,
+    "plumb(no-unknown-parameters)\u0000src/questionnaire.ts\u0000Parameter `description` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.": 1,
+    "plumb(no-unknown-parameters)\u0000src/questionnaire.ts\u0000Parameter `instructions` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.": 1,
     "plumb(no-unknown-parameters)\u0000src/surface.ts\u0000Parameter `declaration` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.": 1,
     "plumb(no-unknown-parameters)\u0000src/surface.ts\u0000Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.": 1,
-    "plumb(no-unsafe-dictionary-type)\u0000src/surface.ts\u0000This dictionary's unknown value type gives callers no concrete value contract. Use an owner/schema-derived value type; parse external payloads before insertion.": 2
+    "plumb(no-unsafe-dictionary-type)\u0000src/surface.ts\u0000This dictionary's unknown value type gives callers no concrete value contract. Use an owner/schema-derived value type; parse external payloads before insertion.": 2,
+    "plumb(require-safety-comment-for-type-assertion)\u0000src/questionnaire.ts\u0000This type assertion has no `SAFETY:` justification. State the checked invariant immediately before the assertion or its containing statement.": 1
   }
 }
