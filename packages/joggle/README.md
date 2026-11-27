@@ -71,11 +71,14 @@ pnpm lint:json > findings.json        # or any oxlint --format json stream
 joggle remedies findings.json         # cluster findings by the repair they prescribe
 ```
 
-`remedies` reads joggle's or oxlint's JSON unchanged. It asks `j_repair` once per
-distinct message against candidate clauses code derived, asks `j_same` for each
-pair of witness groups, and writes `finding(site, rule, remedy_hash, run)` into the
-machine-local fact store. The deterministic witness — the imperative clause with
-the diagnosis dropped — is kept beside the judgement, and every cluster prints a
+`remedies` reads joggle's or oxlint's JSON unchanged. It asks a repair family
+once per distinct message, then the clause only among the candidates code assigned
+to that family, so no Choice exceeds `docs/jev.md`'s eight options. Each pair of
+witness groups gets `j_remedy`; `j_material` and `j_subcase` are asked only of the
+pairs the previous answer left open, and published thresholds decide the merge.
+Every run writes `finding(site, rule, remedy_hash, run)` into the machine-local
+fact store. The deterministic witness -- the imperative clause with the diagnosis
+dropped -- is kept beside the judgement, and every cluster prints a
 counterexample pack: for each pair of rules, the sites one reaches that the other
 cannot.
 

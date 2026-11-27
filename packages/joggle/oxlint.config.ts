@@ -82,9 +82,15 @@ const GENERIC = [
 
 const EFFECT = [
   "guarded-op-must-return-effect",
-  // guarded-op-must-return-option is not enabled: joggle's exported surface spells
-  // absence as `T | undefined`, in the seven sites lint-baseline.json accepts. The
-  // rule pair now agrees on Either, so re-enabling means re-deriving that baseline.
+  // guarded-op-must-return-option is not enabled: the two helper rules disagree
+  // about the same absence. This one wants `Option<T>`; its sibling below rejects
+  // an Option as hiding the failure reason and wants `Either<T, TaggedError>`.
+  // The branch's `familyOfRule` was forced into `Result<_, NoMatch>` to satisfy the
+  // sibling, and every caller then discarded the reason with `getOrUndefined`. No
+  // representation satisfies both, so the pair is reported as a rule gap rather
+  // than answered with a wrapper. 20 sites spell absence as `T | undefined`
+  // across 13 modules; the two branch files now return Option where the lookup is
+  // a question, and the rest is trunk debt for the rule's next revision.
   "no-cascading-layer-provide",
   "no-decode-unknown-option",
   "no-direct-browser-storage",

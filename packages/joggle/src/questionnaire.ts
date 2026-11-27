@@ -43,18 +43,18 @@ export interface QuestionCensus {
   readonly worst: QuestionViolation | undefined
 }
 
-/** The limits, published in `policy` beside every other threshold. */
-export interface QuestionLimits {
-  readonly maxInstructionChars: number
-  readonly maxOptionDescriptionChars: number
-  readonly maxChoiceOptions: number
-}
-
-const limitsOf = (): QuestionLimits => ({
+/**
+ * The limits, composed from `policy` beside every other threshold.
+ *
+ * One accessor rather than each caller reading the policy's two homes for the
+ * numbers: `maxChoiceOptions` is a decision limit and the other two are question
+ * shape, but a validator and the question builder must agree on all three.
+ */
+export const questionLimits = {
   maxInstructionChars: policy.decision.questionLimits.maxInstructionChars,
   maxOptionDescriptionChars: policy.decision.questionLimits.maxOptionDescriptionChars,
   maxChoiceOptions: policy.decision.maxChoiceOptions,
-})
+} as const
 
 const isText = Schema.is(Schema.String)
 
@@ -123,7 +123,7 @@ export const validateQuestionnaire = (
   questionnaire: Questionnaire<unknown>,
   subject: string = "questionnaire",
 ): ReadonlyArray<QuestionViolation> => {
-  const limits = limitsOf()
+  const limits = questionLimits
   const violations: Array<QuestionViolation> = []
   const declared = new Set(questionnaire.atoms)
   for (const [name, decision] of Object.entries(questionnaire.decisions)) {
