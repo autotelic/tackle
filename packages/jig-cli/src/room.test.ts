@@ -64,7 +64,8 @@ describe("jig room is a door, not a second renderer", () => {
       expect(created.status).toBe(0)
       const paused = run(root, ["room", "pause", "--id", "dev-repo"])
       expect(paused.status).toBe(0)
-      expect(paused.stdout).toBe("room dev-repo recorded paused; no process was signalled\n")
+      expect(paused.stdout).toContain("journal ")
+      expect(paused.stdout).toContain("checkpointed; no process was signalled")
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
