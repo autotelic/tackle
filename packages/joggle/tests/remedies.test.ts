@@ -18,7 +18,6 @@ import {
   repairLabel,
   remedyFamilies,
   witnessClause,
-  witnessOnlyOpinion,
   type RemedyFinding,
   type RepairOpinion,
 } from "../src/remedies.ts"
@@ -40,6 +39,21 @@ const finding = (
   line,
   rule,
   message,
+})
+
+const witnessOnlyOpinion = (
+  findings: ReadonlyArray<RemedyFinding>,
+  reason: string,
+): RepairOpinion => ({
+  repairs: new Map(),
+  same: new Map(),
+  unavailable: reason,
+  failures: [],
+  questions: new Set(findings.map(messageKeyOf)).size,
+  pairs: 0,
+  rejectedClauses: findings
+    .filter((item) => !isImperativeClause(witnessClause(item.message)))
+    .map((item) => ({ message: item.message, clause: witnessClause(item.message) })),
 })
 
 const opinionOf = (
