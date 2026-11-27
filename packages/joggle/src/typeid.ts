@@ -8,6 +8,7 @@ import {
   type TypeReference,
 } from "@typescript/native/unstable/async"
 import { SyntaxKind } from "@typescript/native/unstable/ast"
+import { Option } from "effect"
 import { isRecord } from "./workspace.ts"
 import { stableId } from "./identity.ts"
 
@@ -43,16 +44,30 @@ interface EncodingState extends TypeIdContext {
   readonly visiting: Set<string>
 }
 
-const byHash = (left: string, right: string): number => {
-  const a = stableId(left)
-  const b = stableId(right)
+const byHash = (payload: { readonly left: string; readonly right: string }): number => {
+  const a = stableId(payload.left)
+  const b = stableId(payload.right)
   return a < b ? -1 : a > b ? 1 : 0
 }
 
-const literalOf = (type: Type): string | undefined => {
-  if (!type.isLiteralType()) return undefined
-  const value = type.value
-  return "literal:" + (typeof value === "bigint" ? value.toString() : String(value))
+const literalOf = (type: Type): Option.Option<string> => {
+  if (!type.isLiteralType()) return Option.none()
+  return Option.some("literal:" + String(type.value))
+}
+
+/**
+ * Hold a declaration marker for the duration of one encoding.
+ *
+ * The marker is cycle state, not an error boundary: release it however the
+ * checker's promises settle, so a rejected walk cannot leave a false cycle behind.
+ */
+const withVisit = async <A>(payload: {
+  readonly state: EncodingState
+  readonly marker: string
+  readonly body: () => Promise<A>
+}): Promise<A> => {
+  payload.state.visiting.add(payload.marker)
+  return payload.body().finally(() => payload.state.visiting.delete(payload.marker))
 }
 
 /** The parameters a type brings into scope, in declaration order. */
@@ -114,7 +129,7 @@ const encode = async (
   type: Type,
   scope: ReadonlyArray<TypeParameter>,
   state: EncodingState,
-  currentDeclaration?: string,
+  currentDeclaration: string | undefined = undefined,
 ): Promise<string> => {
   // The checker's own failure is a fact, and it is not `any` or `unknown`.
   if (type.isErrorType()) return "error"
@@ -124,13 +139,13 @@ const encode = async (
   }
 
   const literal = literalOf(type)
-  if (literal !== undefined) return literal
+  if (Option.isSome(literal)) return literal.value
 
   if (type.isUnionType() || type.isIntersectionType()) {
     const kind = type.isUnionType() ? "union" : "intersection"
     const parts = await type.getTypes()
     const encoded = await Promise.all(parts.map((part) => encode(part, scope, state)))
-    return kind + "(" + encoded.sort(byHash).join("|") + ")"
+    return kind + "(" + encoded.sort((left, right) => byHash({ left, right })).join("|") + ")"
   }
 
   if (type.isTupleType()) {
@@ -203,7 +218,7 @@ const encode = async (
   if (type.isIntrinsicType()) return "intrinsic:" + type.intrinsicName
 
   if (type.isTypeReference()) {
-    const reference = type as TypeReference
+    const reference: TypeReference = type
     const target = await reference.getTarget()
     const symbol = await declarationSymbolOf(target)
     const args = await state.checker.getTypeArguments(reference)
@@ -217,24 +232,22 @@ const encode = async (
     }
     const marker = await markerOf(target, state)
     if (state.visiting.has(marker)) return "cycle(" + marker + ")"
-    state.visiting.add(marker)
-    try {
-      const encoded = await Promise.all(args.map((arg) => encode(arg, scope, state)))
-      return "ref(" + marker + (encoded.length > 0 ? ";" + encoded.join(",") : "") + ")"
-    } finally {
-      state.visiting.delete(marker)
-    }
+    return withVisit({
+      state,
+      marker,
+      body: async () => {
+        const encoded = await Promise.all(args.map((arg) => encode(arg, scope, state)))
+        return "ref(" + marker + (encoded.length > 0 ? ";" + encoded.join(",") : "") + ")"
+      },
+    })
   }
 
   if (type.isObjectType()) {
     const symbol = await declarationSymbolOf(type)
     const current =
       currentDeclaration ?? (symbol === undefined ? undefined : await state.declarationIdOf(symbol))
-    if (current !== undefined) {
-      if (state.visiting.has(current)) return "cycle(" + current + ")"
-      state.visiting.add(current)
-    }
-    try {
+    if (current !== undefined && state.visiting.has(current)) return "cycle(" + current + ")"
+    const body = async (): Promise<string> => {
       const own = await parametersOf(type)
       const aliases = await aliasArgumentsOf(type)
       const innerScope: Array<TypeParameter> = [...scope]
@@ -262,9 +275,8 @@ const encode = async (
       )
       members.sort((left, right) => left.localeCompare(right))
       return "object{" + members.join(";") + "}"
-    } finally {
-      if (current !== undefined) state.visiting.delete(current)
     }
+    return current === undefined ? body() : withVisit({ state, marker: current, body })
   }
 
   // A type kind this walk has not named still gets its flags, never printed text.

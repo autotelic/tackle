@@ -1,10 +1,6 @@
+import { Predicate } from "effect"
 import { policy } from "./policy.ts"
-import {
-  canonicalRegion,
-  prepareUnit,
-  stableId,
-  type PreparedUnit,
-} from "./identity.ts"
+import { canonicalRegion, prepareUnit, stableId, type PreparedUnit } from "./identity.ts"
 import { isRecord, type Unit } from "./workspace.ts"
 
 /*
@@ -72,10 +68,10 @@ const regionsOf = (prepared: PreparedUnit): ReadonlyArray<{ start: number; end: 
     const start = current["start"]
     const end = current["end"]
     if (
-      typeof kind === "string" &&
+      Predicate.isString(kind) &&
       FRAGMENT_KINDS.has(kind) &&
-      typeof start === "number" &&
-      typeof end === "number" &&
+      Predicate.isNumber(start) &&
+      Predicate.isNumber(end) &&
       start - prepared.shift >= 0 &&
       end - prepared.shift <= prepared.text.length &&
       // The declaration itself is not a piece of itself.
@@ -85,7 +81,7 @@ const regionsOf = (prepared: PreparedUnit): ReadonlyArray<{ start: number; end: 
       found.push({ start: start - prepared.shift, end: end - prepared.shift })
     }
     for (const value of Object.values(current)) {
-      if (value !== null && typeof value === "object") stack.push(value)
+      if (Predicate.isObjectOrArray(value)) stack.push(value)
     }
   }
   return found
@@ -111,9 +107,7 @@ export const fragmentsOf = (unit: Unit): Fragments => {
   const seen = new Set<string>()
   let cut = false
   for (const region of regionsOf(prepared)) {
-    const id = stableId(
-      canonicalRegion({ prepared, region, reference: (name) => "%" + name }),
-    )
+    const id = stableId(canonicalRegion({ prepared, region, reference: (name) => "%" + name }))
     if (seen.has(id)) continue
     if (ids.length >= policy.identity.maxFragments) {
       cut = true
