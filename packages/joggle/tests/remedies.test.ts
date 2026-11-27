@@ -4,6 +4,7 @@ import {
   clusterRemedies,
   FindingsPayload,
   findingsOf,
+  impliedRepairsOf,
   messageKeyOf,
   pairKeyOf,
   witnessClause,
@@ -195,113 +196,154 @@ test("a threshold keeps a pair the judgement calls different apart", () => {
   expect(report.clusters).toHaveLength(2)
 })
 
-test("the five plumb boundary rules normalise to one 99-site cluster", () => {
-  // The target in docs/remedy-hill.md, held as a fixture rather than a comment:
-  // five vocabularies for one repair, 99 sites, kernel.ts and telemetry.ts each
-  // carrying 28. The labels are deliberately distinct so only the pairwise Noul
-  // can join them; a Choice that agreed by label alone would not prove the
-  // normalisation.
-  const boundary = [
-    {
-      rule: "plumb/no-reinterpret-cast",
-      message:
-        "Type assertion discards type evidence. Narrow with discriminants/`in` checks or a type" +
-        " predicate instead.",
-      count: 29,
-      label: "Narrow with a type predicate",
-    },
-    {
-      rule: "plumb/require-safety-comment-for-type-assertion",
-      message:
-        "This type assertion has no `SAFETY:` justification. State the checked invariant" +
-        " immediately before the assertion or its containing statement.",
-      count: 25,
-      label: "State the checked invariant",
-    },
-    {
-      rule: "plumb/no-runtime-typeof",
-      message:
-        "A `typeof` check narrows a representation without establishing its contract. Parse" +
-        " input at its I/O boundary, then branch on the domain value.",
-      count: 23,
-      label: "Parse input at the I/O boundary",
-    },
-    {
-      rule: "plumb/no-unknown-parameters",
-      message:
-        "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected" +
-        " schema or parser at the I/O boundary before calling this function.",
-      count: 11,
-      label: "Accept a named domain type",
-    },
-    {
-      rule: "plumb/no-unsafe-dictionary-type",
-      message:
-        "This dictionary's `string` value type gives callers no concrete value contract. Use an" +
-        " owner/schema-derived value type; parse external payloads before insertion.",
-      count: 11,
-      label: "Use an owner/schema-derived value type",
-    },
-  ] as const
-
-  const slots = [
-    ...Array.from(
-      { length: 28 },
-      (_, index) => "packages/board/src/factory/kernel.ts:" + String(index + 1),
-    ),
-    ...Array.from(
-      { length: 28 },
-      (_, index) => "packages/board/src/factory/telemetry.ts:" + String(index + 1),
-    ),
-    ...Array.from(
-      { length: 43 },
-      (_, index) => "packages/board/src/factory/other.ts:" + String(index + 1),
-    ),
-  ]
-  const findings: Array<RemedyFinding> = []
-  const repairs: Array<readonly [RemedyFinding, string]> = []
-  let cursor = 0
-  for (const entry of boundary) {
-    for (let index = 0; index < entry.count; index += 1) {
-      const site = slots[cursor]
-      cursor += 1
-      if (site === undefined) throw new Error("fixture ran out of sites")
-      const separator = site.lastIndexOf(":")
-      const item = finding(
-        entry.rule,
-        entry.message,
-        Number(site.slice(separator + 1)),
-        site.slice(0, separator),
-      )
-      findings.push(item)
-      repairs.push([item, entry.label])
-    }
+test("the boundary rules are three repairs the judgement finds and the witness cannot", () => {
+  // The old target in docs/remedy-hill.md -- five rules, one 99-site cluster --
+  // was refuted by the first full measurement. What was measured: the witness
+  // cannot merge any of them, and the judgement merges only the pair no witness
+  // can, leaving the other boundary rules apart. This fixture holds the measured
+  // shape so the doc cannot drift back to the hypothesis.
+  const at = (site: string, rule: string, message: string): RemedyFinding => {
+    const separator = site.lastIndexOf(":")
+    return finding(rule, message, Number(site.slice(separator + 1)), site.slice(0, separator))
   }
-  expect(findings).toHaveLength(99)
-  const same = boundary.flatMap((left, leftIndex) =>
-    boundary.slice(leftIndex + 1).map((right) => {
-      const leftItem = repairs.find(([item]) => item.rule === left.rule)?.[0]
-      const rightItem = repairs.find(([item]) => item.rule === right.rule)?.[0]
-      if (leftItem === undefined || rightItem === undefined) throw new Error("missing fixture")
-      return [leftItem, rightItem, 0.92] as const
+  const sites = (file: string, count: number, offset = 0): Array<string> =>
+    Array.from({ length: count }, (_, index) => file + ":" + String(offset + index + 1))
+
+  const parse =
+    "A `typeof` check narrows a representation without establishing its contract. Parse" +
+    " input at its I/O boundary, then branch on the domain value."
+  const accept =
+    "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected" +
+    " schema or parser at the I/O boundary before calling this function."
+  const narrow =
+    "Type assertion discards type evidence. Narrow with discriminants/`in` checks or a type" +
+    " predicate instead."
+  const comment =
+    "This type assertion has no `SAFETY:` justification. State the checked invariant" +
+    " immediately before the assertion or its containing statement."
+  const dictionary =
+    "This dictionary's `string` value type gives callers no concrete value contract. Use an" +
+    " owner/schema-derived value type; parse external payloads before insertion."
+
+  const kernel = sites("packages/board/src/factory/kernel.ts", 23)
+  const shared = kernel.slice(0, 2)
+  const unknownSites = [...shared, ...sites("packages/board/src/factory/other.ts", 10)]
+  const castSites = sites("packages/board/src/factory/telemetry.ts", 29)
+  const commentSites = sites("packages/board/src/factory/safety.ts", 26)
+  const dictionarySites = sites("packages/board/src/factory/dictionary.ts", 11)
+
+  const findings: Array<RemedyFinding> = [
+    ...kernel.map((site) => at(site, "plumb/no-runtime-typeof", parse)),
+    ...unknownSites.map((site) => at(site, "plumb/no-unknown-parameters", accept)),
+    ...castSites.map((site) => at(site, "plumb/no-reinterpret-cast", narrow)),
+    // 30 findings over 29 sites: one site carries the rule twice.
+    at(
+      castSites[0] ?? "packages/board/src/factory/telemetry.ts:1",
+      "plumb/no-reinterpret-cast",
+      narrow,
+    ),
+    ...commentSites.map((site) =>
+      at(site, "plumb/require-safety-comment-for-type-assertion", comment),
+    ),
+    ...dictionarySites.map((site) => at(site, "plumb/no-unsafe-dictionary-type", dictionary)),
+  ]
+
+  const labelOf = new Map<string, string>([
+    ["plumb/no-runtime-typeof", "Parse input at the I/O boundary"],
+    ["plumb/no-unknown-parameters", "Accept a named domain type"],
+    ["plumb/no-reinterpret-cast", "Narrow with a type predicate"],
+    ["plumb/require-safety-comment-for-type-assertion", "State the checked invariant"],
+    ["plumb/no-unsafe-dictionary-type", "Use an owner/schema-derived value type"],
+  ])
+  const representatives = [...labelOf.keys()].flatMap((rule) => {
+    const item = findings.find((candidate) => candidate.rule === rule)
+    return item === undefined ? [] : [item]
+  })
+  const repairs = representatives.map(
+    (item) => [item, labelOf.get(item.rule) ?? "unknown"] as const,
+  )
+  // The judgement agrees on exactly the pair the witness cannot: the merged
+  // repair is `no-runtime-typeof` + `no-unknown-parameters` (33 sites). Every
+  // other pair stays independent.
+  const same = representatives.flatMap((left, leftIndex) =>
+    representatives.slice(leftIndex + 1).map((right) => {
+      const merged =
+        (left.rule === "plumb/no-runtime-typeof" &&
+          right.rule === "plumb/no-unknown-parameters") ||
+        (left.rule === "plumb/no-unknown-parameters" &&
+          right.rule === "plumb/no-runtime-typeof")
+      return [left, right, merged ? 0.92 : 0.08] as const
     }),
   )
-  const opinion = opinionOf(repairs, same)
-  const report = clusterRemedies(findings, opinion)
+  const report = clusterRemedies(findings, opinionOf(repairs, same))
 
   expect(report.witness.clusters).toBe(5)
-  expect(report.clusters).toHaveLength(1)
-  const cluster = report.clusters[0]
-  expect(cluster?.sites).toBe(99)
-  expect(cluster?.rules).toHaveLength(5)
-  expect(cluster?.files.find((file) => file.file.endsWith("kernel.ts"))?.sites).toBe(28)
-  expect(cluster?.files.find((file) => file.file.endsWith("telemetry.ts"))?.sites).toBe(28)
-  const pair = cluster?.counterexamples.find(
-    (counterexample) =>
-      counterexample.a === "plumb/no-reinterpret-cast" &&
-      counterexample.b === "plumb/require-safety-comment-for-type-assertion",
+  expect(report.clusters).toHaveLength(4)
+  const merged = report.clusters.find((cluster) =>
+    cluster.rules.some((rule) => rule.rule === "plumb/no-runtime-typeof"),
   )
-  expect(pair?.onlyA).toHaveLength(29)
-  expect(pair?.onlyB).toHaveLength(25)
-  expect(pair?.reason).toContain("trigger")
+  expect(merged?.rules.map((rule) => rule.rule).sort()).toEqual([
+    "plumb/no-runtime-typeof",
+    "plumb/no-unknown-parameters",
+  ])
+  expect(merged?.sites).toBe(33)
+  expect(merged?.findings).toBe(35)
+  const cast = report.clusters.find((cluster) =>
+    cluster.rules.some((rule) => rule.rule === "plumb/no-reinterpret-cast"),
+  )
+  expect(cast?.sites).toBe(29)
+  expect(cast?.findings).toBe(30)
+  const safety = report.clusters.find((cluster) =>
+    cluster.rules.some((rule) => rule.rule === "plumb/require-safety-comment-for-type-assertion"),
+  )
+  expect(safety?.sites).toBe(26)
+  expect(safety?.findings).toBe(26)
+  // The fifth boundary rule is below them, not inside them.
+  const dictionaryCluster = report.clusters.find((cluster) =>
+    cluster.rules.some((rule) => rule.rule === "plumb/no-unsafe-dictionary-type"),
+  )
+  expect(dictionaryCluster?.rules).toHaveLength(1)
+})
+
+test("a judgement's `none` never becomes a cluster label", () => {
+  const command = finding(
+    "effecttsgo/experimental-api-usage",
+    "@effect/ui/Command#make is an experimental API",
+    1,
+  )
+  const head = finding(
+    "effecttsgo/experimental-api-usage",
+    "@effect/ui/Head#title is an experimental API",
+    2,
+  )
+  const anonymous = opinionOf(
+    [
+      [command, "none"],
+      [head, "none"],
+    ],
+    [[command, head, 0.94]],
+  )
+  const report = clusterRemedies([command, head], anonymous)
+  expect(report.clusters).toHaveLength(1)
+  expect(report.clusters[0]?.sites).toBe(2)
+  expect(report.clusters[0]?.remedy).not.toBe("none")
+
+  const named = opinionOf(
+    [
+      [command, "Use the non-experimental API"],
+      [head, "Use the non-experimental API"],
+    ],
+    [[command, head, 0.94]],
+  )
+  expect(clusterRemedies([command, head], named).clusters[0]?.remedy).toBe(
+    "Use the non-experimental API",
+  )
+})
+
+test("a diagnosis-only message offers the repair it implies", () => {
+  expect(impliedRepairsOf("@effect/ui/Command#make is an experimental API")).toEqual([
+    "Use the non-experimental API",
+  ])
+  expect(impliedRepairsOf("Narrow with a type predicate")).toEqual([])
+  expect(impliedRepairsOf("none")).toEqual([])
 })
