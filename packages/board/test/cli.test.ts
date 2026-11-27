@@ -1,5 +1,6 @@
 import { spawn, spawnSync } from "node:child_process"
 import { createServer } from "node:http"
+import { createServer as createNetServer } from "node:net"
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -595,6 +596,72 @@ test("presence serves the status a probe observed for a declared service", async
     await new Promise<void>((resolve) => server.close(() => resolve()))
   }
 })
+
+test("board up routes a VM room preview through its supervisor socket", async () => {
+  const root = mkdtempSync(join(tmpdir(), "board-vm-preview-"))
+  const roomRoot = join(root, "rooms")
+  const room = "vm-preview"
+  const worktree = join(roomRoot, room, "worktree")
+  const factoryHome = join(root, "factory")
+  const workstreams = join(factoryHome, "workstreams")
+  mkdirSync(worktree, { recursive: true })
+  mkdirSync(workstreams, { recursive: true })
+  writeFileSync(
+    join(roomRoot, room, "room.json"),
+    JSON.stringify({
+      id: room,
+      base: "main",
+      state: { _tag: "Ready", repo: "/r", scope: "dev", createdAt: 1 },
+      runtime: { kind: "agentos", previewPort: 5000 },
+    }),
+  )
+  writeFileSync(
+    join(workstreams, "vm-preview.json"),
+    workstreamRecord({ id: "vm-preview", path: worktree, label: "vm-preview" }),
+  )
+  // A real Unix socket answers the same protocol the detached supervisor does. The board
+  // resolves the workstream to the room, sees the guest port, and must reach the service
+  // through vmHttp — not through a host port.
+  const supervisor = createNetServer((socket) => {
+    socket.setEncoding("utf8")
+    let buffer = ""
+    socket.on("data", (chunk: string) => {
+      buffer += chunk
+      if (!buffer.includes("\n")) return
+      const request = JSON.parse(buffer) as { readonly path: string }
+      socket.end(
+        JSON.stringify({
+          kind: "http",
+          status: 200,
+          statusText: "OK",
+          headers: { "content-type": "text/plain" },
+          body: Buffer.from("vm preview " + request.path).toString("base64"),
+        }) + "\n",
+      )
+    })
+  })
+  const socketPath = join(roomRoot, room, "vm.sock")
+  await new Promise<void>((resolve, reject) => {
+    supervisor.once("error", reject)
+    supervisor.listen(socketPath, resolve)
+  })
+  const boardPort = await releasedPort()
+  const up = run(["up", "--root", "rooms", "--port", String(boardPort), "--detach"], root, {
+    FACTORY_HOME: factoryHome,
+  })
+  expect(up.status, up.stderr).toBe(0)
+  try {
+    const preview = await fetch(
+      "http://127.0.0.1:" + boardPort + "/preview/vm-preview/assets/app.js?v=2",
+    )
+    expect(preview.status).toBe(200)
+    expect(await preview.text()).toBe("vm preview /assets/app.js?v=2")
+  } finally {
+    run(["down", "--root", "rooms"], root)
+    await new Promise<void>((resolve) => supervisor.close(() => resolve()))
+    rmSync(root, { recursive: true, force: true })
+  }
+}, 30_000)
 
 test("board up routes a workstream's preview to its room's leased service", async () => {
   const root = mkdtempSync(join(tmpdir(), "board-preview-"))
