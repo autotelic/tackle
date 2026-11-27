@@ -117,14 +117,23 @@ export interface RoomSession {
 export const openRoomSession = async (input: {
   readonly dir: string
   readonly session?: RoomSessionRecord | undefined
-}): Promise<RoomSession> => {
-  const path = roomSessionPath(input)
-  await mkdir(dirname(path), { recursive: true })
-  const storage = await openNodeSqliteStorage(path)
+}): Promise<RoomSession> => openRoomSessionAt(roomSessionPath(input))
+
+/**
+ * Open a journal by its exact path.
+ *
+ * The path form is what a process started by a room uses: the room hands its child an absolute
+ * journal path in the environment, and the child must open that file rather than re-derive a
+ * directory the room may since have moved.
+ */
+export const openRoomSessionAt = async (path: string): Promise<RoomSession> => {
+  const journalPath = resolve(path)
+  await mkdir(dirname(journalPath), { recursive: true })
+  const storage = await openNodeSqliteStorage(journalPath)
   const session = createSession(storage)
   let closed = false
   return {
-    path,
+    path: journalPath,
     session,
     write: (write) =>
       session.commit(async (tx: Tx) => {
@@ -161,3 +170,94 @@ export const openRoomSession = async (input: {
     },
   }
 }
+
+/** The environment contract a room hands the process it started. */
+export interface RoomSessionEnvironment {
+  /** The room's root, absolute. */
+  readonly root: string
+  /** The room id. */
+  readonly id: string
+  /** The room's journal file, absolute. */
+  readonly path: string
+}
+
+/** The names a room uses for that contract; one spelling for every worker. */
+export const roomSessionEnvKeys = {
+  root: "TACKLE_ROOM_ROOT",
+  id: "TACKLE_ROOM_ID",
+  path: "TACKLE_ROOM_SESSION",
+} as const
+
+/**
+ * Resolve the contract for one room.
+ *
+ * A worker gets the absolute journal path rather than a directory to re-derive: the room file
+ * names the journal (and an old file names the default), so both ends open the same bytes.
+ */
+export const roomSessionEnvironment = (input: {
+  readonly root: string
+  readonly id: string
+  readonly session?: RoomSessionRecord | undefined
+}): RoomSessionEnvironment => {
+  const root = resolve(input.root)
+  return {
+    root,
+    id: input.id,
+    path: roomSessionPath({ dir: resolve(root, input.id), session: input.session }),
+  }
+}
+
+/** Turn the contract into the environment entries a spawn passes to its child. */
+export const roomSessionEnv = (
+  environment: RoomSessionEnvironment,
+): Readonly<Record<string, string>> => ({
+  [roomSessionEnvKeys.root]: environment.root,
+  [roomSessionEnvKeys.id]: environment.id,
+  [roomSessionEnvKeys.path]: environment.path,
+})
+
+export class RoomSessionEnvironmentError extends Error {
+  readonly _tag = "RoomSessionEnvironmentError"
+}
+
+/**
+ * Read the contract from a process environment.
+ *
+ * All three fields are required: a child that knows a journal path but not which room owns it
+ * cannot name an entry, and a room id without a path would silently derive a second journal.
+ */
+export const roomSessionEnvironmentFrom = (
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): RoomSessionEnvironment => {
+  const root = env[roomSessionEnvKeys.root]
+  const id = env[roomSessionEnvKeys.id]
+  const path = env[roomSessionEnvKeys.path]
+  if (
+    root === undefined ||
+    root === "" ||
+    id === undefined ||
+    id === "" ||
+    path === undefined ||
+    path === ""
+  )
+    throw new RoomSessionEnvironmentError(
+      "a room worker needs " +
+        roomSessionEnvKeys.root +
+        ", " +
+        roomSessionEnvKeys.id +
+        " and " +
+        roomSessionEnvKeys.path +
+        "; start it through `room run` or `room up`",
+    )
+  return { root, id, path }
+}
+
+/**
+ * Open the journal a room handed this process.
+ *
+ * The documented open call for a worker: `room run` and `room up` set the three variables, and
+ * this resolves the same file the control plane opens for pause, resume and status.
+ */
+export const openRoomSessionFromEnvironment = async (
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): Promise<RoomSession> => openRoomSessionAt(roomSessionEnvironmentFrom(env).path)

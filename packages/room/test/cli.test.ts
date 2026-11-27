@@ -8,9 +8,10 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs"
+import { createRequire } from "node:module"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
-import { fileURLToPath } from "node:url"
+import { dirname, join } from "node:path"
+import { fileURLToPath, pathToFileURL } from "node:url"
 import { describe, expect, it } from "vitest"
 import { readRoom } from "../src/store.ts"
 
@@ -259,6 +260,75 @@ describe("a verb that prints a completion is a claim", () => {
       const line = readFileSync(log, "utf8").trim()
       expect(line).toContain("run --label room=dev-repo --cwd ")
       expect(line).toContain("-- echo hi")
+    } finally {
+      close()
+    }
+  })
+
+  it("hands `run` a journal the child reopens by request id", () => {
+    const { root, close } = scratch()
+    try {
+      expect(room(root, "new", "--repo", repository(root), "--scope", "dev").status).toBe(0)
+      const bin = join(root, "bin")
+      mkdirSync(bin, { recursive: true })
+      const hc = join(bin, "hc")
+      // The real `hc` runs the command after `--` in `--cwd`; this stand-in does the same so the
+      // test exercises `room run`'s environment rather than hc's own behaviour.
+      writeFileSync(hc, '#!/bin/sh\ncwd="$5"\nshift 6\ncd "$cwd" || exit 1\nexec "$@"\n')
+      chmodSync(hc, 0o755)
+      const child = join(root, "journal-child.mjs")
+      const roomModule = pathToFileURL(
+        fileURLToPath(new URL("../src/RoomSession.ts", import.meta.url)),
+      ).href
+      const require = createRequire(import.meta.url)
+      const chordContext = pathToFileURL(
+        join(
+          dirname(require.resolve("@earendil-works/chord/package.json")),
+          "dist",
+          "context",
+          "index.js",
+        ),
+      ).href
+      writeFileSync(
+        child,
+        [
+          'import { BACKGROUND_CONTEXT } from "' + chordContext + '"',
+          'import { openRoomSessionFromEnvironment } from "' + roomModule + '"',
+          "",
+          "const journal = await openRoomSessionFromEnvironment()",
+          "const conversation = await journal.session.commit(async (tx) => {",
+          "  const page = await tx.scanConversations({}, 1)",
+          '  return page.items[0] ?? (await tx.createConversation({ ownership: { kind: "ownerless" } }))',
+          "}, BACKGROUND_CONTEXT)",
+          "const outcome = await journal.write({",
+          "  conversationId: conversation.id,",
+          '  requestId: "run-once",',
+          '  entry: { kind: "room.test", data: { note: process.argv[2] ?? "" } },',
+          "})",
+          'console.log(outcome.status + " " + outcome.entryId + " " + journal.path)',
+          "await journal.close()",
+        ].join("\n") + "\n",
+      )
+      const environment = { HC_BIN: hc }
+      const first = roomWithEnv(
+        root,
+        ["run", "--id", "dev-repo", "--", process.execPath, child, "first"],
+        environment,
+      )
+      expect(first.status).toBe(0)
+      const [firstStatus, firstEntry, firstPath] = first.stdout.trim().split(" ")
+      expect(firstStatus).toBe("admitted")
+      expect(firstPath).toBe(join(root, ".room", "dev-repo", "session.sqlite"))
+
+      const second = roomWithEnv(
+        root,
+        ["run", "--id", "dev-repo", "--", process.execPath, child, "second"],
+        environment,
+      )
+      expect(second.status).toBe(0)
+      const [secondStatus, secondEntry] = second.stdout.trim().split(" ")
+      expect(secondStatus).toBe("existing")
+      expect(secondEntry).toBe(firstEntry)
     } finally {
       close()
     }

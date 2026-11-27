@@ -28,6 +28,7 @@ import {
   type RoomRuntime,
 } from "./store.ts"
 import { alive, readRun, removeRun, signalRun, startRoomRun } from "./run.ts"
+import { roomSessionEnv, roomSessionEnvironment } from "./RoomSession.ts"
 import {
   ensureVmSupervisor,
   observeVmService,
@@ -335,10 +336,13 @@ const main = async (): Promise<void> => {
     }).catch((cause) => fail("worktree failed: " + String(cause), EXIT.infrastructure))
     const binary = hcBin()
     if (Option.isNone(binary)) return fail("hc is not on PATH", EXIT.infrastructure)
+    // The child gets the journal contract, not just the label: it can reopen the same durable
+    // session after a restart instead of starting a second conversation beside it.
+    const environment = roomSessionEnv(roomSessionEnvironment({ root, id, session: room.session }))
     const child = spawnSync(
       binary.value,
       ["run", "--label", "room=" + id, "--cwd", worktree, "--", ...parsed.positionals],
-      { stdio: "inherit" },
+      { stdio: "inherit", env: { ...process.env, ...environment } },
     )
     return process.exit(child.status ?? EXIT.infrastructure)
   }
@@ -657,6 +661,7 @@ const main = async (): Promise<void> => {
       exec,
       log: join(roomDir({ root, id }), "room.log"),
       port: port.number,
+      environment: roomSessionEnv(roomSessionEnvironment({ root, id, session: room.session })),
     })
     if (!started.ok) {
       await releaseRoomPort({ root, id })

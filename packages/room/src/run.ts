@@ -107,6 +107,8 @@ export const startRoomRun = async (input: {
   readonly exec: string
   readonly log: string
   readonly port?: number | undefined
+  /** The room's journal contract, inherited by the supervisor and the command it starts. */
+  readonly environment?: Readonly<Record<string, string>> | undefined
 }): Promise<StartOutcome> => {
   await removeRun(input)
   const child = spawn(
@@ -128,7 +130,11 @@ export const startRoomRun = async (input: {
       // probe and the process cannot answer on different ones.
       ...(input.port === undefined ? [] : ["--port", String(input.port)]),
     ],
-    { detached: true, stdio: "ignore" },
+    {
+      detached: true,
+      stdio: "ignore",
+      env: input.environment === undefined ? process.env : { ...process.env, ...input.environment },
+    },
   )
   child.unref()
   for (let attempt = 0; attempt < 60; attempt++) {

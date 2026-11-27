@@ -16,7 +16,12 @@ import { parseArgs, promisify } from "node:util"
 import { Option } from "effect"
 import { alive } from "@autotelic/room/run"
 import { listRooms, readRoom, roomDir, type RoomFile } from "@autotelic/room/store"
-import { roomSessionPath, roomSessionState } from "@autotelic/room/RoomSession"
+import {
+  roomSessionEnv,
+  roomSessionEnvironment,
+  roomSessionPath,
+  roomSessionState,
+} from "@autotelic/room/RoomSession"
 import { readRun, startRoomRun } from "@autotelic/room/run"
 import { observeService } from "@autotelic/room/Service"
 import { observeVmService, readVmStatus, vmHttp, vmSocketFile } from "@autotelic/room/VmSupervisor"
@@ -1038,6 +1043,9 @@ const serve = async ({
         exec,
         log: run?.log ?? join(root, room.id, "room.log"),
         port: room.port?.number,
+        environment: roomSessionEnv(
+          roomSessionEnvironment({ root, id: room.id, session: room.session }),
+        ),
       })
       if (started.ok)
         console.log("board: restarted room " + room.id + " as supervisor " + started.run.pid)

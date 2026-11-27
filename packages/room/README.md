@@ -67,7 +67,27 @@ verifies the terminal through `hc get` before labeling. `room up` never stamps a
 terminal: it is idempotent and may run in CI or another agent's shell.
 
 `room run` starts a child with `hc run --label room=<id> --cwd <worktree> -- <command>`,
-so the child is labeled at spawn rather than after the fact.
+so the child is labeled at spawn rather than after the fact. It also hands the child the
+room's journal contract, and `up` hands the same contract to the supervisor it starts:
+
+| variable              | value                                                |
+| --------------------- | ---------------------------------------------------- |
+| `TACKLE_ROOM_ROOT`    | the room root, absolute                              |
+| `TACKLE_ROOM_ID`      | the room id                                          |
+| `TACKLE_ROOM_SESSION` | the room's journal file, absolute (`session.sqlite`) |
+
+A worker opens the journal it was given with the package's documented call:
+
+```ts
+import { openRoomSessionFromEnvironment } from "@autotelic/room"
+
+const journal = await openRoomSessionFromEnvironment()
+```
+
+The same call reads the three variables and opens exactly the file the control plane uses for
+`pause`, `resume` and `status`, so a restarted child resumes the same conversation instead of
+starting a second one. A process started without the contract is refused, not given a
+directory to guess from.
 
 `room vm` runs the command in an embedded agentOS VM instead of a host shell: the room's
 worktree is mounted at `/workspace` read-write, the VM's sqlite database lives in
