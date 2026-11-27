@@ -6,7 +6,18 @@ import { createServer } from "node:net"
 import { parseArgs } from "node:util"
 import { agentOsDatabaseFile, createAgentOsRoom, type AgentOsRoom } from "./AgentOs.ts"
 import { alive } from "./run.ts"
-import { readVmRun, removeVmRun, VmRequest, writeVmRun, type VmResponse } from "./VmSupervisor.ts"
+import { healthTimeoutMs } from "./Service.ts"
+import {
+  readVmRun,
+  removeVmRun,
+  VmRequest,
+  writeVmRun,
+  type VmResponse,
+  type VmServiceObserveRequest,
+  type VmServiceObserveResponse,
+  type VmServiceStopRequest,
+  type VmServiceStopResponse,
+} from "./VmSupervisor.ts"
 
 /*
  * One room's VM supervisor, as a process. It boots the room's agentOS instance once, binds
@@ -14,6 +25,104 @@ import { readVmRun, removeVmRun, VmRequest, writeVmRun, type VmResponse } from "
  * which is what makes a second command see the first one's VM. `room vm start` spawns it
  * detached; `room down` and `room vm stop` signal it.
  */
+
+/** One bounded observation: the answer, the failure, or nothing when the budget ran out. */
+type Bounded<A> =
+  | { readonly ok: true; readonly value: A }
+  | { readonly ok: false; readonly cause: unknown }
+
+/**
+ * Race one promise against a budget.
+ *
+ * A service that accepts a connection and never answers would otherwise hold the socket — and
+ * the `/presence` request behind it — open indefinitely. Undefined is the expired case, which is
+ * a finding of its own rather than an empty answer.
+ */
+const bounded = async <A>(work: Promise<A>, ms: number): Promise<Bounded<A> | undefined> => {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const expired = new Promise<undefined>((resolve) => {
+    timer = setTimeout(() => resolve(undefined), ms)
+  })
+  const settled = work.then(
+    (value): Bounded<A> => ({ ok: true, value }),
+    (cause: unknown): Bounded<A> => ({ ok: false, cause }),
+  )
+  const outcome = await Promise.race([settled, expired])
+  if (timer !== undefined) clearTimeout(timer)
+  return outcome
+}
+
+/** The guest process table's answer about one pid, including the exit it recorded. */
+const guestProcess = async (room: AgentOsRoom, pid: number): Promise<VmServiceObserveResponse> => {
+  const described = await room.vm.process.get(pid).catch(() => undefined)
+  if (described === undefined)
+    return { kind: "service-observed", process: "absent", detail: "the vm has no process " + pid }
+  if (described.state === "running") return { kind: "service-observed", process: "running" }
+  // The VM keeps an exited process queryable for its lifetime, so the exit code is still there
+  // to ask for. The look is bounded because the caller is a /presence request.
+  const exit = await bounded(room.vm.process.wait(pid), healthTimeoutMs)
+  const recorded = exit !== undefined && exit.ok ? exit.value : undefined
+  return {
+    kind: "service-observed",
+    process: "exited",
+    ...(recorded?.exitCode === undefined ? {} : { exitCode: recorded.exitCode }),
+    ...(recorded?.signal === undefined ? {} : { signal: String(recorded.signal) }),
+  }
+}
+
+/**
+ * The guest's own answer about one service: its process first, then its health path.
+ *
+ * A process the VM watched leave carries the code it recorded, and the health path is not asked:
+ * a dead program has nothing to say about a port, so probing would turn one fact into two. A
+ * live one still has to answer — being alive is not being healthy.
+ */
+const observeGuestService = async (
+  room: AgentOsRoom,
+  request: VmServiceObserveRequest,
+): Promise<VmServiceObserveResponse> => {
+  if (request.pid !== undefined) {
+    const known = await guestProcess(room, request.pid)
+    if (known.process !== "running") return known
+  }
+  const answer = await bounded(
+    room.vm.network.httpRequest({ port: request.port, path: request.path, method: "GET" }),
+    healthTimeoutMs,
+  )
+  if (answer === undefined)
+    return {
+      kind: "service-observed",
+      process: "running",
+      detail: "no answer in " + healthTimeoutMs + "ms",
+    }
+  if (!answer.ok)
+    return { kind: "service-observed", process: "running", detail: String(answer.cause) }
+  return { kind: "service-observed", process: "running", status: answer.value.status }
+}
+
+/**
+ * Kill one guest service by the pid the room recorded.
+ *
+ * SIGKILL, because the service is the process that would ignore a polite request — and because
+ * the VM's own `kill` is the API that reaches the process the HTTP socket cannot. The VM reports
+ * an already-exited process as a no-op, which is the same outcome as the kill succeeding.
+ */
+const stopGuestService = async (
+  room: AgentOsRoom,
+  request: VmServiceStopRequest,
+): Promise<VmServiceStopResponse> => {
+  const killed = await room.vm.process.kill(request.pid).then(
+    () => ({ ok: true as const }),
+    (cause: unknown) => ({ ok: false as const, cause }),
+  )
+  return killed.ok
+    ? {
+        kind: "service-stopped",
+        stopped: true,
+        detail: "SIGKILL sent to guest process " + request.pid,
+      }
+    : { kind: "service-stopped", stopped: false, detail: String(killed.cause) }
+}
 
 /** Answer one request line: decode it, run it in the room's workspace, report what happened. */
 const execute = async (room: AgentOsRoom, line: string): Promise<VmResponse> => {
@@ -44,6 +153,8 @@ const execute = async (room: AgentOsRoom, line: string): Promise<VmResponse> => 
     })
     return { kind: "service", pid: spawned.pid }
   }
+  if (request.kind === "service-observe") return observeGuestService(room, request)
+  if (request.kind === "service-stop") return stopGuestService(room, request)
   const options: NonNullable<Parameters<typeof room.vm.process.execFile>[2]> = {
     cwd: room.workspace,
     output: { capture: "all" },

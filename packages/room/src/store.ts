@@ -22,6 +22,15 @@ export const RoomRuntime = Schema.Struct({
   kind: Schema.Literal("agentos"),
   /** The guest port a started VM service answers on; absent until `room vm serve`. */
   previewPort: Schema.optional(Schema.Int),
+  /**
+   * The guest pid of that service, as the VM's own process table named it.
+   *
+   * It is a guest number, not a host pid: the VM's table is the authority for whether the
+   * service is still there, so the room keeps the id it must ask about rather than a number a
+   * log printed once. Optional, so a room file written before the pid was kept decodes
+   * unchanged — and then the room can still report health, but has no process to stop.
+   */
+  servicePid: Schema.optional(Schema.Int),
 })
 export type RoomRuntime = typeof RoomRuntime.Type
 

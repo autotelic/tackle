@@ -7,6 +7,7 @@ import { connect } from "node:net"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { alive } from "./run.ts"
+import type { ServiceDeclaration, ServiceObservation } from "./Service.ts"
 import { roomDir } from "./store.ts"
 
 /*
@@ -156,19 +157,74 @@ export const VmServiceResponse = Schema.Struct({
 })
 export type VmServiceResponse = typeof VmServiceResponse.Type
 
+/** Ask the VM what it knows about one guest service: its process, then its health path. */
+export const VmServiceObserveRequest = Schema.Struct({
+  kind: Schema.Literal("service-observe"),
+  port: Schema.Int,
+  path: Schema.String,
+  pid: Schema.optional(Schema.Int),
+})
+export type VmServiceObserveRequest = typeof VmServiceObserveRequest.Type
+
+/**
+ * What the VM answered about one guest service.
+ *
+ * `process` is the guest process table's answer and `status` is the HTTP answer that may follow
+ * it: two observations, never one derived from the other. A process the VM watched leave carries
+ * the exit code it recorded; a pid the VM never had is `absent`, which is not the same finding as
+ * an exit. `detail` is the only place a probe failure is spoken, so a reader can see why a live
+ * process answered nothing.
+ */
+export const VmServiceObserveResponse = Schema.Struct({
+  kind: Schema.Literal("service-observed"),
+  process: Schema.Union([
+    Schema.Literal("running"),
+    Schema.Literal("exited"),
+    Schema.Literal("absent"),
+  ]),
+  exitCode: Schema.optional(Schema.Int),
+  signal: Schema.optional(Schema.String),
+  status: Schema.optional(Schema.Int),
+  detail: Schema.optional(Schema.String),
+})
+export type VmServiceObserveResponse = typeof VmServiceObserveResponse.Type
+
+/** Kill one guest service by the pid the room recorded for it. */
+export const VmServiceStopRequest = Schema.Struct({
+  kind: Schema.Literal("service-stop"),
+  pid: Schema.Int,
+})
+export type VmServiceStopRequest = typeof VmServiceStopRequest.Type
+
+/** What one guest kill did; `stopped` is false only when the VM could not signal the pid. */
+export const VmServiceStopResponse = Schema.Struct({
+  kind: Schema.Literal("service-stopped"),
+  stopped: Schema.Boolean,
+  detail: Schema.String,
+})
+export type VmServiceStopResponse = typeof VmServiceStopResponse.Type
+
 /** A request the supervisor could not run at all; it carries no stdout or exit code. */
 export const VmFailureResponse = Schema.Struct({
   kind: Schema.Literal("error"),
   message: Schema.String,
 })
 
-export const VmRequest = Schema.Union([VmExecRequest, VmHttpRequest, VmServiceRequest])
+export const VmRequest = Schema.Union([
+  VmExecRequest,
+  VmHttpRequest,
+  VmServiceRequest,
+  VmServiceObserveRequest,
+  VmServiceStopRequest,
+])
 export type VmRequest = typeof VmRequest.Type
 
 export const VmResponse = Schema.Union([
   VmExecResponse,
   VmHttpResponse,
   VmServiceResponse,
+  VmServiceObserveResponse,
+  VmServiceStopResponse,
   VmFailureResponse,
 ])
 export type VmResponse = typeof VmResponse.Type
@@ -183,7 +239,7 @@ export type VmExecResponse = typeof VmExecResponse.Type
  */
 const sendVm = (input: {
   readonly socket: string
-  readonly request: VmExecRequest | VmHttpRequest | VmServiceRequest
+  readonly request: VmRequest
   readonly connectTimeoutMs?: number | undefined
 }): Promise<VmResponse> =>
   new Promise((resolve, reject) => {
@@ -246,6 +302,20 @@ export const vmHttp = (input: {
 export const vmService = (input: {
   readonly socket: string
   readonly request: VmServiceRequest
+  readonly connectTimeoutMs?: number | undefined
+}): Promise<VmResponse> => sendVm(input)
+
+/** Ask the room's VM what its process table and one health path say about a service. */
+export const vmServiceObserve = (input: {
+  readonly socket: string
+  readonly request: VmServiceObserveRequest
+  readonly connectTimeoutMs?: number | undefined
+}): Promise<VmResponse> => sendVm(input)
+
+/** Kill one guest service through the room's VM. */
+export const vmServiceStop = (input: {
+  readonly socket: string
+  readonly request: VmServiceStopRequest
   readonly connectTimeoutMs?: number | undefined
 }): Promise<VmResponse> => sendVm(input)
 
@@ -402,4 +472,125 @@ export const stopVmSupervisor = async (input: {
   await rm(socket, { force: true })
   await removeVmRun(paths)
   return { stopped: true, pid, detail: "stopped" }
+}
+
+/** The one sentence a stopped guest service's exit earns, from the code the VM recorded. */
+const exitDetail = (observed: {
+  readonly exitCode?: number | undefined
+  readonly signal?: string | undefined
+}): string => {
+  if (observed.signal !== undefined) return "the guest service was killed by " + observed.signal
+  if (observed.exitCode !== undefined)
+    return "the guest service exited with code " + observed.exitCode
+  return "the guest service exited"
+}
+
+/**
+ * Observe a room's declared service through its VM supervisor.
+ *
+ * The supervisor asks the guest's own process table, so "the service is gone" is a finding with
+ * an exit code instead of a missing HTTP answer. Nothing here infers one from the other: a dead
+ * process is `stopped` without a port probe, and a live process still has to answer its health
+ * path to be `healthy`. A room served before the pid was kept probes the port and reports what
+ * it found, because the process is the one fact that room never recorded.
+ *
+ * @param input - the room, its declaration, the guest port, the recorded pid, and the instant
+ * the observation is stamped with.
+ * @returns the flat service observation `room status` and `/presence` serve.
+ */
+export const observeVmService = async (input: {
+  readonly root: string
+  readonly id: string
+  readonly service: ServiceDeclaration
+  readonly port: number
+  readonly pid: number | undefined
+  readonly checkedAt: string
+}): Promise<ServiceObservation> => {
+  const base = {
+    name: input.service.name,
+    command: input.service.command,
+    port: input.port,
+    healthPath: input.service.healthPath,
+    checkedAt: input.checkedAt,
+  }
+  const status = await readVmStatus({ root: input.root, id: input.id })
+  if (status.state !== "running" || status.run === undefined)
+    return { ...base, status: "stopped", detail: "no vm supervisor" }
+  const answered = await vmServiceObserve({
+    socket: status.run.socket,
+    request: {
+      kind: "service-observe",
+      port: input.port,
+      path: input.service.healthPath,
+      ...(input.pid === undefined ? {} : { pid: input.pid }),
+    },
+  }).catch((cause: unknown) => ({ kind: "error" as const, message: String(cause) }))
+  // A record that says running and a socket that does not answer is a supervisor that left
+  // between the two looks: the room is down, and saying so is the honest report.
+  if (answered.kind === "error")
+    return {
+      ...base,
+      status: "stopped",
+      detail: "the vm supervisor did not answer: " + answered.message,
+    }
+  if (answered.kind !== "service-observed")
+    return { ...base, status: "stopped", detail: "unexpected supervisor answer: " + answered.kind }
+  if (answered.process === "exited")
+    return { ...base, status: "stopped", detail: exitDetail(answered) }
+  if (answered.process === "absent")
+    return {
+      ...base,
+      status: "stopped",
+      detail:
+        input.pid === undefined
+          ? "the vm has no record of the service"
+          : "the vm has no process " + input.pid,
+    }
+  if (answered.status === undefined)
+    return {
+      ...base,
+      status: "unhealthy",
+      detail: answered.detail ?? "the health path answered nothing",
+    }
+  return answered.status >= 200 && answered.status < 300
+    ? { ...base, status: "healthy", detail: null }
+    : { ...base, status: "unhealthy", detail: "answered " + answered.status }
+}
+
+/** What a stop of the room's guest service did, in words the CLI prints. */
+export interface VmGuestStopOutcome {
+  readonly stopped: boolean
+  readonly detail: string
+}
+
+/**
+ * Kill the room's guest service, while the VM that holds it can still be asked.
+ *
+ * The kill travels over the supervisor's socket, so it is only possible while the VM is alive; a
+ * stale record has no process table to ask, and disposing the VM is the stop that follows. A
+ * missing pid is not a failure: a room served before the pid was kept has nothing to kill, and
+ * the disposal still takes the service with it.
+ *
+ * @param input - the room root and id, and the guest pid the room recorded.
+ * @returns whether a kill was sent, and the reason when it was not.
+ */
+export const stopVmService = async (input: {
+  readonly root: string
+  readonly id: string
+  readonly pid: number | undefined
+}): Promise<VmGuestStopOutcome> => {
+  if (input.pid === undefined)
+    return { stopped: false, detail: "no guest service pid was recorded" }
+  const status = await readVmStatus({ root: input.root, id: input.id })
+  if (status.state !== "running" || status.run === undefined)
+    return { stopped: false, detail: "no live vm supervisor holds the service" }
+  const answered = await vmServiceStop({
+    socket: status.run.socket,
+    request: { kind: "service-stop", pid: input.pid },
+  }).catch((cause: unknown) => ({ kind: "error" as const, message: String(cause) }))
+  if (answered.kind === "error")
+    return { stopped: false, detail: "the vm supervisor did not answer: " + answered.message }
+  if (answered.kind !== "service-stopped")
+    return { stopped: false, detail: "unexpected supervisor answer: " + answered.kind }
+  return { stopped: answered.stopped, detail: answered.detail }
 }

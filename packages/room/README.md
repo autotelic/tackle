@@ -75,9 +75,12 @@ worktree room, which is still what `room new` creates — nothing about the loca
 _before_ anything starts, so an expired lease refuses the command without a VM boot, and its
 environment is passed per request: the host environment is never forwarded.
 
-`room vm serve` starts a long-lived command in the guest and records its port as
-`runtime: { kind: "agentos", previewPort }`. `room vm preview` asks that guest service for one
-HTTP response over the supervisor socket; no host port is bound. The board preview route uses
+`room vm serve` starts a long-lived command in the guest and records its port and the guest pid
+the VM's own process table named it by, as `runtime: { kind: "agentos", previewPort, servicePid }`.
+`room status` and `/presence` then report the service from that table: a process that exited is
+`stopped` with the exit code the VM kept, a live one still has to answer its health path to be
+`healthy`, and `room vm stop` / `room down` kill it before the VM is disposed. `room vm preview`
+asks that guest service for one HTTP response over the supervisor socket; no host port is bound. The board preview route uses
 the same path when the room has an agentOS runtime, so `/preview/<workstream>/` reaches the VM
 service without publishing its port. A service that is not listening is a 502, never an empty
 success.
