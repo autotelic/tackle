@@ -23,10 +23,6 @@ import { verdictOf } from "../verdict.ts"
 
 const RULE_ID = "joggle/underused-primitive"
 
-const DISPOSITIONS = ["use_export", "use_our_wrapper", "home_it", "different"] as const
-
-type Disposition = (typeof DISPOSITIONS)[number]
-
 interface Candidate {
   readonly kind: EvidenceKind
   readonly family: string
@@ -103,7 +99,7 @@ const sampleOf = (unit: Unit): Record<string, string | number> => ({
   source: unit.text.slice(0, policy.evidence.maxSourceChars),
 })
 
-const adviceFor = (disposition: Disposition, path: string, name: string): string => {
+const adviceFor = (disposition: string, path: string, name: string): string => {
   switch (disposition) {
     case "use_export":
       return "Replace the hand-rolled arithmetic with `" + name + "` from `" + path + "`."
@@ -112,6 +108,8 @@ const adviceFor = (disposition: Disposition, path: string, name: string): string
     case "home_it":
       return "`" + name + "` lives in `" + path + "`; import it from there. Do not create a wrapper module."
     case "different":
+      return "The export does not do this; leave the declaration alone."
+    default:
       return "The export does not do this; leave the declaration alone."
   }
 }
@@ -122,7 +120,7 @@ const findingFor = (input: {
   readonly unverifiedReason: string | undefined
   readonly confidence: number | undefined
   readonly score: number | undefined
-  readonly disposition: Disposition | undefined
+  readonly disposition: string | undefined
 }): Diagnostic => {
   const { candidate } = input
   const first = candidate.units[0]
@@ -250,6 +248,22 @@ export const underusedPrimitive: PlannedRule = {
             },
             declarations: candidate.units.slice(0, 8).map(sampleOf),
           })
+          const dispositionReview = Decision.classify({
+            instructions: [
+              `What should happen to the declarations in \`atoms[${id}].declarations\`?`,
+              `\`atoms[${id}].export\` is the export from \`${candidate.package.name}\`; \`atoms[${id}].declarations\` are the hand-rolled sites.`,
+              "Choose `use_export` when the dependency's export is the replacement.",
+              "Choose `use_our_wrapper` when the repository already has a wrapper the export backs, and the sites should go through that wrapper.",
+              "Choose `home_it` when the export is the right home but the declarations should be imported where they are, not wrapped. Name that module; never create one.",
+              "Choose `different` when the export does not do this at all.",
+            ].join("\n"),
+            criteria: {
+              use_export: "Replace the arithmetic with the dependency's export.",
+              use_our_wrapper: "Route through the wrapper this repository already has.",
+              home_it: "Import the export from its existing module. Do not create a wrapper.",
+              different: "The export does not do this. Leave the declarations alone.",
+            },
+          })
           const plan: Plan<DecisionAnswers> = {
             ruleId: RULE_ID,
             subject: candidate.family + " (" + candidate.package.name + ")",
@@ -268,26 +282,11 @@ export const underusedPrimitive: PlannedRule = {
                   true: "The export already supplies this capability. The declarations are a hand-rolled copy.",
                 },
               }),
-              disposition: Decision.classify({
-                instructions: [
-                  `What should happen to the declarations in \`atoms[${id}].declarations\`?`,
-                  `\`atoms[${id}].export\` is the export from \`${candidate.package.name}\`; \`atoms[${id}].declarations\` are the hand-rolled sites.`,
-                  "Choose `use_export` when the dependency's export is the replacement.",
-                  "Choose `use_our_wrapper` when the repository already has a wrapper the export backs, and the sites should go through that wrapper.",
-                  "Choose `home_it` when the export is the right home but the declarations should be imported where they are, not wrapped. Name that module; never create one.",
-                  "Choose `different` when the export does not do this at all.",
-                ].join("\n"),
-                criteria: {
-                  use_export: "Replace the arithmetic with the dependency's export.",
-                  use_our_wrapper: "Route through the wrapper this repository already has.",
-                  home_it: "Import the export from its existing module. Do not create a wrapper.",
-                  different: "The export does not do this. Leave the declarations alone.",
-                },
-              }),
+              disposition: dispositionReview,
             },
             read: (answers) => answers,
           }
-          return { candidate, plan }
+          return { candidate, plan, disposition: dispositionReview }
         }),
       { concurrency: "unbounded" },
     )
@@ -309,8 +308,8 @@ export const underusedPrimitive: PlannedRule = {
           ])
           const disposition =
             dispositionAnswer?.label !== undefined &&
-            (DISPOSITIONS as ReadonlyArray<string>).includes(dispositionAnswer.label)
-              ? (dispositionAnswer.label as Disposition)
+            Object.keys(entry.disposition.criteria).includes(dispositionAnswer.label)
+              ? dispositionAnswer.label
               : undefined
           if (does === undefined || disposition === undefined) {
             diagnostics.push(
