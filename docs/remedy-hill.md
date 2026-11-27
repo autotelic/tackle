@@ -12,6 +12,20 @@ Background: `docs/reading/alarm-postprocessing.md` (Muske & Serebrenik, CSUR 202
 RIT, ICSTW 2024; the ICSE 2022 leakage result) and the vocabulary rule in
 `AGENTS.md`: **Jev makes judgments, code makes decisions.**
 
+## Ground rules
+
+**Jev belongs at the kernel, not at the edge.** It is cheap enough that cost is not
+an argument: the constraint on a judgment is _replay and atomicity_, never price.
+A question is admissible when its answer is recorded in the ledger and its decision
+cache key (model + state + questions) makes the run reproducible, and when it asks
+one thing about evidence the engine computed. Under those conditions a judgment is
+as deterministic as code — and it answers questions code cannot.
+
+A deterministic witness is still worth having beside a judgment, not because the
+judgment is untrustworthy but because it **disambiguates a failure**. If a cheap
+structural computation and a judgment disagree about whether 99 findings share one
+repair, the disagreement is itself the finding, and it costs one Jev call to know.
+
 ## Rung 0 — the numbers must survive their own test
 
 `calibration.ts` partitions by atom. The corpus is full of near-duplicates, so the
@@ -31,10 +45,17 @@ normalises each finding's prescribed repair, hashes it, writes
 `finding(site, rule, remedy_hash, run)` into the fact store, and prints clusters:
 remedy → rules → sites → files, ordered by site count.
 
-Deterministic normalisation only: keep the imperative clause (`Parse input…`,
-`Narrow with…`, `Use an owner…`), drop the diagnosis. Judgment arrives in rung 2,
-for the ambiguous tails; a first rung that already needs a model cannot be trusted
-when it disagrees with us.
+Normalisation is a judgment — `j_repair`: "what repair does this message
+prescribe?" — asked once per distinct message and then cached in the ledger. Jev is
+the kernel here, so asking is the default rather than the fallback.
+
+Beside it, a witness that costs nothing: the imperative clause of each message
+(`Parse input…`, `Narrow with…`, `Use an owner…`) with the diagnosis dropped.
+Where witness and judgment agree, the cluster is unremarkable. Where they disagree,
+report both and investigate the disagreement — a regex cannot tell that
+"narrow with a type predicate" and "parse at the boundary" are one repair, and a
+judgment that fails to see it means the evidence pack is wrong, not that the
+question was.
 
 Every cluster carries a **counterexample pack**: for each pair of rules in it, the
 sites one reaches that the other cannot, and why (a fact, computed, never asked).
