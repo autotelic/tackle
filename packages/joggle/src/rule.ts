@@ -8,6 +8,7 @@ import type { Decision, DecisionModel } from "effect/ai"
 import type { Diagnostic, Drop, JudgementPanel, Operation, Repair, Severity, SourceLocation } from "./schema.ts"
 import type { ReportedRule } from "./reporting.ts"
 import type { Move } from "./moves.ts"
+import type { FactStore } from "./store.ts"
 import type { Workspace } from "./workspace.ts"
 
 /*
@@ -139,6 +140,13 @@ export interface RunContext {
    * reading an empty map and concluding "no types".
    */
   readonly nodeTypes?: ((file: string, position: number) => string | undefined) | undefined
+  /**
+   * The run's fact store, when it has one.
+   *
+   * Passed rather than imported: the cache belongs to the run, and a rule run
+   * outside `check` (a test, calibration) keeps computing fragment sets purely.
+   */
+  readonly store?: FactStore
 }
 
 /**
