@@ -1030,30 +1030,39 @@ describe("initialise", () => {
     }
   })
 
-  it("keeps the chosen gate in the config and in the next command", async () => {
-    const root = project(
-      {
-        json: [
-          ["package.json", { scripts: { lint: "oxlint ." } }],
-          ["tsconfig.json", {}],
-          [".oxlintrc.json", OXLINT],
-        ],
-      },
-      ["oxlint"],
-    )
-    try {
-      const plan = await initialiseIn(root, { gateMode: "all", dryRun: true })
-      expect(summaryFor(plan)).toContain("jig init --gate all")
-      expect(onboardingFor(plan.profile)).toContain("jig init --gate all")
+  // Spawns the built binary against a temp project, so it costs a process rather
+  // than a function call. The 5s default is enough alone and not enough inside the
+  // monorepo run, where fifteen suites share the machine; the timeout is raised
+  // rather than the test weakened, because what it asserts is the gate surviving
+  // into the next command and that is worth waiting for.
+  it(
+    "keeps the chosen gate in the config and in the next command",
+    { timeout: 30_000 },
+    async () => {
+      const root = project(
+        {
+          json: [
+            ["package.json", { scripts: { lint: "oxlint ." } }],
+            ["tsconfig.json", {}],
+            [".oxlintrc.json", OXLINT],
+          ],
+        },
+        ["oxlint"],
+      )
+      try {
+        const plan = await initialiseIn(root, { gateMode: "all", dryRun: true })
+        expect(summaryFor(plan)).toContain("jig init --gate all")
+        expect(onboardingFor(plan.profile)).toContain("jig init --gate all")
 
-      const applied = await initialiseIn(root, { gateMode: "all" })
-      const config = JSON.parse(readFileSync(join(root, "jig.config.json"), "utf8"))
-      expect(config.gate.mode).toBe("all")
-      expect(applied.profile.gateMode).toBe("all")
-    } finally {
-      rmSync(root, { recursive: true, force: true })
-    }
-  })
+        const applied = await initialiseIn(root, { gateMode: "all" })
+        const config = JSON.parse(readFileSync(join(root, "jig.config.json"), "utf8"))
+        expect(config.gate.mode).toBe("all")
+        expect(applied.profile.gateMode).toBe("all")
+      } finally {
+        rmSync(root, { recursive: true, force: true })
+      }
+    },
+  )
 
   it("writes the paths an existing config already names", async () => {
     const root = project(
