@@ -79,7 +79,12 @@ export type RunSessionOptions = {
    * Checks), and the structured Failure set comes back as the tool result.
    */
   runChecks?: () => Promise<{ report: CheckReport; reportDir: string }>
-  /** Cap on mid-session run_checks calls (protective bound; rules tighten later). */
+  /**
+   * Cap on mid-session run_checks calls (budgets.maxCheckRunsPerSession).
+   * Four, not two: issue 004 (2026-11-26) spent its two runs, fixed what the
+   * second run found, and was refused the confirming run — the agent asked
+   * for exactly what the cap then denied.
+   */
   maxCheckRuns?: number
   /** The model for this and every Session; resolved against the agent's catalog. */
   model?: { readonly provider: string; readonly id: string }
@@ -447,7 +452,7 @@ export async function runSession(
   if (options.runChecks !== undefined) {
     const runChecksTool = createRunChecksTool({
       runChecks: options.runChecks,
-      maxRuns: options.maxCheckRuns ?? 2,
+      maxRuns: options.maxCheckRuns ?? 4,
       onRequested: () => emit({ type: 'session.checks_requested' }),
       onResult: (result) => emit({ type: 'session.checks_result', ...result }),
     })

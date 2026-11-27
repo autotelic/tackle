@@ -597,6 +597,10 @@ export function runIssueLoop(deps: IssueLoopDeps): Effect.Effect<IssueLoopResult
             ...(config.budgets.maxCostPerSessionUsd !== undefined
               ? { maxCostUsd: config.budgets.maxCostPerSessionUsd }
               : {}),
+            // Hot-adopts at the pick boundary with the rest of the config.
+            ...(config.budgets.maxCheckRunsPerSession !== undefined
+              ? { maxCheckRuns: config.budgets.maxCheckRunsPerSession }
+              : {}),
             runChecks: () => {
               const reportDir = join(
                 treadleDir,

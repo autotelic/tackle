@@ -77,6 +77,12 @@ export type Budgets = {
    * but nothing grinds forever. Default: 2× passesPerIssue.
    */
   maxPassesPerIssue?: number
+  /**
+   * Mid-session run_checks calls per Session (issue 004, 2026-11-26: the
+   * agent spent its two runs, fixed the finding, and was refused the
+   * confirming run). Driver default: 4.
+   */
+  maxCheckRunsPerSession?: number
   /** Optional dollar cap per issue across its Passes (#16). */
   maxCostPerIssueUsd?: number
   /** Optional dollar cap per day across the whole Loop (#18). */

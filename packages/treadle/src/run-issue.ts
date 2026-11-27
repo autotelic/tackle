@@ -268,6 +268,9 @@ async function main(): Promise<number> {
         ...(config.budgets.maxCostPerSessionUsd !== undefined
           ? { maxCostUsd: config.budgets.maxCostPerSessionUsd }
           : {}),
+        ...(config.budgets.maxCheckRunsPerSession !== undefined
+          ? { maxCheckRuns: config.budgets.maxCheckRunsPerSession }
+          : {}),
         askHumanTimeoutMs: config.budgets.askHumanTimeoutMinutes * 60_000,
         askHuman: human.askHuman,
         logPath: sessionLogPath,
