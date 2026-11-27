@@ -351,6 +351,17 @@ export interface RepairOpinion {
   /** Message key to the repair label the judgement chose. */
   readonly repairs: ReadonlyMap<string, string>
   /**
+   * Message key to the repair family the first question answered.
+   *
+   * The family is the coarse answer and the clause is the fine one, so a pair
+   * may only be joined by the pairwise question inside one family. Two messages
+   * from different rules fitting one family is not the same as two findings
+   * sharing a repair: the measured error was `use the stable API` absorbing five
+   * `no-nullish-default-on-partial-input` findings, whose repair is a schema
+   * choice, not an API swap.
+   */
+  readonly families?: ReadonlyMap<string, string> | undefined
+  /**
    * Message keys whose repair was implied by the family, not asked.
    *
    * A Choice with one candidate is a decision already made. Recording the keys
@@ -929,6 +940,7 @@ export const judgeRemedies = (
     const unavailable = answered === 0 && failures.some(isUnreachable) ? failureText[0] : undefined
     return {
       repairs: repairMap,
+      families: familyByMessage,
       implied: impliedByMessage,
       same: sameMap,
       unavailable,
@@ -965,7 +977,31 @@ export interface RemedyCluster {
   readonly rules: ReadonlyArray<RuleSites>
   readonly files: ReadonlyArray<{ readonly file: string; readonly sites: number }>
   readonly counterexamples: ReadonlyArray<Counterexample>
+  /** One row per rule pair in a multi-rule cluster: what held it together. */
+  readonly crossRules: ReadonlyArray<ClusterRuleMerge>
   readonly members: ReadonlyArray<RemedyFinding>
+}
+
+/**
+ * The facts behind one cross-rule merge, printed so a wrong merge is visible.
+ *
+ * A cluster holding more than one rule is the judgement's strongest claim, and
+ * the claim is only as good as the evidence for it: the probability the pair
+ * question gave, whether the two rules even share a site, and whether they
+ * landed on the same composed repair. A merge with disjoint sites and no shared
+ * repair is a judgement that answered the family, not the repair.
+ */
+export interface ClusterRuleMerge {
+  readonly a: { readonly rule: string; readonly sites: number }
+  readonly b: { readonly rule: string; readonly sites: number }
+  /** Whether any site carries both rules, computed from the site sets. */
+  readonly intersect: boolean
+  /** The highest `j_same` over a message pair from the two rules, if asked. */
+  readonly probability: number | undefined
+  /** Whether both rules have a message composed onto one repair label. */
+  readonly sharedRepair: boolean
+  /** The family each side's messages answered, when they all agree. */
+  readonly families: { readonly a: string | undefined; readonly b: string | undefined }
 }
 
 export interface ClusterSummary {
@@ -1033,7 +1069,20 @@ const sameRepair = ({
     return true
   }
   const probability = opinion.same.get(pairKeyOf({ left, right }))
-  return probability !== undefined && probability >= policy.decision.gates.probabilityFloor
+  if (probability === undefined || probability < policy.decision.gates.probabilityFloor) {
+    return false
+  }
+  // A cluster forms on family AND clause. The composed repair is the clause, so
+  // an equal repair above already passed; the pairwise question is the only path
+  // that can ignore the clause, and it may not cross a family boundary. A clause
+  // that differs by more than a synonym keeps the rules apart, and deciding
+  // synonymy is the clause question's job, not the pairwise one's.
+  const leftFamily = opinion.families?.get(left)
+  const rightFamily = opinion.families?.get(right)
+  if (leftFamily !== undefined && rightFamily !== undefined && leftFamily !== rightFamily) {
+    return false
+  }
+  return true
 }
 
 interface DisjointSet {
@@ -1201,12 +1250,91 @@ const clustersOf = (
         .map(([file, set]) => ({ file, sites: set.size }))
         .sort((left, right) => right.sites - left.sites || left.file.localeCompare(right.file)),
       counterexamples: counterexamplesOf(members),
+      crossRules: crossRulesOf(members, opinion),
       members,
     })
   }
   return clusters.sort(
     (left, right) => right.sites - left.sites || left.remedy.localeCompare(right.remedy),
   )
+}
+
+/** The highest, then the first, family answer among one rule's messages. */
+const familyOfRule = (
+  members: ReadonlyArray<RemedyFinding>,
+  rule: string,
+  opinion: RepairOpinion,
+): string | undefined => {
+  const counts = new Map<string, number>()
+  for (const member of members) {
+    if (member.rule !== rule) continue
+    const family = opinion.families?.get(messageKeyOf(member))
+    if (family === undefined) continue
+    counts.set(family, (counts.get(family) ?? 0) + 1)
+  }
+  return [...counts.entries()].sort(
+    ([leftLabel, leftCount], [rightLabel, rightCount]) =>
+      rightCount - leftCount || leftLabel.localeCompare(rightLabel),
+  )[0]?.[0]
+}
+
+/**
+ * Audit the merges a cluster made between rules, from facts only.
+ *
+ * The measured defect was a cross-rule cluster whose two rules reached disjoint
+ * sites and answered different repairs; the judgement had agreed on the family
+ * and the pairwise question then joined them anyway. Printing the probability,
+ * the intersection and the families per rule pair makes that shape visible
+ * without inspecting the ledger, and each row is computed, never asked.
+ */
+const crossRulesOf = (
+  members: ReadonlyArray<RemedyFinding>,
+  opinion: RepairOpinion,
+): ReadonlyArray<ClusterRuleMerge> => {
+  const rules = rulesOf(members)
+  const out: Array<ClusterRuleMerge> = []
+  for (let left = 0; left < rules.length; left += 1) {
+    for (let right = left + 1; right < rules.length; right += 1) {
+      const a = rules[left]
+      const b = rules[right]
+      if (a === undefined || b === undefined) continue
+      const aSites = new Set(a.sites)
+      const intersect = b.sites.some((site) => aSites.has(site))
+      const aMembers = members.filter((member) => member.rule === a.rule)
+      const bMembers = members.filter((member) => member.rule === b.rule)
+      let probability: number | undefined
+      for (const leftMember of aMembers) {
+        const leftKey = messageKeyOf(leftMember)
+        for (const rightMember of bMembers) {
+          const value = opinion.same.get(
+            pairKeyOf({ left: leftKey, right: messageKeyOf(rightMember) }),
+          )
+          if (value !== undefined && (probability === undefined || value > probability)) {
+            probability = value
+          }
+        }
+      }
+      const aRepairs = new Set(
+        aMembers.map((member) => opinion.repairs.get(messageKeyOf(member))).filter(Predicate.isString),
+      )
+      const sharedRepair = bMembers.some((member) => {
+        const repair = opinion.repairs.get(messageKeyOf(member))
+        return repair !== undefined && repair !== "none" && aRepairs.has(repair)
+      })
+      out.push({
+        a: { rule: a.rule, sites: a.sites.length },
+        b: { rule: b.rule, sites: b.sites.length },
+        intersect,
+        probability,
+        sharedRepair,
+        families: {
+          a: familyOfRule(members, a.rule, opinion),
+          b: familyOfRule(members, b.rule, opinion),
+        },
+      })
+    }
+  }
+  return out
 }
 
 const summaryOf = (clusters: ReadonlyArray<RemedyCluster>): ClusterSummary => {
@@ -1244,6 +1372,10 @@ export const clusterRemedies = (
     const rightMessage = messages.find((message) => message.key === right)
     if (leftMessage === undefined || rightMessage === undefined) continue
     if (leftMessage.clause === rightMessage.clause) continue
+    // Report only a join the clustering actually made: a high pair score that a
+    // family boundary overruled is not a disagreement between witness and
+    // judgement, it is the boundary doing its job.
+    if (!sameRepair({ opinion, left, right })) continue
     disagreements.push({ a: leftMessage.clause, b: rightMessage.clause, probability })
   }
   const answeredPairs = opinion.same.size

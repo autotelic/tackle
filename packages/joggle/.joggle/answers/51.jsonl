@@ -1,5 +1,6 @@
 510bad0eab399c73	{"consistency":1,"kind":"Probability","probability":0.08333333333333333}
 510bf36c1e32a1d1	{"confidence":0.74,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.8,"component_or_feature":0,"not_applicable":0.19,"route_or_handler":0.01}}
+511334fa96c26c67	{"confidence":0.86,"kind":"Classify","label":"own the value type","probabilities":{"inject the dependency":0,"justify the assertion":0,"narrow with a predicate":0.03,"other":0.09,"own the value type":0.88,"parse at the boundary":0,"use the stable API":0}}
 51155c44b9f28dce	{"consistency":1,"kind":"Probability","probability":0.02666666666666667}
 512859602f7cdd0c	{"consistency":1,"kind":"Probability","probability":0.03}
 512c21165b221956	{"confidence":0.97,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.98,"infrastructure":0,"input_adaptation":0,"mechanical":0,"not_applicable":0.01,"orchestration":0.01,"rendering":0,"request_validation":0,"transport_concern":0}}

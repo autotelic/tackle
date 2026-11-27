@@ -7,6 +7,7 @@
 266c104329deafc7	{"consistency":1,"kind":"Probability","probability":0.08333333333333333}
 267043b0a8f05d16	{"confidence":0.8,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.85,"component_or_feature":0.01,"not_applicable":0.13,"route_or_handler":0.01}}
 26949182dc4bdd5d	{"consistency":1,"kind":"Probability","probability":0.036666666666666674}
+269988323234d005	{"confidence":1,"kind":"Classify","label":"Return Option<EffectCounts> and express absence as Option.none()","probabilities":{"Rename symbol \"VmSnapshotShape\" for its domain role; \"shape\" describes structure rather than ownership":0,"Return Option<EffectCounts> and express absence as Option.none()":1}}
 26aaf7d92cf11a49	{"confidence":0.46,"kind":"Classify","label":"infrastructure","probabilities":{"domain_logic":0.03,"infrastructure":0.52,"input_adaptation":0,"mechanical":0.11,"not_applicable":0,"orchestration":0.34,"rendering":0,"request_validation":0,"transport_concern":0}}
 26bb44de31f3a10c	{"confidence":0.94,"kind":"Classify","label":"other","probabilities":{"inject the dependency":0,"justify the assertion":0,"narrow with a predicate":0.03,"other":0.95,"own the value type":0.02,"parse at the boundary":0}}
 26bddfe58bf6c763	{"confidence":0.7,"kind":"Classify","label":"other","probabilities":{"inject the dependency":0,"justify the assertion":0.01,"narrow with a predicate":0.01,"other":0.75,"own the value type":0.2,"parse at the boundary":0.03}}

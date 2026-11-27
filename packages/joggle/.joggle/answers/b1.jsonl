@@ -3,6 +3,7 @@ b1125f2c0216ae04	{"confidence":0.59,"kind":"Classify","label":"same_module","pro
 b1201c1c42e098dd	{"consistency":1,"kind":"Probability","probability":0.03}
 b128605f9352b9da	{"confidence":0.49,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.34,"independent":0.66,"meaning_switched":0}}
 b13ac0fe1f4ee554	{"confidence":0.42,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.03,"merge":0.53,"move":0.37,"share_a_contract":0.04,"split":0.03}}
+b141c2ad8e0c0300	{"confidence":0.06,"kind":"Classify","label":"Add property-based coverage (generate inputs, assert invariants), or disable this rule inline with a reason if the behavior is truly non-property-testable","probabilities":{"Add property-based coverage (generate inputs, assert invariants), or disable this rule inline with a reason if the behavior is truly non-property-testable":0.53,"Build the object in separate statements and add the property only when present":0.47}}
 b1621ef94e6f232b	{"confidence":0.88,"kind":"Classify","label":"domain_concept","probabilities":{"domain_concept":0.91,"framework_glue":0,"implementation_detail":0.09,"wire_contract":0}}
 b167ca23e616d095	{"confidence":0.61,"kind":"Classify","label":"domain_concept","probabilities":{"domain_concept":0.71,"framework_glue":0,"implementation_detail":0.29,"wire_contract":0}}
 b16d915e346194f2	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0.02}}

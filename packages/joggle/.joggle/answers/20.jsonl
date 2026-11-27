@@ -12,6 +12,7 @@
 208d21e082fab458	{"confidence":0.46,"kind":"Classify","label":"narrow with a predicate","probabilities":{"inject the dependency":0,"justify the assertion":0,"narrow with a predicate":0.55,"other":0.22,"own the value type":0.02,"parse at the boundary":0.21}}
 209cbc5f92082ff8	{"confidence":0.32,"kind":"Classify","label":"rendering","probabilities":{"domain_logic":0.01,"infrastructure":0,"input_adaptation":0.39,"mechanical":0.12,"not_applicable":0.05,"orchestration":0,"rendering":0.41000000000000003,"request_validation":0,"transport_concern":0.02}}
 20b27f5d51abe42a	{"confidence":0.62,"kind":"Classify","label":"no_issue","probabilities":{"merge":0.02,"move":0.24,"no_issue":0.74}}
+20ba2e7a0ef36dc9	{"confidence":1,"kind":"Classify","label":"inject the dependency","probabilities":{"inject the dependency":1,"justify the assertion":0,"narrow with a predicate":0,"other":0,"own the value type":0,"parse at the boundary":0,"use the stable API":0}}
 20bd0aed9e639881	{"confidence":1,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":1,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0}}
 20c3102487ff08de	{"consistency":1,"kind":"Probability","probability":0.04}
 20d9e7288f34e256	{"confidence":0.37,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.39,"independent":0.58,"meaning_switched":0.03}}

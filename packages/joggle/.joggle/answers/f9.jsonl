@@ -18,4 +18,5 @@ f9b0c3c0596efb32	{"consistency":1,"kind":"Probability","probability":0.71}
 f9b24031d1a7b06b	{"consistency":1,"kind":"Probability","probability":0.06666666666666667}
 f9b5f4c921387df7	{"consistency":1,"kind":"Probability","probability":0.11333333333333333}
 f9c0ced07c8c8f49	{"consistency":1,"kind":"Probability","probability":0.03333333333333333}
+f9e0b5b9d70b4b1b	{"confidence":0.98,"kind":"Classify","label":"inject the dependency","probabilities":{"inject the dependency":0.98,"justify the assertion":0,"narrow with a predicate":0,"other":0.02,"own the value type":0,"parse at the boundary":0,"use the stable API":0}}
 f9ea2db86dff3b45	{"consistency":1,"kind":"Probability","probability":0.04}

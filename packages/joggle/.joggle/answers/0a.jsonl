@@ -1,3 +1,4 @@
+0a2f4a071e5f47f4	{"confidence":0.92,"kind":"Classify","label":"group 1","probabilities":{"group 1":0.93,"group 2":0.05,"group 3":0.01,"group 4":0,"group 5":0.01,"group 6":0,"group 7":0,"group 8":0}}
 0a37514db320cc7b	{"confidence":0.87,"kind":"Classify","label":"value","probabilities":{"meaning":0.08,"unclear":0.01,"value":0.91}}
 0a3ef6f0fddfa7ce	{"confidence":0.67,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.75,"component_or_feature":0.01,"not_applicable":0.21,"route_or_handler":0.03}}
 0a8841d1d51f4977	{"confidence":0.58,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.6799999999999999,"component_or_feature":0.01,"not_applicable":0.3,"route_or_handler":0.01}}

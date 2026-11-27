@@ -36,8 +36,13 @@ const finding = (
 const opinionOf = (
   repairs: ReadonlyArray<readonly [RemedyFinding, string]>,
   same: ReadonlyArray<readonly [RemedyFinding, RemedyFinding, number]>,
+  families?: ReadonlyArray<readonly [RemedyFinding, string]>,
 ): RepairOpinion => ({
   repairs: new Map(repairs.map(([item, label]) => [messageKeyOf(item), label])),
+  families:
+    families === undefined
+      ? undefined
+      : new Map(families.map(([item, family]) => [messageKeyOf(item), family])),
   same: new Map(
     same.map(([left, right, probability]) => [
       pairKeyOf({ left: messageKeyOf(left), right: messageKeyOf(right) }),
@@ -481,4 +486,106 @@ test("a clause list longer than one Choice is split, not truncated", () => {
   const wide = partitionsOf(clauses, 4)
   expect(wide.length).toBeLessThanOrEqual(4)
   for (const group of wide) expect(group.length).toBeLessThan(clauses.length)
+})
+
+test("a pairwise answer does not join two rules across a family boundary", () => {
+  // The measured defect: the stable-API family absorbed five
+  // `no-nullish-default-on-partial-input` findings. Their repairs are unlike --
+  // one is an API swap, the other a schema choice -- and their sites are
+  // disjoint, but the pair question scored them as one edit because both are
+  // "use the schema". The family is the coarse answer; it may not be widened by
+  // the fine question.
+  const experimental = finding(
+    "effecttsgo/experimental-api-usage",
+    "@effect/ui/Command#make is an experimental API",
+    1,
+  )
+  const nullish = finding(
+    "plumb-effect/no-nullish-default-on-partial-input",
+    "`?? false` on `body.enabled` conflates 'absent' with 'false' in partial updates. Use" +
+      " `Schema.optional` / `Schema.nullable` to distinguish absent from falsy.",
+    2,
+  )
+  const opinion = opinionOf(
+    [
+      [experimental, "use the stable API: Use the non-experimental, non-deprecated API"],
+      [nullish, "parse at the boundary: Use `Schema.optional` / `Schema.nullable`"],
+    ],
+    [[experimental, nullish, 0.91]],
+    [
+      [experimental, "use the stable API"],
+      [nullish, "parse at the boundary"],
+    ],
+  )
+  const report = clusterRemedies([experimental, nullish], opinion)
+  expect(report.clusters).toHaveLength(2)
+  expect(report.disagreements).toHaveLength(0)
+})
+
+test("a pairwise answer still joins two vocabularies inside one family", () => {
+  // The merge the witness cannot make and the judgement must: two rules that
+  // name one repair in two ways, both answering the same family.
+  const parse = finding(
+    "plumb/no-runtime-typeof",
+    "A typeof check narrows a representation. Parse input at its I/O boundary.",
+    1,
+    "src/kernel.ts",
+  )
+  const accept = finding(
+    "plumb/no-unknown-parameters",
+    "Parameter `value` leaves input unparsed. Accept a named domain type.",
+    2,
+    "src/kernel.ts",
+  )
+  const opinion = opinionOf(
+    [
+      [parse, "parse at the boundary: Parse input at its I/O boundary"],
+      [accept, "parse at the boundary: Accept a named domain type"],
+    ],
+    [[parse, accept, 0.91]],
+    [
+      [parse, "parse at the boundary"],
+      [accept, "parse at the boundary"],
+    ],
+  )
+  const report = clusterRemedies([parse, accept], opinion)
+  expect(report.clusters).toHaveLength(1)
+  expect(report.clusters[0]?.rules.map((rule) => rule.rule).sort()).toEqual([
+    "plumb/no-runtime-typeof",
+    "plumb/no-unknown-parameters",
+  ])
+})
+
+test("a multi-rule cluster prints what held it together", () => {
+  // The audit the merge must leave behind: both rules, both site counts, whether
+  // the sites intersect, the probability, and the family each side answered.
+  const parse = finding("a", "A typeof check. Parse input at its I/O boundary.", 1, "src/k.ts")
+  const accept = finding(
+    "b",
+    "Parameter `value` is unparsed. Accept a named domain type.",
+    2,
+    "src/k.ts",
+  )
+  const opinion = opinionOf(
+    [
+      [parse, "parse at the boundary: Parse input at its I/O boundary"],
+      [accept, "parse at the boundary: Accept a named domain type"],
+    ],
+    [[parse, accept, 0.87]],
+    [
+      [parse, "parse at the boundary"],
+      [accept, "parse at the boundary"],
+    ],
+  )
+  const report = clusterRemedies([parse, accept], opinion)
+  expect(report.clusters[0]?.crossRules).toEqual([
+    {
+      a: { rule: "a", sites: 1 },
+      b: { rule: "b", sites: 1 },
+      intersect: false,
+      probability: 0.87,
+      sharedRepair: false,
+      families: { a: "parse at the boundary", b: "parse at the boundary" },
+    },
+  ])
 })

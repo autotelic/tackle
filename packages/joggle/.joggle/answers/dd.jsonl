@@ -8,10 +8,12 @@ dd44b2d960872056	{"consistency":1,"kind":"Probability","probability":0.033333333
 dd44c90283d55908	{"confidence":0.97,"kind":"Classify","label":"general","probabilities":{"general":0.98,"names_a_caller":0.01,"shared_vocabulary":0.01}}
 dd4f31b779b5e31a	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0.01}}
 dd59c99709db3d21	{"consistency":1,"kind":"Probability","probability":0.03}
+dd5f7bc56e10a324	{"confidence":0.65,"kind":"Classify","label":"Use an owner/schema-derived value type; parse external payloads before insertion","probabilities":{"Accept a single named payload object instead; two parameters of the same type transpose silently":0.11,"Keep inference, validate with satisfies, or use a named owner contract":0.12,"type UserId = string & Brand.Brand<\"UserId\">) so the compiler rejects transposed arguments":0.03,"Use an owner/schema-derived value type; parse external payloads before insertion":0.74}}
 dd689c2ae8d54edd	{"consistency":1,"kind":"Probability","probability":0.04666666666666667}
 dd70b495b693bf22	{"confidence":0.3,"kind":"Classify","label":"drift","probabilities":{"compatible":0.05,"drift":0.54,"two_concepts":0.41}}
 dd85baefa3793a0c	{"consistency":1,"kind":"Probability","probability":0.06}
 dd8ca51da827b3ca	{"confidence":0.85,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.9,"not_a_derivation":0.06,"reimplements":0.04}}
+dd9778a83e499658	{"confidence":1,"kind":"Classify","label":"group 6","probabilities":{"group 1":0,"group 2":0,"group 3":0,"group 4":0,"group 5":0,"group 6":1,"group 7":0,"group 8":0}}
 dd9abff5132707d3	{"consistency":1,"kind":"Probability","probability":0.043333333333333335}
 dd9b84e7a2029b41	{"consistency":1,"kind":"Probability","probability":0.036666666666666674}
 dd9e1aba29ca3f61	{"confidence":0.94,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.96,"not_a_derivation":0.01,"reimplements":0.03}}
@@ -19,3 +21,4 @@ dd9f642b776c3f7d	{"confidence":1,"kind":"Classify","label":"@effect/ui/testing/L
 ddaa04c30f239e39	{"confidence":0.78,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.84,"component_or_feature":0.01,"not_applicable":0.15,"route_or_handler":0}}
 ddb6d18fb52ef4b1	{"confidence":0.89,"kind":"Classify","label":"other","probabilities":{"inject the dependency":0,"justify the assertion":0,"narrow with a predicate":0,"other":0.91,"own the value type":0.09,"parse at the boundary":0}}
 ddca579592bdf00c	{"consistency":1,"kind":"Probability","probability":0.04666666666666667}
+ddcae8ecb278f14f	{"confidence":1,"kind":"Classify","label":"group 2","probabilities":{"group 1":0,"group 2":1,"group 3":0,"group 4":0,"group 5":0,"group 6":0,"group 7":0,"group 8":0}}

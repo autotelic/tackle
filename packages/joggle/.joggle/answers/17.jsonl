@@ -12,6 +12,7 @@
 178b2bd7395aa592	{"consistency":1,"kind":"Probability","probability":0.03}
 17ad9c9606268782	{"consistency":1,"kind":"Probability","probability":0.7999999999999999}
 17b94220565a9214	{"confidence":0.98,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0.01}}
+17d9e17314a89ef7	{"confidence":0.92,"kind":"Classify","label":"Use Effect's TaggedError (a tagged class per failure kind carrying structured evidence as fields) so the error flows through the typed channel","probabilities":{"Use Effect's TaggedError (a tagged class per failure kind carrying structured evidence as fields) so the error flows through the typed channel":0.96,"Use parameterized queries or a query builder so values never become syntax":0.04}}
 17e24c5c9a107815	{"consistency":1,"kind":"Probability","probability":0.83}
 17e3e58b33c934e0	{"confidence":0.81,"kind":"Classify","label":"other","probabilities":{"inject the dependency":0,"justify the assertion":0.01,"narrow with a predicate":0,"other":0.84,"own the value type":0.15,"parse at the boundary":0}}
 17e40b1e9395b124	{"confidence":0.61,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.71,"component_or_feature":0.01,"not_applicable":0.27,"route_or_handler":0.01}}

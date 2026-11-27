@@ -7,6 +7,7 @@
 187913a0f5d05e8a	{"confidence":0.7,"kind":"Classify","label":"keep_variants","probabilities":{"collapse":0.05,"keep_variants":0.8,"no_issue":0.15}}
 18c26d4a7b74878c	{"confidence":0.29,"kind":"Classify","label":"drift","probabilities":{"compatible":0.47,"drift":0.52,"two_concepts":0.01}}
 18c3df1e3ae873ee	{"confidence":0.41,"kind":"Classify","label":"other","probabilities":{"inject the dependency":0.01,"justify the assertion":0,"narrow with a predicate":0.01,"other":0.51,"own the value type":0.42,"parse at the boundary":0.05}}
+18dc44e334c257fe	{"confidence":0.81,"kind":"Classify","label":"other","probabilities":{"inject the dependency":0.13,"justify the assertion":0.02,"narrow with a predicate":0,"other":0.84,"own the value type":0,"parse at the boundary":0.01,"use the stable API":0}}
 18e9e75be7f0fb65	{"consistency":1,"kind":"Probability","probability":0.043333333333333335}
 18f16f9399d85bc5	{"consistency":1,"kind":"Probability","probability":0.03}
 18f3294872bf4d62	{"kind":"Probability","probability":0.32}

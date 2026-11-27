@@ -1,3 +1,4 @@
+e20e66c4621f741c	{"confidence":1,"kind":"Classify","label":"Use Effect's TaggedError (a tagged class per failure kind carrying structured evidence as fields) so the error flows through the typed channel","probabilities":{"Use Effect's TaggedError (a tagged class per failure kind carrying structured evidence as fields) so the error flows through the typed channel":1,"Use parameterized queries or a query builder so values never become syntax":0}}
 e21a9c467f1dc797	{"confidence":0.78,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.85,"not_a_derivation":0.13,"reimplements":0.02}}
 e22464446b3bfc94	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0}}
 e23b31d52dfee449	{"consistency":1,"kind":"Probability","probability":0.04}

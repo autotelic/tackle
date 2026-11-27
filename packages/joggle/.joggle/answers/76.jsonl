@@ -5,4 +5,5 @@
 767ee507f6213e19	{"consistency":1,"kind":"Probability","probability":0.09000000000000001}
 7687d59aa0a4c4ae	{"consistency":1,"kind":"Probability","probability":0.06}
 76a5bc2f19fc3849	{"consistency":1,"kind":"Probability","probability":0.023333333333333334}
+76aae9e03a84a299	{"confidence":0.89,"kind":"Classify","label":"inject the dependency","probabilities":{"inject the dependency":0.91,"justify the assertion":0,"narrow with a predicate":0,"other":0.08,"own the value type":0,"parse at the boundary":0.01,"use the stable API":0}}
 76d196e5708a03a0	{"consistency":1,"kind":"Probability","probability":0.05333333333333334}

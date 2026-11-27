@@ -2,6 +2,7 @@
 8831276b475c2872	{"confidence":0.98,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.99,"infrastructure":0,"input_adaptation":0,"mechanical":0,"not_applicable":0.01,"orchestration":0,"rendering":0,"request_validation":0,"transport_concern":0}}
 88326b2560c6ebe3	{"consistency":1,"kind":"Probability","probability":0.036666666666666674}
 88491f6e3dec66c3	{"confidence":1,"kind":"Classify","label":"other","probabilities":{"inject the dependency":0,"justify the assertion":0,"narrow with a predicate":0,"other":1,"own the value type":0,"parse at the boundary":0}}
+88493cdfd9f44ccd	{"confidence":0.93,"kind":"Classify","label":"own the value type","probabilities":{"inject the dependency":0,"justify the assertion":0,"narrow with a predicate":0.01,"other":0.05,"own the value type":0.94,"parse at the boundary":0,"use the stable API":0}}
 88548a5fe59265bf	{"confidence":0.65,"kind":"Classify","label":"violation","probabilities":{"acceptable":0.22,"different_pattern":0.02,"violation":0.76}}
 88568ccd3842017b	{"confidence":0.71,"kind":"Classify","label":"semantic_verdict","probabilities":{"magic_threshold":0.01,"name_meaning":0,"no_issue":0.2,"semantic_verdict":0.79}}
 885dfa456e3b723b	{"consistency":1,"kind":"Probability","probability":0.08666666666666667}

@@ -12,3 +12,4 @@
 5fc7fa93cf06d824	{"confidence":0.83,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.87,"component_or_feature":0.01,"not_applicable":0.11,"route_or_handler":0.01}}
 5fe0a04aaf5d8992	{"confidence":0.96,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0}}
 5fe74eef6e37a220	{"confidence":0.89,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.92,"stale_reference":0,"wrong_behavior":0.05,"wrong_contract":0.03}}
+5ffd3cb81734e443	{"confidence":1,"kind":"Classify","label":"Rename symbol \"VmSnapshotShape\" for its domain role; \"shape\" describes structure rather than ownership","probabilities":{"Rename symbol \"VmSnapshotShape\" for its domain role; \"shape\" describes structure rather than ownership":1,"Return Option<EffectCounts> and express absence as Option.none()":0}}

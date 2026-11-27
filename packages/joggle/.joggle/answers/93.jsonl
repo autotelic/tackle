@@ -5,6 +5,7 @@
 934f042dd043f66f	{"confidence":0.47,"kind":"Classify","label":"group 2","probabilities":{"group 1":0.03,"group 2":0.54,"group 3":0,"group 4":0,"group 5":0,"group 6":0,"group 7":0.43,"group 8":0}}
 936559d2fbbc90cf	{"confidence":0.36,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.53,"component_or_feature":0.06,"not_applicable":0.28,"route_or_handler":0.13}}
 9366f3225369c6da	{"confidence":0.87,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.91,"not_a_derivation":0.08,"reimplements":0.01}}
+936e96a3a333974b	{"confidence":0.6,"kind":"Classify","label":"other","probabilities":{"inject the dependency":0.01,"justify the assertion":0,"narrow with a predicate":0,"other":0.66,"own the value type":0.3,"parse at the boundary":0.03,"use the stable API":0}}
 9373188c66537629	{"consistency":1,"kind":"Probability","probability":0.06333333333333334}
 937f08a5c441bd06	{"consistency":1,"kind":"Probability","probability":0.04}
 9381b94839a644f5	{"consistency":1,"kind":"Probability","probability":0.08}

@@ -9,6 +9,7 @@
 2985d25e4e4225c1	{"confidence":1,"kind":"Classify","label":"inject the dependency","probabilities":{"inject the dependency":1,"justify the assertion":0,"narrow with a predicate":0,"other":0,"own the value type":0,"parse at the boundary":0}}
 298e7400cfe0c57d	{"confidence":0.92,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.03,"inferred":0.02,"not_applicable":0.95}}
 2997e10d7af71c15	{"confidence":0.8,"kind":"Classify","label":"independent","probabilities":{"appropriate":0.13,"independent":0.87,"meaning_switched":0}}
+299a9d337213183c	{"confidence":0.3,"kind":"Classify","label":"use the stable API","probabilities":{"inject the dependency":0,"justify the assertion":0,"narrow with a predicate":0.16,"other":0.33,"own the value type":0.03,"parse at the boundary":0.08,"use the stable API":0.4}}
 299e0935825fd1f8	{"consistency":1,"kind":"Probability","probability":0.04}
 29a4290e6d9708cf	{"consistency":1,"kind":"Probability","probability":0.036666666666666674}
 29deec4933f11eb2	{"confidence":0.93,"kind":"Classify","label":"own the value type","probabilities":{"inject the dependency":0,"justify the assertion":0,"narrow with a predicate":0.02,"other":0.04,"own the value type":0.94,"parse at the boundary":0}}

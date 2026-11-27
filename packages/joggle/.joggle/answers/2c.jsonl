@@ -1,6 +1,7 @@
 2c00ea7f8d5e0a4c	{"confidence":0.88,"kind":"Classify","label":"drift","probabilities":{"compatible":0.01,"drift":0.92,"two_concepts":0.07}}
 2c149949a8f7d92c	{"consistency":1,"kind":"Probability","probability":0.06333333333333334}
 2c26da74fe96d995	{"confidence":0.8,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.04,"inferred":0.1,"not_applicable":0.86}}
+2c42f79c72d7d00e	{"confidence":0.95,"kind":"Classify","label":"other","probabilities":{"inject the dependency":0,"justify the assertion":0,"narrow with a predicate":0,"other":0.96,"own the value type":0,"parse at the boundary":0,"use the stable API":0.04}}
 2c4946b65eaa8585	{"consistency":1,"kind":"Probability","probability":0.06333333333333334}
 2c4ece37b044fd1e	{"confidence":0.78,"kind":"Classify","label":"other","probabilities":{"inject the dependency":0,"justify the assertion":0,"narrow with a predicate":0,"other":0.82,"own the value type":0.18,"parse at the boundary":0}}
 2c4f78eb903f64d3	{"consistency":1,"kind":"Probability","probability":0.03333333333333333}

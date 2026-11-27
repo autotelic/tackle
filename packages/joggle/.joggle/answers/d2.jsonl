@@ -5,10 +5,12 @@ d22c166813bba988	{"confidence":0.87,"kind":"Classify","label":"other","probabili
 d2369e9c13da0e7c	{"consistency":1,"kind":"Probability","probability":0.05000000000000001}
 d2403d0b02a6885d	{"confidence":0.41,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.6,"not_a_derivation":0.38,"reimplements":0.02}}
 d24f980d60058a47	{"confidence":0.8,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.84,"infrastructure":0.01,"input_adaptation":0,"mechanical":0.04,"not_applicable":0.03,"orchestration":0.08,"rendering":0,"request_validation":0,"transport_concern":0}}
+d251604978dbfaf0	{"confidence":1,"kind":"Classify","label":"inject the dependency","probabilities":{"inject the dependency":1,"justify the assertion":0,"narrow with a predicate":0,"other":0,"own the value type":0,"parse at the boundary":0,"use the stable API":0}}
 d251e1f19097763b	{"confidence":0.84,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.86,"infrastructure":0,"input_adaptation":0.01,"mechanical":0.02,"not_applicable":0.04,"orchestration":0.02,"rendering":0.04,"request_validation":0,"transport_concern":0.01}}
 d2567a34f9af4828	{"confidence":0.18,"kind":"Classify","label":"drift","probabilities":{"compatible":0.28,"drift":0.45,"two_concepts":0.27}}
 d267e880c18c9490	{"confidence":0.62,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.72,"stale_reference":0.02,"wrong_behavior":0.24,"wrong_contract":0.02}}
 d27e086ebd598614	{"consistency":1,"kind":"Probability","probability":0.03}
+d286e8f63327148e	{"confidence":0.88,"kind":"Classify","label":"other","probabilities":{"inject the dependency":0,"justify the assertion":0,"narrow with a predicate":0.01,"other":0.9,"own the value type":0.08,"parse at the boundary":0,"use the stable API":0.01}}
 d28aa2fbc0aaefa8	{"consistency":1,"kind":"Probability","probability":0.043333333333333335}
 d292fc8339c914b9	{"kind":"Probability","probability":0.35}
 d2933fe593c34f69	{"confidence":0.31,"kind":"Classify","label":"move","probabilities":{"merge":0.17,"move":0.54,"no_issue":0.29}}

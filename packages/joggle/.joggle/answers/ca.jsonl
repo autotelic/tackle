@@ -3,6 +3,7 @@ ca12465c4a011c5a	{"confidence":0.77,"kind":"Classify","label":"already_there","p
 ca31afb5932de5f2	{"confidence":0.93,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0.02}}
 ca3c5fdae294dd9e	{"consistency":1,"kind":"Probability","probability":0.03}
 ca406422c9e3a743	{"confidence":0.89,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.92,"not_a_derivation":0.07,"reimplements":0.01}}
+ca4a02369f5a85a1	{"confidence":0.93,"kind":"Classify","label":"other","probabilities":{"inject the dependency":0,"justify the assertion":0,"narrow with a predicate":0,"other":0.94,"own the value type":0.05,"parse at the boundary":0,"use the stable API":0.01}}
 ca529843dc4e8b09	{"confidence":0.65,"kind":"Classify","label":"inject the dependency","probabilities":{"inject the dependency":0.71,"justify the assertion":0,"narrow with a predicate":0,"other":0.27,"own the value type":0,"parse at the boundary":0.02}}
 ca58e138cdf96d9a	{"kind":"Probability","probability":0.14}
 ca6ab1ab8f0c6fb3	{"confidence":0.6,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.74,"not_a_derivation":0.01,"reimplements":0.25}}

@@ -10,6 +10,7 @@
 6951446a9877a9bc	{"confidence":0.87,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.91,"not_a_derivation":0.04,"reimplements":0.05}}
 695e470f975f1a35	{"confidence":0.88,"kind":"Classify","label":"library_core","probabilities":{"domain_core":0.09,"infrastructure":0,"library_core":0.9,"not_applicable":0,"rendering_edge":0,"transport_edge":0,"utilities":0.01}}
 695e706c2fea393a	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
+6963f502c961fd2f	{"confidence":0.16,"kind":"Classify","label":"Build the object in separate statements and add the property only when present","probabilities":{"Add property-based coverage (generate inputs, assert invariants), or disable this rule inline with a reason if the behavior is truly non-property-testable":0.42,"Build the object in separate statements and add the property only when present":0.58}}
 6977042b3bce20dc	{"confidence":0.93,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0,"wrong_behavior":0.05,"wrong_contract":0}}
 69ac17b3c90d834f	{"consistency":1,"kind":"Probability","probability":0.02}
 69ac2d38ade63aa8	{"consistency":1,"kind":"Probability","probability":0.03}

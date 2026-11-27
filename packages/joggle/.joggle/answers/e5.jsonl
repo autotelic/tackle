@@ -5,6 +5,8 @@ e54058da62f5ad7e	{"confidence":1,"kind":"Classify","label":"Move the entry point
 e54ae77932ef5ec7	{"confidence":0.91,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.93,"stale_reference":0.02,"wrong_behavior":0.04,"wrong_contract":0.01}}
 e54d6d4bb0d7d134	{"consistency":1,"kind":"Probability","probability":0.04}
 e56faa6976fc407a	{"confidence":0.35,"kind":"Classify","label":"drift","probabilities":{"compatible":0.04,"drift":0.57,"two_concepts":0.39}}
+e578fce19cd113d7	{"confidence":0.24,"kind":"Classify","label":"use the stable API","probabilities":{"inject the dependency":0,"justify the assertion":0,"narrow with a predicate":0.19,"other":0.31,"own the value type":0.05,"parse at the boundary":0.1,"use the stable API":0.35}}
 e589e1d285acda1f	{"confidence":0.95,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0,"wrong_behavior":0.03,"wrong_contract":0}}
+e58c3746d40de92a	{"confidence":1,"kind":"Classify","label":"inject the dependency","probabilities":{"inject the dependency":1,"justify the assertion":0,"narrow with a predicate":0,"other":0,"own the value type":0,"parse at the boundary":0,"use the stable API":0}}
 e5b22bb90a8c516d	{"consistency":1,"kind":"Probability","probability":0.07333333333333335}
 e5f058b0a8ad6178	{"confidence":0.57,"kind":"Classify","label":"leave_it","probabilities":{"leave_it":0.66,"merge":0.12,"move":0.19,"share_a_contract":0.03,"split":0}}
