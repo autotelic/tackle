@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>__FACTORY__</title>
+    <style>
+      :root {
+        color: #101828;
+        background: #f9fafb;
+        font:
+          14px/1.5 ui-sans-serif,
+          system-ui,
+          sans-serif;
+      }
+      body {
+        margin: 0;
+      }
+      main {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 40px 24px 72px;
+      }
+      .kicker {
+        margin: 0 0 8px;
+        color: #667085;
+        font:
+          11px/1.4 ui-monospace,
+          SFMono-Regular,
+          monospace;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+      }
+      .lede {
+        color: #475467;
+        margin: 0 0 24px;
+      }
+      .card {
+        border: 1px solid #d0d5dd;
+        border-radius: 10px;
+        background: #fff;
+        padding: 16px;
+        margin-top: 12px;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 120px 1fr;
+        gap: 6px 14px;
+      }
+      .label {
+        color: #667085;
+        font:
+          11px/1.5 ui-monospace,
+          SFMono-Regular,
+          monospace;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      .mono {
+        font:
+          12px/1.5 ui-monospace,
+          SFMono-Regular,
+          monospace;
+        overflow-wrap: anywhere;
+      }
+      button {
+        border: 1px solid #344054;
+        background: #fff;
+        border-radius: 6px;
+        padding: 7px 10px;
+        cursor: pointer;
+        font:
+          12px/1 ui-monospace,
+          SFMono-Regular,
+          monospace;
+      }
+      button:hover {
+        background: #f2f4f7;
+      }
+      .note {
+        margin-top: 18px;
+        color: #667085;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="kicker">factory orb</p>
+      <h1>__FACTORY__</h1>
+      <p class="lede">
+        This factory has its own worktree and container. The sibling factory has the same source and
+        a different worktree.
+      </p>
+      <section class="card">
+        <div class="row">
+          <span class="label">branch</span><span class="mono">__BRANCH__</span>
+          <span class="label">head</span><span class="mono">__HEAD__</span>
+          <span class="label">source head</span><span class="mono">__SOURCE_HEAD__</span>
+          <span class="label">internal</span><span class="mono">web :__INTERNAL_PORT__</span>
+          <span class="label">external</span
+          ><span class="mono">browser :<span id="external"></span></span>
+          <span class="label">revision</span><span class="mono">__REVISION__</span>
+          <span class="label">built</span><span class="mono">__BUILD_AT__</span>
+        </div>
+      </section>
+      <section class="card">
+        <div class="row"><span class="label">note</span><span class="mono">__NOTE__</span></div>
+      </section>
+      <p><button id="stamp">stamp this factory</button></p>
+      <p class="note">
+        The button posts to this factory's API, rebuilds its own worktree, and reloads. The sibling
+        is untouched.
+      </p>
+    </main>
+    <script>
+      document.querySelector("#external").textContent = location.port || "80"
+      document.querySelector("#stamp").addEventListener("click", async () => {
+        await fetch("/api/note", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ note: "stamped " + new Date().toISOString() }),
+        })
+        location.reload()
+      })
+    </script>
+  </body>
+</html>
