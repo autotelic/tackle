@@ -463,7 +463,7 @@ export const visionView = (h: Html.H<Message>, model: Model) => {
             tone: "built",
             title: "/factory · Room inventory",
             detail:
-              "room.json state + process the room owns; the Environment line names runtime, port and service",
+              "room.json state + process, and the VM supervisor record; the Environment line names runtime, port and service",
           }),
           horizonItem(h, {
             tone: "built",
@@ -484,7 +484,7 @@ export const visionView = (h: Html.H<Message>, model: Model) => {
       sceneHeader(h, {
         title: "The tailnet is the intranet",
         caption:
-          "The rack the loop is designed around. Live sessions and services are on /factory; this map does not invent them.",
+          "A static sketch of the rack the loop is designed around. Live sessions and services are on /factory; the machine names here are examples, not a presence read.",
       }),
       tailnetMap(h, model.visionMachine ?? "mbp1"),
     ),
@@ -771,6 +771,12 @@ export const visionView = (h: Html.H<Message>, model: Model) => {
             title: "Alchemy inventory",
             detail: "Room + RoomMachine declarations · plan and apply tested",
           }),
+          horizonItem(h, {
+            tone: "built",
+            title: "agentOS preview bridge",
+            detail:
+              "board /preview → supervisor vmHttp → guest service; 0.4.9 has no network.preview",
+          }),
         ),
         h.div.class("horizon-layer next").children(
           h.span.class("horizon-title").children("next"),
@@ -778,11 +784,6 @@ export const visionView = (h: Html.H<Message>, model: Model) => {
             tone: "built",
             title: "agentOS provider",
             detail: "embedded VM per room · separate filesystem and process",
-          }),
-          horizonItem(h, {
-            tone: "missing",
-            title: "agentOS preview bridge",
-            detail: "next: board route → VM network.preview; host ports until then",
           }),
           horizonItem(h, {
             tone: "missing",

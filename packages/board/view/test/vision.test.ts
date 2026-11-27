@@ -28,5 +28,7 @@ it.effect("the vision board explains what Alchemy controls", () =>
     assert.include(text, "room.json state + process")
     assert.include(text, "Tackle.RoomMachine is now built")
     assert.include(text, "local worktree · :4400 · web")
+    assert.include(text, "agentOS preview bridge")
+    assert.include(text, "supervisor vmHttp")
   }),
 )
