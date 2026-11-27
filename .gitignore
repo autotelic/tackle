@@ -17,6 +17,10 @@ coverage/
 # joggle local caches (committed answers live in .joggle/answers, which IS tracked)
 .joggle/run-cache/
 .joggle/parsecache/
+# The derived fact store: machine-local, never reviewed, never committed.
+.joggle/cache/store.sqlite
+.joggle/cache/store.sqlite-wal
+.joggle/cache/store.sqlite-shm
 .joggle/types.json
 .joggle/declaration-types.json
 # Machine-local dependency surface: `joggle surface build` regenerates it per checkout.

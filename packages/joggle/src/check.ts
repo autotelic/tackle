@@ -17,6 +17,7 @@ import { canonical } from "./canonical.ts"
 import { sourceFingerprint } from "./fingerprint.ts"
 import { loadParses } from "./parsecache.ts"
 import { answerStoreBytes } from "./answer-store.ts"
+import { closeFactStore, useFactStore } from "./store.ts"
 import {
   baselinePath,
   manifestOf,
@@ -611,6 +612,11 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
   // Written after the load, and only when something was actually parsed.
   yield* parseCache.save
 
+  // Facts are derived and machine-local, unlike the reviewed answer ledger. The
+  // fragment index is behind `fragmentsOf`, so this only points it at the root;
+  // it opens the database on the first rule that asks for a fragment set.
+  useFactStore(options.cwd)
+
   // What each declaration IS, according to the compiler. On by default and
   // separate from the trace: the trace is a whole-program side channel for the
   // facts a guard needs, while this is the per-declaration answer every type
@@ -1001,6 +1007,7 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
   })
 
   const { plannedOutcomes, plainResults } = yield* engine.pipe(Effect.provide(atomsLayer))
+  const factStore = closeFactStore()
 
   const results: ReadonlyArray<{
     readonly rule: { readonly id: string }
@@ -1125,6 +1132,22 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
         " file(s) and reused " +
         parsedFromCache +
         " parse(s) from the cache",
+    })
+  }
+  if (factStore !== undefined) {
+    notes.push({
+      ruleId: "joggle",
+      reason:
+        "fragment store: " +
+        factStore.state +
+        "; " +
+        factStore.reused +
+        " unit(s) reused, " +
+        factStore.walked +
+        " walked, " +
+        factStore.units +
+        " stored" +
+        (factStore.issue === undefined ? "" : "; " + factStore.issue),
     })
   }
   if (workspace.testDeclarations > 0) {
