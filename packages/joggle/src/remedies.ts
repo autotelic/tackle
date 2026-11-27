@@ -404,17 +404,13 @@ export interface RepairOpinion {
 }
 
 /**
- * The gated question counts, so a run can say what it did not ask.
+ * The gated question counts, one number per gate step plus the merge question.
  *
- * `decidedByCode` is the interesting number: pairs whose merge `j_remedy`
- * already rejected, so no materiality or subcase judgment could change it.
- * Rung 3's preview is how much of the corpus code can settle alone.
+ * A projection of `RefinementGate` rather than a second hand-written shape, so
+ * a new gate step cannot arrive without its count.
  */
-export interface RemedyQuestionCounts {
-  readonly remedy: number
-  readonly material: number
-  readonly subcase: number
-  readonly decidedByCode: number
+export type RemedyQuestionCounts = { readonly remedy: number } & {
+  readonly [K in keyof RefinementGate]: number
 }
 
 /** Which pairs get the refinement questions, and which the merge question settled alone. */
@@ -522,6 +518,58 @@ export interface ClusterTrace {
   readonly decision: RemedyDecision
 }
 
+/** The only branch these three answers can take, given the thresholds. */
+const branchOf = (
+  judgments: RemedyJudgments,
+  thresholds: RemedyDecision["thresholds"],
+): RemedyDecision["branch"] => {
+  if (judgments.remedy === undefined || judgments.remedy <= thresholds.sameRemedy) {
+    return "independent"
+  }
+  if (judgments.material !== undefined && judgments.material < thresholds.material) return "same"
+  // Only a pair whose repairs already match can be a subcase: the subcase
+  // question is asked after `j_remedy`, and it refines a material trigger
+  // difference rather than competing with the merge question.
+  return judgments.subcase !== undefined && judgments.subcase > thresholds.subcase
+    ? "subcase"
+    : "independent"
+}
+
+/** One sentence naming the branch and the two answers that chose it. */
+const describeBranch = (
+  branch: RemedyDecision["branch"],
+  judgments: RemedyJudgments,
+  thresholds: RemedyDecision["thresholds"],
+): string => {
+  const percent = (value: number | undefined): string =>
+    value === undefined ? "unanswered" : value.toFixed(2)
+  const remedy = judgments.remedy
+  const material = judgments.material
+  const same = remedy !== undefined && remedy > thresholds.sameRemedy
+  const merge =
+    "j_remedy " + percent(remedy) + (same ? " > " : " <= ") + String(thresholds.sameRemedy)
+  const trigger =
+    "j_material " +
+    percent(material) +
+    (material !== undefined && material < thresholds.material ? " < " : " >= ") +
+    String(thresholds.material)
+  if (branch === "same") return merge + " and " + trigger
+  if (branch === "subcase") {
+    return (
+      merge +
+      " but " +
+      trigger +
+      ", and j_subcase " +
+      percent(judgments.subcase) +
+      " > " +
+      String(thresholds.subcase)
+    )
+  }
+  return same
+    ? merge + " but " + trigger + "; the trigger difference changes the repair"
+    : merge + "; the messages do not prescribe one repair"
+}
+
 /** Apply the published thresholds to the three answers. Code decides. */
 export const remedyDecisionOf = (judgments: RemedyJudgments): RemedyDecision => {
   const thresholds = {
@@ -529,71 +577,8 @@ export const remedyDecisionOf = (judgments: RemedyJudgments): RemedyDecision => 
     material: policy.decision.remedy.material,
     subcase: policy.decision.remedy.subcase,
   }
-  const percent = (value: number | undefined): string =>
-    value === undefined ? "unanswered" : value.toFixed(2)
-  if (judgments.remedy !== undefined && judgments.remedy > thresholds.sameRemedy) {
-    if (judgments.material !== undefined && judgments.material < thresholds.material) {
-      return {
-        branch: "same",
-        reason:
-          "j_remedy " +
-          percent(judgments.remedy) +
-          " > " +
-          String(thresholds.sameRemedy) +
-          " and j_material " +
-          percent(judgments.material) +
-          " < " +
-          String(thresholds.material),
-        thresholds,
-      }
-    }
-    // Only a pair whose repairs already match can be a subcase: the subcase
-    // question is asked after `j_remedy`, and it refines a material trigger
-    // difference rather than competing with the merge question.
-    if (judgments.subcase !== undefined && judgments.subcase > thresholds.subcase) {
-      return {
-        branch: "subcase",
-        reason:
-          "j_remedy " +
-          percent(judgments.remedy) +
-          " > " +
-          String(thresholds.sameRemedy) +
-          " but j_material " +
-          percent(judgments.material) +
-          " >= " +
-          String(thresholds.material) +
-          ", and j_subcase " +
-          percent(judgments.subcase) +
-          " > " +
-          String(thresholds.subcase),
-        thresholds,
-      }
-    }
-    return {
-      branch: "independent",
-      reason:
-        "j_remedy " +
-        percent(judgments.remedy) +
-        " > " +
-        String(thresholds.sameRemedy) +
-        " but j_material " +
-        percent(judgments.material) +
-        " >= " +
-        String(thresholds.material) +
-        "; the trigger difference changes the repair",
-      thresholds,
-    }
-  }
-  return {
-    branch: "independent",
-    reason:
-      "j_remedy " +
-      percent(judgments.remedy) +
-      " <= " +
-      String(thresholds.sameRemedy) +
-      "; the messages do not prescribe one repair",
-    thresholds,
-  }
+  const branch = branchOf(judgments, thresholds)
+  return { branch, reason: describeBranch(branch, judgments, thresholds), thresholds }
 }
 
 /**
@@ -609,17 +594,7 @@ export const remedyDecisionOf = (judgments: RemedyJudgments): RemedyDecision => 
 export const recomputeTraceDecision = (trace: {
   readonly judgments: RemedyJudgments
   readonly decision: RemedyDecision
-}): RemedyDecision["branch"] => {
-  const judgments = trace.judgments
-  const thresholds = trace.decision.thresholds
-  if (judgments.remedy !== undefined && judgments.remedy > thresholds.sameRemedy) {
-    if (judgments.material !== undefined && judgments.material < thresholds.material) return "same"
-    return judgments.subcase !== undefined && judgments.subcase > thresholds.subcase
-      ? "subcase"
-      : "independent"
-  }
-  return "independent"
-}
+}): RemedyDecision["branch"] => branchOf(trace.judgments, trace.decision.thresholds)
 
 /**
  * The unordered key for a pair of message keys.
@@ -703,33 +678,39 @@ export const composeRemedy = ({
 }: {
   readonly family: string
   readonly clause: string
-}): string => {
+}): Result.Result<string, BuildFailure> => {
+  const refuse = (
+    verb: string,
+    subject: string,
+    reason: string,
+  ): Result.Result<string, BuildFailure> =>
+    Result.fail(
+      new BuildFailure({
+        family,
+        subject: JSON.stringify(subject),
+        message: "remedies: refusing to " + verb + " " + JSON.stringify(subject) + "; it " + reason,
+      }),
+    )
   const clauseLabel = repairLabel(clause)
-  if (Result.isFailure(clauseLabel)) {
-    throw new BuildFailure({
-      family,
-      subject: JSON.stringify(clause),
-      message:
-        "remedies: refusing to use " +
-        JSON.stringify(clause) +
-        " as a repair; it " +
-        clauseLabel.failure,
-    })
-  }
+  if (Result.isFailure(clauseLabel)) return refuse("use as a repair", clause, clauseLabel.failure)
   const composed = family === "" ? clauseLabel.success : family + ": " + clauseLabel.success
   const label = repairLabel(composed)
-  if (Result.isFailure(label)) {
-    throw new BuildFailure({
-      family,
-      subject: JSON.stringify(composed),
-      message:
-        "remedies: refusing to label a cluster " +
-        JSON.stringify(composed) +
-        "; it " +
-        label.failure,
-    })
-  }
-  return label.success
+  if (Result.isFailure(label)) return refuse("label a cluster", composed, label.failure)
+  return Result.succeed(label.success)
+}
+
+/** Compose a remedy, failing the effect instead of throwing (`no-builtin-throws`). */
+const composeOrFail = ({
+  family,
+  clause,
+}: {
+  readonly family: string
+  readonly clause: string
+}): Effect.Effect<string, BuildFailure> => {
+  const composed = composeRemedy({ family, clause })
+  return Result.isFailure(composed)
+    ? Effect.fail(composed.failure)
+    : Effect.succeed(composed.success)
 }
 
 /** How a message's clause list is resolved: asked, implied, or a bug. */
@@ -913,6 +894,36 @@ const probabilityPlanOf = ({
   read: (answers) => probabilityOf(answers, name),
 })
 
+/**
+ * One bounded Classify question: four places ask it and only the wording and the
+ * atom differ, so the transport and the label read live here once.
+ */
+const classifyPlanOf = ({
+  subject,
+  atom,
+  name,
+  instructions,
+  criteria,
+}: {
+  readonly subject: string
+  readonly atom: string
+  readonly name: string
+  readonly instructions: ReadonlyArray<string>
+  readonly criteria: Readonly<Record<string, string>>
+}): Plan<string> => ({
+  ruleId: "joggle/remedies",
+  subject,
+  concerns: [],
+  atoms: [atom],
+  decisions: {
+    [name]: Decision.classify({ instructions: instructions.join("\n"), criteria }),
+  },
+  read: (answers) => {
+    const answer = answers[name]
+    return answer !== undefined && "label" in answer ? answer.label : undefined
+  },
+})
+
 /** The answers a plan round returned, keyed by the pair each plan asked about. */
 const answersByKey = (
   pairs: ReadonlyArray<PairQuestion>,
@@ -939,7 +950,7 @@ const answersByKey = (
  */
 export const judgeRemedies = (
   findings: ReadonlyArray<RemedyFinding>,
-): Effect.Effect<RepairOpinion, never, Atoms | PlanAnswers | DecisionModel.DecisionModel> =>
+): Effect.Effect<RepairOpinion, BuildFailure, Atoms | PlanAnswers | DecisionModel.DecisionModel> =>
   Effect.gen(function* () {
     const atoms = yield* Atoms
     const messages = messageNodesOf(findings)
@@ -975,55 +986,41 @@ export const judgeRemedies = (
       const atom = yield* atoms.add({
         finding: { message: message.message, help: message.help ?? "" },
       })
-      familyPlans.push({
-        ruleId: "joggle/remedies",
-        subject: message.key,
-        concerns: [],
-        atoms: [atom],
-        decisions: {
-          family: Decision.classify({
-            instructions: [
-              "Which family of repair does `atoms[" +
-                atom +
-                "].finding.message` prescribe, given `atoms[" +
-                atom +
-                "].finding.help`?",
-              "Answer about what the message tells a reader to DO, not which rule produced it.",
-              "Choose `other` when no family fits; the next question then names the repair.",
-            ].join("\n"),
-            criteria: remedyFamilies,
-          }),
-        },
-        read: (answers) => {
-          const answer = answers["family"]
-          return answer !== undefined && "label" in answer ? answer.label : undefined
-        },
-      })
+      familyPlans.push(
+        classifyPlanOf({
+          subject: message.key,
+          atom,
+          name: "family",
+          instructions: [
+            "Which family of repair does `atoms[" +
+              atom +
+              "].finding.message` prescribe, given `atoms[" +
+              atom +
+              "].finding.help`?",
+            "Answer about what the message tells a reader to DO, not which rule produced it.",
+            "Choose `other` when no family fits; the next question then names the repair.",
+          ],
+          criteria: remedyFamilies,
+        }),
+      )
       familySubjects.push({ kind: "message", key: message.key })
     }
     for (const clause of clauses) {
       const atom = yield* atoms.add({ clause: { text: clause } })
-      familyPlans.push({
-        ruleId: "joggle/remedies",
-        subject: clause,
-        concerns: [],
-        atoms: [atom],
-        decisions: {
-          family: Decision.classify({
-            instructions: [
-              "Which family of repair is `atoms[" + atom + "].clause.text`?",
-              "The text is a candidate repair clause code derived from this corpus, not a finding.",
-              "Classify what it tells a reader to DO.",
-              "Choose `other` when no family fits.",
-            ].join("\n"),
-            criteria: remedyFamilies,
-          }),
-        },
-        read: (answers) => {
-          const answer = answers["family"]
-          return answer !== undefined && "label" in answer ? answer.label : undefined
-        },
-      })
+      familyPlans.push(
+        classifyPlanOf({
+          subject: clause,
+          atom,
+          name: "family",
+          instructions: [
+            "Which family of repair is `atoms[" + atom + "].clause.text`?",
+            "The text is a candidate repair clause code derived from this corpus, not a finding.",
+            "Classify what it tells a reader to DO.",
+            "Choose `other` when no family fits.",
+          ],
+          criteria: remedyFamilies,
+        }),
+      )
       familySubjects.push({ kind: "clause", key: clause })
     }
 
@@ -1067,12 +1064,10 @@ export const judgeRemedies = (
         (clause) => (familyByClause.get(clause) ?? "other") === family,
       )
       const route = clauseRouteOf({ family, message: message.message, candidates })
-      if (route.kind === "orphan") return yield* Effect.die(orphanFailureOf(route))
+      if (route.kind === "orphan") return yield* Effect.fail(orphanFailureOf(route))
       if (route.kind === "implied") {
-        clauseByMessage.set(
-          message.key,
-          composeRemedy({ family: route.family, clause: route.clause }),
-        )
+        const composed = yield* composeOrFail({ family: route.family, clause: route.clause })
+        clauseByMessage.set(message.key, composed)
         impliedByMessage.add(message.key)
         continue
       }
@@ -1081,7 +1076,7 @@ export const judgeRemedies = (
     let depth = 0
     while (pending.length > 0 && depth < 8) {
       const plans: Array<Plan<string>> = []
-      const actions: Array<(value: string | undefined) => void> = []
+      const actions: Array<(value: string | undefined) => Effect.Effect<void, BuildFailure>> = []
       const next: Array<PendingClause> = []
       for (const item of pending) {
         const finding = { message: item.message.message, help: item.message.help ?? "" }
@@ -1090,98 +1085,89 @@ export const judgeRemedies = (
           message: item.message.message,
           candidates: item.candidates,
         })
-        if (route.kind === "orphan") return yield* Effect.die(orphanFailureOf(route))
+        if (route.kind === "orphan") return yield* Effect.fail(orphanFailureOf(route))
         if (route.kind === "implied") {
-          clauseByMessage.set(
-            item.message.key,
-            composeRemedy({ family: route.family, clause: route.clause }),
-          )
+          const composed = yield* composeOrFail({ family: route.family, clause: route.clause })
+          clauseByMessage.set(item.message.key, composed)
           impliedByMessage.add(item.message.key)
           continue
         }
         if (route.candidates.length <= limit) {
           const atom = yield* atoms.add({ finding, candidates: item.candidates })
-          plans.push({
-            ruleId: "joggle/remedies",
-            subject: item.message.key,
-            concerns: [],
-            atoms: [atom],
-            decisions: {
-              clause: Decision.classify({
-                instructions: [
-                  "Which candidate repair does `atoms[" +
-                    atom +
-                    "].finding.message` prescribe, given `atoms[" +
-                    atom +
-                    "].finding.help`?",
-                  "The candidates are `atoms[" +
-                    atom +
-                    "].candidates`, all in the repair family `" +
-                    item.family +
-                    "`.",
-                  "Answer about what the message tells a reader to DO, not which rule produced it.",
-                ].join("\n"),
-                criteria: Object.fromEntries(
-                  item.candidates.map((clause) => [
-                    clause,
-                    "The message tells the reader to: " + clause,
-                  ]),
-                ),
-              }),
-            },
-            read: (answers) => {
-              const answer = answers["clause"]
-              return answer !== undefined && "label" in answer ? answer.label : undefined
-            },
-          })
-          actions.push((value) => {
-            if (!Predicate.isString(value) || value === "") return
-            clauseByMessage.set(
-              item.message.key,
-              composeRemedy({ family: item.family, clause: value }),
-            )
-          })
+          plans.push(
+            classifyPlanOf({
+              subject: item.message.key,
+              atom,
+              name: "clause",
+              instructions: [
+                "Which candidate repair does `atoms[" +
+                  atom +
+                  "].finding.message` prescribe, given `atoms[" +
+                  atom +
+                  "].finding.help`?",
+                "The candidates are `atoms[" +
+                  atom +
+                  "].candidates`, all in the repair family `" +
+                  item.family +
+                  "`.",
+                "Answer about what the message tells a reader to DO, not which rule produced it.",
+              ],
+              criteria: Object.fromEntries(
+                item.candidates.map((clause) => [
+                  clause,
+                  "The message tells the reader to: " + clause,
+                ]),
+              ),
+            }),
+          )
+          actions.push((value) =>
+            Predicate.isString(value) && value !== ""
+              ? Effect.flatMap(composeOrFail({ family: item.family, clause: value }), (label) =>
+                  Effect.sync(() => {
+                    clauseByMessage.set(item.message.key, label)
+                  }),
+                )
+              : Effect.void,
+          )
           continue
         }
         const ranges = partitionsOf(item.candidates, limit)
         const labels = ranges.map((_range, index) => "group " + String(index + 1))
         const atom = yield* atoms.add({ finding, groups: ranges })
-        plans.push({
-          ruleId: "joggle/remedies",
-          subject: item.message.key,
-          concerns: [],
-          atoms: [atom],
-          decisions: {
-            group: Decision.classify({
-              instructions: [
-                "Which group of candidate repairs contains the repair `atoms[" +
-                  atom +
-                  "].finding.message` prescribes?",
-                "The groups are `atoms[" + atom + "].groups`; each lists the repairs it holds.",
-                "Answer about what the message tells a reader to DO.",
-              ].join("\n"),
-              criteria: Object.fromEntries(
-                ranges.map((range, index) => [
-                  labels[index] ?? "group",
-                  "One of these repairs: " + range.join(" | "),
-                ]),
-              ),
-            }),
-          },
-          read: (answers) => {
-            const answer = answers["group"]
-            return answer !== undefined && "label" in answer ? answer.label : undefined
-          },
-        })
-        actions.push((value) => {
-          if (!Predicate.isString(value)) return
-          const range = ranges[labels.indexOf(value)]
-          if (range !== undefined) next.push({ ...item, candidates: range })
-        })
+        plans.push(
+          classifyPlanOf({
+            subject: item.message.key,
+            atom,
+            name: "group",
+            instructions: [
+              "Which group of candidate repairs contains the repair `atoms[" +
+                atom +
+                "].finding.message` prescribes?",
+              "The groups are `atoms[" + atom + "].groups`; each lists the repairs it holds.",
+              "Answer about what the message tells a reader to DO.",
+            ],
+            criteria: Object.fromEntries(
+              ranges.map((range, index) => [
+                labels[index] ?? "group",
+                "One of these repairs: " + range.join(" | "),
+              ]),
+            ),
+          }),
+        )
+        actions.push((value) =>
+          Effect.sync(() => {
+            if (!Predicate.isString(value)) return
+            const range = ranges[labels.indexOf(value)]
+            if (range !== undefined) next.push({ ...item, candidates: range })
+          }),
+        )
       }
       const answered = yield* askPlans(plans)
       failures.push(...answered.failures)
-      answered.values.forEach((value, index) => actions[index]?.(value))
+      for (const [index, value] of answered.values.entries()) {
+        const action = actions[index]
+        if (action !== undefined) yield* action(value)
+      }
       pending = next
       depth += 1
     }
@@ -1538,11 +1524,20 @@ const rulesOf = (findings: ReadonlyArray<RemedyFinding>): ReadonlyArray<RuleSite
     .sort((left, right) => right.findings - left.findings || left.rule.localeCompare(right.rule))
 }
 
-const counterexamplesOf = (
-  findings: ReadonlyArray<RemedyFinding>,
-): ReadonlyArray<Counterexample> => {
+interface RulePair {
+  readonly left: RuleSites
+  readonly right: RuleSites
+  readonly leftOnly: ReadonlyArray<string>
+  readonly rightOnly: ReadonlyArray<string>
+  readonly shared: ReadonlyArray<string>
+}
+
+/**
+ * Every pair of rules in one cluster, with the site arithmetic both audits need.
+ */
+const rulePairsOf = (findings: ReadonlyArray<RemedyFinding>): ReadonlyArray<RulePair> => {
   const rules = rulesOf(findings)
-  const out: Array<Counterexample> = []
+  const pairs: Array<RulePair> = []
   for (let left = 0; left < rules.length; left += 1) {
     for (let right = left + 1; right < rules.length; right += 1) {
       const a = rules[left]
@@ -1550,45 +1545,60 @@ const counterexamplesOf = (
       if (a === undefined || b === undefined) continue
       const aSites = new Set(a.sites)
       const bSites = new Set(b.sites)
-      const onlyA = a.sites.filter((site) => !bSites.has(site))
-      const onlyB = b.sites.filter((site) => !aSites.has(site))
-      const both = a.sites.filter((site) => bSites.has(site))
-      const sampleA = findings.find(
-        (finding) => finding.rule === a.rule && onlyA.includes(finding.site),
-      )
-      const sampleB = findings.find(
-        (finding) => finding.rule === b.rule && onlyB.includes(finding.site),
-      )
-      const reason =
-        onlyA.length === 0 && onlyB.length === 0
-          ? "Every site carries both rules, so neither reaches a site the other cannot."
-          : "The triggers are not the same predicate. `" +
-            a.rule +
-            "` reaches " +
-            String(onlyA.length) +
-            " site(s) `" +
-            b.rule +
-            "` does not" +
-            (sampleA === undefined
-              ? ""
-              : ", where the finding is " + JSON.stringify(diagnosisOf(sampleA.message))) +
-            "; `" +
-            b.rule +
-            "` reaches " +
-            String(onlyB.length) +
-            " site(s) `" +
-            a.rule +
-            "` does not" +
-            (sampleB === undefined
-              ? ""
-              : ", where the finding is " + JSON.stringify(diagnosisOf(sampleB.message))) +
-            ". No finding from the other rule is recorded at those sites, so the other rule's" +
-            " trigger is absent there."
-      out.push({ a: a.rule, b: b.rule, onlyA, onlyB, both, reason })
+      pairs.push({
+        left: a,
+        right: b,
+        leftOnly: a.sites.filter((site) => !bSites.has(site)),
+        rightOnly: b.sites.filter((site) => !aSites.has(site)),
+        shared: a.sites.filter((site) => bSites.has(site)),
+      })
     }
   }
-  return out
+  return pairs
 }
+
+const counterexamplesOf = (findings: ReadonlyArray<RemedyFinding>): ReadonlyArray<Counterexample> =>
+  rulePairsOf(findings).map(({ left, right, leftOnly, rightOnly, shared }) => {
+    const sampleA = findings.find(
+      (finding) => finding.rule === left.rule && leftOnly.includes(finding.site),
+    )
+    const sampleB = findings.find(
+      (finding) => finding.rule === right.rule && rightOnly.includes(finding.site),
+    )
+    const reason =
+      leftOnly.length === 0 && rightOnly.length === 0
+        ? "Every site carries both rules, so neither reaches a site the other cannot."
+        : "The triggers are not the same predicate. `" +
+          left.rule +
+          "` reaches " +
+          String(leftOnly.length) +
+          " site(s) `" +
+          right.rule +
+          "` does not" +
+          (sampleA === undefined
+            ? ""
+            : ", where the finding is " + JSON.stringify(diagnosisOf(sampleA.message))) +
+          "; `" +
+          right.rule +
+          "` reaches " +
+          String(rightOnly.length) +
+          " site(s) `" +
+          left.rule +
+          "` does not" +
+          (sampleB === undefined
+            ? ""
+            : ", where the finding is " + JSON.stringify(diagnosisOf(sampleB.message))) +
+          ". No finding from the other rule is recorded at those sites, so the other rule's" +
+          " trigger is absent there."
+    return {
+      a: left.rule,
+      b: right.rule,
+      onlyA: leftOnly,
+      onlyB: rightOnly,
+      both: shared,
+      reason,
+    }
+  })
 
 const clustersOf = (
   findings: ReadonlyArray<RemedyFinding>,
@@ -1744,46 +1754,35 @@ const clauseOfRule = (members: ReadonlyArray<RemedyFinding>, rule: string): stri
 const crossRulesOf = (
   members: ReadonlyArray<RemedyFinding>,
   opinion: RepairOpinion,
-): ReadonlyArray<ClusterRuleMerge> => {
-  const rules = rulesOf(members)
-  const out: Array<ClusterRuleMerge> = []
-  for (let left = 0; left < rules.length; left += 1) {
-    for (let right = left + 1; right < rules.length; right += 1) {
-      const a = rules[left]
-      const b = rules[right]
-      if (a === undefined || b === undefined) continue
-      const aSites = new Set(a.sites)
-      const intersect = b.sites.some((site) => aSites.has(site))
-      const aMembers = members.filter((member) => member.rule === a.rule)
-      const bMembers = members.filter((member) => member.rule === b.rule)
-      const judgments = judgmentsBetween({ aMembers, bMembers, opinion })
-      const aRepairs = new Set(
-        aMembers
-          .map((member) => opinion.repairs.get(messageKeyOf(member)))
-          .filter(Predicate.isString),
-      )
-      const sharedRepair = bMembers.some((member) => {
-        const repair = opinion.repairs.get(messageKeyOf(member))
-        return repair !== undefined && repair !== "none" && aRepairs.has(repair)
-      })
-      out.push({
-        a: { rule: a.rule, sites: a.sites.length },
-        b: { rule: b.rule, sites: b.sites.length },
-        intersect,
-        probability: judgments.remedy,
-        material: judgments.material,
-        subcase: judgments.subcase,
-        decision: remedyDecisionOf(judgments).branch,
-        sharedRepair,
-        families: {
-          a: familyOfRule(members, a.rule, opinion),
-          b: familyOfRule(members, b.rule, opinion),
-        },
-      })
+): ReadonlyArray<ClusterRuleMerge> =>
+  rulePairsOf(members).map(({ left, right, shared }) => {
+    const aMembers = members.filter((member) => member.rule === left.rule)
+    const bMembers = members.filter((member) => member.rule === right.rule)
+    const judgments = judgmentsBetween({ aMembers, bMembers, opinion })
+    const aRepairs = new Set(
+      aMembers
+        .map((member) => opinion.repairs.get(messageKeyOf(member)))
+        .filter(Predicate.isString),
+    )
+    const sharedRepair = bMembers.some((member) => {
+      const repair = opinion.repairs.get(messageKeyOf(member))
+      return repair !== undefined && repair !== "none" && aRepairs.has(repair)
+    })
+    return {
+      a: { rule: left.rule, sites: left.sites.length },
+      b: { rule: right.rule, sites: right.sites.length },
+      intersect: shared.length > 0,
+      probability: judgments.remedy,
+      material: judgments.material,
+      subcase: judgments.subcase,
+      decision: remedyDecisionOf(judgments).branch,
+      sharedRepair,
+      families: {
+        a: familyOfRule(members, left.rule, opinion),
+        b: familyOfRule(members, right.rule, opinion),
+      },
     }
-  }
-  return out
-}
+  })
 
 /**
  * Turn each cross-rule merge into a facts / judgments / decision trace.

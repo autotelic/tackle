@@ -1,19 +1,11 @@
 import { Data } from "effect"
 
 /*
- * The refusal this package kept inventing.
+ * A refusal that must name its subject, and nothing else.
  *
  * A lookup's absence is `Option`: the value was not there and the caller only
- * needs to know that. This module used to carry a second helper, `lookup`, that
- * returned `Result<A, NoMatch>` so the miss could name what it looked for. Both
- * call sites immediately discarded the failure -- plans.ts with `getOrElse`, the
- * remedy audit with `getOrUndefined` -- so the reason was never read and the
- * wrapper only moved the absence one layer away from the primitive that already
- * spells it. Option is the primitive; it does not need a reason attached.
- *
- * A refusal that must name its subject is different, and is BuildFailure. The
- * finding that paid for this module is plumb's `no-builtin-throws`: remedies.ts
- * threw `new Error` when a repair label could not be composed.
+ * needs to know that. A build that cannot continue is different, and its reason
+ * has to fit in one primitive.
  */
 
 /**

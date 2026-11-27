@@ -428,24 +428,22 @@ test("a subject is not a clause and is reported instead of offered", () => {
   expect(Result.isSuccess(accepted) ? accepted.success : undefined).toBe(
     "Narrow with a type predicate",
   )
-  expect(() =>
-    composeRemedy({ family: "other", clause: "@effect/ui/Command#make is an experimental API" }),
-  ).toThrow(/refusing to use/)
 })
 
 test("a refused repair is a tagged build failure, not prose in a stack trace", () => {
-  let failure: unknown
-  try {
-    composeRemedy({ family: "other", clause: "@effect/ui/Command#make is an experimental API" })
-  } catch (error) {
-    failure = error
-  }
-  expect(failure).toBeInstanceOf(BuildFailure)
-  expect(failure).toMatchObject({
-    _tag: "joggle/BuildFailure",
+  const refused = composeRemedy({
     family: "other",
-    subject: JSON.stringify("@effect/ui/Command#make is an experimental API"),
+    clause: "@effect/ui/Command#make is an experimental API",
   })
+  expect(Result.isFailure(refused)).toBe(true)
+  if (Result.isFailure(refused)) {
+    expect(refused.failure).toBeInstanceOf(BuildFailure)
+    expect(refused.failure).toMatchObject({
+      _tag: "joggle/BuildFailure",
+      family: "other",
+      subject: JSON.stringify("@effect/ui/Command#make is an experimental API"),
+    })
+  }
 })
 
 test("a subject clause is recorded as rejected, not used as a cluster label", () => {
@@ -482,18 +480,20 @@ test("the repair family is one bounded question, and the clause is another", () 
   ])
   expect(Object.keys(remedyFamilies).length).toBeLessThanOrEqual(policy.decision.maxChoiceOptions)
   // The identity is composed, and it reads as a sentence rather than a token.
-  expect(
-    composeRemedy({
-      family: "narrow with a predicate",
-      clause: "Narrow with discriminants/in checks",
-    }),
-  ).toBe("narrow with a predicate: Narrow with discriminants/in checks")
-  expect(
-    composeRemedy({
-      family: "use the stable API",
-      clause: "Use the non-experimental, non-deprecated API",
-    }),
-  ).toBe("use the stable API: Use the non-experimental, non-deprecated API")
+  const narrow = composeRemedy({
+    family: "narrow with a predicate",
+    clause: "Narrow with discriminants/in checks",
+  })
+  expect(Result.isSuccess(narrow) ? narrow.success : undefined).toBe(
+    "narrow with a predicate: Narrow with discriminants/in checks",
+  )
+  const stable = composeRemedy({
+    family: "use the stable API",
+    clause: "Use the non-experimental, non-deprecated API",
+  })
+  expect(Result.isSuccess(stable) ? stable.success : undefined).toBe(
+    "use the stable API: Use the non-experimental, non-deprecated API",
+  )
 })
 
 test("one clause is answered in code, not asked as a one-option Choice", () => {
