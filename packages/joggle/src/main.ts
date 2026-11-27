@@ -39,6 +39,8 @@ import {
 } from "./typefacts.ts"
 import { manifestOf } from "./run-cache.ts"
 import { sourceFingerprint } from "./fingerprint.ts"
+import { buildSurface } from "./surface.ts"
+import { decodeSurface } from "@autotelic/protocol"
 
 /**
  * One report, written and then WAITED for.
@@ -1163,6 +1165,155 @@ const cacheMigrate = Command.make(
   Command.withShortDescription("Consolidate or shard the answer cache."),
 )
 
+const surfaceBuild = Command.make(
+  "build",
+  {
+    out: Flag.String("out").pipe(
+      Flag.withDescription("Where to write the surface (default .joggle/surface.json)."),
+      Flag.optional,
+    ),
+    cwd: Flag.String("cwd").pipe(
+      Flag.withDescription("Project root to read (default: the current directory)."),
+      Flag.optional,
+    ),
+  },
+  (config) =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem
+      const path = yield* Path.Path
+      const cwd = path.resolve(Option.getOrUndefined(config.cwd) ?? process.cwd())
+      const out = path.resolve(
+        cwd,
+        Option.getOrUndefined(config.out) ?? ".joggle/surface.json",
+      )
+      const built = yield* buildSurface({ root: cwd })
+      yield* fs.makeDirectory(path.dirname(out), { recursive: true })
+      yield* fs.writeFileString(out, JSON.stringify(built.surface, null, 2) + "\n")
+      const exports = built.surface.packages.reduce(
+        (total, surfacePackage) => total + surfacePackage.exports.length,
+        0,
+      )
+      const skipped =
+        built.skipped.length === 0
+          ? ""
+          : "; " +
+            String(built.skipped.length) +
+            " package(s) skipped: " +
+            built.skipped.slice(0, 5).map((entry) => entry.name).join(", ") +
+            (built.skipped.length > 5 ? " and more" : "")
+      yield* write(
+        "joggle: wrote " +
+          built.surface.packages.length +
+          " package(s), " +
+          exports +
+          " export(s) to " +
+          out +
+          skipped,
+      )
+    }),
+).pipe(
+  Command.withDescription(
+    "Read each direct dependency's one type declaration and write the export names to a machine-local surface file.",
+  ),
+  Command.withShortDescription("Build the dependency surface."),
+  Command.withExamples([
+    { command: "joggle surface build", description: "Write .joggle/surface.json." },
+    {
+      command: "joggle surface build --out .joggle/surface.json",
+      description: "Write the surface at an explicit path.",
+    },
+  ]),
+)
+
+const surfaceCommand = Command.make(
+  "surface",
+  {
+    check: Flag.Boolean("check").pipe(
+      Flag.withDescription(
+        "Exit 1 when the surface is missing or its packages/versions no longer match package.json + node_modules.",
+      ),
+      Flag.withDefault(false),
+    ),
+    cwd: Flag.String("cwd").pipe(
+      Flag.withDescription("Project root to read (default: the current directory)."),
+      Flag.optional,
+    ),
+  },
+  (config) =>
+    Effect.gen(function* () {
+      if (!config.check) {
+        yield* write(
+          "joggle surface: run `joggle surface build` to write the surface, or `joggle surface --check` to verify it.",
+        )
+        return
+      }
+      const fs = yield* FileSystem.FileSystem
+      const path = yield* Path.Path
+      const cwd = path.resolve(Option.getOrUndefined(config.cwd) ?? process.cwd())
+      const file = path.join(cwd, ".joggle/surface.json")
+      const exists = yield* Effect.orElseSucceed(fs.exists(file), () => false)
+      if (!exists) {
+        yield* write("joggle: no surface at " + file + ": run `joggle surface build`")
+        yield* Effect.sync(() => {
+          process.exitCode = 1
+        })
+        return
+      }
+      const text = yield* Effect.orElseSucceed(fs.readFileString(file), () => "")
+      let parsed: unknown
+      try {
+        parsed = JSON.parse(text)
+      } catch {
+        parsed = undefined
+      }
+      if (parsed === undefined) {
+        yield* write("joggle: the surface is not readable JSON: run `joggle surface build`")
+        yield* Effect.sync(() => {
+          process.exitCode = 1
+        })
+        return
+      }
+      const stored = decodeSurface(parsed)
+      const current = yield* buildSurface({ root: cwd })
+      const namesOf = (surface: typeof stored): ReadonlyArray<string> =>
+        surface.packages
+          .map((surfacePackage) => surfacePackage.name + "@" + surfacePackage.version)
+          .sort((left, right) => left.localeCompare(right))
+      const before = namesOf(stored)
+      const after = namesOf(current.surface)
+      const stale =
+        before.length !== after.length ||
+        before.some((name, index) => name !== after[index])
+      if (stale) {
+        yield* write(
+          "joggle: the surface is stale: " +
+            (before.length === 0 ? "no packages" : before.join(", ")) +
+            " -> " +
+            (after.length === 0 ? "no packages" : after.join(", ")) +
+            ": run `joggle surface build`",
+        )
+        yield* Effect.sync(() => {
+          process.exitCode = 1
+        })
+        return
+      }
+      yield* write("joggle: the surface matches " + after.length + " package(s)")
+    }),
+).pipe(
+  Command.withDescription(
+    "Build or verify the dependency surface. `surface build` writes it; `surface --check` fails when it is missing or stale.",
+  ),
+  Command.withShortDescription("Build or verify the dependency surface."),
+  Command.withExamples([
+    { command: "joggle surface build", description: "Regenerate the machine-local surface." },
+    {
+      command: "joggle surface --check",
+      description: "Fail when the surface no longer matches the installed packages.",
+    },
+  ]),
+  Command.withSubcommands([surfaceBuild]),
+)
+
 const cacheCommand = Command.make("cache", {}, () =>
   write(
     "joggle cache: run `joggle cache compact`, `report`, `prune`, or `migrate --layout single|sharded`; docs/artifacts.md has the reasoning.",
@@ -1192,6 +1343,7 @@ const cli = Command.make("joggle").pipe(
     rules,
     calibrateCommand,
     cacheCommand,
+    surfaceCommand,
     mergeAnswers,
   ]),
 )

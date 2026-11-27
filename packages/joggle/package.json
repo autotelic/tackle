@@ -59,6 +59,7 @@
   },
   "scripts": {
     "joggle": "node --conditions=development src/main.ts",
+    "surface": "node --conditions=development src/main.ts surface",
     "joggle:elsewhere": "sh scripts/joggle-elsewhere.sh",
     "build": "tsc -p tsconfig.build.json",
     "prepack": "pnpm build",

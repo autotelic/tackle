@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "packages": [
+    {
+      "name": "effect",
+      "version": "4.0.5",
+      "exports": [
+        {
+          "name": "Duration",
+          "module": "root",
+          "kind": "class",
+          "signature": "class Duration { static millis(input: number): Duration }",
+          "doc": "A span of time with millisecond precision."
+        }
+      ]
+    }
+  ]
+}

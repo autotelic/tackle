@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "packages": [
+    {
+      "name": "effect",
+      "version": "4.0.5",
+      "exports": [
+        {
+          "name": "Ratio",
+          "module": "root",
+          "kind": "class",
+          "signature": "class Ratio",
+          "doc": "A ratio."
+        }
+      ]
+    }
+  ]
+}
