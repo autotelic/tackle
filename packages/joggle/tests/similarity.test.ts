@@ -101,10 +101,10 @@ it("it is much cheaper than comparing every pair in the window", () => {
   let windowPairs = 0
   const ordered = index
     .map((entry) => ({ item: entry, position: entry.position }))
-    .sort((a, b) => a.item.shingles.size - b.item.shingles.size || a.position - b.position)
+    .sort((a, b) => a.item.values.size - b.item.values.size || a.position - b.position)
   sweep(
     ordered,
-    (item) => item.shingles.size,
+    (item) => item.values.size,
     0.7,
     () => {
       windowPairs += 1
