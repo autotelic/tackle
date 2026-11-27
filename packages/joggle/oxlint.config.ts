@@ -82,6 +82,9 @@ const GENERIC = [
 
 const EFFECT = [
   "guarded-op-must-return-effect",
+  // guarded-op-must-return-option is not enabled: joggle's exported surface spells
+  // absence as `T | undefined`, in the seven sites lint-baseline.json accepts. The
+  // rule pair now agrees on Either, so re-enabling means re-deriving that baseline.
   "no-cascading-layer-provide",
   "no-decode-unknown-option",
   "no-direct-browser-storage",
@@ -135,27 +138,13 @@ export default {
   options: { typeAware: true },
   settings: { jsdoc: { mode: "typescript" } },
   jsPlugins: [
-    // The installed package, which is what a consumer has. Its dist was three
-    // rules behind its src until I rebuilt it, which is the same lesson as every
-    // other stale artifact in this session: a build output is another thing that
-    // can quietly disagree with its source.
+    // The installed package, which is what a consumer has.
     { name: "plumb", specifier: "@autotelic/plumb" },
     { name: "plumb-effect", specifier: "@autotelic/plumb/effect" },
   ],
   rules: {
     ...every(),
     ...EFFECT_TSGO,
-    // Disabled: a contradiction, not a preference. This rule says a function that may
-    // have no answer should return Option; \`guarded-op-must-return-effect\` says Option
-    // hides why and demands Effect or Either. Follow either one and the other fires, and
-    // there is no third spelling that satisfies both. It cost five files and five factory
-    // passes in one evening before \`src/absence.ts\` was written to answer the question
-    // once -- a module whose entire purpose was this rule. The package may use either
-    // shape now; what it may not have is a rule set that recommends both.
-    //
-    // The four file-scoped exceptions that each argued this separately are deleted with
-    // it: one reason, stated once, is what a config should carry.
-    // Recorded with the fix and its negative fixture in docs/rules-to-write.md.
     // Effect 4.0.5 still marks the AI, HTTP, and process modules joggle is built on as
     // `@stability unstable`, so `recommended`'s own `unstable-api-usage` fires on nearly
     // every file. The fact is accepted; the rule stays available to a consumer who wants the

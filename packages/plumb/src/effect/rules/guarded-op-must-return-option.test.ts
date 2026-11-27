@@ -15,12 +15,10 @@ tester.run(
 	// is the adapter's documented purpose.
 	testableRule(guardedOpMustReturnOptionRule) as never,
 	{
-		valid: [
-			{ code: `export function f(): string { return "x"; }`, filename: "a.ts" },
-			{ code: `export function f(): Option<string> { return Option.none(); }`, filename: "a.ts" },
-		],
+		// The return-shape rows live in absence-shape-matrix.test.ts, which runs
+		// both rules over the same matrix; these are the rule's own escapes.
+		valid: [{ code: `export function f(): string { return "x"; }`, filename: "a.ts" }],
 		invalid: [
-			{ code: `export function f(): string | null { return null; }`, filename: "a.ts", errors: [{ messageId: "nullableReturn" }] },
 			{ code: `const v = x.getOrThrow();`, filename: "a.ts", errors: [{ messageId: "optionEscape" }] },
 		],
 	},

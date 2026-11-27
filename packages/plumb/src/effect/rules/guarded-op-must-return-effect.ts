@@ -2,6 +2,7 @@ import { defineRule } from "@oxlint/plugins";
 
 import type { ESTree, SourceCode } from "@oxlint/plugins";
 
+import { ABSENCE_TYPE, TAGGED_REASON } from "../absence-shape.ts";
 import { ancestorsOf } from "../../shared/ancestors.ts";
 const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$|\/test\//u;
 
@@ -95,11 +96,10 @@ function optionTypeReference(type: ESTree.TSType): string | null {
 }
 
 /**
- * Guarded operations must surface failure reasons as tagged MoneyError values
- * through the Effect error channel, not as bare Option.None which conflates
- * every possible why into one silent absence. The recommendation is deliberately
- * the same shape `guarded-op-must-return-option` names for `T | undefined`, so
- * the pair points at one spelling instead of banning Option by accident.
+ * Guarded operations must surface failure reasons as tagged values through the
+ * Effect error channel, not as bare Option.None which conflates every possible
+ * why into one silent absence. Sync cores name ABSENCE_TYPE, the same spelling
+ * `guarded-op-must-return-option` requires.
  */
 export const guardedOpMustReturnEffectRule = defineRule({
 	meta: {
@@ -109,10 +109,8 @@ export const guardedOpMustReturnEffectRule = defineRule({
 				"Require guarded operations to fail with typed MoneyError reasons via Effect/Either instead of returning bare Option values.",
 		},
 		messages: {
-			optionReturn:
-				"`{{found}}` hides why the operation failed. Return `Effect.Effect<T, MoneyError>` (or `Either<T, TaggedReason>` in sync cores) with Schema.TaggedError reasons so callers can match Overflow vs InvalidInput vs ZeroDivisor. Options buried in tuples, records or arrays hide it just as well.",
-			bareNone:
-				"`Option.none()` here discards the reason for failure. Fail with a tagged MoneyError reason instead, or keep the Option strictly internal while a converted public API owns the error channel.",
+			optionReturn: `\`{{found}}\` hides why the operation failed. Return \`Effect.Effect<T, MoneyError>\` (or \`${ABSENCE_TYPE}\` in sync cores) with ${TAGGED_REASON} reasons so callers can match Overflow vs InvalidInput vs ZeroDivisor. Options buried in tuples, records or arrays hide it just as well.`,
+			bareNone: `\`Option.none()\` here discards the reason for failure. Fail with ${TAGGED_REASON} instead, or keep the Option strictly internal while a converted public API owns the error channel.`,
 		},
 	},
 	createOnce(context) {

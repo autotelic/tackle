@@ -1,6 +1,7 @@
 import { defineRule } from "@oxlint/plugins";
 
 import type { ESTree } from "@oxlint/plugins";
+import { ABSENCE_TYPE, OPTION_HIDES_REASON, TAGGED_REASON } from "../absence-shape.ts";
 import { ancestorsOf } from "../../shared/ancestors.ts";
 
 const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$/u;
@@ -37,24 +38,19 @@ function asUnion(type: ESTree.TSType): ESTree.TSUnionType | null {
 }
 
 /**
- * Guarded operations must surface absence as Either<T, TaggedReason>, not a
- * null/undefined union or a crash. This rule once recommended Option; that made
- * it contradict `guarded-op-must-return-effect`, which rejects Option because it
- * discards the reason. Recommending Either here is what makes the pair agree.
- * The rule id keeps its historical name so consumer configs do not break.
+ * Guarded operations must surface absence as ABSENCE_TYPE, not a null/undefined
+ * union or a crash. The id keeps its historical "option" name so consumer configs
+ * do not break.
  */
 export const guardedOpMustReturnOptionRule = defineRule({
 	meta: {
 		type: "problem",
 		docs: {
-			description:
-				"Disallow returning T | null/undefined from guarded operations and getOrThrow escapes; express absence as Either<T, TaggedReason> so the reason survives. Option<T> is not the answer: guarded-op-must-return-effect rejects it for hiding the why.",
+			description: `Disallow returning T | null/undefined from guarded operations and getOrThrow escapes; express absence as ${ABSENCE_TYPE} so the reason survives. ${OPTION_HIDES_REASON}, so guarded-op-must-return-effect rejects it.`,
 		},
 		messages: {
-			nullableReturn:
-				"This function returns `{{type}}`, conflating absence with a value. Return `Either<{{value}}, TaggedReason>` (Effect's `Either`) with a Schema.TaggedError reason for why the value is absent; absence here is a failure that has a why, and `Option<{{value}}>` would hide it.",
-			optionEscape:
-				"`getOrThrow` turns absence into a runtime crash. Match the `Either<T, TaggedReason>` and handle the Left, or parse to a refined value so the empty branch can't exist.",
+			nullableReturn: `This function returns \`{{type}}\`, conflating absence with a value. Return \`${ABSENCE_TYPE}\` with ${TAGGED_REASON} for why the value is absent; absence here is a failure that has a why, and ${OPTION_HIDES_REASON}.`,
+			optionEscape: `\`getOrThrow\` turns absence into a runtime crash. Match the \`${ABSENCE_TYPE}\` and handle the Left, or parse to a refined value so the empty branch can't exist.`,
 		},
 	},
 	createOnce(context) {
@@ -65,14 +61,10 @@ export const guardedOpMustReturnOptionRule = defineRule({
 			const type = annotation.typeAnnotation;
 			const union = asUnion(type);
 			if (union === null || !nullableWithValue(union)) return;
-			const value = union.types
-				.filter((member) => !isNullableKeyword(member) && member.type !== "TSVoidKeyword")
-				.map((member) => context.sourceCode.getText(member))
-				.join(" | ");
 			context.report({
 				node: type,
 				messageId: "nullableReturn",
-				data: { type: context.sourceCode.getText(type), value },
+				data: { type: context.sourceCode.getText(type) },
 			});
 		};
 
