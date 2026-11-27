@@ -663,6 +663,49 @@ test("board up routes a VM room preview through its supervisor socket", async ()
   }
 }, 30_000)
 
+test("board exposes room lifecycle to its loopback control plane", async () => {
+  const root = mkdtempSync(join(tmpdir(), "board-rooms-"))
+  const repo = join(root, "repo")
+  const factoryHome = join(root, "factory")
+  mkdirSync(repo, { recursive: true })
+  const git = (...args: ReadonlyArray<string>) =>
+    spawnSync("git", args, { cwd: repo, stdio: "ignore" })
+  git("init", "-q", "-b", "main")
+  git("config", "user.email", "room@example.test")
+  git("config", "user.name", "Room Test")
+  writeFileSync(join(repo, "README.md"), "room\n")
+  git("add", "README.md")
+  git("commit", "-q", "-m", "init")
+  const boardPort = await releasedPort()
+  const up = run(["up", "--root", "rooms", "--port", String(boardPort), "--detach"], root, {
+    FACTORY_HOME: factoryHome,
+  })
+  expect(up.status, up.stderr).toBe(0)
+  const origin = "http://127.0.0.1:" + boardPort
+  try {
+    const created = await fetch(origin + "/rooms", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id: "api-room", repo, scope: "api-room" }),
+    })
+    expect(created.status, await created.text()).toBe(200)
+
+    const listed = await fetch(origin + "/rooms")
+    expect(listed.status).toBe(200)
+    const rooms = (await listed.json()) as { rooms: Array<{ id: string; state: string }> }
+    expect(rooms.rooms).toContainEqual({ id: "api-room", state: "Ready" })
+
+    for (const action of ["up", "pause", "resume", "down"]) {
+      const response = await fetch(origin + "/rooms/api-room/" + action, { method: "POST" })
+      expect(response.status, action + ": " + (await response.text())).toBe(200)
+    }
+    expect((await fetch(origin + "/rooms")).status).toBe(200)
+  } finally {
+    run(["down", "--root", "rooms"], root)
+    rmSync(root, { recursive: true, force: true })
+  }
+}, 60_000)
+
 test("board up routes a workstream's preview to its room's leased service", async () => {
   const root = mkdtempSync(join(tmpdir(), "board-preview-"))
   const server = createServer((request, response) => {

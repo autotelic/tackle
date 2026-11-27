@@ -406,6 +406,35 @@ const DeskAnswerRequest = Schema.Struct({
   by: Schema.optional(Schema.String),
 })
 
+/** A room the board creates through the room tool's own boundary. */
+const RoomCreateRequest = Schema.Struct({
+  id: Schema.String,
+  repo: Schema.String,
+  scope: Schema.String,
+  base: Schema.optional(Schema.String),
+  software: Schema.optional(Schema.String),
+})
+
+type RoomAction = "up" | "pause" | "resume" | "down"
+
+/** The board's own listener is the only caller allowed to mutate rooms. */
+const isLoopbackAddress = (address: string | undefined): boolean =>
+  address === "127.0.0.1" || address === "::1" || address === "::ffff:127.0.0.1"
+
+/** Run one room command through the room package's bin, never by reimplementing its store. */
+const runRoom = async (input: {
+  readonly root: string
+  readonly args: ReadonlyArray<string>
+}): Promise<{ readonly stdout: string; readonly stderr: string }> => {
+  const root = resolve(input.root)
+  // An absolute root is what keeps the room command from resolving `--root` against its own cwd.
+  const result = await execFileAsync("room", [...input.args, "--root", root], {
+    cwd: dirname(root),
+    timeout: 120_000,
+  })
+  return { stdout: result.stdout, stderr: result.stderr }
+}
+
 const shellQuote = (value: string): string =>
   `"${value.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`
 
@@ -693,6 +722,85 @@ const serve = async ({
       })()
       return
     }
+    if (path === "/rooms" && request.method === "POST") {
+      void (async () => {
+        // oxlint-disable-next-line plumb-effect/no-try-catch -- the HTTP handler consumes JSON.parse and child-process failures here
+        try {
+          if (!isLoopbackAddress(request.socket.remoteAddress)) {
+            json({ response, status: 403, body: { error: "room control is loopback only" } })
+            return
+          }
+          let body = ""
+          for await (const chunk of request) {
+            body += String(chunk)
+            if (body.length > 16_384) {
+              json({ response, status: 400, body: { error: "request body is too large" } })
+              return
+            }
+          }
+          const decoded = Schema.decodeResult(Schema.fromJsonString(RoomCreateRequest))(body)
+          if (Result.isFailure(decoded)) {
+            json({ response, status: 400, body: { error: "expected {id, repo, scope}" } })
+            return
+          }
+          const input = decoded.success
+          const args = [
+            "new",
+            "--id",
+            input.id,
+            "--repo",
+            input.repo,
+            "--scope",
+            input.scope,
+            ...(input.base === undefined ? [] : ["--base", input.base]),
+            ...(input.software === undefined ? [] : ["--software", input.software]),
+          ]
+          const result = await runRoom({ root, args })
+          json({ response, status: 200, body: { ok: true, id: input.id, ...result } })
+        } catch (cause: unknown) {
+          json({ response, status: 500, body: { error: String(cause) } })
+        }
+      })()
+      return
+    }
+    if (path === "/rooms" && request.method === "GET") {
+      void listRooms(root).then(
+        (rooms) =>
+          json({
+            response,
+            status: 200,
+            body: {
+              rooms: rooms.map((room) => ({
+                id: room.id,
+                state: room.state._tag,
+                runtime: room.runtime?.kind,
+                port: room.port?.number,
+              })),
+            },
+          }),
+        (cause: unknown) => json({ response, status: 500, body: { error: String(cause) } }),
+      )
+      return
+    }
+    const roomAction = /^\/rooms\/([^/]+)\/(up|pause|resume|down)$/u.exec(path)
+    if (roomAction !== null && request.method === "POST") {
+      void (async () => {
+        // oxlint-disable-next-line plumb-effect/no-try-catch -- the HTTP handler consumes child-process failures here
+        try {
+          if (!isLoopbackAddress(request.socket.remoteAddress)) {
+            json({ response, status: 403, body: { error: "room control is loopback only" } })
+            return
+          }
+          const id = decodeURIComponent(roomAction[1] ?? "")
+          const action = roomAction[2] as RoomAction
+          const result = await runRoom({ root, args: [action, "--id", id] })
+          json({ response, status: 200, body: { ok: true, id, action, ...result } })
+        } catch (cause: unknown) {
+          json({ response, status: 500, body: { error: String(cause) } })
+        }
+      })()
+      return
+    }
     if (path === "/desk/answer" && request.method === "POST") {
       void (async () => {
         // oxlint-disable-next-line plumb-effect/no-try-catch -- the HTTP handler consumes JSON.parse and desk errors here
@@ -802,6 +910,8 @@ const serve = async ({
           "/presence",
           "/.well-known/presence.json",
           "/queue",
+          "/rooms",
+          "/rooms/<id>/up|pause|resume|down",
           "/preview/<workstream>/",
           "/open",
           "/desk/answer",
