@@ -84,6 +84,38 @@ test("adopt-commits queues a provenance-bearing task event", () => {
   }
 })
 
+test("the phase gate accepts the gate card's resume answer", () => {
+  const root = mkdtempSync(join(tmpdir(), "factory-gate-"))
+  try {
+    const home = join(root, "home")
+    mkdirSync(join(home, "workstreams"), { recursive: true })
+    const file = join(home, "workstreams", record.id + ".json")
+    writeFileSync(file, JSON.stringify({ ...record, phase: "blocked" }, null, 2) + "\n")
+    const answer = join(root, "answer.json")
+    writeFileSync(answer, JSON.stringify({ choice: "resume" }))
+
+    const output = execFileSync(
+      process.execPath,
+      [
+        "--conditions=development",
+        cli,
+        "phase",
+        "--id",
+        record.id,
+        "--set",
+        "build",
+        "--answer",
+        answer,
+      ],
+      { encoding: "utf8", env: { ...process.env, FACTORY_HOME: home } },
+    )
+    expect(output).toContain("phase build")
+    expect(JSON.parse(readFileSync(file, "utf8")).phase).toBe("build")
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
 test("retire turns a workstream off without deleting its record", () => {
   const root = mkdtempSync(join(tmpdir(), "factory-retire-"))
   try {

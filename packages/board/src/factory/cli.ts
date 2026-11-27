@@ -827,8 +827,18 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
         if (Result.isFailure(decoded)) return fail("desk answer has no choice")
         choice = decoded.success.choice
       }
-      if (choice !== "accept" && choice !== "accept-and-continue" && choice !== "apply-evidenced")
-        return fail("desk answer must choose accept, accept-and-continue or apply-evidenced")
+      // `resume` is the gate card's own word for "keep the protected change and continue".
+      // A deferred answer must not advance the phase; `defer` is a refusal, not consent.
+      if (choice === "defer") return fail("desk answer deferred; workstream stays " + record.phase)
+      if (
+        choice !== "accept" &&
+        choice !== "accept-and-continue" &&
+        choice !== "apply-evidenced" &&
+        choice !== "resume"
+      )
+        return fail(
+          "desk answer must choose accept, accept-and-continue, apply-evidenced or resume",
+        )
     }
 
     await writeWorkstream({
