@@ -1,4 +1,4 @@
-import { Cause, Config, Effect, Exit, FileSystem, Layer, Option, Path, Predicate, Result, Runtime } from "effect"
+import { Cause, Config, Effect, Exit, FileSystem, Layer, Option, Path, Predicate, Result, Runtime, Schema, SchemaIssue, SchemaParser } from "effect"
 import { Argument, Command, Flag } from "effect/cli"
 import { Decision, DecisionModel } from "effect/ai"
 import * as FetchHttpClient from "effect/http/FetchHttpClient"
@@ -16,6 +16,7 @@ import { ask } from "./ask.ts"
 import {
   clusterRemedies,
   describeInput,
+  FindingsPayload,
   findingsOf,
   judgeRemedies,
   rememberRemedyFindings,
@@ -708,16 +709,15 @@ const remediesCommand = Command.make(
       const cwd = path.resolve(Option.getOrUndefined(config.cwd) ?? process.cwd())
       const input = path.resolve(cwd, config.file)
       const text = yield* fs.readFileString(input)
-      const payload = yield* Effect.try({
-        try: () => JSON.parse(text) as unknown,
-        catch: (cause) =>
-          WorkspaceError.make({
-            path: input,
-            operation: "read remedies input",
-            cause: String(cause),
-          }),
-      })
-      const findings = findingsOf(payload).map((finding) => {
+      const decoded = SchemaParser.decodeResult(Schema.fromJsonString(FindingsPayload))(text)
+      if (Result.isFailure(decoded)) {
+        return yield* WorkspaceError.make({
+          path: input,
+          operation: "read remedies input",
+          cause: SchemaIssue.makeFormatterDefault()(decoded.failure),
+        })
+      }
+      const findings = findingsOf(decoded.success).map((finding) => {
         const file = path.isAbsolute(finding.file) ? path.relative(cwd, finding.file) : finding.file
         return { ...finding, file, site: file + ":" + String(finding.line) }
       })
