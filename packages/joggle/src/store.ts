@@ -174,6 +174,9 @@ const DfRow = Schema.Struct({
   units: Schema.optional(Schema.Number),
 })
 
+/** The JSON the store writes into `object.body` for a fragment set. */
+const FragmentSetBody = Schema.Struct({ cut: Schema.optional(Schema.Boolean) })
+
 /** Decode one row, or `undefined` when it is not the shape the query promised. */
 function decodeRow<S extends Schema.ConstraintDecoder<unknown>>(
   schema: S,
@@ -375,7 +378,9 @@ export const createFactStore = (root: string): FactStore => {
           StoreError.make({ reason: "Rejected", detail: "no stored fragment set for " + key }),
         )
       }
-      const body = JSON.parse(textOf(row.body)) as { cut?: unknown }
+      const body = SchemaParser.decodeUnknownResult(
+        Schema.fromJsonString(FragmentSetBody),
+      )(textOf(row.body))
       const ids = database
         .prepare("SELECT id FROM fragment WHERE unit = ? ORDER BY rowid")
         .all(key)
@@ -383,8 +388,13 @@ export const createFactStore = (root: string): FactStore => {
           const id = decodeRow(IdRow, entry)?.id
           return id === undefined ? [] : [textOf(id)]
         })
+      if (Result.isFailure(body)) {
+        const detail = "a stored fragment set did not decode"
+        issue ??= detail
+        return Result.fail(StoreError.make({ reason: "Unreadable", detail }))
+      }
       reused += 1
-      return Result.succeed({ ids, cut: body.cut === true })
+      return Result.succeed({ ids, cut: body.success.cut === true })
     } catch (cause) {
       // A row this build cannot read is a miss, not a failed run. The walk that
       // follows counts it once, in `store`.
