@@ -121,6 +121,19 @@ export const witnessClause = (message: string): string => {
   return clause.replace(/[.!?]+$/u, "").trim() || "none"
 }
 
+/**
+ * The diagnosis a message opens with, dropped from the witness clause.
+ *
+ * A counterexample pack quotes it rather than the whole message, so the reason a
+ * rule cannot reach a site is the trigger the other rule did not see, not the
+ * remedy both prescribe.
+ */
+const diagnosisOf = (message: string): string => {
+  const normalized = message.replace(/`/gu, "").replace(/\s+/gu, " ").trim()
+  const first = normalized.split(/(?<=[.!?])\s+/u)[0] ?? normalized
+  return first.replace(/[.!?]+$/u, "").trim() || message
+}
+
 interface MessageNode {
   readonly key: string
   readonly message: string
@@ -222,16 +235,26 @@ export const judgeRemedies = (
         candidates: clauses,
       }
       const atom = yield* atoms.add(state)
+      const findingRef = "atoms[" + atom + "].finding"
       const decision = Decision.classify({
         instructions: [
-          "Which repair does `finding.message` prescribe, given `finding.help`?",
+          "Which repair does `" +
+            findingRef +
+            ".message` prescribe, given `" +
+            findingRef +
+            ".help`?",
+          "The candidate clauses code derived from this corpus are `atoms[" +
+            atom +
+            "].candidates`.",
           "Choose `none` if no candidate applies.",
           "Answer about what the message tells a reader to DO, not which rule produced it.",
         ].join("\n"),
         criteria: Object.fromEntries(
           clauses.map((clause) => [
             clause,
-            clause === "none" ? "No candidate repair applies." : clause,
+            clause === "none"
+              ? "No candidate repair applies."
+              : "The message tells the reader to: " + clause,
           ]),
         ),
       })
@@ -260,6 +283,8 @@ export const judgeRemedies = (
           b: { message: b.message, rule: b.findings[0]?.rule ?? "unknown" },
         }
         const atom = yield* atoms.add(state)
+        const aRef = "atoms[" + atom + "].a"
+        const bRef = "atoms[" + atom + "].b"
         plans.push({
           ruleId: "joggle/remedies",
           subject: key,
@@ -268,8 +293,16 @@ export const judgeRemedies = (
           decisions: {
             same: Decision.probability({
               instructions: [
-                "Do `a.message` and `b.message` prescribe the same repair, given `a.rule`" +
-                  " and `b.rule`?",
+                "Do `" +
+                  aRef +
+                  ".message` and `" +
+                  bRef +
+                  ".message` prescribe the same" +
+                  " repair, given `" +
+                  aRef +
+                  ".rule` and `" +
+                  bRef +
+                  ".rule`?",
                 "Answer about the action the reader must take, not the words the two rules use.",
                 "Answer true when fixing either finding would be the same edit, or the same" +
                   " kind of edit at the same boundary.",
@@ -458,24 +491,29 @@ const counterexamplesOf = (
       )
       const reason =
         onlyA.length === 0 && onlyB.length === 0
-          ? "Every site carries both rules."
-          : "At the `" +
+          ? "Every site carries both rules, so neither reaches a site the other cannot."
+          : "The triggers are not the same predicate. `" +
             a.rule +
-            "`-only sites the message is " +
-            JSON.stringify(sampleA?.message ?? a.rule) +
-            ", and no `" +
-            b.rule +
-            "` finding is present there; at the `" +
-            b.rule +
-            "`-only sites it is " +
-            JSON.stringify(sampleB?.message ?? b.rule) +
-            ", and no `" +
-            a.rule +
-            "` finding is present. The triggers differ: " +
+            "` reaches " +
             String(onlyA.length) +
-            " site(s) one way, " +
+            " site(s) `" +
+            b.rule +
+            "` does not" +
+            (sampleA === undefined
+              ? ""
+              : ", where the finding is " + JSON.stringify(diagnosisOf(sampleA.message))) +
+            "; `" +
+            b.rule +
+            "` reaches " +
             String(onlyB.length) +
-            " the other."
+            " site(s) `" +
+            a.rule +
+            "` does not" +
+            (sampleB === undefined
+              ? ""
+              : ", where the finding is " + JSON.stringify(diagnosisOf(sampleB.message))) +
+            ". No finding from the other rule is recorded at those sites, so the other rule's" +
+            " trigger is absent there."
       out.push({ a: a.rule, b: b.rule, onlyA, onlyB, both, reason })
     }
   }
@@ -660,4 +698,3 @@ export const witnessOnlyOpinion = (
   questions: messageNodesOf(findings).length,
   pairs: 0,
 })
-

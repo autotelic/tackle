@@ -143,3 +143,114 @@ test("a threshold keeps a pair the judgement calls different apart", () => {
   const report = clusterRemedies([left, right], opinion)
   expect(report.clusters).toHaveLength(2)
 })
+
+test("the five plumb boundary rules normalise to one 99-site cluster", () => {
+  // The target in docs/remedy-hill.md, held as a fixture rather than a comment:
+  // five vocabularies for one repair, 99 sites, kernel.ts and telemetry.ts each
+  // carrying 28. The labels are deliberately distinct so only the pairwise Noul
+  // can join them; a Choice that agreed by label alone would not prove the
+  // normalisation.
+  const boundary = [
+    {
+      rule: "plumb/no-reinterpret-cast",
+      message:
+        "Type assertion discards type evidence. Narrow with discriminants/`in` checks or a type" +
+        " predicate instead.",
+      count: 29,
+      label: "Narrow with a type predicate",
+    },
+    {
+      rule: "plumb/require-safety-comment-for-type-assertion",
+      message:
+        "This type assertion has no `SAFETY:` justification. State the checked invariant" +
+        " immediately before the assertion or its containing statement.",
+      count: 25,
+      label: "State the checked invariant",
+    },
+    {
+      rule: "plumb/no-runtime-typeof",
+      message:
+        "A `typeof` check narrows a representation without establishing its contract. Parse" +
+        " input at its I/O boundary, then branch on the domain value.",
+      count: 23,
+      label: "Parse input at the I/O boundary",
+    },
+    {
+      rule: "plumb/no-unknown-parameters",
+      message:
+        "Parameter `value` leaves input unparsed. Accept a named domain type; run the expected" +
+        " schema or parser at the I/O boundary before calling this function.",
+      count: 11,
+      label: "Accept a named domain type",
+    },
+    {
+      rule: "plumb/no-unsafe-dictionary-type",
+      message:
+        "This dictionary's `string` value type gives callers no concrete value contract. Use an" +
+        " owner/schema-derived value type; parse external payloads before insertion.",
+      count: 11,
+      label: "Use an owner/schema-derived value type",
+    },
+  ] as const
+
+  const slots = [
+    ...Array.from(
+      { length: 28 },
+      (_, index) => "packages/board/src/factory/kernel.ts:" + String(index + 1),
+    ),
+    ...Array.from(
+      { length: 28 },
+      (_, index) => "packages/board/src/factory/telemetry.ts:" + String(index + 1),
+    ),
+    ...Array.from(
+      { length: 43 },
+      (_, index) => "packages/board/src/factory/other.ts:" + String(index + 1),
+    ),
+  ]
+  const findings: Array<RemedyFinding> = []
+  const repairs: Array<readonly [RemedyFinding, string]> = []
+  let cursor = 0
+  for (const entry of boundary) {
+    for (let index = 0; index < entry.count; index += 1) {
+      const site = slots[cursor]
+      cursor += 1
+      if (site === undefined) throw new Error("fixture ran out of sites")
+      const separator = site.lastIndexOf(":")
+      const item = finding(
+        entry.rule,
+        entry.message,
+        Number(site.slice(separator + 1)),
+        site.slice(0, separator),
+      )
+      findings.push(item)
+      repairs.push([item, entry.label])
+    }
+  }
+  expect(findings).toHaveLength(99)
+  const same = boundary.flatMap((left, leftIndex) =>
+    boundary.slice(leftIndex + 1).map((right) => {
+      const leftItem = repairs.find(([item]) => item.rule === left.rule)?.[0]
+      const rightItem = repairs.find(([item]) => item.rule === right.rule)?.[0]
+      if (leftItem === undefined || rightItem === undefined) throw new Error("missing fixture")
+      return [leftItem, rightItem, 0.92] as const
+    }),
+  )
+  const opinion = opinionOf(repairs, same)
+  const report = clusterRemedies(findings, opinion)
+
+  expect(report.witness.clusters).toBe(5)
+  expect(report.clusters).toHaveLength(1)
+  const cluster = report.clusters[0]
+  expect(cluster?.sites).toBe(99)
+  expect(cluster?.rules).toHaveLength(5)
+  expect(cluster?.files.find((file) => file.file.endsWith("kernel.ts"))?.sites).toBe(28)
+  expect(cluster?.files.find((file) => file.file.endsWith("telemetry.ts"))?.sites).toBe(28)
+  const pair = cluster?.counterexamples.find(
+    (counterexample) =>
+      counterexample.a === "plumb/no-reinterpret-cast" &&
+      counterexample.b === "plumb/require-safety-comment-for-type-assertion",
+  )
+  expect(pair?.onlyA).toHaveLength(29)
+  expect(pair?.onlyB).toHaveLength(25)
+  expect(pair?.reason).toContain("trigger")
+})
