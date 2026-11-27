@@ -11,6 +11,7 @@ import { PauseRoom } from "./Room/PauseRoom.command.ts"
 import { ResumeRoom } from "./Room/ResumeRoom.command.ts"
 import { RoomState } from "./Room/Room.aggregate.ts"
 import { ServiceDeclaration } from "./Service.ts"
+import { VmSnapshot, type VmSnapshotOutcome } from "./VmSnapshot.ts"
 
 /**
  * Where a room is placed.
@@ -31,6 +32,20 @@ export const RoomRuntime = Schema.Struct({
    * unchanged — and then the room can still report health, but has no process to stop.
    */
   servicePid: Schema.optional(Schema.Int),
+  /**
+   * The root filesystem the last pause captured, beside this file.
+   *
+   * A room file that names a snapshot is a room whose disk is durably somewhere else; a file
+   * without one has only what the VM left in `agentos.sqlite`.
+   */
+  snapshot: Schema.optional(VmSnapshot),
+  /**
+   * Why the last pause captured no snapshot.
+   *
+   * The room is paused either way. This field is the difference between a pause that kept the
+   * disk and a pause that did not, so a reader is never left to assume the first.
+   */
+  snapshotError: Schema.optional(Schema.String),
 })
 export type RoomRuntime = typeof RoomRuntime.Type
 
@@ -378,6 +393,34 @@ export const resumeRoom = async (input: {
   )
   if (!decided.ok) return decided
   const next: RoomFile = { ...room, state: decided.value }
+  await write({ root: input.root, room: next })
+  return { ok: true, value: next }
+}
+
+/**
+ * Record what a pause captured, or why it captured nothing.
+ *
+ * The two outcomes replace each other: a snapshot and an error in one record would say both that
+ * this pause kept the disk and that it did not. The previous snapshot's file stays on disk — a
+ * resumed VM may still be reading it — so only the claim in this file is withdrawn.
+ */
+export const recordRoomSnapshot = async (input: {
+  readonly root: string
+  readonly id: string
+  readonly outcome: VmSnapshotOutcome
+}): Promise<StoreResult<RoomFile>> => {
+  const room = await readRoom(input)
+  if (room === undefined) return { ok: false, error: "RoomNotFound" }
+  const base: RoomRuntime = room.runtime ?? { kind: "agentos" }
+  // The previous capture and its reason are both withdrawn here: this pause either kept the disk
+  // or it did not, and one record must not say it did both.
+  const { snapshot: _snapshot, snapshotError: _snapshotError, ...runtime } = base
+  const next: RoomFile = {
+    ...room,
+    runtime: input.outcome.ok
+      ? { ...runtime, snapshot: input.outcome.snapshot }
+      : { ...runtime, snapshotError: input.outcome.reason },
+  }
   await write({ root: input.root, room: next })
   return { ok: true, value: next }
 }

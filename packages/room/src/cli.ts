@@ -16,6 +16,7 @@ import {
   pauseRoom,
   readRoom,
   releaseRoomPort,
+  recordRoomSnapshot,
   resumeRoom,
   setRoomDesired,
   setRoomExec,
@@ -29,6 +30,8 @@ import {
   ensureVmSupervisor,
   observeVmService,
   readVmStatus,
+  snapshotRoomVm,
+  startVmSupervisor,
   stopVmService,
   stopVmSupervisor,
   vmExec,
@@ -36,6 +39,7 @@ import {
   vmService,
   type VmExecRequest,
 } from "./VmSupervisor.ts"
+import { verifySnapshot } from "./VmSnapshot.ts"
 import { observeService } from "./Service.ts"
 
 const usage = [
@@ -247,6 +251,14 @@ const main = async (): Promise<void> => {
             " " +
             room.state._tag +
             (room.runtime === undefined ? "" : " runtime " + room.runtime.kind) +
+            // A pause that kept the disk and one that could not are the same `Paused` state, so
+            // the difference is printed: the record says which of the two this room is.
+            (room.runtime?.snapshot === undefined
+              ? ""
+              : " snapshot " + room.runtime.snapshot.generation) +
+            (room.runtime?.snapshotError === undefined
+              ? ""
+              : " no snapshot (" + room.runtime.snapshotError + ")") +
             (room.port === undefined ? "" : " port " + room.port.number) +
             (service === null
               ? ""
@@ -681,26 +693,99 @@ const main = async (): Promise<void> => {
   if (command === "pause") {
     const result = await pauseRoom({ root, id, at: Date.now() })
     if (!result.ok) return fail(result.error, EXIT.declined)
+    const stateDir = resolve(roomDir({ root, id }))
+    // A room placed in a VM has a disk worth keeping; a local room has only its record, which is
+    // already written. The generation is one past the last capture, so a resumed room's next
+    // pause writes its own file instead of overwriting the one its VM was restored from.
+    const parts: string[] = []
+    if (result.value.runtime !== undefined) {
+      const captured = await snapshotRoomVm({
+        root,
+        id,
+        stateDir,
+        generation: (result.value.runtime.snapshot?.generation ?? 0) + 1,
+        at: Date.now(),
+      })
+      const recorded = await recordRoomSnapshot({ root, id, outcome: captured })
+      if (!recorded.ok) return fail(recorded.error, EXIT.declined)
+      if (captured.ok) {
+        // The file is the paused room's disk now, so the process that held the disk stops: a
+        // resume builds a new VM from the snapshot rather than thawing the old one.
+        const stopped = await stopVmSupervisor({ root, id })
+        parts.push(
+          "snapshot " +
+            captured.snapshot.path +
+            " (" +
+            captured.snapshot.bytes +
+            " bytes, " +
+            captured.snapshot.entries +
+            " entries, sha256 " +
+            captured.snapshot.sha256.slice(0, 12) +
+            ")" +
+            (stopped.pid === undefined ? "" : "; vm supervisor " + stopped.pid + " stopped"),
+        )
+      } else parts.push("no snapshot was written: " + captured.reason)
+    }
     const outcome = await signalRun({ root, id, signal: "SIGSTOP" })
-    console.log(
-      "room " +
-        id +
-        " recorded paused; " +
-        (outcome === "signalled" ? "process group was signalled" : "no process was signalled"),
-    )
+    parts.push(outcome === "signalled" ? "process group was signalled" : "no process was signalled")
+    console.log("room " + id + " recorded paused; " + parts.join("; "))
     return
   }
 
   if (command === "resume") {
+    const current = await readRoom({ root, id })
+    if (current === undefined) return fail("RoomNotFound", EXIT.declined)
+    const snapshot = current.runtime?.snapshot
+    // The file is checked before the room is called ready: a room that says ready while the disk
+    // it kept is missing or altered is exactly the claim this pause exists to stop making.
+    if (snapshot !== undefined) {
+      const verified = await verifySnapshot(snapshot)
+      if (!verified.ok) return fail(verified.reason, EXIT.declined)
+    }
     const result = await resumeRoom({ root, id, at: Date.now() })
     if (!result.ok) return fail(result.error, EXIT.declined)
+    const parts: string[] = []
+    if (snapshot !== undefined) {
+      const stateDir = resolve(roomDir({ root, id }))
+      const worktree = join(stateDir, "worktree")
+      if (!existsSync(worktree))
+        return fail("room " + id + " has no worktree at " + worktree, EXIT.declined)
+      // A fresh VM directory, so the files it reads come from the snapshot's lowers and not from
+      // the previous VM's overlay. The old supervisor is stopped first for the same reason.
+      const vmStateDir = join(stateDir, "vm-" + snapshot.generation)
+      await mkdir(vmStateDir, { recursive: true })
+      await stopVmSupervisor({ root, id })
+      const started = await startVmSupervisor({
+        root,
+        id,
+        worktree,
+        stateDir: vmStateDir,
+        snapshot: snapshot.path,
+      })
+      if (!started.ok) {
+        // A room that cannot restore its disk is not ready to work: it goes back to paused with
+        // the reason, so the next reader sees a failure instead of an empty VM.
+        const paused = await pauseRoom({ root, id, at: Date.now() })
+        if (paused.ok)
+          await recordRoomSnapshot({
+            root,
+            id,
+            outcome: { ok: false, reason: "the snapshot could not be restored: " + started.reason },
+          })
+        return fail("the snapshot could not be restored: " + started.reason, EXIT.infrastructure)
+      }
+      parts.push(
+        "restored snapshot " +
+          snapshot.path +
+          " into vm supervisor " +
+          started.run.pid +
+          " at " +
+          vmStateDir,
+      )
+    }
     const outcome = await signalRun({ root, id, signal: "SIGCONT" })
-    console.log(
-      "room " +
-        id +
-        " recorded ready; " +
-        (outcome === "signalled" ? "process group was continued" : "no process was continued"),
-    )
+    parts.push(outcome === "signalled" ? "process group was continued" : "no process was continued")
+    console.log("room " + id + " recorded ready; " + parts.join("; "))
     return
   }
 

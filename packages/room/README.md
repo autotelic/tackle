@@ -37,9 +37,29 @@ With `--exec`, `up` starts a detached supervisor (recorded in `run.json` and
 logged to `.room/<id>/room.log`) that restarts the command with a crash budget.
 The command is remembered in `room.json`, so a later `room up --id <id>` with no
 `--exec` starts the same command again.
-`pause` and `resume` send `SIGSTOP`/`SIGCONT` to the whole process group;
+`pause` sends `SIGSTOP` to the whole process group and `resume` sends `SIGCONT`;
 `down` sends `SIGTERM`. Without `--exec`, `pause` and `resume` change only the
 recorded state.
+
+A room placed in a VM pauses as a **snapshot**, not a frozen process. `room pause` asks the
+room's VM for `filesystem.export({ maxBytes })`, writes the exact bytes beside the room record
+as `.room/<id>/vm-snapshot-<n>.json`, records `runtime.snapshot = { path, sha256, bytes,
+entries, generation, at }` in `room.json`, and stops the VM supervisor — a paused room has no
+live VM, and the file is its disk. Nothing is committed: the worktree and the checkpoint are not
+touched by a pause.
+
+`room resume` checks the file against the recorded `sha256` **before** the room is ready, then
+builds a fresh VM from it: the snapshot is a root-filesystem `lowers` entry, the supervisor
+starts with `--snapshot`, and the VM's own database directory is a new `vm-<generation>/` so
+the files it reads come from the snapshot rather than from the previous VM's overlay. A second
+pause writes generation `n + 1` — its own file, never an overwrite of the one the resumed VM was
+built from.
+
+The export is bounded at 64 MiB (`snapshotMaxBytes`), and it is refused — not stored — when it
+carries contents under `/workspace`: the host mount is projected again on resume, so a snapshot
+that baked it in could not be restored without a second copy of the checkout. Either refusal is
+recorded as `runtime.snapshotError` with the reason, and the room stays `Paused`; a pause that
+kept no disk never reads as one that did.
 
 `room use` labels the current Herdr terminal with `room=<id>`, using
 `HC_TERMINAL_ID` (Herdr injects it). It refuses if the variable is absent, and
@@ -95,6 +115,9 @@ protects has stopped, so a shutdown never hands its port to the next room;
 `pause` and `resume` leave it alone, because a frozen room still owns its port. A
 room that is up without a supervisor still leases its port, so `down` works on it
 too.
+
+A paused room reports no service: its VM is stopped, and the guest process table that would
+answer for the service went with it.
 
 A room may declare **one service**: `--health <path>` (with `--service <name>`,
 default `web`) records `service: { name, command, healthPath }` in `room.json` and

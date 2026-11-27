@@ -13,6 +13,8 @@ export {
   ensureVmSupervisor,
   observeVmService,
   readVmRun,
+  snapshotRoomVm,
+  vmSnapshot,
   readVmStatus,
   removeVmRun,
   startVmSupervisor,
@@ -37,6 +39,8 @@ export {
   VmServiceResponse,
   VmServiceStopRequest,
   VmServiceStopResponse,
+  VmSnapshotRequest,
+  VmSnapshotResponse,
   VmResponse,
   VmRun,
   writeVmRun,
@@ -47,7 +51,19 @@ export {
   type VmStatus,
   type VmStopOutcome,
 } from "./VmSupervisor.ts"
-export { RoomRuntime, setRoomRuntime } from "./store.ts"
+export { recordRoomSnapshot, RoomRuntime, setRoomRuntime } from "./store.ts"
+export {
+  readSnapshot,
+  snapshotFile,
+  snapshotGuard,
+  snapshotHash,
+  snapshotMaxBytes,
+  verifySnapshot,
+  VmSnapshot,
+  type VmSnapshotEntry,
+  type VmSnapshotExport,
+  type VmSnapshotOutcome,
+} from "./VmSnapshot.ts"
 export { Worktree, WorktreeLive, WorktreeError, type WorktreeService } from "./Worktree.ts"
 export {
   agentOsRoomProvider,

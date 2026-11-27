@@ -9,6 +9,12 @@ import { fileURLToPath } from "node:url"
 import { alive } from "./run.ts"
 import type { ServiceDeclaration, ServiceObservation } from "./Service.ts"
 import { roomDir } from "./store.ts"
+import {
+  snapshotFile,
+  snapshotMaxBytes,
+  type VmSnapshot,
+  type VmSnapshotOutcome,
+} from "./VmSnapshot.ts"
 
 /*
  * One room's VM supervisor: a detached process that owns the room's agentOS instance and
@@ -204,6 +210,29 @@ export const VmServiceStopResponse = Schema.Struct({
 })
 export type VmServiceStopResponse = typeof VmServiceStopResponse.Type
 
+/**
+ * Ask the VM to export its root filesystem to a file beside the room record.
+ *
+ * The bytes are written by the process that owns the VM: a snapshot is one exact text, and the
+ * hash that comes back is the hash of what is on disk, not of what travelled over a socket.
+ */
+export const VmSnapshotRequest = Schema.Struct({
+  kind: Schema.Literal("snapshot"),
+  path: Schema.String,
+  maxBytes: Schema.Int,
+})
+export type VmSnapshotRequest = typeof VmSnapshotRequest.Type
+
+/** What one export wrote: the path, its hash, and what the reader sees without opening it. */
+export const VmSnapshotResponse = Schema.Struct({
+  kind: Schema.Literal("snapshot"),
+  path: Schema.String,
+  sha256: Schema.String,
+  bytes: Schema.Int,
+  entries: Schema.Int,
+})
+export type VmSnapshotResponse = typeof VmSnapshotResponse.Type
+
 /** A request the supervisor could not run at all; it carries no stdout or exit code. */
 export const VmFailureResponse = Schema.Struct({
   kind: Schema.Literal("error"),
@@ -216,6 +245,7 @@ export const VmRequest = Schema.Union([
   VmServiceRequest,
   VmServiceObserveRequest,
   VmServiceStopRequest,
+  VmSnapshotRequest,
 ])
 export type VmRequest = typeof VmRequest.Type
 
@@ -225,6 +255,7 @@ export const VmResponse = Schema.Union([
   VmServiceResponse,
   VmServiceObserveResponse,
   VmServiceStopResponse,
+  VmSnapshotResponse,
   VmFailureResponse,
 ])
 export type VmResponse = typeof VmResponse.Type
@@ -319,6 +350,13 @@ export const vmServiceStop = (input: {
   readonly connectTimeoutMs?: number | undefined
 }): Promise<VmResponse> => sendVm(input)
 
+/** Capture the room's root filesystem through the VM that holds it. */
+export const vmSnapshot = (input: {
+  readonly socket: string
+  readonly request: VmSnapshotRequest
+  readonly connectTimeoutMs?: number | undefined
+}): Promise<VmResponse> => sendVm(input)
+
 /** The supervisor script, source in development and build after a build. */
 const supervisorPath = (): string => {
   const here = dirname(fileURLToPath(import.meta.url))
@@ -340,6 +378,8 @@ export interface VmStartInput {
   readonly stateDir: string
   /** How long to wait for a booted VM to answer; a cold agentOS sidecar is not instant. */
   readonly waitMs?: number | undefined
+  /** A root filesystem capture to build this VM on; absent means a fresh VM's own root. */
+  readonly snapshot?: string | undefined
 }
 
 /**
@@ -367,26 +407,26 @@ export const startVmSupervisor = async (input: VmStartInput): Promise<VmStartOut
   await mkdir(roomDir(paths), { recursive: true })
   const log = vmLogFile(paths)
   const fd = openSync(log, "a")
-  const child = spawn(
-    process.execPath,
-    [
-      "--conditions=development",
-      supervisorPath(),
-      "--root",
-      root,
-      "--id",
-      input.id,
-      "--worktree",
-      worktree,
-      "--state-dir",
-      stateDir,
-      "--socket",
-      vmSocketFile(paths),
-      "--log",
-      log,
-    ],
-    { detached: true, stdio: ["ignore", fd, fd] },
-  )
+  const args = [
+    "--conditions=development",
+    supervisorPath(),
+    "--root",
+    root,
+    "--id",
+    input.id,
+    "--worktree",
+    worktree,
+    "--state-dir",
+    stateDir,
+    "--socket",
+    vmSocketFile(paths),
+    "--log",
+    log,
+  ]
+  // The supervisor boots the VM before it binds the socket, so the snapshot travels as argv:
+  // a VM started without it would be a room whose disk silently did not come back.
+  if (input.snapshot !== undefined) args.push("--snapshot", resolve(input.snapshot))
+  const child = spawn(process.execPath, args, { detached: true, stdio: ["ignore", fd, fd] })
   closeSync(fd)
   child.unref()
   const waitMs = input.waitMs ?? 30_000
@@ -555,6 +595,47 @@ export const observeVmService = async (input: {
   return answered.status >= 200 && answered.status < 300
     ? { ...base, status: "healthy", detail: null }
     : { ...base, status: "unhealthy", detail: "answered " + answered.status }
+}
+
+/**
+ * Capture the room's root filesystem, through the supervisor that owns it.
+ *
+ * A room with no live supervisor has no disk to read: its VM was disposed or never started, so
+ * there is nothing to export and the caller records the reason rather than an empty snapshot.
+ *
+ * @param input - the room root and id, the directory the snapshot is written into, the
+ * generation that names the file, and the instant the capture is stamped with.
+ * @returns the snapshot the file and its hash name, or the reason no export happened.
+ */
+export const snapshotRoomVm = async (input: {
+  readonly root: string
+  readonly id: string
+  readonly stateDir: string
+  readonly generation: number
+  readonly at: number
+}): Promise<VmSnapshotOutcome> => {
+  const status = await readVmStatus({ root: input.root, id: input.id })
+  if (status.state !== "running" || status.run === undefined)
+    return { ok: false, reason: "no live vm supervisor holds the room's disk" }
+  const path = snapshotFile({ stateDir: input.stateDir, generation: input.generation })
+  const answered = await vmSnapshot({
+    socket: status.run.socket,
+    request: { kind: "snapshot", path, maxBytes: snapshotMaxBytes },
+  }).catch((cause: unknown) => ({ kind: "error" as const, message: String(cause) }))
+  if (answered.kind === "error") return { ok: false, reason: answered.message }
+  if (answered.kind !== "snapshot")
+    return { ok: false, reason: "unexpected supervisor answer: " + answered.kind }
+  return {
+    ok: true,
+    snapshot: {
+      path: answered.path,
+      sha256: answered.sha256,
+      bytes: answered.bytes,
+      entries: answered.entries,
+      generation: input.generation,
+      at: input.at,
+    },
+  }
 }
 
 /** What a stop of the room's guest service did, in words the CLI prints. */

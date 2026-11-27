@@ -1,12 +1,14 @@
 import { Effect } from "effect"
 import * as Result from "effect/Result"
 import { Schema } from "effect"
-import { rm } from "node:fs/promises"
+import { rm, writeFile } from "node:fs/promises"
 import { createServer } from "node:net"
+import { resolve } from "node:path"
 import { parseArgs } from "node:util"
 import { agentOsDatabaseFile, createAgentOsRoom, type AgentOsRoom } from "./AgentOs.ts"
 import { alive } from "./run.ts"
 import { healthTimeoutMs } from "./Service.ts"
+import { readSnapshot, snapshotGuard, snapshotHash } from "./VmSnapshot.ts"
 import {
   readVmRun,
   removeVmRun,
@@ -155,6 +157,36 @@ const execute = async (room: AgentOsRoom, line: string): Promise<VmResponse> => 
   }
   if (request.kind === "service-observe") return observeGuestService(room, request)
   if (request.kind === "service-stop") return stopGuestService(room, request)
+  if (request.kind === "snapshot") {
+    // The bound and the mount guard are the library's own rules, applied before anything is
+    // written: an export this room could not restore is reported, never stored as a snapshot.
+    const exported = await room.vm.filesystem.export({ maxBytes: request.maxBytes }).then(
+      (value) => ({ ok: true as const, value }),
+      (cause: unknown) => ({ ok: false as const, cause }),
+    )
+    if (!exported.ok)
+      return { kind: "error", message: "filesystem.export failed: " + String(exported.cause) }
+    const guarded = snapshotGuard(exported.value)
+    if (!guarded.ok) return { kind: "error", message: guarded.reason }
+    const text = JSON.stringify(exported.value)
+    const written = await writeFile(request.path, text).then(
+      () => ({ ok: true as const }),
+      (cause: unknown) => ({ ok: false as const, cause }),
+    )
+    if (!written.ok)
+      return {
+        kind: "error",
+        message:
+          "the snapshot could not be written to " + request.path + ": " + String(written.cause),
+      }
+    return {
+      kind: "snapshot",
+      path: request.path,
+      sha256: snapshotHash(text),
+      bytes: Buffer.byteLength(text, "utf8"),
+      entries: exported.value.source.filesystem.entries.length,
+    }
+  }
   const options: NonNullable<Parameters<typeof room.vm.process.execFile>[2]> = {
     cwd: room.workspace,
     output: { capture: "all" },
@@ -189,10 +221,11 @@ const main = async (): Promise<void> => {
       "state-dir": { type: "string" },
       socket: { type: "string" },
       log: { type: "string" },
+      snapshot: { type: "string" },
     },
     allowPositionals: false,
   })
-  const { root, id, worktree, socket, log } = parsed.values
+  const { root, id, worktree, socket, log, snapshot } = parsed.values
   const stateDir = parsed.values["state-dir"]
   if (
     root === undefined ||
@@ -219,7 +252,21 @@ const main = async (): Promise<void> => {
   // after a dead supervisor take the path instead of answering EADDRINUSE.
   await rm(socket, { force: true })
 
-  const room = await Effect.runPromise(createAgentOsRoom({ id, worktree, stateDir }))
+  // A restored VM is built on the captured root, and a snapshot that does not read back as one
+  // is a boot failure: starting on an empty root instead would lose the room's disk quietly.
+  const restored = snapshot === undefined ? undefined : await readSnapshot(resolve(snapshot))
+  if (restored !== undefined && !restored.ok) {
+    console.error("room vm supervise: " + restored.reason)
+    process.exit(3)
+  }
+  const room = await Effect.runPromise(
+    createAgentOsRoom({
+      id,
+      worktree,
+      stateDir,
+      ...(restored === undefined || !restored.ok ? {} : { snapshot: restored.value }),
+    }),
+  )
 
   // Commands are answered one at a time: the VM is one machine, and two commands racing in it
   // would make "the second sees the first's state" a claim about luck rather than order.

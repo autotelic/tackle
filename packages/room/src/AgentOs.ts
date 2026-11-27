@@ -2,6 +2,7 @@ import { AgentOs, hostDirMount, type ExecutionOutcome } from "@rivet-dev/agentos
 import { Effect } from "effect"
 import { mkdir } from "node:fs/promises"
 import { join, resolve } from "node:path"
+import type { VmSnapshotExport } from "./VmSnapshot.ts"
 
 /** An embedded agentOS VM owned by one room. The VM owns its filesystem and processes. */
 export interface AgentOsRoom {
@@ -29,6 +30,13 @@ export interface AgentOsRoomOptions {
   readonly worktree?: string
   /** Host directory holding the VM's sqlite database, so its state outlives this process. */
   readonly stateDir?: string
+  /**
+   * A root filesystem captured by an earlier `filesystem.export`, as a lower of this VM's root.
+   *
+   * The restored VM is a *new* machine built on those bytes: it never adopts the process that
+   * wrote them, which is what makes a resume a restore rather than a thawed freeze.
+   */
+  readonly snapshot?: VmSnapshotExport | undefined
 }
 
 /**
@@ -64,6 +72,9 @@ export const createAgentOsRoom = (
       // mount would make the VM a viewer rather than the place the work happens.
       if (worktree !== undefined)
         options.mounts = [hostDirMount(WORKSPACE, worktree, { readOnly: false })]
+      // The snapshot is a lower of the overlay, not its upper: the VM writes its own layer on
+      // top, so what it does after a resume never edits the file it was restored from.
+      if (input.snapshot !== undefined) options.rootFilesystem = { lowers: [input.snapshot] }
       const vm = await AgentOs.create(options)
       // A mounted /workspace already exists; only an unmounted VM needs one created.
       if (worktree === undefined) await vm.filesystem.mkdir(WORKSPACE, { recursive: true })
