@@ -36,7 +36,7 @@ Each loop instance needs three things:
    `docs/markdown-issues.md` (generic format docs also live in a tracker's
    `docs/` — e.g. `h2-permissions/docs/markdown-issues.md`). The tracker also
    carries the instance's `loop.config.ts` (budgets, checks, rules) — target
-   repos symlink to it.
+   repos symlink to it. Every field and what it is for: `docs/config.md`.
 3. **A runner process** — on the deployment machine this is launchd: one
    KeepAlive plist per loop + one per maintenance loop. The loop idles by
    design on an empty queue (60s polls); the maintenance loop runs hourly
