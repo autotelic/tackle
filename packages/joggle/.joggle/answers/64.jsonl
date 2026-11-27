@@ -4,10 +4,13 @@
 643f89a4d5200e36	{"confidence":0.59,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.31,"framework_glue":0,"implementation_detail":0.69,"wire_contract":0}}
 644b2e7c353380df	{"consistency":1,"kind":"Probability","probability":0.06333333333333334}
 64678b8013c913a7	{"confidence":0.6,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.7,"component_or_feature":0,"not_applicable":0.29,"route_or_handler":0.01}}
+6467edf6ea14fcf6	{"consistency":1,"kind":"Probability","probability":0.03}
 647abd4cff52ba41	{"confidence":0.89,"kind":"Classify","label":"same_orchestration","probabilities":{"coincidental":0,"different_inputs":0.01,"different_work":0.08,"same_orchestration":0.91}}
 647b282c9c7767b8	{"confidence":0.85,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.9,"not_a_derivation":0.1,"reimplements":0}}
 648e684574376fac	{"confidence":0.99,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":1,"infrastructure":0,"input_adaptation":0,"mechanical":0,"not_applicable":0,"orchestration":0,"rendering":0,"request_validation":0,"transport_concern":0}}
+64a8d29e9445c6f0	{"consistency":1,"kind":"Probability","probability":0.05000000000000001}
 64d67e149fddf445	{"confidence":0.51,"kind":"Rate","label":"slightly_clearer","probabilities":{"meaningfully_better":0.2,"no_difference":0.17,"removes_a_hazard":0.06,"slightly_clearer":0.57},"rating":1.15}
 64d6b2045693c5f8	{"confidence":0.92,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.95,"not_a_derivation":0.04,"reimplements":0.01}}
+64d7dcc9dcd26290	{"consistency":1,"kind":"Probability","probability":0.06333333333333334}
 64e4264a4335dbd8	{"confidence":0.91,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.93,"infrastructure":0,"input_adaptation":0,"mechanical":0.01,"not_applicable":0.05,"orchestration":0.01,"rendering":0,"request_validation":0,"transport_concern":0}}
 64f4e65982da9dea	{"confidence":1,"kind":"Classify","label":"mechanical","probabilities":{"domain_logic":0,"infrastructure":0,"input_adaptation":0,"mechanical":1,"not_applicable":0,"orchestration":0,"rendering":0,"request_validation":0,"transport_concern":0}}

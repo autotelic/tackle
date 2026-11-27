@@ -1,4 +1,8 @@
+44311f461724b2b4	{"consistency":1,"kind":"Probability","probability":0.04}
 4456654b124066de	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
+44599c905245e8bc	{"consistency":1,"kind":"Probability","probability":0.03333333333333333}
 44a82395f76f89e4	{"confidence":0.86,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.08,"inferred":0.01,"not_applicable":0.91}}
+44a9749efd31d831	{"consistency":1,"kind":"Probability","probability":0.043333333333333335}
+44c6dc62800984ce	{"consistency":1,"kind":"Probability","probability":0.05000000000000001}
 44f4dbca773c4bf5	{"confidence":0.38,"kind":"Classify","label":"drift","probabilities":{"compatible":0.18,"drift":0.59,"two_concepts":0.23}}
 44ff3cce08291988	{"confidence":0.39,"kind":"Classify","label":"same_package","probabilities":{"different_deployables":0,"same_module":0.45,"same_package":0.55,"sibling_packages":0}}

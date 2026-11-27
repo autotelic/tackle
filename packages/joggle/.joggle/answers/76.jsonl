@@ -1,3 +1,8 @@
+763b64074c7e907e	{"consistency":1,"kind":"Probability","probability":0.04}
 764d983e35f15e01	{"confidence":0.92,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.94,"stale_reference":0,"wrong_behavior":0.04,"wrong_contract":0.02}}
 766554b25476efcd	{"confidence":0.97,"kind":"Classify","label":"general","probabilities":{"general":0.98,"names_a_caller":0.01,"shared_vocabulary":0.01}}
+76774ebc1380d2b7	{"consistency":1,"kind":"Probability","probability":0.04}
 767ee507f6213e19	{"consistency":1,"kind":"Probability","probability":0.09000000000000001}
+7687d59aa0a4c4ae	{"consistency":1,"kind":"Probability","probability":0.06}
+76a5bc2f19fc3849	{"consistency":1,"kind":"Probability","probability":0.023333333333333334}
+76d196e5708a03a0	{"consistency":1,"kind":"Probability","probability":0.05333333333333334}

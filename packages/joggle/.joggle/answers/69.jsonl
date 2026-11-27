@@ -2,6 +2,7 @@
 690a40e1b8678755	{"confidence":0.98,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0,"wrong_contract":0.01}}
 6911bb4186e47392	{"confidence":0.89,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.92,"not_a_derivation":0.03,"reimplements":0.05}}
 691b71567c75abdf	{"confidence":0.92,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.95,"not_a_derivation":0.03,"reimplements":0.02}}
+693308bce7c22b76	{"consistency":1,"kind":"Probability","probability":0.03}
 6938ede14c23f18a	{"confidence":0.85,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.91,"not_a_derivation":0.01,"reimplements":0.08}}
 69407cfeeb45ed66	{"confidence":0.1,"kind":"Classify","label":"drift","probabilities":{"compatible":0.32,"drift":0.4,"two_concepts":0.28}}
 694b68228750a28c	{"confidence":0.26,"kind":"Classify","label":"violates","probabilities":{"belongs":0.44,"framework_expected":0.06,"violates":0.5}}
@@ -9,6 +10,9 @@
 695e470f975f1a35	{"confidence":0.88,"kind":"Classify","label":"library_core","probabilities":{"domain_core":0.09,"infrastructure":0,"library_core":0.9,"not_applicable":0,"rendering_edge":0,"transport_edge":0,"utilities":0.01}}
 695e706c2fea393a	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
 6977042b3bce20dc	{"confidence":0.93,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.95,"stale_reference":0,"wrong_behavior":0.05,"wrong_contract":0}}
+69ac17b3c90d834f	{"consistency":1,"kind":"Probability","probability":0.02}
+69ac2d38ade63aa8	{"consistency":1,"kind":"Probability","probability":0.03}
+69b0852dfe87fae9	{"consistency":1,"kind":"Probability","probability":0.03}
 69ba89c0a5a8bdd5	{"confidence":0.74,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.81,"component_or_feature":0.01,"not_applicable":0.17,"route_or_handler":0.01}}
 69be8fd4f1e7eac2	{"confidence":0.88,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.91,"stale_reference":0,"wrong_behavior":0.08,"wrong_contract":0.01}}
 69cad957c8ce7777	{"confidence":0.32,"kind":"Classify","label":"merge","probabilities":{"leave_it":0.06,"merge":0.46,"move":0.44,"share_a_contract":0.03,"split":0.01}}

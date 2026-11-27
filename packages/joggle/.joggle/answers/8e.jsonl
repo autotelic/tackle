@@ -1,9 +1,14 @@
 8e212612ad075913	{"confidence":0.26,"kind":"Classify","label":"internal_only","probabilities":{"accounted_elsewhere":0.37,"internal_only":0.51,"unaccounted":0.12}}
+8e40918166f4d968	{"consistency":1,"kind":"Probability","probability":0.04}
 8e4f02774199fbcf	{"confidence":0.56,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.7,"unclear":0.01,"value":0.29}}
 8e51d4fff3e288d3	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.02,"wrong_contract":0}}
+8e5a0486d44e4d00	{"consistency":1,"kind":"Probability","probability":0.03666666666666667}
+8e62f8383d812e70	{"consistency":1,"kind":"Probability","probability":0.12666666666666668}
 8e85f93506114fc4	{"confidence":0.63,"kind":"Classify","label":"same_module","probabilities":{"different_deployables":0,"same_module":0.73,"same_package":0.27,"sibling_packages":0}}
 8e86d75414c2265c	{"confidence":0.9,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.93,"not_a_derivation":0.05,"reimplements":0.02}}
+8e9be5b11f7e86f3	{"consistency":1,"kind":"Probability","probability":0.56}
 8eb85aecd03c6121	{"confidence":0.73,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.79,"component_or_feature":0.02,"not_applicable":0.17,"route_or_handler":0.02}}
 8ec5771635b37131	{"confidence":0.25,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.5,"not_a_derivation":0.43,"reimplements":0.07}}
+8ece6bc17334bc5b	{"consistency":1,"kind":"Probability","probability":0.03}
 8edcae00bfa7f759	{"confidence":0.85,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.11,"framework_glue":0,"implementation_detail":0.89,"wire_contract":0}}
 8eef5d5d1fe4711b	{"confidence":0.35,"kind":"Classify","label":"meaning","probabilities":{"meaning":0.56,"unclear":0.01,"value":0.43}}

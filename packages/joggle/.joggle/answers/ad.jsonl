@@ -1,4 +1,11 @@
+ad028378ceb5d119	{"consistency":1,"kind":"Probability","probability":0.10666666666666667}
+ad3a3b1a0724644e	{"consistency":1,"kind":"Probability","probability":0.8466666666666667}
+ad4f23844e574a50	{"consistency":1,"kind":"Probability","probability":0.07666666666666667}
 ad571c1a46e18141	{"confidence":0.99,"kind":"Classify","label":"not_applicable","probabilities":{"independent":0.01,"inferred":0,"not_applicable":0.99}}
 ad8e17c4dd2eb35a	{"confidence":0.83,"kind":"Classify","label":"implementation_detail","probabilities":{"domain_concept":0.05,"framework_glue":0,"implementation_detail":0.87,"wire_contract":0.08}}
+ad96a1b2aad31f9e	{"consistency":1,"kind":"Probability","probability":0.1366666666666667}
 adcaa9733f2fb70b	{"confidence":0.88,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.92,"not_a_derivation":0.05,"reimplements":0.03}}
+add5a86aa01ca22e	{"consistency":1,"kind":"Probability","probability":0.04}
+ade3f57179a624ad	{"consistency":1,"kind":"Probability","probability":0.03}
+ade58bfec40f915b	{"consistency":1,"kind":"Probability","probability":0.06}
 adeda4b08e71068a	{"confidence":0.61,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.71,"component_or_feature":0.04,"not_applicable":0.21,"route_or_handler":0.04}}

@@ -4,9 +4,14 @@ d00ea8f045f5d7fa	{"confidence":1,"kind":"Classify","label":"no_issue","probabili
 d01436c50281ccc3	{"confidence":0.37,"kind":"Classify","label":"two_concepts","probabilities":{"compatible":0.02,"drift":0.4,"two_concepts":0.58}}
 d017ba2e8f04dda8	{"confidence":0.98,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.98,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0.01}}
 d022723f8cc60498	{"confidence":0.88,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.92,"not_a_derivation":0.05,"reimplements":0.03}}
+d02b3aaaca3f0f83	{"consistency":1,"kind":"Probability","probability":0.05333333333333334}
 d093ccecee3a5d69	{"confidence":0.89,"kind":"Classify","label":"member_1","probabilities":{"member_0":0.06,"member_1":0.94}}
 d0970338429204b8	{"confidence":0.74,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.81,"component_or_feature":0,"not_applicable":0.18,"route_or_handler":0.01}}
+d09a1dc171cdd437	{"consistency":1,"kind":"Probability","probability":0.043333333333333335}
+d09a9ea6e00192af	{"consistency":1,"kind":"Probability","probability":0.04}
+d09c0e4825c662a5	{"consistency":1,"kind":"Probability","probability":0.09000000000000001}
 d09f66ba9de14718	{"confidence":0.37,"kind":"Classify","label":"not_applicable","probabilities":{"domain_logic":0.12,"infrastructure":0.02,"input_adaptation":0,"mechanical":0.02,"not_applicable":0.44,"orchestration":0.35,"rendering":0.03,"request_validation":0,"transport_concern":0.02}}
 d0e3f0150de648f7	{"confidence":0.92,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.94,"stale_reference":0,"wrong_behavior":0.05,"wrong_contract":0.01}}
+d0e51230dafa4824	{"consistency":1,"kind":"Probability","probability":0.03}
 d0e65fdfb4c9a7ce	{"confidence":0.6,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.65,"infrastructure":0,"input_adaptation":0,"mechanical":0,"not_applicable":0.06,"orchestration":0,"rendering":0.29000000000000004,"request_validation":0,"transport_concern":0}}
 d0ef57a9a822cd55	{"kind":"Probability","probability":0.13}

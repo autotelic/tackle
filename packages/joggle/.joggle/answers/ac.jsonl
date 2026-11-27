@@ -1,3 +1,4 @@
+ac0dbea0665cb6b0	{"consistency":1,"kind":"Probability","probability":0.043333333333333335}
 ac153a6f8cc91ce5	{"confidence":0.63,"kind":"Classify","label":"shared_vocabulary","probabilities":{"general":0.24,"names_a_caller":0,"shared_vocabulary":0.76}}
 ac2689ac9f546b38	{"confidence":0.11,"kind":"Classify","label":"orchestration","probabilities":{"domain_logic":0.16,"infrastructure":0.08,"input_adaptation":0.03,"mechanical":0.16,"not_applicable":0.13,"orchestration":0.21,"rendering":0.02,"request_validation":0.02,"transport_concern":0.19}}
 ac2d9a65e7216c70	{"confidence":0.97,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.97,"infrastructure":0,"input_adaptation":0,"mechanical":0.02,"not_applicable":0.01,"orchestration":0,"rendering":0,"request_validation":0,"transport_concern":0}}
@@ -10,6 +11,9 @@ ac8190a4ab33f143	{"confidence":0.54,"kind":"Classify","label":"already_there","p
 ac90db210c290d2f	{"confidence":0.56,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.61,"infrastructure":0,"input_adaptation":0,"mechanical":0.03,"not_applicable":0.04,"orchestration":0.32,"rendering":0,"request_validation":0,"transport_concern":0}}
 ac93698fa14826e6	{"consistency":1,"kind":"Probability","probability":0.32666666666666666}
 acb0e85a4b7b53f3	{"confidence":0.59,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.73,"not_a_derivation":0.27,"reimplements":0}}
+acb1891dfa35cc4e	{"consistency":1,"kind":"Probability","probability":0.03666666666666667}
+acb2d08922663279	{"consistency":1,"kind":"Probability","probability":0.05333333333333334}
 acb354a06f2e2b48	{"confidence":0.85,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.89,"stale_reference":0.06,"wrong_behavior":0.03,"wrong_contract":0.02}}
 acd227a443730e54	{"confidence":0.63,"kind":"Classify","label":"framework_glue","probabilities":{"domain_concept":0.04,"framework_glue":0.72,"implementation_detail":0.03,"wire_contract":0.21}}
+ace2f352efc46c03	{"consistency":1,"kind":"Probability","probability":0.056666666666666664}
 acf643eebb2d66b5	{"confidence":0.99,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.99,"stale_reference":0,"wrong_behavior":0.01,"wrong_contract":0}}
