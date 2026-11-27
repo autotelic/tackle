@@ -359,6 +359,16 @@ export const dutyFamilyVocabulary: Readonly<Record<string, string>> = Object.fro
   Object.entries(dutyFamilies).map(([family, value]) => [family, value.description]),
 )
 
+/**
+ * The `duty` criteria within one family.
+ *
+ * An unknown family falls back to `not_applicable`, because the family question
+ * and this lookup share the same vocabulary but not the same lifetime: a stored
+ * answer can name a family a later policy revision removed.
+ *
+ * @param family - the duty family whose duties are being asked.
+ * @returns the clause labels and the criterion each one is judged against.
+ */
 export const dutyClausesOf = (family: string): Readonly<Record<string, string>> =>
   Object.fromEntries(
     (dutyFamilies[family]?.duties ?? ["not_applicable"]).map((duty) => [

@@ -1,6 +1,7 @@
 import { Context, Effect, Option, Predicate, Result, Schema } from "effect"
 import * as AiError from "effect/ai/AiError"
 import { Decision, DecisionModel } from "effect/ai"
+import { lookup } from "./absence.ts"
 import { Atoms } from "./atoms.ts"
 import { canonical } from "./canonical.ts"
 import { policy } from "./policy.ts"
@@ -230,13 +231,25 @@ type AnnotatedDecision = { readonly [QUESTION_META]?: QuestionMeta }
 
 /** Attach the state a question read, for the cache key. Returns a copy carrying it. */
 export const withQuestionMeta = <D extends Decision.Any>(decision: D, meta: QuestionMeta): D => {
+  // SAFETY: the spread copies every enumerable field of the decision, and the
+  // annotation is defined non-enumerably afterwards, so the copy still has D's
+  // exact shape. The cast only restores the generic the spread widened.
   const annotated = { ...decision } as D
   Object.defineProperty(annotated, QUESTION_META, { value: meta, enumerable: false })
   return annotated
 }
 
-const metaOf = (decision: Decision.Any): QuestionMeta | undefined =>
-  (decision as AnnotatedDecision)[QUESTION_META]
+const metaOf = (decision: Decision.Any): Option.Option<QuestionMeta> =>
+  lookup(
+    () =>
+      // SAFETY: QUESTION_META is written only by `withQuestionMeta`, which defines
+      // it on a `Decision.Any`; the value read here is that same QuestionMeta.
+      (decision as AnnotatedDecision)[QUESTION_META],
+  )
+
+/** The annotation, or an empty one, for a caller that only reads an optional field. */
+const metaOrEmpty = (decision: Decision.Any): QuestionMeta =>
+  Option.getOrElse(metaOf(decision), (): QuestionMeta => ({}))
 
 /**
  * The key of one question's answer: the question, its OWN state, and the model.
@@ -344,7 +357,7 @@ export const memoize = (
           // A question keyed by the batch's whole state would be unreachable as
           // soon as its neighbours change; the plan engine names the state each
           // question actually read.
-          const key = answerKeyFor(decision, metaOf(decision)?.material ?? options.input)
+          const key = answerKeyFor(decision, metaOrEmpty(decision).material ?? options.input)
           keys.set(name, key)
           const stored = yield* cache.get(key)
           if (Option.isSome(stored)) {
@@ -371,7 +384,7 @@ export const memoize = (
             // three times as many times as the budget counted -- 9 asks for a
             // Noul, which is what pushed a remedies request over the ceiling.
             const names =
-              decision._tag === "Probability" && metaOf(decision)?.repeatsHandled !== true
+              decision._tag === "Probability" && metaOrEmpty(decision).repeatsHandled !== true
                 ? Array.from({ length: repeats }, (_, index) => name + "~" + String(index))
                 : [name]
             for (const one of names) requested[one] = decision
@@ -392,7 +405,7 @@ export const memoize = (
             let answer: Decision.Answer<Decision.Any> = first
             if (
               missing[name]?._tag === "Probability" &&
-              metaOf(missing[name])?.repeatsHandled !== true
+              metaOrEmpty(missing[name]).repeatsHandled !== true
             ) {
               const values = gathered.flatMap((one) => ("probability" in one ? [one.probability] : []))
               const reduced = reduceRepeats(values)

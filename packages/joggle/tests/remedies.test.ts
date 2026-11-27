@@ -1,5 +1,6 @@
 import { Result, Schema, SchemaParser } from "effect"
 import { expect, test } from "vitest"
+import { BuildFailure } from "../src/absence.ts"
 import {
   clauseRouteOf,
   clusterRemedies,
@@ -386,6 +387,21 @@ test("a subject is not a clause and is reported instead of offered", () => {
   expect(() =>
     composeRemedy({ family: "other", clause: "@effect/ui/Command#make is an experimental API" }),
   ).toThrow(/refusing to use/)
+})
+
+test("a refused repair is a tagged build failure, not prose in a stack trace", () => {
+  let failure: unknown
+  try {
+    composeRemedy({ family: "other", clause: "@effect/ui/Command#make is an experimental API" })
+  } catch (error) {
+    failure = error
+  }
+  expect(failure).toBeInstanceOf(BuildFailure)
+  expect(failure).toMatchObject({
+    _tag: "joggle/BuildFailure",
+    family: "other",
+    subject: JSON.stringify("@effect/ui/Command#make is an experimental API"),
+  })
 })
 
 test("a subject clause is recorded as rejected, not used as a cluster label", () => {
