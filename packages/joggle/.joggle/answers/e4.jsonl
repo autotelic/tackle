@@ -1,3 +1,4 @@
+e425728fbf2b5587	{"consistency":1,"kind":"Probability","probability":0.03}
 e47b35386d1f829a	{"confidence":0.97,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.97,"stale_reference":0.01,"wrong_behavior":0.01,"wrong_contract":0.01}}
 e497e2a795733aa5	{"consistency":1,"kind":"Probability","probability":0.4577777777777778}
 e4cdc578cd8bf173	{"confidence":0.36,"kind":"Rate","label":"meaningfully_better","probabilities":{"meaningfully_better":0.43,"no_difference":0.07,"removes_a_hazard":0.2,"slightly_clearer":0.3},"rating":1.77}

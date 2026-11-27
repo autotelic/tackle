@@ -2,10 +2,16 @@
 7022db0a46455ec4	{"confidence":0.88,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.9,"infrastructure":0,"input_adaptation":0,"mechanical":0.06,"not_applicable":0.01,"orchestration":0.03,"rendering":0,"request_validation":0,"transport_concern":0}}
 7045f249b2e4ad1e	{"confidence":0.4,"kind":"Classify","label":"same_module","probabilities":{"different_deployables":0,"same_module":0.56,"same_package":0.44,"sibling_packages":0}}
 704e39973e294dcf	{"confidence":0.87,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.91,"not_a_derivation":0.07,"reimplements":0.02}}
+704f4095eef74fc0	{"consistency":1,"kind":"Probability","probability":0.04}
 705a0559452d4867	{"confidence":0.9,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.93,"not_a_derivation":0.05,"reimplements":0.02}}
 706d09642bad662c	{"confidence":0.68,"kind":"Classify","label":"already_there","probabilities":{"already_there":0.76,"component_or_feature":0.01,"not_applicable":0.18,"route_or_handler":0.05}}
 7080a7d90c5b005f	{"confidence":0.88,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.92,"not_a_derivation":0.05,"reimplements":0.03}}
+708b9bf79921c97a	{"consistency":1,"kind":"Probability","probability":0.03}
 708e977ccb9f8214	{"confidence":0.85,"kind":"Classify","label":"legitimate_local","probabilities":{"legitimate_local":0.9,"not_a_derivation":0.06,"reimplements":0.04}}
 70b0437901d9b90a	{"confidence":0.65,"kind":"Classify","label":"domain_logic","probabilities":{"domain_logic":0.69,"infrastructure":0.01,"input_adaptation":0,"mechanical":0,"not_applicable":0.02,"orchestration":0,"rendering":0,"request_validation":0.01,"transport_concern":0.27}}
+70bc5a2a9ffb7a69	{"consistency":1,"kind":"Probability","probability":0.14333333333333334}
 70c0d97016425d88	{"consistency":1,"kind":"Probability","probability":0.06}
 70ca2299edef01f2	{"confidence":0.89,"kind":"Classify","label":"no_issue","probabilities":{"no_issue":0.92,"stale_reference":0,"wrong_behavior":0.07,"wrong_contract":0.01}}
+70d2fb7f33925b32	{"consistency":1,"kind":"Probability","probability":0.04}
+70d3ee3fd42948c0	{"consistency":1,"kind":"Probability","probability":0.7399999999999999}
+70ed691868ccf83c	{"consistency":1,"kind":"Probability","probability":0.056666666666666664}
