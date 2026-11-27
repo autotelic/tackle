@@ -774,7 +774,13 @@ const runPassInner = async (input: RunPassInput): Promise<PassOutcome> => {
 
   const only = input.eventIds === undefined ? undefined : new Set(input.eventIds)
   const events = (await readEvents({ id: input.id, home: input.home })).filter(
-    (event) => event.status === "pending" && (only === undefined || only.has(event.id)),
+    (event) =>
+      event.status === "pending" &&
+      (only === undefined || only.has(event.id)) &&
+      // A reconcile pass is read-only. A task event that arrived while the workstream was
+      // reconciling is work for the following build pass; consuming it here would mark it done
+      // while the worker was forbidden to edit code.
+      (record.phase !== "reconcile" || event.kind !== "task"),
   )
   if (events.length === 0) return { ok: false, reason: "NoPendingEvents" }
   const worker = record.worker ?? input.worker

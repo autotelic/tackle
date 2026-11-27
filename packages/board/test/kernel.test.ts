@@ -116,6 +116,40 @@ test("a pass consumes its events, checkpoints the worktree, and survives worker 
   }
 }, 20_000)
 
+test("a reconcile pass leaves a task queued for build", async () => {
+  const f = fixture()
+  try {
+    await adoptIt(f)
+    await appendEvent({
+      id: "permissions-1862",
+      home: f.home,
+      event: {
+        id: "task-for-build",
+        kind: "task",
+        at: "2026-11-21T00:01:00.000Z",
+        payload: { task: "do this after reconcile" },
+        status: "pending",
+      },
+    })
+    const worker = join(f.root, "worker.sh")
+    writeFileSync(worker, "#!/bin/sh\necho should-not-run > ran.txt\n")
+    chmodSync(worker, 0o755)
+
+    const result = await runPass({
+      id: "permissions-1862",
+      worker,
+      at: "2026-11-21T00:02:00.000Z",
+      home: f.home,
+    })
+    expect(result).toEqual({ ok: false, reason: "NoPendingEvents" })
+    expect(existsSync(join(f.repo, "ran.txt"))).toBe(false)
+    const events = await readEvents({ id: "permissions-1862", home: f.home })
+    expect(events.find((event) => event.id === "task-for-build")?.status).toBe("pending")
+  } finally {
+    rmSync(f.root, { recursive: true, force: true })
+  }
+}, 20_000)
+
 const receiptWith = (input: {
   readonly record: Awaited<ReturnType<typeof readWorkstream>>
   readonly before: number
