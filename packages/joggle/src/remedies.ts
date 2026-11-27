@@ -526,7 +526,9 @@ export const judgeRemedies = (
       readonly family: string
       readonly candidates: ReadonlyArray<string>
     }
-    const pending: Array<PendingClause> = []
+    // Rebound each round: the loop replaces the queue with the clauses the family
+    // answer narrowed to, rather than mutating one list in place.
+    let pending: Array<PendingClause> = []
     for (const message of messages) {
       const family = familyByMessage.get(message.key) ?? "other"
       const candidates = clauses.filter(
