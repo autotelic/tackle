@@ -54,6 +54,35 @@ describe("featuresOf", () => {
     })
   })
 
+  it("lets the config's value keys win over the pattern's default", () => {
+    const overriding = {
+      ...options,
+      composition: { ...options.composition, valueKeys: ["slots", "status"] },
+    }
+    const modulesWithSlots = [
+      parseModule({
+        filename: "components/feature/context.ts",
+        text: [
+          'import { createContext } from "react"',
+          "export const FeatureContext = createContext({})",
+          "export function useFeature() { return FeatureContext }",
+        ].join("\n"),
+      }),
+      parseModule({
+        filename: "components/feature/provider.tsx",
+        text: [
+          'import { FeatureContext } from "./context"',
+          "export function FeatureProvider({ children }: { children: unknown }) {",
+          "  return <FeatureContext.Provider value={{ slots, status }}>{children}</FeatureContext.Provider>",
+          "}",
+        ].join("\n"),
+      }),
+    ]
+    const features = featuresOf(modulesWithSlots, overriding, importerGraph(modulesWithSlots, {}))
+    expect(features).toHaveLength(1)
+    expect(features[0]?.valueKeys).toEqual(["slots", "status"])
+  })
+
   it("does not let arbitrary same-directory modules become blocks", () => {
     fc.assert(
       fc.property(fc.array(fc.nat({ max: 10_000 }), { maxLength: 12 }), (suffixes) => {

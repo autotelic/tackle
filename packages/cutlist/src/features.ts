@@ -1,4 +1,4 @@
-import type { CatalogFeature, PartRole } from "@autotelic/protocol"
+import { PATTERN_VALUE_KEYS, type CatalogFeature, type PartRole } from "@autotelic/protocol"
 import type { SourceModule } from "./crawl.ts"
 import {
   barrelNameOf,
@@ -22,7 +22,7 @@ import {
  */
 
 /** The pattern's canonical value shape. A repo may override it in its config. */
-export const DEFAULT_VALUE_KEYS: ReadonlyArray<string> = ["state", "actions", "meta"]
+export const DEFAULT_VALUE_KEYS: ReadonlyArray<string> = PATTERN_VALUE_KEYS
 
 /** One key is a coincidence; two is a shape. */
 const MIN_VALUE_KEYS = 2

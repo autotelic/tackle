@@ -1,3 +1,4 @@
+import { PATTERN_VALUE_KEYS } from "@autotelic/protocol"
 import type { Predicate } from "effect"
 import type { SourceFile, Workspace } from "./workspace.ts"
 
@@ -230,4 +231,4 @@ export const orphanBlocks = (bundle: Bundle): ReadonlyArray<string> => {
 }
 
 /** The canonical tripartite shape, from Pattern.md. */
-export const TRIPARTITE: ReadonlyArray<string> = ["state", "actions", "meta"]
+export const TRIPARTITE: ReadonlyArray<string> = PATTERN_VALUE_KEYS

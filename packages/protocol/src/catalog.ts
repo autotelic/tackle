@@ -397,6 +397,15 @@ export const emptyCatalog = (root: string): Catalog => ({
 
 const TIERS_NAMES: ReadonlyArray<TierName> = ["primitive", "shared", "local"]
 
+/**
+ * The tripartite pattern's value shape, from Pattern.md: state, actions, meta.
+ *
+ * The pattern's canonical vocabulary belongs to the seam, not to either tool that reads
+ * it: `cutlist` measures the shape and `joggle` judges conformance to it, and they must
+ * not drift. A repository may still override the keys in its config; this is the default.
+ */
+export const PATTERN_VALUE_KEYS: ReadonlyArray<string> = Object.freeze(["state", "actions", "meta"])
+
 export const PART_ROLES: ReadonlyArray<PartRole> = [
   "component",
   "hook",
