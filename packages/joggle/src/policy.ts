@@ -663,6 +663,28 @@ export const policy = {
   },
 
   /**
+   * A declaration that is a smaller version of another.
+   *
+   * Containment is the relation Jaccard cannot see: a small declaration can be
+   * entirely inside a large one and still score 0.17. The cutoff is DERIVED from
+   * the observed distribution rather than chosen: take every distinct-file pair
+   * at or above `floor`, then keep the pairs above the `percentile` of that
+   * population. The rule reports both the cutoff and the population, because a
+   * number without its denominator is an opinion.
+   *
+   * `minTokens` is the same search bound the near-duplicate rule uses: a very
+   * short declaration is contained in everything by accident. `maxCandidates`
+   * bounds the judgements, not the detection; the overflow is counted in the
+   * report.
+   */
+  containment: {
+    minTokens: 12,
+    floor: 0.8,
+    percentile: 75,
+    maxCandidates: 400,
+  },
+
+  /**
    * The compiler's per-declaration facts.
    *
    * `maxMembers` bounds how much of a type is printed: past it the structural

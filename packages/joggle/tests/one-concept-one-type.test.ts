@@ -29,6 +29,7 @@ const declared = (
       // The rule keys on the structure, so the helper says what the compiler
       // would: the member-sorted fingerprint. Here it is the display itself.
       structural: display,
+      canonical: display,
       flags: ["Object"],
       members: [],
       variants: [],
@@ -115,8 +116,20 @@ test("a real trace index drives the rule", () => {
   const index = indexOf(
     parseTrace("/r", [
       [
-        { id: 1, display: "{ id: String }", symbolName: "User", flags: ["Object"], firstDeclaration: { path: "/r/src/a.ts", start: { line: 2, character: 1 } } },
-        { id: 2, display: "{ name: String }", symbolName: "User", flags: ["Object"], firstDeclaration: { path: "/r/src/b.ts", start: { line: 4, character: 1 } } },
+        {
+          id: 1,
+          display: "{ id: String }",
+          symbolName: "User",
+          flags: ["Object"],
+          firstDeclaration: { path: "/r/src/a.ts", start: { line: 2, character: 1 } },
+        },
+        {
+          id: 2,
+          display: "{ name: String }",
+          symbolName: "User",
+          flags: ["Object"],
+          firstDeclaration: { path: "/r/src/b.ts", start: { line: 4, character: 1 } },
+        },
       ],
     ]),
   )
