@@ -42,10 +42,10 @@ const repoName = (repo) => {
  * environment line. The agent is the projection's own match when it sent one, and the session
  * join is the older evidence path kept for a board that serves no environments.
  *
- * @param {{ workstream: Record<string, any>, activity: Record<string, any>, sessions: Record<string, any>[], environment: any, candidates?: Record<string, any>[] }} input
+ * @param {{ workstream: Record<string, any>, activity: Record<string, any>, sessions: Record<string, any>[], environment: any, candidates?: Record<string, any>[], desk?: Record<string, any>[] }} input
  * @returns {Record<string, any> | null} the row, or null when the workstream has no identity.
  */
-const rowOf = ({ workstream, activity, sessions, environment, candidates }) => {
+const rowOf = ({ workstream, activity, sessions, environment, candidates, desk }) => {
   const id = textOf(workstream.id)
   if (id === null) return null
   const live = recordOf(activity)
@@ -74,6 +74,9 @@ const rowOf = ({ workstream, activity, sessions, environment, candidates }) => {
     ageMinutes: numberOrNull(live.ageMinutes),
     budget: used === null || cap === null ? null : used + "/" + cap,
     queued: pending === 0 ? null : String(pending) + " queued",
+    // The open questions this workstream itself holds, counted here so the row can say it
+    // without the panel re-deriving the join from the desk list.
+    desk: listOf(desk).length,
     worker: textOf(workstream.worker),
     machine: textOf(machine.host),
     runtime: textOf(runtime.kind),
@@ -173,6 +176,7 @@ const readPresence = (body) => {
   const activities = listOf(factory.activity).map(recordOf)
   const environments = listOf(factory.environments).map(recordOf)
   const candidates = listOf(factory.candidates).map(recordOf)
+  const asked = listOf(factory.desk).map(recordOf)
   const rows = listOf(factory.workstreams)
     .map((workstream) => {
       const record = recordOf(workstream)
@@ -185,6 +189,7 @@ const readPresence = (body) => {
         sessions,
         environment,
         candidates: lanes,
+        desk: asked.filter((item) => item.workstream === record.id),
       })
     })
     .filter((row) => row !== null)
@@ -192,7 +197,7 @@ const readPresence = (body) => {
       (left, right) =>
         rank(left.state) - rank(right.state) || left.label.localeCompare(right.label),
     )
-  return { rows, desk: deskRows(factory.desk), reports: listOf(factory.reports).length }
+  return { rows, desk: deskRows(asked), reports: listOf(factory.reports).length }
 }
 
 /**
@@ -209,6 +214,7 @@ const metaLine = (row) =>
     row.age === null ? null : row.age + " ago",
     row.budget,
     row.queued,
+    row.desk === 0 ? null : row.desk + (row.desk === 1 ? " desk" : " desks"),
     row.worker === null ? null : "worker " + row.worker,
   ]
     .filter((part) => part !== null && part !== undefined && part !== "")

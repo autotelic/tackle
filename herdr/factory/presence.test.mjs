@@ -211,6 +211,79 @@ test("a candidate naming another workstream never joins this row", () => {
   assert.deepEqual(row.candidates, [])
 })
 
+/** One open question as the board serves it. */
+const question = (id, workstream) => ({
+  id,
+  workstream,
+  kind: "decision",
+  title: id,
+  body: "why it waits",
+  choices: ["resume", "defer"],
+  route: "live",
+  at: "2026-11-22T12:00:00.000Z",
+})
+
+test("a row counts only the desk items that name it", () => {
+  const document = presence()
+  document.factory.workstreams.push(workstream("enterprise-1854"))
+  document.factory.activity.push({
+    ...document.factory.activity[0],
+    workstream: "enterprise-1854",
+    state: "idle",
+  })
+  document.factory.desk = [
+    question("desk-shakti-a", "shakti-perms"),
+    question("desk-shakti-b", "shakti-perms"),
+    question("desk-enterprise", "enterprise-1854"),
+  ]
+  const rows = readPresence(document).rows
+  const shakti = rows.find((row) => row.id === "shakti-perms")
+  const enterprise = rows.find((row) => row.id === "enterprise-1854")
+  assert.equal(shakti.desk, 2)
+  assert.match(metaLine(shakti), /2 desks/)
+  assert.equal(enterprise.desk, 1)
+  assert.match(metaLine(enterprise), /1 desk(?!s)/)
+  // Every question is still drawn, whichever row it belongs to.
+  assert.equal(readPresence(document).desk.length, 3)
+})
+
+test("a board that serves no desk draws no desk count", () => {
+  const [row] = readPresence(presence()).rows
+  assert.equal(row.desk, 0)
+  assert.equal(metaLine(row).includes("desk"), false)
+})
+
+test("rows are ordered by attention: blocked, working, queued, idle, done", () => {
+  const ids = ["bravo", "alpha", "charlie", "delta", "echo"]
+  const states = ["done", "idle", "queued", "working", "blocked"]
+  const document = {
+    factory: {
+      workstreams: ids.map((id) => workstream(id)),
+      activity: ids.map((id, index) => ({
+        workstream: id,
+        lastPass: null,
+        pending: [],
+        lastEvent: null,
+        ageMinutes: null,
+        budget: { used: 0, passesPerPhase: 20 },
+        phase: "build",
+        state: states[index],
+        blockedBy: [],
+      })),
+      desk: [],
+      reports: [],
+    },
+    sessions: {
+      herdr: { available: false, sessions: [] },
+      rex: { available: false, sessions: [] },
+    },
+  }
+  assert.deepEqual(
+    readPresence(document).rows.map((row) => row.state),
+    ["blocked", "working", "queued", "idle", "done"],
+  )
+})
+
 test("a null machine and a null agent draw nothing, and the session join is the fallback", () => {
   const document = presence({
     environments: [{ workstream: "shakti-perms", machine: null, agent: null }],

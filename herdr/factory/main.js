@@ -302,22 +302,13 @@ export default class Factory extends View {
       .child(div().text_size(11).text_color(t.dim).child(copy.detail))
   }
 
-  answer(item, choice) {
-    exec("curl", [
-      "-sS",
-      "-X",
-      "POST",
-      "-H",
-      "content-type: application/json",
-      "--data",
-      JSON.stringify({ item, choice, by: "herdr" }),
-      "http://127.0.0.1:4780/desk/answer",
-    ])
-      .then(() => this.refresh(this.cx))
-      .catch(() => null)
-    return null
-  }
-
+  /**
+   * The open questions, as links to the place that answers them.
+   *
+   * The panel's only write is Focus: a desk answer spends a decision, and a 320px column that
+   * can spend one by a stray click would be a second desk client with no review step. So each
+   * item names its own choices and opens the web view, which is the surface that answers.
+   */
   deskSection(t) {
     return v_flex()
       .flex_none()
@@ -345,29 +336,31 @@ export default class Factory extends View {
             .py(8)
             .border_t(1)
             .border_color(t.border)
-            .child(div().font_semibold().truncate().child(item.title))
+            .cursor_pointer()
+            .hover((style) => style.bg(t.hover))
+            .on_click(() => openView(VIEW))
+            .child(
+              h_flex()
+                .items_center()
+                .gap(6)
+                .child(div().font_semibold().truncate().child(item.title))
+                .when(item.workstream !== null, (el) =>
+                  el.child(this.badge(t, item.workstream, t.dim)),
+                ),
+            )
             .when(item.body !== null, (el) =>
               el.child(div().text_size(11).text_color(t.dim).truncate().child(item.body)),
             )
-            .child(
-              h_flex()
-                .gap(6)
-                .flex_wrap()
-                .children(
-                  item.choices.map((choice) =>
-                    h_flex()
-                      .id("factory-desk-choice-" + item.id + "-" + choice)
-                      .px(7)
-                      .py(3)
-                      .rounded(6)
-                      .border(1)
-                      .border_color(t.border)
-                      .cursor_pointer()
-                      .hover((style) => style.bg(t.hover))
-                      .on_click(() => this.answer(item.id, choice))
-                      .child(div().text_size(11).text_color(t.muted).child(choice)),
-                  ),
-                ),
+            // The choices are the question's own words, drawn as text: the answer is taken in
+            // the web view, so nothing here can pick one by accident.
+            .when(item.choices.length > 0, (el) =>
+              el.child(
+                div()
+                  .text_size(11)
+                  .text_color(t.dim)
+                  .truncate()
+                  .child(item.choices.join(" · ") + " in the web view"),
+              ),
             ),
         ),
       )

@@ -28,8 +28,9 @@ sends one; then the desk items; then Branch Issue / Branch PR when installed.
   visible rather than being folded away.
 - Done is folded. A done row whose last activity is older than 24 hours is not
   drawn in the panel; it remains in the web view, which is the archive.
-- Every meta part is optional: repo, `pass N`, `Nm ago`, `4/20`, `2 queued` —
-  each appears only when the projection sent it.
+- Every meta part is optional: repo, `pass N`, `Nm ago`, `4/20`, `2 queued`, `1 desk` —
+  each appears only when the projection sent it. The desk count is the workstream's own open
+  questions, counted by the row's decode rather than by the panel.
 - The environment line comes from `factory.environments[]`: the machine host, the
   runtime (`worktree /path`), the port a room leased (`port 4400`), the declared
   services, and the preview URL. A workstream with no entry draws no line; a
@@ -45,8 +46,10 @@ sends one; then the desk items; then Branch Issue / Branch PR when installed.
   session _and_ the app still shows that terminal; it runs
   `agent.focus {terminal: address}`. One action, no Linear or PR internals.
 - Desk items are the only questions: the header badge counts them, each item is
-  one row, and both open the web view — the reading surface, and the only one at
-  phone width.
+  one row, and every one of them opens the web view — the reading surface, and the
+  only one at phone width. The panel never answers a desk item: an answer spends a
+  decision, and Focus is the panel's only write. The item shows the choices it
+  offers, then takes the human to the desk to pick one.
 - An unreachable `/presence` shows `offline` and no rows. Keeping the last good
   rows would report work as current while the board is down.
 
