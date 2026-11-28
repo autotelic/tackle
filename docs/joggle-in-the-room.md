@@ -106,6 +106,27 @@ Two numbers describe the whole plan. **1,424/1,431 decided by code** says the sp
 from not asking. **12 code-answerable judgments** says a tenth of what remains is not the model's
 job either.
 
+### What the experiments measured
+
+Four real diffs in this branch, each run as `check --since <parent> --offline --format json`, with
+the worktree restored clean afterwards:
+
+| files changed | plans asked | answered | unjudged | findings | elapsed | workspace phase |
+| ------------: | ----------: | -------: | -------: | -------: | ------: | --------------: |
+|             6 |         337 |       56 |      281 |        1 |  4.60 s |          3.43 s |
+|             3 |         267 |       12 |      255 |        0 |  4.63 s |          3.45 s |
+|             5 |         275 |       12 |      263 |        1 |  4.65 s |          3.49 s |
+|             6 |         318 |       37 |      281 |        1 |  4.67 s |          3.46 s |
+
+Three conclusions. **The 3-second bar was a claim about an index, not the room**: a scoped run
+loads and parses the whole tree, so 3.4 s is a floor no judge can lower. **The delta is a question
+counter at 5–22% coverage**: 300 questions per window, 0–1 findings, which is why M2 waits.
+**And the training corpus cannot be sliced by rule**: `answerKeyFor` hashes model + decision +
+material and the shards store only hash + answer, so rule id is unrecoverable — the 17,939 answers
+on disk group into 72 question shapes, and only **8 of 72** clear “30 examples and 30 per label”.
+The largest shapes fail for the paper's own reason: 2,436 examples are 100% `no_issue`, 1,236 are
+96% `not_a_projection`. Those are priors, not heads.
+
 ---
 
 ## 3. The split
@@ -297,21 +318,23 @@ Two tracks, two decision points, and neither waits on the other.
 
 ### The room half
 
-| #   | milestone                                                                                                                                                                                                                                             | passes when                                                                                                                                                                                                                                                                                                  | killed when                                                                     |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
-| M0a | **the budget bug**: preflight only the plans that will actually go to the wire (filter cache hits before the loop), stop relabelling `unreadable` drops as `budget` (the `overBudgetSubjects` remap), and report the preflight separately             | a warm ledger is never blocked from questions it could replay; the drop count is drops, not drops × subjects; and a fixture whose **cache hits alone exceed the ceiling while its misses fit comfortably** is blocked today and answered after                                                               | the preflight still charges for cache hits, or the fixture cannot be built      |
-| M0b | split the stage vocabulary: `ceiling` / `token` / `unavailable` / `unreadable` / `no_evidence`, keep `budget` decodable as an alias, and update `UNJUDGED_STAGES` **in `jig-cli/src/engines.ts` too**                                                 | every unjudged total equals the sum over stages for a run carrying all of them (asserted by a test); yesterday's stored run still totals                                                                                                                                                                     | a surface silently reports zero unjudged                                        |
-| M1  | `joggle check --changed --offline --format json` as the room's generation pass                                                                                                                                                                        | warm run under 3s here, diagnostics carrying the honest `judged: false` + reason                                                                                                                                                                                                                             | warm run over 3s, or the flag conflates no-evidence with blindness              |
-| M0c | a rule's candidate ceiling is reported as a ratio with its unit named (`judged 120 of 1,733 documented sentences`), and its candidates are excluded from M3's denominator per rule                                                                    | one rule's cap can no longer dominate the unjudged count, and the report names the unit                                                                                                                                                                                                                      | a ceiling candidate is still counted as if it were a judged-clean one           |
-| M2  | cursor + projection + report at a tool-call boundary                                                                                                                                                                                                  | a room run reports count, paths and not-judged-by-reason, deduped, capped at 3                                                                                                                                                                                                                               | more than 3 actionable findings per window, or dedupe needs a commit per report |
-| M3  | **delta measurement**: one stored run plus `--changed` from the room cursor's checkpoint, with a warm store and identical scope; the census already gives requests / replayed / judged / unavailable, so new-after-replay is `judged` over `requests` | typical build window: diagnostics new, candidates changed, `unjudged` by reason, `unlooked` (caps) **excluded from the denominator**, and `judgedSilent` reported separately per rule — a rule with 1,400 declines is busy, a rule with 6,500 ceiling drops is capped, and the two look identical in a total | the delta is single digits per window — then the room half is all there is      |
+| #   | milestone                                                                                                                                               | passes when                                                                                                                                                                                        | killed when                                                                             |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| M0a | **the budget bug**: preflight only the plans that go to the wire, stop relabelling drops, report the preflight separately                               | a warm ledger is never blocked from questions it could replay; a fixture whose cache hits alone exceed the ceiling is blocked today and answered after                                             | the preflight still charges for cache hits                                              |
+| M0b | split the stage vocabulary: `ceiling` / `token` / `unreadable` / `no_evidence`, `budget` decodable only, in joggle **and** `jig-cli/src/engines.ts`     | every unjudged total equals the sum over stages (asserted); a stored run still totals                                                                                                              | a surface silently reports zero unjudged                                                |
+| M0c | a rule's ceiling is a ratio with its unit named, its rows printed per kind, and its candidates excluded from M3's denominator                           | one rule's cap cannot dominate the unjudged count, and the rows reconcile with the census and the drops                                                                                            | a capped candidate is counted as if judged-clean                                        |
+| M1  | the room's generation pass: `check --changed --offline --format json`                                                                                   | **the workspace phase is not paid twice in one window** -- the measured floor is 3.4s of a 4.6s scoped run, so a wall-clock bar below that is a claim about a persistent index, not about the room | a pass is presented as instant when it costs 5s                                         |
+| M2  | cursor + projection + report at a tool-call boundary                                                                                                    | a room run reports count, paths, ledger coverage and not-judged-by-reason, deduped, capped at 3                                                                                                    | coverage is too low for the report to be more than a debt notice                        |
+| M3  | **delta measurement**: `--since <parent>` per real diff, warm and covered; new-after-replay is `judged` over `requests`, with ceiling excluded per rule | the delta across real windows is small enough that a tool-boundary report is actionable                                                                                                            | the delta is a question counter (measured: 267-337 asked, 12-56 answered, 0-1 findings) |
 
 Landed: M0a and M0b in `30e3bf02`, M0c in the commit that adds this line. M3's baseline starts
 at M0c.
 
-The order is `M0a → M0b → M0c → M1`, and M0b before M1's report line on purpose: that line names a reason
-per unjudged candidate, which cannot ship while one word means two facts. (The alternative — M1
-count-only, M0b adding the reason later — costs a second report format for no benefit.)
+The agreed order is **`N1 → N0.5 → one head → decide M2`**, with M0a/M0b/M0c already landed. M2 is
+deferred, not killed: at 5–22% coverage a tool-boundary report says "300 questions, 12 answered, 1
+finding", which is a debt notice, and the repository already has one of those. N1 comes first
+because its miss queue is the instrument every later decision reads; N0.5 comes second because the
+committed ledger cannot be sliced by rule, so no head can even be attributed until it exists.
 
 M3 is the room half's decision point, and **its baseline starts after M0a lands**. M0a changes which
 candidates are asked, so it moves the denominator of every later measurement: land it alone, re-run
@@ -334,12 +357,13 @@ not reached is a coverage defect. Both fail the same line, and the line says whi
 The consumer is not the room. It is **CI (no key) and an on-demand judge** — the claim is smaller,
 cheaper, and testable without M1–M3.
 
-| #   | milestone                                                                                                | passes when                                                                                                        | killed when                                   |
-| --- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------- |
-| N1  | the provider interface: a `DecisionModel` that answers from a registry of heads and misses with a reason | a test double **misses** deterministically and the reason reaches the report                                       | the interface needs joggle internals to work  |
-| N2  | one head, on the most-asked question that survives rung 3, trained from the existing ledger's corpus     | it passes all five gates in §5.2, with the deduped bound                                                           | no question clears gate 1 or 3                |
-| N3  | keyless judging in CI: the same run, no key, head answers, misses named                                  | the run's findings on holdout agree at the teacher's self-consistency bar and coverage is not bought by abstention | agreement is bought by suppressing hard cases |
-| N4  | artifact through the shop's orb image (weights, heads, calibration, teacher provenance)                  | a fresh checkout judges key-free; the artifact's provenance names its teacher                                      | provenance cannot name a teacher version      |
+| #    | milestone                                                                                                                                                              | passes when                                                                                                        | killed when                                   |
+| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------- |
+| N0.5 | **corpus provenance**: at write time, record a sidecar mapping from the answer cache key to `(ruleId, decisionId, kind, label set, question hash, extraction version)` | the committed ledger can be sliced by rule without a new run                                                       | a cache key stays a bare hash                 |
+| N1   | the provider interface: a `DecisionModel` that answers from a registry of heads and misses with a reason                                                               | a test double **misses** deterministically and the reason reaches the report                                       | the interface needs joggle internals to work  |
+| N2   | one head, on the most-asked question that survives rung 3, trained from the existing ledger's corpus                                                                   | it passes all five gates in §5.2, with the deduped bound                                                           | no question clears gate 1 or 3                |
+| N3   | keyless judging in CI: the same run, no key, head answers, misses named                                                                                                | the run's findings on holdout agree at the teacher's self-consistency bar and coverage is not bought by abstention | agreement is bought by suppressing hard cases |
+| N4   | artifact through the shop's orb image (weights, heads, calibration, teacher provenance)                                                                                | a fresh checkout judges key-free; the artifact's provenance names its teacher                                      | provenance cannot name a teacher version      |
 
 ### M0a and M0b, exactly
 
