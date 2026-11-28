@@ -1,5 +1,25 @@
 # @autotelic/plumb
 
+## 0.7.2
+
+### Patch Changes
+
+- `guarded-op-must-return-option` and `guarded-op-must-return-effect` no longer contradict.
+
+  The first recommended `Option` from a `T | undefined` return; the second rejected `Option` for
+  hiding the reason and demanded `Either<T, TaggedReason>`. There was no spelling that satisfied
+  both, and it cost five files and five passes in one repository before a module named
+  `absence.ts` was written to answer the question once.
+
+  The option rule now recommends `Either<T, TaggedReason>` — the shape the effect rule already
+  accepts — and keeps its id, so consumer configs do not shift. Both rules build their messages from
+  one vocabulary in `effect/absence-shape.ts`, and `absence-shape-matrix.test.ts` proves the three
+  return shapes through both rules with only `Either` passing.
+
+  The sibling pair is settled the same way in its messages: a **required** parameter spelled
+  `T | undefined` is the satisfiable form of `no-optional-function-parameters` against
+  `no-duplicate-type-constituents`.
+
 ## 0.7.1
 
 ### Patch Changes
