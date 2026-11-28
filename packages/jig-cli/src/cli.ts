@@ -351,8 +351,10 @@ const baselineCommand = Command.make(
        * never help. The engine's own unjudged count is the signal that judgement was available
        * and skipped.
        */
+      // Both silences count here: a candidate past a rule's cap is as unjudged as one the model
+      // could not read, and a ledger written from either would not match a judged run.
       const skipped = run.report.generators.reduce(
-        (sum, generator) => sum + (generator.unjudged ?? 0),
+        (sum, generator) => sum + (generator.unjudged ?? 0) + (generator.unlooked ?? 0),
         0,
       )
       const unverified =

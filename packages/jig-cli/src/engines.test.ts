@@ -327,10 +327,10 @@ describe("engineProvenance", () => {
     expect(engineStatus("joggle", [], { status: "skipped" })).toBe("skipped")
   })
 
-  it("counts every unjudged stage and only the unjudged ones", () => {
-    // The stages are the census: declined and gated are answers, the rest are candidates
-    // nobody looked at. The total has to be the sum over stages, or a surface can print a
-    // number it did not derive.
+  it("separates what it tried and could not judge from what it chose not to look at", () => {
+    // Three silences, three different jobs: `unjudged` is a failure to reach an answer,
+    // `unlooked` is a rule's cap or a declared decline, and `no_evidence` is nothing to send.
+    // Folding them together is how 16,561 sentence-level ceiling drops read as unjudged.
     const provenance = engineProvenance(
       JSON.stringify({
         diagnostics: [],
@@ -347,7 +347,9 @@ describe("engineProvenance", () => {
         },
       }),
     )
-    expect(provenance.unjudged).toBe(5)
+    expect(provenance.unjudged).toBe(3)
+    expect(provenance.unlooked).toBe(2)
+    expect(provenance.nothingToJudge).toBe(1)
     expect(provenance.drops).toEqual([
       { stage: "budget", count: 1 },
       { stage: "ceiling", count: 1 },

@@ -163,6 +163,15 @@ export interface EngineSummary {
    * nothing because nothing was judged has not answered the question it was run to answer.
    */
   readonly unjudged?: number
+  /**
+   * Candidates the engine chose not to look at: past a rule's own cap, or declined by the rule.
+   *
+   * Kept apart from `unjudged` because the two call for different work. `unjudged` means the
+   * engine tried and could not (unreadable, the run's token ceiling, no key); `unlooked` means it
+   * decided not to, which is a policy number a reader can raise and a coding agent can ignore.
+   * Folding them together made 16,561 sentence-level ceiling drops read as unjudged candidates.
+   */
+  readonly unlooked?: number
   /** The same candidates, by the engine's own stage, so a reader can see where they went. */
   readonly drops?: ReadonlyArray<DropCount>
 }

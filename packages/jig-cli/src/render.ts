@@ -5,6 +5,7 @@ import {
   type EngineSummary,
   type Report,
 } from "@autotelic/protocol"
+import { notJudgedAnnotations } from "./engines.ts"
 import { EXIT, type GateVerdict } from "./gate.ts"
 import type { HarnessRun } from "./run.ts"
 
@@ -83,9 +84,7 @@ const engineLine = (generator: EngineSummary): string => {
   // `ran` is the unremarkable case and stays silent; anything else is news.
   if (generator.status !== undefined && generator.status !== "ran")
     annotations.push(generator.status)
-  if (generator.unjudged !== undefined && generator.unjudged > 0) {
-    annotations.push(`${generator.unjudged} candidate(s) not judged`)
-  }
+  annotations.push(...notJudgedAnnotations(generator))
   if (generator.note !== undefined) annotations.push(generator.note)
   const suffix = annotations.length === 0 ? "" : ` — ${annotations.join("; ")}`
   return `  ${generator.id}: ${generator.diagnostics} finding(s)${suffix}`
@@ -128,11 +127,15 @@ export const renderText = (run: HarnessRun, options: TextOptions = {}): string =
   // the headline, because "0 findings" from an unjudged half is not an architectural verdict
   // and a trailing engine note is easy to scroll past.
   const unjudged = report.generators.reduce((sum, generator) => sum + (generator.unjudged ?? 0), 0)
+  // Printed, not folded: a rule's own cap is a number a reader can raise, and a run that hid it
+  // would look cleaner than it is.
+  const unlooked = report.generators.reduce((sum, generator) => sum + (generator.unlooked ?? 0), 0)
   // Findings and findings nobody judged are different units, and adding them into one headline
   // number is what made "5315 findings" read as debt when most of it was budget starvation.
   const unverified = report.diagnostics.filter((diagnostic) => diagnostic.judged === false).length
   const notJudged =
     (unjudged > 0 ? `; ${unjudged} candidate(s) not judged` : "") +
+    (unlooked > 0 ? `; ${unlooked} candidate(s) unlooked (a rule's cap or a decline)` : "") +
     (unverified > 0 ? `; ${unverified} of these finding(s) unverified (no judgement reached)` : "")
   const lines: Array<string> = [
     report.generators.length === 0
@@ -310,9 +313,7 @@ export const renderGithub = (report: Report, options: GithubOptions = {}): strin
     const annotations: Array<string> = []
     if (generator.status !== undefined && generator.status !== "ran")
       annotations.push(generator.status)
-    if (generator.unjudged !== undefined && generator.unjudged > 0) {
-      annotations.push(`${generator.unjudged} candidate(s) not judged`)
-    }
+    annotations.push(...notJudgedAnnotations(generator))
     if (generator.note !== undefined) annotations.push(generator.note)
     if (annotations.length === 0) continue
     census.push(`::warning title=jig census (${generator.id})::${annotations.join("; ")}`)

@@ -558,19 +558,55 @@ export const engineDiagnostics = ({
  */
 const UNJUDGED_STAGES: ReadonlySet<string> = new Set([
   "unreadable",
-  "no_evidence",
-  "ceiling",
   "token",
+  // The legacy spelling, so a stored run written before the split still totals.
   "budget",
 ])
+
+/**
+ * The stages the engine CHOOSE not to look at: a rule's own candidate ceiling, and a judgement
+ * that said no.
+ *
+ * A different fact from `UNJUDGED_STAGES`, and a different action. `declined` is an answer -- the
+ * model looked and found nothing -- and `ceiling` is a rule's cap, which a reader can raise. Only
+ * the attempt-and-fail stages belong in `unjudged`.
+ */
+const UNLOOKED_STAGES: ReadonlySet<string> = new Set(["ceiling", "declined"])
+
+/** Candidates with nothing to send: a third silence, neither a failure nor a choice. */
+const NOTHING_TO_JUDGE_STAGES: ReadonlySet<string> = new Set(["no_evidence"])
 
 /** What an engine's own report says it did, beyond the findings it printed. */
 export interface Provenance {
   readonly status: EngineStatus
   readonly unjudged?: number
+  readonly unlooked?: number
+  readonly nothingToJudge?: number
   readonly drops?: ReadonlyArray<DropCount>
   readonly note?: string
 }
+
+/**
+ * The census words for candidates an engine did not judge, in one place.
+ *
+ * The text report and the GitHub annotations said the same thing in two copies of the same
+ * lines. `unlooked` is printed even when it is large: moving a rule's own cap out of `unjudged`
+ * makes a run look cleaner, so the number it moved has to stay visible.
+ *
+ * @param generator - The summary carrying the engine's counts.
+ * @returns One annotation per silence, in the order a reader should read them.
+ */
+export const notJudgedAnnotations = (generator: {
+  readonly unjudged?: number
+  readonly unlooked?: number
+}): ReadonlyArray<string> => [
+  ...(generator.unjudged === undefined || generator.unjudged === 0
+    ? []
+    : [`${generator.unjudged} candidate(s) not judged`]),
+  ...(generator.unlooked === undefined || generator.unlooked === 0
+    ? []
+    : [`${generator.unlooked} candidate(s) unlooked (a rule's cap or a decline)`]),
+]
 
 /**
  * Read an engine's own summary, when its encoding has one.
@@ -603,9 +639,11 @@ export const engineProvenance = (stdout: string): Provenance => {
   const drops = [...byStage.entries()]
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([stage, count]) => ({ stage, count }))
-  const unjudged = drops
-    .filter((drop) => UNJUDGED_STAGES.has(drop.stage))
-    .reduce((total, drop) => total + drop.count, 0)
+  const sumOf = (stages: ReadonlySet<string>): number =>
+    drops.filter((drop) => stages.has(drop.stage)).reduce((total, drop) => total + drop.count, 0)
+  const unjudged = sumOf(UNJUDGED_STAGES)
+  const unlooked = sumOf(UNLOOKED_STAGES)
+  const nothingToJudge = sumOf(NOTHING_TO_JUDGE_STAGES)
   const skipped = Array.isArray(summary.skipped) ? summary.skipped.length : 0
   // joggle reports a coverage gap as a note, not a finding: a tsconfig can declare
   // content mappers for formats its parser cannot index. The note is the engine's
@@ -622,6 +660,8 @@ export const engineProvenance = (stdout: string): Provenance => {
   return {
     status: summary.replayed === true ? "replayed" : "ran",
     ...(unjudged === 0 ? {} : { unjudged }),
+    ...(unlooked === 0 ? {} : { unlooked }),
+    ...(nothingToJudge === 0 ? {} : { nothingToJudge }),
     ...(drops.length === 0 ? {} : { drops }),
     ...(note === undefined ? {} : { note }),
   }
@@ -672,6 +712,7 @@ const summarize = (
     status,
     ...(note === undefined ? {} : { note }),
     ...(provenance?.unjudged === undefined ? {} : { unjudged: provenance.unjudged }),
+    ...(provenance?.unlooked === undefined ? {} : { unlooked: provenance.unlooked }),
     ...(provenance?.drops === undefined ? {} : { drops: provenance.drops }),
   }
 }

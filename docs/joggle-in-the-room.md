@@ -274,7 +274,10 @@ Two tracks, two decision points, and neither waits on the other.
 | M2  | cursor + projection + report at a tool-call boundary                                                                                                                                                                                                  | a room run reports count, paths and not-judged-by-reason, deduped, capped at 3                                                                                                                                                                 | more than 3 actionable findings per window, or dedupe needs a commit per report |
 | M3  | **delta measurement**: one stored run plus `--changed` from the room cursor's checkpoint, with a warm store and identical scope; the census already gives requests / replayed / judged / unavailable, so new-after-replay is `judged` over `requests` | typical build window: diagnostics new, candidates changed, unjudged by reason, per rule                                                                                                                                                        | the delta is single digits per window — then the room half is all there is      |
 
-The order is `M0a → M0b → M1`, and M0b before M1's report line on purpose: that line names a reason
+Landed: M0a and M0b in `30e3bf02`, M0c in the commit that adds this line. M3's baseline starts
+at M0c.
+
+The order is `M0a → M0b → M0c → M1`, and M0b before M1's report line on purpose: that line names a reason
 per unjudged candidate, which cannot ship while one word means two facts. (The alternative — M1
 count-only, M0b adding the reason later — costs a second report format for no benefit.)
 

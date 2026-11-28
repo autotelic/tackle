@@ -249,7 +249,7 @@ export const budgetNote = ({ unitKind, judged, candidates, sample }: BudgetNote)
   candidates <= judged
     ? []
     : [
-        `${candidates - judged} of ${candidates} ${unitKind} were not judged (budget ${judged}). Largest unjudged: ${sample.join("; ")}`,
+        `judged ${judged} of ${candidates} ${unitKind}; ${candidates - judged} unlooked (cap ${judged}). Largest: ${sample.join("; ")}`,
       ]
 
 /** A count of bundles and how many of them broke the pattern. */

@@ -2144,7 +2144,7 @@ export const initialise = (
         // keyless run, so it agrees today, but adding a key can rename them. Say it here rather
         // than let the first keyed run look like a regression.
         const unjudged = run.report.generators.reduce(
-          (sum, generator) => sum + (generator.unjudged ?? 0),
+          (sum, generator) => sum + (generator.unjudged ?? 0) + (generator.unlooked ?? 0),
           0,
         )
         if (unjudged > 0) {
