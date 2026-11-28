@@ -239,17 +239,31 @@ interface BudgetNote {
   readonly judged: number
   readonly candidates: number
   readonly sample: ReadonlyArray<string>
+  /**
+   * How the rule chose which candidates to judge, when it did not take all of them.
+   *
+   * A ratio without this is a number a reader will read as a sample of the tree. `prose-voice`
+   * judges the first N sentences of each kind in file order, which is a defensible policy and not
+   * a random slice -- so the line has to say so.
+   */
+  readonly selection?: string
 }
 
 /**
  * Standard wording for a bound a rule hit, so that no rule invents its own and
  * no reader has to guess whether silence meant "nothing there".
  */
-export const budgetNote = ({ unitKind, judged, candidates, sample }: BudgetNote): ReadonlyArray<string> =>
+export const budgetNote = ({
+  unitKind,
+  judged,
+  candidates,
+  sample,
+  selection,
+}: BudgetNote): ReadonlyArray<string> =>
   candidates <= judged
     ? []
     : [
-        `judged ${judged} of ${candidates} ${unitKind}; ${candidates - judged} unlooked (cap ${judged}). Largest: ${sample.join("; ")}`,
+        `judged ${judged} of ${candidates} ${unitKind}${selection === undefined ? "" : " (" + selection + ")"}; ${candidates - judged} unlooked (cap ${judged}). Largest: ${sample.join("; ")}`,
       ]
 
 /** A count of bundles and how many of them broke the pattern. */

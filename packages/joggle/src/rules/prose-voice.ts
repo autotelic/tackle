@@ -453,6 +453,10 @@ export const proseVoice: PlannedRule = {
               sample: group.candidates
                 .slice(group.budget, group.budget + 5)
                 .map((candidate) => candidate.subject),
+              // Not a random slice, and the line has to say so: this is the opening of each
+              // document in file order, which is where riddle-shaped prose lives and is not an
+              // estimate of the tree.
+              selection: "first " + String(group.budget) + " of each kind, in file order",
             }),
           ),
           drops,

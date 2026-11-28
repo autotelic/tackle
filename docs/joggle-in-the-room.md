@@ -184,6 +184,14 @@ and 16,161 of those ceiling candidates are `prose-voice`'s 120-sentence cap. So 
 delta, the denominator has to be either raised (a bigger cap) or excluded per rule; a 7% figure
 where 96% is one constant is a measurement of the constant.
 
+And it is not even a constant: the cap judges the **first 120 sentences of each kind in file order**,
+so 7% is a measurement of the opening sentences of every document, not an estimate of the tree.
+That is a defensible policy -- a riddle lives in the opening -- and raising 120 to 400 buys four
+times more of the same slice at four times the cost. So the ratio now names its selection
+(`judged 120 of 3,935 documented sentences (first 120 of each kind, in file order)`), and a cap
+change has to be an experiment with a receipt -- candidates, calls, input tokens, wall time and
+new findings per 1,000 judged, reverted if the marginal rate halves -- not a policy edit.
+
 Two corrections the numbers forced, both now in the code: an **unreachable answer leaves no drop**
 (1,007 drops against 3,080 plans without an answer on a keyless run), so `unjudged` is the engine's
 own `asked - answered` and the drops are only the reason breakdown; and `no_evidence` candidates can
