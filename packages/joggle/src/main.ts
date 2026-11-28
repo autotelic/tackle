@@ -753,9 +753,15 @@ const remedyLines = ({ report, ledger, cache, trace }: RemedyLinesInput): Readon
     }
   }
   for (const disagreement of report.disagreements) {
+    // Name the cause that fired. A label join is not a judgement, and quoting its probability
+    // claimed a threshold nobody crossed.
+    const how =
+      disagreement.cause === "label"
+        ? "joined them by the composed label"
+        : "joined them at " + disagreement.probability.toFixed(2) + " by the pair question"
     lines.push(
-      "disagreement: witness kept these apart, judgement joined them at " +
-        disagreement.probability.toFixed(2) + ": " + disagreement.a + " / " + disagreement.b,
+      "disagreement: witness kept these apart, judgement " + how + ": " +
+        disagreement.a + " / " + disagreement.b,
     )
   }
   return lines

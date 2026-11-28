@@ -1462,6 +1462,14 @@ export interface RemedyReport {
     readonly a: string
     readonly b: string
     readonly probability: number
+    /**
+     * What actually joined the two messages.
+     *
+     * A within-rule join comes from the composed label; only a cross-rule join needs the pair
+     * question. Printing the probability for a label join names a cause that did not fire: the
+     * line said "joined them at 0.72" where no threshold was crossed.
+     */
+    readonly cause: "label" | "pair"
   }>
   /** One facts/judgments/decision trace per cross-rule cluster pair. */
   readonly traces: ReadonlyArray<ClusterTrace>
@@ -2088,7 +2096,12 @@ export const clusterRemedies = (
   const judges = clustersOf(findings, opinion, "judgement")
   const witnesses = clustersOf(findings, { ...opinion, same: new Map() }, "witness")
   const clusters = clustersOf(findings, opinion, "union")
-  const disagreements: Array<{ a: string; b: string; probability: number }> = []
+  const disagreements: Array<{
+    a: string
+    b: string
+    probability: number
+    cause: "label" | "pair"
+  }> = []
   for (const [key, probability] of opinion.same) {
     if (probability < policy.decision.gates.probabilityFloor) continue
     const pair = pairOfKey(key)
@@ -2101,7 +2114,12 @@ export const clusterRemedies = (
     // family boundary overruled is not a disagreement between witness and
     // judgement, it is the boundary doing its job.
     if (!sameRepair({ opinion, left: pair.left, right: pair.right })) continue
-    disagreements.push({ a: leftMessage.clause, b: rightMessage.clause, probability })
+    // Which cause fired: the composed label (within a rule, the normaliser) or the pair answer
+    // (the cross-rule gate). The probability only means something for the second.
+    const leftRepair = opinion.repairs.get(pair.left)
+    const rightRepair = opinion.repairs.get(pair.right)
+    const cause = leftRepair !== undefined && leftRepair === rightRepair ? "label" : "pair"
+    disagreements.push({ a: leftMessage.clause, b: rightMessage.clause, probability, cause })
   }
   const answeredPairs = opinion.same.size
   const answeredRepairs = opinion.repairs.size
