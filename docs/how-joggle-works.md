@@ -141,3 +141,28 @@ flowchart TB
   class JEV,JUDG judgment
   class VAL,DEC,CLUSTER decision
 ```
+
+## Correction, measured after the fact
+
+An earlier version of this document, and the 0.17.0 changelog, described the pair judgments as
+doing the clustering work: 54 witness clusters against 41 judgement clusters. A keyed run on
+2026-11-28 measured what actually merges, and it is not the pair question.
+
+- Every surviving cluster is **single-rule**. No cross-rule merge remains.
+- The 56 to 40 reduction is entirely **within** rules, and the read returns true there before any
+  pair answer is consulted: two messages the composed `family: clause` label puts in one place
+  prescribe one repair, whatever their wording.
+- The pair question's only real job is the **cross-rule gate**. In the current corpus it permitted
+  zero merges.
+
+The honest sentence is: _composed labels cluster findings within a rule; the pairwise judgement
+gates cross-rule merges and, today, permitted none._ The 0.17.0 example (typeof plus
+unknown-parameters as one 33-site repair) was a genuine cross-rule merge at the time, and it no
+longer reproduces because those findings were fixed.
+
+Two consequences worth keeping. A pair question that fires rarely and gates a high-stakes merge is
+the worst candidate for a trained head - few positives, expensive mistakes - and the best candidate
+for deletion if cross-rule redundancy turns out to be rare in practice. And the disagreement report
+was naming the wrong cause: it printed "joined at 0.72" for pairs joined by the label at a
+probability that crossed no threshold. A report that names the wrong cause is the defect this whole
+sequence keeps finding.
