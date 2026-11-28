@@ -75,3 +75,69 @@ of 1,431 need no judgment at all.
 
 That last arrow is the point of `docs/question-audit.md`: 12 of 67 judgments are asking for a fact
 the workspace already holds, and each one is named with the fact that would replace it.
+
+```mermaid
+flowchart TB
+  WT["git worktree<br/>files · units"] --> FRAG["fragmentsOf(unit)<br/>content-addressed · cached"]
+
+  subgraph STORE["fact store · .joggle/cache/store.sqlite"]
+    direction LR
+    OBJ["object(id, kind, body)"]
+    FRG["fragment(id, unit)"]
+    DF["df(id, units)"]
+    FND["finding(site, rule, remedy, run)"]
+  end
+  FRAG --> STORE
+
+  subgraph RULES["rules"]
+    direction LR
+    PLUMB["59 plumb · per-file AST"]
+    JOGGLE["46 joggle · cross-file"]
+  end
+  OBJ -.->|"atoms: facts"| RULES
+  FND --> REM
+
+  subgraph REM["joggle remedies"]
+    direction TB
+    FAM["family · choice ≤8"]
+    CLA["clause · choice ≤8 · imperative"]
+    KEY["composed key<br/>family: clause"]
+    FAM --> KEY
+    CLA --> KEY
+  end
+
+  REM --> PACK["evidence pack<br/>sites · intersection · counterexample"]
+  PACK --> WIT["witness · regex"]
+  PACK --> JUDG["judgments<br/>j_remedy · j_material · j_subcase"]
+
+  RULES --> PLAN["plans"]
+  PLAN --> VAL{"questionnaire validator<br/>fact · judgment · decision<br/>≤8 options · atoms[...] paths"}
+
+  VAL -->|"questions, batched"| JEV
+  JUDG --> JEV
+
+  subgraph JEV["Jev · System One"]
+    direction LR
+    NOUL["noul 0..1"]
+    CHOICE["choice · label + probabilities"]
+    SCORE["score · legend"]
+  end
+
+  JEV -->|"typed answers"| CACHE[("cache key<br/>model + own state + ONE question")]
+  CACHE --> DEC["code decides<br/>j_remedy > 0.8 ∧ j_material < 0.5"]
+  WIT --> DEC
+
+  DEC --> CLUSTER["clusters + counterexample packs<br/>soundness_observed: sound · unsound · unobserved"]
+  CACHE <--> LEDGER["answers ledger<br/>text · merge=union · committed"]
+  LEDGER -.->|"replay: zero questions"| JEV
+
+  CLUSTER --> AUDIT["docs/question-audit.md<br/>12 of 67 judgments<br/>a fact already answers"]
+  AUDIT -.->|"write the fact, delete the question"| OBJ
+
+  classDef fact fill:#eef,stroke:#557
+  classDef judgment fill:#efe,stroke:#575
+  classDef decision fill:#ffe,stroke:#775
+  class STORE,RULES,PLAN fact
+  class JEV,JUDG judgment
+  class VAL,DEC,CLUSTER decision
+```
