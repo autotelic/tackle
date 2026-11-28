@@ -103,6 +103,13 @@ export interface Report {
     readonly unjudged: number
   }>
   /**
+   * The run's total plans without an answer.
+   *
+   * Separate from `census` because a replayed stored run may carry the total without the per-rule
+   * rows: the total is what a reader needs, and inventing rows to hold it would be worse.
+   */
+  readonly unjudged?: number
+  /**
    * Where the wall clock went. A run that takes a minute is fine; a run that
    * takes a minute for a reason nobody can see is not.
    */
@@ -574,7 +581,8 @@ const json = (report: Report): string =>
         // gated band below was found.
         drops: report.drops,
         // One number a consumer can trust, and the per-rule detail behind it.
-        unjudged: (report.census ?? []).reduce((sum, rule) => sum + rule.unjudged, 0),
+        unjudged:
+          report.unjudged ?? (report.census ?? []).reduce((sum, rule) => sum + rule.unjudged, 0),
         census: report.census ?? [],
         discovery: report.discovery,
       },

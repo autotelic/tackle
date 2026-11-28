@@ -295,6 +295,25 @@ export const StoredRun = Schema.Struct({
    * rather than a compatibility problem.
    */
   drops: Schema.optionalKey(Schema.Array(Drop)),
+  /**
+   * What the engine asked and what came back, per rule.
+   *
+   * Stored, because a replay is the common case: a warm checkout re-runs and every rule is
+   * answered from the run cache, so a census recomputed on replay would need the plans the replay
+   * deliberately skips. Optional so a run stored before this existed still replays.
+   */
+  census: Schema.optionalKey(
+    Schema.Array(
+      Schema.Struct({
+        ruleId: Schema.String,
+        asked: Schema.Number,
+        answered: Schema.Number,
+        unjudged: Schema.Number,
+      }),
+    ),
+  ),
+  /** The run's total, beside the per-rule rows, so a stored run from before `census` still totals. */
+  unjudged: Schema.optionalKey(Schema.Number),
   decision: DecisionTotals,
   elapsedMs: Schema.Number,
 })

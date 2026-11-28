@@ -573,6 +573,11 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
           ...stored.notes,
         ],
         structure: stored.structure ?? { concepts: 0, declarations: 0, duplicated: 0, overloaded: 0 },
+        // The census travels with the report it describes. Recomputing it on replay is not
+        // possible -- the plans the replay skips are what produced it -- and dropping it made a
+        // replayed run, which is the common case in a room, the one run with no denominator.
+        census: stored.census ?? [],
+        unjudged: stored.unjudged ?? (stored.census ?? []).reduce((sum, rule) => sum + rule.unjudged, 0),
         timings: [{ phase: "replay-check", ms: discoverMs }],
         // This run spent nothing, so it reports nothing spent.
         decision: { requests: 0, replayed: 0, judged: 0, calls: 0, unavailable: 0, inputTokens: 0, outputTokens: 0 },
@@ -1377,6 +1382,7 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
     notes,
     drops,
     census: ruleCensus,
+    unjudged: ruleCensus.reduce((sum, rule) => sum + rule.unjudged, 0),
     timings,
     decision: decisionTotals,
     elapsedMs,
@@ -1403,6 +1409,8 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
       skipped: report.skipped,
       notes: report.notes,
       drops: report.drops,
+      census: report.census ?? [],
+      unjudged: report.unjudged ?? 0,
       decision: decisionTotals,
       elapsedMs,
     })

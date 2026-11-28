@@ -1,4 +1,7 @@
 import { expect, it } from "@effect/vitest"
+import { mkdtempSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { Effect, Option } from "effect"
 import { checkRepository } from "../src/check.ts"
 import { layer as decisionLayer } from "../src/decision.ts"
@@ -236,6 +239,46 @@ it.effect("reports content-mapped extensions it did not index", () =>
     const coverage = report.notes.find((note) => note.reason.includes("content mappers"))
     expect(coverage?.reason).toContain(".vue")
     expect(coverage?.reason).toContain("--run-external-code")
+  }),
+)
+
+it.effect("a replayed run carries the census it stored, so a room is never the run without one", () =>
+  Effect.gen(function* () {
+    // A warm checkout short-circuits: no rules are planned, so a census recomputed on replay would
+    // be empty exactly on the run a room makes most often. It has to travel with the report.
+    // A fresh directory per execution: a fixed one makes the FIRST run a replay on every run
+    // after the first, which is the same defect this test exists to catch, one level up.
+    const cache = mkdtempSync(join(tmpdir(), "joggle-census-replay-"))
+    const run = () =>
+      checkRepository({
+        cwd: corpus,
+        paths: ["src"],
+        rules: undefined,
+        typecheck: false,
+        types: "off",
+        useTsgo: false,
+        cacheDirExplicit: true,
+        cacheDir: cache,
+        replayUnchanged: true,
+        changed: false,
+        baselinePath: undefined,
+        updateBaselinePath: undefined,
+        config: {},
+      }).pipe(
+        Effect.provide(decisionLayer({ cacheDir: cache, offline: true, apiKey: Option.none() })),
+        Effect.provide(tsgoStub),
+        Effect.provide(builtIn),
+        Effect.provide(nodeLayer),
+      )
+
+    const first = yield* run()
+    expect(first.replayed).toBe(false)
+    expect(first.census?.length ?? 0).toBeGreaterThan(0)
+
+    const second = yield* run()
+    expect(second.replayed).toBe(true)
+    expect(second.census?.length ?? 0).toBeGreaterThan(0)
+    expect(second.unjudged).toBe(first.unjudged)
   }),
 )
 

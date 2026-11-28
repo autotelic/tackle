@@ -287,11 +287,14 @@ export const budgetReport = (
   if (bounded.length === 0) return []
   const judged = bounded.reduce((sum, row) => sum + row.judged, 0)
   const candidates = bounded.reduce((sum, row) => sum + row.candidates, 0)
+  // Distinct subjects: a sample of three sentences from one declaration reads as three
+  // declarations and tells a reader nothing.
+  const sampleOf = (sample: ReadonlyArray<string>): ReadonlyArray<string> => [...new Set(sample)].slice(0, 5)
   return [
     `judged ${judged} of ${candidates} ${unitKind}; ${candidates - judged} unlooked`,
     ...bounded.map(
       (row) =>
-        `  ${row.unitKind}: ${row.judged} of ${row.candidates} judged (cap ${row.cap}); largest: ${row.sample.join("; ")}`,
+        `  ${row.unitKind}: ${row.judged} of ${row.candidates} judged (cap ${row.cap}); largest: ${sampleOf(row.sample).join("; ")}`,
     ),
   ]
 }

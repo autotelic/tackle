@@ -160,7 +160,8 @@ joggle  since 4f1c2a9  2 new in files you touched
   src/drawer.ts    1  (duplicate-meaning, high)
   src/panel.tsx    1  (page-needs-composition, medium)
   ledger 79% answered · not judged: 4 ceiling · 3 token budget · 2 offline
-  prose-voice judged 440 of 17,036 sentences: 120+120 documented, 200 literals; 16,596 unlooked
+  prose-voice judged 440 of 17,036 sentences: 120 documented, 120 Markdown, 200 literals
+                                  16,596 unlooked (the caps, not the code)
 ```
 
 Three lines of accounting, and the two numbers that matter are not the finding count.
@@ -180,16 +181,18 @@ census's use, not for the reader's.
 
 **The denominator is mostly one policy number.** Measured on this repository: candidates =
 4,656 asked + 16,794 ceiling + 181 no-evidence = **21,631**, of which **1,580 were judged (7%)** —
-and 16,161 of those ceiling candidates are `prose-voice`'s 120-sentence cap. So before M3 can read a
-delta, the denominator has to be either raised (a bigger cap) or excluded per rule; a 7% figure
-where 96% is one constant is a measurement of the constant.
+and 16,596 of those ceiling candidates are `prose-voice`'s caps (120 documented sentences, 120
+Markdown sentences, 200 string literals). So before M3 can read a delta, the denominator has to be
+either raised (a bigger cap) or excluded per rule; a 7% figure where 96% is one rule's constant is a
+measurement of the constant.
 
-And it is not even a constant: the cap judges the **first 120 sentences of each kind in file order**,
-so 7% is a measurement of the opening sentences of every document, not an estimate of the tree.
-That is a defensible policy -- a riddle lives in the opening -- and raising 120 to 400 buys four
-times more of the same slice at four times the cost. So the ratio now names its selection
-(`judged 120 of 3,935 documented sentences (first 120 of each kind, in file order)`), and a cap
-change has to be an experiment with a receipt -- candidates, calls, input tokens, wall time and
+And it is not a sample of the tree at all: each kind's cap takes the **first N sentences in file
+order across the whole repository**, so most of what is judged is the opening of the file tree.
+Markdown dominates the count (12,101 of 17,036 candidates), so the 7% is mostly the first 120
+Markdown sentences a directory walk meets -- less representative than "the opening sentence of
+every document", and a reader will anchor on whichever number is printed first. The ratio
+therefore names its rows and caps (`judged 440 of 17,036 prose sentences`, one row per kind), and a
+cap change has to be an experiment with a receipt -- candidates, calls, input tokens, wall time and
 new findings per 1,000 judged, reverted if the marginal rate halves -- not a policy edit.
 
 Two corrections the numbers forced, both now in the code: an **unreachable answer leaves no drop**
