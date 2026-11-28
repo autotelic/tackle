@@ -1,6 +1,6 @@
 /* oxlint-disable plumb/prefer-property-tests -- retire is one command-boundary fixture. */
 import { expect, test } from "vitest"
-import { execFileSync } from "node:child_process"
+import { execFileSync, spawnSync } from "node:child_process"
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -306,6 +306,43 @@ test("desk list marks the workstream a question actually holds", () => {
     writeFileSync(file, JSON.stringify({ ...record, phase: "blocked" }, null, 2) + "\n")
     expect(run("desk", "list")).toContain("Merge or keep going?  held")
     expect(JSON.parse(run("desk", "list", "--json"))[0].held).toBe(true)
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+}, 20_000)
+
+test("status --wait refuses a JSON reader instead of printing two documents", () => {
+  const root = mkdtempSync(join(tmpdir(), "factory-wait-json-"))
+  try {
+    const home = join(root, "home")
+    mkdirSync(join(home, "workstreams"), { recursive: true })
+    writeFileSync(join(home, "workstreams", record.id + ".json"), JSON.stringify(record))
+    const result = spawnSync(
+      process.execPath,
+      ["--conditions=development", cli, "status", "--wait", "60", "--json"],
+      { encoding: "utf8", env: { ...process.env, FACTORY_HOME: home } },
+    )
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain("--wait")
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test("status --wait is bounded: it prints the truth, waits once, and says nothing changed", () => {
+  const root = mkdtempSync(join(tmpdir(), "factory-wait-bounded-"))
+  try {
+    const home = join(root, "home")
+    mkdirSync(join(home, "workstreams"), { recursive: true })
+    writeFileSync(join(home, "workstreams", record.id + ".json"), JSON.stringify(record))
+    const text = execFileSync(
+      process.execPath,
+      ["--conditions=development", cli, "status", "--wait", "1"],
+      { encoding: "utf8", env: { ...process.env, FACTORY_HOME: home } },
+    )
+    // The record itself is still printed before the wait, so the chief sees the state it left.
+    expect(text).toContain(record.id)
+    expect(text).toContain("attention unchanged after 1s")
   } finally {
     rmSync(root, { recursive: true, force: true })
   }

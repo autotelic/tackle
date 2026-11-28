@@ -20,9 +20,9 @@ import {
   writeLease,
 } from "./executor.ts"
 import { branchGuard } from "./branch.ts"
-import { activityOf } from "./activity.ts"
+import { servedStatus, waitForAttention, type Served } from "./attention.ts"
 import { appendEvent, consumeEvents } from "./events.ts"
-import { heldBy, truthOf, type WorkstreamTruth } from "./truth.ts"
+import { heldBy, type WorkstreamTruth } from "./truth.ts"
 import { runPass } from "./kernel.ts"
 import {
   defaultNotifyOutcomes,
@@ -54,7 +54,7 @@ const usage = [
   "",
   "Usage:",
   "  factory adopt --path <worktree> --project <linear> --label <label> [--pr <n> | --delivery trunk] [--reports <dir>] [--repo <owner/name>] [--room <id> --room-root <path>] [--notify <session> [--notify-outcomes done,blocked,gate,failed]] [--phase reconcile|build|compress|land] [--id <id>]",
-  "  factory status [--json]",
+  "  factory status [--json] [--wait <seconds>]",
   "  factory credentials list [--json]",
   "  factory credentials set --id <id> --kind github|opencode|mcp|service|generic --env NAME[=HOST] [--env ...] [--description <text>]",
   "  factory credentials remove --id <id>",
@@ -256,36 +256,62 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
   if (command === "status") {
     const parsed = parseArgs({
       args: argv.slice(1),
-      options: { json: { type: "boolean", default: false } },
+      options: {
+        json: { type: "boolean", default: false },
+        wait: { type: "string" },
+      },
       allowPositionals: false,
     })
-    const records = await listWorkstreams()
-    const desk = await listDesk()
-    const now = Date.now()
-    const served = await Promise.all(
-      records.map(async (record) => ({
-        record,
-        truth: truthOf({
-          activity: await activityOf({ record, now }),
-          desk: desk.filter((item) => item.workstream === record.id),
-        }),
-      })),
-    )
+    // One stdout document per invocation, so a pipeline can decode it. A JSON reader that
+    // wants to wait owns its own loop; the wait's own contract is the readable status.
+    if (parsed.values.wait !== undefined && parsed.values.json)
+      return fail("--wait prints the text status; a JSON reader owns its own loop")
+    const seconds = parsed.values.wait === undefined ? undefined : Number(parsed.values.wait)
+    if (seconds !== undefined && (!Number.isInteger(seconds) || seconds < 1))
+      return fail("--wait must be a positive integer of seconds")
+    const { rows, desk } = await servedStatus()
+    const print = (served: ReadonlyArray<Served>, items: ReadonlyArray<DeskItem>) => {
+      for (const { record, truth } of served) console.log(statusLine(record, truth))
+      for (const item of items)
+        console.log("desk " + item.id + "  " + item.workstream + "  " + item.title)
+    }
     // The array is the contract: a consumer that reads records keeps reading records, and the
     // truth arrives as fields rather than as a wrapper it would have to learn.
     if (parsed.values.json) {
       console.log(
         JSON.stringify(
-          served.map(({ record, truth }) => ({ ...record, ...truth })),
+          rows.map(({ record, truth }) => ({ ...record, ...truth })),
           null,
           2,
         ),
       )
       return
     }
-    for (const { record, truth } of served) console.log(statusLine(record, truth))
-    for (const item of desk)
-      console.log("desk " + item.id + "  " + item.workstream + "  " + item.title)
+    if (seconds === undefined) {
+      print(rows, desk)
+      return
+    }
+    // The state above is the truth now; the wait prints the truth that woke it, or says that
+    // nothing did. It writes nothing, so a chief can repeat it without a marker to clean up.
+    const waited = await waitForAttention({ seconds })
+    if (!waited.changed) {
+      console.log(
+        "factory: attention unchanged after " +
+          Math.round(waited.waitedMs / 1000) +
+          "s (" +
+          waited.polls +
+          " polls)",
+      )
+      return
+    }
+    print(waited.status.rows, waited.status.desk)
+    console.log(
+      "factory: attention changed after " +
+        Math.round(waited.waitedMs / 1000) +
+        "s (" +
+        waited.polls +
+        " polls)",
+    )
     return
   }
 
