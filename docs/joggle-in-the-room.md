@@ -127,6 +127,26 @@ on disk group into 72 question shapes, and only **8 of 72** clear “30 examples
 The largest shapes fail for the paper's own reason: 2,436 examples are 100% `no_issue`, 1,236 are
 96% `not_a_projection`. Those are priors, not heads.
 
+### All 73 shapes, ranked
+
+One baseline plus two runs per shape, whole tree, no key. 73 shapes, 17,972 answers:
+
+| verdict                                        | shapes | answers |
+| ---------------------------------------------- | -----: | ------: |
+| **influence 0** — delete or hold as a constant |     68 |  13,042 |
+| influence 1                                    |      2 |   4,091 |
+| influence ≥ 2 (3, 3, 5 changed findings)       |      3 |     839 |
+
+Across every shape, **8 of 32 findings total** move when the judgement layer is ablated, and the three
+shapes that carry any influence hold **137 minority answers** between them. That is the training set
+the question "train a shrunk model" actually has today — enough for a linear probe on frozen
+embeddings, nowhere near enough to train an encoder.
+
+Fragility runs the other way, which is why it is a separate column: the 2,436-answer `no_issue` shape
+has influence 0 and **fragility 355**. It changes nothing when it shrugs and 355 findings when its
+answers are wrong. A shape like that is not a model target; it is either a constant or a review
+surface.
+
 ### The ablation: influence is not volume
 
 Answer volume says nothing about whether an answer mattered. The instrument is a
