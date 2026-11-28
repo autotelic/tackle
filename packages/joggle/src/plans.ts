@@ -521,6 +521,105 @@ export const chunkPlans = <A>(
     return chunks
   })
 
+/**
+ * Which plans the ledger already answers, and which still need the wire.
+ *
+ * The budget is charged for what will actually be sent, so the cache has to be
+ * read BEFORE the plans are chunked and costed. Charging first was a real defect:
+ * the estimate was computed over every plan, cache hits included, so a warm run
+ * could be budget-blocked from questions it already had answers to -- and the
+ * over-budget set then relabelled those subjects' drops, turning one over-budget
+ * chunk into one "budget" drop per subject inside it.
+ *
+ * A plan is answered only when EVERY decision it asks is in the ledger and
+ * re-validates; one miss sends the plan. A plan that asks nothing is answered by
+ * definition, because there is nothing to send.
+ */
+export interface AnsweredPartition {
+  /** The record each answered plan reads, keyed by its index in the input. */
+  readonly records: ReadonlyMap<number, DecisionAnswers>
+  /** The indices that still need the wire, in input order. */
+  readonly pending: ReadonlyArray<number>
+}
+
+/**
+ * Split plans into the ones the ledger answers and the ones that need the wire.
+ *
+ * @param plans - The run's plans, in the order the rules built them.
+ * @returns The record each answered plan reads, by input index, and the pending indices.
+ */
+export const partitionAnswered = <A>(
+  plans: ReadonlyArray<Plan<A>>,
+): Effect.Effect<AnsweredPartition, never, PlanAnswers> =>
+  Effect.gen(function* () {
+    const cache = yield* PlanAnswers
+    const found = new Map<string, Decision.Answer<Decision.Any>>()
+    const looked = new Set<string>()
+    for (const plan of plans) {
+      for (const decision of Object.values(plan.decisions)) {
+        const key = answerKeyFor(decision, plan.atoms)
+        if (looked.has(key)) continue
+        looked.add(key)
+        const stored = yield* cache.get(key)
+        if (Option.isNone(stored)) continue
+        const valid = yield* revalidate(decision, stored.value)
+        if (Option.isSome(valid)) {
+          found.set(key, withConsistency(valid.value, consistencyOf(stored.value)))
+        }
+      }
+    }
+    const records = new Map<number, DecisionAnswers>()
+    const pending: Array<number> = []
+    plans.forEach((plan, index) => {
+      const collected: Record<string, Decision.Answer<Decision.Any>> = {}
+      for (const [name, decision] of Object.entries(plan.decisions)) {
+        const answer = found.get(answerKeyFor(decision, plan.atoms))
+        if (answer === undefined) {
+          pending.push(index)
+          return
+        }
+        collected[name] = answer
+      }
+      records.set(index, collected)
+    })
+    return { records, pending }
+  })
+
+/** Chunks the run can afford, and the plans it cannot. */
+export interface BudgetSplit<A> {
+  readonly allowed: ReadonlyArray<PlanChunk<A>>
+  /** The plans in the chunks the run's token ceiling excluded. */
+  readonly overBudget: ReadonlyArray<Plan<A>>
+  /** The estimated tokens the allowed chunks charge. */
+  readonly estimated: number
+}
+
+/**
+ * Charge the run's token ceiling to the chunks that will actually be sent.
+ *
+ * The ceiling is per RUN, not per rule: a rule's own candidate cap is a different
+ * fact and the rules report it as a `ceiling` drop themselves. This function only
+ * answers "does the rest of this run fit".
+ */
+export const budgetChunks = <A>(
+  chunks: ReadonlyArray<PlanChunk<A>>,
+  ceiling: number,
+): BudgetSplit<A> => {
+  const allowed: Array<PlanChunk<A>> = []
+  const overBudget: Array<Plan<A>> = []
+  let estimated = 0
+  for (const chunk of chunks) {
+    const cost = Math.ceil(chunk.chars / 4)
+    if (estimated + cost > ceiling) {
+      overBudget.push(...chunk.plans)
+      continue
+    }
+    estimated += cost
+    allowed.push(chunk)
+  }
+  return { allowed, overBudget, estimated }
+}
+
 /* -------------------------------------------------------------------------- */
 /* The engine                                                                  */
 /* -------------------------------------------------------------------------- */

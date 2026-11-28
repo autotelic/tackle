@@ -158,7 +158,7 @@ export const nameAsAddress: PlannedRule = {
     const overflow: ReadonlyArray<Drop> = candidates.slice(maxFiles).map((candidate) => ({
       ruleId: RULE_ID,
       subject: candidate.unit.file + "#" + candidate.unit.name,
-      stage: "budget" as const,
+      stage: "ceiling" as const,
       reason: "past the budget of " + maxFiles + " common names",
     }))
 

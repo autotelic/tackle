@@ -137,7 +137,7 @@ export const shallowModule: PlannedRule = {
     const overflow: ReadonlyArray<Drop> = candidates.slice(budget).map((file) => ({
       ruleId: RULE_ID,
       subject: file.path,
-      stage: "budget" as const,
+      stage: "ceiling" as const,
       reason: "past the budget of " + budget + " wide, thin files",
     }))
 

@@ -140,7 +140,7 @@ export const objectShape: PlannedRule = {
     const overBudget: ReadonlyArray<Drop> = repeated.slice(maxFindings).map(([signature, sites]) => ({
       ruleId: RULE_ID,
       subject: sites.length + " literal(s) of { " + signature.split("\u0000").join("; ") + " }",
-      stage: "budget" as const,
+      stage: "ceiling" as const,
       reason: "past the budget of " + String(maxFindings) + " shapes",
     }))
 

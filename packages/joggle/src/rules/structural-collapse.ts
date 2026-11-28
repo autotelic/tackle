@@ -94,7 +94,7 @@ export const structuralCollapse: PlannedRule = {
       .map((group) => ({
         ruleId: RULE_ID,
         subject: namesOf(group).join(" / "),
-        stage: "budget" as const,
+        stage: "ceiling" as const,
         reason: "past the budget of " + String(policy.structuralCollapse.maxFindings) + " groups",
       }))
 

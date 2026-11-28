@@ -93,7 +93,7 @@ export const unaccountedDrop: PlannedRule = {
     const overBudget: ReadonlyArray<Drop> = candidates.slice(budget).map((unit) => ({
       ruleId: RULE_ID,
       subject: unit.name,
-      stage: "budget" as const,
+      stage: "ceiling" as const,
       reason: "past the budget of " + String(budget) + " skipping paths",
     }))
 

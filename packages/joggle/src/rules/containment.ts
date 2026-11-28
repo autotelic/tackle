@@ -357,7 +357,7 @@ export const containment: PlannedRule = {
     const overflow: ReadonlyArray<Drop> = candidates.slice(maxCandidates).map((candidate) => ({
       ruleId: RULE_ID,
       subject: pairSubject(candidate),
-      stage: "budget" as const,
+      stage: "ceiling" as const,
       reason: "past the budget of " + maxCandidates + " containment pairs",
     }))
     const atoms = yield* Atoms

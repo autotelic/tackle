@@ -103,7 +103,7 @@ export const callPattern: PlannedRule = {
     const overBudget: ReadonlyArray<Drop> = candidates.slice(maxFindings).map(([, units]) => ({
       ruleId: RULE_ID,
       subject: units.map((unit) => unit.name).join(", "),
-      stage: "budget" as const,
+      stage: "ceiling" as const,
       reason: "past the budget of " + String(maxFindings) + " groups",
     }))
 

@@ -368,7 +368,7 @@ export const proseVoice: PlannedRule = {
       group.candidates.slice(group.budget).map((candidate) => ({
         ruleId: RULE_ID,
         subject: candidate.subject,
-        stage: "budget" as const,
+        stage: "ceiling" as const,
         reason: "past the budget of " + String(group.budget) + " " + group.unitKind,
       })),
     )

@@ -348,7 +348,7 @@ test("a candidate past the run's token budget is reported, not judged", async ()
   )
   // The budget stopped the run before the model was reached.
   expect(result.asked).toEqual([])
-  // And what it did not judge is reported as a budget drop, never in silence.
-  expect(result.stages).toEqual(["budget", "budget"])
+  // And what it did not judge is reported as a token-budget drop, never in silence.
+  expect(result.stages).toEqual(["token", "token"])
   expect(result.files).toEqual([])
 })

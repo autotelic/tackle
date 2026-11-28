@@ -115,7 +115,7 @@ export const oneConceptOneType: PlannedRule = {
       .map((candidate) => ({
         ruleId: RULE_ID,
         subject: candidate.name,
-        stage: "budget" as const,
+        stage: "ceiling" as const,
         reason: "past the budget of " + String(policy.oneConceptOneType.maxFindings) + " names",
       }))
 

@@ -200,7 +200,7 @@ export const ruleJudgment: PlannedRule = {
     const overflow: ReadonlyArray<Drop> = candidates.slice(budget).map((candidate) => ({
       ruleId: RULE_ID,
       subject: candidate.id,
-      stage: "budget" as const,
+      stage: "ceiling" as const,
       reason: "past the budget of " + budget + " rules",
     }))
 

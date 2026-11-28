@@ -222,7 +222,7 @@ export const fieldTypeDrift: PlannedRule = {
       .map((group) => ({
         ruleId: RULE_ID,
         subject: group.unitName + " (" + group.file + ":" + String(group.line) + ")",
-        stage: "budget" as const,
+        stage: "ceiling" as const,
         reason: "past the budget of " + String(policy.fieldTypeDrift.maxFindings) + " declarations",
       }))
 

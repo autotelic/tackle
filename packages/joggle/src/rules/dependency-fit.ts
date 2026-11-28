@@ -255,7 +255,7 @@ export const dependencyFit: PlannedRule = {
     const overBudget: ReadonlyArray<Drop> = dependencies.slice(budget).map((dependency) => ({
       ruleId: RULE_ID,
       subject: label(dependency),
-      stage: "budget" as const,
+      stage: "ceiling" as const,
       reason: "this run judged " + budget + " dependencies and this one was past the budget",
     }))
 

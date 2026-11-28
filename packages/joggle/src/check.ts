@@ -3,7 +3,7 @@ import * as AiError from "effect/ai/AiError"
 import type { DecisionModel } from "effect/ai"
 import { layer as atomsLayer, type Atoms } from "./atoms.ts"
 import { isUnreachable, DecisionStats } from "./decision.ts"
-import { answerPlans, chunkPlans, type Plan, type PlanAnswers, type PlanChunk } from "./plans.ts"
+import { answerPlans, budgetChunks, chunkPlans, partitionAnswered, type Plan, type PlanAnswers } from "./plans.ts"
 import { describeQuestionCensus, questionnaireCensus } from "./questionnaire.ts"
 import { emptyTypeIndex, loadTypeFacts, type TypeFactRequest, type TypeIndex } from "./typetrace.ts"
 import {
@@ -74,7 +74,14 @@ import type { ImportGraph } from "./imports.ts"
  * threshold. Both are answers. These three are not, and a baseline that lists their
  * consequences is a record of something that never happened.
  */
-const UNJUDGED_STAGES: ReadonlySet<string> = new Set(["unreadable", "no_evidence", "budget"])
+export const UNJUDGED_STAGES: ReadonlySet<string> = new Set([
+  "unreadable",
+  "no_evidence",
+  "ceiling",
+  "token",
+  // The legacy spelling, so a stored run written before the split still totals.
+  "budget",
+])
 
 /**
  * The size at which a growing ledger stops being a cache and starts being repository debt.
@@ -448,7 +455,7 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
       if (unjudged > 0) {
         notes.push({
           ruleId: "joggle",
-          reason: `${unjudged} candidate(s) were not judged (unreadable, no evidence, or past the budget); a baseline written now would ratify what nobody looked at`,
+          reason: `${unjudged} candidate(s) were not judged (unreadable, no evidence, past a rule's ceiling, or past the run's token budget); a baseline written now would ratify what nobody looked at`,
         })
       }
       if (options.updateBaselinePath !== undefined) {
@@ -477,7 +484,7 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
            */
           const ceilings = new Map<string, number>()
           for (const drop of report.drops) {
-            if (drop.stage !== "budget") continue
+            if (drop.stage !== "ceiling") continue
             const key = drop.ruleId + ": " + drop.reason
             ceilings.set(key, (ceilings.get(key) ?? 0) + 1)
           }
@@ -827,28 +834,26 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
     // reads as unreadable. So the plans are cut into requests that fit, and each is
     // answered from the per-decision cache first, so a chunk boundary does not
     // cost a re-judgement.
-    const chunks = yield* chunkPlans(allPlans, policy.decision.maxRequestChars)
-
-    // The run's token budget. A chunk is estimated from the state AND the
-    // questions it carries, because the provider charges for both and the old
-    // state-only estimate let a question-heavy batch pass the ceiling. The run
-    // stops before a pathological change spends without bound; what it did not
-    // judge is reported as a budget drop, never dropped in silence.
-    const allowed: Array<PlanChunk<unknown>> = []
-    const overBudget: Array<Plan<unknown>> = []
-    let estimated = 0
-    for (const chunk of chunks) {
-      const cost = Math.ceil(chunk.chars / 4)
-      if (estimated + cost > (options.maxInputTokens ?? policy.decision.maxInputTokens)) {
-        overBudget.push(...chunk.plans)
-        continue
-      }
-      estimated += cost
-      allowed.push(chunk)
-    }
+    /*
+     * The ledger is resolved BEFORE the chunking, because the budget is charged for what will
+     * go to the wire. Chunking first charged the estimate for plans that would have replayed for
+     * free -- a warm run could be budget-blocked from questions it already had answers to -- and
+     * the over-budget set then relabelled those subjects' drops, turning one over-budget chunk
+     * into one "budget" drop per subject inside it. The plan builder knows the cache; the budget
+     * must be asked there, not recomputed afterwards.
+     */
+    const answeredBefore = yield* partitionAnswered(allPlans)
+    const pendingPlans = answeredBefore.pending
+      .map((index) => allPlans[index])
+      .filter((plan): plan is Plan<unknown> => plan !== undefined)
+    const chunks = yield* chunkPlans(pendingPlans, policy.decision.maxRequestChars)
+    const ceiling = options.maxInputTokens ?? policy.decision.maxInputTokens
+    const { allowed, overBudget, estimated } = budgetChunks(chunks, ceiling)
     // The denominator of the progress line: every question this run will resolve, replayed or
     // judged. Set here because the plans are built after the judgement layer exists.
-    yield* decisionStats.setTotal(allowed.reduce((sum, chunk) => sum + chunk.plans.length, 0))
+    yield* decisionStats.setTotal(
+      answeredBefore.records.size + allowed.reduce((sum, chunk) => sum + chunk.plans.length, 0),
+    )
 
     // A chunk that fails is CUT AND RETRIED, not abandoned.
     //
@@ -902,31 +907,46 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
         ),
       { concurrency: policy.decision.requestConcurrency },
     )
-    const values: Array<unknown> = []
+    // One slot per plan, in the order the rules built them: an answered plan reads straight from
+    // the ledger, an asked one from its chunk, and a budget-excluded or failed one stays
+    // undefined -- which is what every rule already reads as "no answer".
+    const values: Array<unknown> = allPlans.map(() => undefined)
+    for (const [index, record] of answeredBefore.records) {
+      values[index] = allPlans[index]?.read(record)
+    }
     let failure: AiError.AiError | undefined
     const allowedSet = new Set(allowed)
     let resultIndex = 0
+    let base = 0
     for (const chunk of chunks) {
-      if (allowedSet.has(chunk)) {
-        const result = chunkResults[resultIndex]
-        resultIndex += 1
-        if (result !== undefined && Result.isSuccess(result)) {
-          values.push(...result.success)
-          continue
-        }
-        if (result !== undefined && Result.isFailure(result)) failure ??= result.failure
+      const start = base
+      base += chunk.plans.length
+      if (!allowedSet.has(chunk)) continue
+      const result = chunkResults[resultIndex]
+      resultIndex += 1
+      if (result !== undefined && Result.isFailure(result)) {
+        failure ??= result.failure
+        continue
       }
-      for (let i = 0; i < chunk.plans.length; i += 1) values.push(undefined)
+      if (result === undefined) continue
+      result.success.forEach((value, offset) => {
+        const index = answeredBefore.pending[start + offset]
+        if (index !== undefined) values[index] = value
+      })
     }
-    const overBudgetSubjects = new Set(overBudget.map((plan) => plan.subject))
+    // A rule and a subject, not the subject alone: two rules can share a subject, and a
+    // subject-only match relabelled drops for rules whose plan the budget never excluded.
+    const overBudgetKeys = new Set(overBudget.map((plan) => plan.ruleId + "\u0000" + plan.subject))
     if (overBudget.length > 0) {
       notes.push({
         ruleId: "joggle",
         reason:
           overBudget.length +
-          " candidate(s) were not judged: the run's token budget of " +
-          (options.maxInputTokens ?? policy.decision.maxInputTokens) +
-          " was reached",
+          " plan(s) did not fit the run's token budget of " +
+          ceiling +
+          " token(s) (" +
+          estimated +
+          " estimated for the plans that were sent); a rule's own candidate ceiling reports separately",
       })
     }
 
@@ -972,16 +992,16 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
       }
       // An out-of-scope plan reads as no answer to a rule that never had to know
       // the scope. That is the engine's bookkeeping, not a finding, so the drops
-      // it produced are removed. A plan the budget skipped is a budget drop, not
-      // an unreadable one.
+      // it produced are removed. A plan the run's token ceiling skipped is a `token` drop, not
+      // an unreadable one; a rule's own cap is the rule's `ceiling` drop, reported by the rule.
       const outside = new Set(planned.plans.filter((plan) => !inScopePlan(plan)).map((plan) => plan.subject))
       const drops = result.drops
         .filter((drop) => !(drop.stage === "unreadable" && outside.has(drop.subject)))
         .map((drop) =>
-          drop.stage === "unreadable" && overBudgetSubjects.has(drop.subject)
+          drop.stage === "unreadable" && overBudgetKeys.has(drop.ruleId + "\u0000" + drop.subject)
             ? {
                 ...drop,
-                stage: "budget" as const,
+                stage: "token" as const,
                 reason: "the run's token budget was reached before this candidate",
               }
             : drop,

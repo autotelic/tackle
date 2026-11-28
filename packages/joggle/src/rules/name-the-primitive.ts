@@ -84,7 +84,7 @@ export const nameThePrimitive: PlannedRule = {
     const overBudget: ReadonlyArray<Drop> = candidates.slice(maxFindings).map((entry) => ({
       ruleId: RULE_ID,
       subject: "field group { " + entry.fields.join(", ") + " }",
-      stage: "budget" as const,
+      stage: "ceiling" as const,
       reason: "past the budget of " + String(maxFindings) + " groups",
     }))
 

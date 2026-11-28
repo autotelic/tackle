@@ -209,7 +209,14 @@ export const DropStage = Schema.Literals([
   "unreadable",
   /** The rule never asked: there was nothing to send. */
   "no_evidence",
-  /** The run's budget ran out before this candidate. */
+  /** The rule judged its own candidate budget and stopped. A rule's cap, not the run's. */
+  "ceiling",
+  /** The run's token budget was reached before this candidate went to the wire. */
+  "token",
+  /**
+   * @deprecated The spelling used before the split; read so a stored run or a baseline still
+   * decodes, and never written. Report `ceiling` or `token` instead.
+   */
   "budget",
 ])
 

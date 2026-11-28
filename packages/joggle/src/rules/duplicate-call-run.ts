@@ -151,7 +151,7 @@ export const duplicateCallRun: PlannedRule = {
     const overBudget: ReadonlyArray<Drop> = reported.slice(maxFindings).map((run) => ({
       ruleId: RULE_ID,
       subject: run.left.name + " / " + run.right.name,
-      stage: "budget" as const,
+      stage: "ceiling" as const,
       reason: "past the budget of " + String(maxFindings) + " runs",
     }))
 

@@ -147,7 +147,7 @@ export const temporalCoupling: PlannedRule = {
     const overflow: ReadonlyArray<Drop> = candidates.slice(budget).map((candidate) => ({
       ruleId: RULE_ID,
       subject: label(candidate),
-      stage: "budget" as const,
+      stage: "ceiling" as const,
       reason: "past the budget of " + budget + " paired-operation candidates",
     }))
 

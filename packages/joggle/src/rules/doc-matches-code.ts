@@ -143,7 +143,7 @@ export const docMatchesCode: PlannedRule = {
     const overflow: ReadonlyArray<Drop> = candidates.slice(budget).map((unit) => ({
       ruleId: RULE_ID,
       subject: label(unit),
-      stage: "budget" as const,
+      stage: "ceiling" as const,
       reason: "past the budget of " + budget + " documented declarations",
     }))
 

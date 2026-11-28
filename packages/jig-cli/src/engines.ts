@@ -551,10 +551,18 @@ export const engineDiagnostics = ({
  * The stages that mean no judgement happened, as opposed to a judgement that said no.
  *
  * `declined` is the model looking and finding nothing; `gated` is a judgement below the
- * threshold. Both are answers. `unreadable`/`no_evidence`/`budget` are candidates nobody
- * judged, and folding them into "0 findings" is the lie the invariant forbids.
+ * threshold. Both are answers. `unreadable`, `no_evidence`, `ceiling` and `token` are candidates
+ * nobody judged, and folding them into "0 findings" is the lie the invariant forbids.
+ *
+ * `budget` is the legacy spelling, kept so a stored run written before the split still totals.
  */
-const UNJUDGED_STAGES: ReadonlySet<string> = new Set(["unreadable", "no_evidence", "budget"])
+const UNJUDGED_STAGES: ReadonlySet<string> = new Set([
+  "unreadable",
+  "no_evidence",
+  "ceiling",
+  "token",
+  "budget",
+])
 
 /** What an engine's own report says it did, beyond the findings it printed. */
 export interface Provenance {

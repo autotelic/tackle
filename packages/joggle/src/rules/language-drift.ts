@@ -184,7 +184,7 @@ export const languageDrift: PlannedRule = {
     const overflow: ReadonlyArray<Drop> = candidates.slice(budget).map((candidate) => ({
       ruleId: RULE_ID,
       subject: candidate.source.path,
-      stage: "budget" as const,
+      stage: "ceiling" as const,
       reason: "past the budget of " + budget + " files with prose words",
     }))
 

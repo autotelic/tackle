@@ -117,7 +117,7 @@ export const deviationHasAConcept: PlannedRule = {
       .map((candidate) => ({
         ruleId: RULE_ID,
         subject: candidate.unit.name,
-        stage: "budget" as const,
+        stage: "ceiling" as const,
         reason: "past the budget of " + String(policy.strata.maxCandidates) + " shapes",
       }))
 

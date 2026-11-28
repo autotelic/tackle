@@ -356,7 +356,7 @@ export const dataErrorAsOutage: PlannedRule = {
     const overBudget: ReadonlyArray<Drop> = all.slice(budget).map((outage) => ({
       ruleId: RULE_ID,
       subject: labelOf(outage),
-      stage: "budget" as const,
+      stage: "ceiling" as const,
       reason: "past the budget of " + String(budget) + " handlers",
     }))
 

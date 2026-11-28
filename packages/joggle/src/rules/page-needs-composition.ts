@@ -221,7 +221,7 @@ export const pageNeedsComposition = defineRule({
     const drops: Array<Drop> = pages.slice(budget).map((page) => ({
       ruleId: RULE_ID,
       subject: page.source.path,
-      stage: "budget" as const,
+      stage: "ceiling" as const,
       reason: `the run judged ${budget} page(s) and this one was past the budget`,
     }))
 

@@ -327,6 +327,38 @@ describe("engineProvenance", () => {
     expect(engineStatus("joggle", [], { status: "skipped" })).toBe("skipped")
   })
 
+  it("counts every unjudged stage and only the unjudged ones", () => {
+    // The stages are the census: declined and gated are answers, the rest are candidates
+    // nobody looked at. The total has to be the sum over stages, or a surface can print a
+    // number it did not derive.
+    const provenance = engineProvenance(
+      JSON.stringify({
+        diagnostics: [],
+        summary: {
+          drops: [
+            { ruleId: "a", stage: "declined" },
+            { ruleId: "a", stage: "gated" },
+            { ruleId: "a", stage: "unreadable" },
+            { ruleId: "a", stage: "no_evidence" },
+            { ruleId: "a", stage: "ceiling" },
+            { ruleId: "a", stage: "token" },
+            { ruleId: "a", stage: "budget" },
+          ],
+        },
+      }),
+    )
+    expect(provenance.unjudged).toBe(5)
+    expect(provenance.drops).toEqual([
+      { stage: "budget", count: 1 },
+      { stage: "ceiling", count: 1 },
+      { stage: "declined", count: 1 },
+      { stage: "gated", count: 1 },
+      { stage: "no_evidence", count: 1 },
+      { stage: "token", count: 1 },
+      { stage: "unreadable", count: 1 },
+    ])
+  })
+
   it("keeps the skipped-rule note when there is no coverage note", () => {
     const provenance = engineProvenance(
       JSON.stringify({ diagnostics: [], summary: { skipped: [{ ruleId: "a" }, { ruleId: "b" }] } }),

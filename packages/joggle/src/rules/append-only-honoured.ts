@@ -74,7 +74,7 @@ export const appendOnlyHonoured: PlannedRule = {
       .map((candidate) => ({
         ruleId: RULE_ID,
         subject: candidate.call.method + " " + candidate.call.table,
-        stage: "budget" as const,
+        stage: "ceiling" as const,
         reason: "past the budget of " + String(policy.strata.maxCandidates) + " calls",
       }))
 
