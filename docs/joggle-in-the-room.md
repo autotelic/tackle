@@ -142,13 +142,25 @@ Measured on this repository, whole tree, 32 findings:
 | `no_issue` / `stale_reference` / `wrong_behavior` / `wrong_contract` |            2,436 |                2 |
 | `legitimate_local` / `not_a_derivation` / `reimplements`             |            1,753 |                3 |
 | `not_a_projection` shape, replaced by its **majority**               |            1,236 |                2 |
-| the same shape replaced by a **minority** label (`allowed`)          |            1,236 |          **257** |
+| **fragility**: the same shape at a **minority** label (`allowed`)    |            1,236 |          **257** |
 
-Read the last two rows together: the same question, the same volume, and a 128x difference in
-influence depending on which constant you substitute. An answer's weight lives in its minority
-mass, not its count -- and a shape answered 96% one way is a constant the code should hold,
-however many answers it has. That is the measurement that decides "delete" before "distil", and
-it costs two offline runs per shape.
+These are two different tests, and conflating them makes the ranking wrong. **Influence** asks
+"what if the model had shrugged" -- substitute the observed majority. **Fragility** asks "what if
+these answers were wrong" -- substitute a minority label. Influence cannot exceed the whole layer's
+8, and the 257 row does, which is how it announces itself as fragility: one shape's contribution
+cannot be larger than everything the layer does.
+
+Both are worth having, for different work. Influence ranks what to delete or distil. Fragility is a
+precision risk: the `not_a_projection` rule moves **257 findings on 44 answers**, so a wrong answer
+there is not a missed finding, it is a different report -- the number a human reads before a head is
+trained on the shape.
+
+An answer's weight lives in its minority mass, not its count: a shape answered 96% one way is a
+constant code should hold, however many answers it has. And the honest headline is not "8 of 32
+findings depend on judgements" -- it is that **8 of 32 depend on the judgement layer, and most of
+that sits in shapes whose minority mass is a few percent**. The mechanism earns its keep on roughly
+44 answers out of 17,939. That decides whether this is a model programme or a deletion programme,
+and it costs two offline runs per shape.
 
 ---
 
