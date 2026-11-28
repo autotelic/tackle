@@ -83,6 +83,7 @@
   },
   "devDependencies": {
     "@autotelic/plumb": "workspace:*",
+    "@autotelic/standin": "workspace:*",
     "@effect/tsgo": "catalog:",
     "@effect/vitest": "catalog:",
     "@types/node": "catalog:",

@@ -26,7 +26,10 @@
     // machine where an earlier build had left one.
     "paths": {
       "@autotelic/protocol": ["../protocol/src/index.ts"],
-      "@autotelic/protocol/*": ["../protocol/src/*"]
+      "@autotelic/protocol/*": ["../protocol/src/*"],
+      // The stand-in is test-only, but its source is what the test exercises. Without this
+      // map the package resolves to dist, and a fresh checkout has no dist to resolve.
+      "@autotelic/standin": ["../standin/src/index.ts"]
     }
   },
   "include": [

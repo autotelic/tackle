@@ -429,6 +429,9 @@ importers:
       '@autotelic/plumb':
         specifier: workspace:*
         version: link:../plumb
+      '@autotelic/standin':
+        specifier: workspace:*
+        version: link:../standin
       '@effect/tsgo':
         specifier: 'catalog:'
         version: 0.56.0
@@ -536,6 +539,28 @@ importers:
       '@effect/vitest':
         specifier: 'catalog:'
         version: 4.1.5(effect@4.1.5)(vitest@5.0.1(@opentelemetry/api@1.9.0)(@types/node@24.13.5)(vite@8.3.4(@types/node@24.13.5)))
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.13.5
+      '@typescript/native':
+        specifier: 'catalog:'
+        version: typescript@7.0.2
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.1(@opentelemetry/api@1.9.0)(@types/node@24.13.5)(vite@8.3.4(@types/node@24.13.5))
+
+  packages/standin:
+    dependencies:
+      '@autotelic/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      effect:
+        specifier: 4.1.5
+        version: 4.1.5
+    devDependencies:
+      '@effect/tsgo':
+        specifier: 'catalog:'
+        version: 0.56.0
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.5
