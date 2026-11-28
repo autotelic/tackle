@@ -89,3 +89,29 @@ belief. Abstaining is therefore a successful outcome with a name, a reason, and 
 The miss ledger is the product: aggregated over real repositories, it says which heads are
 worth building next, and a run that made zero network calls can still show exactly what it
 did not decide.
+
+## The baseline, the evaluation, and the gate
+
+The corpus is balanced on purpose; the ledger is not. `standin baseline` reports the
+constant-majority predictor both ways, under two names, so neither can stand in for the other:
+
+```sh
+standin baseline --corpus packages/joggle/testdata/single-path-corpus.jsonl \
+  --prior 0.85 --majority legitimate_local --out packages/standin/testdata/single-path-baseline.json
+```
+
+`priorWeightedAccuracy` is the 0.85 the ledger's shape implies; `balancedAccuracy` is the
+0.50 the balanced split would suggest. A head is scored with `standin evaluate`, whose
+`--head` is a manifest carrying a map from item hash to label (or `none`, which marks every
+item unlooked):
+
+```sh
+standin evaluate --corpus <jsonl> --head <manifest|none> --threshold 0.5 --out <json>
+node scripts/promote.mjs --verification <json> --head <manifest>
+```
+
+`scripts/promote.mjs` is the gate, and its exit code is the contract. It refuses when there is
+no head manifest, when the corpus hash does not match the manifest's `corpusHash`, when
+prior-weighted recall on the violation label is at or below the constant-majority baseline, or
+when abstention exceeds 20% of the verification set. Abstaining is never scored as a wrong
+answer; it is counted in the unlooked bucket, and the gate refuses on the budget instead.

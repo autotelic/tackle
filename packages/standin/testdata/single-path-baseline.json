@@ -1,0 +1,41 @@
+{
+  "kind": "standin/baseline",
+  "corpus": "packages/joggle/testdata/single-path-corpus.jsonl",
+  "corpusHash": "17492e76253d4ce0",
+  "support": 100,
+  "labels": [
+    {
+      "label": "legitimate_local",
+      "support": 50,
+      "majority": true,
+      "prior": 0.85,
+      "constantAccuracy": 1,
+      "recall": 1,
+      "priorWeightedRecall": 1,
+      "priorWeightedAccuracy": 0.85,
+      "balancedAccuracy": 0.5
+    },
+    {
+      "label": "reimplements",
+      "support": 50,
+      "majority": false,
+      "prior": 0.15,
+      "constantAccuracy": 0,
+      "recall": 0,
+      "priorWeightedRecall": 0,
+      "priorWeightedAccuracy": 0,
+      "balancedAccuracy": 0.5
+    }
+  ],
+  "prior": {
+    "majority": 0.85,
+    "majorityLabel": "legitimate_local",
+    "source": "ledger shape legitimate_local/not_a_derivation/reimplements, n=1,753, 85% majority",
+    "weights": {
+      "legitimate_local": 0.85,
+      "reimplements": 0.15
+    }
+  },
+  "priorWeightedAccuracy": 0.85,
+  "balancedAccuracy": 0.5
+}
