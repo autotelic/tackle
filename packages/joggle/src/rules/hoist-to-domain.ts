@@ -244,6 +244,10 @@ export const hoistToDomain: PlannedRule = {
     type Question =
       | { readonly unit: Unit; readonly kind: "family" }
       | { readonly unit: Unit; readonly kind: "duty"; readonly family: string }
+    // Named once, used by both the loop and the note, so the skip cannot drift from the report.
+    const fewClauseFamilies = Object.keys(dutyFamilies).filter(
+      (family) => Object.keys(dutyClausesOf(family)).length < 2,
+    )
     const planned: Array<{
       readonly question: Question
       readonly plan: Plan<DecisionAnswers>
@@ -284,11 +288,11 @@ export const hoistToDomain: PlannedRule = {
         },
       })
       for (const family of Object.keys(dutyFamilies)) {
-        // A family with ONE duty is a fact, not a question: the effect library refuses a
-        // Classify with fewer than two labels, and asking is what crashed every scoped run of
-        // this rule (`none` has only `not_applicable`). The single-duty families cannot carry
-        // the finding this rule reports, so they are skipped rather than guessed at.
-        if (Object.keys(dutyClausesOf(family)).length < 2) continue
+        // A family with ONE duty is a fact, not a question: Effect refuses a Classify with fewer
+        // than two labels, and asking is what crashed every scoped run of this rule (`none` has
+        // only `not_applicable`). Skipped, and named in the notes -- a silent skip would read
+        // as a family that was asked and had nothing to say.
+        if (fewClauseFamilies.includes(family)) continue
         const clause: Plan<DecisionAnswers> = {
           ...shared,
           decisions: dutyClauseReview({ id, family }),
@@ -405,12 +409,23 @@ export const hoistToDomain: PlannedRule = {
 
         return outcome(
           diagnostics,
-          budgetNote({
+          [
+            ...budgetNote({
             unitKind: "declarations",
             judged: budget,
             candidates: candidates.length,
-            sample: candidates.slice(budget).map(label),
-          }),
+              sample: candidates.slice(budget).map(label),
+            }),
+            ...(fewClauseFamilies.length === 0
+              ? []
+              : [
+                  "the " +
+                    fewClauseFamilies.join(", ") +
+                    " famil" +
+                    (fewClauseFamilies.length === 1 ? "y declares" : "ies declare") +
+                    " one duty, so code holds the answer rather than asking",
+                ]),
+          ],
           drops,
         )
       },

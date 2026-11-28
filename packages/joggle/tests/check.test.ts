@@ -242,6 +242,40 @@ it.effect("reports content-mapped extensions it did not index", () =>
   }),
 )
 
+it.effect("a scoped run survives a duty family that declares a single clause", () =>
+  Effect.gen(function* () {
+    // `hoist-to-domain` builds a Classify per duty family; `none` declares one duty, and Effect
+    // refuses a one-label Classify. Every scoped run that reached the rule died in the plan phase,
+    // while whole-tree runs happened not to build that family -- so the room's only mode crashed
+    // and the full run did not. This is the smallest scope that reaches it.
+    const report = yield* checkRepository({
+      cwd: ".",
+      paths: ["src"],
+      rules: ["joggle/hoist-to-domain"],
+      typecheck: false,
+      types: "off",
+      useTsgo: false,
+      cacheDirExplicit: true,
+      cacheDir,
+      replayUnchanged: false,
+      changed: false,
+      baselinePath: undefined,
+      updateBaselinePath: undefined,
+      config: {},
+    }).pipe(
+      Effect.provide(decisionLayer({ cacheDir, offline: true, apiKey: Option.none() })),
+      Effect.provide(tsgoStub),
+      Effect.provide(builtIn),
+      Effect.provide(nodeLayer),
+    )
+
+    // It plans, and it does not throw. The skip is named in the rule's notes on any run that has
+    // candidates (verified on `check packages/cutlist/src`: "the none family declares one duty, so
+    // code holds the answer rather than asking"); this fixture has none of that rule's candidates.
+    expect(report.rules).toBe(1)
+  }),
+)
+
 it.effect("a replayed run carries the census it stored, so a room is never the run without one", () =>
   Effect.gen(function* () {
     // A warm checkout short-circuits: no rules are planned, so a census recomputed on replay would
