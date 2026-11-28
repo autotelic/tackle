@@ -284,6 +284,11 @@ export const hoistToDomain: PlannedRule = {
         },
       })
       for (const family of Object.keys(dutyFamilies)) {
+        // A family with ONE duty is a fact, not a question: the effect library refuses a
+        // Classify with fewer than two labels, and asking is what crashed every scoped run of
+        // this rule (`none` has only `not_applicable`). The single-duty families cannot carry
+        // the finding this rule reports, so they are skipped rather than guessed at.
+        if (Object.keys(dutyClausesOf(family)).length < 2) continue
         const clause: Plan<DecisionAnswers> = {
           ...shared,
           decisions: dutyClauseReview({ id, family }),
