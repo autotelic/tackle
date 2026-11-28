@@ -96,6 +96,10 @@ const recordAt = (value: unknown): Record<string, unknown> | undefined =>
 const numberOr = (value: unknown, fallback: number): number =>
   typeof value === "number" && Number.isFinite(value) ? value : fallback
 
+/** A number when the field is one, and nothing when it is absent -- `0` is a real answer. */
+const numberAt = (value: unknown): number | undefined =>
+  typeof value === "number" && Number.isFinite(value) ? value : undefined
+
 /** oxlint speaks `error | warning | advice`; the protocol speaks `error | warn | info`. */
 const severityOf = (value: unknown): Severity => {
   if (value === "error") return "error"
@@ -651,7 +655,12 @@ export const engineProvenance = (stdout: string): Provenance => {
     .map(([stage, count]) => ({ stage, count }))
   const sumOf = (stages: ReadonlySet<string>): number =>
     drops.filter((drop) => stages.has(drop.stage)).reduce((total, drop) => total + drop.count, 0)
-  const unjudged = sumOf(UNJUDGED_STAGES)
+  // The engine's own `asked - answered` wins. A sum over stages is the reason breakdown, not the
+  // count: an unreachable answer leaves no drop, so on a keyless run the sum was under-reporting
+  // by about 1,900 plans, and nothing else in the document could tell.
+  const reported = numberAt(summary.unjudged)
+  const dropped = sumOf(UNJUDGED_STAGES)
+  const unjudged = reported ?? dropped
   const unlooked = sumOf(UNLOOKED_STAGES)
   const judgedSilent = sumOf(JUDGED_SILENT_STAGES)
   const skipped = Array.isArray(summary.skipped) ? summary.skipped.length : 0
@@ -664,6 +673,11 @@ export const engineProvenance = (stdout: string): Provenance => {
   const annotations = [
     ...(skipped === 0 ? [] : [`${skipped} rule${skipped === 1 ? "" : "s"} skipped`]),
     ...(coverage === undefined ? [] : [coverage]),
+    // Named rather than reconciled: the two numbers disagree because an unreachable answer is
+    // counted, not dropped. Printing only the smaller one is how 1,187 looked like 3,076.
+    ...(reported === undefined || reported === dropped
+      ? []
+      : [`${reported} plan(s) without an answer; drops name ${dropped}`]),
   ]
   const note = annotations.length === 0 ? undefined : annotations.join("; ")
 

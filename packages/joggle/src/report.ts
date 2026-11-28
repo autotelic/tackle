@@ -90,6 +90,19 @@ export interface Report {
    */
   readonly drops: ReadonlyArray<Drop>
   /**
+   * What the engine asked and what came back, per rule.
+   *
+   * `unjudged` here is `asked - answered`, known to the engine and not derived from drops: an
+   * unreachable answer leaves no drop, and some rules drop candidates they never planned. Present
+   * only on a run this process performed; a replayed stored run has no census of its own.
+   */
+  readonly census?: ReadonlyArray<{
+    readonly ruleId: string
+    readonly asked: number
+    readonly answered: number
+    readonly unjudged: number
+  }>
+  /**
    * Where the wall clock went. A run that takes a minute is fine; a run that
    * takes a minute for a reason nobody can see is not.
    */
@@ -560,6 +573,9 @@ const json = (report: Report): string =>
         // artifact that hid where the candidates went -- and reading it is how the
         // gated band below was found.
         drops: report.drops,
+        // One number a consumer can trust, and the per-rule detail behind it.
+        unjudged: (report.census ?? []).reduce((sum, rule) => sum + rule.unjudged, 0),
+        census: report.census ?? [],
         discovery: report.discovery,
       },
     },

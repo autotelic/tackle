@@ -955,6 +955,13 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
       readonly result: RuleResult
       readonly ms: number
     }> = []
+    // The engine's own count of what it asked and what came back, per rule.
+    //
+    // Drops cannot be this number: on a keyless run an unreachable answer leaves no drop at all
+    // (1,889 plans on this repository), and some rules drop candidates they never planned. The
+    // subtraction below is the count; the drops are the reason breakdown, and consumers read
+    // this rather than summing stages.
+    const ruleCensus: Array<{ ruleId: string; asked: number; answered: number; unjudged: number }> = []
     let offset = 0
     plannedRules.forEach((rule, index) => {
       const phase = phases[index]
@@ -984,6 +991,8 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
       // The rule's reader indexes its own full plan list, so the answers go back
       // in that shape: the asked ones in order, undefined for the rest.
       const askedValues = values.slice(start, start + asked.length)
+      const answered = askedValues.filter((value) => value !== undefined).length
+      ruleCensus.push({ ruleId: rule.id, asked: asked.length, answered, unjudged: asked.length - answered })
       let cursor = 0
       const aligned = planned.plans.map((plan) => (inScopePlan(plan) ? askedValues[cursor++] : undefined))
       let result = planned.read(aligned)
@@ -1033,10 +1042,10 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
         }),
       { concurrency: policy.decision.requestConcurrency },
     )
-    return { plannedOutcomes, plainResults }
+    return { plannedOutcomes, plainResults, ruleCensus }
   })
 
-  const { plannedOutcomes, plainResults } = yield* engine.pipe(Effect.provide(atomsLayer))
+  const { plannedOutcomes, plainResults, ruleCensus } = yield* engine.pipe(Effect.provide(atomsLayer))
   const storeReport = factStore.close()
 
   const results: ReadonlyArray<{
@@ -1367,6 +1376,7 @@ export const checkRepository = Effect.fn("joggle.check")(function* (options: Opt
     skipped,
     notes,
     drops,
+    census: ruleCensus,
     timings,
     decision: decisionTotals,
     elapsedMs,

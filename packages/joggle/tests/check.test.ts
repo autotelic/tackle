@@ -238,3 +238,42 @@ it.effect("reports content-mapped extensions it did not index", () =>
     expect(coverage?.reason).toContain("--run-external-code")
   }),
 )
+
+it.effect("counts what it asked and what came back, per rule, without reading the drops", () =>
+  Effect.gen(function* () {
+    // The census is the engine's own subtraction. Drops cannot be it: an unreachable answer
+    // leaves no drop, and a rule can drop candidates it never planned, so a consumer that sums
+    // stages under-reports -- which is exactly what this run's numbers showed.
+    const report = yield* checkRepository({
+      cwd: corpus,
+      paths: ["src"],
+      rules: undefined,
+      typecheck: false,
+      types: "off",
+      useTsgo: false,
+      cacheDirExplicit: true,
+      cacheDir,
+      replayUnchanged: false,
+      changed: false,
+      baselinePath: undefined,
+      updateBaselinePath: undefined,
+      config: {},
+    }).pipe(
+      Effect.provide(decisionLayer({ cacheDir, offline: true, apiKey: Option.none() })),
+      Effect.provide(tsgoStub),
+      Effect.provide(builtIn),
+      Effect.provide(nodeLayer),
+    )
+
+    expect(report.census).toBeDefined()
+    const census = report.census ?? []
+    expect(census.length).toBeGreaterThan(0)
+    for (const rule of census) {
+      expect(rule.asked).toBe(rule.answered + rule.unjudged)
+      expect(rule.answered).toBeLessThanOrEqual(rule.asked)
+    }
+    // An offline run cannot reach the model, so some plan went unanswered -- otherwise this
+    // fixture stopped exercising the case the subtraction exists for.
+    expect(census.reduce((sum, rule) => sum + rule.unjudged, 0)).toBeGreaterThan(0)
+  }),
+)

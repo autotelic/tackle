@@ -363,6 +363,29 @@ describe("engineProvenance", () => {
     ])
   })
 
+  it("trusts the engine's own unjudged count over the sum over drops", () => {
+    // A keyless joggle run leaves an unreachable answer with NO drop: on this repository the
+    // drop sum said 1,007 plans against the engine's 3,080. Summing stages was the only number
+    // anyone had, which is how the gap survived.
+    const provenance = engineProvenance(
+      JSON.stringify({
+        diagnostics: [],
+        summary: {
+          unjudged: 3080,
+          drops: [
+            { ruleId: "a", stage: "unreadable" },
+            { ruleId: "a", stage: "token" },
+            { ruleId: "b", stage: "ceiling" },
+          ],
+        },
+      }),
+    )
+    expect(provenance.unjudged).toBe(3080)
+    expect(provenance.unlooked).toBe(1)
+    expect(provenance.note).toContain("3080 plan(s) without an answer")
+    expect(provenance.note).toContain("drops name 2")
+  })
+
   it("keeps the skipped-rule note when there is no coverage note", () => {
     const provenance = engineProvenance(
       JSON.stringify({ diagnostics: [], summary: { skipped: [{ ruleId: "a" }, { ruleId: "b" }] } }),

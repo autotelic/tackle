@@ -178,6 +178,18 @@ denominator, because one rule at 2% active then dominates a run's unjudged count
 unit it is counting and what fraction the rule actually judged; the drops stay in the census for the
 census's use, not for the reader's.
 
+**The denominator is mostly one policy number.** Measured on this repository: candidates =
+4,656 asked + 16,794 ceiling + 181 no-evidence = **21,631**, of which **1,580 were judged (7%)** —
+and 16,161 of those ceiling candidates are `prose-voice`'s 120-sentence cap. So before M3 can read a
+delta, the denominator has to be either raised (a bigger cap) or excluded per rule; a 7% figure
+where 96% is one constant is a measurement of the constant.
+
+Two corrections the numbers forced, both now in the code: an **unreachable answer leaves no drop**
+(1,007 drops against 3,080 plans without an answer on a keyless run), so `unjudged` is the engine's
+own `asked - answered` and the drops are only the reason breakdown; and `no_evidence` candidates can
+outnumber the plans (`containment`: 150 asked, 181 dropped), so a formula of `plans + drops`
+double-counts and the stage map needs to say which stages count as candidates of their own.
+
 **Three silences, not two.** `unjudged` is the engine trying and failing to read an answer
 (unreadable, the run's token ceiling). `unlooked` is a rule's own cap, which a reader can raise.
 `judgedSilent` is the engine looking and having nothing to act on -- a declined judgement
