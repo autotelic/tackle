@@ -172,6 +172,30 @@ test("a watched write aborts the sleep instead of waiting out the interval", asy
   })
 })
 
+test("a wake that changes nothing does not skip the backoff", async () => {
+  await withHome(async (home) => {
+    let clock = started
+    const intervals: Array<number> = []
+    const result = await waitForAttention({
+      seconds: 200,
+      home,
+      now: () => clock,
+      // A write lands before the first read. The wait must read again and then sleep its
+      // first interval, not jump straight to the second one.
+      watch: (notify) => {
+        notify()
+        return () => {}
+      },
+      sleep: async (ms) => {
+        intervals.push(ms)
+        clock += ms
+      },
+    })
+    expect(result.changed).toBe(false)
+    expect(intervals).toEqual([60_000, 120_000, 20_000])
+  })
+})
+
 test("a bounded wait stops at its deadline and reports no change", async () => {
   await withHome(async (home) => {
     let clock = started

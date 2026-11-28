@@ -201,6 +201,26 @@ export const waitForAttention = async (input: WaitInput): Promise<WaitResult> =>
   }
   const stop = (input.watch ?? ((register) => watchHome(home, register)))(notify)
 
+  // Only an uninterrupted sleep advances the backoff. A write that woke the sleep but did
+  // not change attention — a receipt being written for the pass that already started, a
+  // record renamed between reads — costs one extra read, not a jump to half an hour.
+  let step = 0
+  const pause = (ms: number): Promise<boolean> =>
+    new Promise((resolve) => {
+      const controller = new AbortController()
+      let interrupted = false
+      wake = () => {
+        wake = null
+        interrupted = true
+        controller.abort()
+      }
+      const done = (): void => {
+        wake = null
+        resolve(!interrupted)
+      }
+      sleep(ms, controller.signal).then(done, done)
+    })
+
   try {
     let status = await servedStatus({ home, now: now() })
     let attention = attentionOf(status)
@@ -209,23 +229,13 @@ export const waitForAttention = async (input: WaitInput): Promise<WaitResult> =>
       const remaining = deadline - now()
       if (remaining <= 0)
         return { changed: false, waitedMs: now() - started, polls, intervals, status }
-      const index = Math.min(intervals.length, waitIntervals.length - 1)
-      const interval = Math.min(waitIntervals[index] ?? maxWaitIntervalMs, remaining)
-      intervals.push(interval)
       if (woken) woken = false
-      else
-        await new Promise<void>((resolve) => {
-          const controller = new AbortController()
-          wake = () => {
-            wake = null
-            controller.abort()
-          }
-          const done = (): void => {
-            wake = null
-            resolve()
-          }
-          sleep(interval, controller.signal).then(done, done)
-        })
+      else {
+        const index = Math.min(step, waitIntervals.length - 1)
+        const interval = Math.min(waitIntervals[index] ?? maxWaitIntervalMs, remaining)
+        intervals.push(interval)
+        if (await pause(interval)) step += 1
+      }
       status = await servedStatus({ home, now: now() })
       const current = attentionOf(status)
       polls += 1

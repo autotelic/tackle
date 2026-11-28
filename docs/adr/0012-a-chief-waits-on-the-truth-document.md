@@ -48,7 +48,9 @@ timer daemon if it does not fit.
    never includes `ageMinutes`, which moves on every read and would wake a wait for nothing.
 3. Backoff is one minute, doubling to half an hour (`waitIntervals`), and every sleep is
    bounded by what is left of the wait. A timeout returns `changed: false`; it is a fact, not
-   a failure, and nothing is charged for it.
+   a failure, and nothing is charged for it. Only an uninterrupted sleep advances the backoff:
+   a write that woke the sleep but did not change attention costs one extra read, never a jump
+   to the next interval.
 4. The local equivalent of `onWake`: a recursive `fs.watch` on the workstream and desk
    directories, armed before the first read, aborts the pending sleep. A change that arrives
    while the truth is being read leaves a flag, so the next sleep is skipped rather than
@@ -79,5 +81,6 @@ to this module, and it was not invented here.
 - The printout and the wait cannot disagree: both read `servedStatus`, and the changed
   printout is the read that spotted the change.
 - The acceptance tests are `packages/board/test/attention.test.ts`: the backoff's shape, a
-  change returning on the change, a watched write aborting the sleep, the deadline never being
-  overshot, and the factory home being byte-identical after a wait.
+  change returning on the change, a watched write aborting the sleep, an irrelevant wake not
+  skipping an interval, the deadline never being overshot, and the factory home being
+  byte-identical after a wait.
