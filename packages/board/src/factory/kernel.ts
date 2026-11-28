@@ -15,6 +15,7 @@ import { raiseDesk } from "./desk.ts"
 import { appendEvent, consumeEvents, readEvents, type Event } from "./events.ts"
 import { baseWorkerEnv, prepareWorkstreamCredentials, resolveCredentialEnv } from "./executor.ts"
 import { snapshotJournal } from "./journal.ts"
+import { notifyPass, type Notice } from "./notify.ts"
 import { resolveRoom } from "./room-binding.ts"
 import { guestEnv, supervisorGuest, type RoomGuest } from "./room-vm.ts"
 import {
@@ -285,6 +286,13 @@ export interface Receipt {
         readonly started: boolean
       }
     | undefined
+  /**
+   * What this pass told the record's session, and whether it arrived.
+   *
+   * Absent is a workstream with no `notify` target, or a pass that ended in a refusal nobody
+   * needs to hear; a delivery failure is `sent: false` here, never a failed pass.
+   */
+  readonly notify?: Notice | undefined
 }
 
 /** Conformance is a landing gate; a pass records that it was deliberately not measured. */
@@ -1266,8 +1274,38 @@ export const runPass = async (input: RunPassInput): Promise<PassOutcome> => {
   // SAFETY: the lock is a file a second process reads, so it must go on the throwing path too.
   // Nothing is caught here: the pass's failure travels on, and only the release is guaranteed.
   try {
-    return await runPassInner(input)
+    return await notified({ outcome: await runPassInner(input), home: input.home })
   } finally {
     await rm(passLock(input), { force: true })
+  }
+}
+
+/**
+ * Report a finished pass to the session the record names, and keep the report on the receipt.
+ *
+ * Written after the pass's own receipt, so the receipt that exists while the worker runs never
+ * claims a message was sent. Nothing here can change the outcome: the pass already happened,
+ * and a chief who was not told still has `factory status`.
+ */
+const notified = async (input: {
+  readonly outcome: PassOutcome
+  readonly home?: string | undefined
+}): Promise<PassOutcome> => {
+  const receipt = input.outcome.receipt
+  if (receipt === undefined) return input.outcome
+  // SAFETY: notification is a report about the pass; a throw here must not erase the pass.
+  try {
+    const notice = await notifyPass({
+      outcome: input.outcome,
+      at: new Date().toISOString(),
+      home: input.home,
+    })
+    if (notice === undefined) return input.outcome
+    const updated: Receipt = { ...receipt, notify: notice }
+    await writeReceipt({ id: updated.workstream, receipt: updated, home: input.home })
+    return { ...input.outcome, receipt: updated }
+  } catch {
+    // The pass already happened; a chief nobody can reach is not a reason to lose it.
+    return input.outcome
   }
 }

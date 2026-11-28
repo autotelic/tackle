@@ -25,11 +25,14 @@ import { appendEvent, consumeEvents } from "./events.ts"
 import { heldBy, truthOf, type WorkstreamTruth } from "./truth.ts"
 import { runPass } from "./kernel.ts"
 import {
+  defaultNotifyOutcomes,
   Gates,
   listWorkstreams,
+  NotifyOutcome,
   Phase,
   readWorkstream,
   writeWorkstream,
+  type Notify,
   type Workstream,
 } from "./store.ts"
 import { deliverReport, fingerprintOf, ReportKind, writeReport, type Report } from "./report.ts"
@@ -50,7 +53,7 @@ const usage = [
   "factory — adopt in-flight work as durable workstreams",
   "",
   "Usage:",
-  "  factory adopt --path <worktree> --project <linear> --label <label> [--pr <n> | --delivery trunk] [--reports <dir>] [--repo <owner/name>] [--room <id> --room-root <path>] [--phase reconcile|build|compress|land] [--id <id>]",
+  "  factory adopt --path <worktree> --project <linear> --label <label> [--pr <n> | --delivery trunk] [--reports <dir>] [--repo <owner/name>] [--room <id> --room-root <path>] [--notify <session> [--notify-outcomes done,blocked,gate,failed]] [--phase reconcile|build|compress|land] [--id <id>]",
   "  factory status [--json]",
   "  factory credentials list [--json]",
   "  factory credentials set --id <id> --kind github|opencode|mcp|service|generic --env NAME[=HOST] [--env ...] [--description <text>]",
@@ -1305,6 +1308,8 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
       repo: { type: "string" },
       room: { type: "string" },
       "room-root": { type: "string" },
+      notify: { type: "string" },
+      "notify-outcomes": { type: "string" },
       pr: { type: "string" },
       id: { type: "string" },
       phase: { type: "string", default: "reconcile" },
@@ -1341,6 +1346,34 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
     return fail("--room and --room-root go together")
   const room =
     roomId === undefined || roomRoot === undefined ? undefined : { id: roomId, root: roomRoot }
+  const notifySession = parsed.values.notify
+  const outcomes = parsed.values["notify-outcomes"]
+  // An outcome list with no session names nobody to tell: it is a typo, not a default.
+  if (outcomes !== undefined && notifySession === undefined)
+    return fail("--notify-outcomes needs --notify <session>")
+  const requested =
+    outcomes === undefined
+      ? undefined
+      : outcomes
+          .split(",")
+          .map((outcome) => outcome.trim())
+          .filter((outcome) => outcome !== "")
+  const unknown = (requested ?? []).filter((outcome) => !Schema.is(NotifyOutcome)(outcome))
+  if (unknown.length > 0)
+    return fail("--notify-outcomes must be done, blocked, gate or failed: " + unknown.join(", "))
+  const notify: Notify | undefined =
+    notifySession === undefined
+      ? undefined
+      : {
+          session: notifySession,
+          ...(requested === undefined
+            ? {}
+            : {
+                outcomes: requested.filter((outcome): outcome is NotifyOutcome =>
+                  Schema.is(NotifyOutcome)(outcome),
+                ),
+              }),
+        }
 
   const result = await adopt({
     path,
@@ -1349,6 +1382,7 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
     linearUrl,
     worker: parsed.values.worker,
     room,
+    notify,
     label,
     delivery,
     reports: parsed.values.reports,
@@ -1367,6 +1401,13 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
       "  path       " + record.path,
       "  room       " +
         (record.room === undefined ? "unbound" : record.room.id + " (" + record.room.root + ")"),
+      "  notify     " +
+        (record.notify === undefined
+          ? "none"
+          : record.notify.session +
+            " (" +
+            (record.notify.outcomes ?? defaultNotifyOutcomes).join(",") +
+            ")"),
       "  branch     " + record.branch + " @ " + record.head.slice(0, 8),
       "  delivery   " +
         (record.delivery ?? "pr") +

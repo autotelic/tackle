@@ -11,6 +11,7 @@ import {
   listWorkstreams,
   recordOf,
   writeWorkstream,
+  type Notify,
   type Phase,
   type Workstream,
 } from "./store.ts"
@@ -202,6 +203,13 @@ export interface AdoptInput {
    * the record's `path` is the one worktree, and the binding only ever refers to it.
    */
   readonly room?: { readonly id: string; readonly root: string } | undefined
+  /**
+   * The session a finished pass reports to.
+   *
+   * Absent is a workstream nobody is told about: the record is the record, and the chief
+   * reads it with `factory status`.
+   */
+  readonly notify?: Notify | undefined
   readonly label: string
   readonly delivery?: "pr" | "trunk" | undefined
   readonly reports?: string | undefined
@@ -309,6 +317,7 @@ export const adopt = async (input: AdoptInput): Promise<Outcome<Workstream>> => 
       linearUrl: input.linearUrl,
       worker: input.worker,
       room,
+      notify: input.notify,
       label: input.label,
       repo,
       path,

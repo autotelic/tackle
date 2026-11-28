@@ -33,6 +33,42 @@ export const RoomBinding = Schema.Struct({
 })
 export type RoomBinding = typeof RoomBinding.Type
 
+/**
+ * The four things a finished pass can be, as the session that started it hears them.
+ *
+ * They are four different questions: did it finish (done), does a human have to answer
+ * (blocked, gate), did it break (failed). A pass is one of them, never a sentence.
+ */
+export const NotifyOutcome = Schema.Literals(["done", "blocked", "gate", "failed"])
+export type NotifyOutcome = typeof NotifyOutcome.Type
+
+/**
+ * Where a finished pass reports: one Pi/intercom session, and which outcomes it wants.
+ *
+ * `factory status` is pull; this is the push edge that stops the chief asking every ten
+ * minutes. Absent is a workstream nobody is told about, which is what every record written
+ * before this field is.
+ */
+export const Notify = Schema.Struct({
+  session: Schema.String,
+  outcomes: Schema.optional(Schema.Array(NotifyOutcome)),
+})
+export type Notify = typeof Notify.Type
+
+/**
+ * Every outcome notifies unless the record narrows it.
+ *
+ * All four by default because a pass already ends rarely: at most one message per pass is
+ * written, so "done" is one line at the end of the pass that finished the work, not a stream.
+ * A chief that wants attention only passes `--notify-outcomes blocked,gate,failed`.
+ */
+export const defaultNotifyOutcomes: ReadonlyArray<NotifyOutcome> = [
+  "done",
+  "blocked",
+  "gate",
+  "failed",
+]
+
 export const Workstream = Schema.Struct({
   version: Schema.Literal(1),
   id: Schema.String,
@@ -42,6 +78,8 @@ export const Workstream = Schema.Struct({
   worker: Schema.optional(Schema.String),
   /** The room this workstream's passes occupy; absent is a workstream with no room. */
   room: Schema.optional(RoomBinding),
+  /** The session a finished pass reports to; absent is a workstream nobody is told about. */
+  notify: Schema.optional(Notify),
   label: Schema.String,
   repo: Schema.String,
   path: Schema.String,
@@ -129,6 +167,7 @@ export interface Facts {
   readonly linearUrl?: string | undefined
   readonly worker?: string | undefined
   readonly room?: RoomBinding | undefined
+  readonly notify?: Notify | undefined
   readonly label: string
   readonly repo: string
   readonly path: string
@@ -255,6 +294,7 @@ export const writeWorkstream = async (input: {
         // The binding is an operator control written by adopt, like the budgets: a pass that
         // started before a rebind must not write its stale copy back over the new one.
         room: current.room,
+        notify: current.notify,
         desk: current.desk,
         phase: current.phase,
         cursors: current.cursors,
@@ -348,6 +388,7 @@ export const recordOf = (input: { readonly id: string; readonly facts: Facts }):
   linearUrl: input.facts.linearUrl,
   worker: input.facts.worker,
   room: input.facts.room,
+  notify: input.facts.notify,
   label: input.facts.label,
   repo: input.facts.repo,
   path: resolve(input.facts.path),

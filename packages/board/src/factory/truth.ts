@@ -75,9 +75,10 @@ export interface WorkstreamTruth {
  *
  * The newest, not the oldest: a workstream can hold a stale question and a live one, and the
  * live one is the answer that unblocks it. Ordering is `at`, then id, so two items sharing an
- * instant still resolve the same way on every read.
+ * instant still resolve the same way on every read. Exported because the pass notification names
+ * the same open item: one ordering, so the message and `factory status` cannot disagree.
  */
-const newestDesk = (desk: ReadonlyArray<DeskItem>): DeskItem | null =>
+export const newestDesk = (desk: ReadonlyArray<DeskItem>): DeskItem | null =>
   [...desk]
     .sort(
       (left, right) =>
