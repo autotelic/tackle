@@ -160,7 +160,7 @@ joggle  since 4f1c2a9  2 new in files you touched
   src/drawer.ts    1  (duplicate-meaning, high)
   src/panel.tsx    1  (page-needs-composition, medium)
   ledger 79% answered · not judged: 4 ceiling · 3 token budget · 2 offline
-  prose-voice judged 120 of 1,733 documented sentences
+  prose-voice judged 440 of 17,036 sentences: 120+120 documented, 200 literals; 16,596 unlooked
 ```
 
 Three lines of accounting, and the two numbers that matter are not the finding count.

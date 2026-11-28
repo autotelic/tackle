@@ -239,32 +239,62 @@ interface BudgetNote {
   readonly judged: number
   readonly candidates: number
   readonly sample: ReadonlyArray<string>
-  /**
-   * How the rule chose which candidates to judge, when it did not take all of them.
-   *
-   * A ratio without this is a number a reader will read as a sample of the tree. `prose-voice`
-   * judges the first N sentences of each kind in file order, which is a defensible policy and not
-   * a random slice -- so the line has to say so.
-   */
-  readonly selection?: string
+}
+
+/**
+ * One candidate kind's bound, for a rule that bounds several kinds with different caps.
+ *
+ * A rule that judges three kinds with one prose line cannot be read: the line names one kind's cap
+ * and hides the others. These rows are printed one per kind, and the renderer does the arithmetic,
+ * so the rows always add up to the rule's own totals.
+ */
+export interface BudgetRow {
+  readonly unitKind: string
+  readonly judged: number
+  readonly candidates: number
+  readonly cap: number
+  readonly sample: ReadonlyArray<string>
 }
 
 /**
  * Standard wording for a bound a rule hit, so that no rule invents its own and
  * no reader has to guess whether silence meant "nothing there".
  */
-export const budgetNote = ({
-  unitKind,
-  judged,
-  candidates,
-  sample,
-  selection,
-}: BudgetNote): ReadonlyArray<string> =>
+export const budgetNote = ({ unitKind, judged, candidates, sample }: BudgetNote): ReadonlyArray<string> =>
   candidates <= judged
     ? []
     : [
-        `judged ${judged} of ${candidates} ${unitKind}${selection === undefined ? "" : " (" + selection + ")"}; ${candidates - judged} unlooked (cap ${judged}). Largest: ${sample.join("; ")}`,
+        `judged ${judged} of ${candidates} ${unitKind}; ${candidates - judged} unlooked (cap ${judged}). Largest: ${sample.join("; ")}`,
       ]
+
+/**
+ * A rule's bounds, one row per kind, with totals that add.
+ *
+ * `prose-voice` caps documented sentences at 120, Markdown sentences at 120 and string literals at
+ * 200. One line naming only the first kind is not a summary of the rule, it is a claim about one
+ * third of it; and a free-text selection string let exactly that through. The rows are printed as
+ * rows and the total is computed from them, so the note cannot disagree with itself.
+ *
+ * @param unitKind - What the rule counts, plural, for the total line.
+ * @param rows - One bound per candidate kind.
+ * @returns The total line and one line per kind; empty when nothing was bounded.
+ */
+export const budgetReport = (
+  unitKind: string,
+  rows: ReadonlyArray<BudgetRow>,
+): ReadonlyArray<string> => {
+  const bounded = rows.filter((row) => row.candidates > row.judged)
+  if (bounded.length === 0) return []
+  const judged = bounded.reduce((sum, row) => sum + row.judged, 0)
+  const candidates = bounded.reduce((sum, row) => sum + row.candidates, 0)
+  return [
+    `judged ${judged} of ${candidates} ${unitKind}; ${candidates - judged} unlooked`,
+    ...bounded.map(
+      (row) =>
+        `  ${row.unitKind}: ${row.judged} of ${row.candidates} judged (cap ${row.cap}); largest: ${row.sample.join("; ")}`,
+    ),
+  ]
+}
 
 /** A count of bundles and how many of them broke the pattern. */
 interface BundleTally {

@@ -7,7 +7,7 @@ import { hasWords, readsAsProse, sentencesOfDoc, type Sentence } from "../prose.
 import { locator, messages, reporter } from "../reporting.ts"
 import { verdictOf } from "../verdict.ts"
 import {
-  budgetNote,
+  budgetReport,
   declined,
   outcome,
   qualityOf,
@@ -445,19 +445,20 @@ export const proseVoice: PlannedRule = {
 
         return outcome(
           diagnostics,
-          groups.flatMap((group) =>
-            budgetNote({
+          // One row per kind, because the three caps differ (120, 120, 200) and a single line
+          // naming one of them hides the other two. The rows are also the opening sentences of
+          // each kind in file order, not a sample of the tree -- a policy the ratios make visible.
+          budgetReport(
+            "prose sentences",
+            groups.map((group) => ({
               unitKind: group.unitKind,
               judged: Math.min(group.candidates.length, group.budget),
               candidates: group.candidates.length,
+              cap: group.budget,
               sample: group.candidates
                 .slice(group.budget, group.budget + 5)
                 .map((candidate) => candidate.subject),
-              // Not a random slice, and the line has to say so: this is the opening of each
-              // document in file order, which is where riddle-shaped prose lives and is not an
-              // estimate of the tree.
-              selection: "first " + String(group.budget) + " of each kind, in file order",
-            }),
+            })),
           ),
           drops,
         )
