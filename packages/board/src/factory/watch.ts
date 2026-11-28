@@ -432,10 +432,21 @@ export const linearEvents = (input: {
  * new work, and consuming it without a pass loses it silently. Reopen only those two event kinds;
  * a review/comment on a retired PR stays a desk decision rather than an automatic restart.
  */
-export const reopenFor = (record: Workstream, event: WatchEvent): Workstream | undefined =>
-  record.phase === "done" && (event.kind === "merge-conflict" || event.kind === "parent")
-    ? { ...record, phase: "build", updatedAt: event.at }
-    : undefined
+export const reopenFor = (
+  record: Workstream,
+  event: WatchEvent,
+  hasOpenDesk = false,
+): Workstream | undefined => {
+  if (record.phase === "done" && (event.kind === "merge-conflict" || event.kind === "parent"))
+    return { ...record, phase: "build", updatedAt: event.at }
+  if (
+    record.phase === "blocked" &&
+    !hasOpenDesk &&
+    (event.kind === "review" || event.kind === "comment")
+  )
+    return { ...record, phase: "build", updatedAt: event.at }
+  return undefined
+}
 
 export interface WakeDecision {
   readonly wake: boolean
@@ -564,6 +575,11 @@ export const watchOnce = async (input: {
   }
   const consumed = existing.filter((event) => event.status === "consumed").map((event) => event.id)
   const used = await passesUsed({ id: input.id, home: input.home })
+  // A blocked workstream with no open desk is held by a decision nobody can answer. New review
+  // work must not sit behind that stale hold; a real open desk still blocks the event.
+  const hasOpenDesk = (await listDesk({ home: input.home })).some(
+    (item) => item.workstream === record.id,
+  )
   const progress = (await activityOf({ record, home: input.home, now: Date.parse(input.at) }))
     .progress
   if (progress.stalled && progress.signature !== null) {
@@ -746,7 +762,7 @@ export const watchOnce = async (input: {
       appended.push(event.id)
       continue
     }
-    const reopened = reopenFor(record, event)
+    const reopened = reopenFor(record, event, hasOpenDesk)
     if (reopened !== undefined) {
       record = reopened
       await writeWorkstream({ record, home: input.home })

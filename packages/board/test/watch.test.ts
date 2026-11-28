@@ -467,6 +467,9 @@ test("a done workstream reopens for a conflict or a moved parent, and only those
   expect(reopenFor(done, event("parent"))?.phase).toBe("build")
   expect(reopenFor(done, event("review"))).toBeUndefined()
   expect(reopenFor({ ...base(), phase: "build" }, event("merge-conflict"))).toBeUndefined()
+  expect(reopenFor({ ...base(), phase: "blocked" }, event("review"))?.phase).toBe("build")
+  expect(reopenFor({ ...base(), phase: "blocked" }, event("review"), true)).toBeUndefined()
+  expect(reopenFor({ ...base(), phase: "blocked" }, event("merge-conflict"))).toBeUndefined()
 })
 
 test("the six wake cases agree with the decision", () => {
