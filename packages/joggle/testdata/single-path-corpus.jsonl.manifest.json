@@ -1,0 +1,13 @@
+{
+  "corpusHash": "17492e76253d4ce0",
+  "seed": 1,
+  "generatorVersion": "1",
+  "predicateVersion": "1",
+  "counts": {
+    "reimplements": 50,
+    "legitimate_local": 50,
+    "near_miss": 25
+  },
+  "predicateFailures": 0,
+  "duplicates": 0
+}

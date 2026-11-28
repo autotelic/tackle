@@ -86,6 +86,33 @@ const callersOf = (workspace: Workspace): ReadonlyMap<string, ReadonlySet<string
   return callerFiles
 }
 
+/**
+ * The question `joggle/single-path` asks, written against one atom id.
+ *
+ * Exported so a synthetic corpus can ask the SAME question rather than a copy of
+ * it: a corpus measured against a retyped prompt would report on a question
+ * nothing in a run asks, and the rule's wording would drift away from it with
+ * nothing failing.
+ *
+ * @param atomId - The id of the atom holding this site and its helpers.
+ * @returns the rule's own instructions and criteria.
+ */
+export const verdictQuestion = (atomId: string) => ({
+  instructions: [
+    `\`atoms[${atomId}].site.source\`, in \`atoms[${atomId}].site.unit\`, builds a string. The references it interpolates are \`atoms[${atomId}].site.refs\`.`,
+    `These helpers are already used in this file and across files: \`atoms[${atomId}].helpers\` (each with its body).`,
+    "Does the inline string re-implement one of them?",
+    "Answer `reimplements` when a listed helper produces the same value and the site should call it -- the rounding, the sign, the locale or the zero are the same question asked twice.",
+    "Answer `legitimate_local` when no listed helper covers this case: a different unit, locale or format, or a value a helper would render wrongly.",
+    "Answer `not_a_derivation` when the string is not a derived display value at all.",
+  ].join("\n"),
+  criteria: {
+    reimplements: "One of the helpers does this. Call it.",
+    legitimate_local: "No helper covers this case.",
+    not_a_derivation: "Not a derived display value.",
+  },
+})
+
 export const singlePath: PlannedRule = {
   id: RULE_ID,
   severity: "warn",
@@ -184,21 +211,7 @@ export const singlePath: PlannedRule = {
             atoms: [id],
             violations: { verdict: ["reimplements"] },
             decisions: {
-              verdict: Decision.classify({
-                instructions: [
-                  `\`atoms[${id}].site.source\`, in \`atoms[${id}].site.unit\`, builds a string. The references it interpolates are \`atoms[${id}].site.refs\`.`,
-                  `These helpers are already used in this file and across files: \`atoms[${id}].helpers\` (each with its body).`,
-                  "Does the inline string re-implement one of them?",
-                  "Answer `reimplements` when a listed helper produces the same value and the site should call it -- the rounding, the sign, the locale or the zero are the same question asked twice.",
-                  "Answer `legitimate_local` when no listed helper covers this case: a different unit, locale or format, or a value a helper would render wrongly.",
-                  "Answer `not_a_derivation` when the string is not a derived display value at all.",
-                ].join("\n"),
-                criteria: {
-                  reimplements: "One of the helpers does this. Call it.",
-                  legitimate_local: "No helper covers this case.",
-                  not_a_derivation: "Not a derived display value.",
-                },
-              }),
+              verdict: Decision.classify(verdictQuestion(id)),
             },
             read: (answers) => answers,
           }

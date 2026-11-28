@@ -62,6 +62,11 @@ import { manifestOf } from "./run-cache.ts"
 import { identityKeysOf, identityOf } from "./identity.ts"
 import { sourceFingerprint } from "./fingerprint.ts"
 import { buildSurface, projectRootOf, SURFACE_PATH, surfaceFileOf, surfaceOutputOf } from "./surface.ts"
+import {
+  corpusManifest,
+  generate as generateCorpus,
+  SINGLE_PATH_RULE_ID,
+} from "./synthetic/single-path.ts"
 import { decodeSurface, parseJson } from "@autotelic/protocol"
 
 /**
@@ -1352,6 +1357,93 @@ const calibrateCommand = Command.make(
   ]),
 )
 
+const corpusCommand = Command.make(
+  "corpus",
+  {
+    rule: Flag.String("rule").pipe(
+      Flag.withDescription(
+        "Which rule's synthetic generator to run. `joggle/single-path` is the only one that ships.",
+      ),
+      Flag.withDefault(SINGLE_PATH_RULE_ID),
+    ),
+    seed: Flag.Int("seed").pipe(
+      Flag.withDescription("PRNG seed. The corpus is a function of this and --count alone."),
+      Flag.withDefault(1),
+    ),
+    count: Flag.Int("count").pipe(
+      Flag.withDescription("How many items to emit."),
+      Flag.withDefault(100),
+    ),
+    out: Flag.String("out").pipe(
+      Flag.withDescription(
+        "Where to write the JSONL corpus. Its manifest is written beside it, at <out>.manifest.json.",
+      ),
+    ),
+  },
+  (config) =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem
+      const path = yield* Path.Path
+      const output = path.resolve(process.cwd(), config.out)
+      if (config.rule !== SINGLE_PATH_RULE_ID) {
+        return yield* WorkspaceError.make({
+          path: output,
+          operation: "corpus",
+          cause:
+            "no synthetic generator for " + config.rule + "; " + SINGLE_PATH_RULE_ID + " is the one that ships",
+        })
+      }
+      if (config.count < 1) {
+        return yield* WorkspaceError.make({
+          path: output,
+          operation: "corpus",
+          cause: "--count must be at least 1",
+        })
+      }
+      // The generator is pure: no clock, no filesystem, no model. This command
+      // only writes what it returned, so two runs of one seed are the same bytes.
+      const items = generateCorpus({ seed: config.seed, count: config.count })
+      const manifest = corpusManifest({ items, seed: config.seed })
+      const manifestPath = output + ".manifest.json"
+      yield* fs.makeDirectory(path.dirname(output), { recursive: true })
+      yield* fs.writeFileString(
+        output,
+        items.map((item) => JSON.stringify(item)).join("\n") + "\n",
+      )
+      yield* fs.writeFileString(manifestPath, JSON.stringify(manifest, null, 2) + "\n")
+      yield* write(
+        "joggle: wrote " +
+          String(items.length) +
+          " item(s) to " +
+          output +
+          "; " +
+          manifest.corpusHash +
+          "; reimplements " +
+          String(manifest.counts.reimplements) +
+          " · legitimate_local " +
+          String(manifest.counts.legitimate_local) +
+          " · near_miss " +
+          String(manifest.counts.near_miss) +
+          "; " +
+          String(manifest.predicateFailures) +
+          " predicate failure(s), " +
+          String(manifest.duplicates) +
+          " duplicate(s)",
+      )
+    }),
+).pipe(
+  Command.withDescription(
+    "Emit a seeded synthetic corpus for one rule's judged question, with the label re-derived from the state by a code predicate and a manifest recording the hash, the counts and the predicate's own failures. No model is called and nothing is trained.",
+  ),
+  Command.withShortDescription("Emit a code-labelled synthetic corpus."),
+  Command.withExamples([
+    {
+      command: "joggle corpus --rule joggle/single-path --seed 1 --count 100 --out corpus.jsonl",
+      description: "Emit the 100-item verification split beside its manifest.",
+    },
+  ]),
+)
+
 /**
  * The merge driver git invokes for one answer shard, registered in
  * `.joggle/.gitattributes` and in the user's git config.
@@ -1771,6 +1863,7 @@ const cli = Command.make("joggle").pipe(
     rules,
     identityCommand,
     calibrateCommand,
+    corpusCommand,
     cacheCommand,
     surfaceCommand,
     mergeAnswers,
