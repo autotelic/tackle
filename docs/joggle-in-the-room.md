@@ -127,6 +127,29 @@ on disk group into 72 question shapes, and only **8 of 72** clear “30 examples
 The largest shapes fail for the paper's own reason: 2,436 examples are 100% `no_issue`, 1,236 are
 96% `not_a_projection`. Those are priors, not heads.
 
+### The ablation: influence is not volume
+
+Answer volume says nothing about whether an answer mattered. The instrument is a
+counterfactual, and it needs no model and no key: copy the ledger, replace one shape's answers
+with that shape's **majority label** (0.5 for a Noul), run the deterministic tail, and diff the
+findings against the run over real answers. Whatever changes is what that shape was doing.
+
+Measured on this repository, whole tree, 32 findings:
+
+| ablated                                                              | answers replaced | findings changed |
+| -------------------------------------------------------------------- | ---------------: | ---------------: |
+| every judgement at once                                              |           17,939 |          8 of 32 |
+| `no_issue` / `stale_reference` / `wrong_behavior` / `wrong_contract` |            2,436 |                2 |
+| `legitimate_local` / `not_a_derivation` / `reimplements`             |            1,753 |                3 |
+| `not_a_projection` shape, replaced by its **majority**               |            1,236 |                2 |
+| the same shape replaced by a **minority** label (`allowed`)          |            1,236 |          **257** |
+
+Read the last two rows together: the same question, the same volume, and a 128x difference in
+influence depending on which constant you substitute. An answer's weight lives in its minority
+mass, not its count -- and a shape answered 96% one way is a constant the code should hold,
+however many answers it has. That is the measurement that decides "delete" before "distil", and
+it costs two offline runs per shape.
+
 ---
 
 ## 3. The split
