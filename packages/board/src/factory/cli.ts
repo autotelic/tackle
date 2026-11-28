@@ -291,8 +291,9 @@ const main = async (argv: ReadonlyArray<string>): Promise<void> => {
       print(rows, desk)
       return
     }
-    // The state above is the truth now; the wait prints the truth that woke it, or says that
-    // nothing did. It writes nothing, so a chief can repeat it without a marker to clean up.
+    // Print the state the chief starts from, then wait. The wait prints the truth that woke it,
+    // or says that nothing did; it writes nothing, so a chief can repeat it without a marker.
+    print(rows, desk)
     const waited = await waitForAttention({ seconds })
     if (!waited.changed) {
       console.log(
