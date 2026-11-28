@@ -4,8 +4,10 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { expect, test } from "vitest"
 import { adopt, type AdoptInput } from "../src/factory/adopt.ts"
+import { raiseDesk } from "../src/factory/desk.ts"
 import { appendEvent } from "../src/factory/events.ts"
 import { runPass } from "../src/factory/kernel.ts"
+import { notifyPass } from "../src/factory/notify.ts"
 import { readWorkstream, workstreamFile } from "../src/factory/store.ts"
 
 /* oxlint-disable plumb/prefer-property-tests -- one fixed scratch repository and one fake CLI. */
@@ -129,27 +131,45 @@ test("a done pass tells the session once, with the truth fields", async () => {
   }
 }, 20_000)
 
-test("a gate pass names the desk that is waiting for an answer", async () => {
+test("a gate outcome names the desk that is waiting for an answer", async () => {
   const f = fixture()
   try {
     const intercom = fakeIntercom(f)
     expect((await adopted(f, { notify: { session: "herdr" } })).ok).toBe(true)
-    await taskEvent(f)
-
-    const result = await runPass({
-      id: "permissions-1862",
-      worker:
-        "mkdir -p packages/board/src/factory && printf x > packages/board/src/factory/probe.ts",
+    await raiseDesk({
+      home: f.home,
+      item: {
+        id: "desk-permissions-1862-gate-1",
+        workstream: "permissions-1862",
+        kind: "decision",
+        title: "Unblock pass #1?",
+        body: "protected path",
+        choices: ["resume", "defer"],
+        route: "live",
+        at: "2026-11-23T00:02:00.000Z",
+      },
+    })
+    const notice = await notifyPass({
       at: "2026-11-23T00:02:00.000Z",
       home: f.home,
+      outcome: {
+        ok: false,
+        reason: "gate-protected: packages/board/src/factory/probe.ts",
+        receipt: {
+          workstream: "permissions-1862",
+          pass: 1,
+          phase: "build",
+          checkpoint: "a".repeat(40),
+          commit: "b".repeat(40),
+        },
+      },
     })
-    expect(result.ok).toBe(false)
     const messages = intercom.sent()
     expect(messages).toHaveLength(1)
     expect(messages[0]).toContain("pass #1 gate")
     expect(messages[0]).toContain("desk desk-permissions-1862-gate-1")
     expect(messages[0]).toContain("reason gate-protected")
-    expect(result.receipt?.notify).toMatchObject({ outcome: "gate", sent: true })
+    expect(notice).toMatchObject({ outcome: "gate", sent: true })
   } finally {
     delete process.env.PI_INTERCOM_CLI
     rmSync(f.root, { recursive: true, force: true })
