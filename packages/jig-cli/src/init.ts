@@ -2144,9 +2144,22 @@ export const initialise = (
         // keyless run, so it agrees today, but adding a key can rename them. Say it here rather
         // than let the first keyed run look like a regression.
         const unjudged = run.report.generators.reduce(
-          (sum, generator) => sum + (generator.unjudged ?? 0) + (generator.unlooked ?? 0),
+          (sum, generator) => sum + (generator.unjudged ?? 0),
           0,
         )
+        const unlooked = run.report.generators.reduce(
+          (sum, generator) => sum + (generator.unlooked ?? 0),
+          0,
+        )
+        if (unlooked > 0) {
+          profile = {
+            ...profile,
+            notes: [
+              ...profile.notes,
+              `${unlooked} candidate(s) are past a rule's candidate cap; they produced no finding and are outside this ledger. Quote the caps in the commit body.`,
+            ],
+          }
+        }
         if (unjudged > 0) {
           profile = {
             ...profile,

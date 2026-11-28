@@ -351,12 +351,25 @@ const baselineCommand = Command.make(
        * never help. The engine's own unjudged count is the signal that judgement was available
        * and skipped.
        */
-      // Both silences count here: a candidate past a rule's cap is as unjudged as one the model
-      // could not read, and a ledger written from either would not match a judged run.
+      // Only `unjudged` blocks. A capped candidate produces no finding, so it cannot become a
+      // silent acceptance -- and blocking on it would refuse every baseline in a repository whose
+      // rules carry caps, which is a guard satisfied only by raising the caps.
       const skipped = run.report.generators.reduce(
-        (sum, generator) => sum + (generator.unjudged ?? 0) + (generator.unlooked ?? 0),
+        (sum, generator) => sum + (generator.unjudged ?? 0),
         0,
       )
+      // Warned, not blocked: a reader accepting a ledger should know how much the caps held back.
+      const unlooked = run.report.generators.reduce(
+        (sum, generator) => sum + (generator.unlooked ?? 0),
+        0,
+      )
+      if (unlooked > 0) {
+        yield* write(
+          `jig: ${unlooked} candidate(s) are past a rule's candidate cap. They produced no finding,\n` +
+            "  so they cannot be accepted or rejected here -- quote the caps and counts in this\n" +
+            "  commit's body so the acceptance is informed rather than silent.",
+        )
+      }
       const unverified =
         skipped > 0
           ? run.report.diagnostics.filter((diagnostic) => diagnostic.judged === false)

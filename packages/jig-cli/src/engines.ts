@@ -564,24 +564,28 @@ const UNJUDGED_STAGES: ReadonlySet<string> = new Set([
 ])
 
 /**
- * The stages the engine CHOOSE not to look at: a rule's own candidate ceiling, and a judgement
- * that said no.
+ * The stages where the engine chose not to look: a rule's own candidate ceiling.
  *
- * A different fact from `UNJUDGED_STAGES`, and a different action. `declined` is an answer -- the
- * model looked and found nothing -- and `ceiling` is a rule's cap, which a reader can raise. Only
- * the attempt-and-fail stages belong in `unjudged`.
+ * A cap is a policy number with a ratio attached, so a reader can raise it -- the opposite of
+ * `unjudged`, where nothing can be raised but the ceiling of the run.
  */
-const UNLOOKED_STAGES: ReadonlySet<string> = new Set(["ceiling", "declined"])
+const UNLOOKED_STAGES: ReadonlySet<string> = new Set(["ceiling"])
 
-/** Candidates with nothing to send: a third silence, neither a failure nor a choice. */
-const NOTHING_TO_JUDGE_STAGES: ReadonlySet<string> = new Set(["no_evidence"])
+/**
+ * The stages where the engine looked and had nothing to act on.
+ *
+ * `declined` is a model ANSWER (no issue, not applicable) and `no_evidence` is a candidate with
+ * nothing to send to it. Neither is a gap: a rule with 1,400 declines is busy, and folding those
+ * into "we did not look" is the same species of error as counting a cap as unjudged.
+ */
+const JUDGED_SILENT_STAGES: ReadonlySet<string> = new Set(["declined", "no_evidence"])
 
 /** What an engine's own report says it did, beyond the findings it printed. */
 export interface Provenance {
   readonly status: EngineStatus
   readonly unjudged?: number
   readonly unlooked?: number
-  readonly nothingToJudge?: number
+  readonly judgedSilent?: number
   readonly drops?: ReadonlyArray<DropCount>
   readonly note?: string
 }
@@ -599,13 +603,19 @@ export interface Provenance {
 export const notJudgedAnnotations = (generator: {
   readonly unjudged?: number
   readonly unlooked?: number
+  readonly judgedSilent?: number
 }): ReadonlyArray<string> => [
   ...(generator.unjudged === undefined || generator.unjudged === 0
     ? []
     : [`${generator.unjudged} candidate(s) not judged`]),
   ...(generator.unlooked === undefined || generator.unlooked === 0
     ? []
-    : [`${generator.unlooked} candidate(s) unlooked (a rule's cap or a decline)`]),
+    : [`${generator.unlooked} candidate(s) unlooked (a rule's cap)`]),
+  // Not a gap, and printed anyway: a reader who sees the declines knows the rules were working,
+  // which is the difference between a quiet run and a blind one.
+  ...(generator.judgedSilent === undefined || generator.judgedSilent === 0
+    ? []
+    : [`${generator.judgedSilent} candidate(s) judged, nothing to act on`]),
 ]
 
 /**
@@ -643,7 +653,7 @@ export const engineProvenance = (stdout: string): Provenance => {
     drops.filter((drop) => stages.has(drop.stage)).reduce((total, drop) => total + drop.count, 0)
   const unjudged = sumOf(UNJUDGED_STAGES)
   const unlooked = sumOf(UNLOOKED_STAGES)
-  const nothingToJudge = sumOf(NOTHING_TO_JUDGE_STAGES)
+  const judgedSilent = sumOf(JUDGED_SILENT_STAGES)
   const skipped = Array.isArray(summary.skipped) ? summary.skipped.length : 0
   // joggle reports a coverage gap as a note, not a finding: a tsconfig can declare
   // content mappers for formats its parser cannot index. The note is the engine's
@@ -661,7 +671,7 @@ export const engineProvenance = (stdout: string): Provenance => {
     status: summary.replayed === true ? "replayed" : "ran",
     ...(unjudged === 0 ? {} : { unjudged }),
     ...(unlooked === 0 ? {} : { unlooked }),
-    ...(nothingToJudge === 0 ? {} : { nothingToJudge }),
+    ...(judgedSilent === 0 ? {} : { judgedSilent }),
     ...(drops.length === 0 ? {} : { drops }),
     ...(note === undefined ? {} : { note }),
   }
@@ -713,6 +723,7 @@ const summarize = (
     ...(note === undefined ? {} : { note }),
     ...(provenance?.unjudged === undefined ? {} : { unjudged: provenance.unjudged }),
     ...(provenance?.unlooked === undefined ? {} : { unlooked: provenance.unlooked }),
+    ...(provenance?.judgedSilent === undefined ? {} : { judgedSilent: provenance.judgedSilent }),
     ...(provenance?.drops === undefined ? {} : { drops: provenance.drops }),
   }
 }

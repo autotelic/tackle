@@ -135,7 +135,7 @@ export const renderText = (run: HarnessRun, options: TextOptions = {}): string =
   const unverified = report.diagnostics.filter((diagnostic) => diagnostic.judged === false).length
   const notJudged =
     (unjudged > 0 ? `; ${unjudged} candidate(s) not judged` : "") +
-    (unlooked > 0 ? `; ${unlooked} candidate(s) unlooked (a rule's cap or a decline)` : "") +
+    (unlooked > 0 ? `; ${unlooked} candidate(s) unlooked (a rule's cap)` : "") +
     (unverified > 0 ? `; ${unverified} of these finding(s) unverified (no judgement reached)` : "")
   const lines: Array<string> = [
     report.generators.length === 0

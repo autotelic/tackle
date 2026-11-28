@@ -164,14 +164,17 @@ export interface EngineSummary {
    */
   readonly unjudged?: number
   /**
-   * Candidates the engine chose not to look at: past a rule's own cap, or declined by the rule.
+   * Candidates past a rule's own cap: the engine chose not to look, and a reader can raise the cap.
    *
-   * Kept apart from `unjudged` because the two call for different work. `unjudged` means the
-   * engine tried and could not (unreadable, the run's token ceiling, no key); `unlooked` means it
-   * decided not to, which is a policy number a reader can raise and a coding agent can ignore.
-   * Folding them together made 16,561 sentence-level ceiling drops read as unjudged candidates.
+   * Kept apart from `unjudged` (tried and could not) and from `judgedSilent` (looked and had
+   * nothing to act on), because the three call for different work and look identical in a total.
    */
   readonly unlooked?: number
+  /**
+   * Candidates the engine looked at and had nothing to act on: a declined judgement, or no
+   * evidence to send. A result, not a gap — a rule with 1,400 of these is busy, not blind.
+   */
+  readonly judgedSilent?: number
   /** The same candidates, by the engine's own stage, so a reader can see where they went. */
   readonly drops?: ReadonlyArray<DropCount>
 }

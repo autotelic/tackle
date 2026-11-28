@@ -328,9 +328,9 @@ describe("engineProvenance", () => {
   })
 
   it("separates what it tried and could not judge from what it chose not to look at", () => {
-    // Three silences, three different jobs: `unjudged` is a failure to reach an answer,
-    // `unlooked` is a rule's cap or a declared decline, and `no_evidence` is nothing to send.
-    // Folding them together is how 16,561 sentence-level ceiling drops read as unjudged.
+    // Three facts, three different jobs: `unjudged` is a failure to reach an answer, `unlooked` is
+    // a rule's cap, and `judgedSilent` is an answer with nothing to act on. Folding them together
+    // is how 16,561 sentence-level ceiling drops read as unjudged candidates.
     const provenance = engineProvenance(
       JSON.stringify({
         diagnostics: [],
@@ -348,8 +348,10 @@ describe("engineProvenance", () => {
       }),
     )
     expect(provenance.unjudged).toBe(3)
-    expect(provenance.unlooked).toBe(2)
-    expect(provenance.nothingToJudge).toBe(1)
+    expect(provenance.unlooked).toBe(1)
+    // A decline is a model answer and no_evidence is a candidate with nothing to send: neither is
+    // a gap, and both must stay out of the two numbers above.
+    expect(provenance.judgedSilent).toBe(2)
     expect(provenance.drops).toEqual([
       { stage: "budget", count: 1 },
       { stage: "ceiling", count: 1 },
