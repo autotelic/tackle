@@ -159,8 +159,24 @@ Two truths is the failure mode this section exists to avoid.
 joggle  since 4f1c2a9  2 new in files you touched
   src/drawer.ts    1  (duplicate-meaning, high)
   src/panel.tsx    1  (page-needs-composition, medium)
-  9 candidates changed · not judged: 4 ceiling · 3 token budget · 2 offline
+  ledger 79% answered · not judged: 4 ceiling · 3 token budget · 2 offline
+  prose-voice judged 120 of 1,733 documented sentences
 ```
+
+Three lines of accounting, and the two numbers that matter are not the finding count.
+
+**Coverage** is the second number. The same commit, same command, measured on two machines: a warm
+ledger reported **28 findings**, a cold one reported **8**. Nothing about the code differed; 1,478
+questions were answered from the ledger on one and asked, unanswered, on the other. So a finding
+count is a statement about _coverage_ as much as about the code, and a report that prints "2 new"
+without it invites the reader to read silence as clean.
+
+**A ceiling is a ratio, not a pile of drops.** A rule's candidate unit is whatever the rule judges --
+a declaration, a file, a _documented sentence_. `prose-voice` caps at 120 sentences and emitted 1,613
+drops for the sentences it did not judge: correct per candidate, and an order of magnitude wrong as a
+denominator, because one rule at 2% active then dominates a run's unjudged count. The line says which
+unit it is counting and what fraction the rule actually judged; the drops stay in the census for the
+census's use, not for the reader's.
 
 Two lines of paths, one line of accounting. The last line is the honest one: it says how much of
 the delta nobody has judged yet **and why**, which is the difference between a quiet run and a
@@ -254,6 +270,7 @@ Two tracks, two decision points, and neither waits on the other.
 | M0a | **the budget bug**: preflight only the plans that will actually go to the wire (filter cache hits before the loop), stop relabelling `unreadable` drops as `budget` (the `overBudgetSubjects` remap), and report the preflight separately             | a warm ledger is never blocked from questions it could replay; the drop count is drops, not drops × subjects; and a fixture whose **cache hits alone exceed the ceiling while its misses fit comfortably** is blocked today and answered after | the preflight still charges for cache hits, or the fixture cannot be built      |
 | M0b | split the stage vocabulary: `ceiling` / `token` / `unavailable` / `unreadable` / `no_evidence`, keep `budget` decodable as an alias, and update `UNJUDGED_STAGES` **in `jig-cli/src/engines.ts` too**                                                 | every unjudged total equals the sum over stages for a run carrying all of them (asserted by a test); yesterday's stored run still totals                                                                                                       | a surface silently reports zero unjudged                                        |
 | M1  | `joggle check --changed --offline --format json` as the room's generation pass                                                                                                                                                                        | warm run under 3s here, diagnostics carrying the honest `judged: false` + reason                                                                                                                                                               | warm run over 3s, or the flag conflates no-evidence with blindness              |
+| M0c | a rule's candidate ceiling is reported as a ratio with its unit named (`judged 120 of 1,733 documented sentences`), and its candidates are excluded from M3's denominator per rule                                                                    | one rule's cap can no longer dominate the unjudged count, and the report names the unit                                                                                                                                                        | a ceiling candidate is still counted as if it were a judged-clean one           |
 | M2  | cursor + projection + report at a tool-call boundary                                                                                                                                                                                                  | a room run reports count, paths and not-judged-by-reason, deduped, capped at 3                                                                                                                                                                 | more than 3 actionable findings per window, or dedupe needs a commit per report |
 | M3  | **delta measurement**: one stored run plus `--changed` from the room cursor's checkpoint, with a warm store and identical scope; the census already gives requests / replayed / judged / unavailable, so new-after-replay is `judged` over `requests` | typical build window: diagnostics new, candidates changed, unjudged by reason, per rule                                                                                                                                                        | the delta is single digits per window — then the room half is all there is      |
 
@@ -266,10 +283,16 @@ candidates are asked, so it moves the denominator of every later measurement: la
 warm on trunk, and record "candidates budget-skipped by the preflight, before/after" as the change's
 receipt. Any window measured across that boundary is meaningless.
 
-One precondition on M3: after M0a, check that the **misses** fit the ceiling at all. If they do not,
-the delta must print "candidates changed: N, all asked; of those new: M" rather than a fraction,
-because a fraction invites the reader to believe the remainder was judged. Measured once replay
-accounting is honest, misses were 556 under a 1,000,000 ceiling — measure it, do not assume it.
+One precondition on M3: check that the **misses fit the ceiling at all, on a warm and covered
+ledger**. The same commit and command, on a **cold** ledger, has 556 requests, 556 unavailable, and
+906 plans that did not fit a 1,000,000 ceiling — the misses genuinely exceed it. So the condition is
+"warm and covered", not absolute; a report that fails it says "ceiling: 906 plans unasked" with the
+cause named, never a fraction. The delta itself prints "candidates changed: N, all asked; of those
+new: M", because a fraction invites the reader to believe the remainder was judged.
+
+Two ledger facts must stay distinct, because they lead to different work: a question that has **never
+been judged in this repository** is a training-queue item, and a question whose answer exists but was
+not reached is a coverage defect. Both fail the same line, and the line says which.
 
 ### The model half
 
